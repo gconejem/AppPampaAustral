@@ -76,6 +76,12 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
         menuItemStyles={menuItemStyles(verticalNavOptions, theme)}
         renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
       >
+        <MenuSection label={dictionary['navigation'].formsAndTables}>
+          <MenuItem href={`/${locale}/apps/user/cotizaciones`} icon={<i className='ri-book-line' />}>
+            Cotizaciones
+          </MenuItem>
+        </MenuSection>
+
         <MenuSection label={dictionary['navigation'].appsPages}>
           <MenuItem href={`/${locale}/apps/user/list`} icon={<i className='ri-book-line' />}>
             Clientes
@@ -83,10 +89,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-pantone-line' />}>
             Obras
           </MenuItem>
-          <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-user-line' />}>
+          <MenuItem href={`/${locale}/apps/user/`} icon={<i className='ri-user-line' />}>
             Contactos
           </MenuItem>
-          <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-bill-line' />}>
+          <MenuItem href={`/${locale}/apps/user/`} icon={<i className='ri-bill-line' />}>
             Lista de Precios
           </MenuItem>
         </MenuSection>

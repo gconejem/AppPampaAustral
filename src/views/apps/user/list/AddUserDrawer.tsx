@@ -109,7 +109,7 @@ const AddUserDrawer = (props: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 400 } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5'>Add New User</Typography>
+        <Typography variant='h5'>Añadir nuevo cliente</Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
@@ -125,9 +125,135 @@ const AddUserDrawer = (props: Props) => {
               <TextField
                 {...field}
                 fullWidth
-                label='Full Name'
+                label='ID Cliente (RUT)'
+                placeholder=''
+                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <Controller
+            name='fullName'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Razón Social'
+                placeholder=''
+                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <Controller
+            name='fullName'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Nombre Comercial'
                 placeholder='John Doe'
                 {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <Controller
+            name='fullName'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Dirección'
+                placeholder='John Doe'
+                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <FormControl fullWidth>
+            <InputLabel id='country'>País</InputLabel>
+            <Select
+              fullWidth
+              id='country'
+              value={formData.country}
+              onChange={e => setFormData({ ...formData, country: e.target.value })}
+              label='País'
+              labelId='country'
+            >
+              <MenuItem value='Chile'>Chile</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel id='country'>Región</InputLabel>
+            <Select
+              fullWidth
+              id='country'
+              value={formData.country}
+              onChange={e => setFormData({ ...formData, country: e.target.value })}
+              label='País'
+              labelId='country'
+            >
+              <MenuItem value='Chile'>Arica y Parinacota</MenuItem>
+              <MenuItem value='Chile'>Tarapacá</MenuItem>
+              <MenuItem value='Chile'>Antofagasta</MenuItem>
+              <MenuItem value='Chile'>Atacama</MenuItem>
+              <MenuItem value='Chile'>Coquimbo</MenuItem>
+              <MenuItem value='Chile'>Vaparaíso</MenuItem>
+              <MenuItem value='Chile'>Metropolitana</MenuItem>
+              <MenuItem value='Chile'>OHiggins</MenuItem>
+              <MenuItem value='Chile'>Maule</MenuItem>
+              <MenuItem value='Chile'>Ñuble</MenuItem>
+              <MenuItem value='Chile'>Biobío</MenuItem>
+              <MenuItem value='Chile'>La Araucanía</MenuItem>
+              <MenuItem value='Chile'>Los Ríos</MenuItem>
+              <MenuItem value='Chile'>Los Lagos</MenuItem>
+              <MenuItem value='Chile'>Aysén</MenuItem>
+              <MenuItem value='Chile'>Magallanes</MenuItem>
+            </Select>
+          </FormControl>
+          <Controller
+            name='fullName'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Ciudad'
+                placeholder=''
+                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <Controller
+            name='fullName'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Comuna'
+                placeholder=''
+                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+
+          <Controller
+            name='username'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Web'
+                placeholder=''
+                {...(errors.username && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
@@ -139,69 +265,58 @@ const AddUserDrawer = (props: Props) => {
               <TextField
                 {...field}
                 fullWidth
-                label='Username'
-                placeholder='johndoe'
+                label='Teléfono'
+                placeholder=''
                 {...(errors.username && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
           <Controller
-            name='email'
+            name='username'
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
               <TextField
                 {...field}
                 fullWidth
-                type='email'
-                label='Email'
-                placeholder='johndoe@gmail.com'
-                {...(errors.email && { error: true, helperText: 'This field is required.' })}
+                label='Segmento'
+                placeholder=''
+                {...(errors.username && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
-          <FormControl fullWidth>
-            <InputLabel id='country' error={Boolean(errors.role)}>
-              Select Role
-            </InputLabel>
-            <Controller
-              name='role'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Select label='Select Role' {...field} error={Boolean(errors.role)}>
-                  <MenuItem value='admin'>Admin</MenuItem>
-                  <MenuItem value='author'>Author</MenuItem>
-                  <MenuItem value='editor'>Editor</MenuItem>
-                  <MenuItem value='maintainer'>Maintainer</MenuItem>
-                  <MenuItem value='subscriber'>Subscriber</MenuItem>
-                </Select>
-              )}
-            />
-            {errors.role && <FormHelperText error>This field is required.</FormHelperText>}
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id='country' error={Boolean(errors.plan)}>
-              Select Plan
-            </InputLabel>
-            <Controller
-              name='plan'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Select label='Select Plan' {...field} error={Boolean(errors.plan)}>
-                  <MenuItem value='basic'>Basic</MenuItem>
-                  <MenuItem value='company'>Company</MenuItem>
-                  <MenuItem value='enterprise'>Enterprise</MenuItem>
-                  <MenuItem value='team'>Team</MenuItem>
-                </Select>
-              )}
-            />
-            {errors.plan && <FormHelperText error>This field is required.</FormHelperText>}
-          </FormControl>
+          <Controller
+            name='username'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Industria'
+                placeholder=''
+                {...(errors.username && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+          <Controller
+            name='username'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label='Fecha de creación'
+                placeholder=''
+                {...(errors.username && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
+
           <FormControl fullWidth>
             <InputLabel id='country' error={Boolean(errors.status)}>
-              Select Status
+              Estado
             </InputLabel>
             <Controller
               name='status'
@@ -209,51 +324,21 @@ const AddUserDrawer = (props: Props) => {
               rules={{ required: true }}
               render={({ field }) => (
                 <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                  <MenuItem value='pending'>Pending</MenuItem>
-                  <MenuItem value='active'>Active</MenuItem>
-                  <MenuItem value='inactive'>Inactive</MenuItem>
+                  <MenuItem value='pending'>Activo</MenuItem>
+                  <MenuItem value='active'>Inactivo</MenuItem>
+                  <MenuItem value='inactive'>Bloqueado</MenuItem>
                 </Select>
               )}
             />
             {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
           </FormControl>
-          <TextField
-            label='Company'
-            fullWidth
-            placeholder='Company PVT LTD'
-            value={formData.company}
-            onChange={e => setFormData({ ...formData, company: e.target.value })}
-          />
-          <FormControl fullWidth>
-            <InputLabel id='country'>Select Country</InputLabel>
-            <Select
-              fullWidth
-              id='country'
-              value={formData.country}
-              onChange={e => setFormData({ ...formData, country: e.target.value })}
-              label='Select Country'
-              labelId='country'
-            >
-              <MenuItem value='India'>India</MenuItem>
-              <MenuItem value='USA'>USA</MenuItem>
-              <MenuItem value='Australia'>Australia</MenuItem>
-              <MenuItem value='Germany'>Germany</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            label='Contact'
-            type='number'
-            fullWidth
-            placeholder='(397) 294-5153'
-            value={formData.contact}
-            onChange={e => setFormData({ ...formData, contact: e.target.value })}
-          />
+
           <div className='flex items-center gap-4'>
             <Button variant='contained' type='submit'>
-              Submit
+              Guardar
             </Button>
             <Button variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
-              Cancel
+              Cancelar
             </Button>
           </div>
         </form>

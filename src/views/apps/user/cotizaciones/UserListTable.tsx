@@ -239,7 +239,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('action', {
-        header: 'Acciones',
+        header: 'Action',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
