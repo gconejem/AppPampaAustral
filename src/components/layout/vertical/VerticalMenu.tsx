@@ -77,8 +77,16 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
         renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
       >
         <MenuSection label={dictionary['navigation'].formsAndTables}>
-          <MenuItem href={`/${locale}/apps/user/cotizaciones`} icon={<i className='ri-book-line' />}>
+          <MenuItem
+            href={`/${locale}/apps/ecommerce/orders/details/5434`}
+            icon={<i className='ri-calendar-line' />}
+            exactMatch={false}
+            activeUrl='/apps/ecommerce/orders/details'
+          >
             Cotizaciones
+          </MenuItem>
+          <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
+            Agenda
           </MenuItem>
         </MenuSection>
 

@@ -28,6 +28,7 @@ type Props = {
 }
 
 type FormValidateType = {
+  rut: string
   fullName: string
   username: string
   email: string
@@ -64,6 +65,7 @@ const AddUserDrawer = (props: Props) => {
     formState: { errors }
   } = useForm<FormValidateType>({
     defaultValues: {
+      rut: '',
       fullName: '',
       username: '',
       email: '',
@@ -77,6 +79,7 @@ const AddUserDrawer = (props: Props) => {
     const newUser: UsersType = {
       id: (userData?.length && userData?.length + 1) || 1,
       avatar: `/images/avatars/${Math.floor(Math.random() * 8) + 1}.png`,
+      rut: data.rut,
       fullName: data.fullName,
       username: data.username,
       email: data.email,
@@ -118,7 +121,7 @@ const AddUserDrawer = (props: Props) => {
       <div className='p-5'>
         <form onSubmit={handleSubmit(data => onSubmit(data))} className='flex flex-col gap-5'>
           <Controller
-            name='fullName'
+            name='rut'
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
