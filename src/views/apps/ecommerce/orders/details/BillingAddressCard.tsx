@@ -8,7 +8,7 @@ import type { TypographyProps } from '@mui/material/Typography'
 import type { ThemeColor } from '@core/types'
 
 // Component Imports
-import AddAddress from '@components/dialogs/add-edit-address'
+import AddAddress from '@components/dialogs/add-edit-addres2'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 // Vars
@@ -41,24 +41,19 @@ const BillingAddress = () => {
       <CardContent className='flex flex-col gap-6'>
         <div className='flex flex-col'>
           <div className='flex justify-between items-center'>
-            <Typography variant='h5'>Billing Address</Typography>
+            <Typography variant='h5'>Cotización</Typography>
             <OpenDialogOnElementClick
               element={Typography}
-              elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
+              elementProps={typographyProps('Crear', 'primary', 'cursor-pointer font-medium')}
               dialog={AddAddress}
               dialogProps={{ type: 'Add address for billing address', data }}
             />
           </div>
-          <div className='flex flex-col'>
-            <Typography>45 Roker Terrace</Typography>
-            <Typography>Latheronwheel</Typography>
-            <Typography>KW5 8NW, London</Typography>
-            <Typography>UK</Typography>
-          </div>
+          <div className='flex flex-col'></div>
         </div>
         <div className='flex flex-col items-start gap-1'>
-          <Typography variant='h5'>Mastercard</Typography>
-          <Typography>Card Number: ******4291</Typography>
+          <Typography variant='h5'></Typography>
+          <Typography></Typography>
         </div>
       </CardContent>
     </Card>

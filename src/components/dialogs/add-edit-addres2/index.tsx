@@ -105,7 +105,7 @@ const AddEditAddress = ({ open, setOpen, data }: AddEditAddressProps) => {
       }}
     >
       <DialogTitle variant='h4' className='flex gap-2 flex-col text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
-        {data ? 'Agendar Cita' : 'Add New Address'}
+        {data ? 'Crear cotización' : 'Add New Address'}
         <Typography component='span' className='flex flex-col text-center'>
           {data ? '' : 'Add address for billing address'}
         </Typography>
@@ -240,7 +240,7 @@ const AddEditAddress = ({ open, setOpen, data }: AddEditAddressProps) => {
         </DialogContent>
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
           <Button variant='contained' onClick={() => setOpen(false)} type='submit'>
-            {data ? 'Agendar' : 'Submit'}
+            {data ? 'Crear' : 'Submit'}
           </Button>
           <Button
             variant='outlined'

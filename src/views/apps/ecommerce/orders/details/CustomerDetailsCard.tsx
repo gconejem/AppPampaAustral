@@ -53,38 +53,36 @@ const CustomerDetails = ({ orderData }: { orderData?: OrderType }) => {
   return (
     <Card>
       <CardContent className='flex flex-col gap-6'>
-        <Typography variant='h5'>Customer details</Typography>
+        <Typography variant='h5'>Contactos</Typography>
         <div className='flex items-center gap-3'>
           {getAvatar({ avatar: orderData?.avatar ?? '', customer: orderData?.customer ?? '' })}
           <div className='flex flex-col'>
             <Typography color='text.primary' className='font-medium'>
               {orderData?.customer}
             </Typography>
-            <Typography>Customer ID: #47389</Typography>
+            <Typography></Typography>
           </div>
         </div>
         <div className='flex items-center gap-3'>
           <CustomAvatar skin='light' color='success' size={40}>
             <i className='ri-shopping-cart-2-line' />
           </CustomAvatar>
-          <Typography color='text.primary' className='font-medium'>
-            12 Orders
-          </Typography>
+          <Typography color='text.primary' className='font-medium'></Typography>
         </div>
         <div className='flex flex-col gap-1'>
           <div className='flex justify-between items-center'>
             <Typography color='text.primary' className='font-medium'>
-              Contact info
+              Información del contacto
             </Typography>
             <OpenDialogOnElementClick
               element={Typography}
-              elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
+              elementProps={typographyProps('Editar', 'primary', 'cursor-pointer font-medium')}
               dialog={EditUserInfo}
               dialogProps={{ data: userData }}
             />
           </div>
           <Typography>Email: {orderData?.email}</Typography>
-          <Typography>Mobile: +1 (609) 972-22-22</Typography>
+          <Typography>Teléfono: +1 (609) 972-22-22</Typography>
         </div>
       </CardContent>
     </Card>

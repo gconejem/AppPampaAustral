@@ -40,19 +40,19 @@ const ShippingAddress = () => {
     <Card>
       <CardContent className='flex flex-col gap-6'>
         <div className='flex justify-between items-center'>
-          <Typography variant='h5'>Shipping Address</Typography>
+          <Typography variant='h5'>Agendar Cita</Typography>
           <OpenDialogOnElementClick
             element={Typography}
-            elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
+            elementProps={typographyProps('Agendar', 'primary', 'cursor-pointer font-medium')}
             dialog={AddAddress}
             dialogProps={{ type: 'Add address for billing address', data }}
           />
         </div>
         <div className='flex flex-col'>
-          <Typography>45 Roker Terrace</Typography>
-          <Typography>Latheronwheel</Typography>
-          <Typography>KW5 8NW, London</Typography>
-          <Typography>UK</Typography>
+          <Typography></Typography>
+          <Typography></Typography>
+          <Typography></Typography>
+          <Typography></Typography>
         </div>
       </CardContent>
     </Card>

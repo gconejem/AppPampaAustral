@@ -32,10 +32,10 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
 
   return (
     <CardContent>
-      <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginBottom: '16px' }}>
+      <Grid container spacing={5} style={{ marginBottom: '16px' }}>
+        <Grid item xs={12} sm={4} style={{ marginTop: '' }}>
           <FormControl fullWidth>
-            <InputLabel id='role-select'>Rut</InputLabel>
+            <InputLabel id='role-select'>RUT</InputLabel>
             <Select
               fullWidth
               id='select-role'
@@ -49,9 +49,9 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={8}>
+        <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
-            <InputLabel id='plan-select'>Nombre Comercial</InputLabel>
+            <InputLabel id='plan-select'>Número de Obra</InputLabel>
             <Select
               fullWidth
               id='select-plan'
@@ -60,6 +60,22 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
               label='Select Plan'
               labelId='plan-select'
               inputProps={{ placeholder: 'Select Plan' }}
+            >
+              <MenuItem value=''>...</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth>
+            <InputLabel id='status-select'>Fecha de ingreso</InputLabel>
+            <Select
+              fullWidth
+              id='select-status'
+              label='Select Status'
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              labelId='status-select'
+              inputProps={{ placeholder: 'Select Status' }}
             >
               <MenuItem value=''>...</MenuItem>
             </Select>
@@ -68,9 +84,9 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
       </Grid>
 
       <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginBottom: '' }}>
+        <Grid item xs={12} sm={4} style={{ marginTop: '' }}>
           <FormControl fullWidth>
-            <InputLabel id='role-select'>Estado</InputLabel>
+            <InputLabel id=''>Elegir código</InputLabel>
             <Select
               fullWidth
               id='select-role'
@@ -86,7 +102,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         </Grid>
         <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
-            <InputLabel id='plan-select'>Industria</InputLabel>
+            <InputLabel id='plan-select'>Elegir ubicación</InputLabel>
             <Select
               fullWidth
               id='select-plan'
@@ -102,41 +118,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         </Grid>
         <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
-            <InputLabel id='status-select'>Región</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Ciudad</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Comuna</InputLabel>
+            <InputLabel id='status-select'>Elegir estado</InputLabel>
             <Select
               fullWidth
               id='select-status'

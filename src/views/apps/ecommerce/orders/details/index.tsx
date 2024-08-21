@@ -31,13 +31,13 @@ const OrderDetails = ({ orderData, order }: { orderData?: OrderType; order: stri
       <Grid item xs={12} md={4}>
         <Grid container spacing={6}>
           <Grid item xs={12}>
-            <CustomerDetails orderData={orderData} />
-          </Grid>
-          <Grid item xs={12}>
-            <ShippingAddress />
-          </Grid>
-          <Grid item xs={12}>
             <BillingAddress />
+          </Grid>
+          <Grid item xs={12}>
+            <ShippingAddress />{' '}
+          </Grid>
+          <Grid item xs={12}>
+            <CustomerDetails orderData={orderData} />
           </Grid>
         </Grid>
       </Grid>
