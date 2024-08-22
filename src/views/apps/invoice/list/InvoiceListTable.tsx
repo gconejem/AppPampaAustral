@@ -349,17 +349,18 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           href={getLocalizedUrl('apps/invoice/add', locale as Locale)}
           className='max-sm:is-full'
         >
-          Create Invoice
+          Crear cotización
         </Button>
         <div className='flex flex-col sm:flex-row max-sm:is-full items-center gap-4'>
           <DebouncedInput
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Invoice'
+            placeholder='Buscar cotización'
             className='max-sm:is-full min-is-[200px]'
           />
+
           <FormControl fullWidth size='small' className='min-is-[175px]'>
-            <InputLabel id='status-select'>Invoice Status</InputLabel>
+            <InputLabel id='status-select'>Estado de cotización</InputLabel>
             <Select
               fullWidth
               id='select-status'

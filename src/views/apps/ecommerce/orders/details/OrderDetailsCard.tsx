@@ -249,7 +249,7 @@ const OrderDetailsCard = () => {
   return (
     <Card>
       <CardHeader
-        title='Solicitudes'
+        title='Items - Laboratoristas'
         action={
           <Typography component={Link} color='primary.main' className='font-medium'>
             Edit
@@ -257,42 +257,7 @@ const OrderDetailsCard = () => {
         }
       />
       <OrderTable />
-      <CardContent className='flex justify-end'>
-        <div>
-          <div className='flex items-center gap-12'>
-            <Typography color='text.primary' className='min-is-[100px]'>
-              Subtotal:
-            </Typography>
-            <Typography color='text.primary' className='font-medium'>
-              $2,093
-            </Typography>
-          </div>
-          <div className='flex items-center gap-12'>
-            <Typography color='text.primary' className='min-is-[100px]'>
-              Shipping Fee:
-            </Typography>
-            <Typography color='text.primary' className='font-medium'>
-              $2
-            </Typography>
-          </div>
-          <div className='flex items-center gap-12'>
-            <Typography color='text.primary' className='min-is-[100px]'>
-              Tax:
-            </Typography>
-            <Typography color='text.primary' className='font-medium'>
-              $28
-            </Typography>
-          </div>
-          <div className='flex items-center gap-12'>
-            <Typography color='text.primary' className='font-medium min-is-[100px]'>
-              Total:
-            </Typography>
-            <Typography color='text.primary' className='font-medium'>
-              $2113
-            </Typography>
-          </div>
-        </div>
-      </CardContent>
+      <CardContent className='flex justify-end'></CardContent>
     </Card>
   )
 }

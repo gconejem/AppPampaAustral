@@ -60,16 +60,16 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
                     <Logo />
                   </div>
                   <div>
-                    <Typography color='text.primary'>Office 149, 450 South Brand Brooklyn</Typography>
-                    <Typography color='text.primary'>San Diego County, CA 91905, USA</Typography>
-                    <Typography color='text.primary'>+1 (123) 456 7891, +44 (876) 543 2198</Typography>
+                    <Typography color='text.primary'>Calle Santa Blanca 51, Chillán – Chile.</Typography>
+                    <Typography color='text.primary'>Email: contacto@pampaustral.cl</Typography>
+                    <Typography color='text.primary'>+56 42-223 82 90 </Typography>
                   </div>
                 </div>
                 <div className='flex flex-col gap-6'>
-                  <Typography variant='h5'>{`Invoice #${id}`}</Typography>
+                  <Typography variant='h5'>{`Folio #${id}`}</Typography>
                   <div className='flex flex-col gap-1'>
-                    <Typography color='text.primary'>{`Date Issued: ${invoiceData?.issuedDate}`}</Typography>
-                    <Typography color='text.primary'>{`Date Due: ${invoiceData?.dueDate}`}</Typography>
+                    <Typography color='text.primary'>{`Desde: ${invoiceData?.issuedDate}`}</Typography>
+                    <Typography color='text.primary'>{`Hasta: ${invoiceData?.dueDate}`}</Typography>
                   </div>
                 </div>
               </div>
@@ -80,7 +80,7 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
               <Grid item xs={12} sm={6}>
                 <div className='flex flex-col gap-4'>
                   <Typography className='font-medium' color='text.primary'>
-                    Invoice To:
+                    Para:
                   </Typography>
                   <div>
                     <Typography>{invoiceData?.name}</Typography>
@@ -93,29 +93,27 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
               </Grid>
               <Grid item xs={12} sm={6}>
                 <div className='flex flex-col gap-4'>
-                  <Typography className='font-medium' color='text.primary'>
-                    Bill To:
-                  </Typography>
+                  <Typography className='font-medium' color='text.primary'></Typography>
                   <div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Total Due:</Typography>
-                      <Typography>$12,110.55</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Bank name:</Typography>
-                      <Typography>American Bank</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Country:</Typography>
-                      <Typography>United States</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>IBAN:</Typography>
-                      <Typography>ETD95476213874685</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>SWIFT code:</Typography>
-                      <Typography>BR91905</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                   </div>
                 </div>
@@ -128,9 +126,9 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
                 <thead>
                   <tr className='border-be'>
                     <th className='!bg-transparent'>Item</th>
-                    <th className='!bg-transparent'>Description</th>
-                    <th className='!bg-transparent'>Hours</th>
-                    <th className='!bg-transparent'>Qty</th>
+                    <th className='!bg-transparent'>Descripción</th>
+                    <th className='!bg-transparent'>Horas</th>
+                    <th className='!bg-transparent'>Datos</th>
                     <th className='!bg-transparent'>Total</th>
                   </tr>
                 </thead>
@@ -161,13 +159,7 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
           <Grid item xs={12}>
             <div className='flex justify-between flex-col gap-y-4 sm:flex-row'>
               <div className='flex flex-col gap-1 order-2 sm:order-[unset]'>
-                <div className='flex items-center gap-2'>
-                  <Typography className='font-medium' color='text.primary'>
-                    Salesperson:
-                  </Typography>
-                  <Typography>Tommy Shelby</Typography>
-                </div>
-                <Typography>Thanks for your business</Typography>
+                <div className='flex items-center gap-2'></div>
               </div>
               <div className='min-is-[200px]'>
                 <div className='flex items-center justify-between'>
@@ -177,7 +169,7 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
                   </Typography>
                 </div>
                 <div className='flex items-center justify-between'>
-                  <Typography>Discount:</Typography>
+                  <Typography>Descuento:</Typography>
                   <Typography className='font-medium' color='text.primary'>
                     $28
                   </Typography>
@@ -203,11 +195,7 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
           </Grid>
           <Grid item xs={12}>
             <Typography>
-              <Typography component='span' className='font-medium' color='text.primary'>
-                Note:
-              </Typography>{' '}
-              It was a pleasure working with you and your team. We hope you will keep us in mind for future freelance
-              projects. Thank You!
+              <Typography component='span' className='font-medium' color='text.primary'></Typography>{' '}
             </Typography>
           </Grid>
         </Grid>

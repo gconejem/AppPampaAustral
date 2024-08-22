@@ -72,15 +72,15 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       <Logo />
                     </div>
                     <div>
-                      <Typography color='text.primary'>Office 149, 450 South Brand Brooklyn</Typography>
-                      <Typography color='text.primary'>San Diego County, CA 91905, USA</Typography>
-                      <Typography color='text.primary'>+1 (123) 456 7891, +44 (876) 543 2198</Typography>
+                      <Typography color='text.primary'>Calle Santa Blanca 51, Chillán – Chile.</Typography>
+                      <Typography color='text.primary'>Email: contacto@pampaustral.cl</Typography>
+                      <Typography color='text.primary'>+56 42-223 82 90 </Typography>
                     </div>
                   </div>
                   <div className='flex flex-col gap-2'>
                     <div className='flex items-center gap-4'>
                       <Typography variant='h5' className='min-is-[95px]'>
-                        Invoice
+                        Folio
                       </Typography>
                       <TextField
                         fullWidth
@@ -94,7 +94,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                     </div>
                     <div className='flex items-center'>
                       <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Date Issued:
+                        Desde:
                       </Typography>
                       <AppReactDatepicker
                         boxProps={{ className: 'is-full' }}
@@ -107,7 +107,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                     </div>
                     <div className='flex items-center'>
                       <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Date Due:
+                        Hasta:
                       </Typography>
                       <AppReactDatepicker
                         boxProps={{ className: 'is-full' }}
@@ -127,7 +127,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <div className='flex justify-between flex-col gap-4 flex-wrap sm:flex-row'>
                 <div className='flex flex-col gap-4'>
                   <Typography className='font-medium' color='text.primary'>
-                    Invoice To:
+                    Para:
                   </Typography>
                   <Select
                     className={classnames('min-is-[220px]', { 'is-1/2': isBelowSmScreen })}
@@ -147,7 +147,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       }}
                     >
                       <i className='ri-add-line' />
-                      Add New Customer
+                      Añadir nuevo cliente
                     </MenuItem>
                     {invoiceData?.slice(0, 5).map((invoice: InvoiceType, index) => (
                       <MenuItem key={index} value={invoice.id}>
@@ -174,29 +174,27 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   )}
                 </div>
                 <div className='flex flex-col gap-4'>
-                  <Typography className='font-medium' color='text.primary'>
-                    Bill To:
-                  </Typography>
+                  <Typography className='font-medium' color='text.primary'></Typography>
                   <div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Total Due:</Typography>
-                      <Typography>$12,110.55</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Bank name:</Typography>
-                      <Typography>American Bank</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Country:</Typography>
-                      <Typography>United States</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>IBAN:</Typography>
-                      <Typography>ETD95476213874685</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>SWIFT code:</Typography>
-                      <Typography>BR91905</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                   </div>
                 </div>
@@ -222,15 +220,15 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         Item
                       </Typography>
                       <Select fullWidth size='small' defaultValue='App Design' className='mbe-5'>
-                        <MenuItem value='App Design'>App Design</MenuItem>
-                        <MenuItem value='App Customization'>App Customization</MenuItem>
-                        <MenuItem value='ABC Template'>ABC Template</MenuItem>
-                        <MenuItem value='App Development'>App Development</MenuItem>
+                        <MenuItem value='App Design'>...</MenuItem>
+                        <MenuItem value='App Customization'></MenuItem>
+                        <MenuItem value='ABC Template'></MenuItem>
+                        <MenuItem value='App Development'></MenuItem>
                       </Select>
-                      <TextField rows={2} fullWidth multiline size='small' defaultValue='Customization & Bug Fixes' />
+                      <TextField rows={2} fullWidth multiline size='small' defaultValue='Texto de ejemplo' />
                     </Grid>
                     <Grid item lg={2} md={3} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8'>Cost</Typography>
+                      <Typography className='font-medium md:absolute md:-top-8'>Costo</Typography>
                       <TextField
                         {...(isBelowMdScreen && { fullWidth: true })}
                         size='small'
@@ -242,7 +240,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       />
                       <div className='flex flex-col'>
                         <Typography component='span' color='text.primary'>
-                          Discount:
+                          Descuento
                         </Typography>
                         <div className='flex gap-2'>
                           <Typography component='span' color='text.primary'>
@@ -262,7 +260,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       </div>
                     </Grid>
                     <Grid item md={2} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8'>Hours</Typography>
+                      <Typography className='font-medium md:absolute md:-top-8'>Horas</Typography>
                       <TextField
                         {...(isBelowMdScreen && { fullWidth: true })}
                         size='small'
@@ -273,7 +271,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       />
                     </Grid>
                     <Grid item md={2} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8'>Price</Typography>
+                      <Typography className='font-medium md:absolute md:-top-8'>Precio</Typography>
                       <Typography>$24.00</Typography>
                     </Grid>
                   </Grid>
@@ -291,7 +289,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   onClick={() => setCount(count + 1)}
                   startIcon={<i className='ri-add-line' />}
                 >
-                  Add Item
+                  Añadir item
                 </Button>
               </Grid>
             </Grid>
@@ -302,12 +300,8 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <div className='flex justify-between flex-col gap-4 sm:flex-row'>
                 <div className='flex flex-col gap-4 order-2 sm:order-[unset]'>
                   <div className='flex items-center gap-2'>
-                    <Typography className='font-medium' color='text.primary'>
-                      Salesperson:
-                    </Typography>
-                    <TextField size='small' defaultValue='Tommy Shelby' />
+                    <Typography className='font-medium' color='text.primary'></Typography>
                   </div>
-                  <TextField size='small' placeholder='Thanks for your business' />
                 </div>
                 <div className='min-is-[200px]'>
                   <div className='flex items-center justify-between'>
@@ -317,7 +311,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                     </Typography>
                   </div>
                   <div className='flex items-center justify-between'>
-                    <Typography>Discount:</Typography>
+                    <Typography>Descuento:</Typography>
                     <Typography className='font-medium' color='text.primary'>
                       $28
                     </Typography>
@@ -340,20 +334,6 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
             </Grid>
             <Grid item xs={12}>
               <Divider className='border-dashed' />
-            </Grid>
-            <Grid item xs={12}>
-              <InputLabel htmlFor='invoice-note' className='inline-flex mbe-1 text-textPrimary'>
-                Note:
-              </InputLabel>
-              <TextField
-                id='invoice-note'
-                rows={2}
-                fullWidth
-                multiline
-                className='border rounded'
-                defaultValue='It was a pleasure working with you and your team. We hope you will keep us in mind for future freelance
-              projects. Thank You!'
-              />
             </Grid>
           </Grid>
         </CardContent>

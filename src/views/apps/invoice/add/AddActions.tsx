@@ -39,14 +39,8 @@ const AddActions = () => {
       <Grid item xs={12}>
         <Card>
           <CardContent className='flex flex-col gap-4'>
-            <Button
-              fullWidth
-              variant='contained'
-              className='capitalize'
-              startIcon={<i className='ri-send-plane-line' />}
-              onClick={() => setSendDrawerOpen(true)}
-            >
-              Send Invoice
+            <Button fullWidth color='secondary' variant='outlined' className='capitalize'>
+              Guardar
             </Button>
             <Button
               fullWidth
@@ -56,10 +50,7 @@ const AddActions = () => {
               className='capitalize'
               href={getLocalizedUrl('/apps/invoice/preview/4987', locale as Locale)}
             >
-              Preview
-            </Button>
-            <Button fullWidth color='secondary' variant='outlined' className='capitalize'>
-              Save
+              Visualizar
             </Button>
           </CardContent>
         </Card>
@@ -67,33 +58,14 @@ const AddActions = () => {
       </Grid>
 
       <Grid item xs={12}>
-        <FormControl fullWidth className='mbe-4'>
-          <InputLabel id='payment-select'>Accept payments via</InputLabel>
-          <Select fullWidth defaultValue='Internet Banking' label='Accept payments via' labelId='payment-select'>
-            <MenuItem value='Internet Banking'>Internet Banking</MenuItem>
-            <MenuItem value='Debit Card'>Debit Card</MenuItem>
-            <MenuItem value='Credit Card'>Credit Card</MenuItem>
-            <MenuItem value='Paypal'>Paypal</MenuItem>
-            <MenuItem value='UPI Transfer'>UPI Transfer</MenuItem>
-          </Select>
-        </FormControl>
         <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-payment-terms' className='cursor-pointer'>
-            Payment Terms
-          </InputLabel>
-          <Switch defaultChecked id='invoice-edit-payment-terms' />
+          <InputLabel htmlFor='invoice-edit-payment-terms' className='cursor-pointer'></InputLabel>
         </div>
         <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-client-notes' className='cursor-pointer'>
-            Client Notes
-          </InputLabel>
-          <Switch id='invoice-edit-client-notes' />
+          <InputLabel htmlFor='invoice-edit-client-notes' className='cursor-pointer'></InputLabel>
         </div>
         <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-payment-stub' className='cursor-pointer'>
-            Payment Stub
-          </InputLabel>
-          <Switch id='invoice-edit-payment-stub' />
+          <InputLabel htmlFor='invoice-edit-payment-stub' className='cursor-pointer'></InputLabel>
         </div>
       </Grid>
     </Grid>

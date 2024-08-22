@@ -30,47 +30,6 @@ const PreviewActions = ({ id, onButtonClick }: { id: string; onButtonClick: () =
 
   return (
     <>
-      <Card>
-        <CardContent className='flex flex-col gap-4'>
-          <Button
-            fullWidth
-            variant='contained'
-            className='capitalize'
-            startIcon={<i className='ri-send-plane-line' />}
-            onClick={() => setSendDrawerOpen(true)}
-          >
-            Send Invoice
-          </Button>
-          <Button fullWidth color='secondary' variant='outlined' className='capitalize'>
-            Download
-          </Button>
-          <div className='flex items-center gap-4'>
-            <Button fullWidth color='secondary' variant='outlined' className='capitalize' onClick={onButtonClick}>
-              Print
-            </Button>
-            <Button
-              fullWidth
-              component={Link}
-              color='secondary'
-              variant='outlined'
-              className='capitalize'
-              href={getLocalizedUrl(`/apps/invoice/edit/${id}`, locale as Locale)}
-            >
-              Edit
-            </Button>
-          </div>
-          <Button
-            fullWidth
-            color='success'
-            variant='contained'
-            className='capitalize'
-            onClick={() => setPaymentDrawerOpen(true)}
-            startIcon={<i className='ri-money-dollar-circle-line' />}
-          >
-            Add Payment
-          </Button>
-        </CardContent>
-      </Card>
       <AddPaymentDrawer open={paymentDrawerOpen} handleClose={() => setPaymentDrawerOpen(false)} />
       <SendInvoiceDrawer open={sendDrawerOpen} handleClose={() => setSendDrawerOpen(false)} />
     </>

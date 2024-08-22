@@ -16,28 +16,7 @@ import classnames from 'classnames'
 import CustomAvatar from '@/@core/components/mui/Avatar'
 
 // Vars
-const data = [
-  {
-    title: 24,
-    subtitle: 'Clients',
-    icon: 'ri-user-3-line'
-  },
-  {
-    title: 165,
-    subtitle: 'Invoices',
-    icon: 'ri-pages-line'
-  },
-  {
-    title: '$2.46k',
-    subtitle: 'Paid',
-    icon: 'ri-wallet-line'
-  },
-  {
-    title: '$876',
-    subtitle: 'Unpaid',
-    icon: 'ri-money-dollar-circle-line'
-  }
-]
+const data = []
 
 const InvoiceCard = () => {
   // Hooks
