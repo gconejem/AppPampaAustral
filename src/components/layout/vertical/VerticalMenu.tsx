@@ -77,6 +77,20 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
         renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
       >
         <MenuSection label={dictionary['navigation'].formsAndTables}>
+          <SubMenu label={dictionary['navigation'].invoice} icon={<i className='ri-bill-line' />}>
+            <MenuItem href={`/${locale}/apps/invoice/list`}>{dictionary['navigation'].list}</MenuItem>
+            <MenuItem
+              href={`/${locale}/apps/invoice/preview/4987`}
+              exactMatch={false}
+              activeUrl='/apps/invoice/preview'
+            >
+              {dictionary['navigation'].preview}
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/invoice/edit/4987`} exactMatch={false} activeUrl='/apps/invoice/edit'>
+              {dictionary['navigation'].edit}
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/invoice/add`}>{dictionary['navigation'].add}</MenuItem>
+          </SubMenu>
           <MenuItem href={`/${locale}/apps/user/solicitudes`} icon={<i className='ri-calendar-line' />}>
             Solicitudes
           </MenuItem>

@@ -47,25 +47,14 @@ const OrderDetailHeader = ({ orderData, order }: { orderData?: OrderType; order:
     <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
       <div className='flex flex-col items-start gap-1'>
         <div className='flex items-center gap-2'>
-          <Typography variant='h5'>{`- #${order}`}</Typography>
-          <Chip
-            variant='tonal'
-            label={orderData?.status}
-            color={statusChipColor[orderData?.status || ''].color}
-            size='small'
-          />
-          <Chip
-            variant='tonal'
-            label={paymentStatus[orderData?.payment ?? 0].text}
-            color={paymentStatus[orderData?.payment ?? 0].color}
-            size='small'
-          />
+          <Typography variant='h5'>{`Solicitud   #${order}`}</Typography>
+          <Chip variant='tonal' label='Clientes' color={statusChipColor[orderData?.status || ''].color} size='small' />
         </div>
-        <Typography>{`${new Date(orderData?.date ?? '').toDateString()}, ${orderData?.time} (ET)`}</Typography>
+        <Typography>{`${new Date(orderData?.date ?? '').toDateString()}, ${orderData?.time} (GMT-4)`}</Typography>
       </div>
       <OpenDialogOnElementClick
         element={Button}
-        elementProps={buttonProps('Delete Order', 'error', 'outlined')}
+        elementProps={buttonProps('Borrar solicitud', 'error', 'outlined')}
         dialog={ConfirmationDialog}
         dialogProps={{ type: 'delete-order' }}
       />

@@ -249,7 +249,7 @@ const OrderDetailsCard = () => {
   return (
     <Card>
       <CardHeader
-        title='Order Details'
+        title='Solicitudes'
         action={
           <Typography component={Link} color='primary.main' className='font-medium'>
             Edit

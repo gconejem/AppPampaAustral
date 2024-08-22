@@ -1,137 +1,265 @@
 'use client'
 
+// React Imports
+import { useState, useMemo } from 'react'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
-import TimelineDot from '@mui/lab/TimelineDot'
-import TimelineItem from '@mui/lab/TimelineItem'
-import TimelineContent from '@mui/lab/TimelineContent'
-import TimelineSeparator from '@mui/lab/TimelineSeparator'
-import TimelineConnector from '@mui/lab/TimelineConnector'
+import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
-import { styled } from '@mui/material/styles'
-import MuiTimeline from '@mui/lab/Timeline'
-import type { TimelineProps } from '@mui/lab/Timeline'
 
-// Styled Timeline component
-const Timeline = styled(MuiTimeline)<TimelineProps>({
-  paddingLeft: 0,
-  paddingRight: 0,
-  '& .MuiTimelineItem-root': {
-    width: '100%',
-    '&:before': {
-      display: 'none'
-    },
-    '& .MuiTimelineContent-root:last-child': {
-      paddingBottom: 0
-    },
-    '&:nth-last-child(2) .MuiTimelineConnector-root': {
-      backgroundColor: 'transparent',
-      borderInlineStart: '1px dashed var(--mui-palette-divider)'
-    },
-    '& .MuiTimelineConnector-root': {
-      backgroundColor: 'var(--mui-palette-primary-main)'
-    }
+// Third-party Imports
+import classnames from 'classnames'
+import { rankItem } from '@tanstack/match-sorter-utils'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
+  getPaginationRowModel,
+  getSortedRowModel
+} from '@tanstack/react-table'
+import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+
+// Component Imports
+import Link from '@components/Link'
+
+// Style Imports
+import tableStyles from '@core/styles/table.module.css'
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  // Rank the item
+  const itemRank = rankItem(row.getValue(columnId), value)
+
+  // Store the itemRank info
+  addMeta({
+    itemRank
+  })
+
+  // Return if the item should be filtered in/out
+  return itemRank.passed
+}
+
+type dataType = {
+  productName: string
+  productImage: string
+  brand: string
+  price: number
+  quantity: number
+  total: number
+}
+
+const orderData: dataType[] = [
+  {
+    productName: 'OnePlus 7 Pro',
+    productImage: '/images/apps/ecommerce/product-21.png',
+    brand: 'OnePluse',
+    price: 799,
+    quantity: 1,
+    total: 799
+  },
+  {
+    productName: 'Magic Mouse',
+    productImage: '/images/apps/ecommerce/product-22.png',
+    brand: 'Google',
+    price: 89,
+    quantity: 1,
+    total: 89
+  },
+  {
+    productName: 'Wooden Chair',
+    productImage: '/images/apps/ecommerce/product-23.png',
+    brand: 'Insofar',
+    price: 289,
+    quantity: 2,
+    total: 578
+  },
+  {
+    productName: 'Air Jorden',
+    productImage: '/images/apps/ecommerce/product-24.png',
+    brand: 'Nike',
+    price: 299,
+    quantity: 2,
+    total: 598
   }
-})
+]
 
-const ShippingActivity = ({ order }: { order: string }) => {
+// Column Definitions
+const columnHelper = createColumnHelper<dataType>()
+
+const OrderTable = () => {
+  // States
+  const [rowSelection, setRowSelection] = useState({})
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [data, setData] = useState(...[orderData])
+  const [globalFilter, setGlobalFilter] = useState('')
+
+  const columns = useMemo<ColumnDef<dataType, any>[]>(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
+      columnHelper.accessor('productName', {
+        header: 'Product',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <img src={row.original.productImage} alt={row.original.productName} height={34} className='rounded' />
+            <div className='flex flex-col items-start'>
+              <Typography color='text.primary' className='font-medium'>
+                {row.original.productName}
+              </Typography>
+              <Typography variant='body2'>{row.original.brand}</Typography>
+            </div>
+          </div>
+        )
+      }),
+      columnHelper.accessor('price', {
+        header: 'Price',
+        cell: ({ row }) => <Typography>{`$${row.original.price}`}</Typography>
+      }),
+      columnHelper.accessor('quantity', {
+        header: 'Qty',
+        cell: ({ row }) => <Typography>{`${row.original.quantity}`}</Typography>
+      }),
+      columnHelper.accessor('total', {
+        header: 'Total',
+        cell: ({ row }) => <Typography>{`$${row.original.total}`}</Typography>
+      })
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
+  const table = useReactTable({
+    data: data as dataType[],
+    columns,
+    filterFns: {
+      fuzzy: fuzzyFilter
+    },
+    state: {
+      rowSelection,
+      globalFilter
+    },
+    initialState: {
+      pagination: {
+        pageSize: 10
+      }
+    },
+    enableRowSelection: true, //enable row selection for all rows
+    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
+    globalFilterFn: fuzzyFilter,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues()
+  })
+
+  return (
+    <div className='overflow-x-auto'>
+      <table className={tableStyles.table}>
+        <thead>
+          {table.getHeaderGroups().map(headerGroup => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map(header => (
+                <th key={header.id}>
+                  {header.isPlaceholder ? null : (
+                    <>
+                      <div
+                        className={classnames({
+                          'flex items-center': header.column.getIsSorted(),
+                          'cursor-pointer select-none': header.column.getCanSort()
+                        })}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: <i className='ri-arrow-up-s-line text-xl' />,
+                          desc: <i className='ri-arrow-down-s-line text-xl' />
+                        }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                      </div>
+                    </>
+                  )}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        {table.getFilteredRowModel().rows.length === 0 ? (
+          <tbody>
+            <tr>
+              <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                No data available
+              </td>
+            </tr>
+          </tbody>
+        ) : (
+          <tbody className='border-be'>
+            {table
+              .getRowModel()
+              .rows.slice(0, table.getState().pagination.pageSize)
+              .map(row => {
+                return (
+                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id} className='first:is-14'>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
+          </tbody>
+        )}
+      </table>
+    </div>
+  )
+}
+
+const OrderDetailsCard = () => {
   return (
     <Card>
-      <CardHeader title='Shipping Activity' />
-      <CardContent>
-        <Timeline>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
-                <Typography color='text.primary' className='font-medium'>
-                  Order was placed (Order ID: #{order})
-                </Typography>
-                <Typography variant='caption'>Tuesday 11:29 AM</Typography>
-              </div>
-              <Typography className='mbe-2'>Your order has been placed successfully</Typography>
-            </TimelineContent>
-          </TimelineItem>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
-                <Typography color='text.primary' className='font-medium'>
-                  Pick-up
-                </Typography>
-                <Typography variant='caption'>Wednesday 11:29 AM</Typography>
-              </div>
-              <Typography className='mbe-2'>Pick-up scheduled with courier</Typography>
-            </TimelineContent>
-          </TimelineItem>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
-                <Typography color='text.primary' className='font-medium'>
-                  Dispatched
-                </Typography>
-                <Typography variant='caption'>Thursday 8:15 AM</Typography>
-              </div>
-              <Typography className='mbe-2'>Item has been picked up by courier.</Typography>
-            </TimelineContent>
-          </TimelineItem>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
-                <Typography color='text.primary' className='font-medium'>
-                  Package arrived
-                </Typography>
-                <Typography variant='caption'>Saturday 15:20 AM</Typography>
-              </div>
-              <Typography className='mbe-2'>Package arrived at an Amazon facility, NY</Typography>
-            </TimelineContent>
-          </TimelineItem>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-              <TimelineConnector />
-            </TimelineSeparator>
-            <TimelineContent>
-              <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
-                <Typography color='text.primary' className='font-medium'>
-                  Dispatched for delivery
-                </Typography>
-                <Typography variant='caption'>Today 14:12 PM</Typography>
-              </div>
-              <Typography className='mbe-2'>Package has left an Amazon facility , NY</Typography>
-            </TimelineContent>
-          </TimelineItem>
-          <TimelineItem>
-            <TimelineSeparator>
-              <TimelineDot color='primary' />
-            </TimelineSeparator>
-            <TimelineContent>
-              <Typography color='text.primary' className='font-medium'>
-                Delivery
-              </Typography>
-              <Typography className='mbe-2'>Package will be delivered by tomorrow</Typography>
-            </TimelineContent>
-          </TimelineItem>
-        </Timeline>
-      </CardContent>
+      <CardHeader
+        title='Cotizaciones'
+        action={
+          <Typography component={Link} color='primary.main' className='font-medium'>
+            Edit
+          </Typography>
+        }
+      />
+      <OrderTable />
+      <CardContent className='flex justify-end'></CardContent>
     </Card>
   )
 }
 
-export default ShippingActivity
+export default OrderDetailsCard
