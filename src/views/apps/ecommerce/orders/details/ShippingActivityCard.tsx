@@ -245,21 +245,6 @@ const OrderTable = () => {
   )
 }
 
-const OrderDetailsCard = () => {
-  return (
-    <Card>
-      <CardHeader
-        title='Cotizaciones'
-        action={
-          <Typography component={Link} color='primary.main' className='font-medium'>
-            Edit
-          </Typography>
-        }
-      />
-      <OrderTable />
-      <CardContent className='flex justify-end'></CardContent>
-    </Card>
-  )
-}
+const OrderDetailsCard = () => {}
 
 export default OrderDetailsCard

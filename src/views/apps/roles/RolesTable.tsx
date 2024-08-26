@@ -330,7 +330,7 @@ const RolesTable = ({ tableData }: { tableData?: UsersType[] }) => {
           startIcon={<i className='ri-upload-2-line' />}
           className='max-sm:is-full'
         >
-          Export
+          Exportar
         </Button>
         <div className='flex gap-4 flex-col !items-start max-sm:is-full sm:flex-row sm:items-center'>
           <DebouncedInput
@@ -340,7 +340,7 @@ const RolesTable = ({ tableData }: { tableData?: UsersType[] }) => {
             placeholder='Search User'
           />
           <FormControl size='small' className='max-sm:is-full'>
-            <InputLabel id='roles-app-role-select-label'>Select Role</InputLabel>
+            <InputLabel id='roles-app-role-select-label'>Seleccionar rol</InputLabel>
             <Select
               value={role}
               onChange={e => setRole(e.target.value)}

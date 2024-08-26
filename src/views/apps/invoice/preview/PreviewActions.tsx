@@ -30,6 +30,37 @@ const PreviewActions = ({ id, onButtonClick }: { id: string; onButtonClick: () =
 
   return (
     <>
+      <Card>
+        <CardContent className='flex flex-col gap-4'>
+          <Button
+            fullWidth
+            variant='contained'
+            className='capitalize'
+            startIcon={<i className='ri-send-plane-line' />}
+            onClick={() => setSendDrawerOpen(true)}
+          >
+            Enviar correo
+          </Button>
+          <Button fullWidth color='secondary' variant='outlined' className='capitalize'>
+            Descargar
+          </Button>
+          <div className='flex items-center gap-4'>
+            <Button fullWidth color='secondary' variant='outlined' className='capitalize' onClick={onButtonClick}>
+              Imprimir
+            </Button>
+            <Button
+              fullWidth
+              component={Link}
+              color='secondary'
+              variant='outlined'
+              className='capitalize'
+              href={getLocalizedUrl(`/apps/invoice/edit/${id}`, locale as Locale)}
+            >
+              Editar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       <AddPaymentDrawer open={paymentDrawerOpen} handleClose={() => setPaymentDrawerOpen(false)} />
       <SendInvoiceDrawer open={sendDrawerOpen} handleClose={() => setSendDrawerOpen(false)} />
     </>

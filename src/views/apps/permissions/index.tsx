@@ -127,7 +127,7 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
   // Vars
   const buttonProps: ButtonProps = {
     variant: 'contained',
-    children: 'Add Permission',
+    children: 'Añadir permisos',
     onClick: () => handleAddPermission(),
     className: 'max-sm:is-full'
   }
@@ -136,11 +136,11 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
   const columns = useMemo<ColumnDef<PermissionsTypeWithAction, any>[]>(
     () => [
       columnHelper.accessor('name', {
-        header: 'Name',
+        header: 'Nombre',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.name}</Typography>
       }),
       columnHelper.accessor('assignedTo', {
-        header: 'Assigned To',
+        header: 'Asignado a ',
         cell: ({ row }) =>
           typeof row.original.assignedTo === 'string' ? (
             <Chip
@@ -164,11 +164,11 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
           )
       }),
       columnHelper.accessor('createdDate', {
-        header: 'Created Date',
+        header: 'Fecha de creación',
         cell: ({ row }) => <Typography>{row.original.createdDate}</Typography>
       }),
       columnHelper.accessor('action', {
-        header: 'Actions',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <IconButton onClick={() => handleEditPermission(row.original.name)}>
@@ -231,7 +231,7 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
           <DebouncedInput
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Permissions'
+            placeholder='Buscar Permisos...'
             className='max-sm:is-full'
           />
           <OpenDialogOnElementClick

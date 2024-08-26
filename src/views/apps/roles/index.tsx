@@ -14,21 +14,18 @@ const Roles = ({ userData }: { userData?: UsersType[] }) => {
     <Grid container spacing={6}>
       <Grid item xs={12}>
         <Typography variant='h4' className='mbe-1'>
-          Roles List
+          Lista de roles
         </Typography>
-        <Typography>
-          A role provided access to predefined menus and features so that depending on assigned role an administrator
-          can have access to what he need
-        </Typography>
+        <Typography></Typography>
       </Grid>
       <Grid item xs={12}>
         <RoleCards />
       </Grid>
       <Grid item xs={12} className='!pbs-12'>
         <Typography variant='h4' className='mbe-1'>
-          Total users with their roles
+          Total usuarios y sus roles
         </Typography>
-        <Typography>Find all of your company&#39;s administrator accounts and their associate roles.</Typography>
+        <Typography></Typography>
       </Grid>
       <Grid item xs={12}>
         <RolesTable tableData={userData} />

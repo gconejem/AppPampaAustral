@@ -49,10 +49,11 @@ const ShippingAddress = () => {
           />
         </div>
         <div className='flex flex-col'>
-          <Typography></Typography>
-          <Typography></Typography>
-          <Typography></Typography>
-          <Typography></Typography>
+          <Typography>Día: 2024-08-26</Typography>
+          <Typography>Hora inicio: 09:00</Typography>
+          <Typography>Hora final: 16:00</Typography>
+          <Typography>Para:</Typography>
+          <Typography>Jordan Stevenson</Typography>
         </div>
       </CardContent>
     </Card>

@@ -102,6 +102,12 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           <MenuItem href={`/${locale}/apps/user/`} icon={<i className='ri-bill-line' />}>
             Lista de Precios
           </MenuItem>
+          <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>
+            Roles
+          </MenuItem>
+          <MenuItem href={`/${locale}/apps/permissions`} icon={<i className='ri-lock-2-line' />}>
+            Permisos
+          </MenuItem>
         </MenuSection>
       </Menu>
     </ScrollWrapper>

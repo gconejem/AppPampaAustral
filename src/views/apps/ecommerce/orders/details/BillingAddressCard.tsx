@@ -49,7 +49,15 @@ const BillingAddress = () => {
               dialogProps={{ type: 'Add address for billing address', data }}
             />
           </div>
-          <div className='flex flex-col'></div>
+          <div className='flex flex-col'>
+            <Typography>Folio #4987 </Typography>
+            <Typography>Desde: 2024-07-17</Typography>
+            <Typography>Hasta: 2024-07-31</Typography>
+            <Typography>Para:</Typography>
+            <Typography>Jordan Stevenson</Typography>
+            <Typography>(616) 865-4180</Typography>
+            <Typography>don85@johnson.com</Typography>
+          </div>
         </div>
         <div className='flex flex-col items-start gap-1'>
           <Typography variant='h5'></Typography>

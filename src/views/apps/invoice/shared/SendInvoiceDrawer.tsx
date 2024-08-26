@@ -27,14 +27,10 @@ type FormDataType = {
 const initialData: FormDataType = {
   from: 'shelbyComapny@email.com',
   to: 'qConsolidated@email.com',
-  subject: 'Invoice of purchased Admin Templates',
-  message: `Dear Queen Consolidated,
+  subject: 'Asunto de ejemplo',
+  message: `
 
-Thank you for your business, always a pleasure to work with you!
-
-We have generated a new invoice in the amount of $95.59
-
-We would appreciate payment of this invoice by 05/11/2019`
+Texto de ejemplo`
 }
 
 const SendInvoiceDrawer = ({ open, handleClose }: Props) => {
@@ -62,7 +58,7 @@ const SendInvoiceDrawer = ({ open, handleClose }: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 400 } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5'>Send Invoice</Typography>
+        <Typography variant='h5'>Enviar Correo</Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
@@ -72,28 +68,28 @@ const SendInvoiceDrawer = ({ open, handleClose }: Props) => {
         <form onSubmit={handleSubmit} className='flex flex-col items-start gap-5'>
           <TextField
             fullWidth
-            label='From'
+            label='De'
             variant='outlined'
             value={formData.from}
             onChange={e => setFormData({ ...formData, from: e.target.value })}
           />
           <TextField
             fullWidth
-            label='To'
+            label='Para'
             variant='outlined'
             value={formData.to}
             onChange={e => setFormData({ ...formData, to: e.target.value })}
           />
           <TextField
             fullWidth
-            label='Subject'
+            label='Asunto'
             variant='outlined'
             value={formData.subject}
             onChange={e => setFormData({ ...formData, subject: e.target.value })}
           />
           <TextField
             fullWidth
-            label='Message'
+            label='Mensaje'
             variant='outlined'
             multiline
             rows={10}
@@ -110,10 +106,10 @@ const SendInvoiceDrawer = ({ open, handleClose }: Props) => {
           />
           <div className='flex items-center gap-4'>
             <Button variant='contained' color='primary' type='submit'>
-              Send
+              Enviar
             </Button>
             <Button variant='outlined' color='secondary' type='reset' onClick={handleReset}>
-              Cancel
+              Cancelar
             </Button>
           </div>
         </form>
