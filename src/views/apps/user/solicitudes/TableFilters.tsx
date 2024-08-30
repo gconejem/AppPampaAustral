@@ -1,140 +1,255 @@
+'use client'
+
 // React Imports
-import { useState, useEffect } from 'react'
+import { Fragment, useState } from 'react'
+import type { SyntheticEvent } from 'react'
+
+import Link from 'next/link'
 
 // MUI Imports
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
-import FormControl from '@mui/material/FormControl'
+import Divider from '@mui/material/Divider'
+import { styled } from '@mui/material/styles'
+import Tab from '@mui/material/Tab'
+import TabList from '@mui/lab/TabList'
+import TabPanel from '@mui/lab/TabPanel'
+import TabContext from '@mui/lab/TabContext'
+import Typography from '@mui/material/Typography'
+import TimelineDot from '@mui/lab/TimelineDot'
+import TimelineItem from '@mui/lab/TimelineItem'
+import TimelineContent from '@mui/lab/TimelineContent'
+import TimelineSeparator from '@mui/lab/TimelineSeparator'
+import TimelineConnector from '@mui/lab/TimelineConnector'
+import MuiTimeline from '@mui/lab/Timeline'
 import Grid from '@mui/material/Grid'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
-import Select from '@mui/material/Select'
+import Button from '@mui/material/Button'
+import type { TimelineProps } from '@mui/lab/Timeline'
 
-// Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
+// Components Imports
+import OptionMenu from '@core/components/option-menu'
 
-const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => void; tableData?: UsersType[] }) => {
+// Styled Timeline component
+const Timeline = styled(MuiTimeline)<TimelineProps>({
+  paddingLeft: 0,
+  paddingRight: 0,
+  '& .MuiTimelineItem-root': {
+    width: '100%',
+    '&:before': {
+      display: 'none'
+    }
+  },
+  '& .MuiTimelineDot-root': {
+    border: 0,
+    padding: 0
+  }
+})
+
+// Vars
+const data = {
+  new: [
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    },
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    }
+  ],
+  new2: [
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    },
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    }
+  ],
+  new3: [
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    },
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: 'texto por definir'
+      }
+    }
+  ],
+  preparing: [
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: '61 Unions, California (CA), 922523'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: '865 Delta, California (CA), 932830'
+      }
+    },
+    {
+      sender: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: '37 Marjory, California (CA), 951958'
+      },
+      receiver: {
+        name: '0123456789 (N° Obra) - Nombre cliente',
+        address: '926 Reynolds, California (CA), 910279'
+      }
+    }
+  ],
+  shipping: [
+    {
+      sender: {
+        name: 'Alex Walton',
+        address: '78 Judson, California (CA), 956084'
+      },
+      receiver: {
+        name: 'Eula Griffin',
+        address: '56 Bernard, California (CA), 965133'
+      }
+    },
+    {
+      sender: {
+        name: 'Lula Barton',
+        address: '95 Gaylord, California (CA), 991955'
+      },
+      receiver: {
+        name: 'Craig Jacobs',
+        address: '73 Sandy, California (CA), 954566'
+      }
+    }
+  ]
+}
+
+const LogisticsOrdersByCountries = () => {
   // States
-  const [role, setRole] = useState<UsersType['role']>('')
-  const [plan, setPlan] = useState<UsersType['currentPlan']>('')
-  const [status, setStatus] = useState<UsersType['status']>('')
+  const [value, setValue] = useState<string>('new')
 
-  useEffect(() => {
-    const filteredData = tableData?.filter(user => {
-      if (role && user.role !== role) return false
-      if (plan && user.currentPlan !== plan) return false
-      if (status && user.status !== status) return false
-
-      return true
-    })
-
-    setData(filteredData || [])
-  }, [role, plan, status, tableData, setData])
+  const handleChange = (event: SyntheticEvent, newValue: string) => {
+    setValue(newValue)
+  }
 
   return (
-    <CardContent>
-      <Grid container spacing={5} style={{ marginBottom: '16px' }}>
-        <Grid item xs={12} sm={4} style={{ marginTop: '' }}>
-          <FormControl fullWidth>
-            <InputLabel id='role-select'>RUT</InputLabel>
-            <Select
-              fullWidth
-              id='select-role'
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              label='Select Role'
-              labelId='role-select'
-              inputProps={{ placeholder: 'Select Role' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='plan-select'>Número de Obra</InputLabel>
-            <Select
-              fullWidth
-              id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
-              label='Select Plan'
-              labelId='plan-select'
-              inputProps={{ placeholder: 'Select Plan' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Fecha de ingreso</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+    <>
+      <Grid container spacing={2} justifyContent='flex-end' alignItems='center' sx={{ mb: 2 }}>
+        <Grid item></Grid>
       </Grid>
-
-      <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginTop: '' }}>
-          <FormControl fullWidth>
-            <InputLabel id=''>Elegir código</InputLabel>
-            <Select
-              fullWidth
-              id='select-role'
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              label='Select Role'
-              labelId='role-select'
-              inputProps={{ placeholder: 'Select Role' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='plan-select'>Elegir ubicación</InputLabel>
-            <Select
-              fullWidth
-              id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
-              label='Select Plan'
-              labelId='plan-select'
-              inputProps={{ placeholder: 'Select Plan' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Elegir estado</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-    </CardContent>
+      <Card>
+        <CardHeader
+          title='Solicitudes por estado'
+          subheader='12 solicitudes en proceso'
+          action={<OptionMenu iconClassName='text-textPrimary' options={['Show all orders', 'Share', 'Refresh']} />}
+          className='pbe-4'
+        />
+        <TabContext value={value}>
+          <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
+            <Tab value='new' label='Nuevas solicitudes' />
+            <Tab value='new3' label='En proceso ' />
+            <Tab value='preparing' label='Concluidas ' />
+            <Tab value='shipping' label='Sin movimientos ' />
+          </TabList>
+          <TabPanel value={value} className='pbs-0'>
+            <CardContent>
+              {data[value as keyof typeof data].map((item, index) => {
+                return (
+                  <Fragment key={index}>
+                    <Timeline>
+                      <TimelineItem>
+                        <TimelineSeparator>
+                          <TimelineDot variant='outlined' className='mlb-0'>
+                            <i className='ri-checkbox-circle-line text-xl text-success' />
+                          </TimelineDot>
+                          <TimelineConnector />
+                        </TimelineSeparator>
+                        <TimelineContent className='flex flex-col gap-0.5 pbs-0 pis-5 pbe-5'>
+                          <Link href='/apps/ecommerce/orders/details/5434'>
+                            <Typography
+                              variant='caption'
+                              className='uppercase'
+                              color='success.main'
+                              sx={{ cursor: 'pointer' }}
+                            >
+                              N° ID solicitud - 28/08/2024 (Fecha de solicitud)
+                            </Typography>
+                          </Link>
+                          <Typography color='text.primary' className='font-medium'>
+                            {item.sender.name}
+                          </Typography>
+                          <Typography variant='body2' className='line-clamp-1'>
+                            {item.sender.address}
+                          </Typography>
+                        </TimelineContent>
+                      </TimelineItem>
+                      <TimelineItem>
+                        <TimelineSeparator>
+                          <TimelineDot variant='outlined' className='mlb-0'>
+                            <i className='ri-map-pin-line text-xl text-primary' />
+                          </TimelineDot>
+                        </TimelineSeparator>
+                        <TimelineContent className='flex flex-col pbe-0 gap-0.5 pbs-0 pis-5'>
+                          <Typography variant='caption' className='uppercase' color='primary.main'>
+                            N° ID solicitud - 28/08/2024 (Fecha de solicitud)
+                          </Typography>
+                          <Typography color='text.primary' className='font-medium'>
+                            {item.receiver.name}
+                          </Typography>
+                          <Typography variant='body2' className='line-clamp-1'>
+                            {item.receiver.address}
+                          </Typography>
+                        </TimelineContent>
+                      </TimelineItem>
+                    </Timeline>
+                    {index !== data[value as keyof typeof data].length - 1 && (
+                      <Divider className='mlb-4 border-dashed' />
+                    )}
+                  </Fragment>
+                )
+              })}
+            </CardContent>
+          </TabPanel>
+        </TabContext>
+      </Card>
+    </>
   )
 }
 
-export default TableFilters
+export default LogisticsOrdersByCountries

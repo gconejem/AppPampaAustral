@@ -15,111 +15,111 @@ export const events: EventInput[] = [
   {
     id: '1',
     url: '',
-    title: 'Design Review',
+    title: 'Obra N1',
     start: date,
     end: nextDay,
     allDay: false,
     extendedProps: {
-      calendar: 'Business'
+      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
     }
   },
   {
     id: '2',
     url: '',
-    title: 'Meeting With Client',
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -11),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -10),
     allDay: true,
     extendedProps: {
-      calendar: 'Business'
+      calendar: 'Cliente' // Cambiado de 'Business' a 'Cliente'
     }
   },
   {
     id: '3',
     url: '',
-    title: 'Family Trip',
+    title: 'Obra N2',
     allDay: true,
     start: new Date(date.getFullYear(), date.getMonth() + 1, -9),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -7),
     extendedProps: {
-      calendar: 'Holiday'
+      calendar: 'Obra' // Cambiado de 'Holiday' a 'Obra'
     }
   },
   {
     id: '4',
     url: '',
-    title: "Doctor's Appointment",
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -11),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -10),
     allDay: true,
     extendedProps: {
-      calendar: 'Personal'
+      calendar: 'Cliente' // Cambiado de 'Personal' a 'Cliente'
     }
   },
   {
     id: '5',
     url: '',
-    title: 'Dart Game?',
+    title: 'Nombre del Laboratorista',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'ETC'
+      calendar: 'Laboratorista' // Cambiado de 'ETC' a 'Laboratorista'
     }
   },
   {
     id: '6',
     url: '',
-    title: 'Meditation',
+    title: 'Nombre del Laboratorista',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Personal'
+      calendar: 'Laboratorista' // Cambiado de 'Personal' a 'Laboratorista'
     }
   },
   {
     id: '7',
     url: '',
-    title: 'Dinner',
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Family'
+      calendar: 'Cliente' // Cambiado de 'Family' a 'Cliente'
     }
   },
   {
     id: '8',
     url: '',
-    title: 'Product Review',
+    title: 'Obra N3',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Business'
+      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
     }
   },
   {
     id: '9',
     url: '',
-    title: 'Monthly Meeting',
+    title: 'Obra N4',
     start: nextMonth,
     end: nextMonth,
     allDay: true,
     extendedProps: {
-      calendar: 'Business'
+      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
     }
   },
   {
     id: '10',
     url: '',
-    title: 'Monthly Checkup',
+    title: 'Nombre del Laboratorista',
     start: prevMonth,
     end: prevMonth,
     allDay: true,
     extendedProps: {
-      calendar: 'Personal'
+      calendar: 'Laboratorista' // Cambiado de 'Personal' a 'Laboratorista'
     }
   }
 ]

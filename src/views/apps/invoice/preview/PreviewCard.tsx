@@ -127,9 +127,8 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
                   <tr className='border-be'>
                     <th className='!bg-transparent'>Item</th>
                     <th className='!bg-transparent'>Descripción</th>
-                    <th className='!bg-transparent'>Horas</th>
-                    <th className='!bg-transparent'>Datos</th>
-                    <th className='!bg-transparent'>Total</th>
+                    <th className='!bg-transparent'>Cantidad</th>
+                    <th className='!bg-transparent'>Precio</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,9 +140,7 @@ const PreviewCard = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: strin
                       <td>
                         <Typography color='text.primary'>{item.Description}</Typography>
                       </td>
-                      <td>
-                        <Typography color='text.primary'>{item.Hours}</Typography>
-                      </td>
+
                       <td>
                         <Typography color='text.primary'>{item.Qty}</Typography>
                       </td>

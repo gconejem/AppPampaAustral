@@ -153,124 +153,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const { lang: locale } = useParams()
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('fullName', {
-        header: 'Rut',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('email', {
-        header: 'Nombre comercial',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
-      }),
-      columnHelper.accessor('role', {
-        header: 'Ciudad',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Segmento',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Contacto',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('status', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
-        )
-      }),
-      columnHelper.accessor('action', {
-        header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-edit-box-line text-textSecondary' />
-            </IconButton>
-            <IconButton>
-              <Link href={`/${locale}/apps/ecommerce/orders/details/5434`} className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
-            </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Editar',
-                  icon: 'ri-edit-box-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            />
-          </div>
-        ),
-        enableSorting: false
-      })
-    ],
+    () => [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
@@ -323,24 +206,10 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filtros' />
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          <Button
-            color='secondary'
-            variant='outlined'
-            startIcon={<i className='ri-upload-2-line text-xl' />}
-            className='max-sm:is-full'
-          >
-            Exportar
-          </Button>
-
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              Crear solicitud
-            </Button>
-          </div>
+          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'> </div>
         </div>
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
@@ -397,28 +266,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             )}
           </table>
         </div>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component='div'
-          className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          SelectProps={{
-            inputProps: { 'aria-label': 'rows per page' }
-          }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-        />
       </Card>
-      <AddUserDrawer
-        open={addUserOpen}
-        handleClose={() => setAddUserOpen(!addUserOpen)}
-        userData={data}
-        setData={setData}
-      />
     </>
   )
 }

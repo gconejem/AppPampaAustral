@@ -2,9 +2,15 @@
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Typography from '@mui/material/Typography'
-import type { ButtonProps } from '@mui/material/Button'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Box from '@mui/material/Box'
 
 // Type Imports
+import type { ButtonProps } from '@mui/material/Button'
+
 import type { ThemeColor } from '@core/types'
 import type { OrderType } from '@/types/apps/ecommerceTypes'
 
@@ -44,21 +50,44 @@ const OrderDetailHeader = ({ orderData, order }: { orderData?: OrderType; order:
   })
 
   return (
-    <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
+    <Box
+      className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'
+      sx={{ p: 2, backgroundColor: 'background.paper', borderRadius: 1 }}
+    >
       <div className='flex flex-col items-start gap-1'>
         <div className='flex items-center gap-2'>
-          <Typography variant='h5'>{`Solicitud   #${order}`}</Typography>
-          <Chip variant='tonal' label='Clientes' color={statusChipColor[orderData?.status || ''].color} size='small' />
+          <Typography variant='h6' sx={{ fontWeight: 'bold' }}>{`Solicitud #${order}`}</Typography>
+          <Chip variant='outlined' label='Estado' size='small' />
         </div>
-        <Typography>{`${new Date(orderData?.date ?? '').toDateString()}, ${orderData?.time} (GMT-4)`}</Typography>
+        <Typography variant='body2'>{`${new Date(orderData?.date ?? '').toDateString()}, ${orderData?.time} (GMT-4)`}</Typography>
       </div>
-      <OpenDialogOnElementClick
-        element={Button}
-        elementProps={buttonProps('Borrar solicitud', 'error', 'outlined')}
-        dialog={ConfirmationDialog}
-        dialogProps={{ type: 'delete-order' }}
-      />
-    </div>
+      <div className='flex items-center gap-2'>
+        <FormControl variant='outlined' size='small' sx={{ minWidth: 150 }}>
+          <InputLabel>Cliente</InputLabel>
+          <Select label='Cliente'>
+            <MenuItem value='' disabled>
+              Selecciona un cliente
+            </MenuItem>
+            {/* Aquí puedes añadir las opciones para los clientes */}
+          </Select>
+        </FormControl>
+        <FormControl variant='outlined' size='small' sx={{ minWidth: 150 }}>
+          <InputLabel>Obra</InputLabel>
+          <Select label='Obra'>
+            <MenuItem value='' disabled>
+              Selecciona una obra
+            </MenuItem>
+            {/* Aquí puedes añadir las opciones para las obras */}
+          </Select>
+        </FormControl>
+        <OpenDialogOnElementClick
+          element={Button}
+          elementProps={buttonProps('Eliminar Solicitud', 'error', 'outlined')}
+          dialog={ConfirmationDialog}
+          dialogProps={{ type: 'delete-order' }}
+        />
+      </div>
+    </Box>
   )
 }
 

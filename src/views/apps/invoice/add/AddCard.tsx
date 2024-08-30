@@ -228,7 +228,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       <TextField rows={2} fullWidth multiline size='small' defaultValue='Texto de ejemplo' />
                     </Grid>
                     <Grid item lg={2} md={3} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8'>Costo</Typography>
+                      <Typography className='font-medium md:absolute md:-top-8'>Cantidad</Typography>
                       <TextField
                         {...(isBelowMdScreen && { fullWidth: true })}
                         size='small'
@@ -259,17 +259,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         </div>
                       </div>
                     </Grid>
-                    <Grid item md={2} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8'>Horas</Typography>
-                      <TextField
-                        {...(isBelowMdScreen && { fullWidth: true })}
-                        size='small'
-                        type='number'
-                        placeholder='1'
-                        defaultValue='1'
-                        InputProps={{ inputProps: { min: 0 } }}
-                      />
-                    </Grid>
+
                     <Grid item md={2} xs={12}>
                       <Typography className='font-medium md:absolute md:-top-8'>Precio</Typography>
                       <Typography>$24.00</Typography>

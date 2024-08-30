@@ -1,265 +1,225 @@
 'use client'
 
 // React Imports
-import { useState, useMemo } from 'react'
+import { Fragment, useState } from 'react'
+import type { SyntheticEvent } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
-import Checkbox from '@mui/material/Checkbox'
+import Divider from '@mui/material/Divider'
+import { styled } from '@mui/material/styles'
+import Tab from '@mui/material/Tab'
+import TabList from '@mui/lab/TabList'
+import TabPanel from '@mui/lab/TabPanel'
+import TabContext from '@mui/lab/TabContext'
 import Typography from '@mui/material/Typography'
+import TimelineDot from '@mui/lab/TimelineDot'
+import TimelineItem from '@mui/lab/TimelineItem'
+import TimelineContent from '@mui/lab/TimelineContent'
+import TimelineSeparator from '@mui/lab/TimelineSeparator'
+import TimelineConnector from '@mui/lab/TimelineConnector'
+import MuiTimeline from '@mui/lab/Timeline'
+import type { TimelineProps } from '@mui/lab/Timeline'
 
-// Third-party Imports
-import classnames from 'classnames'
-import { rankItem } from '@tanstack/match-sorter-utils'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getFilteredRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
-  getPaginationRowModel,
-  getSortedRowModel
-} from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+// Components Imports
+import OptionMenu from '@core/components/option-menu'
 
-// Component Imports
-import Link from '@components/Link'
-
-// Style Imports
-import tableStyles from '@core/styles/table.module.css'
-
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
-  const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
-  return itemRank.passed
+type TimelineItemData = {
+  name: string
+  address: string
 }
 
-type dataType = {
-  productName: string
-  productImage: string
-  brand: string
-  price: number
-  quantity: number
-  total: number
-}
+type TimelineData = Record<'sender' | 'receiver', TimelineItemData>
 
-const orderData: dataType[] = [
-  {
-    productName: 'OnePlus 7 Pro',
-    productImage: '/images/apps/ecommerce/product-21.png',
-    brand: 'OnePluse',
-    price: 799,
-    quantity: 1,
-    total: 799
+type Data = Record<'new' | 'new2' | 'preparing' | 'shipping', TimelineData[]>
+
+// Styled Timeline component
+const Timeline = styled(MuiTimeline)<TimelineProps>({
+  paddingLeft: 0,
+  paddingRight: 0,
+  '& .MuiTimelineItem-root': {
+    width: '100%',
+    '&:before': {
+      display: 'none'
+    }
   },
-  {
-    productName: 'Magic Mouse',
-    productImage: '/images/apps/ecommerce/product-22.png',
-    brand: 'Google',
-    price: 89,
-    quantity: 1,
-    total: 89
-  },
-  {
-    productName: 'Wooden Chair',
-    productImage: '/images/apps/ecommerce/product-23.png',
-    brand: 'Insofar',
-    price: 289,
-    quantity: 2,
-    total: 578
-  },
-  {
-    productName: 'Air Jorden',
-    productImage: '/images/apps/ecommerce/product-24.png',
-    brand: 'Nike',
-    price: 299,
-    quantity: 2,
-    total: 598
+  '& .MuiTimelineDot-root': {
+    border: 0,
+    padding: 0
   }
-]
+})
 
-// Column Definitions
-const columnHelper = createColumnHelper<dataType>()
-
-const OrderTable = () => {
-  // States
-  const [rowSelection, setRowSelection] = useState({})
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [data, setData] = useState(...[orderData])
-  const [globalFilter, setGlobalFilter] = useState('')
-
-  const columns = useMemo<ColumnDef<dataType, any>[]>(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
+// Vars
+const data: Data = {
+  new: [
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
       },
-      columnHelper.accessor('productName', {
-        header: 'Product',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <img src={row.original.productImage} alt={row.original.productName} height={34} className='rounded' />
-            <div className='flex flex-col items-start'>
-              <Typography color='text.primary' className='font-medium'>
-                {row.original.productName}
-              </Typography>
-              <Typography variant='body2'>{row.original.brand}</Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('price', {
-        header: 'Price',
-        cell: ({ row }) => <Typography>{`$${row.original.price}`}</Typography>
-      }),
-      columnHelper.accessor('quantity', {
-        header: 'Qty',
-        cell: ({ row }) => <Typography>{`${row.original.quantity}`}</Typography>
-      }),
-      columnHelper.accessor('total', {
-        header: 'Total',
-        cell: ({ row }) => <Typography>{`$${row.original.total}`}</Typography>
-      })
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
-
-  const table = useReactTable({
-    data: data as dataType[],
-    columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      globalFilter
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
       }
     },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
-  })
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    }
+  ],
 
-  return (
-    <div className='overflow-x-auto'>
-      <table className={tableStyles.table}>
-        <thead>
-          {table.getHeaderGroups().map(headerGroup => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <th key={header.id}>
-                  {header.isPlaceholder ? null : (
-                    <>
-                      <div
-                        className={classnames({
-                          'flex items-center': header.column.getIsSorted(),
-                          'cursor-pointer select-none': header.column.getCanSort()
-                        })}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {{
-                          asc: <i className='ri-arrow-up-s-line text-xl' />,
-                          desc: <i className='ri-arrow-down-s-line text-xl' />
-                        }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                      </div>
-                    </>
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        {table.getFilteredRowModel().rows.length === 0 ? (
-          <tbody>
-            <tr>
-              <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                No data available
-              </td>
-            </tr>
-          </tbody>
-        ) : (
-          <tbody className='border-be'>
-            {table
-              .getRowModel()
-              .rows.slice(0, table.getState().pagination.pageSize)
-              .map(row => {
-                return (
-                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className='first:is-14'>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                )
-              })}
-          </tbody>
-        )}
-      </table>
-    </div>
-  )
+  new2: [
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    },
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    }
+  ],
+  preparing: [
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    },
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    }
+  ],
+  shipping: [
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    },
+    {
+      sender: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      },
+      receiver: {
+        name: 'Ejemplo',
+        address: 'Ejemplo'
+      }
+    }
+  ]
 }
 
-const OrderDetailsCard = () => {
+const LogisticsOrdersByCountries = () => {
+  // States
+  const [value, setValue] = useState<string>('new')
+
+  const handleChange = (event: SyntheticEvent, newValue: string) => {
+    setValue(newValue)
+  }
+
   return (
     <Card>
       <CardHeader
-        title='Items - Laboratoristas'
-        action={
-          <Typography component={Link} color='primary.main' className='font-medium'>
-            Edit
-          </Typography>
-        }
+        title='Historial'
+        subheader=''
+        action={<OptionMenu iconClassName='text-textPrimary' options={['Agendar']} />}
+        className='pbe-4'
       />
-      <OrderTable />
-      <CardContent className='flex justify-end'></CardContent>
+      <TabContext value={value}>
+        <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
+          <Tab value='new2' label='Visitas' />
+          <Tab value='new' label='OTS' />
+          <Tab value='preparing' label='Muestras' />
+          <Tab value='shipping' label='Ensayos' />
+        </TabList>
+        <TabPanel value={value} className='pbs-0'>
+          <CardContent>
+            {data[value as keyof Data].map((item: TimelineData, index: number) => {
+              return (
+                <Fragment key={index}>
+                  <Timeline>
+                    <TimelineItem>
+                      <TimelineSeparator>
+                        <TimelineDot variant='outlined' className='mlb-0'>
+                          <i className='ri-checkbox-circle-line text-xl text-success' />
+                        </TimelineDot>
+                        <TimelineConnector />
+                      </TimelineSeparator>
+                      <TimelineContent className='flex flex-col gap-0.5 pbs-0 pis-5 pbe-5'>
+                        <Typography variant='caption' className='uppercase' color='success.main'>
+                          Ejemplo
+                        </Typography>
+                        <Typography color='text.primary' className='font-medium'>
+                          {item.sender.name}
+                        </Typography>
+                        <Typography variant='body2' className='line-clamp-1'>
+                          {item.sender.address}
+                        </Typography>
+                      </TimelineContent>
+                    </TimelineItem>
+                    <TimelineItem>
+                      <TimelineSeparator>
+                        <TimelineDot variant='outlined' className='mlb-0'>
+                          <i className='ri-map-pin-line text-xl text-primary' />
+                        </TimelineDot>
+                      </TimelineSeparator>
+                      <TimelineContent className='flex flex-col pbe-0 gap-0.5 pbs-0 pis-5'>
+                        <Typography variant='caption' className='uppercase' color='primary.main'>
+                          Ejemplo
+                        </Typography>
+                        <Typography color='text.primary' className='font-medium'>
+                          {item.receiver.name}
+                        </Typography>
+                        <Typography variant='body2' className='line-clamp-1'>
+                          {item.receiver.address}
+                        </Typography>
+                      </TimelineContent>
+                    </TimelineItem>
+                  </Timeline>
+                  {index !== data[value as keyof Data].length - 1 && <Divider className='mlb-4 border-dashed' />}
+                </Fragment>
+              )
+            })}
+          </CardContent>
+        </TabPanel>
+      </TabContext>
     </Card>
   )
 }
 
-export default OrderDetailsCard
+export default LogisticsOrdersByCountries

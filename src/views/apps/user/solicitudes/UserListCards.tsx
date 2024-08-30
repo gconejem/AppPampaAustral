@@ -8,7 +8,44 @@ import type { UserDataType } from '@components/card-statistics/HorizontalWithSub
 import HorizontalWithSubtitle from '@components/card-statistics/HorizontalWithSubtitle'
 
 // Vars
-const data: UserDataType[] = []
+const data: UserDataType[] = [
+  {
+    title: '',
+    stats: '',
+    avatarIcon: 'ri-group-line',
+    avatarColor: 'primary',
+    trend: 'positive',
+    trendNumber: '',
+    subtitle: ''
+  },
+  {
+    title: '',
+    stats: '',
+    avatarIcon: 'ri-user-add-line',
+    avatarColor: 'error',
+    trend: 'positive',
+    trendNumber: '',
+    subtitle: ''
+  },
+  {
+    title: '',
+    stats: '',
+    avatarIcon: 'ri-user-follow-line',
+    avatarColor: 'success',
+    trend: 'negative',
+    trendNumber: '',
+    subtitle: ''
+  },
+  {
+    title: '',
+    stats: '',
+    avatarIcon: 'ri-user-search-line',
+    avatarColor: 'warning',
+    trend: 'positive',
+    trendNumber: '',
+    subtitle: ''
+  }
+]
 
 const UserListCards = () => {
   return (

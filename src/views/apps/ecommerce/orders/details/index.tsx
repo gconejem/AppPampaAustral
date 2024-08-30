@@ -11,6 +11,7 @@ import ShippingActivity from './ShippingActivityCard'
 import CustomerDetails from './CustomerDetailsCard'
 import ShippingAddress from './ShippingAddressCard'
 import BillingAddress from './BillingAddressCard'
+import MeetingSchedule from './Visitas' // O el nombre del archivo que hayas utilizado
 
 const OrderDetails = ({ orderData, order }: { orderData?: OrderType; order: string }) => {
   return (
@@ -34,10 +35,13 @@ const OrderDetails = ({ orderData, order }: { orderData?: OrderType; order: stri
             <BillingAddress />
           </Grid>
           <Grid item xs={12}>
-            <ShippingAddress />{' '}
+            <MeetingSchedule /> {/* Aquí es donde agregas tu componente */}{' '}
           </Grid>
           <Grid item xs={12}>
             <CustomerDetails orderData={orderData} />
+          </Grid>
+          <Grid item xs={12}>
+            <ShippingAddress />{' '}
           </Grid>
         </Grid>
       </Grid>

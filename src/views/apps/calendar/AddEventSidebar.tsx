@@ -176,10 +176,10 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
       return (
         <div className='flex gap-4'>
           <Button type='submit' variant='contained'>
-            Add
+            Añadir
           </Button>
           <Button variant='outlined' color='secondary' onClick={resetToEmptyValues}>
-            Reset
+            Cancelar
           </Button>
         </div>
       )
@@ -187,10 +187,10 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
       return (
         <div className='flex gap-4'>
           <Button type='submit' variant='contained'>
-            Update
+            Actualizar
           </Button>
           <Button variant='outlined' color='secondary' onClick={resetToStoredValues}>
-            Reset
+            Cancelar
           </Button>
         </div>
       )
@@ -217,7 +217,7 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
     >
       <Box className='flex justify-between items-center sidebar-header pli-5 plb-4 border-be'>
         <Typography variant='h5'>
-          {calendarStore.selectedEvent && calendarStore.selectedEvent.title.length ? 'Update Event' : 'Add Event'}
+          {calendarStore.selectedEvent && calendarStore.selectedEvent.title.length ? 'Actualizar Cita' : 'Añadir Cita'}
         </Typography>
         {calendarStore.selectedEvent && calendarStore.selectedEvent.title.length ? (
           <Box className='flex items-center' sx={{ gap: calendarStore.selectedEvent !== null ? 1 : 0 }}>
@@ -248,7 +248,7 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
                 rules={{ required: true }}
                 render={({ field: { value, onChange } }) => (
                   <TextField
-                    label='Title'
+                    label='Título'
                     value={value}
                     onChange={onChange}
                     {...(errors.title && { error: true, helperText: 'This field is required' })}
@@ -257,7 +257,7 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
               />
             </FormControl>
             <FormControl fullWidth className='mbe-6'>
-              <InputLabel id='event-calendar'>Calendar</InputLabel>
+              <InputLabel id='event-calendar'>Calendario</InputLabel>
               <Select
                 label='Calendar'
                 value={values.calendar}
@@ -265,10 +265,6 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
                 onChange={e => setValues({ ...values, calendar: e.target.value })}
               >
                 <MenuItem value='Personal'>Personal</MenuItem>
-                <MenuItem value='Business'>Business</MenuItem>
-                <MenuItem value='Family'>Family</MenuItem>
-                <MenuItem value='Holiday'>Holiday</MenuItem>
-                <MenuItem value='ETC'>ETC</MenuItem>
               </Select>
             </FormControl>
             <div className='mbe-6'>
@@ -280,7 +276,7 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
                 startDate={values.startDate}
                 showTimeSelect={!values.allDay}
                 dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm' : 'yyyy-MM-dd'}
-                customInput={<PickersComponent label='Start Date' registername='startDate' />}
+                customInput={<PickersComponent label='Fecha de inicio' registername='startDate' />}
                 onChange={(date: Date | null) => date !== null && setValues({ ...values, startDate: new Date(date) })}
                 onSelect={handleStartDate}
               />
@@ -295,29 +291,21 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
                 startDate={values.startDate}
                 showTimeSelect={!values.allDay}
                 dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm' : 'yyyy-MM-dd'}
-                customInput={<PickersComponent label='End Date' registername='endDate' />}
+                customInput={<PickersComponent label='Fecha de termino' registername='endDate' />}
                 onChange={(date: Date | null) => date !== null && setValues({ ...values, endDate: new Date(date) })}
               />
             </div>
             <FormControl className='mbe-6'>
               <FormControlLabel
-                label='All Day'
+                label='Todo el dia'
                 control={
                   <Switch checked={values.allDay} onChange={e => setValues({ ...values, allDay: e.target.checked })} />
                 }
               />
             </FormControl>
-            <TextField
-              fullWidth
-              type='url'
-              id='event-url'
-              className='mbe-6'
-              label='Event URL'
-              value={values.url}
-              onChange={e => setValues({ ...values, url: e.target.value })}
-            />
+
             <FormControl fullWidth className='mbe-6'>
-              <InputLabel id='event-guests'>Guests</InputLabel>
+              <InputLabel id='event-guests'>Laboratoristas</InputLabel>
               <Select
                 multiple
                 label='Guests'
@@ -338,12 +326,60 @@ const AddEventSidebar = (props: AddEventSidebarType) => {
                 <MenuItem value='barry'>Barry</MenuItem>
               </Select>
             </FormControl>
+            <FormControl className='mbe-6'>
+              <FormControlLabel label='Individual' control={<Switch />} />
+            </FormControl>
+            <FormControl fullWidth className='mbe-6'>
+              <InputLabel id='event-guests'>Cliente</InputLabel>
+              <Select
+                multiple
+                label='Guests'
+                value={values.guests}
+                labelId='event-guests'
+                id='event-guests-select'
+                onChange={(e: SelectChangeEvent<(typeof values)['guests']>) =>
+                  setValues({
+                    ...values,
+                    guests: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value
+                  })
+                }
+              >
+                <MenuItem value='bruce'>Bruce</MenuItem>
+                <MenuItem value='clark'>Clark</MenuItem>
+                <MenuItem value='diana'>Diana</MenuItem>
+                <MenuItem value='john'>John</MenuItem>
+                <MenuItem value='barry'>Barry</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth className='mbe-6'>
+              <InputLabel id='event-guests'>Obra</InputLabel>
+              <Select
+                multiple
+                label='Guests'
+                value={values.guests}
+                labelId='event-guests'
+                id='event-guests-select'
+                onChange={(e: SelectChangeEvent<(typeof values)['guests']>) =>
+                  setValues({
+                    ...values,
+                    guests: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value
+                  })
+                }
+              >
+                <MenuItem value='bruce'>Bruce</MenuItem>
+                <MenuItem value='clark'>Clark</MenuItem>
+                <MenuItem value='diana'>Diana</MenuItem>
+                <MenuItem value='john'>John</MenuItem>
+                <MenuItem value='barry'>Barry</MenuItem>
+              </Select>
+            </FormControl>
+
             <TextField
               rows={4}
               multiline
               fullWidth
               className='mbe-6'
-              label='Description'
+              label='Descripción'
               id='event-description'
               value={values.description}
               onChange={e => setValues({ ...values, description: e.target.value })}

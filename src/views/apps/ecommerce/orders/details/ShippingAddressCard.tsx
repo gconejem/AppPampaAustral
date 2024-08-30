@@ -40,20 +40,18 @@ const ShippingAddress = () => {
     <Card>
       <CardContent className='flex flex-col gap-6'>
         <div className='flex justify-between items-center'>
-          <Typography variant='h5'>Agendar Cita</Typography>
+          <Typography variant='h5'>Prefacturación</Typography>
           <OpenDialogOnElementClick
             element={Typography}
-            elementProps={typographyProps('Agendar', 'primary', 'cursor-pointer font-medium')}
+            elementProps={typographyProps('Pre-Facturar', 'primary', 'cursor-pointer font-medium')}
             dialog={AddAddress}
             dialogProps={{ type: 'Add address for billing address', data }}
           />
         </div>
         <div className='flex flex-col'>
-          <Typography>Día: 2024-08-26</Typography>
-          <Typography>Hora inicio: 09:00</Typography>
-          <Typography>Hora final: 16:00</Typography>
-          <Typography>Para:</Typography>
-          <Typography>Jordan Stevenson</Typography>
+          <Typography>Monto Total: $0</Typography>
+          <Typography>Nombre del Cliente</Typography>
+          <Typography>Dirección</Typography>
         </div>
       </CardContent>
     </Card>

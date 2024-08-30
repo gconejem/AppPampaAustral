@@ -26,7 +26,9 @@ type CardDataType = {
 // Vars
 const cardData: CardDataType[] = [
   { totalUsers: 4, title: 'Administrador', avatars: ['1.png', '2.png', '3.png', '4.png'] },
-  { totalUsers: 7, title: 'Analista', avatars: ['5.png', '6.png', '7.png'] }
+  { totalUsers: 7, title: 'Analista', avatars: ['5.png', '6.png', '7.png'] },
+  { totalUsers: 4, title: 'Jefatura Administrativa', avatars: ['1.png', '2.png', '3.png', '4.png'] },
+  { totalUsers: 7, title: 'Jefatura Técnica', avatars: ['5.png', '6.png', '7.png'] }
 ]
 
 const RoleCards = () => {

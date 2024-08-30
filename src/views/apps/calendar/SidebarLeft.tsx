@@ -1,10 +1,14 @@
+// React Imports
+import { useState } from 'react'
+
 // MUI Imports
 import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import Divider from '@mui/material/Divider'
-import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
-import FormControlLabel from '@mui/material/FormControlLabel'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
 
 // Third-party imports
 import classnames from 'classnames'
@@ -25,113 +29,130 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     mdAbove,
     leftSidebarOpen,
     calendarStore,
-    calendarsColor,
     calendarApi,
     dispatch,
     handleLeftSidebarToggle,
     handleAddEventSidebarToggle
   } = props
 
-  // Vars
-  const colorsArr = calendarsColor ? Object.entries(calendarsColor) : []
+  // Custom Filters State
+  const [clienteFilter, setClienteFilter] = useState<CalendarFiltersType | 'None'>('None')
+  const [obraFilter, setObraFilter] = useState<CalendarFiltersType | 'None'>('None')
+  const [laboratoristaFilter, setLaboratoristaFilter] = useState<CalendarFiltersType | 'None'>('None')
 
-  const renderFilters = colorsArr.length
-    ? colorsArr.map(([key, value]: string[]) => {
-        return (
-          <FormControlLabel
-            className='mbe-1'
-            key={key}
-            label={key}
-            control={
-              <Checkbox
-                color={value as ThemeColor}
-                checked={calendarStore.selectedCalendars.indexOf(key as CalendarFiltersType) > -1}
-                onChange={() => dispatch(filterCalendarLabel(key as CalendarFiltersType))}
-              />
-            }
-          />
-        )
-      })
-    : null
+  const handleFilterChange = (filterType: string, value: CalendarFiltersType | 'None') => {
+    switch (filterType) {
+      case 'Cliente':
+        setClienteFilter(value)
+        break
+      case 'Obra':
+        setObraFilter(value)
+        break
+      case 'Laboratorista':
+        setLaboratoristaFilter(value)
+        break
+      default:
+        break
+    }
+
+    // Dispatch the filter change only if the value is not 'None'
+    if (value !== 'None') {
+      dispatch(filterCalendarLabel(value))
+    }
+  }
 
   const handleSidebarToggleSidebar = () => {
     dispatch(selectedEvent(null))
     handleAddEventSidebarToggle()
   }
 
-  if (renderFilters) {
-    return (
-      <Drawer
-        open={leftSidebarOpen}
-        onClose={handleLeftSidebarToggle}
-        variant={mdAbove ? 'permanent' : 'temporary'}
-        ModalProps={{
-          disablePortal: true,
-          disableAutoFocus: true,
-          disableScrollLock: true,
-          keepMounted: true // Better open performance on mobile.
+  return (
+    <Drawer
+      open={leftSidebarOpen}
+      onClose={handleLeftSidebarToggle}
+      variant={mdAbove ? 'permanent' : 'temporary'}
+      ModalProps={{
+        disablePortal: true,
+        disableAutoFocus: true,
+        disableScrollLock: true,
+        keepMounted: true // Better open performance on mobile.
+      }}
+      className={classnames('block', { static: mdAbove, absolute: !mdAbove })}
+      PaperProps={{
+        className: classnames('items-start is-[280px] shadow-none rounded rounded-se-none rounded-ee-none', {
+          static: mdAbove,
+          absolute: !mdAbove
+        })
+      }}
+      sx={{
+        zIndex: 3,
+        '& .MuiDrawer-paper': {
+          zIndex: mdAbove ? 2 : 'drawer'
+        },
+        '& .MuiBackdrop-root': {
+          borderRadius: 1,
+          position: 'absolute'
+        }
+      }}
+    >
+      <div className='is-full p-5'>
+        <Button
+          fullWidth
+          variant='contained'
+          onClick={handleSidebarToggleSidebar}
+          startIcon={<i className='ri-add-line' />}
+        >
+          Añadir Cita
+        </Button>
+      </div>
+      <Divider className='is-full' />
+      <AppReactDatepicker
+        inline
+        onChange={date => calendarApi.gotoDate(date)}
+        boxProps={{
+          className: 'flex justify-center is-full',
+          sx: { '& .react-datepicker': { boxShadow: 'none !important', border: 'none !important' } }
         }}
-        className={classnames('block', { static: mdAbove, absolute: !mdAbove })}
-        PaperProps={{
-          className: classnames('items-start is-[280px] shadow-none rounded rounded-se-none rounded-ee-none', {
-            static: mdAbove,
-            absolute: !mdAbove
-          })
-        }}
-        sx={{
-          zIndex: 3,
-          '& .MuiDrawer-paper': {
-            zIndex: mdAbove ? 2 : 'drawer'
-          },
-          '& .MuiBackdrop-root': {
-            borderRadius: 1,
-            position: 'absolute'
-          }
-        }}
-      >
-        <div className='is-full p-5'>
-          <Button
-            fullWidth
-            variant='contained'
-            onClick={handleSidebarToggleSidebar}
-            startIcon={<i className='ri-add-line' />}
-          >
-            Add Event
-          </Button>
-        </div>
-        <Divider className='is-full' />
-        <AppReactDatepicker
-          inline
-          onChange={date => calendarApi.gotoDate(date)}
-          boxProps={{
-            className: 'flex justify-center is-full',
-            sx: { '& .react-datepicker': { boxShadow: 'none !important', border: 'none !important' } }
-          }}
-        />
-        <Divider className='is-full' />
+      />
+      <Divider className='is-full' />
 
-        <div className='flex flex-col p-5 is-full'>
-          <Typography variant='h5' className='mbe-4'>
-            Event Filters
-          </Typography>
-          <FormControlLabel
-            className='mbe-1'
-            label='View All'
-            control={
-              <Checkbox
-                color='secondary'
-                checked={calendarStore.selectedCalendars.length === colorsArr.length}
-                onChange={e => dispatch(filterAllCalendarLabels(e.target.checked))}
-              />
-            }
-          />
-          {renderFilters}
-        </div>
-      </Drawer>
-    )
-  } else {
-    return null
-  }
+      <div className='flex flex-col p-5 is-full'>
+        <Typography variant='h5' className='mbe-4'>
+          Filtros
+        </Typography>
+        <FormControl fullWidth variant='outlined' className='mbe-2'>
+          <Select
+            value={clienteFilter}
+            onChange={e => handleFilterChange('Cliente', e.target.value as CalendarFiltersType)}
+            displayEmpty
+          >
+            <MenuItem value='None'>Seleccione Cliente</MenuItem>
+            <MenuItem value='Cliente'>Cliente</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl fullWidth variant='outlined' className='mbe-2'>
+          <Select
+            value={obraFilter}
+            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
+            displayEmpty
+          >
+            <MenuItem value='None'>Seleccione Obra</MenuItem>
+            <MenuItem value='Obra'>Obra</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl fullWidth variant='outlined' className='mbe-2'>
+          <Select
+            value={laboratoristaFilter}
+            onChange={e => handleFilterChange('Laboratorista', e.target.value as CalendarFiltersType)}
+            displayEmpty
+          >
+            <MenuItem value='None'>Seleccione Laboratorista</MenuItem>
+            <MenuItem value='Laboratorista'>Laboratorista</MenuItem>
+          </Select>
+        </FormControl>
+      </div>
+    </Drawer>
+  )
 }
 
 export default SidebarLeft
