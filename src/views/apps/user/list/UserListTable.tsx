@@ -1,13 +1,14 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, forwardRef } from 'react'
 
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -19,7 +20,16 @@ import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
 import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import type { TextFieldProps } from '@mui/material/TextField'
+
+// DatePicker Imports
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -38,6 +48,7 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import { format, addDays } from 'date-fns'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -49,6 +60,8 @@ import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
+import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+import PickersRange from './date'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -149,8 +162,21 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
 
+  const [startDate, setStartDate] = useState(new Date())
+  const [openDialog, setOpenDialog] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
+
   // Hooks
   const { lang: locale } = useParams()
+
+  const handleClickOpenDialog = (user: UsersTypeWithAction) => {
+    setSelectedUser(user)
+    setOpenDialog(true)
+  }
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
     () => [
@@ -252,14 +278,19 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               iconClassName='text-textSecondary'
               options={[
                 {
-                  text: 'Download',
-                  icon: 'ri-download-line',
+                  text: 'Estado',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
                 },
                 {
                   text: 'Editar',
-                  icon: 'ri-edit-box-line',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                },
+                {
+                  text: 'Eliminar',
+                  menuItemProps: {
+                    className: 'flex items-center gap-2 text-textSecondary',
+                    onClick: () => handleClickOpenDialog(row.original)
+                  }
                 }
               ]}
             />
@@ -288,7 +319,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }
     },
     enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -315,8 +345,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     }
   }
 
-  //ARRIBA DEL <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-
   return (
     <>
       <Card>
@@ -333,6 +361,16 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             Exportar
           </Button>
 
+          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+            {/* Aquí se integra el componente PickersRange */}
+            <PickersRange />
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Buscar Cliente'
+              className='max-sm:is-full min-is-[200px]'
+            />
+          </div>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
               Añadir Nuevo Cliente
@@ -416,6 +454,37 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         userData={data}
         setData={setData}
       />
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        aria-labelledby='alert-dialog-title'
+        aria-describedby='alert-dialog-description'
+      >
+        <DialogTitle id='alert-dialog-title'>Eliminar Cliente</DialogTitle>
+        <DialogContent>
+          <DialogContentText id='alert-dialog-description'>
+            ¿Seguro que desea eliminar el Cliente elegido?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color='secondary'>
+            Cerrar
+          </Button>
+          <Button
+            onClick={() => {
+              if (selectedUser) {
+                setData(data?.filter(user => user.id !== selectedUser.id))
+              }
+
+              handleCloseDialog()
+            }}
+            color='primary'
+            autoFocus
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

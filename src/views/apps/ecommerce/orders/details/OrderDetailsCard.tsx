@@ -33,7 +33,7 @@ type TimelineItemData = {
 
 type TimelineData = Record<'sender' | 'receiver', TimelineItemData>
 
-type Data = Record<'new' | 'new2' | 'preparing' | 'shipping', TimelineData[]>
+type Data = Record<'new' | 'preparing' | 'shipping', TimelineData[]>
 
 // Styled Timeline component
 const Timeline = styled(MuiTimeline)<TimelineProps>({
@@ -76,28 +76,6 @@ const data: Data = {
     }
   ],
 
-  new2: [
-    {
-      sender: {
-        name: 'Ejemplo',
-        address: 'Ejemplo'
-      },
-      receiver: {
-        name: 'Ejemplo',
-        address: 'Ejemplo'
-      }
-    },
-    {
-      sender: {
-        name: 'Ejemplo',
-        address: 'Ejemplo'
-      },
-      receiver: {
-        name: 'Ejemplo',
-        address: 'Ejemplo'
-      }
-    }
-  ],
   preparing: [
     {
       sender: {
@@ -162,7 +140,6 @@ const LogisticsOrdersByCountries = () => {
       />
       <TabContext value={value}>
         <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
-          <Tab value='new2' label='Visitas' />
           <Tab value='new' label='OTS' />
           <Tab value='preparing' label='Muestras' />
           <Tab value='shipping' label='Ensayos' />

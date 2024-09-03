@@ -50,40 +50,7 @@ const CustomerDetails = ({ orderData }: { orderData?: OrderType }) => {
     className
   })
 
-  return (
-    <Card>
-      <CardContent className='flex flex-col gap-6'>
-        <Typography variant='h5'>Contactos</Typography>
-        <div className='flex items-center gap-3'>
-          {getAvatar({ avatar: orderData?.avatar ?? '', customer: orderData?.customer ?? '' })}
-          <div className='flex flex-col'>
-            <Typography color='text.primary' className='font-medium'>
-              {orderData?.customer}
-            </Typography>
-            <Typography></Typography>
-          </div>
-        </div>
-        <div className='flex items-center gap-3'>
-          <Typography color='text.primary' className='font-medium'></Typography>
-        </div>
-        <div className='flex flex-col gap-1'>
-          <div className='flex justify-between items-center'>
-            <Typography color='text.primary' className='font-medium'>
-              Información del contacto
-            </Typography>
-            <OpenDialogOnElementClick
-              element={Typography}
-              elementProps={typographyProps('Editar', 'primary', 'cursor-pointer font-medium')}
-              dialog={EditUserInfo}
-              dialogProps={{ data: userData }}
-            />
-          </div>
-          <Typography>Email: {orderData?.email}</Typography>
-          <Typography>Teléfono: +1 (609) 972-22-22</Typography>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  return <Card></Card>
 }
 
 export default CustomerDetails

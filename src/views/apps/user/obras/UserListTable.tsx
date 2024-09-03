@@ -49,6 +49,7 @@ import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
+import PickersRange from './date' // Import del DatePicker
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -283,7 +284,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }
     },
     enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -325,6 +325,15 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           >
             Exportar
           </Button>
+          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+            <PickersRange />
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Buscar Obra'
+              className='max-sm:is-full min-is-[200px]'
+            />
+          </div>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
               Crear Nueva Obra

@@ -152,6 +152,8 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         </Grid>
       </Grid>
     </CardContent>
+
+    
   )
 }
 
