@@ -55,7 +55,7 @@ const PickersRange = () => {
             onChange={handleOnChange}
             shouldCloseOnSelect={false}
             customInput={
-              <CustomInput label='Rango de Fechas}' start={startDate as Date | number} end={endDate as Date | number} />
+              <CustomInput label='Rango de Fechas' start={startDate as Date | number} end={endDate as Date | number} />
             }
           />
         </div>

@@ -13,9 +13,21 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
+
+// PDF Imports
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 // Types Imports
 import type { UsersType } from '@/types/apps/userTypes'
@@ -30,7 +42,9 @@ type Props = {
 type FormValidateType = {
   numeroObra: string
   fechaIngreso: string
-  numeroCotizacion: string
+  estadoObra: string
+  rut: string
+  nombreCliente: string
   nombreObra: string
   direccion: string
   region: string
@@ -41,12 +55,13 @@ type FormValidateType = {
   informeMandante: string
   encargadoObra: string
   envioInformes: string
-  acreditacionPersonal: string
-  especificacionesTecnicas: string
-  acreditacionEquipos: string
-  cartaCompromiso: string
-  mandatoServiu: string
+  acreditacionPersonal: boolean
+  especificacionesTecnicas: boolean
+  acreditacionEquipos: boolean
+  cartaCompromiso: boolean
+  mandatoServiu: boolean
   otros: string
+  razonSocial: string
 }
 
 const AddUserDrawer = (props: Props) => {
@@ -60,7 +75,9 @@ const AddUserDrawer = (props: Props) => {
     defaultValues: {
       numeroObra: '',
       fechaIngreso: '',
-      numeroCotizacion: '',
+      estadoObra: '',
+      rut: '',
+      nombreCliente: '',
       nombreObra: '',
       direccion: '',
       region: '',
@@ -71,19 +88,48 @@ const AddUserDrawer = (props: Props) => {
       informeMandante: '',
       encargadoObra: '',
       envioInformes: '',
-      acreditacionPersonal: '',
-      especificacionesTecnicas: '',
-      acreditacionEquipos: '',
-      cartaCompromiso: '',
-      mandatoServiu: '',
-      otros: ''
+      acreditacionPersonal: false,
+      especificacionesTecnicas: false,
+      acreditacionEquipos: false,
+      cartaCompromiso: false,
+      mandatoServiu: false,
+      otros: '',
+      razonSocial: ''
     }
   })
 
   const onSubmit = (data: FormValidateType) => {
-    //  lógica para manejar el envío del formulario
+    // lógica para manejar el envío del formulario
     console.log(data)
     handleClose()
+  }
+
+  const handleReset = () => {
+    handleClose()
+  }
+
+  const generatePDF = () => {
+    const doc = new jsPDF()
+
+    // Título
+    doc.text('Nueva Obra - Ejemplo', 10, 10)
+
+    // Añadir una tabla con algunos datos del formulario como ejemplo
+    doc.autoTable({
+      startY: 20,
+      head: [['Campo', 'Valor']],
+      body: [
+        ['Número Obra', '12345'], // Aquí puedes poner los valores reales del formulario
+        ['Fecha Ingreso', '2024-09-04'],
+        ['Estado', 'Activo'],
+        ['Nombre Cliente', 'Sebastian']
+
+        // Añade más campos según sea necesario
+      ]
+    })
+
+    // Guardar el PDF
+    doc.save('nueva_obra.pdf')
   }
 
   return (
@@ -91,21 +137,22 @@ const AddUserDrawer = (props: Props) => {
       open={open}
       anchor='right'
       variant='temporary'
-      onClose={handleClose}
+      onClose={handleReset}
       ModalProps={{ keepMounted: true }}
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Nueva Obra</Typography>
-        <IconButton size='small' onClick={handleClose}>
+        <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
       </div>
       <Divider />
       <div className='p-5'>
         <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
+          <Typography variant='h6'>Nueva Obra</Typography>
           <Grid container spacing={5}>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <Controller
                 name='numeroObra'
                 control={control}
@@ -115,13 +162,12 @@ const AddUserDrawer = (props: Props) => {
                     {...field}
                     fullWidth
                     label='Número Obra *'
-                    placeholder=''
                     {...(errors.numeroObra && { error: true, helperText: 'Este campo es obligatorio.' })}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <Controller
                 name='fechaIngreso'
                 control={control}
@@ -131,17 +177,41 @@ const AddUserDrawer = (props: Props) => {
                     {...field}
                     fullWidth
                     label='Fecha Ingreso *'
-                    placeholder=''
                     {...(errors.fechaIngreso && { error: true, helperText: 'Este campo es obligatorio.' })}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <Controller
-                name='numeroCotizacion'
+                name='estadoObra'
                 control={control}
-                render={({ field }) => <TextField {...field} fullWidth label='Número Cotización' placeholder='' />}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Estado</InputLabel>
+                    <Select {...field}>
+                      <MenuItem value='Activo'>Activo</MenuItem>
+                      <MenuItem value='Inactivo'>Inactivo</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <Controller
+                name='rut'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='RUT' placeholder='' />}
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='nombreCliente'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Nombre Cliente' placeholder='' />}
               />
             </Grid>
           </Grid>
@@ -150,7 +220,7 @@ const AddUserDrawer = (props: Props) => {
             Antecedentes
           </Typography>
           <Grid container spacing={5}>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name='nombreObra'
                 control={control}
@@ -160,13 +230,12 @@ const AddUserDrawer = (props: Props) => {
                     {...field}
                     fullWidth
                     label='Nombre Obra *'
-                    placeholder=''
                     {...(errors.nombreObra && { error: true, helperText: 'Este campo es obligatorio.' })}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={8}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name='direccion'
                 control={control}
@@ -177,13 +246,12 @@ const AddUserDrawer = (props: Props) => {
               <Controller
                 name='region'
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
                   <FormControl fullWidth>
-                    <InputLabel>Región *</InputLabel>
+                    <InputLabel>Región</InputLabel>
                     <Select {...field}>
-                      <MenuItem value='Region 1'>Region 1</MenuItem>
-                      <MenuItem value='Region 2'>Region 2</MenuItem>
+                      <MenuItem value='Región 1'>Región 1</MenuItem>
+                      <MenuItem value='Región 2'>Región 2</MenuItem>
                     </Select>
                   </FormControl>
                 )}
@@ -193,10 +261,9 @@ const AddUserDrawer = (props: Props) => {
               <Controller
                 name='comuna'
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
                   <FormControl fullWidth>
-                    <InputLabel>Comuna *</InputLabel>
+                    <InputLabel>Comuna</InputLabel>
                     <Select {...field}>
                       <MenuItem value='Comuna 1'>Comuna 1</MenuItem>
                       <MenuItem value='Comuna 2'>Comuna 2</MenuItem>
@@ -223,10 +290,9 @@ const AddUserDrawer = (props: Props) => {
               <Controller
                 name='mandante'
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
                   <FormControl fullWidth>
-                    <InputLabel>Mandante *</InputLabel>
+                    <InputLabel>Mandante</InputLabel>
                     <Select {...field}>
                       <MenuItem value='Mandante 1'>Mandante 1</MenuItem>
                       <MenuItem value='Mandante 2'>Mandante 2</MenuItem>
@@ -242,55 +308,54 @@ const AddUserDrawer = (props: Props) => {
                 render={({ field }) => <TextField {...field} fullWidth label='Informe a Mandante' placeholder='' />}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='encargadoObra'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Contactos</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Encargado 1'>Contacto 1</MenuItem>
-                      <MenuItem value='Encargado 2'>Contacto 2</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='envioInformes'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Encargado de obra</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Envio 1'>Envio 1</MenuItem>
-                      <MenuItem value='Envio 2'>Envio 2</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='envioInformes'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Envío de Informes *</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Envio 1'>Envio 1</MenuItem>
-                      <MenuItem value='Envio 2'>Envio 2</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
           </Grid>
+
+          <Typography variant='h6' sx={{ mt: 4 }}>
+            Roles y Contactos
+          </Typography>
+          <TableContainer sx={{ mt: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Rol</TableCell>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Acción</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Encargado de Obra</TableCell>
+                  <TableCell>Nombre Encargado</TableCell>
+                  <TableCell>email@email.com</TableCell>
+                  <TableCell>+56912345678</TableCell>
+                  <TableCell>
+                    <IconButton size='small'>
+                      <i className='ri-edit-line' />
+                    </IconButton>
+                    <IconButton size='small'>
+                      <i className='ri-delete-bin-line' />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Envio de Informes</TableCell>
+                  <TableCell>Nombre Encargado</TableCell>
+                  <TableCell>email@email.com</TableCell>
+                  <TableCell>+56912345678</TableCell>
+                  <TableCell>
+                    <IconButton size='small'>
+                      <i className='ri-edit-line' />
+                    </IconButton>
+                    <IconButton size='small'>
+                      <i className='ri-delete-bin-line' />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
 
           <Typography variant='h6' sx={{ mt: 4 }}>
             Requisitos
@@ -301,13 +366,7 @@ const AddUserDrawer = (props: Props) => {
                 name='acreditacionPersonal'
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Acreditación de Personal</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Acreditación 1'>Acreditación 1</MenuItem>
-                      <MenuItem value='Acreditación 2'>Acreditación 2</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <FormControlLabel control={<Checkbox {...field} />} label='Acreditación de Personal' />
                 )}
               />
             </Grid>
@@ -316,13 +375,7 @@ const AddUserDrawer = (props: Props) => {
                 name='especificacionesTecnicas'
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Especificaciones Técnicas (EETT)</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Especificación 1'>Especificación 1</MenuItem>
-                      <MenuItem value='Especificación 2'>Especificación 2</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <FormControlLabel control={<Checkbox {...field} />} label='Especificaciones Técnicas (EETT)' />
                 )}
               />
             </Grid>
@@ -331,13 +384,7 @@ const AddUserDrawer = (props: Props) => {
                 name='acreditacionEquipos'
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Acreditación de Equipos</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Equipo 1'>Equipo 1</MenuItem>
-                      <MenuItem value='Equipo 2'>Equipo 2</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <FormControlLabel control={<Checkbox {...field} />} label='Acreditación de Equipos' />
                 )}
               />
             </Grid>
@@ -346,13 +393,7 @@ const AddUserDrawer = (props: Props) => {
                 name='cartaCompromiso'
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Carta de Compromiso</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Compromiso 1'>Compromiso 1</MenuItem>
-                      <MenuItem value='Compromiso 2'>Compromiso 2</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <FormControlLabel control={<Checkbox {...field} />} label='Carta de Compromiso' />
                 )}
               />
             </Grid>
@@ -361,13 +402,7 @@ const AddUserDrawer = (props: Props) => {
                 name='mandatoServiu'
                 control={control}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Mandato y Envío de Informes a SERVIU</InputLabel>
-                    <Select {...field}>
-                      <MenuItem value='Mandato 1'>Mandato 1</MenuItem>
-                      <MenuItem value='Mandato 2'>Mandato 2</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <FormControlLabel control={<Checkbox {...field} />} label='Mandato y Envío de Informes a SERVIU' />
                 )}
               />
             </Grid>
@@ -380,12 +415,109 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
           </Grid>
 
+          <Typography variant='h6' sx={{ mt: 4 }}>
+            Facturación
+          </Typography>
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='razonSocial'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Razón Social' placeholder='' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='rut'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='RUT' placeholder='' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='giro'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Giro' placeholder='' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='direccionComercial'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Dirección Comercial' placeholder='' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='comuna'
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Comuna</InputLabel>
+                    <Select {...field}>
+                      <MenuItem value='Comuna 1'>Comuna 1</MenuItem>
+                      <MenuItem value='Comuna 2'>Comuna 2</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='telefono'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Teléfono' placeholder='' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='mailRecepcionFactura'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Mail Recepción Factura' placeholder='' />}
+              />
+            </Grid>
+          </Grid>
+
+          <Typography variant='h6' sx={{ mt: 4 }}>
+            Referencias
+          </Typography>
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='estadoDePago'
+                control={control}
+                render={({ field }) => <FormControlLabel control={<Checkbox {...field} />} label='Estado de Pago' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='hes'
+                control={control}
+                render={({ field }) => <FormControlLabel control={<Checkbox {...field} />} label='HES' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='oc'
+                control={control}
+                render={({ field }) => <FormControlLabel control={<Checkbox {...field} />} label='OC' />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='otro'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Otro' placeholder='' />}
+              />
+            </Grid>
+          </Grid>
+
           <div className='flex items-center gap-4 mt-5'>
             <Button variant='contained' type='submit'>
               Crear Nueva Obra
             </Button>
-            <Button variant='outlined' color='error' type='reset' onClick={handleClose}>
-              Cancelar
+            <Button variant='outlined' color='error' onClick={generatePDF}>
+              Exportar a PDF
             </Button>
           </div>
         </form>

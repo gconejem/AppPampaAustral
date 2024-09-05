@@ -71,7 +71,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                   <div className='flex flex-col gap-2'>
                     <div className='flex items-center gap-4'>
                       <Typography variant='h5' className='min-is-[95px]'>
-                        Invoice
+                        Folio
                       </Typography>
                       <TextField
                         fullWidth
@@ -85,7 +85,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                     </div>
                     <div className='flex items-center'>
                       <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Date Issued:
+                        Desde:
                       </Typography>
                       <AppReactDatepicker
                         boxProps={{ className: 'is-full' }}
@@ -97,7 +97,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                     </div>
                     <div className='flex items-center'>
                       <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Date Due:
+                        Hasta:
                       </Typography>
                       <AppReactDatepicker
                         boxProps={{ className: 'is-full' }}
@@ -115,7 +115,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
               <div className='flex justify-between flex-col gap-4 flex-wrap sm:flex-row'>
                 <div className='flex flex-col gap-4'>
                   <Typography className='font-medium' color='text.primary'>
-                    Invoice To:
+                    Para:
                   </Typography>
                   <Select
                     className='is-1/2 min-is-[220px] sm:is-auto'
@@ -132,37 +132,34 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                     ))}
                   </Select>
                   <div>
-                    <Typography>{selectData?.name}</Typography>
-                    <Typography>{selectData?.company}</Typography>
-                    <Typography>{selectData?.address}</Typography>
-                    <Typography>{selectData?.contact}</Typography>
+                    <Typography>Calle Santa Blanca 51, Chillán – Chile.</Typography>
+                    <Typography>Email: contacto@pampaustral.cl</Typography>
+                    <Typography>+56 42-223 82 90</Typography>
                     <Typography>{selectData?.companyEmail}</Typography>
                   </div>
                 </div>
                 <div className='flex flex-col gap-4'>
-                  <Typography className='font-medium' color='text.primary'>
-                    Bill To:
-                  </Typography>
+                  <Typography className='font-medium' color='text.primary'></Typography>
                   <div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Total Due:</Typography>
-                      <Typography>$12,110.55</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Bank name:</Typography>
-                      <Typography>American Bank</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Country:</Typography>
-                      <Typography>United States</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>IBAN:</Typography>
-                      <Typography>ETD95476213874685</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                     <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>SWIFT code:</Typography>
-                      <Typography>BR91905</Typography>
+                      <Typography className='min-is-[100px]'></Typography>
+                      <Typography></Typography>
                     </div>
                   </div>
                 </div>
@@ -187,16 +184,16 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                         Item
                       </Typography>
                       <Select fullWidth size='small' defaultValue='App Design' className='mbe-5'>
-                        <MenuItem value='App Design'>App Design</MenuItem>
-                        <MenuItem value='App Customization'>App Customization</MenuItem>
-                        <MenuItem value='ABC Template'>ABC Template</MenuItem>
-                        <MenuItem value='App Development'>App Development</MenuItem>
+                        <MenuItem value='App Design'>...</MenuItem>
+                        <MenuItem value='App Customization'>...</MenuItem>
+                        <MenuItem value='ABC Template'>...</MenuItem>
+                        <MenuItem value='App Development'>...</MenuItem>
                       </Select>
-                      <TextField rows={2} fullWidth multiline size='small' defaultValue='Customization & Bug Fixes' />
+                      <TextField rows={2} fullWidth multiline size='small' defaultValue='Descripción' />
                     </Grid>
                     <Grid item lg={2} md={3} xs={12}>
                       <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Cost
+                        Cantidad
                       </Typography>
                       <TextField
                         {...(isBelowMdScreen && { fullWidth: true })}
@@ -209,7 +206,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                       />
                       <div className='flex flex-col'>
                         <Typography component='span' color='text.primary'>
-                          Discount:
+                          Descuento
                         </Typography>
                         <div className='flex gap-2'>
                           <Typography component='span' color='text.primary'>
@@ -230,20 +227,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                     </Grid>
                     <Grid item md={2} xs={12}>
                       <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Hours
-                      </Typography>
-                      <TextField
-                        {...(isBelowMdScreen && { fullWidth: true })}
-                        size='small'
-                        type='number'
-                        placeholder='1'
-                        defaultValue='1'
-                        InputProps={{ inputProps: { min: 0 } }}
-                      />
-                    </Grid>
-                    <Grid item md={2} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Price
+                        Precio
                       </Typography>
                       <Typography>$24.00</Typography>
                     </Grid>
@@ -262,7 +246,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
                   onClick={() => setCount(count + 1)}
                   startIcon={<i className='ri-add-line' />}
                 >
-                  Add Item
+                  Añadir Item
                 </Button>
               </Grid>
             </Grid>
@@ -272,13 +256,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
             <Grid item xs={12}>
               <div className='flex justify-between flex-col gap-4 sm:flex-row'>
                 <div className='flex flex-col gap-4 order-2 sm:order-[unset]'>
-                  <div className='flex items-center gap-2'>
-                    <Typography className='font-medium' color='text.primary'>
-                      Salesperson:
-                    </Typography>
-                    <TextField size='small' defaultValue='Tommy Shelby' />
-                  </div>
-                  <TextField size='small' defaultValue='Thanks for your business' />
+                  <div className='flex items-center gap-2'></div>
                 </div>
                 <div className='min-is-[200px]'>
                   <div className='flex items-center justify-between'>
@@ -312,20 +290,7 @@ const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: st
             <Grid item xs={12}>
               <Divider className='border-dashed' />
             </Grid>
-            <Grid item xs={12}>
-              <InputLabel htmlFor='invoice-note' className='inline-flex mbe-1 text-textPrimary'>
-                Note:
-              </InputLabel>
-              <TextField
-                id='invoice-note'
-                rows={2}
-                fullWidth
-                multiline
-                className='border rounded'
-                defaultValue='It was a pleasure working with you and your team. We hope you will keep us in mind for future freelance
-              projects. Thank You!'
-              />
-            </Grid>
+            <Grid item xs={12}></Grid>
           </Grid>
         </CardContent>
       </Card>

@@ -15,6 +15,9 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 
+// PDF Imports
+import { jsPDF } from 'jspdf'
+
 // Type Imports
 import type { Locale } from '@configs/i18n'
 
@@ -34,6 +37,24 @@ const PreviewActions = ({ id, onButtonClick }: { id: string; onButtonClick: () =
   // Hooks
   const { lang: locale } = useParams()
 
+  // Función para generar el PDF
+  const generatePDF = () => {
+    const doc = new jsPDF()
+
+    // Título del PDF
+    doc.setFontSize(18)
+    doc.text('Factura N° ' + id, 20, 20)
+
+    // Ejemplo de contenido en el PDF
+    doc.setFontSize(12)
+    doc.text('Fecha: 2024-09-05', 20, 30)
+    doc.text('Cliente: Juan Pérez', 20, 40)
+    doc.text('Monto Total: $1,000.00', 20, 50)
+
+    // Guardar el PDF
+    doc.save('factura.pdf')
+  }
+
   return (
     <>
       <Card>
@@ -47,7 +68,7 @@ const PreviewActions = ({ id, onButtonClick }: { id: string; onButtonClick: () =
           >
             Enviar correo
           </Button>
-          <Button fullWidth color='secondary' variant='outlined' className='capitalize'>
+          <Button fullWidth color='secondary' variant='outlined' className='capitalize' onClick={generatePDF}>
             Descargar
           </Button>
           <div className='flex items-center gap-4'>
@@ -183,40 +204,6 @@ const PreviewActions = ({ id, onButtonClick }: { id: string; onButtonClick: () =
               Esta nueva versión tendrá un costo adicional, el que deberá ser cotizado y aprobado oportunamente por el
               cliente, salvo que las modificaciones realizadas sean de responsabilidad del Laboratorio Pampa Austral
               Ltda.
-            </p>
-
-            <p>
-              <strong>Notas:</strong>
-            </p>
-            <p>
-              Nota 1: Este presupuesto se elaboró con la información disponible hasta el momento, si se establecen
-              exigencias especiales, solicitamos a Ud., nos remitan dichos antecedentes para su elaboración y disponer
-              las acciones necesarias de manera de cumplir satisfactoriamente para desarrollar los trabajos como:
-              <br />
-              certificación del personal y maquinaria, reglamentos, ordenanzas, requerimientos de seguridad y
-              ambientales u otras.
-              <br />
-              Si dichas exigencias no están cotizadas deberán ser presupuestadas nuevamente.
-            </p>
-            <p>
-              Nota 2: Recuerde siempre que contamos con: la experiencia, infraestructura y la tecnología, para prestarle
-              el mejor servicio en controles y ensayos de Laboratorio.
-            </p>
-            <p>En espera de una favorable acogida, le saluda cordialmente.</p>
-
-            <p>
-              <strong>MERCEDES LILLO REYES</strong>
-            </p>
-            <p>
-              p.p: Laboratorio Pampa Austral Ltda.
-              <br />
-              Casa Matriz: Calle Santa Blanca N° 51, Chillán - Chile
-              <br />
-              Fono: 42-223 82 90 | 42-224 02 55 – Horario 8:00 a 18:00 Horas contacto@pampaustral.cl
-              <br />
-              COTIZACION Nº 1290- E - I - 2024
-              <br />
-              Laboratorio Oficial Acreditado INN Chile
             </p>
           </DialogContentText>
         </DialogContent>
