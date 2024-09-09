@@ -114,7 +114,7 @@ const AddUserDrawer = (props: Props) => {
     // Título
     doc.text('Nueva Obra - Ejemplo', 10, 10)
 
-    // Añadir una tabla con algunos datos del formulario como ejemplo
+    // Tabla del formulario
     doc.autoTable({
       startY: 20,
       head: [['Campo', 'Valor']],

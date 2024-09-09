@@ -1,8 +1,8 @@
 // React Imports
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // MUI Imports
-import { useTheme } from '@mui/material/styles'
+import { useTheme, Button, Modal, Box, TextField, Checkbox, FormControlLabel } from '@mui/material'
 
 // Third-party imports
 import type { Dispatch } from '@reduxjs/toolkit'
@@ -56,19 +56,70 @@ const Calendar = (props: CalenderProps) => {
     handleLeftSidebarToggle
   } = props
 
+  // States for checkboxes and modal
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([])
+  const [selectAll, setSelectAll] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
+
   // Refs
-  const calendarRef = useRef()
+  const calendarRef = useRef<any>(null)
 
   // Hooks
   const theme = useTheme()
 
   useEffect(() => {
     if (calendarApi === null) {
-      // @ts-ignore
       setCalendarApi(calendarRef.current?.getApi())
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [calendarApi, setCalendarApi])
+
+  // Handle checkbox changes
+  const handleCheckboxChange = (eventId: string) => {
+    setSelectedEvents(prev => (prev.includes(eventId) ? prev.filter(id => id !== eventId) : [...prev, eventId]))
+  }
+
+  // Handle "Seleccionar todo" checkbox change
+  const handleSelectAllChange = () => {
+    setSelectAll(!selectAll)
+
+    if (!selectAll) {
+      const allEventIds = calendarStore.events.map(event => event.id)
+
+      setSelectedEvents(allEventIds)
+    } else {
+      setSelectedEvents([])
+    }
+  }
+
+  // Handle opening the modal for editing events
+  const handleOpenEditModal = () => {
+    if (selectedEvents.length > 0) {
+      const event = calendarStore.events.find(e => e.id === selectedEvents[0])
+
+      if (event) setEditedTitle(event.title || '')
+      setIsModalOpen(true)
+    }
+  }
+
+  // Handle closing the modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+  }
+
+  // Handle saving the edited title
+  const handleSaveTitle = () => {
+    selectedEvents.forEach(eventId => {
+      const eventToUpdate = calendarApi.getEventById(eventId)
+
+      if (eventToUpdate) {
+        eventToUpdate.setProp('title', editedTitle)
+        dispatch(updateEvent(eventToUpdate))
+      }
+    })
+    setIsModalOpen(false)
+    setSelectedEvents([]) // Clear the selected events
+  }
 
   // calendarOptions(Props)
   const calendarOptions: CalendarOptions = {
@@ -85,61 +136,29 @@ const Calendar = (props: CalenderProps) => {
       }
     },
 
-    /*
-      Enable dragging and resizing event
-      ? Docs: https://fullcalendar.io/docs/editable
-    */
     editable: true,
-
-    /*
-      Enable resizing event from start
-      ? Docs: https://fullcalendar.io/docs/eventResizableFromStart
-    */
     eventResizableFromStart: true,
-
-    /*
-      Automatically scroll the scroll-containers during event drag-and-drop and date selecting
-      ? Docs: https://fullcalendar.io/docs/dragScroll
-    */
     dragScroll: true,
-
-    /*
-      Max number of events within a given day
-      ? Docs: https://fullcalendar.io/docs/dayMaxEvents
-    */
     dayMaxEvents: 2,
-
-    /*
-      Determines if day names and week names are clickable
-      ? Docs: https://fullcalendar.io/docs/navLinks
-    */
     navLinks: true,
 
     eventClassNames({ event: calendarEvent }: any) {
-      // @ts-ignore
       const colorName = calendarsColor[calendarEvent._def.extendedProps.calendar]
 
-      return [
-        // Background Color
-        `event-bg-${colorName}`
-      ]
+      return [`event-bg-${colorName}`]
     },
 
+    // Avoid opening the event if clicking on the checkbox
     eventClick({ event: clickedEvent, jsEvent }: any) {
-      jsEvent.preventDefault()
+      if ((jsEvent.target as HTMLElement).tagName !== 'INPUT') {
+        jsEvent.preventDefault()
+        dispatch(selectedEvent(clickedEvent))
+        handleAddEventSidebarToggle()
 
-      dispatch(selectedEvent(clickedEvent))
-      handleAddEventSidebarToggle()
-
-      if (clickedEvent.url) {
-        // Open the URL in a new tab
-        window.open(clickedEvent.url, '_blank')
+        if (clickedEvent.url) {
+          window.open(clickedEvent.url, '_blank')
+        }
       }
-
-      //* Only grab required field otherwise it goes in infinity loop
-      //! Always grab all fields rendered by form (even if it get `undefined`)
-      // event.value = grabEventDataFromEventApi(clickedEvent)
-      // isAddNewEventSidebarActive.value = true
     },
 
     customButtons: {
@@ -162,32 +181,88 @@ const Calendar = (props: CalenderProps) => {
       handleAddEventSidebarToggle()
     },
 
-    /*
-      Handle event drop (Also include dragged event)
-      ? Docs: https://fullcalendar.io/docs/eventDrop
-      ? We can use `eventDragStop` but it doesn't return updated event so we have to use `eventDrop` which returns updated event
-    */
+    eventContent: (arg: any) => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <input
+            type='checkbox'
+            onChange={() => handleCheckboxChange(arg.event.id)}
+            checked={selectedEvents.includes(arg.event.id)}
+            style={{ marginRight: '5px' }}
+          />
+          <b>{arg.event.title}</b>
+        </div>
+      </div>
+    ),
+
     eventDrop({ event: droppedEvent }: any) {
       dispatch(updateEvent(droppedEvent))
       dispatch(filterEvents())
     },
 
-    /*
-      Handle event resize
-      ? Docs: https://fullcalendar.io/docs/eventResize
-    */
     eventResize({ event: resizedEvent }: any) {
       dispatch(updateEvent(resizedEvent))
       dispatch(filterEvents())
     },
 
-    // @ts-ignore
     ref: calendarRef,
-
     direction: theme.direction
   }
 
-  return <FullCalendar {...calendarOptions} />
+  return (
+    <>
+      {/* Casilla "Seleccionar todo" y botón "Editar" alineados */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <FormControlLabel
+          control={<Checkbox checked={selectAll} onChange={handleSelectAllChange} name='selectAll' color='primary' />}
+          label='Seleccionar todo'
+        />
+
+        <Button
+          variant='contained'
+          color='primary'
+          onClick={handleOpenEditModal}
+          disabled={selectedEvents.length === 0}
+          style={{ marginLeft: 'auto' }}
+        >
+          Editar Seleccionados
+        </Button>
+      </div>
+
+      {/* Full Calendar */}
+      <div>
+        <FullCalendar {...calendarOptions} />
+      </div>
+
+      {/* Modal for editing the event */}
+      <Modal open={isModalOpen} onClose={handleCloseModal}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 400,
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4
+          }}
+        >
+          <h2>Editar Eventos Seleccionados</h2>
+          <TextField
+            fullWidth
+            label='Título del evento'
+            value={editedTitle}
+            onChange={e => setEditedTitle(e.target.value)}
+            sx={{ mb: 3 }}
+          />
+          <Button variant='contained' color='primary' onClick={handleSaveTitle}>
+            Guardar
+          </Button>
+        </Box>
+      </Modal>
+    </>
+  )
 }
 
 export default Calendar

@@ -169,86 +169,95 @@ const LogisticsOrdersByCountries = () => {
   }
 
   return (
-    <>
-      <Grid container spacing={2} justifyContent='flex-end' alignItems='center' sx={{ mb: 2 }}>
-        <Grid item></Grid>
-      </Grid>
-      <Card>
-        <CardHeader
-          title='Solicitudes por estado'
-          subheader='12 solicitudes en proceso'
-          action={<OptionMenu iconClassName='text-textPrimary' options={['Show all orders', 'Share', 'Refresh']} />}
-          className='pbe-4'
-        />
-        <TabContext value={value}>
-          <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
-            <Tab value='new' label='Nuevas solicitudes' />
-            <Tab value='new3' label='En proceso ' />
-            <Tab value='preparing' label='Concluidas ' />
-            <Tab value='shipping' label='Sin movimientos ' />
-          </TabList>
-          <TabPanel value={value} className='pbs-0'>
-            <CardContent>
-              {data[value as keyof typeof data].map((item, index) => {
-                return (
-                  <Fragment key={index}>
-                    <Timeline>
-                      <TimelineItem>
-                        <TimelineSeparator>
-                          <TimelineDot variant='outlined' className='mlb-0'>
-                            <i className='ri-checkbox-circle-line text-xl text-success' />
-                          </TimelineDot>
-                          <TimelineConnector />
-                        </TimelineSeparator>
-                        <TimelineContent className='flex flex-col gap-0.5 pbs-0 pis-5 pbe-5'>
-                          <Link href='/apps/ecommerce/orders/details/5434'>
-                            <Typography
-                              variant='caption'
-                              className='uppercase'
-                              color='success.main'
-                              sx={{ cursor: 'pointer' }}
-                            >
+    <Grid container spacing={6}>
+      <Grid item xs={12} md={8}>
+        <Card>
+          <CardHeader
+            title='Solicitudes por estado'
+            subheader='12 solicitudes en proceso'
+            action={<OptionMenu iconClassName='text-textPrimary' options={['Show all orders', 'Share', 'Refresh']} />}
+            className='pbe-4'
+          />
+          <TabContext value={value}>
+            <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
+              <Tab value='new' label='Nuevas' />
+              <Tab value='new3' label='En ruta' />
+              <Tab value='preparing' label='Recibido' />
+              <Tab value='shipping' label='En proceso' />
+            </TabList>
+            <TabPanel value={value} className='pbs-0'>
+              <CardContent>
+                {data[value as keyof typeof data].map((item, index) => {
+                  return (
+                    <Fragment key={index}>
+                      <Timeline>
+                        <TimelineItem>
+                          <TimelineSeparator>
+                            <TimelineDot variant='outlined' className='mlb-0'>
+                              <i className='ri-checkbox-circle-line text-xl text-success' />
+                            </TimelineDot>
+                            <TimelineConnector />
+                          </TimelineSeparator>
+                          <TimelineContent className='flex flex-col gap-0.5 pbs-0 pis-5 pbe-5'>
+                            <Link href='/apps/ecommerce/orders/details/5434'>
+                              <Typography
+                                variant='caption'
+                                className='uppercase'
+                                color='success.main'
+                                sx={{ cursor: 'pointer' }}
+                              >
+                                N° ID solicitud - 28/08/2024 (Fecha de solicitud)
+                              </Typography>
+                            </Link>
+                            <Typography color='text.primary' className='font-medium'>
+                              {item.sender.name}
+                            </Typography>
+                            <Typography variant='body2' className='line-clamp-1'>
+                              {item.sender.address}
+                            </Typography>
+                          </TimelineContent>
+                        </TimelineItem>
+                        <TimelineItem>
+                          <TimelineSeparator>
+                            <TimelineDot variant='outlined' className='mlb-0'>
+                              <i className='ri-map-pin-line text-xl text-primary' />
+                            </TimelineDot>
+                          </TimelineSeparator>
+                          <TimelineContent className='flex flex-col pbe-0 gap-0.5 pbs-0 pis-5'>
+                            <Typography variant='caption' className='uppercase' color='primary.main'>
                               N° ID solicitud - 28/08/2024 (Fecha de solicitud)
                             </Typography>
-                          </Link>
-                          <Typography color='text.primary' className='font-medium'>
-                            {item.sender.name}
-                          </Typography>
-                          <Typography variant='body2' className='line-clamp-1'>
-                            {item.sender.address}
-                          </Typography>
-                        </TimelineContent>
-                      </TimelineItem>
-                      <TimelineItem>
-                        <TimelineSeparator>
-                          <TimelineDot variant='outlined' className='mlb-0'>
-                            <i className='ri-map-pin-line text-xl text-primary' />
-                          </TimelineDot>
-                        </TimelineSeparator>
-                        <TimelineContent className='flex flex-col pbe-0 gap-0.5 pbs-0 pis-5'>
-                          <Typography variant='caption' className='uppercase' color='primary.main'>
-                            N° ID solicitud - 28/08/2024 (Fecha de solicitud)
-                          </Typography>
-                          <Typography color='text.primary' className='font-medium'>
-                            {item.receiver.name}
-                          </Typography>
-                          <Typography variant='body2' className='line-clamp-1'>
-                            {item.receiver.address}
-                          </Typography>
-                        </TimelineContent>
-                      </TimelineItem>
-                    </Timeline>
-                    {index !== data[value as keyof typeof data].length - 1 && (
-                      <Divider className='mlb-4 border-dashed' />
-                    )}
-                  </Fragment>
-                )
-              })}
-            </CardContent>
-          </TabPanel>
-        </TabContext>
-      </Card>
-    </>
+                            <Typography color='text.primary' className='font-medium'>
+                              {item.receiver.name}
+                            </Typography>
+                            <Typography variant='body2' className='line-clamp-1'>
+                              {item.receiver.address}
+                            </Typography>
+                          </TimelineContent>
+                        </TimelineItem>
+                      </Timeline>
+                      {index !== data[value as keyof typeof data].length - 1 && (
+                        <Divider className='mlb-4 border-dashed' />
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </CardContent>
+            </TabPanel>
+          </TabContext>
+        </Card>
+      </Grid>
+
+      {/* Nueva caja al lado derecho */}
+      <Grid item xs={12} md={4}>
+        <Card>
+          <CardHeader title='Líneas Operativas y Administrativas' />
+          <CardContent>
+            <Typography variant='body2'></Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   )
 }
 

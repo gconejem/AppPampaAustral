@@ -4,7 +4,7 @@ import type { UsersType } from '@/types/apps/userTypes'
 export const db: UsersType[] = [
   {
     id: 1,
-    rut: '29699040-k',
+    rut: '',
     fullName: 'Galen Slixby',
     company: 'Yotz PVT LTD',
     role: 'editor',
