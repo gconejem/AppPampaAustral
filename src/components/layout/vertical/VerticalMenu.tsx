@@ -84,11 +84,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           <MenuItem href={`/${locale}/apps/user/solicitudes`} icon={<i className='ri-calendar-line' />}>
             Solicitudes
           </MenuItem>
-          <SubMenu
-            label='Agenda'
-            icon={<i className='ri-home-smile-line' />}
-            suffix={<Chip label='5' size='small' color='error' />}
-          >
+          <SubMenu label='Agenda' icon={<i className='ri-home-smile-line' />}>
             <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
               Agenda
             </MenuItem>

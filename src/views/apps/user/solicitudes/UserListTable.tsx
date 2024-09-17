@@ -21,6 +21,8 @@ import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 
+// Import del componente PickersRange
+
 // Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -38,6 +40,8 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+
+import PickersRange from './date'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -153,8 +157,138 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const { lang: locale } = useParams()
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
-    () => [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
+      columnHelper.accessor('fullName', {
+        header: 'ID Solicitud',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-4'>
+            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
+            <div className='flex flex-col'>
+              <Typography className='font-medium' color='text.primary'>
+                {row.original.fullName}
+              </Typography>
+              <Typography variant='body2'>{row.original.username}</Typography>
+            </div>
+          </div>
+        )
+      }),
+      columnHelper.accessor('email', {
+        header: 'Fecha',
+        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+      }),
+      columnHelper.accessor('role', {
+        header: 'Cliente',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-2'>
+            <Icon
+              className={userRoleObj[row.original.role].icon}
+              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
+            />
+            <Typography className='capitalize' color='text.primary'>
+              {row.original.role}
+            </Typography>
+          </div>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'N° Obra',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'Comuna',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('status', {
+        header: 'Estado 1',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <Chip
+              variant='tonal'
+              label={row.original.status}
+              size='small'
+              color={userStatusObj[row.original.status]}
+              className='capitalize'
+            />
+          </div>
+        )
+      }),
+      columnHelper.accessor('status', {
+        header: 'Estado 2',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <Chip
+              variant='tonal'
+              label={row.original.status}
+              size='small'
+              color={userStatusObj[row.original.status]}
+              className='capitalize'
+            />
+          </div>
+        )
+      }),
+      columnHelper.accessor('action', {
+        header: 'Acciones',
+        cell: ({ row }) => (
+          <div className='flex items-center'>
+            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
+              <i className='ri-delete-bin-7-line text-textSecondary' />
+            </IconButton>
+            <IconButton>
+              <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
+                <i className='ri-eye-line text-textSecondary' />
+              </Link>
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ size: 'medium' }}
+              iconClassName='text-textSecondary'
+              options={[
+                {
+                  text: 'Download',
+                  icon: 'ri-download-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                },
+                {
+                  text: 'Edit',
+                  icon: 'ri-edit-box-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                }
+              ]}
+            />
+          </div>
+        ),
+        enableSorting: false
+      })
+    ],
     [data, filteredData]
   )
 
@@ -170,11 +304,10 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     },
     initialState: {
       pagination: {
-        pageSize: 10
+        pageSize: 3 // Mostrar solo 3 filas
       }
     },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
+    enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -201,15 +334,26 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     }
   }
 
-  //ARRIBA DEL <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-
   return (
     <>
       <Card>
+        <CardHeader title='' />
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'> </div>
+          <Typography variant='h6' color='text.primary' className='max-sm:is-full'>
+            Lista de Solicitudes
+          </Typography>
+          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+            {/* Se agrega el componente PickersRange en lugar de DatePicker */}
+            <PickersRange />
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Buscar RUT o N° Obra'
+              className='max-sm:is-full min-is-[200px]'
+            />
+          </div>
         </div>
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
@@ -252,21 +396,39 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               <tbody>
                 {table
                   .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
+                  .rows.slice(0, table.getState().pagination.pageSize) // Limitar a las filas visibles en la página actual
+                  .map(row => (
+                    <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                      ))}
+                    </tr>
+                  ))}
               </tbody>
             )}
           </table>
         </div>
+        <TablePagination
+          rowsPerPageOptions={[]} // Desactivar la opción para cambiar el número de filas por página
+          component='div'
+          className='border-bs'
+          count={table.getFilteredRowModel().rows.length}
+          rowsPerPage={table.getState().pagination.pageSize}
+          page={table.getState().pagination.pageIndex}
+          SelectProps={{
+            inputProps: { 'aria-label': 'rows per page' }
+          }}
+          onPageChange={(_, page) => {
+            table.setPageIndex(page)
+          }}
+        />
       </Card>
+      <AddUserDrawer
+        open={addUserOpen}
+        handleClose={() => setAddUserOpen(!addUserOpen)}
+        userData={data}
+        setData={setData}
+      />
     </>
   )
 }

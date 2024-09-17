@@ -150,6 +150,26 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             <MenuItem value='Laboratorista'>Laboratorista</MenuItem>
           </Select>
         </FormControl>
+        <FormControl fullWidth variant='outlined' className='mbe-2'>
+          <Select
+            value={obraFilter}
+            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
+            displayEmpty
+          >
+            <MenuItem value='None'>Sector Comercial</MenuItem>
+            <MenuItem value='Obra'></MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl fullWidth variant='outlined' className='mbe-2'>
+          <Select
+            value={obraFilter}
+            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
+            displayEmpty
+          >
+            <MenuItem value='None'>Comuna</MenuItem>
+            <MenuItem value='Obra'></MenuItem>
+          </Select>
+        </FormControl>
       </div>
     </Drawer>
   )

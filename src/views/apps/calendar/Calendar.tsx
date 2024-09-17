@@ -225,7 +225,7 @@ const Calendar = (props: CalenderProps) => {
           disabled={selectedEvents.length === 0}
           style={{ marginLeft: 'auto' }}
         >
-          Editar Seleccionados
+          Editar
         </Button>
       </div>
 

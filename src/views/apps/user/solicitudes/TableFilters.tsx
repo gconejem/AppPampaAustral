@@ -24,14 +24,14 @@ import TimelineSeparator from '@mui/lab/TimelineSeparator'
 import TimelineConnector from '@mui/lab/TimelineConnector'
 import MuiTimeline from '@mui/lab/Timeline'
 import Grid from '@mui/material/Grid'
-import Button from '@mui/material/Button'
-import type { TimelineProps } from '@mui/lab/Timeline'
+import Chip from '@mui/material/Chip'
+import Box from '@mui/material/Box'
 
 // Components Imports
 import OptionMenu from '@core/components/option-menu'
 
 // Styled Timeline component
-const Timeline = styled(MuiTimeline)<TimelineProps>({
+const Timeline = styled(MuiTimeline)({
   paddingLeft: 0,
   paddingRight: 0,
   '& .MuiTimelineItem-root': {
@@ -69,112 +69,31 @@ const data = {
         address: 'texto por definir'
       }
     }
-  ],
-  new2: [
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      }
-    },
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      }
-    }
-  ],
-  new3: [
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      }
-    },
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: 'texto por definir'
-      }
-    }
-  ],
-  preparing: [
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: '61 Unions, California (CA), 922523'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: '865 Delta, California (CA), 932830'
-      }
-    },
-    {
-      sender: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: '37 Marjory, California (CA), 951958'
-      },
-      receiver: {
-        name: '0123456789 (N° Obra) - Nombre cliente',
-        address: '926 Reynolds, California (CA), 910279'
-      }
-    }
-  ],
-  shipping: [
-    {
-      sender: {
-        name: 'Alex Walton',
-        address: '78 Judson, California (CA), 956084'
-      },
-      receiver: {
-        name: 'Eula Griffin',
-        address: '56 Bernard, California (CA), 965133'
-      }
-    },
-    {
-      sender: {
-        name: 'Lula Barton',
-        address: '95 Gaylord, California (CA), 991955'
-      },
-      receiver: {
-        name: 'Craig Jacobs',
-        address: '73 Sandy, California (CA), 954566'
-      }
-    }
   ]
 }
 
 const LogisticsOrdersByCountries = () => {
-  // States
+  // States for the first tab
   const [value, setValue] = useState<string>('new')
+
+  // States for the second tab in "Líneas Operativas y Administrativas"
+  const [valueAdmin, setValueAdmin] = useState<string>('tab1')
 
   const handleChange = (event: SyntheticEvent, newValue: string) => {
     setValue(newValue)
   }
 
+  const handleChangeAdmin = (event: SyntheticEvent, newValue: string) => {
+    setValueAdmin(newValue)
+  }
+
   return (
-    <Grid container spacing={6}>
-      <Grid item xs={12} md={8}>
+    <Grid container spacing={3}>
+      {/* First Card with Tabs */}
+      <Grid item xs={12} md={6}>
         <Card>
           <CardHeader
             title='Solicitudes por estado'
-            subheader='12 solicitudes en proceso'
             action={<OptionMenu iconClassName='text-textPrimary' options={['Show all orders', 'Share', 'Refresh']} />}
             className='pbe-4'
           />
@@ -183,78 +102,116 @@ const LogisticsOrdersByCountries = () => {
               <Tab value='new' label='Nuevas' />
               <Tab value='new3' label='En ruta' />
               <Tab value='preparing' label='Recibido' />
-              <Tab value='shipping' label='En proceso' />
             </TabList>
             <TabPanel value={value} className='pbs-0'>
               <CardContent>
-                {data[value as keyof typeof data].map((item, index) => {
+                {data.new.map((item, index) => {
                   return (
                     <Fragment key={index}>
-                      <Timeline>
-                        <TimelineItem>
-                          <TimelineSeparator>
-                            <TimelineDot variant='outlined' className='mlb-0'>
-                              <i className='ri-checkbox-circle-line text-xl text-success' />
-                            </TimelineDot>
-                            <TimelineConnector />
-                          </TimelineSeparator>
-                          <TimelineContent className='flex flex-col gap-0.5 pbs-0 pis-5 pbe-5'>
-                            <Link href='/apps/ecommerce/orders/details/5434'>
-                              <Typography
-                                variant='caption'
-                                className='uppercase'
-                                color='success.main'
-                                sx={{ cursor: 'pointer' }}
-                              >
-                                N° ID solicitud - 28/08/2024 (Fecha de solicitud)
-                              </Typography>
-                            </Link>
-                            <Typography color='text.primary' className='font-medium'>
-                              {item.sender.name}
-                            </Typography>
-                            <Typography variant='body2' className='line-clamp-1'>
-                              {item.sender.address}
-                            </Typography>
-                          </TimelineContent>
-                        </TimelineItem>
-                        <TimelineItem>
-                          <TimelineSeparator>
-                            <TimelineDot variant='outlined' className='mlb-0'>
-                              <i className='ri-map-pin-line text-xl text-primary' />
-                            </TimelineDot>
-                          </TimelineSeparator>
-                          <TimelineContent className='flex flex-col pbe-0 gap-0.5 pbs-0 pis-5'>
-                            <Typography variant='caption' className='uppercase' color='primary.main'>
-                              N° ID solicitud - 28/08/2024 (Fecha de solicitud)
-                            </Typography>
-                            <Typography color='text.primary' className='font-medium'>
-                              {item.receiver.name}
-                            </Typography>
-                            <Typography variant='body2' className='line-clamp-1'>
-                              {item.receiver.address}
-                            </Typography>
-                          </TimelineContent>
-                        </TimelineItem>
-                      </Timeline>
-                      {index !== data[value as keyof typeof data].length - 1 && (
-                        <Divider className='mlb-4 border-dashed' />
-                      )}
+                      <Box display='flex' alignItems='center' mb={2}>
+                        <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
+                        <Link href='/apps/ecommerce/orders/details/5434'>
+                          <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
+                            #0123456781
+                          </Typography>
+                        </Link>
+                        <Chip label='Creada' color='default' sx={{ ml: 1, mr: 1 }} />
+                        <Chip label='Cotizada' color='success' />
+                      </Box>
+                      <Typography variant='body2' color='primary'>
+                        00/00/00 (Fecha de inicio ruta)
+                      </Typography>
+                      <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
+                      {/* PDF Example using a simple text */}
+                      <Box mt={1} display='flex' alignItems='center'>
+                        <span role='img' aria-label='pdf' style={{ marginRight: '8px' }}>
+                          📄
+                        </span>
+                        <Typography variant='body2' color='text.primary'>
+                          Cotización-012345.pdf
+                        </Typography>
+                      </Box>
+                      {index !== data.new.length - 1 && <Divider className='my-2' />}
                     </Fragment>
                   )
                 })}
+
+                {/* Nueva entrada con "Creada - Sin Cotización" */}
+                <Box display='flex' alignItems='center' mt={2}>
+                  <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
+                  <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
+                    #0123456782
+                  </Typography>
+                  <Chip label='Creada' color='default' sx={{ ml: 1, mr: 1 }} />
+                  <Chip label='Sin Cotización' color='error' />
+                </Box>
+                <Typography variant='body2' color='primary'>
+                  00/00/00 (Fecha de inicio ruta)
+                </Typography>
+                <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
+
+                {/* Nueva entrada con "Creada - Sin Cotización" */}
+
+                <Box display='flex' alignItems='center' mt={2}>
+                  <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
+                  <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
+                    #0123456782
+                  </Typography>
+                  <Chip label='Creada' color='default' sx={{ ml: 1, mr: 1 }} />
+                  <Chip label='Sin Cotización' color='error' />
+                </Box>
+                <Typography variant='body2' color='primary'>
+                  00/00/00 (Fecha de inicio ruta)
+                </Typography>
+                <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
               </CardContent>
             </TabPanel>
           </TabContext>
         </Card>
       </Grid>
 
-      {/* Nueva caja al lado derecho */}
-      <Grid item xs={12} md={4}>
+      {/* Second Card with new Tabs */}
+      <Grid item xs={12} md={6}>
         <Card>
-          <CardHeader title='Líneas Operativas y Administrativas' />
-          <CardContent>
-            <Typography variant='body2'></Typography>
-          </CardContent>
+          <CardHeader title='Ejemplo' />
+          <TabContext value={valueAdmin}>
+            <TabList variant='fullWidth' onChange={handleChangeAdmin}>
+              <Tab value='tab1' label='Nuevas' />
+              <Tab value='tab2' label='En Ruta' />
+              <Tab value='tab3' label='En Proceso' />
+            </TabList>
+            <TabPanel value='tab1'>
+              <CardContent>
+                {[...Array(4)].map((_, index) => (
+                  <Fragment key={index}>
+                    <Box display='flex' alignItems='center' mb={2}>
+                      <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
+                      <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
+                        #012345678{index}
+                      </Typography>
+                      <Chip label='Operativo' color='success' sx={{ ml: 1, mr: 1 }} />
+                      <Chip label='Administrativo' color='primary' />
+                    </Box>
+                    <Typography variant='body2' color='primary'>
+                      00/00/0{index}
+                    </Typography>
+                    <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
+                    {index < 3 && <Divider className='my-2' />} {/* Add a divider between entries */}
+                  </Fragment>
+                ))}
+              </CardContent>
+            </TabPanel>
+            <TabPanel value='tab2'>
+              <CardContent>
+                <Typography variant='body2'>En Ruta</Typography>
+              </CardContent>
+            </TabPanel>
+            <TabPanel value='tab3'>
+              <CardContent>
+                <Typography variant='body2'>En Proceso</Typography>
+              </CardContent>
+            </TabPanel>
+          </TabContext>
         </Card>
       </Grid>
     </Grid>

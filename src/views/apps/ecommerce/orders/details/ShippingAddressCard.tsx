@@ -1,61 +1,107 @@
+'use client'
+
+// React Imports
+import { useEffect, useState, useMemo, forwardRef } from 'react'
+
 // MUI Imports
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Typography from '@mui/material/Typography'
-import type { TypographyProps } from '@mui/material/Typography'
+
+// Third-party Imports
+import classnames from 'classnames'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getPaginationRowModel
+} from '@tanstack/react-table'
+
+// DatePicker Imports
+import 'react-datepicker/dist/react-datepicker.css'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
+import type { UsersType } from '@/types/apps/userTypes'
 
-// Component Imports
-import AddAddress from '@components/dialogs/add-edit-address'
-import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
+// Styled Components
 
-// Vars
-const data = {
-  firstName: 'Roker',
-  lastName: 'Terrace',
-  email: 'sbaser0@boston.com',
-  country: 'UK',
-  address1: 'Latheronwheel',
-  address2: 'KW5 8NW, London',
-  landmark: 'Near Water Plant',
-  city: 'London',
-  state: 'Capholim',
-  zipCode: '403114',
-  taxId: 'TAX-875623',
-  vatNumber: 'SDF754K77',
-  contact: '+1 (609) 972-22-22'
-}
+// Simulated Data
+const data = [
+  {
+    id: 1,
+    name: 'Galen Slixby',
+    email: 'gslixby0@abc.net.au',
+    role: 'Editor',
+    plan: 'Enterprise',
+    status: 'Inactive'
+  },
+  {
+    id: 2,
+    name: 'Halsey Redmore',
+    email: 'hredmore1@imgur.com',
+    role: 'Author',
+    plan: 'Team',
+    status: 'Pending'
+  },
+  {
+    id: 3,
+    name: 'Marjory Sicely',
+    email: 'msicely2@who.int',
+    role: 'Maintainer',
+    plan: 'Enterprise',
+    status: 'Active'
+  }
+]
 
-const ShippingAddress = () => {
-  // Vars
-  const typographyProps = (children: string, color: ThemeColor, className: string): TypographyProps => ({
-    children,
-    color,
-    className
+// Column Definitions
+const columnHelper = createColumnHelper()
+
+const columns = [
+  columnHelper.accessor('id', {
+    header: 'ID SOLICITUD',
+    cell: info => <Checkbox />
+  }),
+  columnHelper.accessor('name', {
+    header: 'CLIENTE',
+    cell: info => (
+      <div>
+        <Typography>{info.getValue()}</Typography>
+        <Typography variant='caption' color='textSecondary'>
+          {data[info.row.index].email}
+        </Typography>
+      </div>
+    )
+  }),
+  columnHelper.accessor('role', {
+    header: 'ROL',
+    cell: info => <Typography>{info.getValue()}</Typography>
+  }),
+  columnHelper.accessor('plan', {
+    header: 'PLAN',
+    cell: info => <Typography>{info.getValue()}</Typography>
+  }),
+  columnHelper.accessor('status', {
+    header: 'ESTADO',
+    cell: info => (
+      <Typography
+        color={info.getValue() === 'Active' ? 'success' : info.getValue() === 'Pending' ? 'warning' : 'textSecondary'}
+      >
+        {info.getValue()}
+      </Typography>
+    )
   })
+]
 
-  return (
-    <Card>
-      <CardContent className='flex flex-col gap-6'>
-        <div className='flex justify-between items-center'>
-          <Typography variant='h5'>Prefacturación</Typography>
-          <OpenDialogOnElementClick
-            element={Typography}
-            elementProps={typographyProps('Pre-Facturar', 'primary', 'cursor-pointer font-medium')}
-            dialog={AddAddress}
-            dialogProps={{ type: 'Add address for billing address', data }}
-          />
-        </div>
-        <div className='flex flex-col'>
-          <Typography>Monto Total: $0</Typography>
-          <Typography>Nombre del Cliente</Typography>
-          <Typography>Dirección</Typography>
-        </div>
-      </CardContent>
-    </Card>
-  )
+// Main Component
+const ExampleTable = () => {
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel()
+  })
 }
 
-export default ShippingAddress
+export default ExampleTable

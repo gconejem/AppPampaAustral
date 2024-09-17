@@ -1,8 +1,6 @@
 // MUI Imports
 import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
 import Avatar from '@mui/material/Avatar'
-import Typography from '@mui/material/Typography'
 import type { TypographyProps } from '@mui/material/Typography'
 
 // Type Imports
