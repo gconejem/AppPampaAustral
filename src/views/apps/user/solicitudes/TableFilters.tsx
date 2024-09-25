@@ -110,7 +110,7 @@ const LogisticsOrdersByCountries = () => {
                     <Fragment key={index}>
                       <Box display='flex' alignItems='center' mb={2}>
                         <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
-                        <Link href='/apps/ecommerce/orders/details/5434'>
+                        <Link href='/apps/user/solicitud'>
                           <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
                             #0123456781
                           </Typography>
@@ -177,8 +177,7 @@ const LogisticsOrdersByCountries = () => {
           <TabContext value={valueAdmin}>
             <TabList variant='fullWidth' onChange={handleChangeAdmin}>
               <Tab value='tab1' label='Nuevas' />
-              <Tab value='tab2' label='En Ruta' />
-              <Tab value='tab3' label='En Proceso' />
+              <Tab value='tab2' label='Informes Disponibles' />
             </TabList>
             <TabPanel value='tab1'>
               <CardContent>
@@ -203,7 +202,7 @@ const LogisticsOrdersByCountries = () => {
             </TabPanel>
             <TabPanel value='tab2'>
               <CardContent>
-                <Typography variant='body2'>En Ruta</Typography>
+                <Typography variant='body2'>Informes...</Typography>
               </CardContent>
             </TabPanel>
             <TabPanel value='tab3'>

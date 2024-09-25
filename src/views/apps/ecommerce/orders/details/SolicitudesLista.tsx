@@ -10,6 +10,14 @@ import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
 import TablePagination from '@mui/material/TablePagination'
 import Checkbox from '@mui/material/Checkbox'
+import IconButton from '@mui/material/IconButton'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+
+// Icon Imports
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 
 // TanStack/React-Table Imports
 import {
@@ -61,8 +69,62 @@ const columns = [
   columnHelper.accessor('factura', {
     header: 'FACTURA',
     cell: info => <Typography>{info.getValue()}</Typography>
+  }),
+  columnHelper.display({
+    id: 'actions',
+    header: 'ACCIONES',
+    cell: info => <ActionMenu />,
+    size: 50 // Ajustamos el tamaño de la columna de acciones
   })
 ]
+
+const ActionMenu = () => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const open = Boolean(anchorEl)
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  return (
+    <div>
+      <IconButton color='default'>
+        {' '}
+        {/* Cambiamos a color gris */}
+        <VisibilityIcon style={{ color: '#B0B0B0' }} /> {/* Ícono gris */}
+      </IconButton>
+      <IconButton color='default'>
+        {' '}
+        {/* Cambiamos a color gris */}
+        <EditIcon style={{ color: '#B0B0B0' }} /> {/* Ícono gris */}
+      </IconButton>
+      <IconButton onClick={handleClick} color='default'>
+        <MoreVertIcon style={{ color: '#B0B0B0' }} /> {/* Ícono gris */}
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+      >
+        <MenuItem onClick={handleClose}>Acción 1</MenuItem>
+        <MenuItem onClick={handleClose}>Acción 2</MenuItem>
+        <MenuItem onClick={handleClose}>Acción 3</MenuItem>
+      </Menu>
+    </div>
+  )
+}
 
 const OrderDetailHeader = () => {
   // Table states

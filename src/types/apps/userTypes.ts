@@ -15,4 +15,11 @@ export type UsersType = {
   username: string
   currentPlan: string
   avatarColor?: ThemeColor
+  cliente: string
+  servicio: string
+  obra: string
+  laboratorista: string
+  comuna: string
+  inicio: string
+  termino: string
 }
