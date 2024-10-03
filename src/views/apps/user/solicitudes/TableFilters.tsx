@@ -89,15 +89,18 @@ const LogisticsOrdersByCountries = () => {
 
   return (
     <Grid container spacing={3}>
+      {/* Título común para ambos TabPanels */}
+      <Grid item xs={12}>
+        <Typography variant='h5' component='h2' gutterBottom sx={{ ml: 2 }}>
+          Solicitudes por estado
+        </Typography>
+      </Grid>
+
       {/* First Card with Tabs */}
       <Grid item xs={12} md={6}>
         <Card>
-          <CardHeader
-            title='Solicitudes por estado'
-            action={<OptionMenu iconClassName='text-textPrimary' options={['Show all orders', 'Share', 'Refresh']} />}
-            className='pbe-4'
-          />
           <TabContext value={value}>
+            {/* Las Tabs se quedan debajo del título */}
             <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
               <Tab value='new' label='Nuevas' />
               <Tab value='new3' label='En ruta' />
@@ -149,21 +152,6 @@ const LogisticsOrdersByCountries = () => {
                   00/00/00 (Fecha de inicio ruta)
                 </Typography>
                 <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
-
-                {/* Nueva entrada con "Creada - Sin Cotización" */}
-
-                <Box display='flex' alignItems='center' mt={2}>
-                  <i className='ri-truck-line text-lg text-success' style={{ marginRight: '8px' }} />
-                  <Typography variant='body2' color='primary' sx={{ cursor: 'pointer' }}>
-                    #0123456782
-                  </Typography>
-                  <Chip label='Creada' color='default' sx={{ ml: 1, mr: 1 }} />
-                  <Chip label='Sin Cotización' color='error' />
-                </Box>
-                <Typography variant='body2' color='primary'>
-                  00/00/00 (Fecha de inicio ruta)
-                </Typography>
-                <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
               </CardContent>
             </TabPanel>
           </TabContext>
@@ -173,7 +161,6 @@ const LogisticsOrdersByCountries = () => {
       {/* Second Card with new Tabs */}
       <Grid item xs={12} md={6}>
         <Card>
-          <CardHeader title='Ejemplo' />
           <TabContext value={valueAdmin}>
             <TabList variant='fullWidth' onChange={handleChangeAdmin}>
               <Tab value='tab1' label='Nuevas' />
@@ -203,11 +190,6 @@ const LogisticsOrdersByCountries = () => {
             <TabPanel value='tab2'>
               <CardContent>
                 <Typography variant='body2'>Informes...</Typography>
-              </CardContent>
-            </TabPanel>
-            <TabPanel value='tab3'>
-              <CardContent>
-                <Typography variant='body2'>En Proceso</Typography>
               </CardContent>
             </TabPanel>
           </TabContext>

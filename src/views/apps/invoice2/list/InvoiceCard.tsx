@@ -1,15 +1,11 @@
 'use client'
 
 // MUI Imports
-import Link from 'next/link'
-
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
+import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 
@@ -23,22 +19,22 @@ import CustomAvatar from '@/@core/components/mui/Avatar'
 const data = [
   {
     title: 24,
-    subtitle: 'Total Creadas',
+    subtitle: 'Clients',
     icon: 'ri-user-3-line'
   },
   {
     title: 165,
-    subtitle: 'Activas',
+    subtitle: 'Obras Pendientes',
     icon: 'ri-pages-line'
   },
   {
-    title: '165',
-    subtitle: 'Cerradas',
+    title: '$2.46k',
+    subtitle: 'Paid',
     icon: 'ri-wallet-line'
   },
   {
     title: '$876',
-    subtitle: 'Tota Cotizado',
+    subtitle: 'Unpaid',
     icon: 'ri-money-dollar-circle-line'
   }
 ]
@@ -50,20 +46,7 @@ const InvoiceCard = () => {
 
   return (
     <Card>
-      <CardContent sx={{ padding: '24px' }}>
-        {/* Contenedor para el título y el botón */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant='h6'>Cotizaciones</Typography>
-          <Button
-            variant='contained'
-            color='primary'
-            component={Link}
-            href='/apps/invoice/add' // Ruta a la que quieres redirigir
-          >
-            + Crear Cotización
-          </Button>
-        </Box>
-        <Divider sx={{ mb: 4 }} />
+      <CardContent>
         <Grid container spacing={6}>
           {data.map((item, index) => (
             <Grid

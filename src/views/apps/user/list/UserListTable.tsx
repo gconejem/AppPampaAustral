@@ -348,7 +348,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filtros' />
+        <CardHeader title='Clientes' />
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>

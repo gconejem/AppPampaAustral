@@ -22,7 +22,6 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
 import TablePagination from '@mui/material/TablePagination'
-import Grid from '@mui/material/Grid'
 import type { TextFieldProps } from '@mui/material/TextField'
 
 // Third-party Imports
@@ -115,7 +114,7 @@ const DebouncedInput = ({
     }, debounce)
 
     return () => clearTimeout(timeout)
-  }, [value])
+  }, [value, onChange])
 
   return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
 }
@@ -137,17 +136,41 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // States
   const [status, setStatus] = useState<InvoiceType['invoiceStatus']>('')
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[invoiceData])
+  const [data, setData] = useState(invoiceData || [])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
-  const [creationDate, setCreationDate] = useState('')
-  const [quoteType, setQuoteType] = useState('')
+
+  // Estados para startDate y endDate
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   // Hooks
   const { lang: locale } = useParams()
 
   const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
     () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
       columnHelper.accessor('id', {
         header: '#',
         cell: ({ row }) => (
@@ -315,68 +338,89 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     })
 
     setFilteredData(filteredData)
-  }, [status, data, setFilteredData])
+  }, [status, data])
+
+  const handleStartDateChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setStartDate(event.target.value as string)
+  }
+
+  const handleEndDateChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setEndDate(event.target.value as string)
+  }
 
   return (
     <Card>
-      <CardContent>
-        <Grid container spacing={2} justifyContent='space-between' alignItems='center'>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Fecha Creación</InputLabel>
-              <Select value={creationDate} onChange={e => setCreationDate(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Fecha1'>Fecha1</MenuItem>
-                <MenuItem value='Fecha2'>Fecha2</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+      <CardContent className='flex justify-between gap-4 flex-wrap flex-col sm:flex-row items-center'>
+        <div className='flex flex-col sm:flex-row max-sm:is-full items-center gap-4' style={{ flexGrow: 1 }}>
+          <Typography>Minutas</Typography>
 
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Tipo Cotización</InputLabel>
-              <Select value={quoteType} onChange={e => setQuoteType(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Tipo1'>Tipo1</MenuItem>
-                <MenuItem value='Tipo2'>Tipo2</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+          {/* Fecha Inicio */}
+          <FormControl fullWidth size='small' className='min-is-[175px]'>
+            <InputLabel id='start-date-select'>Fecha Inicio</InputLabel>
+            <Select
+              fullWidth
+              id='select-start-date'
+              value={startDate}
+              onChange={handleStartDateChange}
+              label='Fecha Inicio'
+              labelId='start-date-select'
+            >
+              <MenuItem value='Fecha 1'>Fecha 1</MenuItem>
+              <MenuItem value='Fecha 2'>Fecha 2</MenuItem>
+            </Select>
+          </FormControl>
 
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Estado</InputLabel>
-              <Select value={status} onChange={e => setStatus(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Sent'>Sent</MenuItem>
-                <MenuItem value='Paid'>Paid</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-        <div className='flex justify-between items-center mt-4'>
-          <Button
-            variant='outlined'
-            startIcon={<i className='ri-external-link-line' />}
-            onClick={() => console.log('Exportando...')}
-            style={{
-              color: '#6e6e6e',
-              borderColor: '#d1d1d1',
-              textTransform: 'none',
-              borderRadius: '8px'
-            }}
-          >
-            Exportar
-          </Button>
+          {/* Fecha Fin */}
+          <FormControl fullWidth size='small' className='min-is-[175px]'>
+            <InputLabel id='end-date-select'>Fecha Fin</InputLabel>
+            <Select
+              fullWidth
+              id='select-end-date'
+              value={endDate}
+              onChange={handleEndDateChange}
+              label='Fecha Fin'
+              labelId='end-date-select'
+            >
+              <MenuItem value='Fecha 1'>Fecha 1</MenuItem>
+              <MenuItem value='Fecha 2'>Fecha 2</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* Campo de búsqueda */}
           <DebouncedInput
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
-            placeholder='Buscar'
-            className='min-is-[200px]'
+            placeholder='Buscar cotización'
+            className='max-sm:is-full min-is-[400px]' // He aumentado el tamaño del campo de búsqueda
           />
+
+          {/* Estado de Minuta */}
+          <FormControl fullWidth size='small' className='min-is-[175px]'>
+            <InputLabel id='status-select'>Estado Minuta</InputLabel>
+            <Select
+              fullWidth
+              id='select-status'
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              label='Estado Minuta'
+              labelId='status-select'
+            >
+              <MenuItem value=''>none</MenuItem>
+              <MenuItem value='draft'>Draft</MenuItem>
+              <MenuItem value='paid'>Paid</MenuItem>
+            </Select>
+          </FormControl>
+        </div>
+
+        {/* Botón de Facturar */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: '200px' }}>
+          <Button variant='contained' color='primary'>
+            Facturar
+          </Button>
         </div>
       </CardContent>
 
+      {/* Tabla existente */}
       <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
@@ -393,11 +437,10 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <i className='ri-arrow-up-s-line text-xl' />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <i className='ri-arrow-down-s-line text-xl' />
-                        ) : null}
+                        {{
+                          asc: <i className='ri-arrow-up-s-line text-xl' />,
+                          desc: <i className='ri-arrow-down-s-line text-xl' />
+                        }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
                       </div>
                     )}
                   </th>
@@ -405,7 +448,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               </tr>
             ))}
           </thead>
-
           {table.getFilteredRowModel().rows.length === 0 ? (
             <tbody>
               <tr>
@@ -419,25 +461,32 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               {table
                 .getRowModel()
                 .rows.slice(0, table.getState().pagination.pageSize)
-                .map(row => (
-                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                    ))}
-                  </tr>
-                ))}
+                .map(row => {
+                  return (
+                    <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                      ))}
+                    </tr>
+                  )
+                })}
             </tbody>
           )}
         </table>
       </div>
-
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
         component='div'
+        className='border-bs'
         count={table.getFilteredRowModel().rows.length}
         rowsPerPage={table.getState().pagination.pageSize}
         page={table.getState().pagination.pageIndex}
-        onPageChange={(_, page) => table.setPageIndex(page)}
+        SelectProps={{
+          inputProps: { 'aria-label': 'rows per page' }
+        }}
+        onPageChange={(_, page) => {
+          table.setPageIndex(page)
+        }}
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
     </Card>

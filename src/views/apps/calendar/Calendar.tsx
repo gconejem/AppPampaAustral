@@ -1,13 +1,6 @@
-// React Imports
 import { useEffect, useRef, useState } from 'react'
 
-// MUI Imports
-import { useTheme, Button, Modal, Box, TextField, Checkbox, FormControlLabel } from '@mui/material'
-
-// Third-party imports
-import type { Dispatch } from '@reduxjs/toolkit'
-import 'bootstrap-icons/font/bootstrap-icons.css'
-
+import { useTheme, Button, Modal, Box, TextField, Checkbox, FormControlLabel, Chip, ButtonGroup } from '@mui/material'
 import FullCalendar from '@fullcalendar/react'
 import listPlugin from '@fullcalendar/list'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -15,37 +8,19 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
 
-// Type Imports
-import type { AddEventType, CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
-
-// Slice Imports
 import { filterEvents, selectedEvent, updateEvent } from '@/redux-store/slices/calendar'
 
 type CalenderProps = {
-  calendarStore: CalendarType
+  calendarStore: any
   calendarApi: any
   setCalendarApi: (val: any) => void
-  calendarsColor: CalendarColors
-  dispatch: Dispatch
+  calendarsColor: any
+  dispatch: any
   handleLeftSidebarToggle: () => void
   handleAddEventSidebarToggle: () => void
 }
 
-const blankEvent: AddEventType = {
-  title: '',
-  start: '',
-  end: '',
-  allDay: false,
-  url: '',
-  extendedProps: {
-    calendar: '',
-    guests: [],
-    description: ''
-  }
-}
-
 const Calendar = (props: CalenderProps) => {
-  // Props
   const {
     calendarStore,
     calendarApi,
@@ -56,16 +31,12 @@ const Calendar = (props: CalenderProps) => {
     handleLeftSidebarToggle
   } = props
 
-  // States for checkboxes and modal
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editedTitle, setEditedTitle] = useState('')
-
-  // Refs
+  const [selectedFilter, setSelectedFilter] = useState('Todas')
   const calendarRef = useRef<any>(null)
-
-  // Hooks
   const theme = useTheme()
 
   useEffect(() => {
@@ -74,12 +45,10 @@ const Calendar = (props: CalenderProps) => {
     }
   }, [calendarApi, setCalendarApi])
 
-  // Handle checkbox changes
   const handleCheckboxChange = (eventId: string) => {
     setSelectedEvents(prev => (prev.includes(eventId) ? prev.filter(id => id !== eventId) : [...prev, eventId]))
   }
 
-  // Handle "Seleccionar todo" checkbox change
   const handleSelectAllChange = () => {
     setSelectAll(!selectAll)
 
@@ -92,7 +61,6 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  // Handle opening the modal for editing events
   const handleOpenEditModal = () => {
     if (selectedEvents.length > 0) {
       const event = calendarStore.events.find(e => e.id === selectedEvents[0])
@@ -102,12 +70,10 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  // Handle closing the modal
   const handleCloseModal = () => {
     setIsModalOpen(false)
   }
 
-  // Handle saving the edited title
   const handleSaveTitle = () => {
     selectedEvents.forEach(eventId => {
       const eventToUpdate = calendarApi.getEventById(eventId)
@@ -118,10 +84,15 @@ const Calendar = (props: CalenderProps) => {
       }
     })
     setIsModalOpen(false)
-    setSelectedEvents([]) // Clear the selected events
+    setSelectedEvents([])
   }
 
-  // calendarOptions(Props)
+  const handleFilterChange = (filter: string) => {
+    setSelectedFilter(filter)
+
+    // Aquí puedes agregar la lógica para filtrar los eventos según el filtro seleccionado
+  }
+
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
@@ -135,20 +106,16 @@ const Calendar = (props: CalenderProps) => {
         titleFormat: { year: 'numeric', month: 'short', day: 'numeric' }
       }
     },
-
     editable: true,
     eventResizableFromStart: true,
     dragScroll: true,
     dayMaxEvents: 2,
     navLinks: true,
-
     eventClassNames({ event: calendarEvent }: any) {
       const colorName = calendarsColor[calendarEvent._def.extendedProps.calendar]
 
       return [`event-bg-${colorName}`]
     },
-
-    // Avoid opening the event if clicking on the checkbox
     eventClick({ event: clickedEvent, jsEvent }: any) {
       if ((jsEvent.target as HTMLElement).tagName !== 'INPUT') {
         jsEvent.preventDefault()
@@ -160,7 +127,6 @@ const Calendar = (props: CalenderProps) => {
         }
       }
     },
-
     customButtons: {
       sidebarToggle: {
         icon: 'bi bi-list',
@@ -169,18 +135,12 @@ const Calendar = (props: CalenderProps) => {
         }
       }
     },
-
     dateClick(info: any) {
-      const ev = { ...blankEvent }
-
-      ev.start = info.date
-      ev.end = info.date
-      ev.allDay = true
+      const ev = { title: '', start: info.date, end: info.date, allDay: true, extendedProps: { calendar: '' } }
 
       dispatch(selectedEvent(ev))
       handleAddEventSidebarToggle()
     },
-
     eventContent: (arg: any) => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -192,38 +152,70 @@ const Calendar = (props: CalenderProps) => {
           />
           <b>{arg.event.title}</b>
         </div>
+        <Chip label='Agendada' color='success' size='small' style={{ marginLeft: '10px' }} />
       </div>
     ),
-
     eventDrop({ event: droppedEvent }: any) {
       dispatch(updateEvent(droppedEvent))
       dispatch(filterEvents())
     },
-
     eventResize({ event: resizedEvent }: any) {
       dispatch(updateEvent(resizedEvent))
       dispatch(filterEvents())
     },
-
     ref: calendarRef,
     direction: theme.direction
   }
 
   return (
     <>
-      {/* Casilla "Seleccionar todo" y botón "Editar" alineados */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+      {/* Casilla "Seleccionar todo", botones de filtro y botón Editar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
         <FormControlLabel
           control={<Checkbox checked={selectAll} onChange={handleSelectAllChange} name='selectAll' color='primary' />}
           label='Seleccionar todo'
         />
 
+        {/* Botones de filtro */}
+        <ButtonGroup variant='outlined' aria-label='outlined button group'>
+          <Button
+            variant={selectedFilter === 'Todas' ? 'contained' : 'outlined'}
+            onClick={() => handleFilterChange('Todas')}
+          >
+            Todas
+          </Button>
+          <Button
+            variant={selectedFilter === 'Por Agendar' ? 'contained' : 'outlined'}
+            onClick={() => handleFilterChange('Por Agendar')}
+          >
+            Por Agendar
+          </Button>
+          <Button
+            variant={selectedFilter === 'Agendadas' ? 'contained' : 'outlined'}
+            onClick={() => handleFilterChange('Agendadas')}
+          >
+            Agendadas
+          </Button>
+          <Button
+            variant={selectedFilter === 'Completadas' ? 'contained' : 'outlined'}
+            onClick={() => handleFilterChange('Completadas')}
+          >
+            Completadas
+          </Button>
+          <Button
+            variant={selectedFilter === 'Suspendidas' ? 'contained' : 'outlined'}
+            onClick={() => handleFilterChange('Suspendidas')}
+          >
+            Suspendidas
+          </Button>
+        </ButtonGroup>
+
+        {/* Botón Editar */}
         <Button
           variant='contained'
           color='primary'
           onClick={handleOpenEditModal}
           disabled={selectedEvents.length === 0}
-          style={{ marginLeft: 'auto' }}
         >
           Editar
         </Button>

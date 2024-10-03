@@ -33,38 +33,8 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
   return (
     <CardContent>
       <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginBottom: '16px' }}>
-          <FormControl fullWidth>
-            <InputLabel id='role-select'>Rut</InputLabel>
-            <Select
-              fullWidth
-              id='select-role'
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              label='Select Role'
-              labelId='role-select'
-              inputProps={{ placeholder: 'Select Role' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={8}>
-          <FormControl fullWidth>
-            <InputLabel id='plan-select'>Nombre Comercial</InputLabel>
-            <Select
-              fullWidth
-              id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
-              label='Select Plan'
-              labelId='plan-select'
-              inputProps={{ placeholder: 'Select Plan' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+        <Grid item xs={12} sm={4} style={{ marginBottom: '16px' }}></Grid>
+        <Grid item xs={12} sm={8}></Grid>
       </Grid>
 
       <Grid container spacing={5}>
@@ -100,60 +70,13 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Región</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+        <Grid item xs={12} sm={4}></Grid>
 
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Ciudad</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+        <Grid item xs={12} sm={4}></Grid>
 
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel id='status-select'>Comuna</InputLabel>
-            <Select
-              fullWidth
-              id='select-status'
-              label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+        <Grid item xs={12} sm={4}></Grid>
       </Grid>
     </CardContent>
-
-    
   )
 }
 

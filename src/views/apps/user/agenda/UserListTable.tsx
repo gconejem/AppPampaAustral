@@ -14,7 +14,7 @@ import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
-import { styled } from '@mui/material/styles'
+import Button from '@mui/material/Button'
 import TablePagination from '@mui/material/TablePagination'
 
 // Third-party Imports
@@ -54,19 +54,33 @@ const UserListTable = ({
   tableData,
   headers,
   title,
-  actionIcons
+  actionIcons,
+  showDetailsBox = false // Añadimos esta opción para habilitar o deshabilitar la caja de detalles
 }: {
   tableData: UsersType[]
   headers: { [key: string]: string }
   title: string
   actionIcons: JSX.Element[]
+  showDetailsBox?: boolean // Añadido por defecto como false
 }) => {
   const [filteredData, setFilteredData] = useState(tableData || [])
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
 
   const columns = useMemo<ColumnDef<UsersType>[]>(() => {
-    const dynamicColumns: ColumnDef<UsersType>[] = []
+    const dynamicColumns: ColumnDef<UsersType>[] = [
+      {
+        id: 'checkbox',
+        header: ({ table }) => (
+          <Checkbox
+            indeterminate={table.getIsSomeRowsSelected()}
+            checked={table.getIsAllRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+          />
+        ),
+        cell: ({ row }) => <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
+      }
+    ]
 
     if (headers.fullName) {
       dynamicColumns.push(
@@ -111,7 +125,6 @@ const UserListTable = ({
       )
     }
 
-    // Agrega las demás columnas opcionales como 'laboratorista', 'comuna', etc.
     if (headers.laboratorista) {
       dynamicColumns.push(
         columnHelper.accessor('laboratorista', {
@@ -206,97 +219,219 @@ const UserListTable = ({
   })
 
   return (
-    <Card>
-      <CardHeader title={title} /> {/* Título dinámico */}
-      <Divider />
-      {/* Filtros visuales */}
-      <Box sx={{ padding: 2 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={2}>
-            <TextField select label='Intervalo de Fechas' fullWidth />
-          </Grid>
-          <Grid item xs={2}>
-            <TextField label='Cliente' fullWidth />
-          </Grid>
-          <Grid item xs={2}>
-            <TextField label='Obra' fullWidth />
-          </Grid>
-          <Grid item xs={2}>
-            <TextField select label='Laboratorista' fullWidth />
-          </Grid>
-          <Grid item xs={2}>
-            <TextField select label='Estado' fullWidth />
-          </Grid>
-          <Grid item xs={2}>
-            <Checkbox /> Por Recibir
-          </Grid>
-        </Grid>
-      </Box>
-      <Divider />
-      <div className='overflow-x-auto'>
-        <table className={tableStyles.table}>
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th key={header.id}>
-                    <div
-                      className={classnames({
-                        'flex items-center': header.column.getIsSorted(),
-                        'cursor-pointer select-none': header.column.getCanSort()
-                      })}
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getIsSorted() ? (
-                        header.column.getIsSorted() === 'asc' ? (
-                          <i className='ri-arrow-up-s-line text-xl' />
-                        ) : (
-                          <i className='ri-arrow-down-s-line text-xl' />
-                        )
-                      ) : null}
-                    </div>
-                  </th>
+    <Grid container spacing={3}>
+      {/* Contenido principal, la tabla */}
+      <Grid item xs={showDetailsBox ? 8 : 12}>
+        <Card>
+          <CardHeader title={title} />
+          <Divider />
+          <Box sx={{ padding: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={2}>
+                <TextField select label='Intervalo de Fechas' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <TextField label='Cliente' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <TextField label='Obra' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <TextField select label='Laboratorista' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <TextField select label='Estado' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <Checkbox /> Por Recibir
+              </Grid>
+            </Grid>
+          </Box>
+          <Divider />
+          <div className='overflow-x-auto'>
+            <table className={tableStyles.table}>
+              <thead>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th key={header.id}>
+                        <div
+                          className={classnames({
+                            'flex items-center': header.column.getIsSorted(),
+                            'cursor-pointer select-none': header.column.getCanSort()
+                          })}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getIsSorted() ? (
+                            header.column.getIsSorted() === 'asc' ? (
+                              <i className='ri-arrow-up-s-line text-xl' />
+                            ) : (
+                              <i className='ri-arrow-down-s-line text-xl' />
+                            )
+                          ) : null}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tr>
-                <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                  No data available
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map(row => (
-                <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50]}
-        component='div'
-        count={filteredData.length}
-        rowsPerPage={10}
-        page={0}
-        onPageChange={() => {}}
-        onRowsPerPageChange={() => {}}
-      />
-    </Card>
+              </thead>
+              <tbody>
+                {table.getFilteredRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                      No data available
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map(row => (
+                    <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50]}
+            component='div'
+            count={filteredData.length}
+            rowsPerPage={10}
+            page={0}
+            onPageChange={() => {}}
+            onRowsPerPageChange={() => {}}
+          />
+        </Card>
+      </Grid>
+
+      {/* Solo se muestra la caja de detalles en la tabla de gestión de visitas */}
+      {showDetailsBox && (
+        <Grid item xs={4}>
+          <Card>
+            <CardHeader title='Detalles de la Visita' />
+            <Divider />
+            <Box p={2} sx={{ position: 'relative' }}>
+              {/* Botones en la esquina superior derecha */}
+              <Box sx={{ position: 'absolute', top: '10px', right: '10px' }}>
+                <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
+                  Editar
+                </Button>
+                <Button variant='outlined' color='secondary'>
+                  Anular
+                </Button>
+              </Box>
+
+              {/* Información de la visita */}
+              <Typography>Hora Llegada:</Typography>
+              <Typography>Movilización:</Typography>
+              <Typography>Observaciones:</Typography>
+
+              <Divider sx={{ my: 2 }} />
+              <Typography>Servicios Agendado vs Completado</Typography>
+              <Typography>Extras Agendados:</Typography>
+
+              <Box mt={2}>
+                <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
+                  Comprobante
+                </Button>
+                <Button variant='outlined' color='warning' style={{ marginRight: '10px' }}>
+                  En Revisión
+                </Button>
+                <Button variant='outlined' color='success'>
+                  Recepción OK
+                </Button>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
+      )}
+    </Grid>
   )
 }
 
-// Datos ficticios para las tablas
+// Datos ficticios actualizados para la tabla de "Gestión de Visitas"
 const dataTable1 = [
-  { id: 1, fullName: 'John Doe', email: 'john@example.com', role: 'admin', status: 'active' },
-  { id: 2, fullName: 'Jane Doe', email: 'jane@example.com', role: 'editor', status: 'inactive' }
+  {
+    id: 1,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'En Revisión'
+  },
+  {
+    id: 2,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'Completada'
+  },
+  {
+    id: 3,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'Anulada'
+  },
+  {
+    id: 4,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'Suspendida'
+  },
+  {
+    id: 5,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'Recibida'
+  },
+  {
+    id: 6,
+    fullName: '22/12/24',
+    email: '00:00',
+    cliente: 'Nombre Cliente',
+    obra: 'Obra',
+    laboratorista: 'Laboratorista',
+    comuna: 'Segmento',
+    inicio: '00:00',
+    termino: '23:59',
+    role: '',
+    status: 'Codificada'
+  }
 ]
 
 const dataTable2 = [
@@ -308,43 +443,53 @@ const dataTable2 = [
 const TablesPage = () => {
   return (
     <div>
+      {/* La tabla de "Gestión de Visitas" muestra la caja de detalles */}
       <UserListTable
         tableData={dataTable1}
         headers={{
           fullName: 'Fecha',
           email: 'Hora',
-          role: 'Rol',
-          status: 'Estado',
           cliente: 'Cliente',
           obra: 'Obra',
           laboratorista: 'Laboratorista',
-          comuna: 'Comuna',
+          comuna: 'Segmento',
           inicio: 'Inicio',
-          termino: 'Término'
+          termino: 'Término',
+          role: 'Rol',
+          status: 'Estado'
         }}
         title='Gestión de Visitas'
         actionIcons={[<i className='ri-edit-box-line' />, <i className='ri-time-line' />]}
+        showDetailsBox={true} // Habilitamos la caja de detalles solo en esta tabla
       />
-      <UserListTable
-        tableData={dataTable2}
-        headers={{
-          fullName: 'N° OT',
-          email: 'Fecha',
-          cliente: 'Cliente',
-          obra: 'N° Obra',
-          role: 'Cliente',
-          servicio: 'Servicio',
-          status: 'Estado',
-          laboratorista: 'Laboratorista'
-        }}
-        title='Órdenes de Trabajo'
-        actionIcons={[
-          <i className='ri-download-line' />,
-          <i className='ri-edit-box-line' />,
-          <i className='ri-time-line' />,
-          <i className='ri-code-s-slash-line' />
-        ]}
-      />
+
+      {/* Separación entre las dos tablas */}
+      <Box mt={4}>
+        {' '}
+        {/* Ajusta el valor '4' según lo que necesites */}
+        {/* La tabla de "Órdenes de Trabajo" no tiene la caja de detalles */}
+        <UserListTable
+          tableData={dataTable2}
+          headers={{
+            fullName: 'N° OT',
+            email: 'Fecha',
+            cliente: 'Cliente',
+            obra: 'N° Obra',
+            role: 'Cliente',
+            servicio: 'Servicio',
+            status: 'Estado',
+            laboratorista: 'Laboratorista'
+          }}
+          title='Órdenes de Trabajo'
+          actionIcons={[
+            <i className='ri-download-line' />,
+            <i className='ri-edit-box-line' />,
+            <i className='ri-time-line' />,
+            <i className='ri-code-s-slash-line' />
+          ]}
+          showDetailsBox={false} // No mostramos la caja de detalles
+        />
+      </Box>
     </div>
   )
 }
