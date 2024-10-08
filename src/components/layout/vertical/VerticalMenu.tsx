@@ -96,6 +96,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
             Facturación
           </MenuItem>
+          <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
+            Control Interno
+          </MenuItem>
         </MenuSection>
 
         <MenuSection label={dictionary['navigation'].appsPages}>
@@ -119,9 +122,6 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           </MenuItem>
           <MenuItem href={`/${locale}/apps/permissions`} icon={<i className='ri-lock-2-line' />}>
             Permisos
-          </MenuItem>
-          <MenuItem href={`/${locale}/apps/permissions`} icon={<i className='ri-lock-2-line' />}>
-            Productos
           </MenuItem>
         </MenuSection>
       </Menu>

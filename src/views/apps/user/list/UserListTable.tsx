@@ -26,6 +26,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import type { TextFieldProps } from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 
 // DatePicker Imports
 import DatePicker from 'react-datepicker'
@@ -299,7 +300,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
 
@@ -348,7 +348,14 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Clientes' />
+        <CardHeader
+          title={<span className='text-xl '>Clientes</span>}
+          action={
+            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
+              + Nuevo Cliente
+            </Button>
+          }
+        />
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
@@ -362,19 +369,25 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Button>
 
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            {/* Aquí se integra el componente PickersRange */}
-            <PickersRange />
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar Cliente'
+              placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
+              style={{ width: '500px' }}
               className='max-sm:is-full min-is-[200px]'
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='ri-search-line' /> {/* Icono de búsqueda */}
+                  </InputAdornment>
+                ),
+                sx: {
+                  padding: '8px', // Ajustamos el relleno para hacerlo más amplio
+                  borderRadius: '8px', // Borde redondeado similar a la imagen
+                  border: '1px solid #E0E0E0' // Color suave para el borde
+                }
+              }}
             />
-          </div>
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              Añadir Nuevo Cliente
-            </Button>
           </div>
         </div>
         <div className='overflow-x-auto'>

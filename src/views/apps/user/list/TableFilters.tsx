@@ -9,6 +9,9 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 
+// DatePicker Imports
+import PickersRange from './date' // Asegúrate de que esta importación esté correctamente referenciada
+
 // Type Imports
 import type { UsersType } from '@/types/apps/userTypes'
 
@@ -32,13 +35,15 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
 
   return (
     <CardContent>
-      <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginBottom: '16px' }}></Grid>
-        <Grid item xs={12} sm={8}></Grid>
-      </Grid>
-
-      <Grid container spacing={5}>
-        <Grid item xs={12} sm={4} style={{ marginBottom: '' }}>
+      <Grid container spacing={2} alignItems='center'>
+        {' '}
+        {/* Rango de Fechas */}
+        <Grid item xs={12} sm={3} sx={{ marginRight: '-79px' }}>
+          {' '}
+          <PickersRange />
+        </Grid>
+        {/* Filtro de Estado */}
+        <Grid item xs={12} sm={3}>
           <FormControl fullWidth>
             <InputLabel id='role-select'>Estado</InputLabel>
             <Select
@@ -46,15 +51,15 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
               id='select-role'
               value={role}
               onChange={e => setRole(e.target.value)}
-              label='Select Role'
+              label='Estado'
               labelId='role-select'
-              inputProps={{ placeholder: 'Select Role' }}
             >
               <MenuItem value=''>...</MenuItem>
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        {/* Filtro de Industria */}
+        <Grid item xs={12} sm={3}>
           <FormControl fullWidth>
             <InputLabel id='plan-select'>Industria</InputLabel>
             <Select
@@ -62,19 +67,13 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
               id='select-plan'
               value={plan}
               onChange={e => setPlan(e.target.value)}
-              label='Select Plan'
+              label='Industria'
               labelId='plan-select'
-              inputProps={{ placeholder: 'Select Plan' }}
             >
               <MenuItem value=''>...</MenuItem>
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}></Grid>
-
-        <Grid item xs={12} sm={4}></Grid>
-
-        <Grid item xs={12} sm={4}></Grid>
       </Grid>
     </CardContent>
   )

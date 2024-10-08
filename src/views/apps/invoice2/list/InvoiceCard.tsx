@@ -1,6 +1,8 @@
 'use client'
 
 // MUI Imports
+import Link from 'next/link'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
@@ -8,6 +10,8 @@ import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
+
+// Next.js Link Import
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -25,7 +29,8 @@ const data = [
   {
     title: 165,
     subtitle: 'Obras Pendientes',
-    icon: 'ri-pages-line'
+    icon: 'ri-pages-line',
+    link: '/en/apps/invoice2/add?cliente=Pepito123&obra=Sodimac' // Parámetros para cliente y obra
   },
   {
     title: '$2.46k',
@@ -57,15 +62,30 @@ const InvoiceCard = () => {
               key={index}
               className='sm:[&:nth-of-type(odd)>div]:pie-6 sm:[&:nth-of-type(odd)>div]:border-ie md:[&:not(:last-child)>div]:pie-6 md:[&:not(:last-child)>div]:border-ie'
             >
-              <div className='flex justify-between'>
-                <div className='flex flex-col'>
-                  <Typography variant='h4'>{item.title}</Typography>
-                  <Typography>{item.subtitle}</Typography>
+              {item.link ? (
+                // Si hay un link, envolvemos la carta en el componente Link
+                <Link href={item.link}>
+                  <div className='flex justify-between cursor-pointer'>
+                    <div className='flex flex-col'>
+                      <Typography variant='h4'>{item.title}</Typography>
+                      <Typography>{item.subtitle}</Typography>
+                    </div>
+                    <CustomAvatar variant='rounded' size={42}>
+                      <i className={classnames('text-[26px]', item.icon)} />
+                    </CustomAvatar>
+                  </div>
+                </Link>
+              ) : (
+                <div className='flex justify-between'>
+                  <div className='flex flex-col'>
+                    <Typography variant='h4'>{item.title}</Typography>
+                    <Typography>{item.subtitle}</Typography>
+                  </div>
+                  <CustomAvatar variant='rounded' size={42}>
+                    <i className={classnames('text-[26px]', item.icon)} />
+                  </CustomAvatar>
                 </div>
-                <CustomAvatar variant='rounded' size={42}>
-                  <i className={classnames('text-[26px]', item.icon)} />
-                </CustomAvatar>
-              </div>
+              )}
               {isBelowMdScreen && !isBelowSmScreen && index < data.length - 2 && (
                 <Divider
                   className={classnames('mbs-6', {

@@ -20,6 +20,7 @@ import IconButton from '@mui/material/IconButton'
 import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -313,7 +314,15 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filtros' />
+        <CardHeader
+          title={<span className='text-xl '>Obras</span>}
+          action={
+            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
+              + Nueva Obra
+            </Button>
+          }
+        />
+
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
@@ -326,18 +335,25 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             Exportar
           </Button>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <PickersRange />
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar Obra'
+              placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
+              style={{ width: '500px' }}
               className='max-sm:is-full min-is-[200px]'
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='ri-search-line' /> {/* Icono de búsqueda */}
+                  </InputAdornment>
+                ),
+                sx: {
+                  padding: '8px', // Ajustamos el relleno para hacerlo más amplio
+                  borderRadius: '8px', // Borde redondeado similar a la imagen
+                  border: '1px solid #E0E0E0' // Color suave para el borde
+                }
+              }}
             />
-          </div>
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              Crear Nueva Obra
-            </Button>
           </div>
         </div>
         <div className='overflow-x-auto'>

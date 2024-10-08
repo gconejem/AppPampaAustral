@@ -1,7 +1,9 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+import { useSearchParams } from 'next/navigation'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -36,6 +38,10 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
   const [issuedDate, setIssuedDate] = useState<Date | null | undefined>(null)
   const [dueDate, setDueDate] = useState<Date | null | undefined>(null)
   const [selectedVisits, setSelectedVisits] = useState<any[]>([])
+
+  const searchParams = useSearchParams()
+  const cliente = searchParams.get('cliente') || 'Cliente'
+  const obra = searchParams.get('obra') || 'Obra'
 
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
 
@@ -122,7 +128,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                 <TextField
                   fullWidth
                   size='small'
-                  placeholder='Buscar Cliente'
+                  placeholder={cliente} // Muestra el valor del cliente
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position='start'>
@@ -134,7 +140,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                 <TextField
                   fullWidth
                   size='small'
-                  placeholder='Buscar Obra'
+                  placeholder={obra} // Muestra el valor de la obra
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position='start'>
@@ -184,10 +190,6 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                     </div>
                     <div className='flex items-center gap-4'>
                       <Typography className='min-is-[100px]'>Lista de Precios:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
                       <Typography></Typography>
                     </div>
                   </div>
@@ -281,7 +283,6 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                               <IconButton
                                 size='small'
                                 onClick={() => {
-                                  // Aquí puedes agregar la lógica para editar los datos
                                   alert('Función de edición aún no implementada')
                                 }}
                               >
@@ -302,7 +303,6 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                             {selectedVisits
                               .filter(visita => visita.solicitud === solicitud)
                               .reduce((total, visita) => total + (visita.valor || 0), 0)}{' '}
-                            {/* Sumamos el valor de cada visita */}
                           </Typography>
                         </TableCell>
                       </TableRow>
