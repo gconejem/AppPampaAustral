@@ -452,9 +452,6 @@ const TablesPage = () => {
           cliente: 'Cliente',
           obra: 'Obra',
           laboratorista: 'Laboratorista',
-          comuna: 'Segmento',
-          inicio: 'Inicio',
-          termino: 'Término',
           role: 'Rol',
           status: 'Estado'
         }}

@@ -93,11 +93,11 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               Gestión de Agenda
             </MenuItem>
           </SubMenu>
-          <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
-            Facturación
-          </MenuItem>
           <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
             Control Interno
+          </MenuItem>
+          <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
+            Facturación
           </MenuItem>
         </MenuSection>
 
@@ -114,7 +114,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             </MenuItem>
           </SubMenu>
 
-          <MenuItem href={`/${locale}/apps/user/`} icon={<i className='ri-bill-line' />}>
+          <MenuItem href={`/${locale}/apps/ecommerce/products/list`} icon={<i className='ri-bill-line' />}>
             Lista de Precios
           </MenuItem>
           <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>

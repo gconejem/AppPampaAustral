@@ -27,16 +27,19 @@ import { getInvoiceData } from '@/app/server/actions'
 }
  */
 const InvoiceAdd = async () => {
-  // Vars
+  // Obtener los datos
   const data = await getInvoiceData()
 
   return (
     <Grid container spacing={6}>
-      <Grid item xs={12} md={9}>
-        <AddCard invoiceData={data} />
-      </Grid>
-      <Grid item xs={12} md={3}>
+      {/* Mover AddActions a la parte superior */}
+      <Grid item xs={12}>
         <AddActions />
+      </Grid>
+
+      {/* Colocar AddCard abajo */}
+      <Grid item xs={12}>
+        <AddCard invoiceData={data} />
       </Grid>
     </Grid>
   )

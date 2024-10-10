@@ -4,6 +4,8 @@
 import { useState } from 'react'
 
 // MUI Imports
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+
 import {
   Dialog,
   DialogTitle,
@@ -83,10 +85,71 @@ const AddPopUp = ({ open, obra, handleClose, handleAgregarVisitas }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth='md' fullWidth>
-      <DialogTitle>Seleccionar Solicitudes</DialogTitle>
+      <DialogTitle>Solicitudes Pendientes</DialogTitle>
+
+      {/* Header debajo del título */}
       <DialogContent>
+        <Grid container spacing={2} sx={{ marginBottom: '16px' }}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label='Fecha Inicio'
+              fullWidth
+              sx={{
+                width: '280px', // Ajusta el ancho aquí
+                '& .MuiInputBase-root': {
+                  height: '40px' // Ajusta la altura del input
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '12px', // Ajusta el tamaño del texto del label
+                  transform: 'translate(14px, 12px) scale(1)' // Ajusta la posición del label
+                },
+                '& .MuiInputLabel-shrink': {
+                  transform: 'translate(14px, -6px) scale(0.75)' // Ajusta el label cuando el campo está enfocado o tiene texto
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label='Fecha Fin'
+              fullWidth
+              sx={{
+                width: '280px', // Ajusta el ancho aquí
+                '& .MuiInputBase-root': {
+                  height: '40px' // Ajusta la altura del input
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '12px', // Ajusta el tamaño del texto del label
+                  transform: 'translate(14px, 12px) scale(1)' // Ajusta la posición del label
+                },
+                '& .MuiInputLabel-shrink': {
+                  transform: 'translate(14px, -6px) scale(0.75)' // Ajusta el label cuando el campo está enfocado o tiene texto
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              variant='contained'
+              color='primary'
+              fullWidth
+              startIcon={<ContentCopyIcon />} // Aquí reemplazamos el Checkbox por el ícono
+              sx={{ width: '280px', height: '40px' }}
+            >
+              Seleccionar Todo
+            </Button>
+          </Grid>
+        </Grid>
+
+        {/* Tabla de solicitudes */}
         <Table sx={{ marginTop: '16px' }}>
-          <TableHead>
+          <TableHead
+            sx={{
+              boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+              backgroundColor: '#F5F5F5', // Leve gris
+              borderBottom: '1px solid #E0E0E0' // Borde inferior similar
+            }}
+          >
             <TableRow>
               <TableCell>N° Solicitud</TableCell>
               <TableCell>Visitas</TableCell>
@@ -100,6 +163,7 @@ const AddPopUp = ({ open, obra, handleClose, handleAgregarVisitas }) => {
               </TableCell>
             </TableRow>
           </TableHead>
+
           <TableBody>
             {solicitudesData[obra]?.map((solicitud, solicitudIndex) =>
               solicitud.visitas.map((visita, visitaIndex) => (
@@ -120,15 +184,12 @@ const AddPopUp = ({ open, obra, handleClose, handleAgregarVisitas }) => {
           </TableBody>
         </Table>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={handleClose} color='primary'>
           Cancelar
         </Button>
-        <Button
-          onClick={agregarVisitasSeleccionadas} // Llama a la nueva función
-          color='primary'
-          disabled={selectedVisitas.length === 0}
-        >
+        <Button onClick={agregarVisitasSeleccionadas} color='primary' disabled={selectedVisitas.length === 0}>
           Agregar Solicitud
         </Button>
       </DialogActions>

@@ -18,7 +18,9 @@ import IconButton from '@mui/material/IconButton'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
-import StarIcon from '@mui/icons-material/Star' // Agrega esta línea
+import StarIcon from '@mui/icons-material/Star'
+import InputAdornment from '@mui/material/InputAdornment'
+import SearchIcon from '@mui/icons-material/Search'
 
 // Header + Formulario
 const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) => {
@@ -45,7 +47,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
       onClose={handleAddEventSidebarToggle}
       sx={{ '& .MuiDrawer-paper': { width: ['100%', '90vw'], maxWidth: '100vw' } }}
     >
-      <Box p={4}>
+      <Box sx={{ maxWidth: '1900px', margin: '0 auto', padding: '16px' }}>
         {/* Header */}
         <Grid container alignItems='center' justifyContent='space-between'>
           <Typography variant='h6'>
@@ -65,7 +67,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
         </Grid>
 
         {/* Formulario */}
-        <Grid container spacing={2} mt={3}>
+        <Grid container spacing={2} mt={4}>
           {/* Primera Fila */}
           <Grid item xs={12} sm={2}>
             <Typography>Tipo de Visita:</Typography>
@@ -174,19 +176,19 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
           </Grid>
 
           {/* Quinta Fila - Lista con Rol, Nombre y Acciones */}
-          <Grid container spacing={2} mt={4} alignItems='center'>
+          <Grid container spacing={2} mt={4} alignItems='center' sx={{ paddingLeft: '15px' }}>
             {/* Cabeceras de la tabla */}
             <Grid item xs={4}>
               <Typography variant='subtitle2' align='left'>
                 ROL
               </Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <Typography variant='subtitle2' align='left'>
                 NOMBRE
               </Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={2}>
               <Typography variant='subtitle2' align='left'>
                 ACCIÓN
               </Typography>
@@ -196,10 +198,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
             <Grid item xs={4}>
               <Typography>Solicitante</Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <Typography>Nombre Encargado</Typography>
             </Grid>
-            <Grid item xs={4} style={{ textAlign: 'left' }}>
+            <Grid item xs={2} style={{ textAlign: 'left' }}>
               <IconButton size='small'>
                 <AddIcon />
               </IconButton>
@@ -218,10 +220,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
             <Grid item xs={4}>
               <Typography>Solicitante</Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={6}>
               <TextField label='Nombre' fullWidth />
             </Grid>
-            <Grid item xs={4} style={{ textAlign: 'left' }}>
+            <Grid item xs={2} style={{ textAlign: 'left' }}>
               <IconButton size='small'>
                 <AddIcon />
               </IconButton>
@@ -230,6 +232,147 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }) =
               </IconButton>
               <IconButton size='small'>
                 <StarIcon />
+              </IconButton>
+              <IconButton size='small'>
+                <DeleteIcon />
+              </IconButton>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2} mt={4} alignItems='center' sx={{ paddingLeft: '15px' }}>
+            {/* Título "Detalle" */}
+            <Grid item xs={12}>
+              <Typography sx={{ fontSize: '20px', fontWeight: 'bold', mb: 4 }}>Detalle</Typography>
+            </Grid>
+
+            {/* Campos debajo del título */}
+            <Grid container item spacing={2} alignItems='center'>
+              {/* Servicio - xs={3} */}
+              <Grid item xs={3}>
+                <TextField
+                  label='Servicio'
+                  variant='outlined'
+                  fullWidth
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
+
+              {/* Cantidad - xs={2} */}
+              <Grid item xs={2}>
+                <TextField label='Cantidad' variant='outlined' fullWidth />
+              </Grid>
+
+              {/* Descripción - xs={4} */}
+              <Grid item xs={4}>
+                <TextField label='Descripción' variant='outlined' fullWidth />
+              </Grid>
+
+              {/* Checkbox 2a Visita - xs={1} */}
+              <Grid item xs={1}>
+                <FormControlLabel control={<Checkbox />} label='2a Visita' />
+              </Grid>
+
+              {/* Botón Agregar - xs={2} */}
+              <Grid item xs={2}>
+                <Button variant='contained' color='primary' fullWidth startIcon={<AddIcon />}>
+                  Agregar
+                </Button>
+              </Grid>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2} mt={4} alignItems='center' sx={{ paddingLeft: '15px' }}>
+            {/* Cabeceras de la tabla */}
+            <Grid item xs={2}>
+              <Typography variant='subtitle2' align='left'>
+                CÓDIGO
+              </Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography variant='subtitle2' align='left'>
+                SERVICIOS
+              </Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography variant='subtitle2' align='left'>
+                CANTIDAD
+              </Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography variant='subtitle2' align='left'>
+                DESCRIPCIÓN / OBSERVACIÓN
+              </Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography variant='subtitle2' align='left'>
+                ACCIÓN
+              </Typography>
+            </Grid>
+
+            {/* Filas de datos, ejemplo 1 */}
+            <Grid item xs={2}>
+              <Typography>123</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Servicios elegidos...</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>10</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Texto</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <IconButton size='small'>
+                <EditIcon />
+              </IconButton>
+              <IconButton size='small'>
+                <DeleteIcon />
+              </IconButton>
+            </Grid>
+
+            {/* Filas de datos, ejemplo 2 */}
+            <Grid item xs={2}>
+              <Typography>124</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Servicios elegidos...</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>2</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Texto</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <IconButton size='small'>
+                <EditIcon />
+              </IconButton>
+              <IconButton size='small'>
+                <DeleteIcon />
+              </IconButton>
+            </Grid>
+
+            {/* Filas de datos, ejemplo 3 */}
+            <Grid item xs={2}>
+              <Typography>125</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Control de Compactación</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography>1</Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography>Texto</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <IconButton size='small'>
+                <EditIcon />
               </IconButton>
               <IconButton size='small'>
                 <DeleteIcon />

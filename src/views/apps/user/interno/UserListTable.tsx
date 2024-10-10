@@ -14,6 +14,7 @@ import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
 import TablePagination from '@mui/material/TablePagination'
 
 // Third-party Imports
@@ -53,31 +54,16 @@ const UserListTable = ({
   tableData,
   headers,
   title,
-  actionIcons,
-  showDetailsBox = false // Añadimos esta opción para habilitar o deshabilitar la caja de detalles
+  actionIcons
 }: {
   tableData: UsersType[]
   headers: { [key: string]: string }
   title: string
   actionIcons: JSX.Element[]
-  showDetailsBox?: boolean // Añadido por defecto como false
 }) => {
   const [filteredData, setFilteredData] = useState(tableData || [])
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(5)
-
-  // Previene bucles infinitos en la selección de filas
-  const handleRowSelectionChange = (newSelection: any) => {
-    setRowSelection(prevSelection => {
-      if (prevSelection !== newSelection) {
-        return newSelection
-      }
-
-      return prevSelection
-    })
-  }
 
   const columns = useMemo<ColumnDef<UsersType>[]>(() => {
     const dynamicColumns: ColumnDef<UsersType>[] = [
@@ -218,7 +204,7 @@ const UserListTable = ({
   }, [headers, actionIcons])
 
   const table = useReactTable({
-    data: filteredData.slice(page * rowsPerPage, (page + 1) * rowsPerPage), // Controlar la paginación aquí
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -226,44 +212,36 @@ const UserListTable = ({
     getPaginationRowModel: getPaginationRowModel(),
     state: { rowSelection, globalFilter },
     globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: handleRowSelectionChange, // Modificamos el método de selección
+    onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter
   })
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    if (page !== newPage) {
-      setPage(newPage)
-    }
-  }
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newRowsPerPage = parseInt(event.target.value, 10)
-
-    if (rowsPerPage !== newRowsPerPage) {
-      setRowsPerPage(newRowsPerPage)
-      setPage(0)
-    }
-  }
-
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={5}>
+      {/* Contenido principal, la tabla */}
       <Grid item xs={12}>
         <Card>
           <CardHeader title={title} />
           <Divider />
           <Box sx={{ padding: 2 }}>
             <Grid container spacing={2}>
-              <Grid item xs={3}>
+              <Grid item xs={2}>
                 <TextField select label='Intervalo de Fechas' fullWidth />
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={2}>
                 <TextField label='Cliente' fullWidth />
               </Grid>
-              <Grid item xs={3}>
-                <TextField label='Buscar' fullWidth />
+              <Grid item xs={2}>
+                <TextField label='Obra' fullWidth />
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={2}>
+                <TextField select label='Laboratorista' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
                 <TextField select label='Estado' fullWidth />
+              </Grid>
+              <Grid item xs={2}>
+                <Checkbox /> Por Recibir
               </Grid>
             </Grid>
           </Box>
@@ -316,100 +294,15 @@ const UserListTable = ({
             </table>
           </div>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
+            rowsPerPageOptions={[10, 25, 50]}
             component='div'
             count={filteredData.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPage={10}
+            page={0}
+            onPageChange={() => {}}
+            onRowsPerPageChange={() => {}}
           />
         </Card>
-      </Grid>
-
-      {/* Tablas debajo */}
-      <Grid container spacing={2} mt={4}>
-        {/* Tabla Cantidades */}
-        <Grid item xs={4}>
-          <Card>
-            <CardHeader title='' />
-            <Divider />
-            <Box sx={{ padding: 2 }}>
-              <table className={tableStyles.table}>
-                <thead>
-                  <tr>
-                    <th>CANT</th>
-                    <th>DÍAS</th>
-                    <th>FECHA VENC</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>7</td>
-                    <td>10</td>
-                    <td>10/10/2024</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>28</td>
-                    <td>31/10/2024</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Box>
-          </Card>
-        </Grid>
-
-        {/* Tabla Ensayos/Servicios */}
-        <Grid item xs={8}>
-          <Card>
-            <CardHeader title='' />
-            <Divider />
-            <Box sx={{ padding: 2 }}>
-              <table className={tableStyles.table}>
-                <thead>
-                  <tr>
-                    <th>SF AM</th>
-                    <th>TIPO/FORMA</th>
-                    <th>CÓD INT</th>
-                    <th>ENSAYO/SERV</th>
-                    <th>CANT</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>GEN</td>
-                    <td>Genérico</td>
-                    <td>200</td>
-                    <td>Movilización</td>
-                    <td>1.00</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>PCL</td>
-                    <td>Cilindros</td>
-                    <td>196</td>
-                    <td>Compresión</td>
-                    <td>3.00</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Box>
-          </Card>
-        </Grid>
       </Grid>
     </Grid>
   )
@@ -497,28 +390,63 @@ const dataTable1 = [
   }
 ]
 
-// Componente principal donde se renderiza la tabla de "Gestión de Visitas"
+const dataTable2 = [
+  { id: 1, fullName: 'Alice Smith', email: 'alice@example.com', role: 'maintainer', status: 'active' },
+  { id: 2, fullName: 'Bob Johnson', email: 'bob@example.com', role: 'subscriber', status: 'pending' }
+]
+
+// Componente principal donde se renderizan las dos tablas con títulos y encabezados diferentes
 const TablesPage = () => {
   return (
     <div>
-      <UserListTable
-        tableData={dataTable1}
-        headers={{
-          fullName: 'Fecha',
-          email: 'Hora',
-          cliente: 'Cliente',
-          obra: 'Obra',
-          laboratorista: 'Laboratorista',
-          comuna: 'Segmento',
-          inicio: 'Inicio',
-          termino: 'Término',
-          role: 'Rol',
-          status: 'Estado'
-        }}
-        title='Control de Muestras'
-        actionIcons={[<i className='ri-edit-box-line' />, <i className='ri-time-line' />]}
-        showDetailsBox={true}
-      />
+      {/* La tabla de "Gestión de Visitas" ahora ocupa todo el ancho */}
+      <Grid container spacing={6}>
+        <Grid item xs={12}>
+          <UserListTable
+            tableData={dataTable1}
+            headers={{
+              fullName: 'Fecha',
+              email: 'Hora',
+              cliente: 'Cliente',
+              obra: 'Obra',
+              laboratorista: 'Laboratorista',
+              role: 'Rol',
+              status: 'Estado'
+            }}
+            title='Gestión de Visitas'
+            actionIcons={[<i className='ri-edit-box-line' />, <i className='ri-time-line' />]}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Separación entre las dos tablas */}
+      <Box mt={4}>
+        {/* La tabla de "Órdenes de Trabajo" también ocupa todo el espacio */}
+        <Grid container spacing={6}>
+          <Grid item xs={12}>
+            <UserListTable
+              tableData={dataTable2}
+              headers={{
+                fullName: 'N° OT',
+                email: 'Fecha',
+                cliente: 'Cliente',
+                obra: 'N° Obra',
+                role: 'Cliente',
+                servicio: 'Servicio',
+                status: 'Estado',
+                laboratorista: 'Laboratorista'
+              }}
+              title='Órdenes de Trabajo'
+              actionIcons={[
+                <i className='ri-download-line' />,
+                <i className='ri-edit-box-line' />,
+                <i className='ri-time-line' />,
+                <i className='ri-code-s-slash-line' />
+              ]}
+            />
+          </Grid>
+        </Grid>
+      </Box>
     </div>
   )
 }
