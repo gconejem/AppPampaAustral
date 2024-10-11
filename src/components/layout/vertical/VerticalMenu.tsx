@@ -93,7 +93,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               Gestión de Agenda
             </MenuItem>
           </SubMenu>
-          <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
+          <MenuItem href={`/${locale}/apps/user/interno`} icon={<i className='ri-home-smile-line' />}>
             Control Interno
           </MenuItem>
           <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
