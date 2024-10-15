@@ -132,7 +132,6 @@ const AddUserDrawer = (props: Props) => {
       <div className='p-5'>
         <form onSubmit={handleSubmit(data => onSubmit(data))} className='flex flex-col gap-5'>
           <Grid container spacing={5}>
-            {/* Campo Número de Obra - xs={4} */}
             <Grid item xs={12} sm={4}>
               <Controller
                 name='numeroObra'
@@ -150,7 +149,6 @@ const AddUserDrawer = (props: Props) => {
               />
             </Grid>
 
-            {/* Campo Fecha de Ingreso - xs={3} */}
             <Grid item xs={12} sm={3}>
               <Controller
                 name='fechaIngreso'
@@ -169,7 +167,6 @@ const AddUserDrawer = (props: Props) => {
               />
             </Grid>
 
-            {/* Campo Estado - xs={2} */}
             <Grid item xs={12} sm={2}>
               <FormControl fullWidth>
                 <Controller
@@ -181,7 +178,6 @@ const AddUserDrawer = (props: Props) => {
               </FormControl>
             </Grid>
 
-            {/* Campo Estado de Obra - xs={3} */}
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
                 <InputLabel id='estadoObra' error={Boolean(errors.estadoObra)}>
@@ -378,7 +374,6 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
           </Grid>
           <Grid container spacing={5}>
-            {/* Primer campo de texto */}
             <Grid item xs={12} sm={5}>
               <Controller
                 name='username'
@@ -396,12 +391,10 @@ const AddUserDrawer = (props: Props) => {
               />
             </Grid>
 
-            {/* Checkbox en el medio */}
             <Grid item xs={12} sm={2} style={{ display: 'flex', alignItems: 'center' }}>
               <FormControlLabel control={<Checkbox />} label='Informe a Mandante' />
             </Grid>
 
-            {/* Segundo campo de texto */}
             <Grid item xs={12} sm={5}>
               <Controller
                 name='username'
@@ -420,11 +413,10 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
           </Grid>
 
-          {/* Sección de Contactos */}
+          {/*  Contactos */}
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
             <Grid item xs={6}>
-              {/* Aquí centramos el texto dentro del grid que ocupa el 50% del espacio */}
               <Typography
                 variant='h5'
                 sx={{
@@ -436,7 +428,6 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
 
             <Grid item xs={6} container justifyContent='flex-end'>
-              {/* Alineamos la barra de búsqueda a la derecha dentro del grid que ocupa el 50% del espacio */}
               <TextField
                 placeholder='Buscar Contacto'
                 InputProps={{
@@ -447,10 +438,10 @@ const AddUserDrawer = (props: Props) => {
                   )
                 }}
                 sx={{
-                  width: '400px', // Ajusta el ancho si es necesario
-                  height: '40px', // Ajusta la altura si es necesario
+                  width: '400px',
+                  height: '40px',
                   '& .MuiInputBase-root': {
-                    height: '100%' // Asegura que el input tenga la altura correcta
+                    height: '100%'
                   }
                 }}
               />
@@ -579,24 +570,88 @@ const AddUserDrawer = (props: Props) => {
             </Table>
           </TableContainer>
 
-          {/* Sección de Condiciones Comerciales */}
+          {/*  Condiciones Comerciales */}
           <Divider sx={{ my: 4 }} />
-          <Typography variant='h6'>Condiciones Comerciales</Typography>
+          <Typography variant='h5'>Requisitos</Typography>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
+              <FormControlLabel control={<Checkbox />} label='Acreditación de Personal' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel control={<Checkbox />} label='Especificaciones Técnicas (EETT)' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel control={<Checkbox />} label='Acreditación de Equipos' />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel control={<Checkbox />} label='Carta de Compromiso' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel control={<Checkbox />} label='Mandato y Envío de Informes a SERVIU' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='Otros' placeholder='' />
+            </Grid>
+          </Grid>
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant='h5'>Facturación</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} display='flex' justifyContent='flex-end'>
+              <FormControlLabel control={<Checkbox />} label='Copiar Cliente' />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='Razón Social' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='RUT' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='Giro' />
+            </Grid>
+
+            <Grid item xs={12} sm={8}>
+              <TextField fullWidth label='Dirección Comercial' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='Comuna' />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label='Teléfono' />
+            </Grid>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth>
-                <InputLabel>Vendedor</InputLabel>
+                <InputLabel>Lista de Precios</InputLabel>
                 <Select>
-                  <MenuItem value='Vendedor 1'>Vendedor 1</MenuItem>
-                  <MenuItem value='Vendedor 2'>Vendedor 2</MenuItem>
+                  <MenuItem value='Lista 1'>Lista 1</MenuItem>
+                  <MenuItem value='Lista 2'>Lista 2</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Condiciones de Venta' placeholder='' />
+              <TextField fullWidth label='Mail Recepción Factura' />
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Observaciones' placeholder='' />
+          </Grid>
+          <Grid container spacing={5}>
+            {/* "Referencias" */}
+            <Grid item xs={12}>
+              <Typography variant='h5'>Referencias</Typography>
+            </Grid>
+
+            <Grid item xs={12} sm={3}>
+              <FormControlLabel control={<Checkbox />} label='Estado de Pago' />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <FormControlLabel control={<Checkbox />} label='HES' />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <FormControlLabel control={<Checkbox />} label='OC' />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField fullWidth label='Otro' />
             </Grid>
           </Grid>
 

@@ -6,6 +6,7 @@ import type { UsersType } from '@/types/apps/userTypes'
 
 // Component Imports
 import UserListTable from './UserListTable'
+import UserListTable2 from './UserListTable2'
 import UserListCards from './UserListCards'
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
@@ -16,6 +17,9 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
       </Grid>
       <Grid item xs={12}>
         <UserListTable tableData={userData} />
+      </Grid>
+      <Grid item xs={12}>
+        <UserListTable2 tableData={userData} />
       </Grid>
     </Grid>
   )

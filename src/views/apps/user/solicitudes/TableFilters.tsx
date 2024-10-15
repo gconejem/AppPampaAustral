@@ -88,19 +88,15 @@ const LogisticsOrdersByCountries = () => {
   }
 
   return (
-    <Grid container spacing={3}>
-      {/* Título común para ambos TabPanels */}
+    <Grid container spacing={3} sx={{ display: 'flex', alignItems: 'stretch' }}>
       <Grid item xs={12}>
         <Typography variant='h5' component='h2' gutterBottom sx={{ ml: 2 }}>
           Solicitudes por estado
         </Typography>
       </Grid>
-
-      {/* First Card with Tabs */}
-      <Grid item xs={12} md={6}>
-        <Card>
+      <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Card sx={{ flexGrow: 1 }}>
           <TabContext value={value}>
-            {/* Las Tabs se quedan debajo del título */}
             <TabList variant='fullWidth' onChange={handleChange} aria-label='full width tabs example'>
               <Tab value='new' label='Nuevas' />
               <Tab value='new3' label='En ruta' />
@@ -158,9 +154,9 @@ const LogisticsOrdersByCountries = () => {
         </Card>
       </Grid>
 
-      {/* Second Card with new Tabs */}
-      <Grid item xs={12} md={6}>
-        <Card>
+      {/* Second Card with Tabs */}
+      <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Card sx={{ flexGrow: 1 }}>
           <TabContext value={valueAdmin}>
             <TabList variant='fullWidth' onChange={handleChangeAdmin}>
               <Tab value='tab1' label='Nuevas' />
@@ -182,7 +178,7 @@ const LogisticsOrdersByCountries = () => {
                       00/00/0{index}
                     </Typography>
                     <Typography variant='body2'>123456 - Echeverría Izquierdo</Typography>
-                    {index < 3 && <Divider className='my-2' />} {/* Add a divider between entries */}
+                    {index < 3 && <Divider className='my-2' />}
                   </Fragment>
                 ))}
               </CardContent>

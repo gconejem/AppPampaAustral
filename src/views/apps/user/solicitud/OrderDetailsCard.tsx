@@ -131,7 +131,9 @@ const LogisticsOrdersByCountries = () => {
   }
 
   return (
-    <Card>
+    <Card sx={{ minHeight: '555px' }}>
+      {' '}
+      {/* Ajusta el valor según sea necesario */}
       <CardHeader
         title='Historial'
         subheader=''

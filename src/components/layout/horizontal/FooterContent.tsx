@@ -30,19 +30,17 @@ const FooterContent = () => {
       </p>
       {!isBreakpointReached && (
         <div className='flex items-center gap-4'>
-          <Link href='https://mui.com/store/license' target='_blank' className='text-primary'>
-            License
-          </Link>
-          <Link href='https://mui.com/store/contributors/themeselection' target='_blank' className='text-primary'>
-            More Themes
-          </Link>
+          <Link href='https://mui.com/store/license' target='_blank' className='text-primary'></Link>
+          <Link
+            href='https://mui.com/store/contributors/themeselection'
+            target='_blank'
+            className='text-primary'
+          ></Link>
           <Link
             href='https://demos.themeselection.com/marketplace/materio-mui-nextjs-admin-template/documentation'
             target='_blank'
             className='text-primary'
-          >
-            Documentation
-          </Link>
+          ></Link>
           <Link href='https://themeselection.com/support' target='_blank' className='text-primary'>
             Support
           </Link>

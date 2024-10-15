@@ -10,40 +10,40 @@ import HorizontalWithSubtitle from '@components/card-statistics/HorizontalWithSu
 // Vars
 const data: UserDataType[] = [
   {
-    title: '',
-    stats: '',
+    title: 'Session',
+    stats: '21,459',
     avatarIcon: 'ri-group-line',
     avatarColor: 'primary',
     trend: 'positive',
-    trendNumber: '',
-    subtitle: ''
+    trendNumber: '29%',
+    subtitle: 'Total User'
   },
   {
-    title: '',
-    stats: '',
+    title: 'Paid Users',
+    stats: '4,567',
     avatarIcon: 'ri-user-add-line',
     avatarColor: 'error',
     trend: 'positive',
-    trendNumber: '',
-    subtitle: ''
+    trendNumber: '18%',
+    subtitle: 'Last week analytics'
   },
   {
-    title: '',
-    stats: '',
+    title: 'Active Users',
+    stats: '19,860',
     avatarIcon: 'ri-user-follow-line',
     avatarColor: 'success',
     trend: 'negative',
-    trendNumber: '',
-    subtitle: ''
+    trendNumber: '14%',
+    subtitle: 'Last week analytics'
   },
   {
-    title: '',
-    stats: '',
+    title: 'Pending Users',
+    stats: '237',
     avatarIcon: 'ri-user-search-line',
     avatarColor: 'warning',
     trend: 'positive',
-    trendNumber: '',
-    subtitle: ''
+    trendNumber: '42%',
+    subtitle: 'Last week analytics'
   }
 ]
 

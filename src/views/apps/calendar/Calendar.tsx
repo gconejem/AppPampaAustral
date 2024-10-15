@@ -7,6 +7,10 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
+import IconButton from '@mui/material/IconButton'
+import EditIcon from '@mui/icons-material/Edit'
+
+import DeleteIcon from '@mui/icons-material/Delete'
 
 import { filterEvents, selectedEvent, updateEvent } from '@/redux-store/slices/calendar'
 
@@ -93,6 +97,19 @@ const Calendar = (props: CalenderProps) => {
     // Aquí puedes agregar la lógica para filtrar los eventos según el filtro seleccionado
   }
 
+  const handleEditEvent = (event: any) => {
+    // Abre el modal para editar el título del evento
+    setEditedTitle(event.title)
+    setSelectedEvents([event.id])
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteEvent = (event: any) => {
+    // Elimina el evento del calendario
+    event.remove()
+    dispatch(filterEvents())
+  }
+
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
@@ -152,7 +169,15 @@ const Calendar = (props: CalenderProps) => {
           />
           <b>{arg.event.title}</b>
         </div>
-        <Chip label='Agendada' color='success' size='small' style={{ marginLeft: '10px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
+          <Chip label='Agendada' color='success' size='small' style={{ marginRight: '5px' }} />
+          <IconButton size='small' onClick={() => handleEditEvent(arg.event)}>
+            <EditIcon fontSize='small' />
+          </IconButton>
+          <IconButton size='small' onClick={() => handleDeleteEvent(arg.event)}>
+            <DeleteIcon fontSize='small' />
+          </IconButton>
+        </div>
       </div>
     ),
     eventDrop({ event: droppedEvent }: any) {

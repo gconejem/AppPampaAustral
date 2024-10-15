@@ -1,21 +1,29 @@
 'use client'
 
 // React Imports
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+
+// Next Imports
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
-import TextField from '@mui/material/TextField'
-import Button from '@mui/material/Button'
+import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
+import Box from '@mui/material/Box'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import FormControlLabel from '@mui/material/FormControlLabel'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -26,228 +34,274 @@ import {
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
+import type { ThemeColor } from '@core/types'
 import type { UsersType } from '@/types/apps/userTypes'
+import type { Locale } from '@configs/i18n'
+
+// Component Imports
+import TableFilters from './TableFilters'
+import AddUserDrawer from './AddUserDrawer'
+import OptionMenu from '@core/components/option-menu'
+import CustomAvatar from '@core/components/mui/Avatar'
+
+// Util Imports
+import { getInitials } from '@/utils/getInitials'
+import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-// Column helper
-const columnHelper = createColumnHelper<UsersType>()
+declare module '@tanstack/table-core' {
+  interface FilterFns {
+    fuzzy: FilterFn<unknown>
+  }
+  interface FilterMeta {
+    itemRank: RankingInfo
+  }
+}
 
-// Fuzzy Filter for search functionality
-const fuzzyFilter: FilterFn<UsersType> = (row, columnId, value, addMeta) => {
+type UsersTypeWithAction = UsersType & {
+  action?: string
+}
+
+type UserRoleType = {
+  [key: string]: { icon: string; color: string }
+}
+
+type UserStatusType = {
+  [key: string]: ThemeColor
+}
+
+// Styled Components
+const Icon = styled('i')({})
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value)
 
-  addMeta({ itemRank })
+  // Store the itemRank info
+  addMeta({
+    itemRank
+  })
 
+  // Return if the item should be filtered in/out
   return itemRank.passed
 }
 
-// Componente que renderiza la tabla con títulos dinámicos y encabezados personalizados
-const UserListTable = ({
-  tableData,
-  headers,
-  title,
-  actionIcons,
-  showDetailsBox = false // Añadimos esta opción para habilitar o deshabilitar la caja de detalles
-}: {
-  tableData: UsersType[]
-  headers: { [key: string]: string }
-  title: string
-  actionIcons: JSX.Element[]
-  showDetailsBox?: boolean // Añadido por defecto como false
-}) => {
-  const [filteredData, setFilteredData] = useState(tableData || [])
-  const [rowSelection, setRowSelection] = useState({})
+const userRoleObj: UserRoleType = {
+  admin: { icon: 'ri-vip-crown-line', color: 'error' },
+  author: { icon: 'ri-computer-line', color: 'warning' },
+  editor: { icon: 'ri-edit-box-line', color: 'info' },
+  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
+  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+}
+
+const userStatusObj: UserStatusType = {
+  active: 'success',
+  pending: 'warning',
+  inactive: 'secondary'
+}
+
+// Column Definitions
+const columnHelper = createColumnHelper<UsersTypeWithAction>()
+
+const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+  // States
+  const [addUserOpen, setAddUserOpen] = useState(false)
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null) // Solo permite una selección de fila
+  const [data, setData] = useState(tableData || [])
+  const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
+  const [selectedEstado, setSelectedEstado] = useState('')
+  const [porRecibir, setPorRecibir] = useState(false)
 
-  const columns = useMemo<ColumnDef<UsersType>[]>(() => {
-    const dynamicColumns: ColumnDef<UsersType>[] = [
+  // Hooks
+  const { lang: locale } = useParams()
+
+  const handleSelectChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setSelectedLaboratorista(event.target.value as string)
+  }
+
+  const handleEstadoChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setSelectedEstado(event.target.value as string)
+  }
+
+  const handlePorRecibirChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPorRecibir(event.target.checked)
+  }
+
+  const handleRowSelection = (rowId: string) => {
+    setSelectedRowId(prevSelectedRowId => (prevSelectedRowId === rowId ? null : rowId))
+  }
+
+  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+    () => [
       {
-        id: 'checkbox',
-        header: ({ table }) => (
+        id: 'select',
+        header: () => <div></div>, // Espacio vacío, ya que no se requiere seleccionar todas las filas
+        cell: ({ row }) => (
           <Checkbox
-            indeterminate={table.getIsSomeRowsSelected()}
-            checked={table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
+            checked={selectedRowId === row.id}
+            onChange={() => handleRowSelection(row.id)} // Solo se maneja selección desde el Checkbox
+            inputProps={{ 'aria-label': 'select row' }}
           />
-        ),
-        cell: ({ row }) => <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
-      }
-    ]
-
-    if (headers.fullName) {
-      dynamicColumns.push(
-        columnHelper.accessor('fullName', {
-          header: headers.fullName,
-          cell: ({ row }) => (
-            <div className='flex items-center gap-4'>
+        )
+      },
+      columnHelper.accessor('fullName', {
+        header: 'User',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-4'>
+            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
+            <div className='flex flex-col'>
               <Typography className='font-medium' color='text.primary'>
                 {row.original.fullName}
               </Typography>
               <Typography variant='body2'>{row.original.username}</Typography>
             </div>
-          )
-        })
-      )
-    }
-
-    if (headers.email) {
-      dynamicColumns.push(
-        columnHelper.accessor('email', {
-          header: headers.email,
-          cell: ({ row }) => <Typography>{row.original.email}</Typography>
-        })
-      )
-    }
-
-    if (headers.cliente) {
-      dynamicColumns.push(
-        columnHelper.accessor('cliente', {
-          header: headers.cliente,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.obra) {
-      dynamicColumns.push(
-        columnHelper.accessor('obra', {
-          header: headers.obra,
-          cell: ({ row }) => <Typography>{row.original.email}</Typography>
-        })
-      )
-    }
-
-    if (headers.laboratorista) {
-      dynamicColumns.push(
-        columnHelper.accessor('laboratorista', {
-          header: headers.laboratorista,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.servicio) {
-      dynamicColumns.push(
-        columnHelper.accessor('servicio', {
-          header: headers.servicio,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.comuna) {
-      dynamicColumns.push(
-        columnHelper.accessor('comuna', {
-          header: headers.comuna,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.inicio) {
-      dynamicColumns.push(
-        columnHelper.accessor('inicio', {
-          header: headers.inicio,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.termino) {
-      dynamicColumns.push(
-        columnHelper.accessor('termino', {
-          header: headers.termino,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    dynamicColumns.push(
+          </div>
+        )
+      }),
+      columnHelper.accessor('email', {
+        header: 'Email',
+        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+      }),
       columnHelper.accessor('role', {
-        header: headers.role,
+        header: 'Role',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
+            <Icon className={userRoleObj[row.original.role].icon} />
             <Typography className='capitalize' color='text.primary'>
               {row.original.role}
             </Typography>
           </div>
         )
-      })
-    )
-
-    dynamicColumns.push(
+      }),
       columnHelper.accessor('status', {
-        header: headers.status,
-        cell: ({ row }) => <Chip label={row.original.status} size='small' className='capitalize' />
+        header: 'Status',
+        cell: ({ row }) => (
+          <Chip variant='tonal' label={row.original.status} size='small' color={userStatusObj[row.original.status]} />
+        )
+      }),
+
+      columnHelper.accessor('action', {
+        header: 'Action',
+        cell: ({ row }) => (
+          <div className='flex items-center'>
+            <OptionMenu
+              iconButtonProps={{ size: 'medium' }}
+              iconClassName='text-textSecondary'
+              options={[
+                {
+                  text: 'Download',
+                  icon: 'ri-download-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                },
+                {
+                  text: 'Edit',
+                  icon: 'ri-edit-box-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                }
+              ]}
+            />
+          </div>
+        ),
+        enableSorting: false
       })
-    )
-
-    dynamicColumns.push({
-      id: 'action',
-      header: 'Acciones',
-      cell: ({ row }) => (
-        <div className='flex items-center gap-2'>
-          {actionIcons.map((icon, index) => (
-            <IconButton key={index}>{icon}</IconButton>
-          ))}
-        </div>
-      )
-    })
-
-    return dynamicColumns
-  }, [headers, actionIcons])
+    ],
+    [selectedRowId]
+  )
 
   const table = useReactTable({
-    data: filteredData,
+    data: filteredData as UsersType[],
     columns,
+    filterFns: {
+      fuzzy: fuzzyFilter
+    },
+    state: {
+      globalFilter
+    },
+    initialState: {
+      pagination: {
+        pageSize: 6
+      }
+    },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    state: { rowSelection, globalFilter },
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter
+    getPaginationRowModel: getPaginationRowModel()
   })
+
+  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
+    const { avatar, fullName } = params
+
+    if (avatar) {
+      return <CustomAvatar src={avatar} skin='light' size={34} />
+    } else {
+      return (
+        <CustomAvatar skin='light' size={34}>
+          {getInitials(fullName as string)}
+        </CustomAvatar>
+      )
+    }
+  }
 
   return (
     <Grid container spacing={3}>
-      {/* Contenido principal, la tabla */}
-      <Grid item xs={showDetailsBox ? 8 : 12}>
+      <Grid item xs={8}>
         <Card>
-          <CardHeader title={title} />
+          <CardHeader title='Gestión de Visitas' />
           <Divider />
-          <Box sx={{ padding: 2 }}>
+          <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
             <Grid container spacing={2}>
-              <Grid item xs={2}>
-                <TextField select label='Intervalo de Fechas' fullWidth />
+              <Grid item xs={12} sm={4}>
+                <Select value={selectedLaboratorista} onChange={handleSelectChange} displayEmpty fullWidth size='small'>
+                  <MenuItem value=''>
+                    <em>Laboratorista</em>
+                  </MenuItem>
+                  <MenuItem value={'lab1'}>Laboratorista 1</MenuItem>
+                  <MenuItem value={'lab2'}>Laboratorista 2</MenuItem>
+                  <MenuItem value={'lab3'}>Laboratorista 3</MenuItem>
+                </Select>
               </Grid>
-              <Grid item xs={2}>
-                <TextField label='Cliente' fullWidth />
+
+              <Grid item xs={12} sm={4}>
+                <Select value={selectedEstado} onChange={handleEstadoChange} displayEmpty fullWidth size='small'>
+                  <MenuItem value=''>
+                    <em>Estado</em>
+                  </MenuItem>
+                  <MenuItem value={'activo'}>Activo</MenuItem>
+                  <MenuItem value={'inactivo'}>Inactivo</MenuItem>
+                  <MenuItem value={'pendiente'}>Pendiente</MenuItem>
+                </Select>
               </Grid>
-              <Grid item xs={2}>
-                <TextField label='Obra' fullWidth />
+
+              <Grid item xs={12} sm={2}>
+                <FormControlLabel
+                  control={<Checkbox checked={porRecibir} onChange={handlePorRecibirChange} />}
+                  label='Por Recibir'
+                />
               </Grid>
-              <Grid item xs={2}>
-                <TextField select label='Laboratorista' fullWidth />
-              </Grid>
-              <Grid item xs={2}>
-                <TextField select label='Estado' fullWidth />
-              </Grid>
-              <Grid item xs={2}>
-                <Checkbox /> Por Recibir
+
+              <Grid item xs={12} sm={2}>
+                <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} fullWidth>
+                  Editar
+                </Button>
               </Grid>
             </Grid>
-          </Box>
-          <Divider />
+          </div>
+
+          {/* Aquí va tu tabla */}
           <div className='overflow-x-auto'>
             <table className={tableStyles.table}>
               <thead>
@@ -255,240 +309,95 @@ const UserListTable = ({
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
                       <th key={header.id}>
-                        <div
-                          className={classnames({
-                            'flex items-center': header.column.getIsSorted(),
-                            'cursor-pointer select-none': header.column.getCanSort()
-                          })}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() ? (
-                            header.column.getIsSorted() === 'asc' ? (
-                              <i className='ri-arrow-up-s-line text-xl' />
-                            ) : (
-                              <i className='ri-arrow-down-s-line text-xl' />
-                            )
-                          ) : null}
-                        </div>
+                        {header.isPlaceholder ? null : (
+                          <div className='cursor-pointer select-none'>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </div>
+                        )}
                       </th>
                     ))}
                   </tr>
                 ))}
               </thead>
               <tbody>
-                {table.getFilteredRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                      No data available
-                    </td>
+                {table.getRowModel().rows.map(row => (
+                  <tr
+                    key={row.id}
+                    className={classnames({ selected: selectedRowId === row.id })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    ))}
                   </tr>
-                ) : (
-                  table.getRowModel().rows.map(row => (
-                    <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                      ))}
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
+
           <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
+            rowsPerPageOptions={[6, 10, 25, 50]}
             component='div'
-            count={filteredData.length}
-            rowsPerPage={10}
-            page={0}
-            onPageChange={() => {}}
-            onRowsPerPageChange={() => {}}
+            className='border-bs'
+            count={table.getFilteredRowModel().rows.length}
+            rowsPerPage={table.getState().pagination.pageSize}
+            page={table.getState().pagination.pageIndex}
+            SelectProps={{
+              inputProps: { 'aria-label': 'rows per page' }
+            }}
+            onPageChange={(_, page) => {
+              table.setPageIndex(page)
+            }}
+            onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
           />
         </Card>
       </Grid>
 
-      {/* Solo se muestra la caja de detalles en la tabla de gestión de visitas */}
-      {showDetailsBox && (
-        <Grid item xs={4}>
-          <Card>
-            <CardHeader title='Detalles de la Visita' />
-            <Divider />
-            <Box p={2} sx={{ position: 'relative' }}>
-              {/* Botones en la esquina superior derecha */}
-              <Box sx={{ position: 'absolute', top: '10px', right: '10px' }}>
-                <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
-                  Editar
-                </Button>
-                <Button variant='outlined' color='secondary'>
-                  Anular
-                </Button>
-              </Box>
-
-              {/* Información de la visita */}
-              <Typography>Hora Llegada:</Typography>
-              <Typography>Movilización:</Typography>
-              <Typography>Observaciones:</Typography>
-
-              <Divider sx={{ my: 2 }} />
-              <Typography>Servicios Agendado vs Completado</Typography>
-              <Typography>Extras Agendados:</Typography>
-
-              <Box mt={2}>
-                <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
-                  Comprobante
-                </Button>
-                <Button variant='outlined' color='warning' style={{ marginRight: '10px' }}>
-                  En Revisión
-                </Button>
-                <Button variant='outlined' color='success'>
-                  Recepción OK
-                </Button>
-              </Box>
+      {/* Caja de detalles a la derecha */}
+      <Grid item xs={4}>
+        {' '}
+        {/* Mantenemos xs={4} */}
+        <Card sx={{ width: '100%', minHeight: '385px' }}>
+          {' '}
+          {/* Ajustamos la altura */}
+          <CardHeader title='Detalles de la Visita' />
+          <Divider />
+          <Box p={2} sx={{ position: 'relative', height: '100%' }}>
+            {/* Botones en la esquina superior derecha */}
+            <Box sx={{ position: 'absolute', top: '10px', right: '10px' }}>
+              <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
+                Editar
+              </Button>
+              <Button variant='outlined' color='secondary'>
+                Anular
+              </Button>
             </Box>
-          </Card>
-        </Grid>
-      )}
+
+            {/* Información de la visita */}
+            <Typography>Hora Llegada:</Typography>
+            <Typography>Movilización:</Typography>
+            <Typography>Observaciones:</Typography>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography>Servicios Agendado vs Completado</Typography>
+            <Typography>Extras Agendados:</Typography>
+
+            <Box mt={2}>
+              <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
+                Comprobante
+              </Button>
+              <Button variant='outlined' color='warning' style={{ marginRight: '10px' }}>
+                En Revisión
+              </Button>
+              <Button variant='outlined' color='success'>
+                Recepción OK
+              </Button>
+            </Box>
+          </Box>
+        </Card>
+      </Grid>
     </Grid>
   )
 }
 
-// Datos ficticios actualizados para la tabla de "Gestión de Visitas"
-const dataTable1 = [
-  {
-    id: 1,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'En Revisión'
-  },
-  {
-    id: 2,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Completada'
-  },
-  {
-    id: 3,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Anulada'
-  },
-  {
-    id: 4,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Suspendida'
-  },
-  {
-    id: 5,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Recibida'
-  },
-  {
-    id: 6,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Codificada'
-  }
-]
-
-const dataTable2 = [
-  { id: 1, fullName: 'Alice Smith', email: 'alice@example.com', role: 'maintainer', status: 'active' },
-  { id: 2, fullName: 'Bob Johnson', email: 'bob@example.com', role: 'subscriber', status: 'pending' }
-]
-
-// Componente principal donde se renderizan las dos tablas con títulos y encabezados diferentes
-const TablesPage = () => {
-  return (
-    <div>
-      {/* La tabla de "Gestión de Visitas" muestra la caja de detalles */}
-      <UserListTable
-        tableData={dataTable1}
-        headers={{
-          fullName: 'Fecha',
-          email: 'Hora',
-          cliente: 'Cliente',
-          obra: 'Obra',
-          laboratorista: 'Laboratorista',
-          role: 'Rol',
-          status: 'Estado'
-        }}
-        title='Gestión de Visitas'
-        actionIcons={[<i className='ri-edit-box-line' />, <i className='ri-time-line' />]}
-        showDetailsBox={true} // Habilitamos la caja de detalles solo en esta tabla
-      />
-
-      {/* Separación entre las dos tablas */}
-      <Box mt={4}>
-        {' '}
-        {/* Ajusta el valor '4' según lo que necesites */}
-        {/* La tabla de "Órdenes de Trabajo" no tiene la caja de detalles */}
-        <UserListTable
-          tableData={dataTable2}
-          headers={{
-            fullName: 'N° OT',
-            email: 'Fecha',
-            cliente: 'Cliente',
-            obra: 'N° Obra',
-            role: 'Cliente',
-            servicio: 'Servicio',
-            status: 'Estado',
-            laboratorista: 'Laboratorista'
-          }}
-          title='Órdenes de Trabajo'
-          actionIcons={[
-            <i className='ri-download-line' />,
-            <i className='ri-edit-box-line' />,
-            <i className='ri-time-line' />,
-            <i className='ri-code-s-slash-line' />
-          ]}
-          showDetailsBox={false} // No mostramos la caja de detalles
-        />
-      </Box>
-    </div>
-  )
-}
-
-export default TablesPage
+export default UserListTable

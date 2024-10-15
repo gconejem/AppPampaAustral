@@ -44,7 +44,7 @@ const BillingAddress = () => {
             <Typography variant='h5'>Cotización</Typography>
             <OpenDialogOnElementClick
               element={Typography}
-              elementProps={typographyProps('Crear', 'primary', 'cursor-pointer font-medium')}
+              elementProps={typographyProps('Editar', 'primary', 'cursor-pointer font-medium')}
               dialog={AddAddress}
               dialogProps={{ type: 'Add address for billing address', data }}
             />
