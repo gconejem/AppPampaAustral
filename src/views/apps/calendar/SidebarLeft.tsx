@@ -9,8 +9,11 @@ import Typography from '@mui/material/Typography'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
+import SearchIcon from '@mui/icons-material/Search' // Importamos el ícono de búsqueda
+import { TextField, InputAdornment } from '@mui/material'
 
 // Third-party imports
+
 import classnames from 'classnames'
 
 // Types Imports
@@ -120,36 +123,52 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         <Typography variant='h5' className='mbe-4'>
           Filtros
         </Typography>
+
+        {/* Campo Cliente con ícono de búsqueda */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <Select
-            value={clienteFilter}
+          <TextField
+            variant='outlined'
+            placeholder='Cliente'
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
             onChange={e => handleFilterChange('Cliente', e.target.value as CalendarFiltersType)}
-            displayEmpty
-          >
-            <MenuItem value='None'>Seleccione Cliente</MenuItem>
-            <MenuItem value='Cliente'>Cliente</MenuItem>
-          </Select>
+          />
         </FormControl>
+
+        {/* Campo Obra con ícono de búsqueda */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <Select
-            value={obraFilter}
+          <TextField
+            variant='outlined'
+            placeholder='Obra'
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
             onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
-            displayEmpty
-          >
-            <MenuItem value='None'>Seleccione Obra</MenuItem>
-            <MenuItem value='Obra'>Obra</MenuItem>
-          </Select>
+          />
         </FormControl>
+
+        {/* Select para Laboratorista */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
           <Select
             value={laboratoristaFilter}
             onChange={e => handleFilterChange('Laboratorista', e.target.value as CalendarFiltersType)}
             displayEmpty
           >
-            <MenuItem value='None'>Seleccione Laboratorista</MenuItem>
+            <MenuItem value='None'> Laboratorista</MenuItem>
             <MenuItem value='Laboratorista'>Laboratorista</MenuItem>
           </Select>
         </FormControl>
+
+        {/* Sector Comercial */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
           <Select
             value={obraFilter}
@@ -160,6 +179,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             <MenuItem value='Obra'></MenuItem>
           </Select>
         </FormControl>
+
+        {/* Comuna */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
           <Select
             value={obraFilter}

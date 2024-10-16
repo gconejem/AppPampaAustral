@@ -9,6 +9,9 @@ import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
 import IconButton from '@mui/material/IconButton'
 import EditIcon from '@mui/icons-material/Edit'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import PersonIcon from '@mui/icons-material/Person'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 
 import DeleteIcon from '@mui/icons-material/Delete'
 
@@ -171,11 +174,25 @@ const Calendar = (props: CalenderProps) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
           <Chip label='Agendada' color='success' size='small' style={{ marginRight: '5px' }} />
+
+          {/* Ícono de "Ver" */}
+          <IconButton size='small' onClick={() => handleViewEvent(arg.event)}>
+            <VisibilityIcon fontSize='small' />
+          </IconButton>
+
+          {/* Ícono de "Editar" */}
           <IconButton size='small' onClick={() => handleEditEvent(arg.event)}>
             <EditIcon fontSize='small' />
           </IconButton>
-          <IconButton size='small' onClick={() => handleDeleteEvent(arg.event)}>
-            <DeleteIcon fontSize='small' />
+
+          {/* Ícono de "Persona" */}
+          <IconButton size='small' onClick={() => handlePersonAction(arg.event)}>
+            <PersonIcon fontSize='small' />
+          </IconButton>
+
+          {/* Menú de opciones (tres puntos) */}
+          <IconButton size='small' onClick={() => handleMenuOptions(arg.event)}>
+            <MoreVertIcon fontSize='small' />
           </IconButton>
         </div>
       </div>

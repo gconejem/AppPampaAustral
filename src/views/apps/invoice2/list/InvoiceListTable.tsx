@@ -23,6 +23,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
+import ReceiptIcon from '@mui/icons-material/Receipt'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -414,7 +415,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
         {/* Botón de Facturar */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: '200px' }}>
-          <Button variant='contained' color='primary'>
+          <Button variant='contained' color='success' startIcon={<ReceiptIcon />}>
             Facturar
           </Button>
         </div>

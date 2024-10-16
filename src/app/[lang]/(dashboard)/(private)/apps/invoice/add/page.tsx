@@ -4,6 +4,7 @@ import Grid from '@mui/material/Grid'
 // Component Imports
 import AddCard from '@views/apps/invoice/add/AddCard'
 import AddActions from '@views/apps/invoice/add/AddActions'
+import AddHeader from '@/views/apps/invoice/add/AddHeader'
 
 // Data Imports
 import { getInvoiceData } from '@/app/server/actions'
@@ -32,6 +33,10 @@ const InvoiceAdd = async () => {
 
   return (
     <Grid container spacing={6}>
+      {/* Header */}
+      <Grid item xs={12}>
+        <AddHeader />
+      </Grid>
       <Grid item xs={12} md={9}>
         <AddCard invoiceData={data} />
       </Grid>

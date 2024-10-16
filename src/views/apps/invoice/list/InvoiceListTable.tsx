@@ -149,17 +149,52 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
     () => [
       columnHelper.accessor('id', {
-        header: '#',
+        header: 'RUT',
         cell: ({ row }) => (
           <Typography
             component={Link}
             href={getLocalizedUrl(`/apps/invoice/preview/${row.original.id}`, locale as Locale)}
             color='primary'
-          >{`#${row.original.id}`}</Typography>
+          >{``}</Typography>
         )
       }),
+
+      columnHelper.accessor('name', {
+        header: 'Nombre Comercial',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            {getAvatar({ avatar: row.original.avatar, name: row.original.name })}
+            <div className='flex flex-col'>
+              <Typography className='font-medium' color='text.primary'>
+                {row.original.name}
+              </Typography>
+              <Typography variant='body2'>{row.original.companyEmail}</Typography>
+            </div>
+          </div>
+        )
+      }),
+
+      columnHelper.accessor('total', {
+        header: 'Ciudad',
+        cell: ({ row }) => <Typography>{`$${row.original.total}`}</Typography>
+      }),
+      columnHelper.accessor('issuedDate', {
+        header: 'Segmento',
+        cell: ({ row }) => <Typography>{row.original.issuedDate}</Typography>
+      }),
+
+      columnHelper.accessor('balance', {
+        header: 'Contacto',
+        cell: ({ row }) => {
+          return row.original.balance === 0 ? (
+            <Chip variant='tonal' label='Paid' color='success' size='small' />
+          ) : (
+            <Typography color='text.primary'>{row.original.balance}</Typography>
+          )
+        }
+      }),
       columnHelper.accessor('invoiceStatus', {
-        header: 'Status',
+        header: 'Estado',
         cell: ({ row }) => (
           <Tooltip
             title={
@@ -186,40 +221,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           </Tooltip>
         )
       }),
-      columnHelper.accessor('name', {
-        header: 'Client',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            {getAvatar({ avatar: row.original.avatar, name: row.original.name })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.name}
-              </Typography>
-              <Typography variant='body2'>{row.original.companyEmail}</Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('total', {
-        header: 'Total',
-        cell: ({ row }) => <Typography>{`$${row.original.total}`}</Typography>
-      }),
-      columnHelper.accessor('issuedDate', {
-        header: 'Issued Date',
-        cell: ({ row }) => <Typography>{row.original.issuedDate}</Typography>
-      }),
-      columnHelper.accessor('balance', {
-        header: 'Balance',
-        cell: ({ row }) => {
-          return row.original.balance === 0 ? (
-            <Chip variant='tonal' label='Paid' color='success' size='small' />
-          ) : (
-            <Typography color='text.primary'>{row.original.balance}</Typography>
-          )
-        }
-      }),
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <IconButton onClick={() => setData(data?.filter(invoice => invoice.id !== row.original.id))}>
