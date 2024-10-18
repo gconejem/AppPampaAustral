@@ -116,7 +116,7 @@ const ProductInformation = () => {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: 'Write something here...'
+        placeholder: 'Escribe algo aquí...'
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph']
@@ -125,28 +125,23 @@ const ProductInformation = () => {
     ],
 
     content: `
-      <p>
-        Keep your account secure with authentication step.
-      </p>
+    
     `
   })
 
   return (
     <Card>
-      <CardHeader title='Product Information' />
+      <CardHeader title='Información del Ensayo' />
       <CardContent>
         <Grid container spacing={5} className='mbe-5'>
           <Grid item xs={12}>
-            <TextField fullWidth label='Product Name' placeholder='iPhone 14' />
+            <TextField fullWidth label='Nombre Ensayo' placeholder='iPhone 14' />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={12}>
             <TextField fullWidth label='SKU' placeholder='FXSK123U' />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField fullWidth label='Barcode' placeholder='0123-4567' />
-          </Grid>
         </Grid>
-        <Typography className='mbe-1'>Description (Optional)</Typography>
+        <Typography className='mbe-1'>Descripción (Opcional)</Typography>
         <Card className='p-0 border shadow-none'>
           <CardContent className='p-0'>
             <EditorToolbar editor={editor} />

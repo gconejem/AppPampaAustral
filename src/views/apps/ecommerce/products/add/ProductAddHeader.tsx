@@ -7,16 +7,16 @@ const ProductAddHeader = () => {
     <div className='flex flex-wrap sm:items-center justify-between max-sm:flex-col gap-6'>
       <div>
         <Typography variant='h4' className='mbe-1'>
-          Add a new product
+          Añadir Ensayo/Servicio
         </Typography>
-        <Typography>Orders placed across your store</Typography>
+        <Typography></Typography>
       </div>
       <div className='flex flex-wrap max-sm:flex-col gap-4'>
         <Button variant='outlined' color='secondary'>
-          Discard
+          Cancelar
         </Button>
-        <Button variant='outlined'>Save Draft</Button>
-        <Button variant='contained'>Publish Product</Button>
+        <Button variant='outlined'>Guardar Borrador</Button>
+        <Button variant='contained'>Publicar Item</Button>
       </div>
     </div>
   )

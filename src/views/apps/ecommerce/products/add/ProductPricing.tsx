@@ -15,15 +15,15 @@ import Form from '@components/Form'
 const ProductPricing = () => {
   return (
     <Card>
-      <CardHeader title='Pricing' />
+      <CardHeader title='Precio' />
       <CardContent>
         <Form>
-          <TextField fullWidth label='Base Price' placeholder='Enter Base Price' className='mbe-5' />
-          <TextField fullWidth label='Discounted Price' placeholder='$499' className='mbe-5' />
-          <FormControlLabel control={<Checkbox defaultChecked />} label='Charge tax on this product' />
+          <TextField fullWidth label='Precio Base' placeholder='Enter Base Price' className='mbe-5' />
+          <TextField fullWidth label='Descuento' placeholder='$499' className='mbe-5' />
+          <FormControlLabel control={<Checkbox defaultChecked />} label='Cargar IVA' />
           <Divider className='mlb-2' />
           <div className='flex items-center justify-between'>
-            <Typography>In stock</Typography>
+            <Typography>En Stock</Typography>
             <Switch defaultChecked />
           </div>
         </Form>

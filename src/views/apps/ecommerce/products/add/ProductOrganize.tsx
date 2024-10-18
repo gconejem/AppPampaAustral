@@ -25,11 +25,11 @@ const ProductOrganize = () => {
 
   return (
     <Card>
-      <CardHeader title='Organize' />
+      <CardHeader title='Filtros' />
       <CardContent>
         <form onSubmit={e => e.preventDefault()} className='flex flex-col gap-5'>
           <FormControl fullWidth>
-            <InputLabel>Select Vendor</InputLabel>
+            <InputLabel>Seleccionar Familia</InputLabel>
             <Select label='Select Vendor' value={vendor} onChange={e => setVendor(e.target.value)}>
               <MenuItem value={`Men's Clothing`}>Men&apos;s Clothing</MenuItem>
               <MenuItem value={`Women's Clothing`}>Women&apos;s Clothing</MenuItem>
@@ -38,7 +38,7 @@ const ProductOrganize = () => {
           </FormControl>
           <div className='flex items-center gap-4'>
             <FormControl fullWidth>
-              <InputLabel>Select Category</InputLabel>
+              <InputLabel>Seleccionar Sub-Familia</InputLabel>
               <Select label='Select Category' value={category} onChange={e => setCategory(e.target.value)}>
                 <MenuItem value='Household'>Household</MenuItem>
                 <MenuItem value='Office'>Office</MenuItem>
@@ -52,7 +52,7 @@ const ProductOrganize = () => {
             </CustomIconButton>
           </div>
           <FormControl fullWidth>
-            <InputLabel>Select Collection</InputLabel>
+            <InputLabel>Seleccionar Área</InputLabel>
             <Select label='Select Collection' value={collection} onChange={e => setCollection(e.target.value)}>
               <MenuItem value={`Men's Clothing`}>Men&apos;s Clothing</MenuItem>
               <MenuItem value={`Women's Clothing`}>Women&apos;s Clothing</MenuItem>
@@ -60,14 +60,14 @@ const ProductOrganize = () => {
             </Select>
           </FormControl>
           <FormControl fullWidth>
-            <InputLabel>Select Status</InputLabel>
-            <Select label='Select Status' value={status} onChange={e => setStatus(e.target.value)}>
+            <InputLabel>Seleccionar Tipo</InputLabel>
+            <Select label='Seleccionar Tipo' value={status} onChange={e => setStatus(e.target.value)}>
               <MenuItem value='Published'>Published</MenuItem>
               <MenuItem value='Inactive'>Inactive</MenuItem>
               <MenuItem value='Scheduled'>Scheduled</MenuItem>
             </Select>
           </FormControl>
-          <TextField fullWidth label='Enter Tags' placeholder='Fashion, Trending, Summer' />
+          <TextField fullWidth label='Más Campos...' placeholder='Fashion, Trending, Summer' />
         </form>
       </CardContent>
     </Card>

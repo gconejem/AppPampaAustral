@@ -95,48 +95,6 @@ const ProductImage = () => {
   const handleRemoveAllFiles = () => {
     setFiles([])
   }
-
-  return (
-    <Dropzone>
-      <Card>
-        <CardHeader
-          title='Product Image'
-          action={
-            <Typography component={Link} color='primary' className='font-medium'>
-              Add media from URL
-            </Typography>
-          }
-          sx={{ '& .MuiCardHeader-action': { alignSelf: 'center' } }}
-        />
-        <CardContent>
-          <div {...getRootProps({ className: 'dropzone' })}>
-            <input {...getInputProps()} />
-            <div className='flex items-center flex-col gap-2 text-center'>
-              <CustomAvatar variant='rounded' skin='light' color='secondary'>
-                <i className='ri-upload-2-line' />
-              </CustomAvatar>
-              <Typography variant='h4'>Drag and Drop Your Image Here.</Typography>
-              <Typography color='text.disabled'>or</Typography>
-              <Button variant='outlined' size='small'>
-                Browse Image
-              </Button>
-            </div>
-          </div>
-          {files.length ? (
-            <>
-              <List>{fileList}</List>
-              <div className='buttons'>
-                <Button color='error' variant='outlined' onClick={handleRemoveAllFiles}>
-                  Remove All
-                </Button>
-                <Button variant='contained'>Upload Files</Button>
-              </div>
-            </>
-          ) : null}
-        </CardContent>
-      </Card>
-    </Dropzone>
-  )
 }
 
 export default ProductImage

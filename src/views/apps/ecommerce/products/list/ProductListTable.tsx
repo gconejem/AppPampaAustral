@@ -178,7 +178,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
         )
       },
       columnHelper.accessor('productName', {
-        header: 'Product',
+        header: 'Ensayos/Servicio',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <img src={row.original.image} width={38} height={38} className='rounded bg-actionHover' />
@@ -192,7 +192,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
         )
       }),
       columnHelper.accessor('category', {
-        header: 'Category',
+        header: 'COD INTERNO',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <CustomAvatar skin='light' color={productCategoryObj[row.original.category].color} size={30}>
@@ -203,24 +203,25 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
         )
       }),
       columnHelper.accessor('stock', {
-        header: 'Stock',
+        header: 'SUB-FAMILIA',
         cell: ({ row }) => <Switch defaultChecked={row.original.stock} />,
         enableSorting: false
       }),
       columnHelper.accessor('sku', {
-        header: 'SKU',
+        header: 'PAQUETE',
         cell: ({ row }) => <Typography>{row.original.sku}</Typography>
       }),
-      columnHelper.accessor('price', {
-        header: 'Price',
-        cell: ({ row }) => <Typography>{row.original.price}</Typography>
+
+      columnHelper.accessor('qty', {
+        header: 'FAMILIA',
+        cell: ({ row }) => <Typography>{row.original.qty}</Typography>
       }),
       columnHelper.accessor('qty', {
-        header: 'QTY',
+        header: 'ÁREA',
         cell: ({ row }) => <Typography>{row.original.qty}</Typography>
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: 'TIPO',
         cell: ({ row }) => (
           <Chip
             label={productStatusObj[row.original.status].title}
@@ -230,8 +231,12 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
           />
         )
       }),
+      columnHelper.accessor('price', {
+        header: 'Precio',
+        cell: ({ row }) => <Typography>{row.original.price}</Typography>
+      }),
       columnHelper.accessor('actions', {
-        header: 'Actions',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <IconButton size='small'>
@@ -294,25 +299,17 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filters' className='pbe-4' />
+        <CardHeader title='Lista de Precios' className='pbe-4' />
         <TableFilters setData={setFilteredData} productData={data} />
         <Divider />
         <div className='flex justify-between flex-col items-start sm:flex-row sm:items-center gap-y-4 p-5'>
           <DebouncedInput
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Product'
+            placeholder='Buscar Ensayo/Servicio'
             className='max-sm:is-full'
           />
           <div className='flex items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
-            <Button
-              color='secondary'
-              variant='outlined'
-              className='max-sm:is-full is-auto'
-              startIcon={<i className='ri-upload-2-line' />}
-            >
-              Export
-            </Button>
             <Button
               variant='contained'
               component={Link}
@@ -320,7 +317,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
               startIcon={<i className='ri-add-line' />}
               className='max-sm:is-full is-auto'
             >
-              Add Product
+              Agregar Ensayo
             </Button>
           </div>
         </div>
