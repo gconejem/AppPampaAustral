@@ -43,16 +43,11 @@ const Header = () => {
           />
         </Grid>
 
-        {/* Grupo de Llenar */}
         <Grid item xs={12} sm={4} container alignItems='center' spacing={2}>
           <Grid item>
             <TextField variant='outlined' label='Precio' />
           </Grid>
-          <Grid item>
-            <Button variant='contained' color='primary' startIcon={<AttachMoneyIcon />}>
-              Llenar
-            </Button>
-          </Grid>
+          <Grid item></Grid>
         </Grid>
 
         <Grid item xs={12} sm={5} container justifyContent='flex-end'>
