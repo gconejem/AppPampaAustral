@@ -188,7 +188,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
         )
       },
       columnHelper.accessor('sku', {
-        header: 'SKU',
+        header: 'ID',
         cell: ({ row }) => <Typography>{row.original.sku}</Typography>
       }),
       columnHelper.accessor('productName', {
@@ -292,7 +292,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Productos' className='pbe-4' />
+        <CardHeader title='Ingreso de Productos' className='pbe-4' />
         <TableFilters setData={setFilteredData} productData={data} />
         <Divider />
         <div className='flex justify-between flex-col items-start sm:flex-row sm:items-center gap-y-4 p-5'>
@@ -302,20 +302,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
             placeholder='Buscar Ensayo/Servicio'
             className='max-sm:is-full'
           />
-          <div className='flex items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
-            <Button variant='contained' onClick={handleOpen} className='max-sm:is-full is-auto'>
-              Crear Paquete
-            </Button>
-            <Button
-              variant='contained'
-              component={Link}
-              href={getLocalizedUrl('/apps/ecommerce/products/add', locale as Locale)}
-              startIcon={<i className='ri-add-line' />}
-              className='max-sm:is-full is-auto'
-            >
-              Agregar Ensayo
-            </Button>
-          </div>
+          <div className='flex items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'></div>
         </div>
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
