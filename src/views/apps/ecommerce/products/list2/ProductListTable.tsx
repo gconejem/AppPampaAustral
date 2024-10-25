@@ -220,13 +220,12 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
           </div>
         )
       }),
-      columnHelper.accessor('stock', {
-        header: 'PAQUETE',
-        cell: ({ row }) => <Switch defaultChecked={row.original.stock} />,
-        enableSorting: false
-      }),
       columnHelper.accessor('sku', {
         header: 'TIPO',
+        cell: ({ row }) => <Typography>{row.original.sku}</Typography>
+      }),
+      columnHelper.accessor('sku', {
+        header: 'PRECIO',
         cell: ({ row }) => <Typography>{row.original.sku}</Typography>
       }),
 

@@ -113,13 +113,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               Contactos
             </MenuItem>
           </SubMenu>
-
-          <MenuItem href={`/${locale}/apps/ecommerce/products/list`} icon={<i className='ri-bill-line' />}>
-            Lista de Precios
-          </MenuItem>
-          <MenuItem href={`/${locale}/apps/ecommerce/products/list2`} icon={<i className='ri-bill-line' />}>
-            Test
-          </MenuItem>
+          <SubMenu label='Productos' icon={<i className='ri-home-smile-line' />}>
+            <MenuItem href={`/${locale}/apps/ecommerce/products/list`} icon={<i className='ri-bill-line' />}>
+              Productos
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/ecommerce/products/list2`} icon={<i className='ri-bill-line' />}>
+              Lista de Precios
+            </MenuItem>
+          </SubMenu>
           <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>
             Roles
           </MenuItem>

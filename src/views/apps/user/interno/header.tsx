@@ -8,13 +8,11 @@ import {
   Card,
   CardContent,
   Typography,
+  Button,
   Tabs,
   Tab,
   TextField,
-  Button,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Chip,
   Table,
   TableBody,
   TableCell,
@@ -22,42 +20,154 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
-  TablePagination,
-  FormControlLabel,
-  Checkbox
+  IconButton,
+  TablePagination
 } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import Acordeon from './Acordeon' // Importando el componente Acordeon
 
 const Header = () => {
-  const [showBox, setShowBox] = useState(false)
-  const [tabValue, setTabValue] = useState(0)
-  const [muestras, setMuestras] = useState<number[]>([]) // Estado para almacenar muestras dinámicas
+  const [sections, setSections] = useState<
+    { id: number; tabs: { label: string; content: JSX.Element }[]; tabValue?: number; muestras?: any[] }[]
+  >([])
 
-  // Datos de ejemplo para la tabla
   const [rows, setRows] = useState([
-    { codigoInterno: '100', servicio: 'Toma de Muestra', cantidad: 1, observacion: 'Texto', estado: 'Ensayado' },
-    { codigoInterno: '101', servicio: 'Docilidad Cono Abrams', cantidad: 1, observacion: 'Texto', estado: 'Ensayado' },
-    { codigoInterno: '102', servicio: 'Piscina de Curado', cantidad: 1, observacion: 'Texto', estado: 'Ensayado' }
+    { codigoInt: '100', servicio: 'Toma de Muestra', cantidad: 1, observacion: 'Texto' },
+    { codigoInt: '101', servicio: 'Docilidad Cono Abrams', cantidad: 1, observacion: 'Texto' },
+    { codigoInt: '102', servicio: 'Piscina de Curado', cantidad: 1, observacion: 'Texto' }
   ])
 
-  const handleButtonClick = () => {
-    setShowBox(!showBox)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+
+  const handleTabChange = (sectionIndex: number) => (event: React.SyntheticEvent, newValue: number) => {
+    const updatedSections = [...sections]
+
+    updatedSections[sectionIndex].tabValue = newValue
+    setSections(updatedSections)
   }
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
+  const handleAddSection = () => {
+    const newSectionId = sections.length + 1
+
+    setSections([
+      ...sections,
+      {
+        id: newSectionId,
+        tabs: [
+          {
+            label: `RCM ${newSectionId}`,
+            content: (
+              <>
+                <Grid container spacing={2} sx={{ marginTop: 2 }}>
+                  <Grid item xs={1}>
+                    <Chip label='Codificado' color='primary' sx={{ backgroundColor: '#D1E9FF', color: '#007BFF' }} />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <TextField fullWidth label='Fecha Codificación' select size='small' />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <TextField fullWidth label='Área' select size='small' />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <TextField fullWidth label='Servicio Familia' select size='small' />
+                  </Grid>
+                  <Grid item xs={3}>
+                    <TextField
+                      fullWidth
+                      label='Servicio / Ensayo'
+                      size='small'
+                      InputProps={{
+                        startAdornment: <i className='ri-search-line' />
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <TextField fullWidth label='Cantidad' size='small' />
+                  </Grid>
+
+                  <Grid item xs={2}>
+                    <Chip label='Sin Inicio' color='success' sx={{ backgroundColor: '#DFF5D5', color: '#4CAF50' }} />
+                  </Grid>
+                  <Grid item xs={8}>
+                    <TextField fullWidth label='Observación' size='small' />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <Button variant='contained' color='primary'>
+                      + Añadir Servicio
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ marginTop: 4 }}>
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>CÓD INT</TableCell>
+                          <TableCell>SERVICIO / ENSAYO</TableCell>
+                          <TableCell>CANTIDAD</TableCell>
+                          <TableCell>OBSERVACIÓN</TableCell>
+                          <TableCell>ACCIONES</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{row.codigoInt}</TableCell>
+                            <TableCell>{row.servicio}</TableCell>
+                            <TableCell>{row.cantidad}</TableCell>
+                            <TableCell>{row.observacion}</TableCell>
+                            <TableCell>
+                              <IconButton sx={{ color: '#B0B0B0' }}>
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton sx={{ color: '#B0B0B0' }}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <TablePagination
+                    component='div'
+                    count={rows.length}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    onPageChange={(_, newPage) => setPage(newPage)}
+                    onRowsPerPageChange={event => setRowsPerPage(parseInt(event.target.value, 10))}
+                  />
+                </Box>
+              </>
+            )
+          }
+        ],
+        muestras: []
+      }
+    ])
   }
 
-  const handleAgregarMuestra = () => {
-    // Cada vez que se haga clic, agrega un nuevo número de muestra
-    setMuestras([...muestras, muestras.length + 1])
+  const handleAddMuestra = (sectionIndex: number) => {
+    const updatedSections = [...sections]
+
+    if (!updatedSections[sectionIndex].muestras) {
+      updatedSections[sectionIndex].muestras = []
+    }
+
+    const newMuestraId = updatedSections[sectionIndex].muestras.length + 1
+
+    updatedSections[sectionIndex].muestras.push({ id: newMuestraId })
+    setSections(updatedSections)
   }
 
   return (
     <Box sx={{ marginBottom: 4 }}>
-      <Card>
+      <Card sx={{ marginBottom: 4 }}>
         <CardContent>
           <Grid container spacing={2} alignItems='center'>
             <Grid item xs={12} sm={6}>
@@ -66,7 +176,7 @@ const Header = () => {
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6} display='flex' justifyContent='flex-end'>
-              <Button variant='contained' color='primary' onClick={handleButtonClick} sx={{ marginBottom: '20px' }}>
+              <Button variant='contained' color='primary' onClick={handleAddSection} sx={{ marginBottom: '20px' }}>
                 + Nuevo Registro
               </Button>
             </Grid>
@@ -74,341 +184,70 @@ const Header = () => {
 
           <Grid container spacing={2}>
             <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='Orden de Trabajo' size='small' sx={{ marginBottom: '15px' }} />
+              <TextField fullWidth label='Orden de Trabajo' size='small' />
             </Grid>
             <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='Cliente' size='small' />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='N° Obra' size='small' />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='Nombre Cliente' size='small' />
-            </Grid>
-
-            <Grid item xs={12} sm={2}>
-              <TextField fullWidth label='Muestreado por...' size='small' />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='Fecha de Muestreo' size='small' select />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='Fecha de Ingreso' size='small' />
-            </Grid>
-            <Grid item xs={12} sm={2}>
-              <TextField fullWidth label='Comuna' size='small' />
-            </Grid>
-            <Grid item xs={12} sm={2}>
-              <TextField fullWidth label='Mandante' size='small' />
+              <TextField fullWidth label='+ campos' size='small' />
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {showBox && (
-        <Box sx={{ marginTop: 4 }}>
-          <Card>
-            <CardContent>
-              <Typography variant='h5' gutterBottom sx={{ marginBottom: '25px' }}>
-                Codificación Registro Control de Muestras
-              </Typography>
-              <Tabs value={tabValue} onChange={handleTabChange} aria-label='tabs example' variant='fullWidth'>
-                <Tab label='Área' sx={{ flex: 1 }} />
-                <Tab label='Muestras' sx={{ flex: 1 }} />
-              </Tabs>
+      {sections.map((section, sectionIndex) => (
+        <Card key={section.id} sx={{ marginBottom: 4 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems='center'>
+              <Grid item xs={10}>
+                <Tabs
+                  value={section.tabValue || 0}
+                  onChange={handleTabChange(sectionIndex)}
+                  aria-label={`RCM Tabs ${section.id}`}
+                >
+                  {section.tabs.map((tab, tabIndex) => (
+                    <Tab
+                      key={tabIndex}
+                      label={
+                        <Box display='flex' alignItems='center'>
+                          <Typography sx={{ marginRight: '8px', color: '#1976D2', fontWeight: 600 }}>RCM</Typography>
+                          <TextField
+                            value={tab.label.split(' ')[1]}
+                            variant='outlined'
+                            size='small'
+                            sx={{
+                              '& .MuiInputBase-input': {
+                                padding: '6px 10px',
+                                textAlign: 'center',
+                                width: '80px'
+                              }
+                            }}
+                            InputProps={{
+                              readOnly: true
+                            }}
+                          />
+                        </Box>
+                      }
+                    />
+                  ))}
+                </Tabs>
+              </Grid>
+            </Grid>
 
-              <Box sx={{ padding: 2 }}>
-                {/* Contenido del Tab "Área" */}
-                {tabValue === 0 && (
-                  <>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Área'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='RCM'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Estado'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                          select
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Código Interno'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          fullWidth
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                          label='Servicio / Ensayo'
-                          InputProps={{
-                            startAdornment: <i className='ri-search-line'></i>
-                          }}
-                        />
-                      </Grid>
+            <Box sx={{ marginTop: 2, padding: 2 }}>
+              {section.tabs[section.tabValue || 0] && section.tabs[section.tabValue || 0].content}
+            </Box>
 
-                      <Grid item xs={12} sm={2}>
-                        <TextField fullWidth label='Cantidad' size='small' />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField fullWidth label='Observación' size='small' />
-                      </Grid>
-                      <Grid item xs={12} sm={6} display='flex' justifyContent='flex-end'>
-                        <Button variant='contained' color='primary'>
-                          + Agregar
-                        </Button>
-                      </Grid>
-                    </Grid>
-
-                    <Box sx={{ marginTop: 4 }}>
-                      <TableContainer component={Paper}>
-                        <Table>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ backgroundColor: '#f5f5f5' }}>Cód Int</TableCell>
-                              <TableCell sx={{ backgroundColor: '#f5f5f5' }}>Servicio / Ensayo</TableCell>
-                              <TableCell sx={{ backgroundColor: '#f5f5f5' }}>Cantidad</TableCell>
-                              <TableCell sx={{ backgroundColor: '#f5f5f5' }}>Observación</TableCell>
-                              <TableCell sx={{ backgroundColor: '#f5f5f5' }}>Estado</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {rows.map((row, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{row.codigoInterno}</TableCell>
-                                <TableCell>{row.servicio}</TableCell>
-                                <TableCell>{row.cantidad}</TableCell>
-                                <TableCell>{row.observacion}</TableCell>
-                                <TableCell>
-                                  <Chip label={row.estado} color='success' />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-
-                      <TablePagination
-                        component='div'
-                        count={rows.length}
-                        page={0}
-                        rowsPerPage={5}
-                        onPageChange={() => {}}
-                        onRowsPerPageChange={() => {}}
-                      />
-                    </Box>
-                  </>
-                )}
-
-                {/* Contenido del Tab "Muestras" */}
-                {tabValue === 1 && (
-                  <>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Tarjeta (176712)'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Procedencia'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Ubicación / Sector'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Tipo de Muestra'
-                          size='small'
-                          select
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Ítem'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Cantidad de Muestras'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    <Grid container spacing={2} alignItems='center'>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Específicos Área'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
-                        <TextField
-                          fullWidth
-                          label='Grado'
-                          size='small'
-                          sx={{ marginBottom: '10px', marginTop: '10px' }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={8} display='flex' justifyContent='flex-end'>
-                        <Button variant='contained' color='primary' onClick={handleAgregarMuestra}>
-                          + Añadir Muestra
-                        </Button>
-                      </Grid>
-                    </Grid>
-
-                    {/* Acordeones */}
-                    {muestras.map((muestra, index) => (
-                      <Accordion key={index} sx={{ marginTop: 2 }}>
-                        <AccordionSummary
-                          expandIcon={<ExpandMoreIcon />}
-                          aria-controls={`panel${index}-content`}
-                          id={`panel${index}-header`}
-                        >
-                          <Typography>Muestra #{muestra}</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <Typography variant='h6'>Ensayos</Typography>
-
-                          <Grid container spacing={2} sx={{ marginTop: 2 }}>
-                            <Grid item xs={12} sm={4}>
-                              <TextField fullWidth label='Código Int.' size='small' />
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <TextField fullWidth label='Servicio / Ensayo' size='small' />
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <TextField fullWidth label='Estado' size='small' select>
-                                {/* Opciones de Estado */}
-                              </TextField>
-                            </Grid>
-                          </Grid>
-
-                          <Grid container spacing={2} sx={{ marginTop: 2 }}>
-                            <Grid item xs={12} sm={4}>
-                              <TextField fullWidth label='Observación' size='small' />
-                            </Grid>
-                            <Grid item xs={12} sm={2}>
-                              <FormControlLabel control={<Checkbox />} label='Vencimiento' />
-                            </Grid>
-                            <Grid item xs={12} sm={3}>
-                              <TextField fullWidth label='Fecha Confección' size='small' select>
-                                {/* Opciones de Fecha */}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={12} sm={3} display='flex' justifyContent='flex-end'>
-                              <Button variant='contained' color='primary'>
-                                + Añadir Ensayo
-                              </Button>
-                            </Grid>
-                          </Grid>
-
-                          {/* Tablas debajo del acordeón */}
-                          <Grid container spacing={2} sx={{ marginTop: 4 }}>
-                            <Grid item xs={12} sm={6}>
-                              <TableContainer component={Paper}>
-                                <Table>
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>Cód Int</TableCell>
-                                      <TableCell>Servicio / Ensayo</TableCell>
-                                      <TableCell>Estado</TableCell>
-                                      <TableCell>Observación</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell>200</TableCell>
-                                      <TableCell>Compresión</TableCell>
-                                      <TableCell>
-                                        <Chip label='Codificado' color='primary' />
-                                      </TableCell>
-                                      <TableCell>Texto</TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                              <TableContainer component={Paper}>
-                                <Table>
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>#</TableCell>
-                                      <TableCell>Cant</TableCell>
-                                      <TableCell>Días</TableCell>
-                                      <TableCell>Fecha Venc.</TableCell>
-                                      <TableCell>Estado</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell>1</TableCell>
-                                      <TableCell>1</TableCell>
-                                      <TableCell>7</TableCell>
-                                      <TableCell>31/12/2024</TableCell>
-                                      <TableCell>
-                                        <Chip label='Ensayado' color='success' />
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </Grid>
-                          </Grid>
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
-                  </>
-                )}
+            {sections.length > 0 && (
+              <Box display='flex' justifyContent='flex-end' sx={{ marginTop: 2 }}>
+                <Button variant='contained' color='primary' onClick={() => handleAddMuestra(sectionIndex)}>
+                  + Añadir Muestra
+                </Button>
               </Box>
-            </CardContent>
-          </Card>
-        </Box>
-      )}
+            )}
+
+            <Acordeon muestras={section.muestras} />
+          </CardContent>
+        </Card>
+      ))}
     </Box>
   )
 }
