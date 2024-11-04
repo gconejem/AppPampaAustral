@@ -226,35 +226,24 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
       }),
       columnHelper.accessor('sku', {
         header: 'PRECIO',
-        cell: ({ row }) => <Typography>{row.original.sku}</Typography>
-      }),
+        cell: ({ row }) => {
+          const [price, setPrice] = useState(row.original.sku) // Puedes cambiar 'sku' por la propiedad correcta para el precio.
 
-      columnHelper.accessor('actions', {
-        header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton size='small'>
-              <i className='ri-edit-box-line text-[22px] text-textSecondary' />
-            </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary text-[22px]'
-              options={[
-                { text: 'Download', icon: 'ri-download-line', menuItemProps: { className: 'gap-2' } },
-                {
-                  text: 'Delete',
-                  icon: 'ri-delete-bin-7-line',
-                  menuItemProps: {
-                    className: 'gap-2',
-                    onClick: () => setData(data?.filter(product => product.id !== row.original.id))
-                  }
-                },
-                { text: 'Duplicate', icon: 'ri-stack-line', menuItemProps: { className: 'gap-2' } }
-              ]}
+          const handlePriceChange = event => {
+            setPrice(event.target.value)
+
+            // Aquí puedes agregar lógica para actualizar el precio en tu estado o enviar la actualización al servidor.
+          }
+
+          return (
+            <TextField
+              value={price}
+              onChange={handlePriceChange}
+              size='small'
+              sx={{ width: '80px' }} // Ajusta el ancho según sea necesario.
             />
-          </div>
-        ),
-        enableSorting: false
+          )
+        }
       })
     ],
     [data, filteredData]

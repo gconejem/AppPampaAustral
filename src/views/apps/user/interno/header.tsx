@@ -172,7 +172,7 @@ const Header = () => {
           <Grid container spacing={2} alignItems='center'>
             <Grid item xs={12} sm={6}>
               <Typography variant='h5' gutterBottom sx={{ marginBottom: '15px' }}>
-                Codificación Registro Control de Muestras
+                Control de Muestras{' '}
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6} display='flex' justifyContent='flex-end'>
@@ -183,11 +183,49 @@ const Header = () => {
           </Grid>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={3}>
+            {/* Fila 1: Orden de trabajo, Cliente, Número de obra, Nombre Cliente */}
+            <Grid item xs={4}>
               <TextField fullWidth label='Orden de Trabajo' size='small' />
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField fullWidth label='+ campos' size='small' />
+            <Grid item xs={4}>
+              <TextField fullWidth label='Cliente' size='small' />
+            </Grid>
+            <Grid item xs={1}>
+              <TextField fullWidth label='N° Obra' size='small' />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField fullWidth label='Nombre Cliente' size='small' />
+            </Grid>
+
+            {/* Fila 2: Fecha de Muestreo, Fecha de Ingreso, Tipo Servicio, Muestreado por */}
+            <Grid item xs={3}>
+              <TextField fullWidth label='Fecha de Muestreo' select size='small'>
+                {/* Agrega opciones aquí */}
+              </TextField>
+            </Grid>
+            <Grid item xs={3}>
+              <TextField fullWidth label='Fecha de Ingreso' select size='small'>
+                {/* Agrega opciones aquí */}
+              </TextField>
+            </Grid>
+            <Grid item xs={3}>
+              <TextField fullWidth label='Tipo Servicio' select size='small'>
+                {/* Agrega opciones aquí */}
+              </TextField>
+            </Grid>
+            <Grid item xs={3}>
+              <TextField fullWidth label='Muestreado por...' size='small' />
+            </Grid>
+
+            {/* Fila 3: Laboratorista, Comuna, Mandante */}
+            <Grid item xs={4}>
+              <TextField fullWidth label='Laboratorista' size='small' />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField fullWidth label='Comuna' size='small' />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField fullWidth label='Mandante' size='small' />
             </Grid>
           </Grid>
         </CardContent>

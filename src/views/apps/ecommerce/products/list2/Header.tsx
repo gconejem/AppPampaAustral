@@ -44,9 +44,6 @@ const Header = () => {
         </Grid>
 
         <Grid item xs={12} sm={4} container alignItems='center' spacing={2}>
-          <Grid item>
-            <TextField variant='outlined' label='Precio' />
-          </Grid>
           <Grid item></Grid>
         </Grid>
 

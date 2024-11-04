@@ -8,6 +8,9 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+import Grid from '@mui/material/Grid'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Button from '@mui/material/Button'
@@ -134,6 +137,7 @@ const DebouncedInput = ({
 }
 
 // Vars
+
 const productCategoryObj: ProductCategoryType = {
   Accessories: { icon: 'ri-headphone-line', color: 'error' },
   'Home Decor': { icon: 'ri-home-6-line', color: 'info' },
@@ -158,6 +162,55 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
   const [globalFilter, setGlobalFilter] = useState('')
   const [open, setOpen] = useState(false)
 
+  const [paqueteList, setPaqueteList] = useState<string[]>([]) // Lista de paquetes
+  const [productosList, setProductosList] = useState<string[]>(['Producto 1', 'Producto 2', 'Producto 3']) // Lista de productos
+  const [selectedProductos, setSelectedProductos] = useState<string[]>([])
+  const [selectedPaquetes, setSelectedPaquetes] = useState<string[]>([])
+
+  // Funciones para manejar la selección
+  const handleSelectProducto = (item: string) => {
+    setSelectedProductos(prev => (prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]))
+  }
+
+  const handleSelectPaquete = (item: string) => {
+    setSelectedPaquetes(prev => (prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]))
+  }
+
+  // Funciones para mover los elementos entre las listas
+  const handleMoveToPaquete = () => {
+    setPaqueteList(prev => [...prev, ...selectedProductos])
+    setProductosList(prev => prev.filter(item => !selectedProductos.includes(item)))
+    setSelectedProductos([]) // Limpia la selección
+  }
+
+  const handleMoveToProductos = () => {
+    setProductosList(prev => [...prev, ...selectedPaquetes])
+    setPaqueteList(prev => prev.filter(item => !selectedPaquetes.includes(item)))
+    setSelectedPaquetes([]) // Limpia la selección
+  }
+
+  const handleSave = () => {
+    // Lógica para guardar los datos del paquete
+    console.log('Datos del paquete guardados:', {
+      nombre,
+      sku,
+      norma,
+      listaPrecios,
+      precio,
+      aplicarImpuesto,
+      paqueteList
+    })
+
+    // Cierra el modal después de guardar
+    handleClose()
+  }
+
+  const [nombre, setNombre] = useState('')
+  const [sku, setSku] = useState('')
+  const [norma, setNorma] = useState('')
+  const [listaPrecios, setListaPrecios] = useState('')
+  const [precio, setPrecio] = useState('')
+  const [aplicarImpuesto, setAplicarImpuesto] = useState(false)
   const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
 
@@ -380,18 +433,121 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
         <Modal open={open} onClose={handleClose}>
-          <Box sx={style}>
-            <Typography variant='h6' mb={2}>
-              Crear Nuevo Paquete
+          <Box sx={{ ...style, width: 900, padding: 4 }}>
+            <Typography variant='h5' mb={3} fontWeight=''>
+              Crear Paquete
             </Typography>
-            <TextField fullWidth label='SKU' margin='normal' />
-            <TextField fullWidth label='Área' margin='normal' />
-            <TextField fullWidth label='Familia' margin='normal' />
-            <div className='flex justify-end mt-4'>
-              <Button onClick={handleClose} color='primary' variant='contained'>
-                Guardar
+            {/* Sección de campos de entrada */}
+            <Grid container spacing={3}>
+              <Grid item xs={4}>
+                <TextField
+                  label='Nombre del Paquete'
+                  value={nombre}
+                  onChange={e => setNombre(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField label='SKU' value={sku} onChange={e => setSku(e.target.value)} fullWidth />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField label='Norma' value={norma} onChange={e => setNorma(e.target.value)} fullWidth />
+              </Grid>
+            </Grid>
+            <Grid container spacing={3} mt={2}>
+              <Grid item xs={4}>
+                <TextField
+                  label='Lista de Precios'
+                  value={listaPrecios}
+                  onChange={e => setListaPrecios(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label='Precio'
+                  value={precio}
+                  onChange={e => setPrecio(e.target.value)}
+                  fullWidth
+                  InputProps={{ startAdornment: <Typography>$</Typography> }}
+                />
+              </Grid>
+              <Grid item xs={4} display='flex' alignItems='center'>
+                <Checkbox checked={aplicarImpuesto} onChange={e => setAplicarImpuesto(e.target.checked)} />
+                <Typography component='span'>Aplicar Impuesto</Typography>
+              </Grid>
+            </Grid>
+            {/* Contenedor de las tablas */}
+            <Grid container spacing={3} mt={4}>
+              {/* Tabla de Paquetes */}
+              <Grid item xs={5}>
+                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, height: 250, overflowY: 'auto' }}>
+                  <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
+                    <Typography variant='subtitle2' fontWeight='bold'>
+                      PAQUETE
+                    </Typography>
+                  </Box>
+                  {paqueteList.length > 0 ? (
+                    paqueteList.map((item, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
+                        <Checkbox
+                          checked={selectedPaquetes.includes(item)}
+                          onChange={() => handleSelectPaquete(item)}
+                        />
+                        <Typography component='span'>{item}</Typography>
+                      </div>
+                    ))
+                  ) : (
+                    <Typography color='text.secondary' textAlign='center' p={1}>
+                      Sin productos
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+              {/* Botones de mover */}
+              <Grid item xs={2} container direction='column' justifyContent='center' alignItems='center'>
+                <Button variant='contained' onClick={handleMoveToPaquete} sx={{ mb: 1 }}>
+                  <ArrowBackIcon />
+                </Button>
+                <Button variant='contained' onClick={handleMoveToProductos}>
+                  <ArrowForwardIcon />
+                </Button>
+              </Grid>
+              {/* Tabla de Productos */}
+              <Grid item xs={5}>
+                <Box sx={{ border: '1px solid #f0efef', borderRadius: 2, height: 250, overflowY: 'auto' }}>
+                  <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
+                    <Typography variant='subtitle2' fontWeight='bold'>
+                      PRODUCTOS
+                    </Typography>
+                  </Box>
+                  {productosList.length > 0 ? (
+                    productosList.map((item, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
+                        <Checkbox
+                          checked={selectedProductos.includes(item)}
+                          onChange={() => handleSelectProducto(item)}
+                        />
+                        <Typography component='span'>{item}</Typography>
+                      </div>
+                    ))
+                  ) : (
+                    <Typography color='text.secondary' textAlign='center' p={1}>
+                      Sin productos
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+            {/* Botones de acción */}
+            <Box mt={4} display='flex' justifyContent='flex-end' gap={2}>
+              <Button onClick={handleClose} color='secondary' variant='outlined'>
+                Cancelar
               </Button>
-            </div>
+              <Button onClick={handleSave} color='primary' variant='contained'>
+                Agregar Paquete
+              </Button>
+            </Box>
           </Box>
         </Modal>
       </Card>

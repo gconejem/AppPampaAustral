@@ -5,7 +5,7 @@ export const db: ECommerceType = {
   products: [
     {
       id: 1,
-      productName: 'iPhone 14 Pro',
+      productName: 'GRANULOMETRIA - IGNICIÓN',
       category: 'Electronics',
       stock: true,
       sku: 19472,
@@ -13,7 +13,7 @@ export const db: ECommerceType = {
       qty: 665,
       status: 'Inactive',
       image: '/images/apps/ecommerce/product-1.png',
-      productBrand: 'Super Retina XDR display footnote Pro Motion technology'
+      productBrand: ''
     },
     {
       id: 2,
