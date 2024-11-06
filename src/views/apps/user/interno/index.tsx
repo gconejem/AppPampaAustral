@@ -8,6 +8,8 @@ import type { UsersType } from '@/types/apps/userTypes'
 import UserListTable from './UserListTable'
 import UserListCards from './UserListCards'
 import Header from './header' // Importamos el Header
+import StepperAlternativeLabel from './StepperAlternativeLabel' // Importamos el Stepper horizontal
+import StepperVerticalWithNumbers from './StepperVerticalWithNumbers' // Importamos el Stepper vertical
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
@@ -17,15 +19,17 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
         <Header /> {/* Aquí agregamos el Header */}
       </Grid>
 
+      {/* Integración del Stepper Horizontal */}
+      <Grid item xs={12}>
+        <StepperVerticalWithNumbers /> {/* Aquí se muestra el Stepper horizontal en la página */}
+      </Grid>
+
       {/* Contenido de UserListCards */}
       <Grid item xs={12}>
         <UserListCards />
       </Grid>
 
       {/* Puedes agregar el UserListTable si es necesario en otro Grid */}
-      <Grid item xs={12}>
-        {/* Ejemplo de tabla u otro contenido */}
-      </Grid>
     </Grid>
   )
 }
