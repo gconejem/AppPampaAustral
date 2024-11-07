@@ -6,32 +6,35 @@ import { useState } from 'react'
 // MUI Imports
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Step from '@mui/material/Step'
-import Card from '@mui/material/Card'
-import Button from '@mui/material/Button'
-import Stepper from '@mui/material/Stepper'
-import StepLabel from '@mui/material/StepLabel'
-import CardHeader from '@mui/material/CardHeader'
-import Typography from '@mui/material/Typography'
-import CardContent from '@mui/material/CardContent'
-import StepContent from '@mui/material/StepContent'
-import TextField from '@mui/material/TextField'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import IconButton from '@mui/material/IconButton'
-import Grid from '@mui/material/Grid'
-import Chip from '@mui/material/Chip'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
-import FormControlLabel from '@mui/material/FormControlLabel' // Importa FormControlLabel
-import Checkbox from '@mui/material/Checkbox' // Importa Checkbox
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Chip,
+  FormControlLabel,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Step,
+  StepContent,
+  StepLabel,
+  Stepper,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Checkbox
+} from '@mui/material'
 
 // Third-party Imports
 import { toast } from 'react-toastify'
@@ -41,37 +44,35 @@ import classNames from 'classnames'
 import StepperWrapper from '@core/styles/stepper'
 import StepperCustomDot from '@components/stepper-dot'
 
-// Vars
+// Constants
 const steps = [
-  {
-    title: 'RCM',
-    subtitle: ''
-  },
-  {
-    title: 'Muestras',
-    subtitle: ''
-  },
-  {
-    title: 'Planificación',
-    subtitle: ''
-  }
+  { title: 'RCM', subtitle: '' },
+  { title: 'Muestras', subtitle: '' },
+  { title: '...', subtitle: '' }
 ]
 
 const StepperVerticalWithNumbers = () => {
   const [activeStep, setActiveStep] = useState(0)
-  const [rcmNumber, setRcmNumber] = useState('')
-  const [fechaCodificacion, setFechaCodificacion] = useState('')
-  const [area, setArea] = useState('')
-  const [servicioFamilia, setServicioFamilia] = useState('')
-  const [servicioEnsayo, setServicioEnsayo] = useState('')
-  const [cantidad, setCantidad] = useState('')
-  const [observacion, setObservacion] = useState('')
+  const [rcmTabs, setRcmTabs] = useState([{ label: 'RCM 1', id: 1 }])
+  const [selectedTab, setSelectedTab] = useState(0)
+
+  const [rcmData, setRcmData] = useState({
+    1: {
+      rcmNumber: '176712',
+      fechaCodificacion: '',
+      area: '',
+      servicioFamilia: '',
+      servicioEnsayo: '',
+      cantidad: '',
+      observacion: ''
+    }
+  })
 
   const handleNext = () => {
     setActiveStep(prevActiveStep => prevActiveStep + 1)
 
     if (activeStep === steps.length - 1) {
-      toast.success('Completed All Steps!!')
+      toast.success('¡Todos los pasos completados!')
     }
   }
 
@@ -83,6 +84,95 @@ const StepperVerticalWithNumbers = () => {
     setActiveStep(0)
   }
 
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue)
+  }
+
+  const addNewTab = () => {
+    const newId = rcmTabs.length + 1
+
+    setRcmTabs([...rcmTabs, { label: `RCM ${newId}`, id: newId }])
+    setRcmData({
+      ...rcmData,
+      [newId]: {
+        rcmNumber: '',
+        fechaCodificacion: '',
+        area: '',
+        servicioFamilia: '',
+        servicioEnsayo: '',
+        cantidad: '',
+        observacion: ''
+      }
+    })
+    setSelectedTab(rcmTabs.length)
+  }
+
+  const handleInputChange = (tabId, field, value) => {
+    setRcmData({
+      ...rcmData,
+      [tabId]: {
+        ...rcmData[tabId],
+        [field]: value
+      }
+    })
+  }
+
+  const [muestrasTabs, setMuestrasTabs] = useState([{ label: 'Muestra 1', id: 1 }])
+  const [selectedMuestrasTab, setSelectedMuestrasTab] = useState(0)
+
+  const [muestrasData, setMuestrasData] = useState({
+    1: {
+      numeroTarjeta: '',
+      estado: '',
+      tipoMaterial: '',
+      item: '',
+      procedencia: '',
+      ubicacion: '',
+      muestra: '',
+      fecha: '',
+      cantidadMuestras: '',
+      dias: '',
+      vencimiento: false
+    }
+  })
+
+  const handleMuestrasTabChange = (event, newValue) => {
+    setSelectedMuestrasTab(newValue)
+  }
+
+  const addNewMuestraTab = () => {
+    const newId = muestrasTabs.length + 1
+
+    setMuestrasTabs([...muestrasTabs, { label: `Muestra ${newId}`, id: newId }])
+    setMuestrasData({
+      ...muestrasData,
+      [newId]: {
+        numeroTarjeta: '',
+        estado: '',
+        tipoMaterial: '',
+        item: '',
+        procedencia: '',
+        ubicacion: '',
+        muestra: '',
+        fecha: '',
+        cantidadMuestras: '',
+        dias: '',
+        vencimiento: false
+      }
+    })
+    setSelectedMuestrasTab(muestrasTabs.length)
+  }
+
+  const handleMuestrasInputChange = (tabId, field, value) => {
+    setMuestrasData({
+      ...muestrasData,
+      [tabId]: {
+        ...muestrasData[tabId],
+        [field]: value
+      }
+    })
+  }
+
   return (
     <Card>
       <CardHeader title='RCM' />
@@ -92,95 +182,94 @@ const StepperVerticalWithNumbers = () => {
             {steps.map((step, index) => (
               <Step key={index} className={classNames({ active: activeStep === index })}>
                 <StepLabel StepIconComponent={StepperCustomDot}>
-                  <div className='step-label'>
-                    <Typography className='step-number' color='text.primary'>{`0${index + 1}`}</Typography>
-                    <div>
-                      <Typography className='step-title' color='text.primary'>
-                        {step.title}
-                      </Typography>
-                      <Typography className='step-subtitle' color='text.primary'>
-                        {step.subtitle}
-                      </Typography>
-                    </div>
-                  </div>
+                  <Typography className='step-number' color='text.primary'>{`0${index + 1}`}</Typography>
+                  <Typography className='step-title' color='text.primary'>
+                    {step.title}
+                  </Typography>
+                  <Typography className='step-subtitle' color='text.primary'>
+                    {step.subtitle}
+                  </Typography>
                 </StepLabel>
                 <StepContent>
                   {index === 0 ? (
                     <>
-                      {/* Primer Paso: Campos de Número de RCM y otros detalles */}
-                      <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                          <TextField
-                            label='Número de RCM'
-                            placeholder='Ingrese el número de RCM'
-                            value={rcmNumber}
-                            onChange={e => setRcmNumber(e.target.value)}
-                            fullWidth
-                          />
-                        </Grid>
+                      {/* Tabs de RCM */}
+                      <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mb: 2 }}>
+                        {rcmTabs.map((tab, tabIndex) => (
+                          <Tab key={tab.id} label={tab.label} />
+                        ))}
+                        <Button onClick={addNewTab} sx={{ ml: 2 }}>
+                          +
+                        </Button>
+                      </Tabs>
+                      <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={2}>
                           <Chip label='Codificado' color='primary' />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Fecha de Codificación'
-                            placeholder='dd-mm-yyyy'
-                            value={fechaCodificacion}
-                            onChange={e => setFechaCodificacion(e.target.value)}
+                            value={rcmData[rcmTabs[selectedTab].id].fechaCodificacion}
+                            onChange={e =>
+                              handleInputChange(rcmTabs[selectedTab].id, 'fechaCodificacion', e.target.value)
+                            }
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Área'
-                            placeholder='Ingrese el área'
-                            value={area}
-                            onChange={e => setArea(e.target.value)}
+                            value={rcmData[rcmTabs[selectedTab].id].area}
+                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'area', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Servicio Familia'
-                            placeholder='Ingrese servicio familia'
-                            value={servicioFamilia}
-                            onChange={e => setServicioFamilia(e.target.value)}
+                            value={rcmData[rcmTabs[selectedTab].id].servicioFamilia}
+                            onChange={e =>
+                              handleInputChange(rcmTabs[selectedTab].id, 'servicioFamilia', e.target.value)
+                            }
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Servicio / Ensayo'
-                            placeholder='Buscar servicio / ensayo'
-                            value={servicioEnsayo}
-                            onChange={e => setServicioEnsayo(e.target.value)}
+                            value={rcmData[rcmTabs[selectedTab].id].servicioEnsayo}
+                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'servicioEnsayo', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Cantidad'
-                            placeholder='Ingrese cantidad'
-                            value={cantidad}
-                            onChange={e => setCantidad(e.target.value)}
-                            fullWidth
-                          />
-                        </Grid>
-                        <Grid item xs={2}>
-                          <Chip label='Sin Inicio' color='success' />
-                        </Grid>
-                        <Grid item xs={10}>
-                          <TextField
-                            label='Observación'
-                            placeholder='Ingrese observación'
-                            value={observacion}
-                            onChange={e => setObservacion(e.target.value)}
+                            value={rcmData[rcmTabs[selectedTab].id].cantidad}
+                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'cantidad', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                       </Grid>
-
-                      {/* Tabla de detalles */}
+                      {/* Segunda fila: 2-8-2 */}
+                      <Grid container spacing={2} sx={{ mt: 2 }}>
+                        <Grid item xs={2}>
+                          <Chip label='Sin Inicio' color='success' />
+                        </Grid>
+                        <Grid item xs={8}>
+                          <TextField
+                            label='Observación'
+                            value={rcmData[rcmTabs[selectedTab].id].observacion}
+                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'observacion', e.target.value)}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Button variant='contained' color='primary' fullWidth>
+                            + Añadir Servicio
+                          </Button>
+                        </Grid>
+                      </Grid>
                       <TableContainer component={Paper} sx={{ mt: 3 }}>
                         <Table>
                           <TableHead>
@@ -241,13 +330,41 @@ const StepperVerticalWithNumbers = () => {
                     </>
                   ) : index === 1 ? (
                     <>
-                      {/* Segundo Paso: Campos adicionales */}
-                      <Grid container spacing={2}>
+                      {/* Tabs de Muestras */}
+                      <Tabs value={selectedMuestrasTab} onChange={handleMuestrasTabChange} sx={{ mb: 2 }}>
+                        {muestrasTabs.map((tab, tabIndex) => (
+                          <Tab key={tab.id} label={tab.label} />
+                        ))}
+                        <Button onClick={addNewMuestraTab} sx={{ ml: 2 }}>
+                          +
+                        </Button>
+                      </Tabs>
+
+                      <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={3}>
-                          <TextField label='N° Tarjeta' placeholder='Ingrese N° Tarjeta' fullWidth />
+                          <TextField
+                            label='N° Tarjeta'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].numeroTarjeta}
+                            onChange={e =>
+                              handleMuestrasInputChange(
+                                muestrasTabs[selectedMuestrasTab].id,
+                                'numeroTarjeta',
+                                e.target.value
+                              )
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={3}>
-                          <Select label='Estado' defaultValue='' displayEmpty fullWidth>
+                          <Select
+                            label='Estado'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].estado}
+                            onChange={e =>
+                              handleMuestrasInputChange(muestrasTabs[selectedMuestrasTab].id, 'estado', e.target.value)
+                            }
+                            displayEmpty
+                            fullWidth
+                          >
                             <MenuItem value='' disabled>
                               Seleccione Estado
                             </MenuItem>
@@ -256,63 +373,95 @@ const StepperVerticalWithNumbers = () => {
                           </Select>
                         </Grid>
                         <Grid item xs={3}>
-                          <IconButton>
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton>
-                            <DeleteIcon />
-                          </IconButton>
+                          <TextField
+                            label='Tipo Material'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].tipoMaterial}
+                            onChange={e =>
+                              handleMuestrasInputChange(
+                                muestrasTabs[selectedMuestrasTab].id,
+                                'tipoMaterial',
+                                e.target.value
+                              )
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={3}>
-                          <Button variant='contained'>Guardar</Button>
+                          <TextField
+                            label='Ítem'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].item}
+                            onChange={e =>
+                              handleMuestrasInputChange(muestrasTabs[selectedMuestrasTab].id, 'item', e.target.value)
+                            }
+                            fullWidth
+                          />
                         </Grid>
                       </Grid>
 
-                      {/* Primera fila adicional */}
-                      <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={3}>
-                          <TextField label='Tipo Material' placeholder='Ingrese Tipo Material' fullWidth />
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField label='Ítem' placeholder='Ingrese Ítem' fullWidth />
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField label='Procedencia' placeholder='Ingrese Procedencia' fullWidth />
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField label='Ubicación / Sector' placeholder='Ingrese Ubicación' fullWidth />
-                        </Grid>
-                      </Grid>
-
-                      {/* Segunda fila adicional */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={2}>
-                          <TextField label='Muestra' placeholder='Ingrese Muestra' fullWidth />
+                          <TextField
+                            label='Muestra'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].muestra}
+                            onChange={e =>
+                              handleMuestrasInputChange(muestrasTabs[selectedMuestrasTab].id, 'muestra', e.target.value)
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={2}>
-                          <TextField label='Fecha' placeholder='Seleccione Fecha' fullWidth />
+                          <TextField
+                            label='Fecha'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].fecha}
+                            onChange={e =>
+                              handleMuestrasInputChange(muestrasTabs[selectedMuestrasTab].id, 'fecha', e.target.value)
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={2}>
-                          <TextField label='Cantidad Muestras' placeholder='Ingrese Cantidad' fullWidth />
+                          <TextField
+                            label='Cantidad Muestras'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].cantidadMuestras}
+                            onChange={e =>
+                              handleMuestrasInputChange(
+                                muestrasTabs[selectedMuestrasTab].id,
+                                'cantidadMuestras',
+                                e.target.value
+                              )
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={2}>
-                          <TextField label='Días' placeholder='Seleccione Días' fullWidth />
+                          <TextField
+                            label='Días'
+                            value={muestrasData[muestrasTabs[selectedMuestrasTab].id].dias}
+                            onChange={e =>
+                              handleMuestrasInputChange(muestrasTabs[selectedMuestrasTab].id, 'dias', e.target.value)
+                            }
+                            fullWidth
+                          />
                         </Grid>
                         <Grid item xs={2}>
-                          <Select label='Estado' defaultValue='' displayEmpty fullWidth>
-                            <MenuItem value='' disabled>
-                              Seleccione Estado
-                            </MenuItem>
-                            <MenuItem value='Activo'>Activo</MenuItem>
-                            <MenuItem value='Inactivo'>Inactivo</MenuItem>
-                          </Select>
-                        </Grid>
-                        <Grid item xs={2}>
-                          <FormControlLabel control={<Checkbox />} label='Vencimiento' />
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={muestrasData[muestrasTabs[selectedMuestrasTab].id].vencimiento}
+                                onChange={e =>
+                                  handleMuestrasInputChange(
+                                    muestrasTabs[selectedMuestrasTab].id,
+                                    'vencimiento',
+                                    e.target.checked
+                                  )
+                                }
+                              />
+                            }
+                            label='Vencimiento'
+                          />
                         </Grid>
                       </Grid>
 
-                      {/* Contenedor de tablas en la misma fila */}
                       <Grid container spacing={2} sx={{ mt: 3 }}>
                         <Grid item xs={6}>
                           <TableContainer component={Paper}>
