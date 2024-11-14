@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+import SearchIcon from '@mui/icons-material/Search'
+import InputAdornment from '@mui/material/InputAdornment'
 import Grid from '@mui/material/Grid'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -433,7 +435,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
         <Modal open={open} onClose={handleClose}>
-          <Box sx={{ ...style, width: 900, padding: 4 }}>
+          <Box sx={{ ...style, width: 1100, height: 650, padding: 4 }}>
             <Typography variant='h5' mb={3} fontWeight=''>
               Crear Paquete
             </Typography>
@@ -477,22 +479,54 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
                 <Typography component='span'>Aplicar Impuesto</Typography>
               </Grid>
             </Grid>
+            {/* Barra de búsqueda para Paquete y Productos */}
+            <Grid container spacing={3} mt={2}>
+              <Grid item xs={6}>
+                <TextField
+                  placeholder='Buscar en Paquete'
+                  fullWidth
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
+                  onChange={e => setBuscarPaquete(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  placeholder='Buscar en Productos'
+                  fullWidth
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
+                  onChange={e => setBuscarProductos(e.target.value)}
+                />
+              </Grid>
+            </Grid>
+
             {/* Contenedor de las tablas */}
             <Grid container spacing={3} mt={4}>
-              {/* Tabla de Paquetes */}
+              {/* Tabla de Productos */}
               <Grid item xs={5}>
-                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, height: 250, overflowY: 'auto' }}>
+                <Box sx={{ border: '1px solid #f0efef', borderRadius: 2, height: 300, overflowY: 'auto' }}>
                   <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
                     <Typography variant='subtitle2' fontWeight='bold'>
-                      PAQUETE
+                      PRODUCTOS
                     </Typography>
                   </Box>
-                  {paqueteList.length > 0 ? (
-                    paqueteList.map((item, index) => (
+                  {productosList.length > 0 ? (
+                    productosList.map((item, index) => (
                       <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
-                          checked={selectedPaquetes.includes(item)}
-                          onChange={() => handleSelectPaquete(item)}
+                          checked={selectedProductos.includes(item)}
+                          onChange={() => handleSelectProducto(item)}
                         />
                         <Typography component='span'>{item}</Typography>
                       </div>
@@ -507,26 +541,26 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
               {/* Botones de mover */}
               <Grid item xs={2} container direction='column' justifyContent='center' alignItems='center'>
                 <Button variant='contained' onClick={handleMoveToPaquete} sx={{ mb: 1 }}>
-                  <ArrowBackIcon />
-                </Button>
-                <Button variant='contained' onClick={handleMoveToProductos}>
                   <ArrowForwardIcon />
                 </Button>
+                <Button variant='contained' onClick={handleMoveToProductos}>
+                  <ArrowBackIcon />{' '}
+                </Button>
               </Grid>
-              {/* Tabla de Productos */}
+              {/* Tabla de Paquete */}
               <Grid item xs={5}>
-                <Box sx={{ border: '1px solid #f0efef', borderRadius: 2, height: 250, overflowY: 'auto' }}>
+                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, height: 300, overflowY: 'auto' }}>
                   <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
                     <Typography variant='subtitle2' fontWeight='bold'>
-                      PRODUCTOS
+                      PAQUETE
                     </Typography>
                   </Box>
-                  {productosList.length > 0 ? (
-                    productosList.map((item, index) => (
+                  {paqueteList.length > 0 ? (
+                    paqueteList.map((item, index) => (
                       <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
-                          checked={selectedProductos.includes(item)}
-                          onChange={() => handleSelectProducto(item)}
+                          checked={selectedPaquetes.includes(item)}
+                          onChange={() => handleSelectPaquete(item)}
                         />
                         <Typography component='span'>{item}</Typography>
                       </div>

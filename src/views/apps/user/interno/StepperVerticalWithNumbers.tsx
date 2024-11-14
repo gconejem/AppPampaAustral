@@ -6,6 +6,9 @@ import { useState } from 'react'
 // MUI Imports
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import Pagination from '@mui/material/Pagination'
+import AddIcon from '@mui/icons-material/Add'
+
 import {
   Box,
   Button,
@@ -53,8 +56,22 @@ const steps = [
 
 const StepperVerticalWithNumbers = () => {
   const [activeStep, setActiveStep] = useState(0)
-  const [rcmTabs, setRcmTabs] = useState([{ label: 'RCM 1', id: 1 }])
+
+  const [rcmTabs, setRcmTabs] = useState([
+    { label: 'RCM 1', id: 1 },
+    { label: 'RCM 2', id: 2 },
+    { label: 'RCM 3', id: 3 },
+    { label: 'RCM 4', id: 4 },
+    { label: 'RCM 5', id: 5 },
+    { label: 'RCM 6', id: 6 },
+    { label: 'RCM 7', id: 7 },
+    { label: 'RCM 8', id: 8 },
+    { label: 'RCM 9', id: 9 },
+    { label: 'RCM 10', id: 10 }
+  ])
+
   const [selectedTab, setSelectedTab] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const [rcmData, setRcmData] = useState({
     1: {
@@ -67,6 +84,27 @@ const StepperVerticalWithNumbers = () => {
       observacion: ''
     }
   })
+
+  const addNewPage = () => {
+    const newId = rcmTabs.length + 1
+
+    setRcmTabs([...rcmTabs, { label: `RCM ${newId}`, id: newId }])
+    setRcmData({
+      ...rcmData,
+      [newId]: {
+        rcmNumber: '',
+        fechaCodificacion: '',
+        area: '',
+        servicioFamilia: '',
+        servicioEnsayo: '',
+        cantidad: '',
+        observacion: ''
+      }
+    })
+
+    // Asegura que la paginación vaya a la última página cuando se añade un nuevo "RCM"
+    setCurrentPage(Math.ceil((rcmTabs.length + 1) / 5))
+  }
 
   const handleNext = () => {
     setActiveStep(prevActiveStep => prevActiveStep + 1)
@@ -193,15 +231,22 @@ const StepperVerticalWithNumbers = () => {
                 <StepContent>
                   {index === 0 ? (
                     <>
-                      {/* Tabs de RCM */}
-                      <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mb: 2 }}>
-                        {rcmTabs.map((tab, tabIndex) => (
-                          <Tab key={tab.id} label={tab.label} />
-                        ))}
-                        <Button onClick={addNewTab} sx={{ ml: 2 }}>
-                          +
-                        </Button>
-                      </Tabs>
+                      {/* Paginación para RCM con botón de agregar */}
+                      <Box display='flex' alignItems='center' sx={{ mb: 2 }}>
+                        <Pagination
+                          count={Math.ceil(rcmTabs.length / 5)} // Número de páginas basado en 5 elementos por página
+                          variant='tonal'
+                          color='primary'
+                          page={currentPage}
+                          onChange={(_, value) => setCurrentPage(value)}
+                          siblingCount={2} // Esto permitirá que se muestren más elementos en cada lado
+                        />
+                        <IconButton onClick={addNewPage} color='primary' sx={{ ml: 1 }}>
+                          <AddIcon />
+                        </IconButton>
+                      </Box>
+
+                      {/* Campos de Número de RCM y otros detalles */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={2}>
                           <Chip label='Codificado' color='primary' />
@@ -209,48 +254,45 @@ const StepperVerticalWithNumbers = () => {
                         <Grid item xs={2}>
                           <TextField
                             label='Fecha de Codificación'
-                            value={rcmData[rcmTabs[selectedTab].id].fechaCodificacion}
-                            onChange={e =>
-                              handleInputChange(rcmTabs[selectedTab].id, 'fechaCodificacion', e.target.value)
-                            }
+                            value={rcmData[currentPage]?.fechaCodificacion || ''}
+                            onChange={e => handleInputChange(currentPage, 'fechaCodificacion', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Área'
-                            value={rcmData[rcmTabs[selectedTab].id].area}
-                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'area', e.target.value)}
+                            value={rcmData[currentPage]?.area || ''}
+                            onChange={e => handleInputChange(currentPage, 'area', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Servicio Familia'
-                            value={rcmData[rcmTabs[selectedTab].id].servicioFamilia}
-                            onChange={e =>
-                              handleInputChange(rcmTabs[selectedTab].id, 'servicioFamilia', e.target.value)
-                            }
+                            value={rcmData[currentPage]?.servicioFamilia || ''}
+                            onChange={e => handleInputChange(currentPage, 'servicioFamilia', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Servicio / Ensayo'
-                            value={rcmData[rcmTabs[selectedTab].id].servicioEnsayo}
-                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'servicioEnsayo', e.target.value)}
+                            value={rcmData[currentPage]?.servicioEnsayo || ''}
+                            onChange={e => handleInputChange(currentPage, 'servicioEnsayo', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                         <Grid item xs={2}>
                           <TextField
                             label='Cantidad'
-                            value={rcmData[rcmTabs[selectedTab].id].cantidad}
-                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'cantidad', e.target.value)}
+                            value={rcmData[currentPage]?.cantidad || ''}
+                            onChange={e => handleInputChange(currentPage, 'cantidad', e.target.value)}
                             fullWidth
                           />
                         </Grid>
                       </Grid>
+
                       {/* Segunda fila: 2-8-2 */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={2}>
@@ -259,8 +301,8 @@ const StepperVerticalWithNumbers = () => {
                         <Grid item xs={8}>
                           <TextField
                             label='Observación'
-                            value={rcmData[rcmTabs[selectedTab].id].observacion}
-                            onChange={e => handleInputChange(rcmTabs[selectedTab].id, 'observacion', e.target.value)}
+                            value={rcmData[currentPage]?.observacion || ''}
+                            onChange={e => handleInputChange(currentPage, 'observacion', e.target.value)}
                             fullWidth
                           />
                         </Grid>
@@ -270,6 +312,8 @@ const StepperVerticalWithNumbers = () => {
                           </Button>
                         </Grid>
                       </Grid>
+
+                      {/* Tabla de detalles con datos de ejemplo */}
                       <TableContainer component={Paper} sx={{ mt: 3 }}>
                         <Table>
                           <TableHead>
@@ -282,6 +326,7 @@ const StepperVerticalWithNumbers = () => {
                             </TableRow>
                           </TableHead>
                           <TableBody>
+                            {/* Datos de ejemplo */}
                             <TableRow>
                               <TableCell>100</TableCell>
                               <TableCell>Toma de Muestra</TableCell>
