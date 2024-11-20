@@ -125,8 +125,8 @@ const AddUserDrawer = (props: Props) => {
               <TextField
                 {...field}
                 fullWidth
-                label='Full Name'
-                placeholder='John Doe'
+                label='OT'
+                placeholder=''
                 {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
               />
             )}
@@ -139,7 +139,7 @@ const AddUserDrawer = (props: Props) => {
               <TextField
                 {...field}
                 fullWidth
-                label='Username'
+                label='Cliente'
                 placeholder='johndoe'
                 {...(errors.username && { error: true, helperText: 'This field is required.' })}
               />
@@ -154,15 +154,15 @@ const AddUserDrawer = (props: Props) => {
                 {...field}
                 fullWidth
                 type='email'
-                label='Email'
-                placeholder='johndoe@gmail.com'
+                label='Obra'
+                placeholder=''
                 {...(errors.email && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
           <FormControl fullWidth>
             <InputLabel id='country' error={Boolean(errors.role)}>
-              Select Role
+              Comuna
             </InputLabel>
             <Controller
               name='role'
@@ -170,38 +170,34 @@ const AddUserDrawer = (props: Props) => {
               rules={{ required: true }}
               render={({ field }) => (
                 <Select label='Select Role' {...field} error={Boolean(errors.role)}>
-                  <MenuItem value='admin'>Admin</MenuItem>
-                  <MenuItem value='author'>Author</MenuItem>
-                  <MenuItem value='editor'>Editor</MenuItem>
-                  <MenuItem value='maintainer'>Maintainer</MenuItem>
-                  <MenuItem value='subscriber'>Subscriber</MenuItem>
+                  <MenuItem value='admin'></MenuItem>
+                  <MenuItem value='author'></MenuItem>
+                  <MenuItem value='editor'></MenuItem>
+                  <MenuItem value='maintainer'></MenuItem>
+                  <MenuItem value='subscriber'></MenuItem>
                 </Select>
               )}
             />
             {errors.role && <FormHelperText error>This field is required.</FormHelperText>}
           </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id='country' error={Boolean(errors.plan)}>
-              Select Plan
-            </InputLabel>
-            <Controller
-              name='plan'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Select label='Select Plan' {...field} error={Boolean(errors.plan)}>
-                  <MenuItem value='basic'>Basic</MenuItem>
-                  <MenuItem value='company'>Company</MenuItem>
-                  <MenuItem value='enterprise'>Enterprise</MenuItem>
-                  <MenuItem value='team'>Team</MenuItem>
-                </Select>
-              )}
-            />
-            {errors.plan && <FormHelperText error>This field is required.</FormHelperText>}
-          </FormControl>
+          <Controller
+            name='email'
+            control={control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                type='email'
+                label='Fecha de Ingreso'
+                placeholder=''
+                {...(errors.email && { error: true, helperText: 'This field is required.' })}
+              />
+            )}
+          />
           <FormControl fullWidth>
             <InputLabel id='country' error={Boolean(errors.status)}>
-              Select Status
+              Laboratorista
             </InputLabel>
             <Controller
               name='status'
@@ -209,51 +205,28 @@ const AddUserDrawer = (props: Props) => {
               rules={{ required: true }}
               render={({ field }) => (
                 <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                  <MenuItem value='pending'>Pending</MenuItem>
-                  <MenuItem value='active'>Active</MenuItem>
-                  <MenuItem value='inactive'>Inactive</MenuItem>
+                  <MenuItem value='pending'></MenuItem>
+                  <MenuItem value='active'></MenuItem>
+                  <MenuItem value='inactive'></MenuItem>
                 </Select>
               )}
             />
             {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
           </FormControl>
           <TextField
-            label='Company'
+            label='Mandante'
             fullWidth
             placeholder='Company PVT LTD'
             value={formData.company}
             onChange={e => setFormData({ ...formData, company: e.target.value })}
           />
-          <FormControl fullWidth>
-            <InputLabel id='country'>Select Country</InputLabel>
-            <Select
-              fullWidth
-              id='country'
-              value={formData.country}
-              onChange={e => setFormData({ ...formData, country: e.target.value })}
-              label='Select Country'
-              labelId='country'
-            >
-              <MenuItem value='India'>India</MenuItem>
-              <MenuItem value='USA'>USA</MenuItem>
-              <MenuItem value='Australia'>Australia</MenuItem>
-              <MenuItem value='Germany'>Germany</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            label='Contact'
-            type='number'
-            fullWidth
-            placeholder='(397) 294-5153'
-            value={formData.contact}
-            onChange={e => setFormData({ ...formData, contact: e.target.value })}
-          />
+
           <div className='flex items-center gap-4'>
             <Button variant='contained' type='submit'>
-              Submit
+              Guardar
             </Button>
             <Button variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
-              Cancel
+              Cancelar
             </Button>
           </div>
         </form>

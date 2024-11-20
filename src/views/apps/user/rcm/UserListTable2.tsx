@@ -8,10 +8,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-
-import MenuItem from '@mui/material/MenuItem'
-import Grid from '@mui/material/Grid'
-import CardContent from '@mui/material/CardContent'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -145,15 +143,21 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState(...[tableData])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   // Hooks
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
   const { lang: locale } = useParams()
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
@@ -185,12 +189,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
+            <div className='flex flex-col'></div>
           </div>
         )
       }),
@@ -258,41 +257,13 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </div>
         )
       }),
+
       columnHelper.accessor('action', {
         header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-delete-bin-7-line text-textSecondary' />
-            </IconButton>
-            <IconButton>
-              <Link href='/en/apps/user/rcm' className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
-            </IconButton>
-
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Edit',
-                  icon: 'ri-edit-box-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            />
-          </div>
-        ),
+        cell: ({ row }) => <div className='flex items-center'></div>,
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
 
@@ -308,7 +279,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     },
     initialState: {
       pagination: {
-        pageSize: 6
+        pageSize: 5
       }
     },
     enableRowSelection: true, //enable row selection for all rows
@@ -342,137 +313,104 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Órdenes de Trabajo' />
-        <TableFilters setData={setFilteredData} tableData={data} />
-        <Divider />
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Orden de Trabajo, Nº Tarjeta' />
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Servicio' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Estado OT' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Estado Retiro' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={3} alignItems='center'>
-            <Grid item xs={12} sm='auto'>
-              <Button
-                variant='contained'
-                color='primary'
-                size='small'
-                startIcon={<i className='ri-edit-line' />}
-                sx={{
-                  minWidth: 'auto',
-                  padding: '6px 16px'
-                }}
-              >
-                Editar
-              </Button>
-            </Grid>
-
-            <Grid item xs={12} sm='auto'>
-              <TextField
-                size='small'
-                placeholder='Buscar'
-                sx={{
-                  maxWidth: 250,
-                  width: '100%'
-                }}
-                InputProps={{
-                  startAdornment: <i className='ri-search-line' style={{ marginRight: 8 }} />
-                }}
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
-        </div>
-        <TablePagination
-          rowsPerPageOptions={[6, 10, 25, 50]}
-          component='div'
-          className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          SelectProps={{
-            inputProps: { 'aria-label': 'rows per page' }
-          }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+        <CardHeader
+          title='Órdenes de Trabajo'
+          action={
+            <IconButton onClick={toggleCollapse}>{isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}</IconButton>
+          }
         />
+        {!isCollapsed && ( // Si no está colapsado, renderizar el contenido
+          <>
+            <TableFilters setData={setFilteredData} tableData={data} />
+            <Divider />
+            <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
+              <Button color='secondary' variant='outlined' className='max-sm:is-full'></Button>
+              <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+                <DebouncedInput
+                  value={globalFilter ?? ''}
+                  onChange={value => setGlobalFilter(String(value))}
+                  placeholder='Buscar'
+                  className='max-sm:is-full'
+                />
+                <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
+                  Agregar
+                </Button>
+              </div>
+            </div>
+            <div className='overflow-x-auto'>
+              <table className={tableStyles.table}>
+                <thead>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id}>
+                          {header.isPlaceholder ? null : (
+                            <>
+                              <div
+                                className={classnames({
+                                  'flex items-center': header.column.getIsSorted(),
+                                  'cursor-pointer select-none': header.column.getCanSort()
+                                })}
+                                onClick={header.column.getToggleSortingHandler()}
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {{
+                                  asc: <i className='ri-arrow-up-s-line text-xl' />,
+                                  desc: <i className='ri-arrow-down-s-line text-xl' />
+                                }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                              </div>
+                            </>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                {table.getFilteredRowModel().rows.length === 0 ? (
+                  <tbody>
+                    <tr>
+                      <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                        No data available
+                      </td>
+                    </tr>
+                  </tbody>
+                ) : (
+                  <tbody>
+                    {table
+                      .getRowModel()
+                      .rows.slice(0, table.getState().pagination.pageSize)
+                      .map(row => {
+                        return (
+                          <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                            {row.getVisibleCells().map(cell => (
+                              <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                            ))}
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                )}
+              </table>
+            </div>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              component='div'
+              className='border-bs'
+              count={table.getFilteredRowModel().rows.length}
+              rowsPerPage={table.getState().pagination.pageSize}
+              page={table.getState().pagination.pageIndex}
+              SelectProps={{
+                inputProps: { 'aria-label': 'rows per page' }
+              }}
+              onPageChange={(_, page) => {
+                table.setPageIndex(page)
+              }}
+              onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+            />
+          </>
+        )}
       </Card>
+
       <AddUserDrawer
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}
@@ -483,4 +421,4 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   )
 }
 
-export default UserListTable
+export default UserListTable2

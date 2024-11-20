@@ -15,9 +15,6 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
     <Grid container spacing={6}>
       {/* Agregamos el Header */}
-      <Grid item xs={12}>
-        <Header /> {/* Aquí agregamos el Header */}
-      </Grid>
 
       {/* Integración del Stepper Horizontal */}
       <Grid item xs={12}>

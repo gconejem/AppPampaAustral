@@ -159,7 +159,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       },
       columnHelper.accessor('fullName', {
-        header: 'User',
+        header: 'Fecha',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
@@ -173,11 +173,11 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('email', {
-        header: 'Email',
+        header: 'Hora',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
       columnHelper.accessor('role', {
-        header: 'Role',
+        header: 'Cliente',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
             <Icon className={userRoleObj[row.original.role].icon} />
@@ -188,14 +188,19 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
-        cell: ({ row }) => (
-          <Chip variant='tonal' label={row.original.status} size='small' color={userStatusObj[row.original.status]} />
+        header: 'Estado',
+        cell: () => (
+          <Chip
+            variant='tonal'
+            label='Recepción OK'
+            size='small'
+            color='success' // El color verde en Material UI
+          />
         )
       }),
 
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <OptionMenu

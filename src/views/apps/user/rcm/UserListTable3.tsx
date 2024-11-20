@@ -8,9 +8,6 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
-import MenuItem from '@mui/material/MenuItem'
-import FormControl from '@mui/material/FormControl'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import Card from '@mui/material/Card'
@@ -146,7 +143,7 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const UserListTable3 = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
@@ -155,12 +152,11 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [globalFilter, setGlobalFilter] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  // Hooks
-
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed)
   }
 
+  // Hooks
   const { lang: locale } = useParams()
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
@@ -188,7 +184,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       },
       columnHelper.accessor('fullName', {
-        header: 'Fecha',
+        header: 'Nombre Servicio',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
@@ -196,26 +192,9 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </div>
         )
       }),
-      columnHelper.accessor('email', {
-        header: 'Hora',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
-      }),
-      columnHelper.accessor('role', {
-        header: 'Cliente',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
-      }),
+
       columnHelper.accessor('currentPlan', {
-        header: 'Obra',
+        header: 'Tipo de Servicio',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
             {row.original.currentPlan}
@@ -224,16 +203,40 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }),
       columnHelper.accessor('status', {
         header: 'Estado',
-        cell: () => (
+        cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <Chip variant='tonal' label='Recepcionado OK' size='small' color='success' className='capitalize' />
+            <Chip
+              variant='tonal'
+              label={row.original.status}
+              size='small'
+              color={userStatusObj[row.original.status]}
+              className='capitalize'
+            />
           </div>
+        )
+      }),
+
+      columnHelper.accessor('currentPlan', {
+        header: 'Ejemplo',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
         )
       }),
 
       columnHelper.accessor('action', {
         header: 'Acciones',
-        cell: ({ row }) => <div className='flex items-center'></div>,
+        cell: ({ row }) => (
+          <div className='flex items-center'>
+            {/* Primer botón "+" con enlace */}
+            <Link href='/en/apps/user/interno' passHref>
+              <IconButton>
+                <i className='ri-add-line text-textSecondary' /> {/* Ícono de "+" */}
+              </IconButton>
+            </Link>
+          </div>
+        ),
         enableSorting: false
       })
     ],
@@ -288,7 +291,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     <>
       <Card>
         <CardHeader
-          title='Gestión de Visitas'
+          title='Servicios'
           action={
             <IconButton onClick={toggleCollapse}>{isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}</IconButton>
           }
@@ -298,16 +301,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             <TableFilters setData={setFilteredData} tableData={data} />
             <Divider />
             <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-              <Grid item xs={3}>
-                <FormControl fullWidth>
-                  <TextField label='Laboratorista' variant='outlined' select defaultValue=''>
-                    <MenuItem value='laboratorista1'>Laboratorista 1</MenuItem>
-                    <MenuItem value='laboratorista2'>Laboratorista 2</MenuItem>
-                    <MenuItem value='laboratorista3'>Laboratorista 3</MenuItem>
-                  </TextField>
-                </FormControl>{' '}
-              </Grid>
-
+              <Button color='secondary' variant='outlined' className='max-sm:is-full'></Button>
               <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
                 <DebouncedInput
                   value={globalFilter ?? ''}
@@ -404,4 +398,4 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   )
 }
 
-export default UserListTable
+export default UserListTable3
