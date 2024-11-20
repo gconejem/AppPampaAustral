@@ -4,6 +4,8 @@
 import { useState } from 'react'
 
 // MUI Imports
+import Checkbox from '@mui/material/Checkbox'
+
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import {
@@ -91,47 +93,63 @@ const StepperVerticalWithNumbers = () => {
                   {index === 0 && (
                     <>
                       {/* Tabs for RCM */}
-                      <Tabs value={selectedRCMTab} onChange={handleRCMTabChange} sx={{ mb: 2 }}>
-                        {rcmTabs.map(tab => (
-                          <Tab key={tab.id} label={tab.label} />
-                        ))}
-                      </Tabs>
+                      <Box display='flex' alignItems='center' gap={2} sx={{ mb: 2 }}>
+                        <Tabs value={selectedRCMTab} onChange={handleRCMTabChange}>
+                          {rcmTabs.map(tab => (
+                            <Tab key={tab.id} label={tab.label} />
+                          ))}
+                        </Tabs>
+
+                        {/* Read-Only Fields */}
+                        <TextField
+                          label='Fecha de Codificación'
+                          size='small'
+                          value='DD-MM-YYYY' // Valor de ejemplo fijo
+                          InputProps={{ readOnly: true }}
+                          sx={{ width: '200px' }}
+                        />
+                        <TextField
+                          label='Área'
+                          size='small'
+                          value='Hormigón' // Valor de ejemplo fijo
+                          InputProps={{ readOnly: true }}
+                          sx={{ width: '200px' }}
+                        />
+                        <TextField
+                          label='Familia'
+                          size='small'
+                          value='Hormigón Fresco' // Valor de ejemplo fijo
+                          InputProps={{ readOnly: true }}
+                          sx={{ width: '200px' }}
+                        />
+                        {/* Tarjeta de Estado */}
+                        <Chip
+                          label='Sin Inicio'
+                          sx={{
+                            bgcolor: '#e8f5e9',
+                            color: '#388e3c',
+                            fontWeight: 'bold',
+                            height: '32px'
+                          }}
+                        />
+                      </Box>
 
                       {/* RCM Details */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
                         <Grid item xs={2}>
-                          <Chip label='Codificado' color='primary' />
+                          <TextField label='Fecha de Muestreo' fullWidth />
                         </Grid>
                         <Grid item xs={2}>
-                          <TextField label='Fecha de Codificación' fullWidth />
-                        </Grid>
-                        <Grid item xs={2}>
-                          <TextField label='Área' fullWidth />
-                        </Grid>
-                        <Grid item xs={2}>
-                          <TextField label='Servicio Familia' fullWidth />
-                        </Grid>
-                        <Grid item xs={2}>
-                          <TextField label='Servicio / Ensayo' fullWidth />
-                        </Grid>
-                        <Grid item xs={2}>
-                          <TextField label='Cantidad' fullWidth />
+                          <TextField label='Fecha de Ingreso' fullWidth />
                         </Grid>
                       </Grid>
 
                       {/* Observación */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={2}>
-                          <Chip label='Sin Inicio' color='success' />
-                        </Grid>
                         <Grid item xs={8}>
                           <TextField label='Observación' fullWidth />
                         </Grid>
-                        <Grid item xs={2}>
-                          <Button variant='contained' color='primary' fullWidth>
-                            + Añadir Servicio
-                          </Button>
-                        </Grid>
+                        <Grid item xs={2}></Grid>
                       </Grid>
 
                       {/* Tabla for RCM */}
@@ -142,16 +160,13 @@ const StepperVerticalWithNumbers = () => {
                               <TableCell>CÓD INT</TableCell>
                               <TableCell>Servicio</TableCell>
                               <TableCell>Cantidad</TableCell>
-                              <TableCell>Observación</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             <TableRow>
                               <TableCell>100</TableCell>
-
                               <TableCell>Toma de Muestra</TableCell>
                               <TableCell>2</TableCell>
-                              <TableCell>Prueba</TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
@@ -167,10 +182,116 @@ const StepperVerticalWithNumbers = () => {
                         ))}
                       </Tabs>
 
-                      <Grid container spacing={2}>
+                      {/* Encabezado Superior */}
+                      <Grid container spacing={2} alignItems='center'>
+                        {/* Cantidad de muestras */}
+                        <Grid item xs={2}>
+                          <TextField
+                            label='Cantidad Muestras'
+                            size='small'
+                            value='4' // Valor de ejemplo fijo
+                            InputProps={{
+                              readOnly: true
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Barra de búsqueda */}
+                        <Grid item xs={3}>
+                          <TextField
+                            size='small'
+                            placeholder='Servicio / Ensayo'
+                            InputProps={{
+                              startAdornment: <i className='ri-search-line' style={{ marginRight: 8 }} />
+                            }}
+                          />
+                        </Grid>
+
+                        {/* Campo de cantidad */}
+                        <Grid item xs={2}>
+                          <TextField
+                            label='Cantidad'
+                            size='small'
+                            value='2' // Valor de ejemplo fijo
+                          />
+                        </Grid>
+
+                        {/* Botón Añadir Servicio */}
+                        <Grid item xs={3}>
+                          <Button
+                            variant='contained'
+                            color='primary'
+                            size='small'
+                            startIcon={<i className='ri-add-line' />}
+                            fullWidth
+                            sx={{ minHeight: '20px' }}
+                          >
+                            Añadir Servicio
+                          </Button>
+                        </Grid>
+
+                        {/* Booleano Vencimiento */}
+                        <Grid item xs={2} display='flex' alignItems='center' justifyContent='flex-end'>
+                          <Checkbox defaultChecked />
+                          <Typography>Vencimiento</Typography>
+                        </Grid>
+                      </Grid>
+
+                      {/* Contenido de las Tablas */}
+                      <Grid container spacing={2} sx={{ mt: 3 }}>
                         {/* Primera Tabla */}
-                        <Grid item xs={6}>
-                          <TableContainer component={Paper} sx={{ mt: 3 }}>
+                        <Grid item xs={4}>
+                          <TableContainer component={Paper}>
+                            <Table>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>TIPO MATERIAL</TableCell>
+                                  <TableCell>ITEM</TableCell>
+                                  <TableCell>PROCEDENCIA</TableCell>
+                                  <TableCell>UBICACIÓN / SECTOR</TableCell>
+                                  <TableCell>GRADO</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell>Probeta Cilíndrica</TableCell>
+                                  <TableCell>Sobrecrecimiento</TableCell>
+                                  <TableCell>Río San Martín</TableCell>
+                                  <TableCell>Chillán</TableCell>
+                                  <TableCell>G-17</TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Grid>
+
+                        {/* Segunda Tabla */}
+                        <Grid item xs={4}>
+                          <TableContainer component={Paper}>
+                            <Table>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>CÓD. INT.</TableCell>
+                                  <TableCell>ENSAYO / ANÁLISIS</TableCell>
+                                  <TableCell>ESTADO</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell>HOR004</TableCell>
+                                  <TableCell>Serie 3 Cilindros - Compresión</TableCell>
+                                  <TableCell>
+                                    <Chip label='Codificado' color='primary' />
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Grid>
+
+                        {/* Tercera Tabla */}
+                        <Grid item xs={4}>
+                          <TableContainer component={Paper}>
                             <Table>
                               <TableHead>
                                 <TableRow>
@@ -187,79 +308,12 @@ const StepperVerticalWithNumbers = () => {
                                 <TableRow>
                                   <TableCell>1</TableCell>
                                   <TableCell>21764-1</TableCell>
-                                  <TableCell>dd-mm-yyyy</TableCell>
+                                  <TableCell>25-10-2024</TableCell>
                                   <TableCell>1</TableCell>
-                                  <TableCell>51</TableCell>
-                                  <TableCell>01/01/2025</TableCell>
+                                  <TableCell>7</TableCell>
+                                  <TableCell>DD-MM-YYYY</TableCell>
                                   <TableCell>
-                                    <Chip label='Cod.' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>2</TableCell>
-                                  <TableCell>21764-2</TableCell>
-                                  <TableCell>dd-mm-yyyy</TableCell>
-                                  <TableCell>1</TableCell>
-                                  <TableCell>69</TableCell>
-                                  <TableCell>dd-mm-yyyy</TableCell>
-                                  <TableCell>
-                                    <Chip label='Cod.' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>3</TableCell>
-                                  <TableCell>21764-3</TableCell>
-                                  <TableCell>dd-mm-yyyy</TableCell>
-                                  <TableCell>1</TableCell>
-                                  <TableCell>45</TableCell>
-                                  <TableCell>dd-mm-yyyy</TableCell>
-                                  <TableCell>
-                                    <Chip label='Cod.' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        </Grid>
-
-                        {/* Segunda Tabla */}
-                        <Grid item xs={6}>
-                          <TableContainer component={Paper} sx={{ mt: 3 }}>
-                            <Table>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>CÓD. INT.</TableCell>
-                                  <TableCell>ENSAYO / ANÁLISIS</TableCell>
-                                  <TableCell>ESTADO</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell>HOR01</TableCell>
-                                  <TableCell>Testigo Hormigón Fresco</TableCell>
-                                  <TableCell>
-                                    <Chip label='Codificado' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>H323</TableCell>
-                                  <TableCell>Espesor</TableCell>
-                                  <TableCell>
-                                    <Chip label='Codificado' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>H324</TableCell>
-                                  <TableCell>Densidad</TableCell>
-                                  <TableCell>
-                                    <Chip label='Codificado' color='primary' />
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>H325</TableCell>
-                                  <TableCell>Compresión Testigo</TableCell>
-                                  <TableCell>
-                                    <Chip label='Codificado' color='primary' />
+                                    <Chip label='Ensayado' color='primary' />
                                   </TableCell>
                                 </TableRow>
                               </TableBody>

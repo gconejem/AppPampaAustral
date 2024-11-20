@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+import Grid from '@mui/material/Grid'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import Card from '@mui/material/Card'
@@ -161,86 +162,51 @@ const UserListTable3 = ({ tableData }: { tableData?: UsersType[] }) => {
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
     () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('fullName', {
-        header: 'Nombre Servicio',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'></div>
-          </div>
-        )
+      columnHelper.accessor('codigo', {
+        header: 'Código',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.codigo}</Typography>
       }),
-
-      columnHelper.accessor('currentPlan', {
-        header: 'Tipo de Servicio',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('fechaCodificacion', {
+        header: 'Fecha de Codificación',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaCodificacion}</Typography>
       }),
-      columnHelper.accessor('status', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
-        )
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'Fecha de Muestreo',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaMuestreo}</Typography>
       }),
-
-      columnHelper.accessor('currentPlan', {
-        header: 'Ejemplo',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('area', {
+        header: 'Área',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.area}</Typography>
       }),
-
-      columnHelper.accessor('action', {
+      columnHelper.accessor('familia', {
+        header: 'Familia',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.familia}</Typography>
+      }),
+      columnHelper.accessor('servicio', {
+        header: 'Servicio',
+        cell: ({ row }) => <Typography color='error'>{row.original.servicio}</Typography>
+      }),
+      columnHelper.accessor('estado', {
+        header: 'Estado Op',
+        cell: ({ row }) => <Typography color='error'>{row.original.servicio}</Typography>
+      }),
+      columnHelper.accessor('acciones', {
         header: 'Acciones',
         cell: ({ row }) => (
-          <div className='flex items-center'>
-            {/* Primer botón "+" con enlace */}
-            <Link href='/en/apps/user/interno' passHref>
-              <IconButton>
-                <i className='ri-add-line text-textSecondary' /> {/* Ícono de "+" */}
-              </IconButton>
-            </Link>
+          <div className='flex items-center gap-2'>
+            <IconButton size='small' color='secondary' onClick={() => console.log('Editar', row.original)}>
+              <i className='ri-edit-line' /> {/* Ícono de edición */}
+            </IconButton>
+            <IconButton size='small' color='secondary' onClick={() => console.log('Duplicar', row.original)}>
+              <i className='ri-file-copy-line' /> {/* Ícono de duplicar */}
+            </IconButton>
+            <IconButton size='small' color='secondary' onClick={() => console.log('Eliminar', row.original)}>
+              <i className='ri-delete-bin-line' /> {/* Ícono de eliminar */}
+            </IconButton>
           </div>
-        ),
-        enableSorting: false
+        )
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
 
@@ -256,7 +222,7 @@ const UserListTable3 = ({ tableData }: { tableData?: UsersType[] }) => {
     },
     initialState: {
       pagination: {
-        pageSize: 5
+        pageSize: 3
       }
     },
     enableRowSelection: true, //enable row selection for all rows
@@ -300,20 +266,44 @@ const UserListTable3 = ({ tableData }: { tableData?: UsersType[] }) => {
           <>
             <TableFilters setData={setFilteredData} tableData={data} />
             <Divider />
-            <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-              <Button color='secondary' variant='outlined' className='max-sm:is-full'></Button>
-              <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-                <DebouncedInput
-                  value={globalFilter ?? ''}
-                  onChange={value => setGlobalFilter(String(value))}
-                  placeholder='Buscar'
-                  className='max-sm:is-full'
+            <Grid container spacing={3} alignItems='center' sx={{ p: 3 }}>
+              {/* Campo para escribir Área */}
+              <Grid item xs={3}>
+                <TextField size='small' label='Área' placeholder='Escribe el área' fullWidth />
+              </Grid>
+
+              {/* Campo para escribir Familia */}
+              <Grid item xs={3}>
+                <TextField size='small' label='Familia' placeholder='Escribe la familia' fullWidth />
+              </Grid>
+
+              {/* Campo para Fecha */}
+              <Grid item xs={3}>
+                <TextField
+                  size='small'
+                  label='Fecha de Codificación'
+                  type='date'
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
                 />
-                <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-                  Agregar
-                </Button>
-              </div>
-            </div>
+              </Grid>
+
+              {/* Botón Crear */}
+              <Grid item xs={3}>
+                <Link href='http://localhost:3000/en/apps/user/interno' passHref>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    startIcon={<i className='ri-add-line' />}
+                    fullWidth
+                    sx={{ minHeight: '40px' }}
+                  >
+                    Crear
+                  </Button>
+                </Link>
+              </Grid>
+            </Grid>
+
             <div className='overflow-x-auto'>
               <table className={tableStyles.table}>
                 <thead>
