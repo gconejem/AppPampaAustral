@@ -1,5 +1,5 @@
 // MUI Imports
-import { Grid, Button, TextField, Card, CardContent, CardHeader } from '@mui/material'
+import { Grid, Chip, Button, TextField, Card, CardContent, CardHeader } from '@mui/material'
 
 const Header = () => {
   return (
@@ -7,9 +7,19 @@ const Header = () => {
       <CardHeader
         title='Control de Muestras'
         action={
-          <Button variant='contained' color='primary' size='medium'>
-            + Nuevo Registro
-          </Button>
+          <Chip
+            label='En Proceso'
+            sx={{
+              bgcolor: '#fff3cd',
+              color: '#856404',
+              fontWeight: 'bold',
+              borderRadius: '4px',
+              padding: '8px 16px',
+              border: '1px solid #856404',
+              fontSize: '14px',
+              textAlign: 'center'
+            }}
+          />
         }
       />
       <CardContent>
