@@ -1,19 +1,22 @@
 // MUI Imports
 import Grid from '@mui/material/Grid'
 
-// Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
-
 // Component Imports
 import UserListTable from './UserListTable'
-import UserListCards from './UserListCards'
+import Header from './Header' // Asegúrate de que Header esté en el mismo directorio o ajusta el import
+
+// Type Imports
+import type { UsersType } from '@/types/apps/userTypes'
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
     <Grid container spacing={6}>
+      {/* Header */}
       <Grid item xs={12}>
-        <UserListCards />
+        <Header />
       </Grid>
+
+      {/* User List Table */}
       <Grid item xs={12}>
         <UserListTable tableData={userData} />
       </Grid>

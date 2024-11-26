@@ -1,20 +1,25 @@
 'use client'
 
 // React Imports
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+
+// Next Imports
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import Box from '@mui/material/Box'
-import Grid from '@mui/material/Grid'
-import TextField from '@mui/material/TextField'
+import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
+import type { TextFieldProps } from '@mui/material/TextField'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -25,502 +30,402 @@ import {
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
+import type { ThemeColor } from '@core/types'
 import type { UsersType } from '@/types/apps/userTypes'
+import type { Locale } from '@configs/i18n'
+
+// Component Imports
+import TableFilters from './TableFilters'
+import AddUserDrawer from './AddUserDrawer'
+import OptionMenu from '@core/components/option-menu'
+import CustomAvatar from '@core/components/mui/Avatar'
+
+// Util Imports
+import { getInitials } from '@/utils/getInitials'
+import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-// Column helper
-const columnHelper = createColumnHelper<UsersType>()
+declare module '@tanstack/table-core' {
+  interface FilterFns {
+    fuzzy: FilterFn<unknown>
+  }
+  interface FilterMeta {
+    itemRank: RankingInfo
+  }
+}
 
-// Fuzzy Filter for search functionality
-const fuzzyFilter: FilterFn<UsersType> = (row, columnId, value, addMeta) => {
+type UsersTypeWithAction = UsersType & {
+  action?: string
+}
+
+type UserRoleType = {
+  [key: string]: { icon: string; color: string }
+}
+
+type UserStatusType = {
+  [key: string]: ThemeColor
+}
+
+// Styled Components
+const Icon = styled('i')({})
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value)
 
-  addMeta({ itemRank })
+  // Store the itemRank info
+  addMeta({
+    itemRank
+  })
 
+  // Return if the item should be filtered in/out
   return itemRank.passed
 }
 
-// Componente que renderiza la tabla con títulos dinámicos y encabezados personalizados
-const UserListTable = ({
-  tableData,
-  headers,
-  title,
-  actionIcons,
-  showDetailsBox = false // Añadimos esta opción para habilitar o deshabilitar la caja de detalles
+const DebouncedInput = ({
+  value: initialValue,
+  onChange,
+  debounce = 500,
+  ...props
 }: {
-  tableData: UsersType[]
-  headers: { [key: string]: string }
-  title: string
-  actionIcons: JSX.Element[]
-  showDetailsBox?: boolean // Añadido por defecto como false
-}) => {
-  const [filteredData, setFilteredData] = useState(tableData || [])
+  value: string | number
+  onChange: (value: string | number) => void
+  debounce?: number
+} & Omit<TextFieldProps, 'onChange'>) => {
+  // States
+  const [value, setValue] = useState(initialValue)
+
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value)
+    }, debounce)
+
+    return () => clearTimeout(timeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
+}
+
+// Vars
+const userRoleObj: UserRoleType = {
+  admin: { icon: 'ri-vip-crown-line', color: 'error' },
+  author: { icon: 'ri-computer-line', color: 'warning' },
+  editor: { icon: 'ri-edit-box-line', color: 'info' },
+  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
+  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+}
+
+const userStatusObj: UserStatusType = {
+  active: 'success',
+  pending: 'warning',
+  inactive: 'secondary'
+}
+
+// Column Definitions
+const columnHelper = createColumnHelper<UsersTypeWithAction>()
+
+const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+  // States
+  const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
+  const [data, setData] = useState(...[tableData])
+  const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(5)
 
-  // Previene bucles infinitos en la selección de filas
-  const handleRowSelectionChange = (newSelection: any) => {
-    setRowSelection(prevSelection => {
-      if (prevSelection !== newSelection) {
-        return newSelection
-      }
+  // Hooks
+  const { lang: locale } = useParams()
 
-      return prevSelection
-    })
-  }
-
-  const columns = useMemo<ColumnDef<UsersType>[]>(() => {
-    const dynamicColumns: ColumnDef<UsersType>[] = [
+  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+    () => [
       {
-        id: 'checkbox',
+        id: 'select',
         header: ({ table }) => (
           <Checkbox
-            indeterminate={table.getIsSomeRowsSelected()}
-            checked={table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
           />
         ),
-        cell: ({ row }) => <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
-      }
-    ]
-
-    if (headers.fullName) {
-      dynamicColumns.push(
-        columnHelper.accessor('fullName', {
-          header: headers.fullName,
-          cell: ({ row }) => (
-            <div className='flex items-center gap-4'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          )
-        })
-      )
-    }
-
-    if (headers.email) {
-      dynamicColumns.push(
-        columnHelper.accessor('email', {
-          header: headers.email,
-          cell: ({ row }) => <Typography>{row.original.email}</Typography>
-        })
-      )
-    }
-
-    if (headers.cliente) {
-      dynamicColumns.push(
-        columnHelper.accessor('cliente', {
-          header: headers.cliente,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.obra) {
-      dynamicColumns.push(
-        columnHelper.accessor('obra', {
-          header: headers.obra,
-          cell: ({ row }) => <Typography>{row.original.email}</Typography>
-        })
-      )
-    }
-
-    if (headers.laboratorista) {
-      dynamicColumns.push(
-        columnHelper.accessor('laboratorista', {
-          header: headers.laboratorista,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.servicio) {
-      dynamicColumns.push(
-        columnHelper.accessor('servicio', {
-          header: headers.servicio,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.comuna) {
-      dynamicColumns.push(
-        columnHelper.accessor('comuna', {
-          header: headers.comuna,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.inicio) {
-      dynamicColumns.push(
-        columnHelper.accessor('inicio', {
-          header: headers.inicio,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    if (headers.termino) {
-      dynamicColumns.push(
-        columnHelper.accessor('termino', {
-          header: headers.termino,
-          cell: ({ row }) => <Typography>{row.original.role}</Typography>
-        })
-      )
-    }
-
-    dynamicColumns.push(
-      columnHelper.accessor('role', {
-        header: headers.role,
         cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
+      columnHelper.accessor('currentPlan', {
+        header: 'CÓDIGO',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'FECHA DE CODIFICACIÓN',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'FECHA MUESTREO',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'ÁREA',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'FAMILIA',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'OBSERVACIÓN',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('status', {
+        header: 'ESTADO',
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <Chip
+              variant='tonal'
+              label={row.original.status}
+              size='small'
+              color={userStatusObj[row.original.status]}
+              className='capitalize'
+            />
           </div>
         )
+      }),
+      columnHelper.accessor('action', {
+        header: 'ACCIONES',
+        cell: ({ row }) => (
+          <div className='flex items-center'>
+            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
+              <i className='ri-delete-bin-7-line text-textSecondary' />
+            </IconButton>
+            <IconButton>
+              <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
+                <i className='ri-eye-line text-textSecondary' />
+              </Link>
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ size: 'medium' }}
+              iconClassName='text-textSecondary'
+              options={[
+                {
+                  text: 'Download',
+                  icon: 'ri-download-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                },
+                {
+                  text: 'Edit',
+                  icon: 'ri-edit-box-line',
+                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                }
+              ]}
+            />
+          </div>
+        ),
+        enableSorting: false
       })
-    )
-
-    dynamicColumns.push(
-      columnHelper.accessor('status', {
-        header: headers.status,
-        cell: ({ row }) => <Chip label={row.original.status} size='small' className='capitalize' />
-      })
-    )
-
-    dynamicColumns.push({
-      id: 'action',
-      header: 'Acciones',
-      cell: ({ row }) => (
-        <div className='flex items-center gap-2'>
-          {actionIcons.map((icon, index) => (
-            <IconButton key={index}>{icon}</IconButton>
-          ))}
-        </div>
-      )
-    })
-
-    return dynamicColumns
-  }, [headers, actionIcons])
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, filteredData]
+  )
 
   const table = useReactTable({
-    data: filteredData.slice(page * rowsPerPage, (page + 1) * rowsPerPage), // Controlar la paginación aquí
+    data: filteredData as UsersType[],
     columns,
+    filterFns: {
+      fuzzy: fuzzyFilter
+    },
+    state: {
+      rowSelection,
+      globalFilter
+    },
+    initialState: {
+      pagination: {
+        pageSize: 10
+      }
+    },
+    enableRowSelection: true, //enable row selection for all rows
+    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
+    globalFilterFn: fuzzyFilter,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    state: { rowSelection, globalFilter },
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: handleRowSelectionChange, // Modificamos el método de selección
-    onGlobalFilterChange: setGlobalFilter
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    if (page !== newPage) {
-      setPage(newPage)
-    }
-  }
+  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
+    const { avatar, fullName } = params
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newRowsPerPage = parseInt(event.target.value, 10)
-
-    if (rowsPerPage !== newRowsPerPage) {
-      setRowsPerPage(newRowsPerPage)
-      setPage(0)
+    if (avatar) {
+      return <CustomAvatar src={avatar} skin='light' size={34} />
+    } else {
+      return (
+        <CustomAvatar skin='light' size={34}>
+          {getInitials(fullName as string)}
+        </CustomAvatar>
+      )
     }
   }
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Card>
-          <CardHeader title={title} />
-          <Divider />
-          <Box sx={{ padding: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={3}>
-                <TextField select label='Intervalo de Fechas' fullWidth />
-              </Grid>
-              <Grid item xs={3}>
-                <TextField label='Cliente' fullWidth />
-              </Grid>
-              <Grid item xs={3}>
-                <TextField label='Buscar' fullWidth />
-              </Grid>
-              <Grid item xs={3}>
-                <TextField select label='Estado' fullWidth />
-              </Grid>
-            </Grid>
-          </Box>
-          <Divider />
-          <div className='overflow-x-auto'>
-            <table className={tableStyles.table}>
-              <thead>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th key={header.id}>
-                        <div
-                          className={classnames({
-                            'flex items-center': header.column.getIsSorted(),
-                            'cursor-pointer select-none': header.column.getCanSort()
-                          })}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() ? (
-                            header.column.getIsSorted() === 'asc' ? (
-                              <i className='ri-arrow-up-s-line text-xl' />
-                            ) : (
-                              <i className='ri-arrow-down-s-line text-xl' />
-                            )
-                          ) : null}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getFilteredRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                      No data available
-                    </td>
-                  </tr>
-                ) : (
-                  table.getRowModel().rows.map(row => (
-                    <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+    <>
+      <Card>
+        <CardHeader title='' />
+        <TableFilters setData={setFilteredData} tableData={data} />
+        <Divider />
+        <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
+          {/* Campos Área y Familia */}
+          <div className='flex items-center gap-4 flex-col sm:flex-row'>
+            <TextField label='Área' size='small' fullWidth select sx={{ minWidth: 200 }}>
+              {/* Opciones de Área */}
+            </TextField>
+            <TextField label='Familia' size='small' fullWidth select sx={{ minWidth: 200 }}>
+              {/* Opciones de Familia */}
+            </TextField>
           </div>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            component='div'
-            count={filteredData.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Card>
-      </Grid>
 
-      {/* Tablas debajo */}
-      <Grid container spacing={2} mt={4}>
-        {/* Tabla Cantidades */}
-        <Grid item xs={4}>
-          <Card>
-            <CardHeader title='' />
-            <Divider />
-            <Box sx={{ padding: 2 }}>
-              <table className={tableStyles.table}>
-                <thead>
-                  <tr>
-                    <th>CANT</th>
-                    <th>DÍAS</th>
-                    <th>FECHA VENC</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>7</td>
-                    <td>10</td>
-                    <td>10/10/2024</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>28</td>
-                    <td>31/10/2024</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Box>
-          </Card>
-        </Grid>
+          {/* Botón + Crear Código */}
+          <Button
+            variant='contained'
+            color='primary'
+            startIcon={<i className='ri-add-line' />}
+            component='a'
+            href='/en/apps/user/interno'
+          >
+            Crear Código
+          </Button>
+        </div>
 
-        {/* Tabla Ensayos/Servicios */}
-        <Grid item xs={8}>
-          <Card>
-            <CardHeader title='' />
-            <Divider />
-            <Box sx={{ padding: 2 }}>
-              <table className={tableStyles.table}>
-                <thead>
-                  <tr>
-                    <th>SF AM</th>
-                    <th>TIPO/FORMA</th>
-                    <th>CÓD INT</th>
-                    <th>ENSAYO/SERV</th>
-                    <th>CANT</th>
-                    <th>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>GEN</td>
-                    <td>Genérico</td>
-                    <td>200</td>
-                    <td>Movilización</td>
-                    <td>1.00</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>PCL</td>
-                    <td>Cilindros</td>
-                    <td>196</td>
-                    <td>Compresión</td>
-                    <td>3.00</td>
-                    <td>
-                      <Chip label='En Revisión' size='small' />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Box>
-          </Card>
-        </Grid>
-      </Grid>
-    </Grid>
-  )
-}
-
-// Datos ficticios actualizados para la tabla de "Gestión de Visitas"
-const dataTable1 = [
-  {
-    id: 1,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'En Revisión'
-  },
-  {
-    id: 2,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Completada'
-  },
-  {
-    id: 3,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Anulada'
-  },
-  {
-    id: 4,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Suspendida'
-  },
-  {
-    id: 5,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Recibida'
-  },
-  {
-    id: 6,
-    fullName: '22/12/24',
-    email: '00:00',
-    cliente: 'Nombre Cliente',
-    obra: 'Obra',
-    laboratorista: 'Laboratorista',
-    comuna: 'Segmento',
-    inicio: '00:00',
-    termino: '23:59',
-    role: '',
-    status: 'Codificada'
-  }
-]
-
-// Componente principal donde se renderiza la tabla de "Gestión de Visitas"
-const TablesPage = () => {
-  return (
-    <div>
-      <UserListTable
-        tableData={dataTable1}
-        headers={{
-          fullName: 'Fecha',
-          email: 'Hora',
-          cliente: 'Cliente',
-          obra: 'Obra',
-          laboratorista: 'Laboratorista',
-          comuna: 'Segmento',
-          inicio: 'Inicio',
-          termino: 'Término',
-          role: 'Rol',
-          status: 'Estado'
-        }}
-        title='Control de Muestras'
-        actionIcons={[<i className='ri-edit-box-line' />, <i className='ri-time-line' />]}
-        showDetailsBox={true}
+        <div className='overflow-x-auto'>
+          <table className={tableStyles.table}>
+            <thead>
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <th key={header.id}>
+                      {header.isPlaceholder ? null : (
+                        <>
+                          <div
+                            className={classnames({
+                              'flex items-center': header.column.getIsSorted(),
+                              'cursor-pointer select-none': header.column.getCanSort()
+                            })}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: <i className='ri-arrow-up-s-line text-xl' />,
+                              desc: <i className='ri-arrow-down-s-line text-xl' />
+                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                          </div>
+                        </>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            {table.getFilteredRowModel().rows.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                    No data available
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
+              <tbody>
+                {table
+                  .getRowModel()
+                  .rows.slice(0, table.getState().pagination.pageSize)
+                  .map(row => {
+                    return (
+                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                        {row.getVisibleCells().map(cell => (
+                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+              </tbody>
+            )}
+          </table>
+        </div>
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50]}
+          component='div'
+          className='border-bs'
+          count={table.getFilteredRowModel().rows.length}
+          rowsPerPage={table.getState().pagination.pageSize}
+          page={table.getState().pagination.pageIndex}
+          SelectProps={{
+            inputProps: { 'aria-label': 'rows per page' }
+          }}
+          onPageChange={(_, page) => {
+            table.setPageIndex(page)
+          }}
+          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+        />
+      </Card>
+      <AddUserDrawer
+        open={addUserOpen}
+        handleClose={() => setAddUserOpen(!addUserOpen)}
+        userData={data}
+        setData={setData}
       />
-    </div>
+    </>
   )
 }
 
-export default TablesPage
+export default UserListTable
