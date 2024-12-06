@@ -93,9 +93,18 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
               Gestión de Agenda
             </MenuItem>
           </SubMenu>
-          <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
-            Control Interno
-          </MenuItem>
+          <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
+            <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
+              Control Interno
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/user/registro1`} icon={<i className='ri-home-smile-line' />}>
+              Navegador
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/user/registro2`} icon={<i className='ri-home-smile-line' />}>
+              Navegador Detalle
+            </MenuItem>
+          </SubMenu>
+
           <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
             Facturación
           </MenuItem>
@@ -108,9 +117,6 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             </MenuItem>
             <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-pantone-line' />}>
               Obras
-            </MenuItem>
-            <MenuItem href={`/${locale}/apps/user/`} icon={<i className='ri-user-line' />}>
-              Contactos
             </MenuItem>
           </SubMenu>
           <SubMenu label='Productos' icon={<i className='ri-home-smile-line' />}>
