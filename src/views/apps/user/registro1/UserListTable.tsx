@@ -177,14 +177,7 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           />
         )
       },
-      columnHelper.accessor('currentPlan', {
-        header: 'N OBRA',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
+
       columnHelper.accessor('currentPlan', {
         header: 'CLIENTE',
         cell: ({ row }) => (
@@ -217,19 +210,19 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'FECHA COD',
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'FECHA COD.',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
+            {row.original.fechaMuestreo || '00/00/00'}
           </Typography>
         )
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'FECHA MUESTREO',
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'FECHA MUES.',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
+            {row.original.fechaMuestreo || '00/00/00'}
           </Typography>
         )
       }),
@@ -250,8 +243,16 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'C. MUES',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.fechaMuestreo || '1'}
+          </Typography>
+        )
+      }),
       columnHelper.accessor('status', {
-        header: 'ESTADO',
+        header: 'EST. OP.',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <Chip
@@ -265,7 +266,7 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('status', {
-        header: 'ESTADO',
+        header: 'EST. AD.',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <Chip
@@ -276,6 +277,14 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
               className='capitalize'
             />
           </div>
+        )
+      }),
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'N OBRA',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.fechaMuestreo || '1'}
+          </Typography>
         )
       }),
 
@@ -293,15 +302,20 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
               <i className='ri-checkbox-circle-line text-textSecondary' />
             </IconButton>
 
-            {/* Ícono de Documento */}
-            <IconButton>
-              <i className='ri-file-list-line text-textSecondary' />
-            </IconButton>
-
             {/* Menú de opciones (tres puntos) */}
             <OptionMenu
               iconButtonProps={{ size: 'medium', className: 'text-textSecondary' }}
               options={[
+                {
+                  text: 'Documento',
+                  icon: 'ri-file-list-line',
+                  menuItemProps: {
+                    onClick: () => {
+                      // Acción de documento
+                      console.log(`Documento de fila con ID: ${row.original.id}`)
+                    }
+                  }
+                },
                 {
                   text: 'Editar',
                   icon: 'ri-pencil-line',

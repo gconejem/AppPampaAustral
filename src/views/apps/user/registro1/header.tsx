@@ -12,34 +12,44 @@ const Header = () => {
       }}
     >
       {/* Título */}
-      <Typography variant='h5' sx={{ fontWeight: '', mb: 4 }}>
-        Navegador Global
+      <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
+        Navegador Global de RCM
       </Typography>
 
-      {/* Fila de Inputs */}
+      {/* Primera Fila de Inputs */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={4}>
+          <TextField label='Fecha Codificación' size='small' fullWidth select>
+            {/* Opciones */}
+          </TextField>
+        </Grid>
+        <Grid item xs={4}>
+          <TextField label='Fecha desde' size='small' fullWidth select>
+            {/* Opciones */}
+          </TextField>
+        </Grid>
+        <Grid item xs={4}>
+          <TextField label='Fecha hasta' size='small' fullWidth select>
+            {/* Opciones */}
+          </TextField>
+        </Grid>
+      </Grid>
+
+      {/* Segunda Fila de Inputs */}
       <Grid container spacing={2}>
-        <Grid item xs={2}>
-          <TextField label='Intervalo de Fechas' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+        <Grid item xs={3}>
+          <TextField label='Área' size='small' fullWidth />
         </Grid>
-        <Grid item xs={2}>
-          <TextField label='Área' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+        <Grid item xs={3}>
+          <TextField label='Familia' size='small' fullWidth />
         </Grid>
-        <Grid item xs={2}>
-          <TextField label='Familia' size='small' fullWidth select>
+        <Grid item xs={3}>
+          <TextField label='Estado Operativo' size='small' fullWidth select>
             {/* Opciones */}
           </TextField>
         </Grid>
         <Grid item xs={3}>
-          <TextField label='Estado OP' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
-        </Grid>
-        <Grid item xs={3}>
-          <TextField label='Estado Adm' size='small' fullWidth select>
+          <TextField label='Estado Administrativo' size='small' fullWidth select>
             {/* Opciones */}
           </TextField>
         </Grid>

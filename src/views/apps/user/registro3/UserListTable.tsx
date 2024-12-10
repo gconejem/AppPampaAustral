@@ -25,49 +25,100 @@ import {
 } from '@mui/material'
 
 const UserListTable: React.FC = () => {
-  const [selectedRowsMuestra1, setSelectedRowsMuestra1] = useState<number[]>([])
-  const [selectedRowsMuestra2, setSelectedRowsMuestra2] = useState<number[]>([])
-  const [openDialog, setOpenDialog] = useState(false) // Estado para manejar el diálogo
+  // Estado general de las muestras
+  const [muestras, setMuestras] = useState([
+    { id: 1, estado: 'Codificado', ensayos: ['Codificado', 'Codificado', 'Codificado'] },
+    { id: 2, estado: 'Codificado', ensayos: ['Codificado', 'Codificado', 'Codificado'] }
+  ])
 
-  const handleOpenDialog = () => {
+  // Muestra seleccionada
+  const [selectedMuestra, setSelectedMuestra] = useState<number | null>(null)
+
+  // Estado de las filas seleccionadas en la tabla de muestras
+  const [selectedRowsMuestra, setSelectedRowsMuestra] = useState<number[]>([])
+
+  // Estado de las filas seleccionadas en la tabla de ensayos
+  const [selectedRowsEnsayos, setSelectedRowsEnsayos] = useState<number[]>([])
+
+  // Estado seleccionado en el popup
+  const [selectedState, setSelectedState] = useState('')
+
+  // Estado para abrir/cerrar el diálogo
+  const [openDialog, setOpenDialog] = useState(false)
+
+  // Índice del ensayo en edición
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null)
+
+  // Abrir el diálogo para un ensayo específico
+  const handleOpenDialog = (index: number) => {
+    setEditingRowIndex(index)
     setOpenDialog(true)
   }
 
+  // Cerrar el diálogo
   const handleCloseDialog = () => {
+    setSelectedState('')
     setOpenDialog(false)
   }
 
-  const handleSelectAllMuestra1 = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelectedRowsMuestra1([0])
+  // Manejar cambio de estado en el popup
+  const handleStateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedState(event.target.value)
+  }
+
+  // Guardar el estado seleccionado en el popup
+  const handleAccept = () => {
+    if (editingRowIndex !== null && selectedMuestra !== null) {
+      const updatedMuestras = [...muestras]
+      const muestra = updatedMuestras.find(m => m.id === selectedMuestra)
+
+      if (muestra) {
+        muestra.ensayos[editingRowIndex] = selectedState
+
+        // Verificar si todos los ensayos están en "Ensayado"
+        if (muestra.ensayos.every(state => state === 'Ensayado')) {
+          muestra.estado = 'Ensayado'
+        } else {
+          muestra.estado = 'Codificado'
+        }
+
+        setMuestras(updatedMuestras)
+      }
+    }
+
+    handleCloseDialog()
+  }
+
+  // Seleccionar/deseleccionar una fila en la tabla
+  const handleSelectRow = (index: number, isEnsayo: boolean) => {
+    if (isEnsayo) {
+      setSelectedRowsEnsayos(prev => (prev.includes(index) ? prev.filter(row => row !== index) : [...prev, index]))
     } else {
-      setSelectedRowsMuestra1([])
+      setSelectedRowsMuestra(prev => (prev.includes(index) ? prev.filter(row => row !== index) : [...prev, index]))
+      setSelectedMuestra(index + 1) // Actualizar la muestra seleccionada (asume IDs consecutivos)
     }
   }
 
-  const handleSelectRowMuestra1 = (index: number) => {
-    setSelectedRowsMuestra1(prev => (prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]))
-  }
+  // Seleccionar/deseleccionar todas las filas en la tabla
+  const handleSelectAllRows = (isEnsayo: boolean) => {
+    if (isEnsayo && selectedMuestra !== null) {
+      const muestra = muestras.find(m => m.id === selectedMuestra)
 
-  const handleSelectAllMuestra2 = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelectedRowsMuestra2([0, 1])
+      if (muestra) {
+        setSelectedRowsEnsayos(
+          selectedRowsEnsayos.length === muestra.ensayos.length ? [] : muestra.ensayos.map((_, index) => index)
+        )
+      }
     } else {
-      setSelectedRowsMuestra2([])
+      setSelectedRowsMuestra(selectedRowsMuestra.length === muestras.length ? [] : muestras.map(m => m.id - 1))
     }
-  }
-
-  const handleSelectRowMuestra2 = (index: number) => {
-    setSelectedRowsMuestra2(prev => (prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]))
   }
 
   return (
     <Box sx={{ p: 4, backgroundColor: 'white', boxShadow: 2, borderRadius: 2 }}>
       {/* Tabla de muestras */}
       <Box sx={{ mb: 4 }}>
-        {/* Título y tarjetas de estado */}
         <Box display='flex' alignItems='center' justifyContent='space-between' sx={{ mb: 4 }}>
-          {/* Contenedor del título y N° Tarjeta */}
           <Box display='flex' alignItems='center' gap={2}>
             <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
               Muestra 180280-1
@@ -81,24 +132,32 @@ const UserListTable: React.FC = () => {
               }}
             />
           </Box>
-          {/* Contenedor de los otros chips */}
           <Box display='flex' alignItems='center' gap={2}>
-            <Chip
-              label='Muestra: En Proceso'
-              sx={{
-                backgroundColor: '#e3f2fd',
-                color: '#1976d2',
-                fontWeight: 'bold'
-              }}
-            />
-            <Chip
-              label='Ensayos: 1/4'
-              sx={{
-                backgroundColor: '#fff9c4',
-                color: '#f9a825',
-                fontWeight: 'bold'
-              }}
-            />
+            {selectedMuestra !== null ? (
+              <>
+                <Chip
+                  label={`Muestra: ${muestras.find(m => m.id === selectedMuestra)?.estado || 'N/A'}`}
+                  sx={{
+                    backgroundColor:
+                      muestras.find(m => m.id === selectedMuestra)?.estado === 'Ensayado' ? '#dfffe1' : '#e3f2fd',
+                    color: muestras.find(m => m.id === selectedMuestra)?.estado === 'Ensayado' ? '#4caf50' : '#1976d2',
+                    fontWeight: 'bold'
+                  }}
+                />
+                <Chip
+                  label={`Ensayos: ${
+                    muestras.find(m => m.id === selectedMuestra)?.ensayos.filter(e => e === 'Ensayado').length
+                  }/${muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0}`}
+                  sx={{
+                    backgroundColor: '#fff9c4',
+                    color: '#f9a825',
+                    fontWeight: 'bold'
+                  }}
+                />
+              </>
+            ) : (
+              <Typography variant='body1' color='text.secondary'></Typography>
+            )}
           </Box>
         </Box>
 
@@ -106,11 +165,17 @@ const UserListTable: React.FC = () => {
           <Table>
             <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
               <TableRow>
-                <TableCell sx={{ width: '50px' }}>
+                <TableCell>
                   <Checkbox
-                    indeterminate={selectedRowsMuestra2.length > 0 && selectedRowsMuestra2.length < 2}
-                    checked={selectedRowsMuestra2.length === 2}
-                    onChange={handleSelectAllMuestra2}
+                    indeterminate={
+                      selectedMuestra !== null &&
+                      selectedRowsEnsayos.length > 0 &&
+                      selectedRowsEnsayos.length < (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                    }
+                    checked={
+                      selectedMuestra !== null &&
+                      selectedRowsEnsayos.length === (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                    }
                   />
                 </TableCell>
                 <TableCell>#</TableCell>
@@ -124,96 +189,36 @@ const UserListTable: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {[1, 2].map((row, index) => (
-                <TableRow key={index}>
+              {muestras.map((muestra, index) => (
+                <TableRow key={muestra.id}>
                   <TableCell>
                     <Checkbox
-                      checked={selectedRowsMuestra2.includes(index)}
-                      onChange={() => handleSelectRowMuestra2(index)}
+                      checked={selectedRowsMuestra.includes(index)}
+                      onChange={() => handleSelectRow(index, false)}
                     />
                   </TableCell>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell>2182-{index + 6}</TableCell>
+                  <TableCell>{muestra.id}</TableCell>
                   <TableCell>01/01/2024</TableCell>
                   <TableCell>1</TableCell>
                   <TableCell>23</TableCell>
                   <TableCell>01/01/2025</TableCell>
                   <TableCell>
                     <Chip
-                      label='Codificado'
+                      label={muestra.estado}
                       sx={{
-                        backgroundColor: '#daf3ff',
-                        color: '#16b1ff'
+                        backgroundColor: muestra.estado === 'Ensayado' ? '#dfffe1' : '#daf3ff',
+                        color: muestra.estado === 'Ensayado' ? '#4caf50' : '#16b1ff',
+                        fontWeight: 'bold'
                       }}
                     />
                   </TableCell>
                   <TableCell>
                     <Box display='flex' justifyContent='center' gap={1}>
-                      <IconButton color='secondary' onClick={handleOpenDialog}>
+                      <IconButton color='secondary'>
                         <i className='ri-checkbox-line' />
                       </IconButton>
-                      <IconButton color='secondary' onClick={() => console.log('Probeta')}>
-                        <ScienceIcon />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-
-      {/* Tabla de ensayos */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
-          Ensayos
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell sx={{ width: '50px' }}>
-                  <Checkbox
-                    indeterminate={selectedRowsMuestra1.length > 0 && selectedRowsMuestra1.length < 1}
-                    checked={selectedRowsMuestra1.length === 1}
-                    onChange={handleSelectAllMuestra1}
-                  />
-                </TableCell>
-                <TableCell>CÓD. INT.</TableCell>
-                <TableCell>ENSAYO / ANÁLISIS</TableCell>
-                <TableCell>CANTIDAD</TableCell>
-                <TableCell>ESTADO</TableCell>
-                <TableCell sx={{ width: '150px', textAlign: 'center' }}>ACCIONES</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[0].map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedRowsMuestra1.includes(index)}
-                      onChange={() => handleSelectRowMuestra1(index)}
-                    />
-                  </TableCell>
-                  <TableCell>HOR01</TableCell>
-                  <TableCell>Testigo Hormigón Fresco</TableCell>
-                  <TableCell>3</TableCell>
-                  <TableCell>
-                    <Chip
-                      label='Codificado'
-                      sx={{
-                        backgroundColor: '#daf3ff',
-                        color: '#16b1ff'
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box display='flex' justifyContent='center' gap={1}>
-                      <IconButton color='secondary' onClick={handleOpenDialog}>
-                        <i className='ri-checkbox-line' />
-                      </IconButton>
-                      <IconButton color='secondary' onClick={() => console.log('Probeta')}>
+                      <IconButton color='secondary'>
                         <ScienceIcon />
                       </IconButton>
                     </Box>
@@ -231,8 +236,8 @@ const UserListTable: React.FC = () => {
         onClose={handleCloseDialog}
         sx={{
           '& .MuiDialog-paper': {
-            width: '400px', // Ancho personalizado
-            maxWidth: '100%' // Evita que exceda el ancho de la pantalla
+            width: '400px',
+            maxWidth: '100%'
           }
         }}
       >
@@ -240,12 +245,13 @@ const UserListTable: React.FC = () => {
         <DialogContent>
           <TextField
             select
-            label=''
+            label='Estado'
             fullWidth
             SelectProps={{
               native: true
             }}
-            defaultValue=''
+            value={selectedState}
+            onChange={handleStateChange}
           >
             <option value=''>Seleccionar</option>
             <option value='Codificado'>Codificado</option>
@@ -256,11 +262,83 @@ const UserListTable: React.FC = () => {
           <Button onClick={handleCloseDialog} color='secondary'>
             Cerrar
           </Button>
-          <Button onClick={() => console.log('Estado actualizado')} variant='contained' color='primary'>
+          <Button onClick={handleAccept} variant='contained' color='primary'>
             Aceptar
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Tabla de ensayos */}
+
+      <Box sx={{ mb: 4 }}>
+        <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
+          Ensayos
+        </Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableRow>
+                <TableCell>
+                  <Checkbox
+                    indeterminate={
+                      selectedMuestra !== null &&
+                      selectedRowsEnsayos.length > 0 &&
+                      selectedRowsEnsayos.length < (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                    }
+                    checked={
+                      selectedMuestra !== null &&
+                      selectedRowsEnsayos.length === (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                    }
+                    onChange={() => handleSelectAllRows(true)}
+                  />
+                </TableCell>
+                <TableCell>CÓD. INT.</TableCell>
+                <TableCell>ENSAYO / ANÁLISIS</TableCell>
+                <TableCell>CANTIDAD</TableCell>
+                <TableCell>ESTADO</TableCell>
+                <TableCell sx={{ width: '150px', textAlign: 'center' }}>ACCIONES</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedMuestra !== null &&
+                muestras
+                  .find(m => m.id === selectedMuestra)
+                  ?.ensayos.map((state, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRowsEnsayos.includes(index)}
+                          onChange={() => handleSelectRow(index, true)}
+                        />
+                      </TableCell>
+                      <TableCell>HOR{index + 1}</TableCell>
+                      <TableCell>Ensayo {index + 1}</TableCell>
+                      <TableCell>3</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={state}
+                          sx={{
+                            backgroundColor: state === 'Ensayado' ? '#dfffe1' : '#daf3ff',
+                            color: state === 'Ensayado' ? '#4caf50' : '#16b1ff',
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box display='flex' justifyContent='center' gap={1}>
+                          <IconButton color='secondary' onClick={() => handleOpenDialog(index)}>
+                            <i className='ri-checkbox-line' />
+                          </IconButton>
+                          <IconButton color='secondary'>
+                            <ScienceIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
     </Box>
   )
 }
