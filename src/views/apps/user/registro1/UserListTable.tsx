@@ -46,10 +46,14 @@ import type { UsersType } from '@/types/apps/userTypes'
 import type { Locale } from '@configs/i18n'
 
 // Component Imports
+
+import HistorialPopup from './HistorialPopup'
+
 import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
+import InfoCards from './InfoCards'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -125,6 +129,7 @@ const DebouncedInput = ({
 }
 
 // Vars
+
 const userRoleObj: UserRoleType = {
   admin: { icon: 'ri-vip-crown-line', color: 'error' },
   author: { icon: 'ri-computer-line', color: 'warning' },
@@ -149,6 +154,43 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
   const [data, setData] = useState(...[tableData])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+
+  const [openHistorial, setOpenHistorial] = useState(false) // Mueve esto aquí
+
+  const [historialData, setHistorialData] = useState([
+    {
+      registro: '04/03/2024 - 17:07',
+      funcionario: 'Paola Mena',
+      aplicadoA: 'Ensayo/Serv 2',
+      tipo: 'Ope',
+      estadoAnterior: 'Firmado',
+      estadoNuevo: 'Env-Cliente',
+      informe: '1',
+      fechaAccion: '04/03/2024',
+      observacion: 'Codificar, automático'
+    },
+    {
+      registro: '04/03/2024 - 18:10',
+      funcionario: 'Cristian Salinas',
+      aplicadoA: 'Ensayo/Serv 1',
+      tipo: 'Adm',
+      estadoAnterior: 'Facturado',
+      estadoNuevo: 'Pagado',
+      informe: '---',
+      fechaAccion: '04/03/2024',
+      observacion: 'Procesar Abonos, automático'
+    }
+  ]) // Mueve esto aquí
+
+  // Función para abrir el historial
+  const handleOpenHistorial = () => {
+    setOpenHistorial(true)
+  }
+
+  // Función para cerrar el historial
+  const handleCloseHistorial = () => {
+    setOpenHistorial(false)
+  }
 
   // Hooks
   const { lang: locale } = useParams()
@@ -179,22 +221,6 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
       },
 
       columnHelper.accessor('currentPlan', {
-        header: 'CLIENTE',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
-        header: 'COMUNA',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
         header: 'RCM',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
@@ -210,6 +236,7 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
+
       columnHelper.accessor('fechaMuestreo', {
         header: 'FECHA COD.',
         cell: ({ row }) => (
@@ -287,6 +314,22 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'CLIENTE',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.fechaMuestreo || 'Nombre Cliente'}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'COMUNA',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.fechaMuestreo || 'Comuna'}
+          </Typography>
+        )
+      }),
 
       columnHelper.accessor('action', {
         header: 'ACCIONES',
@@ -331,8 +374,8 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
                   icon: 'ri-history-line',
                   menuItemProps: {
                     onClick: () => {
-                      // Acción de historial
-                      console.log(`Historial de fila con ID: ${row.original.id}`)
+                      // Abrir el PopUp de historial
+                      handleOpenHistorial(row.original.id) // Pasa el ID de la fila para cargar su historial
                     }
                   }
                 }
@@ -394,6 +437,53 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
     <>
       <Card>
         <CardHeader title='' />
+        <div className='p-5'>
+          <Grid container spacing={2} alignItems='center'>
+            {[
+              { title: 'Por Ensayar', value: 347, color: '#9e9e9e', flex: 1 }, // Gris
+              { title: 'Por Digitar', value: 125, color: '#2196f3', flex: 1 }, // Azul
+              { title: 'Por Enviar Digitación', value: 136, color: '#00bcd4', flex: 2 }, // Celeste
+              { title: 'Por Revisar', value: 77, color: '#9c27b0', flex: 1 }, // Morado
+              { title: 'Por Corregir', value: 0, color: '#f44336', flex: 1 }, // Rojo
+              { title: 'Por Firmar', value: 200, color: '#ff9800', flex: 1 }, // Amarillo
+              { title: 'Por Enviar (Firmados)', value: 629, color: '#4caf50', flex: 2 }, // Verde
+              { title: 'Firmados Pagados', value: '18/2,9%', color: '#388e3c', flex: 3 } // Verde
+            ].map((card, index) => (
+              <Grid item xs={card.flex} key={index}>
+                <Card
+                  sx={{
+                    backgroundColor: '#ffffff', // Fondo blanco
+                    textAlign: 'center',
+                    borderRadius: 2,
+                    boxShadow: '0px 3px 5px rgba(0,0,0,0.1)', // Sombra suave
+                    borderBottom: `2px solid ${card.color}`, // Línea inferior de color
+                    padding: 2
+                  }}
+                >
+                  <Typography
+                    variant='subtitle2'
+                    sx={{
+                      color: '#424242', // Texto en gris oscuro
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {card.title}
+                  </Typography>
+                  <Typography
+                    variant='h5'
+                    sx={{
+                      fontWeight: 'bold',
+                      color: '#000' // Texto negro
+                    }}
+                  >
+                    {card.value}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </div>
+
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='p-5'>
@@ -502,6 +592,9 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
+
+      <HistorialPopup open={openHistorial} onClose={handleCloseHistorial} data={historialData} />
+
       <AddUserDrawer
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}

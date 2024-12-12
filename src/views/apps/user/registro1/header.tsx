@@ -1,4 +1,4 @@
-import { Box, Grid, TextField, Typography } from '@mui/material'
+import { Box, Grid, TextField, Typography, Button } from '@mui/material'
 
 const Header = () => {
   return (
@@ -11,10 +11,20 @@ const Header = () => {
         mb: 4 // Margen inferior para separación
       }}
     >
-      {/* Título */}
-      <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
-        Navegador Global de RCM
-      </Typography>
+      {/* Título y Botón */}
+      <Grid container alignItems='center' sx={{ mb: 4 }}>
+        <Grid item xs={3}>
+          <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
+            Navegador Global de RCM
+          </Typography>
+        </Grid>
+        <Grid item xs={6} />
+        <Grid item xs={3} sx={{ textAlign: 'right' }}>
+          <Button variant='contained' color='primary' size='large' sx={{ fontWeight: '' }}>
+            Informes
+          </Button>
+        </Grid>
+      </Grid>
 
       {/* Primera Fila de Inputs */}
       <Grid container spacing={2} sx={{ mb: 2 }}>

@@ -51,6 +51,7 @@ import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import PopUp from './popup'
+import HistorialPopup from './HistorialPopup'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -149,6 +150,42 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
   const [isPopUpOpen, setIsPopUpOpen] = useState(false) // State for PopUp
+  const [openHistorial, setOpenHistorial] = useState(false) // Mueve esto aquí
+
+  const [historialData, setHistorialData] = useState([
+    {
+      registro: '04/03/2024 - 17:07',
+      funcionario: 'Paola Mena',
+      aplicadoA: 'Ensayo/Serv 2',
+      tipo: 'Ope',
+      estadoAnterior: 'Firmado',
+      estadoNuevo: 'Env-Cliente',
+      informe: '1',
+      fechaAccion: '04/03/2024',
+      observacion: 'Codificar, automático'
+    },
+    {
+      registro: '04/03/2024 - 18:10',
+      funcionario: 'Cristian Salinas',
+      aplicadoA: 'Ensayo/Serv 1',
+      tipo: 'Adm',
+      estadoAnterior: 'Facturado',
+      estadoNuevo: 'Pagado',
+      informe: '---',
+      fechaAccion: '04/03/2024',
+      observacion: 'Procesar Abonos, automático'
+    }
+  ]) // Mueve esto aquí
+
+  // Función para abrir el historial
+  const handleOpenHistorial = () => {
+    setOpenHistorial(true)
+  }
+
+  // Función para cerrar el historial
+  const handleCloseHistorial = () => {
+    setOpenHistorial(false)
+  }
 
   // Handlers for PopUp
   const handleOpenPopUp = () => setIsPopUpOpen(true)
@@ -306,7 +343,8 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
                   icon: 'ri-history-line',
                   menuItemProps: {
                     onClick: () => {
-                      console.log(`Historial de fila con ID: ${row.original.id}`)
+                      // Abrir el PopUp de historial
+                      handleOpenHistorial(row.original.id) // Pasa el ID de la fila para cargar su historial
                     }
                   }
                 }
@@ -455,6 +493,8 @@ const UserListTable2 = ({ tableData }: { tableData?: UsersType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
+      <HistorialPopup open={openHistorial} onClose={handleCloseHistorial} data={historialData} />
+
       <AddUserDrawer
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}
