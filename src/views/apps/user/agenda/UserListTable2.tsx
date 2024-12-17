@@ -1,17 +1,11 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
-
-// Next Imports
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useState, useMemo } from 'react'
 
 // MUI Imports
+import Link from 'next/link'
 
-import MenuItem from '@mui/material/MenuItem'
-import Grid from '@mui/material/Grid'
-import CardContent from '@mui/material/CardContent'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -21,466 +15,235 @@ import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import { styled } from '@mui/material/styles'
+import Grid from '@mui/material/Grid'
 import TablePagination from '@mui/material/TablePagination'
-import type { TextFieldProps } from '@mui/material/TextField'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
-import classnames from 'classnames'
-import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
-  getFilteredRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
-  getPaginationRowModel,
-  getSortedRowModel
+  getPaginationRowModel
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
-import type { ThemeColor } from '@core/types'
 import type { UsersType } from '@/types/apps/userTypes'
-import type { Locale } from '@configs/i18n'
 
 // Component Imports
-import TableFilters from './TableFilters'
-import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
-import CustomAvatar from '@core/components/mui/Avatar'
 
-// Util Imports
-import { getInitials } from '@/utils/getInitials'
-import { getLocalizedUrl } from '@/utils/i18n'
-
-// Style Imports
+// Table Styles
 import tableStyles from '@core/styles/table.module.css'
-
-declare module '@tanstack/table-core' {
-  interface FilterFns {
-    fuzzy: FilterFn<unknown>
-  }
-  interface FilterMeta {
-    itemRank: RankingInfo
-  }
-}
 
 type UsersTypeWithAction = UsersType & {
   action?: string
 }
 
-type UserRoleType = {
-  [key: string]: { icon: string; color: string }
-}
-
-type UserStatusType = {
-  [key: string]: ThemeColor
-}
-
-// Styled Components
-const Icon = styled('i')({})
-
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
-  const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
-  return itemRank.passed
-}
-
-const DebouncedInput = ({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number
-  onChange: (value: string | number) => void
-  debounce?: number
-} & Omit<TextFieldProps, 'onChange'>) => {
-  // States
-  const [value, setValue] = useState(initialValue)
-
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value)
-    }, debounce)
-
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-
-  return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
-}
-
-// Vars
-const userRoleObj: UserRoleType = {
-  admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
-}
-
-const userStatusObj: UserStatusType = {
-  active: 'success',
-  pending: 'warning',
-  inactive: 'secondary'
-}
-
-// Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const UserListTable2 = ({ tableData, selectedVisit }: { tableData?: UsersType[]; selectedVisit: UsersType | null }) => {
   // States
-  const [addUserOpen, setAddUserOpen] = useState(false)
-  const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
-  const [filteredData, setFilteredData] = useState(data)
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [data] = useState(tableData || [])
+  const [pageSize, setPageSize] = useState(6)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [rowSelection, setRowSelection] = useState<{ [key: string]: boolean }>({})
+  const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '', estadoRetiro: '' })
 
-  // Hooks
-  const { lang: locale } = useParams()
+  // Handler para manejar los cambios en los filtros
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
+    setFilters(prev => ({ ...prev, [field]: e.target.value }))
+  }
 
-  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+  // Columns Definition
+  const columns = useMemo(
     () => [
       {
         id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
+        header: () => <Checkbox />,
         cell: ({ row }) => (
           <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
+            checked={rowSelection[row.id] || false}
+            onChange={() =>
+              setRowSelection(prev => ({
+                ...prev,
+                [row.id]: !prev[row.id]
+              }))
+            }
           />
         )
       },
       columnHelper.accessor('fullName', {
         header: 'OT',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          </div>
-        )
+        cell: ({ row }) => <Typography>0123456789 </Typography>
       }),
-      columnHelper.accessor('email', {
-        header: 'Fecha',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+      columnHelper.accessor('fullName', {
+        header: 'FECHA',
+        cell: ({ row }) => <Typography>00/00/0000</Typography>
       }),
-      columnHelper.accessor('role', {
-        header: 'Cliente',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
+      columnHelper.accessor('fullName', {
+        header: 'CLIENTE',
+        cell: ({ row }) => <Typography>Nombre Cliente</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Obra',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('fullName', {
+        header: 'OBRA',
+        cell: ({ row }) => <Typography>Nombre Obra</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Servicio',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('fullName', {
+        header: 'SERVICIO',
+        cell: ({ row }) => <Typography>Servicio</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Laboratorista',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('fullName', {
+        header: 'LABRST.',
+        cell: ({ row }) => <Typography>Laboratorista</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Muestreado',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('fullName', {
+        header: 'MUESTREADO',
+        cell: ({ row }) => <Typography>Laboratorio</Typography>
       }),
       columnHelper.accessor('status', {
         header: 'Estado',
         cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
+          <Chip label={row.original.status || 'Activo'} size='small' color='primary' className='capitalize' />
         )
       }),
       columnHelper.accessor('action', {
         header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-delete-bin-7-line text-textSecondary' />
-            </IconButton>
+        cell: () => (
+          <div className='flex items-center gap-2'>
             <IconButton>
-              <Link href='/en/apps/user/rcm' className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
+              <i className='ri-download-line' style={{ fontSize: '1.2rem' }} /> {/* Ícono de descarga */}
             </IconButton>
+            <Link href='http://localhost:3000/en/apps/user/rcm' passHref>
+              <IconButton>
+                <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} /> {/* Ícono de código */}
+              </IconButton>
+            </Link>
 
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Edit',
-                  icon: 'ri-edit-box-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            />
+            <IconButton>
+              <i className='ri-more-2-fill' style={{ fontSize: '1.2rem' }} /> {/* Ícono de opciones */}
+            </IconButton>
           </div>
-        ),
-        enableSorting: false
+        )
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, filteredData]
+    [rowSelection]
   )
 
   const table = useReactTable({
-    data: filteredData as UsersType[],
+    data,
     columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      globalFilter
-    },
-    initialState: {
-      pagination: {
-        pageSize: 6
-      }
-    },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
+    state: { pagination: { pageSize, pageIndex } },
     getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
+    getPaginationRowModel: getPaginationRowModel()
   })
 
-  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
-    const { avatar, fullName } = params
-
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
-        </CustomAvatar>
-      )
-    }
-  }
+  // Condicional: No mostrar si no hay una visita seleccionada
+  if (!selectedVisit) return null
 
   return (
-    <>
-      <Card>
-        <CardHeader title='Órdenes de Trabajo' />
-        <TableFilters setData={setFilteredData} tableData={data} />
-        <Divider />
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Orden de Trabajo, Nº Tarjeta' />
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Servicio' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Estado OT' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={3}>
-              <TextField fullWidth size='small' label='Estado Retiro' select>
-                <MenuItem value='opcion1'>Opción 1</MenuItem>
-                <MenuItem value='opcion2'>Opción 2</MenuItem>
-              </TextField>
-            </Grid>
+    <Card>
+      <CardHeader title={`Órdenes de Trabajo - ${selectedVisit.cliente || ''}`} />
+      <Divider />
+
+      {/* Filtros */}
+      <Box p={3}>
+        <Grid container spacing={2} alignItems='center'>
+          {/* Primera Fila */}
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              size='small'
+              label='Orden de Trabajo, Nº Tarjeta'
+              value={filters.ot}
+              onChange={e => handleFilterChange(e, 'ot')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              size='small'
+              label='Servicio'
+              value={filters.servicio}
+              onChange={e => handleFilterChange(e, 'servicio')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              size='small'
+              label='Estado OT'
+              value={filters.estadoOT}
+              onChange={e => handleFilterChange(e, 'estadoOT')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              size='small'
+              label='Estado Retiro'
+              value={filters.estadoRetiro}
+              onChange={e => handleFilterChange(e, 'estadoRetiro')}
+            />
           </Grid>
 
-          <Grid container spacing={3} alignItems='center'>
-            <Grid item xs={12} sm='auto'>
-              <Button
-                variant='contained'
-                color='primary'
-                size='small'
-                startIcon={<i className='ri-edit-line' />}
-                sx={{
-                  minWidth: 'auto',
-                  padding: '6px 16px'
-                }}
-              >
-                Editar
-              </Button>
-            </Grid>
-
-            <Grid item xs={12} sm='auto'>
-              <TextField
-                size='small'
-                placeholder='Buscar'
-                sx={{
-                  maxWidth: 250,
-                  width: '100%'
-                }}
-                InputProps={{
-                  startAdornment: <i className='ri-search-line' style={{ marginRight: 8 }} />
-                }}
-              />
-            </Grid>
+          {/* Segunda Fila */}
+          <Grid item xs={12} sm={2}>
+            <Button variant='contained' fullWidth>
+              Editar
+            </Button>
           </Grid>
-        </CardContent>
+          <Grid item xs={12} sm={7} />
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              size='small'
+              placeholder='Buscar'
+              InputProps={{
+                startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }} />
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Box>
 
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
-        </div>
-        <TablePagination
-          rowsPerPageOptions={[6, 10, 25, 50]}
-          component='div'
-          className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          SelectProps={{
-            inputProps: { 'aria-label': 'rows per page' }
-          }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-        />
-      </Card>
-      <AddUserDrawer
-        open={addUserOpen}
-        handleClose={() => setAddUserOpen(!addUserOpen)}
-        userData={data}
-        setData={setData}
+      {/* Tabla */}
+      <Box className='overflow-x-auto'>
+        <table className={tableStyles.table}>
+          <thead>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map(row => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map(cell => (
+                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Box>
+
+      {/* Paginación */}
+      <TablePagination
+        component='div'
+        count={data.length}
+        rowsPerPage={pageSize}
+        page={pageIndex}
+        onPageChange={(_, page) => setPageIndex(page)}
+        onRowsPerPageChange={e => setPageSize(Number(e.target.value))}
+        rowsPerPageOptions={[6, 10, 25, 50]}
       />
-    </>
+    </Card>
   )
 }
 
-export default UserListTable
+export default UserListTable2

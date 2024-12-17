@@ -1,7 +1,7 @@
 // MUI Imports
 import Link from 'next/link'
 
-import { Box, Grid, Typography, Button } from '@mui/material'
+import { Box, Grid, Typography, Button, Stack } from '@mui/material'
 
 const Header = () => {
   return (
@@ -11,11 +11,17 @@ const Header = () => {
           <Typography variant='h6'>Facturación y Cobranza</Typography>
         </Grid>
         <Grid item>
-          <Link href='/apps/invoice2/add' passHref>
-            <Button variant='contained' color='primary'>
-              + Crear Minuta
+          <Stack direction='row' spacing={2}>
+            <Button variant='outlined' color='secondary'>
+              Informes
             </Button>
-          </Link>
+
+            <Link href='/apps/invoice2/add' passHref>
+              <Button variant='contained' color='primary'>
+                + Crear Minuta
+              </Button>
+            </Link>
+          </Stack>
         </Grid>
       </Grid>
     </Box>

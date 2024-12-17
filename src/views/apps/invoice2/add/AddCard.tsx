@@ -6,6 +6,11 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 // MUI Imports
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Box from '@mui/material/Box'
+import Radio from '@mui/material/Radio'
+
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -33,17 +38,23 @@ import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 
 const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
   const [open, setOpen] = useState(false)
+  const [isValorGlobal, setIsValorGlobal] = useState(false) // Estado para el booleano "Valor Global"
+  const [valorUF, setValorUF] = useState('') // Estado para el campo VALOR UF
   const [isPopUpOpen, setIsPopUpOpen] = useState(false)
   const [count, setCount] = useState(1)
   const [issuedDate, setIssuedDate] = useState<Date | null | undefined>(null)
   const [dueDate, setDueDate] = useState<Date | null | undefined>(null)
   const [selectedVisits, setSelectedVisits] = useState<any[]>([])
-
+  const [precioSeleccionado, setPrecioSeleccionado] = useState('')
   const searchParams = useSearchParams()
   const cliente = searchParams.get('cliente') || 'Cliente'
   const obra = searchParams.get('obra') || 'Obra'
 
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
+
+  const handleChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setPrecioSeleccionado(event.target.value as string)
+  }
 
   const handleOpenPopUp = () => {
     setIsPopUpOpen(true)
@@ -63,6 +74,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
       <Card>
         <CardContent className='sm:!p-12'>
           <Grid container spacing={6}>
+            {/* Encabezado Principal */}
             <Grid item xs={12}>
               <div className='p-6 bg-actionHover rounded'>
                 <div className='flex justify-between gap-4 flex-col sm:flex-row'>
@@ -128,7 +140,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                 <TextField
                   fullWidth
                   size='small'
-                  placeholder={cliente} // Muestra el valor del cliente
+                  placeholder={cliente}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position='start'>
@@ -140,7 +152,7 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
                 <TextField
                   fullWidth
                   size='small'
-                  placeholder={obra} // Muestra el valor de la obra
+                  placeholder={obra}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position='start'>
@@ -164,153 +176,178 @@ const AddAction = ({ invoiceData }: { invoiceData?: any[] }) => {
               <Divider className='border-dashed' />
             </Grid>
 
-            {/* Texto Agregado: "Invoice To" y "Bill To" */}
+            {/* Sección Obra y Facturar a */}
             <Grid item xs={12}>
               <div className='flex justify-between flex-col gap-4 flex-wrap sm:flex-row'>
+                {/* Obra */}
                 <div className='flex flex-col gap-4'>
                   <Typography className='font-medium' color='text.primary'>
                     Obra:
                   </Typography>
-                  <div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Obra N°:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Nombre Obra:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Encargado Obra:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Teléfono:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Lista de Precios:</Typography>
-                      <Typography></Typography>
-                    </div>
-                  </div>
+                  <Typography>Obra: N°</Typography>
+                  <Typography>
+                    <strong>Nombre Obra:</strong> Nombre Obra
+                  </Typography>
+                  <Typography>
+                    <strong>Encargado de Obra:</strong> Nombre Encargado
+                  </Typography>
+                  <Typography>
+                    <strong>Teléfono:</strong> +56900000000
+                  </Typography>
+                  <Typography>Lista 1</Typography>
+                  <Select
+                    value={precioSeleccionado}
+                    onChange={handleChange}
+                    displayEmpty
+                    fullWidth
+                    size='small'
+                    sx={{ maxWidth: '200px' }}
+                  >
+                    <MenuItem value=''>Lista de Precios</MenuItem>
+                    <MenuItem value='precio1'>Precio 1</MenuItem>
+                    <MenuItem value='precio2'>Precio 2</MenuItem>
+                    <MenuItem value='precio3'>Precio 3</MenuItem>
+                  </Select>
                 </div>
+
+                {/* Facturar a */}
                 <div className='flex flex-col gap-4'>
                   <Typography className='font-medium' color='text.primary'>
                     Facturar a:
                   </Typography>
-                  <div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>RUT:</Typography>
-                      <Typography></Typography>
-                    </div>
-
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Razón Social:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Giro:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Comuna:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Dirección:</Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'>Correo:</Typography>
-                      <Typography></Typography>
-                    </div>
-                  </div>
+                  <Typography>
+                    <strong>RUT:</strong> N° RUT
+                  </Typography>
+                  <Typography>
+                    <strong>Razón Social:</strong> Nombre Razón Social
+                  </Typography>
+                  <Typography>
+                    <strong>Giro:</strong> Nombre Giro
+                  </Typography>
+                  <Typography>
+                    <strong>Comuna:</strong> Nombre Comuna
+                  </Typography>
+                  <Typography>
+                    <strong>Dirección:</strong> Calle y número, Ciudad
+                  </Typography>
+                  <Typography>
+                    <strong>Correo:</strong> dirección@correo.com
+                  </Typography>
                 </div>
               </div>
             </Grid>
 
-            {/* Tabla de Visitas */}
-            <Grid item xs={12}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>N° Solicitud</TableCell>
-                    <TableCell>Visita</TableCell>
-                    <TableCell>OTS</TableCell>
-                    <TableCell>RCM</TableCell>
-                    <TableCell>Valor</TableCell> {/* Nueva columna para el valor */}
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {/* Agrupamos las visitas por número de solicitud */}
-                  {Object.keys(
-                    selectedVisits.reduce((acc, visita) => {
-                      acc[visita.solicitud] = acc[visita.solicitud] || []
-                      acc[visita.solicitud].push(visita)
+            {/* Tarjetas, Booleano y Tabla Condicional */}
+            {selectedVisits.length > 0 && (
+              <>
+                <Grid item xs={12}>
+                  <Box display='flex' alignItems='center' justifyContent='space-between' sx={{ mb: 2 }}>
+                    <Box display='flex' gap={2}>
+                      <Box display='flex' alignItems='center' gap={1}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                          Solicitud:
+                        </Typography>
+                        <Box
+                          sx={{
+                            backgroundColor: '#E3F2FD',
+                            color: '#0277BD',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            borderRadius: '8px',
+                            padding: '2px 8px',
+                            display: 'inline-block'
+                          }}
+                        >
+                          123
+                        </Box>
+                      </Box>
 
-                      return acc
-                    }, {})
-                  ).map(solicitud => (
-                    <>
-                      <TableRow key={`header-${solicitud}`}>
-                        <TableCell colSpan={6}>
-                          <Typography variant='h6'>
-                            Solicitud {solicitud} {/* Encabezado para cada solicitud */}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                      {selectedVisits
-                        .filter(visita => visita.solicitud === solicitud) // Filtramos por solicitud
-                        .map((visita, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{solicitud}</TableCell>
-                            <TableCell>{visita.visita}</TableCell>
-                            <TableCell>{visita.ots}</TableCell>
-                            <TableCell>{visita.rcm}</TableCell>
-                            <TableCell>{visita.valor}</TableCell> {/* Mostramos el valor */}
-                            <TableCell>
-                              <IconButton
-                                size='small'
-                                onClick={() => {
-                                  const updatedVisits = selectedVisits.filter((_, idx) => idx !== index)
+                      <Box display='flex' alignItems='center' gap={1}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                          Cotización:
+                        </Typography>
+                        <Box
+                          sx={{
+                            backgroundColor: '#E3F2FD',
+                            color: '#0277BD',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            borderRadius: '8px',
+                            padding: '2px 8px',
+                            display: 'inline-block'
+                          }}
+                        >
+                          433
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Box display='flex' alignItems='center' gap={2}>
+                      <Radio
+                        checked={isValorGlobal}
+                        onChange={() => setIsValorGlobal(!isValorGlobal)}
+                        color='primary'
+                      />
+                      <Typography>Valor Global</Typography>
+                      <TextField
+                        label='Valor UF'
+                        variant='outlined'
+                        size='small'
+                        value={valorUF}
+                        onChange={e => setValorUF(e.target.value)}
+                        disabled={!isValorGlobal}
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
 
-                                  setSelectedVisits(updatedVisits)
-                                }}
-                              >
-                                <i className='ri-delete-bin-line' /> {/* Icono de basurero */}
-                              </IconButton>
-                              <IconButton
-                                size='small'
-                                onClick={() => {
-                                  alert('Función de edición aún no implementada')
-                                }}
-                              >
-                                <i className='ri-pencil-line' /> {/* Icono de lápiz */}
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                {/* Tabla de Visitas */}
+                <Grid item xs={12}>
+                  <Table>
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={4} align='right'>
-                          <Typography variant='body2' fontWeight='bold'>
-                            Subtotal Solicitud {solicitud}:
-                          </Typography>
-                        </TableCell>
-                        <TableCell colSpan={2}>
-                          {/* Calculamos el subtotal por solicitud */}
-                          <Typography variant='body2' fontWeight='bold'>
-                            {selectedVisits
-                              .filter(visita => visita.solicitud === solicitud)
-                              .reduce((total, visita) => total + (visita.valor || 0), 0)}{' '}
-                          </Typography>
-                        </TableCell>
+                        <TableCell>VISITA</TableCell>
+                        <TableCell>...</TableCell>
+                        <TableCell>OT</TableCell>
+                        <TableCell>RCM</TableCell>
+                        <TableCell>COD-INT</TableCell>
+                        <TableCell>DESCRIPCIÓN</TableCell>
+                        <TableCell>CANTIDAD</TableCell>
+
+                        <TableCell>VALO</TableCell>
+                        <TableCell>TOTAL</TableCell>
+
+                        <TableCell>ACCIONES</TableCell>
                       </TableRow>
-                    </>
-                  ))}
-                </TableBody>
-              </Table>
-            </Grid>
+                    </TableHead>
+                    <TableBody>
+                      {selectedVisits.map((visita, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{visita.solicitud}</TableCell>
+                          <TableCell>...</TableCell>
+
+                          <TableCell>{visita.ots}</TableCell>
+                          <TableCell></TableCell>
+                          <TableCell>MOV</TableCell>
+                          <TableCell>DESCRIPCIÓN</TableCell>
+                          <TableCell>1</TableCell>
+                          <TableCell>1</TableCell>
+
+                          <TableCell>{visita.valor}</TableCell>
+                          <TableCell>
+                            <IconButton size='small'>
+                              <i className='ri-pencil-line' /> {/* Ícono de editar */}
+                            </IconButton>
+                            <IconButton size='small'>
+                              <i className='ri-delete-bin-line' /> {/* Ícono de eliminar */}
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Grid>
+              </>
+            )}
           </Grid>
         </CardContent>
       </Card>

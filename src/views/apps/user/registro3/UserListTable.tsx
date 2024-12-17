@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+
 import ScienceIcon from '@mui/icons-material/Science'
 import {
   Typography,
@@ -21,7 +23,9 @@ import {
   DialogContent,
   DialogTitle,
   Button,
-  TextField
+  TextField,
+  Menu,
+  MenuItem
 } from '@mui/material'
 
 import ResultadosPopup from './ResultadosPopup'
@@ -30,91 +34,118 @@ const UserListTable: React.FC = () => {
   const [resultadosOpen, setResultadosOpen] = useState(false)
   const [selectedEnsayador, setSelectedEnsayador] = useState('')
 
-  const handleOpenResultadosPopup = (ensayador: string) => {
-    setSelectedEnsayador(ensayador)
-    setResultadosOpen(true)
-  }
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedMuestra, setSelectedMuestra] = useState<number | null>(null)
 
-  const handleSaveResultados = (resultados: { resultado1: string; resultado2: string }) => {
-    console.log('Resultados guardados:', resultados)
-
-    // Aquí puedes manejar el guardado de los resultados
-  }
-
-  // Estado general de las muestras
   const [muestras, setMuestras] = useState([
     { id: 1, estado: 'Codificado', ensayos: ['Codificado', 'Codificado', 'Codificado'] },
     { id: 2, estado: 'Codificado', ensayos: ['Codificado', 'Codificado', 'Codificado'] }
   ])
 
-  const [isMuestraPopup, setIsMuestraPopup] = useState(false) // Nuevo estado
-
-  // Muestra seleccionada
-  const [selectedMuestra, setSelectedMuestra] = useState<number | null>(null)
-
-  // Estado de las filas seleccionadas en la tabla de muestras
+  const [isMuestraPopup, setIsMuestraPopup] = useState(false)
   const [selectedRowsMuestra, setSelectedRowsMuestra] = useState<number[]>([])
-
-  // Estado de las filas seleccionadas en la tabla de ensayos
   const [selectedRowsEnsayos, setSelectedRowsEnsayos] = useState<number[]>([])
-
-  // Estado seleccionado en el popup
   const [selectedState, setSelectedState] = useState('')
-
-  // Estado para abrir/cerrar el diálogo
   const [openDialog, setOpenDialog] = useState(false)
-
-  // Índice del ensayo en edición
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null)
 
-  // Abrir el diálogo para un ensayo específico
+  const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
+    event.stopPropagation()
+    setAnchorEl(event.currentTarget)
+    setSelectedMuestra(index)
+  }
+
+  const handleChangeEnsayoEstado = (index: number) => {
+    const updatedMuestras = [...muestras]
+
+    if (selectedMuestra !== null) {
+      const muestra = updatedMuestras[selectedMuestra]
+
+      // Alternar estado entre "Ensayado" y "Codificado"
+      muestra.ensayos[index] = muestra.ensayos[index] === 'Ensayado' ? 'Codificado' : 'Ensayado'
+
+      // Si todos los ensayos son "Ensayado", actualiza el estado de la muestra
+      if (muestra.ensayos.every(e => e === 'Ensayado')) {
+        muestra.estado = 'Ensayado'
+      } else {
+        muestra.estado = 'Codificado'
+      }
+
+      setMuestras(updatedMuestras)
+    }
+  }
+
+  // Función para cerrar el menú
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+
+    // No reiniciar selectedMuestra a null aquí, mantén su valor actual
+  }
+
+  // Función para cambiar el estado de una muestra
+  const handleChangeEstado = (newState: string) => {
+    const updatedMuestras = [...muestras]
+
+    if (selectedMuestra !== null) {
+      const muestra = updatedMuestras[selectedMuestra]
+
+      muestra.estado = newState
+      muestra.ensayos = muestra.ensayos.map(() => newState) // Actualiza los ensayos
+
+      setMuestras(updatedMuestras)
+    }
+
+    // Mantén el valor de selectedMuestra intacto después de cerrar el menú
+    handleMenuClose()
+  }
+
+  // Función para abrir el popup de resultados
+  const handleOpenResultadosPopup = (ensayador: string) => {
+    setSelectedEnsayador(ensayador)
+    setResultadosOpen(true)
+  }
+
+  // Función para guardar los resultados
+  const handleSaveResultados = (resultados: { resultado1: string; resultado2: string }) => {
+    console.log('Resultados guardados:', resultados)
+  }
+
+  // Función para abrir el diálogo de edición
   const handleOpenDialog = (index: number, isEnsayo: boolean) => {
     setEditingRowIndex(index)
-    setIsMuestraPopup(!isEnsayo) // Si no es ensayo, es muestra
+    setIsMuestraPopup(!isEnsayo)
     setOpenDialog(true)
   }
 
-  // Cerrar el diálogo
+  // Función para cerrar el diálogo
   const handleCloseDialog = () => {
     setSelectedState('')
     setOpenDialog(false)
   }
 
-  // Manejar cambio de estado en el popup
+  // Función para manejar el cambio de estado en el popup
   const handleStateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedState(event.target.value)
   }
 
-  // Guardar el estado seleccionado en el popup
+  // Función para aceptar cambios en el popup
   const handleAccept = () => {
     const updatedMuestras = [...muestras]
 
     if (isMuestraPopup && editingRowIndex !== null) {
-      // Cambiar estado de una muestra completa
       const muestra = updatedMuestras[editingRowIndex]
 
       if (muestra) {
         muestra.estado = selectedState
-
-        if (selectedState === 'Ensayado') {
-          muestra.ensayos = muestra.ensayos.map(() => 'Ensayado') // Cambiar todos los ensayos
-        } else if (selectedState === 'Codificado') {
-          muestra.ensayos = muestra.ensayos.map(() => 'Codificado') // Cambiar todos los ensayos
-        }
+        muestra.ensayos = muestra.ensayos.map(() => selectedState)
       }
     } else if (!isMuestraPopup && editingRowIndex !== null && selectedMuestra !== null) {
-      // Cambiar estado de un ensayo individual
       const muestra = updatedMuestras.find(m => m.id === selectedMuestra)
 
       if (muestra) {
         muestra.ensayos[editingRowIndex] = selectedState
-
-        // Cambiar estado de la muestra si todos los ensayos son iguales
-        if (muestra.ensayos.every(e => e === 'Ensayado')) {
-          muestra.estado = 'Ensayado'
-        } else {
-          muestra.estado = 'Codificado'
-        }
+        muestra.estado = muestra.ensayos.every(e => e === 'Ensayado') ? 'Ensayado' : 'Codificado'
       }
     }
 
@@ -122,45 +153,38 @@ const UserListTable: React.FC = () => {
     handleCloseDialog()
   }
 
-  const handleChangeMuestraState = (muestraIndex: number, newState: string) => {
-    const updatedMuestras = [...muestras]
-    const muestra = updatedMuestras[muestraIndex]
-
-    if (muestra) {
-      muestra.estado = newState
-
-      if (newState === 'Ensayado') {
-        muestra.ensayos = muestra.ensayos.map(() => 'Ensayado') // Cambia todos los ensayos a "Ensayado"
-      } else if (newState === 'Codificado') {
-        muestra.ensayos = muestra.ensayos.map(() => 'Codificado') // Cambia todos los ensayos a "Codificado"
-      }
-    }
-
-    setMuestras(updatedMuestras)
-  }
-
-  // Seleccionar/deseleccionar una fila en la tabla
+  // Función para seleccionar/deseleccionar una fila
   const handleSelectRow = (index: number, isEnsayo: boolean) => {
     if (isEnsayo) {
       setSelectedRowsEnsayos(prev => (prev.includes(index) ? prev.filter(row => row !== index) : [...prev, index]))
     } else {
-      setSelectedRowsMuestra(prev => (prev.includes(index) ? prev.filter(row => row !== index) : [...prev, index]))
-      setSelectedMuestra(index + 1) // Actualizar la muestra seleccionada (asume IDs consecutivos)
+      setSelectedRowsMuestra(prev => {
+        const newSelection = prev.includes(index) ? prev.filter(row => row !== index) : [index] // Solo selecciona una fila a la vez para sincronización
+
+        // Actualiza la muestra seleccionada (muestra específica)
+        setSelectedMuestra(newSelection.length > 0 ? index : null)
+
+        return newSelection
+      })
     }
   }
 
-  // Seleccionar/deseleccionar todas las filas en la tabla
-  const handleSelectAllRows = (isEnsayo: boolean) => {
-    if (isEnsayo && selectedMuestra !== null) {
-      const muestra = muestras.find(m => m.id === selectedMuestra)
+  const muestraSeleccionada = muestras[selectedMuestra ?? -1]
 
-      if (muestra) {
-        setSelectedRowsEnsayos(
-          selectedRowsEnsayos.length === muestra.ensayos.length ? [] : muestra.ensayos.map((_, index) => index)
-        )
+  // Función para seleccionar/deseleccionar todas las filas
+  const handleSelectAllRows = (isEnsayo: boolean) => {
+    if (isEnsayo) {
+      if (selectedMuestra !== null) {
+        const muestra = muestras[selectedMuestra]
+
+        if (muestra) {
+          setSelectedRowsEnsayos(prev =>
+            prev.length === muestra.ensayos.length ? [] : muestra.ensayos.map((_, i) => i)
+          )
+        }
       }
     } else {
-      setSelectedRowsMuestra(selectedRowsMuestra.length === muestras.length ? [] : muestras.map(m => m.id - 1))
+      setSelectedRowsMuestra(prev => (prev.length === muestras.length ? [] : muestras.map((_, i) => i)))
     }
   }
 
@@ -183,31 +207,24 @@ const UserListTable: React.FC = () => {
             />
           </Box>
           <Box display='flex' alignItems='center' gap={2}>
-            {selectedMuestra !== null ? (
-              <>
-                <Chip
-                  label={`Muestra: ${muestras.find(m => m.id === selectedMuestra)?.estado || 'N/A'}`}
-                  sx={{
-                    backgroundColor:
-                      muestras.find(m => m.id === selectedMuestra)?.estado === 'Ensayado' ? '#dfffe1' : '#e3f2fd',
-                    color: muestras.find(m => m.id === selectedMuestra)?.estado === 'Ensayado' ? '#4caf50' : '#1976d2',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Chip
-                  label={`Ensayos: ${
-                    muestras.find(m => m.id === selectedMuestra)?.ensayos.filter(e => e === 'Ensayado').length
-                  }/${muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0}`}
-                  sx={{
-                    backgroundColor: '#fff9c4',
-                    color: '#f9a825',
-                    fontWeight: 'bold'
-                  }}
-                />
-              </>
-            ) : (
-              <Typography variant='body1' color='text.secondary'></Typography>
-            )}
+            <Chip
+              label={`Muestra: ${muestraSeleccionada?.estado || 'N/A'}`}
+              sx={{
+                backgroundColor: muestraSeleccionada?.estado === 'Ensayado' ? '#dfffe1' : '#e3f2fd',
+                color: muestraSeleccionada?.estado === 'Ensayado' ? '#4caf50' : '#1976d2',
+                fontWeight: 'bold'
+              }}
+            />
+            <Chip
+              label={`Ensayos: ${
+                muestraSeleccionada?.ensayos.filter(e => e === 'Ensayado').length || 0
+              }/${muestraSeleccionada?.ensayos.length || 0}`}
+              sx={{
+                backgroundColor: '#fff9c4',
+                color: '#f9a825',
+                fontWeight: 'bold'
+              }}
+            />
           </Box>
         </Box>
 
@@ -248,6 +265,7 @@ const UserListTable: React.FC = () => {
 
         <TableContainer component={Paper}>
           <Table>
+            {/* Encabezado de la tabla */}
             <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
               <TableRow>
                 <TableCell>
@@ -273,6 +291,8 @@ const UserListTable: React.FC = () => {
                 <TableCell sx={{ width: '150px', textAlign: 'center' }}>ACCIONES</TableCell>
               </TableRow>
             </TableHead>
+
+            {/* Cuerpo de la tabla */}
             <TableBody>
               {muestras.map((muestra, index) => (
                 <TableRow key={muestra.id}>
@@ -282,6 +302,7 @@ const UserListTable: React.FC = () => {
                       onChange={() => handleSelectRow(index, false)}
                     />
                   </TableCell>
+
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{muestra.id}</TableCell>
                   <TableCell>01/01/2024</TableCell>
@@ -289,27 +310,67 @@ const UserListTable: React.FC = () => {
                   <TableCell>23</TableCell>
                   <TableCell>01/01/2025</TableCell>
                   <TableCell>
-                    <Chip
-                      label={muestra.estado}
-                      sx={{
-                        backgroundColor: muestra.estado === 'Ensayado' ? '#dfffe1' : '#daf3ff',
-                        color: muestra.estado === 'Ensayado' ? '#4caf50' : '#16b1ff',
-                        fontWeight: 'bold'
-                      }}
-                    />
+                    <Box>
+                      <Chip
+                        label={muestra.estado}
+                        onClick={e => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleMenuOpen(e, index)
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                          backgroundColor: muestra.estado === 'Ensayado' ? '#dfffe1' : '#daf3ff',
+                          color: muestra.estado === 'Ensayado' ? '#4caf50' : '#16b1ff',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                      <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl && selectedMuestra === index)}
+                        onClose={handleMenuClose}
+                        MenuListProps={{
+                          onClick: e => e.stopPropagation() // Bloquea la propagación del menú
+                        }}
+                      >
+                        <MenuItem onClick={() => handleChangeEstado('Codificado')}>Codificado</MenuItem>
+                        <MenuItem onClick={() => handleChangeEstado('Ensayado')}>Ensayado</MenuItem>
+                      </Menu>
+                    </Box>
                   </TableCell>
                   <TableCell>
-                    <Box display='flex' justifyContent='center' gap={1}>
+                    <Box>
                       <IconButton
-                        color='secondary'
-                        onClick={() => handleOpenDialog(index, false)} // false indica que es una muestra
+                        onClick={e => {
+                          e.stopPropagation() // Evita que se propague y active selección
+                          handleMenuOpen(e, index) // Abre el menú desplegable
+                        }}
                       >
                         <i className='ri-checkbox-line' />
                       </IconButton>
 
-                      <IconButton color='secondary' onClick={() => handleOpenResultadosPopup(`Ensayador ${index + 1}`)}>
-                        <ScienceIcon />
-                      </IconButton>
+                      {/* Menú desplegable de opciones */}
+                      <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl && selectedMuestra === index)}
+                        onClose={handleMenuClose}
+                        MenuListProps={{
+                          onClick: e => e.stopPropagation() // Evita propagación
+                        }}
+                      >
+                        <MenuItem
+                          onClick={() => handleChangeEstado('Ensayado')}
+                          disabled={muestra.estado === 'Ensayado'} // Evita cambios redundantes
+                        >
+                          Ensayado
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => handleChangeEstado('Codificado')}
+                          disabled={muestra.estado === 'Codificado'}
+                        >
+                          Codificado
+                        </MenuItem>
+                      </Menu>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -318,7 +379,6 @@ const UserListTable: React.FC = () => {
           </Table>
         </TableContainer>
       </Box>
-
       {/* Mini Pop-Up */}
       <Dialog
         open={openDialog}
@@ -357,7 +417,6 @@ const UserListTable: React.FC = () => {
         </DialogActions>
       </Dialog>
       {/* Tabla de ensayos */}
-
       <Box sx={{ mb: 4 }}>
         <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
           Ensayos
@@ -371,11 +430,11 @@ const UserListTable: React.FC = () => {
                     indeterminate={
                       selectedMuestra !== null &&
                       selectedRowsEnsayos.length > 0 &&
-                      selectedRowsEnsayos.length < (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                      selectedRowsEnsayos.length < (muestras[selectedMuestra]?.ensayos.length || 0)
                     }
                     checked={
                       selectedMuestra !== null &&
-                      selectedRowsEnsayos.length === (muestras.find(m => m.id === selectedMuestra)?.ensayos.length || 0)
+                      selectedRowsEnsayos.length === (muestras[selectedMuestra]?.ensayos.length || 0)
                     }
                     onChange={() => handleSelectAllRows(true)}
                   />
@@ -387,52 +446,44 @@ const UserListTable: React.FC = () => {
                 <TableCell sx={{ width: '150px', textAlign: 'center' }}>ACCIONES</TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
               {selectedMuestra !== null &&
-                muestras
-                  .find(m => m.id === selectedMuestra)
-                  ?.ensayos.map((state, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedRowsEnsayos.includes(index)}
-                          onChange={() => handleSelectRow(index, true)}
-                        />
-                      </TableCell>
-                      <TableCell>HOR{index + 1}</TableCell>
-                      <TableCell>Ensayo {index + 1}</TableCell>
-                      <TableCell>3</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={state}
-                          sx={{
-                            backgroundColor: state === 'Ensayado' ? '#dfffe1' : '#daf3ff',
-                            color: state === 'Ensayado' ? '#4caf50' : '#16b1ff',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box display='flex' justifyContent='center' gap={1}>
-                          <IconButton color='secondary' onClick={() => handleOpenDialog(index, true)}>
-                            <i className='ri-checkbox-line' />
-                          </IconButton>
-                          <IconButton color='secondary'>
-                            <ScienceIcon />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                muestras[selectedMuestra]?.ensayos.map((state, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedRowsEnsayos.includes(index)}
+                        onChange={() => handleSelectRow(index, true)}
+                      />
+                    </TableCell>
+                    <TableCell>HOR{index + 1}</TableCell>
+                    <TableCell>Ensayo {index + 1}</TableCell>
+                    <TableCell>3</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={state}
+                        sx={{
+                          backgroundColor: state === 'Ensayado' ? '#dfffe1' : '#daf3ff',
+                          color: state === 'Ensayado' ? '#4caf50' : '#16b1ff',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleChangeEnsayoEstado(index)} // Llamada a la nueva función
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box>
+                        <IconButton onClick={() => handleChangeEnsayoEstado(index)}>
+                          <i className='ri-checkbox-line' />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </TableContainer>
-        <ResultadosPopup
-          open={resultadosOpen}
-          onClose={() => setResultadosOpen(false)}
-          ensayador={selectedEnsayador}
-          onSave={handleSaveResultados}
-        />
       </Box>
     </Box>
   )

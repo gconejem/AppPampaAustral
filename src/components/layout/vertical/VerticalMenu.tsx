@@ -112,7 +112,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
 
         <MenuSection label={dictionary['navigation'].appsPages}>
           <SubMenu label='Empresa' icon={<i className='ri-home-smile-line' />}>
-            <MenuItem href={`/${locale}/apps/user/list`} icon={<i className='ri-book-line' />}>
+            <MenuItem href={`/${locale}/apps/user/client`} icon={<i className='ri-book-line' />}>
               Clientes
             </MenuItem>
             <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-pantone-line' />}>

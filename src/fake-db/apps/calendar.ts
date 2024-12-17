@@ -15,12 +15,12 @@ export const events: EventInput[] = [
   {
     id: '1',
     url: '',
-    title: 'Obra N1',
+    title: 'Nombre del Cliente',
     start: date,
     end: nextDay,
     allDay: false,
     extendedProps: {
-      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
+      calendar: 'Cliente'
     }
   },
   {
@@ -31,18 +31,18 @@ export const events: EventInput[] = [
     end: new Date(date.getFullYear(), date.getMonth() + 1, -10),
     allDay: true,
     extendedProps: {
-      calendar: 'Cliente' // Cambiado de 'Business' a 'Cliente'
+      calendar: 'Cliente'
     }
   },
   {
     id: '3',
     url: '',
-    title: 'Obra N2',
+    title: 'Nombre del Cliente',
     allDay: true,
     start: new Date(date.getFullYear(), date.getMonth() + 1, -9),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -7),
     extendedProps: {
-      calendar: 'Obra' // Cambiado de 'Holiday' a 'Obra'
+      calendar: 'Cliente'
     }
   },
   {
@@ -53,29 +53,29 @@ export const events: EventInput[] = [
     end: new Date(date.getFullYear(), date.getMonth() + 1, -10),
     allDay: true,
     extendedProps: {
-      calendar: 'Cliente' // Cambiado de 'Personal' a 'Cliente'
+      calendar: 'Cliente'
     }
   },
   {
     id: '5',
     url: '',
-    title: 'Nombre del Laboratorista',
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Laboratorista' // Cambiado de 'ETC' a 'Laboratorista'
+      calendar: 'Cliente'
     }
   },
   {
     id: '6',
     url: '',
-    title: 'Nombre del Laboratorista',
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Laboratorista' // Cambiado de 'Personal' a 'Laboratorista'
+      calendar: 'Cliente'
     }
   },
   {
@@ -86,40 +86,40 @@ export const events: EventInput[] = [
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Cliente' // Cambiado de 'Family' a 'Cliente'
+      calendar: 'Cliente'
     }
   },
   {
     id: '8',
     url: '',
-    title: 'Obra N3',
+    title: 'Nombre del Cliente',
     start: new Date(date.getFullYear(), date.getMonth() + 1, -13),
     end: new Date(date.getFullYear(), date.getMonth() + 1, -12),
     allDay: true,
     extendedProps: {
-      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
+      calendar: 'Cliente'
     }
   },
   {
     id: '9',
     url: '',
-    title: 'Obra N4',
+    title: 'Nombre del Cliente',
     start: nextMonth,
     end: nextMonth,
     allDay: true,
     extendedProps: {
-      calendar: 'Obra' // Cambiado de 'Business' a 'Obra'
+      calendar: 'Cliente'
     }
   },
   {
     id: '10',
     url: '',
-    title: 'Nombre del Laboratorista',
+    title: 'Nombre del Cliente',
     start: prevMonth,
     end: prevMonth,
     allDay: true,
     extendedProps: {
-      calendar: 'Laboratorista' // Cambiado de 'Personal' a 'Laboratorista'
+      calendar: 'Cliente'
     }
   }
 ]

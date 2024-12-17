@@ -1,5 +1,5 @@
 // Component Imports
-import UserList from '@views/apps/user/list'
+import UserList from '@/views/apps/user/client'
 
 // Data Imports
 import { getUserData } from '@/app/server/actions'

@@ -12,6 +12,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PersonIcon from '@mui/icons-material/Person'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 
 import DeleteIcon from '@mui/icons-material/Delete'
 
@@ -38,6 +40,8 @@ const Calendar = (props: CalenderProps) => {
     handleLeftSidebarToggle
   } = props
 
+  const [currentView, setCurrentView] = useState('timeGridWeek')
+
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -45,6 +49,46 @@ const Calendar = (props: CalenderProps) => {
   const [selectedFilter, setSelectedFilter] = useState('Todas')
   const calendarRef = useRef<any>(null)
   const theme = useTheme()
+
+  // Estado y manejadores para el menú del botón "Editar"
+  const [editMenuAnchorEl, setEditMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const isEditMenuOpen = Boolean(editMenuAnchorEl)
+
+  const handleEditMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setEditMenuAnchorEl(event.currentTarget)
+  }
+
+  const handleEditMenuClose = () => {
+    setEditMenuAnchorEl(null)
+  }
+
+  // Estado y manejadores para el menú de acciones en los eventos
+  const [eventMenuAnchorEl, setEventMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [currentEvent, setCurrentEvent] = useState<any>(null)
+  const isEventMenuOpen = Boolean(eventMenuAnchorEl)
+
+  const handleEventMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, calendarEvent: any) => {
+    event.stopPropagation() // Evita que se abra el formulario al hacer clic
+    setEventMenuAnchorEl(event.currentTarget)
+    setCurrentEvent(calendarEvent)
+  }
+
+  const handleEventMenuClose = () => {
+    setEventMenuAnchorEl(null)
+    setCurrentEvent(null)
+  }
+
+  const handleMenuAction = (action: string) => {
+    if (action === 'Reprogramar') {
+      console.log('Reprogramar', currentEvent)
+    } else if (action === 'Duplicar') {
+      console.log('Duplicar', currentEvent)
+    } else if (action === 'Cambiar Estado') {
+      console.log('Cambiar Estado', currentEvent)
+    }
+
+    handleEventMenuClose()
+  }
 
   useEffect(() => {
     if (calendarApi === null) {
@@ -116,10 +160,10 @@ const Calendar = (props: CalenderProps) => {
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    initialView: 'timeGridWeek',
+    initialView: 'listMonth',
     headerToolbar: {
       start: 'sidebarToggle, prev, next, title',
-      end: 'timeGridWeek, timeGridDay, listMonth, dayGridMonth'
+      end: 'dayGridMonth, timeGridWeek, timeGridDay, listMonth'
     },
     views: {
       week: {
@@ -135,17 +179,6 @@ const Calendar = (props: CalenderProps) => {
       const colorName = calendarsColor[calendarEvent._def.extendedProps.calendar]
 
       return [`event-bg-${colorName}`]
-    },
-    eventClick({ event: clickedEvent, jsEvent }: any) {
-      if ((jsEvent.target as HTMLElement).tagName !== 'INPUT') {
-        jsEvent.preventDefault()
-        dispatch(selectedEvent(clickedEvent))
-        handleAddEventSidebarToggle()
-
-        if (clickedEvent.url) {
-          window.open(clickedEvent.url, '_blank')
-        }
-      }
     },
     customButtons: {
       sidebarToggle: {
@@ -164,39 +197,56 @@ const Calendar = (props: CalenderProps) => {
     eventContent: (arg: any) => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <input
-            type='checkbox'
-            onChange={() => handleCheckboxChange(arg.event.id)}
-            checked={selectedEvents.includes(arg.event.id)}
-            style={{ marginRight: '5px' }}
-          />
+          {/* Checkbox visible solo en modo 'list' */}
+          {currentView === 'listMonth' && (
+            <input
+              type='checkbox'
+              onClick={e => e.stopPropagation()} // Detener propagación
+              onChange={() => handleCheckboxChange(arg.event.id)}
+              checked={selectedEvents.includes(arg.event.id)}
+              style={{ marginRight: '5px' }}
+            />
+          )}
           <b>{arg.event.title}</b>
+          {currentView === 'listMonth' && (
+            <Chip
+              label='Agendada' // Aquí puedes usar dinámicamente el estado
+              color='success' // Color verde
+              size='small'
+              style={{ marginLeft: '500px' }}
+            />
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
-          <Chip label='Agendada' color='success' size='small' style={{ marginRight: '5px' }} />
-
-          {/* Ícono de "Ver" */}
-          <IconButton size='small' onClick={() => handleViewEvent(arg.event)}>
-            <VisibilityIcon fontSize='small' />
-          </IconButton>
-
-          {/* Ícono de "Editar" */}
-          <IconButton size='small' onClick={() => handleEditEvent(arg.event)}>
-            <EditIcon fontSize='small' />
-          </IconButton>
-
-          {/* Ícono de "Persona" */}
-          <IconButton size='small' onClick={() => handlePersonAction(arg.event)}>
-            <PersonIcon fontSize='small' />
-          </IconButton>
-
-          {/* Menú de opciones (tres puntos) */}
-          <IconButton size='small' onClick={() => handleMenuOptions(arg.event)}>
-            <MoreVertIcon fontSize='small' />
-          </IconButton>
-        </div>
+        {/* Acciones */}
+        {currentView === 'listMonth' && (
+          <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
+            <IconButton size='small' onClick={e => e.stopPropagation()}>
+              <VisibilityIcon fontSize='small' />
+            </IconButton>
+            <IconButton size='small' onClick={e => e.stopPropagation()}>
+              <EditIcon fontSize='small' />
+            </IconButton>
+            <IconButton
+              size='small'
+              onClick={e => handleEventMenuOpen(e, arg.event)} // Abre el menú de acciones del evento
+            >
+              <MoreVertIcon fontSize='small' />
+            </IconButton>
+          </div>
+        )}
       </div>
     ),
+    eventClick({ event: clickedEvent, jsEvent }: any) {
+      if ((jsEvent.target as HTMLElement).tagName !== 'INPUT') {
+        jsEvent.preventDefault()
+        dispatch(selectedEvent(clickedEvent))
+        handleAddEventSidebarToggle()
+
+        if (clickedEvent.url) {
+          window.open(clickedEvent.url, '_blank')
+        }
+      }
+    },
     eventDrop({ event: droppedEvent }: any) {
       dispatch(updateEvent(droppedEvent))
       dispatch(filterEvents())
@@ -206,11 +256,29 @@ const Calendar = (props: CalenderProps) => {
       dispatch(filterEvents())
     },
     ref: calendarRef,
-    direction: theme.direction
+    direction: theme.direction,
+    datesSet: info => {
+      setCurrentView(info.view.type)
+    }
   }
 
   return (
     <>
+      {/* Menú para las acciones en los eventos */}
+      <Menu
+        anchorEl={eventMenuAnchorEl}
+        open={isEventMenuOpen}
+        onClose={handleEventMenuClose}
+        MenuListProps={{
+          'aria-labelledby': 'event-menu-button'
+        }}
+      >
+        <MenuItem onClick={() => handleMenuAction('Reprogramar')}>Reprogramar</MenuItem>
+        <MenuItem onClick={() => handleMenuAction('Duplicar')}>Duplicar</MenuItem>
+
+        <MenuItem onClick={() => handleMenuAction('Cambiar Estado')}>Cambiar Estado</MenuItem>
+      </Menu>
+
       {/* Casilla "Seleccionar todo", botones de filtro y botón Editar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
         <FormControlLabel
@@ -253,22 +321,52 @@ const Calendar = (props: CalenderProps) => {
         </ButtonGroup>
 
         {/* Botón Editar */}
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={handleOpenEditModal}
-          disabled={selectedEvents.length === 0}
-        >
+        <Button variant='contained' color='primary' onClick={handleEditMenuOpen} disabled={selectedEvents.length === 0}>
           Editar
         </Button>
+
+        {/* Menú para el botón "Editar" */}
+        <Menu
+          anchorEl={editMenuAnchorEl}
+          open={isEditMenuOpen}
+          onClose={handleEditMenuClose}
+          MenuListProps={{
+            'aria-labelledby': 'edit-menu-button'
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              /* Lógica para asignar laboratorista */
+              handleEditMenuClose()
+            }}
+          >
+            Asignar Laboratorista
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              /* Lógica para reprogramar */
+              handleEditMenuClose()
+            }}
+          >
+            Reprogramar
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              /* Lógica para cambiar estado */
+              handleEditMenuClose()
+            }}
+          >
+            Cambiar Estado
+          </MenuItem>
+        </Menu>
       </div>
 
       {/* Full Calendar */}
-      <div>
+      <div className='calendar-container'>
         <FullCalendar {...calendarOptions} />
       </div>
 
-      {/* Modal for editing the event */}
+      {/* Modal para editar el evento */}
       <Modal open={isModalOpen} onClose={handleCloseModal}>
         <Box
           sx={{

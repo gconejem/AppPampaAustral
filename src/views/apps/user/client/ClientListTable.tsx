@@ -58,7 +58,7 @@ import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddUserDrawer'
+import AddUserDrawer from './AddClient'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
@@ -155,7 +155,7 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
@@ -502,4 +502,4 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   )
 }
 
-export default UserListTable
+export default ClientListTable

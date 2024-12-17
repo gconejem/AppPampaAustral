@@ -115,7 +115,15 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const UserListTable = ({
+  tableData,
+  onVisitSelect,
+  selectedVisit
+}: {
+  tableData?: UsersType[]
+  onVisitSelect: (visit: UsersType | null) => void
+  selectedVisit: UsersType | null
+}) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null) // Solo permite una selección de fila
@@ -141,8 +149,8 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     setPorRecibir(event.target.checked)
   }
 
-  const handleRowSelection = (rowId: string) => {
-    setSelectedRowId(prevSelectedRowId => (prevSelectedRowId === rowId ? null : rowId))
+  const handleRowSelection = (row: UsersType) => {
+    onVisitSelect(selectedVisit?.id === row.id ? null : row) // Actualiza el estado de la visita seleccionada
   }
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
@@ -152,41 +160,45 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: () => <div></div>, // Espacio vacío, ya que no se requiere seleccionar todas las filas
         cell: ({ row }) => (
           <Checkbox
-            checked={selectedRowId === row.id}
-            onChange={() => handleRowSelection(row.id)} // Solo se maneja selección desde el Checkbox
+            checked={selectedVisit?.id === row.original.id} // Compara si la fila actual está seleccionada
+            onChange={() => handleRowSelection(row.original)} // Llama a la función para actualizar la selección
             inputProps={{ 'aria-label': 'select row' }}
           />
         )
       },
-      columnHelper.accessor('fullName', {
+      columnHelper.accessor('role', {
         header: 'Fecha',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          </div>
+        cell: () => (
+          <Typography className='capitalize' color='text.primary'>
+            00/00/00
+          </Typography>
         )
       }),
-      columnHelper.accessor('email', {
+      columnHelper.accessor('role', {
         header: 'Hora',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+        cell: () => (
+          <Typography className='capitalize' color='text.primary'>
+            00:00
+          </Typography>
+        )
       }),
       columnHelper.accessor('role', {
         header: 'Cliente',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon className={userRoleObj[row.original.role].icon} />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
+        cell: () => (
+          <Typography className='capitalize' color='text.primary'>
+            Nombre Cliente
+          </Typography>
         )
       }),
+      columnHelper.accessor('role', {
+        header: 'Obra',
+        cell: () => (
+          <Typography className='capitalize' color='text.primary'>
+            Obra
+          </Typography>
+        )
+      }),
+
       columnHelper.accessor('status', {
         header: 'Estado',
         cell: () => (
@@ -200,7 +212,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }),
 
       columnHelper.accessor('action', {
-        header: 'Acciones',
+        header: 'Acc',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <OptionMenu
@@ -262,141 +274,190 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   }
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={8}>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
         <Card>
           <CardHeader title='Gestión de Visitas' />
           <Divider />
-          <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+
+          {/* Filtros y Botón Editar */}
+          <Box className='p-4'>
+            <Grid container spacing={2} alignItems='center'>
+              {/* Primera Fila: 3-3-3-3 */}
+              <Grid item xs={12} sm={3}>
+                <TextField type='date' fullWidth size='small' label='Fecha Inicio' InputLabelProps={{ shrink: true }} />
+              </Grid>
+              <Grid item xs={12} sm={3}>
                 <Select value={selectedLaboratorista} onChange={handleSelectChange} displayEmpty fullWidth size='small'>
-                  <MenuItem value=''>
-                    <em>Laboratorista</em>
-                  </MenuItem>
+                  <MenuItem value=''>Laboratorista</MenuItem>
                   <MenuItem value={'lab1'}>Laboratorista 1</MenuItem>
                   <MenuItem value={'lab2'}>Laboratorista 2</MenuItem>
-                  <MenuItem value={'lab3'}>Laboratorista 3</MenuItem>
                 </Select>
               </Grid>
-
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={3}>
                 <Select value={selectedEstado} onChange={handleEstadoChange} displayEmpty fullWidth size='small'>
-                  <MenuItem value=''>
-                    <em>Estado</em>
-                  </MenuItem>
+                  <MenuItem value=''>Estado</MenuItem>
                   <MenuItem value={'activo'}>Activo</MenuItem>
                   <MenuItem value={'inactivo'}>Inactivo</MenuItem>
-                  <MenuItem value={'pendiente'}>Pendiente</MenuItem>
                 </Select>
               </Grid>
-
-              <Grid item xs={12} sm={2}>
+              <Grid item xs={12} sm={3}>
                 <FormControlLabel
                   control={<Checkbox checked={porRecibir} onChange={handlePorRecibirChange} />}
                   label='Por Recibir'
                 />
               </Grid>
 
+              {/* Segunda Fila: 2-8-2 */}
               <Grid item xs={12} sm={2}>
-                <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} fullWidth>
+                <Button variant='contained' fullWidth>
                   Editar
                 </Button>
               </Grid>
+              <Grid item xs={12} sm={8} />
+              <Grid item xs={12} sm={2}>
+                <TextField
+                  fullWidth
+                  size='small'
+                  placeholder='Buscar'
+                  InputProps={{
+                    startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }}></i>
+                  }}
+                />
+              </Grid>
             </Grid>
-          </div>
+          </Box>
 
-          {/* Aquí va tu tabla */}
-          <div className='overflow-x-auto'>
-            <table className={tableStyles.table}>
-              <thead>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th key={header.id}>
-                        {header.isPlaceholder ? null : (
-                          <div className='cursor-pointer select-none'>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map(row => (
-                  <tr
-                    key={row.id}
-                    className={classnames({ selected: selectedRowId === row.id })}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <TablePagination
-            rowsPerPageOptions={[6, 10, 25, 50]}
-            component='div'
-            className='border-bs'
-            count={table.getFilteredRowModel().rows.length}
-            rowsPerPage={table.getState().pagination.pageSize}
-            page={table.getState().pagination.pageIndex}
-            SelectProps={{
-              inputProps: { 'aria-label': 'rows per page' }
-            }}
-            onPageChange={(_, page) => {
-              table.setPageIndex(page)
-            }}
-            onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-          />
-        </Card>
-      </Grid>
-
-      {/* Caja de detalles a la derecha */}
-      <Grid item xs={4}>
-        {' '}
-        {/* Mantenemos xs={4} */}
-        <Card sx={{ width: '100%', minHeight: '385px' }}>
-          {' '}
-          {/* Ajustamos la altura */}
-          <CardHeader title='Detalles de la Visita' />
           <Divider />
-          <Box p={2} sx={{ position: 'relative', height: '100%' }}>
-            {/* Botones en la esquina superior derecha */}
-            <Box sx={{ position: 'absolute', top: '10px', right: '10px' }}>
-              <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
-                Editar
-              </Button>
-              <Button variant='outlined' color='secondary'>
-                Anular
-              </Button>
+
+          {/* Contenedor Principal con Flexbox */}
+          <Box display='flex' sx={{ height: '500px' }}>
+            {/* Tabla */}
+            <Box sx={{ width: '65%', borderRight: '1px solid #e0e0e0', overflowY: 'auto' }}>
+              <div className='overflow-x-auto'>
+                <table className={tableStyles.table}>
+                  <thead>
+                    {table.getHeaderGroups().map(headerGroup => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map(header => (
+                          <th key={header.id}>
+                            {header.isPlaceholder ? null : (
+                              <div className='cursor-pointer select-none'>
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                              </div>
+                            )}
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map(row => (
+                      <tr key={row.id} style={{ cursor: 'pointer' }}>
+                        {row.getVisibleCells().map(cell => (
+                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <TablePagination
+                rowsPerPageOptions={[6, 10, 25, 50]}
+                component='div'
+                count={table.getFilteredRowModel().rows.length}
+                rowsPerPage={table.getState().pagination.pageSize}
+                page={table.getState().pagination.pageIndex}
+                onPageChange={(_, page) => table.setPageIndex(page)}
+                onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+              />
             </Box>
 
-            {/* Información de la visita */}
-            <Typography>Hora Llegada:</Typography>
-            <Typography>Movilización:</Typography>
-            <Typography>Observaciones:</Typography>
+            {/* Detalles de la Visita */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                p: 4,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}
+            >
+              {/* Encabezado con Espacio Invisible, Editar e Icono de Basura */}
+              <Grid container spacing={2} alignItems='center' justifyContent='space-between'>
+                <Grid item xs={8} />
+                <Grid item xs={2} textAlign='right'>
+                  <Button variant='contained' color='primary' size='small'>
+                    Editar
+                  </Button>
+                </Grid>
+                <Grid item xs={2} textAlign='right'>
+                  <IconButton color='error'>
+                    <i className='ri-delete-bin-line' />
+                  </IconButton>
+                </Grid>
+              </Grid>
 
-            <Divider sx={{ my: 2 }} />
-            <Typography>Servicios Agendado vs Completado</Typography>
-            <Typography>Extras Agendados:</Typography>
+              <Divider sx={{ my: 2 }} />
 
-            <Box mt={2}>
-              <Button variant='outlined' color='primary' style={{ marginRight: '10px' }}>
-                Comprobante
-              </Button>
-              <Button variant='outlined' color='warning' style={{ marginRight: '10px' }}>
-                En Revisión
-              </Button>
-              <Button variant='outlined' color='success'>
-                Recepción OK
-              </Button>
+              {/* Información Principal: Hora Llegada y Salida */}
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography>
+                    Hora Llegada: <strong>16:35</strong>
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>
+                    Hora Salida: <strong>17:35</strong>
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>
+                    Movilización: <strong>---</strong>
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>
+                    Km Adicionales: <strong>15 Km</strong>
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Servicios Agendado y Extras */}
+              <Box mb={2}>
+                <Typography variant='subtitle1' fontWeight='bold'>
+                  Servicios Agendado vs Completado
+                </Typography>
+              </Box>
+              <Box mb={2}>
+                <Typography variant='subtitle1' fontWeight='bold'>
+                  Extras Agendados:
+                </Typography>
+              </Box>
+
+              {/* Botones: Comprobante, En Revisión, Recepción OK */}
+              <Grid container spacing={2} justifyContent='space-between'>
+                <Grid item xs={4}>
+                  <Button variant='outlined' color='primary' fullWidth>
+                    Comprobante
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button variant='outlined' color='warning' fullWidth>
+                    En Revisión
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button variant='outlined' color='success' fullWidth>
+                    Recepción OK
+                  </Button>
+                </Grid>
+              </Grid>
             </Box>
           </Box>
         </Card>
