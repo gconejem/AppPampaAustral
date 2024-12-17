@@ -1,3 +1,10 @@
+// index.tsx
+
+'use client'
+
+// React Imports
+import { useState } from 'react'
+
 // MUI Imports
 import Grid from '@mui/material/Grid'
 
@@ -10,17 +17,23 @@ import UserListTable2 from './UserListTable2'
 import UserListCards from './UserListCards'
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
+  const [selectedVisit, setSelectedVisit] = useState<UsersType | null>(null) // Estado para la visita seleccionada
+
   return (
     <Grid container spacing={6}>
       <Grid item xs={12}>
         <UserListCards />
       </Grid>
       <Grid item xs={12}>
-        <UserListTable tableData={userData} />
+        {/* Se pasa la función y el estado como props */}
+        <UserListTable tableData={userData} onVisitSelect={setSelectedVisit} selectedVisit={selectedVisit} />
       </Grid>
-      <Grid item xs={12}>
-        <UserListTable2 tableData={userData} />
-      </Grid>
+      {selectedVisit && (
+        <Grid item xs={12}>
+          {/* Solo se renderiza si hay una visita seleccionada */}
+          <UserListTable2 tableData={userData} selectedVisit={selectedVisit} />
+        </Grid>
+      )}
     </Grid>
   )
 }

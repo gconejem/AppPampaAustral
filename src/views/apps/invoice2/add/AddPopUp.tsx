@@ -146,21 +146,24 @@ const AddPopUp = ({ open, obra, handleClose, handleAgregarVisitas }) => {
           <TableHead
             sx={{
               boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-              backgroundColor: '#F5F5F5', // Leve gris
-              borderBottom: '1px solid #E0E0E0' // Borde inferior similar
+              backgroundColor: '#F5F5F5',
+              borderBottom: '1px solid #E0E0E0'
             }}
           >
             <TableRow>
-              <TableCell>N° Solicitud</TableCell>
-              <TableCell>Visitas</TableCell>
-              <TableCell>OTS</TableCell>
-              <TableCell>Estado</TableCell>
               <TableCell>
                 <Checkbox
-                  checked={selectedVisitas.length === Object.keys(solicitudesData[obra] || {}).length}
+                  checked={
+                    selectedVisitas.length ===
+                    solicitudesData[obra]?.reduce((acc, solicitud) => acc + solicitud.visitas.length, 0)
+                  }
                   onChange={handleSelectAll}
                 />
               </TableCell>
+              <TableCell>Solicitud/Cotización</TableCell>
+              <TableCell>Visitas</TableCell>
+              <TableCell>OTS</TableCell>
+              <TableCell>Estado</TableCell>
             </TableRow>
           </TableHead>
 
@@ -168,16 +171,21 @@ const AddPopUp = ({ open, obra, handleClose, handleAgregarVisitas }) => {
             {solicitudesData[obra]?.map((solicitud, solicitudIndex) =>
               solicitud.visitas.map((visita, visitaIndex) => (
                 <TableRow key={`${solicitudIndex}-${visitaIndex}`}>
-                  {visitaIndex === 0 && <TableCell rowSpan={solicitud.visitas.length}>{solicitud.solicitud}</TableCell>}
-                  <TableCell>{visita.visita}</TableCell>
-                  <TableCell>{visita.ots}</TableCell>
-                  <TableCell>{visita.estado}</TableCell>
+                  {/* Checkbox al inicio */}
                   <TableCell>
                     <Checkbox
                       checked={selectedVisitas.includes(`${solicitudIndex}-${visitaIndex}`)}
                       onChange={() => handleSelectVisita(solicitudIndex, visitaIndex)}
                     />
                   </TableCell>
+
+                  {/* Celda de N° Solicitud con rowSpan */}
+                  {visitaIndex === 0 && <TableCell rowSpan={solicitud.visitas.length}>{solicitud.solicitud}</TableCell>}
+
+                  {/* Celdas de visitas, OTS y estado */}
+                  <TableCell>{visita.visita}</TableCell>
+                  <TableCell>{visita.ots}</TableCell>
+                  <TableCell>{visita.estado}</TableCell>
                 </TableRow>
               ))
             )}

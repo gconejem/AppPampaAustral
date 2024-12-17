@@ -5,8 +5,8 @@ import Grid from '@mui/material/Grid'
 import type { UsersType } from '@/types/apps/userTypes'
 
 // Component Imports
-import UserListTable from './UserListTable'
 import UserListCards from './UserListCards'
+import WorkListTable from './WorkListTable'
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
@@ -15,7 +15,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
         <UserListCards />
       </Grid>
       <Grid item xs={12}>
-        <UserListTable tableData={userData} />
+        <WorkListTable tableData={userData} />
       </Grid>
     </Grid>
   )

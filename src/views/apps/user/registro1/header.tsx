@@ -1,4 +1,9 @@
+'use client'
+
 import { Box, Grid, TextField, Typography, Button } from '@mui/material'
+
+// Importa el componente PickersRange
+import PickersRange from './date'
 
 const Header = () => {
   return (
@@ -33,15 +38,9 @@ const Header = () => {
             {/* Opciones */}
           </TextField>
         </Grid>
-        <Grid item xs={4}>
-          <TextField label='Fecha desde' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
-        </Grid>
-        <Grid item xs={4}>
-          <TextField label='Fecha hasta' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+        <Grid item xs={8}>
+          {/* Rango de Fechas usando PickersRange */}
+          <PickersRange />
         </Grid>
       </Grid>
 

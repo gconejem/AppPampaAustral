@@ -1,14 +1,14 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo, forwardRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -29,7 +29,6 @@ import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 
 // DatePicker Imports
-import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 
 // Third-party Imports
@@ -49,7 +48,6 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
-import { format, addDays } from 'date-fns'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -57,15 +55,13 @@ import type { UsersType } from '@/types/apps/userTypes'
 import type { Locale } from '@configs/i18n'
 
 // Component Imports
+
+import EditClientForm from '../edit/EditClientForm'
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddUserDrawer'
+import AddUserDrawer from './AddClient'
 import OptionMenu from '@core/components/option-menu'
-import CustomAvatar from '@core/components/mui/Avatar'
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-import PickersRange from './date'
 
 // Util Imports
-import { getInitials } from '@/utils/getInitials'
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
@@ -155,15 +151,15 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState(...[tableData])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
-
-  const [startDate, setStartDate] = useState(new Date())
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [currentClient, setCurrentClient] = useState<UsersType | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
 
@@ -177,6 +173,11 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
+  }
+
+  const handleEditClient = (client: UsersType) => {
+    setCurrentClient(client)
+    setIsEditOpen(true)
   }
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
@@ -266,14 +267,21 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-edit-box-line text-textSecondary' />
-            </IconButton>
             <IconButton>
               <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
                 <i className='ri-eye-line text-textSecondary' />
               </Link>
             </IconButton>
+
+            <IconButton
+              onClick={() => {
+                setCurrentClient(row.original) // Asigna el cliente actual
+                setIsEditOpen(true) // Abre el formulario de edición
+              }}
+            >
+              <i className='ri-edit-box-line text-textSecondary' />
+            </IconButton>
+
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
@@ -330,20 +338,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
-
-  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
-    const { avatar, fullName } = params
-
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
-        </CustomAvatar>
-      )
-    }
-  }
 
   return (
     <>
@@ -498,8 +492,16 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <EditClientForm
+        open={isEditOpen}
+        handleClose={() => setIsEditOpen(false)}
+        userData={data}
+        setData={setData}
+        currentUser={currentClient}
+      />
     </>
   )
 }
 
-export default UserListTable
+export default ClientListTable

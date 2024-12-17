@@ -309,7 +309,10 @@ const StepperVerticalWithNumbers = () => {
                             <Grid item xs={6} sx={{ mb: 4 }}>
                               <TextField label='Procedencia' size='small' fullWidth />
                             </Grid>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
+                            <Grid item xs={3} sx={{ mb: 4 }}>
+                              <TextField label='Cotas' size='small' fullWidth />
+                            </Grid>
+                            <Grid item xs={3} sx={{ mb: 4 }}>
                               <TextField label='Cotas' size='small' fullWidth />
                             </Grid>
                             <Grid item xs={6} sx={{ mb: 4 }}>

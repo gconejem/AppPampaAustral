@@ -8,6 +8,12 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import EditIcon from '@mui/icons-material/Edit'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
@@ -148,118 +154,94 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
   const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
     () => [
-      columnHelper.accessor('id', {
-        header: 'RUT',
+      columnHelper.accessor('rut', {
+        header: 'Rut',
         cell: ({ row }) => (
-          <Typography
-            component={Link}
-            href={getLocalizedUrl(`/apps/invoice/preview/${row.original.id}`, locale as Locale)}
-            color='primary'
-          >{``}</Typography>
+          <div className='flex flex-col'>
+            {/* Texto principal con color negro */}
+            <Typography variant='body1' color='text.primary'>
+              160671982-3
+            </Typography>
+          </div>
         )
       }),
 
       columnHelper.accessor('name', {
         header: 'Nombre Comercial',
         cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            {getAvatar({ avatar: row.original.avatar, name: row.original.name })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.name}
-              </Typography>
-              <Typography variant='body2'>{row.original.companyEmail}</Typography>
-            </div>
+          <div className='flex flex-col'>
+            {/* Texto principal con color negro */}
+            <Typography variant='body1' color='text.primary'>
+              Nombre Comercial
+            </Typography>
           </div>
         )
       }),
 
-      columnHelper.accessor('total', {
+      columnHelper.accessor('Ciudad', {
         header: 'Ciudad',
-        cell: ({ row }) => <Typography>{`$${row.original.total}`}</Typography>
-      }),
-      columnHelper.accessor('issuedDate', {
-        header: 'Segmento',
-        cell: ({ row }) => <Typography>{row.original.issuedDate}</Typography>
+        cell: ({ row }) => (
+          <div className='flex flex-col'>
+            {/* Texto principal con color negro */}
+            <Typography variant='body1' color='text.primary'>
+              Chillán
+            </Typography>
+          </div>
+        )
       }),
 
-      columnHelper.accessor('balance', {
-        header: 'Contacto',
-        cell: ({ row }) => {
-          return row.original.balance === 0 ? (
-            <Chip variant='tonal' label='Paid' color='success' size='small' />
-          ) : (
-            <Typography color='text.primary'>{row.original.balance}</Typography>
-          )
-        }
+      columnHelper.accessor('issuedDate', {
+        header: 'Segmento',
+        cell: ({ row }) => <Typography>Segmento</Typography>
       }),
+
+      columnHelper.accessor('Contacto', {
+        header: 'Contacto',
+        cell: ({ row }) => (
+          <div className='flex flex-col'>
+            {/* Texto principal con color negro */}
+            <Typography variant='body1' color='text.primary'>
+              Ver
+            </Typography>
+          </div>
+        )
+      }),
+
       columnHelper.accessor('invoiceStatus', {
         header: 'Estado',
-        cell: ({ row }) => (
-          <Tooltip
-            title={
-              <div>
-                <Typography variant='body2' component='span' className='text-inherit'>
-                  {row.original.invoiceStatus}
-                </Typography>
-                <br />
-                <Typography variant='body2' component='span' className='text-inherit'>
-                  Balance:
-                </Typography>{' '}
-                {row.original.balance}
-                <br />
-                <Typography variant='body2' component='span' className='text-inherit'>
-                  Due Date:
-                </Typography>{' '}
-                {row.original.dueDate}
-              </div>
-            }
-          >
-            <CustomAvatar skin='light' color={invoiceStatusObj[row.original.invoiceStatus].color} size={28}>
-              <i className={classnames('bs-4 is-4', invoiceStatusObj[row.original.invoiceStatus].icon)} />
-            </CustomAvatar>
-          </Tooltip>
+        cell: () => (
+          <Chip
+            label='Pendiente'
+            sx={{
+              backgroundColor: '#ffebee', // Fondo rojo claro
+              color: '#f44336', // Texto rojo
+              fontWeight: 'bold',
+              borderRadius: '16px', // Bordes redondeados
+              padding: '0 8px', // Espaciado interno
+              height: '24px' // Altura del chip
+            }}
+          />
         )
       }),
       columnHelper.accessor('action', {
         header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(invoice => invoice.id !== row.original.id))}>
-              <i className='ri-delete-bin-7-line text-textSecondary' />
+        cell: () => (
+          <div className='flex items-center gap-2'>
+            <IconButton color='default' size='small'>
+              <VisibilityIcon fontSize='small' />
             </IconButton>
-            <IconButton>
-              <Link
-                href={getLocalizedUrl(`/apps/invoice/preview/${row.original.id}`, locale as Locale)}
-                className='flex'
-              >
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
+
+            <IconButton color='default' size='small'>
+              <AttachMoneyIcon fontSize='small' />
             </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Edit',
-                  icon: 'ri-pencil-line',
-                  href: getLocalizedUrl(`/apps/invoice/edit/${row.original.id}`, locale as Locale),
-                  linkProps: {
-                    className: 'flex items-center is-full plb-2 pli-4 gap-2 text-textSecondary'
-                  }
-                },
-                {
-                  text: 'Duplicate',
-                  icon: 'ri-file-copy-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            />
+
+            <IconButton color='default' size='small'>
+              <EditIcon fontSize='small' />
+            </IconButton>
+
+            <IconButton color='default' size='small'>
+              <MoreVertIcon fontSize='small' />
+            </IconButton>
           </div>
         ),
         enableSorting: false
