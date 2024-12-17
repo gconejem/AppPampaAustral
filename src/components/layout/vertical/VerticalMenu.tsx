@@ -2,7 +2,6 @@
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-import Chip from '@mui/material/Chip'
 import { useTheme } from '@mui/material/styles'
 
 // Third-party Imports
@@ -25,7 +24,6 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 
 // Style Imports
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
-import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // Menu Data Imports
 // import menuData from '@/data/navigation/verticalMenuData'
@@ -115,8 +113,11 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             <MenuItem href={`/${locale}/apps/user/client`} icon={<i className='ri-book-line' />}>
               Clientes
             </MenuItem>
-            <MenuItem href={`/${locale}/apps/user/obras`} icon={<i className='ri-pantone-line' />}>
+            <MenuItem href={`/${locale}/apps/user/work`} icon={<i className='ri-pantone-line' />}>
               Obras
+            </MenuItem>
+            <MenuItem href={`/${locale}/apps/user/contacts`} icon={<i className='ri-book-line' />}>
+              Contactos
             </MenuItem>
           </SubMenu>
           <SubMenu label='Productos' icon={<i className='ri-home-smile-line' />}>

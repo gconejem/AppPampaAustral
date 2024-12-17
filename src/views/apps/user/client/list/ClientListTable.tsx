@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -19,8 +20,16 @@ import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
 import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
+
+// DatePicker Imports
+import 'react-datepicker/dist/react-datepicker.css'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -46,14 +55,13 @@ import type { UsersType } from '@/types/apps/userTypes'
 import type { Locale } from '@configs/i18n'
 
 // Component Imports
+
+import EditClientForm from '../edit/EditClientForm'
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddUserDrawer'
+import AddUserDrawer from './AddClient'
 import OptionMenu from '@core/components/option-menu'
-import CustomAvatar from '@core/components/mui/Avatar'
-import PickersRange from './date' // Import del DatePicker
 
 // Util Imports
-import { getInitials } from '@/utils/getInitials'
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
@@ -143,16 +151,34 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState(...[tableData])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [currentClient, setCurrentClient] = useState<UsersType | null>(null)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
 
   // Hooks
   const { lang: locale } = useParams()
+
+  const handleClickOpenDialog = (user: UsersTypeWithAction) => {
+    setSelectedUser(user)
+    setOpenDialog(true)
+  }
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
+
+  const handleEditClient = (client: UsersType) => {
+    setCurrentClient(client)
+    setIsEditOpen(true)
+  }
 
   const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
     () => [
@@ -178,30 +204,27 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           />
         )
       },
-      columnHelper.accessor('fullName', {
-        header: 'User',
+      columnHelper.accessor('rut', {
+        header: 'Rut',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
             <div className='flex flex-col'>
               <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
+                {row.original.rut}
               </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
             </div>
           </div>
         )
       }),
       columnHelper.accessor('email', {
-        header: 'Email',
+        header: 'Nombre comercial',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
       columnHelper.accessor('role', {
-        header: 'Role',
+        header: 'Ciudad',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
             <Icon
-              className={userRoleObj[row.original.role].icon}
               sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
             />
             <Typography className='capitalize' color='text.primary'>
@@ -211,7 +234,15 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('currentPlan', {
-        header: 'Plan',
+        header: 'Segmento',
+        cell: ({ row }) => (
+          <Typography className='capitalize' color='text.primary'>
+            {row.original.currentPlan}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('currentPlan', {
+        header: 'Contacto',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
             {row.original.currentPlan}
@@ -219,7 +250,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: 'Estado',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <Chip
@@ -233,30 +264,42 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-delete-bin-7-line text-textSecondary' />
-            </IconButton>
             <IconButton>
               <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
                 <i className='ri-eye-line text-textSecondary' />
               </Link>
             </IconButton>
+
+            <IconButton
+              onClick={() => {
+                setCurrentClient(row.original) // Asigna el cliente actual
+                setIsEditOpen(true) // Abre el formulario de edición
+              }}
+            >
+              <i className='ri-edit-box-line text-textSecondary' />
+            </IconButton>
+
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
               options={[
                 {
-                  text: 'Download',
-                  icon: 'ri-download-line',
+                  text: 'Estado',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
                 },
                 {
-                  text: 'Edit',
-                  icon: 'ri-edit-box-line',
+                  text: 'Editar',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
+                },
+                {
+                  text: 'Eliminar',
+                  menuItemProps: {
+                    className: 'flex items-center gap-2 text-textSecondary',
+                    onClick: () => handleClickOpenDialog(row.original)
+                  }
                 }
               ]}
             />
@@ -265,7 +308,6 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
 
@@ -297,32 +339,17 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
-    const { avatar, fullName } = params
-
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
-        </CustomAvatar>
-      )
-    }
-  }
-
   return (
     <>
       <Card>
         <CardHeader
-          title={<span className='text-xl '>Obras</span>}
+          title={<span className='text-xl '>Clientes</span>}
           action={
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              + Nueva Obra
+              + Nuevo Cliente
             </Button>
           }
         />
-
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
@@ -334,6 +361,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           >
             Exportar
           </Button>
+
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <DebouncedInput
               value={globalFilter ?? ''}
@@ -433,8 +461,47 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         userData={data}
         setData={setData}
       />
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        aria-labelledby='alert-dialog-title'
+        aria-describedby='alert-dialog-description'
+      >
+        <DialogTitle id='alert-dialog-title'>Eliminar Cliente</DialogTitle>
+        <DialogContent>
+          <DialogContentText id='alert-dialog-description'>
+            ¿Seguro que desea eliminar el Cliente elegido?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color='secondary'>
+            Cerrar
+          </Button>
+          <Button
+            onClick={() => {
+              if (selectedUser) {
+                setData(data?.filter(user => user.id !== selectedUser.id))
+              }
+
+              handleCloseDialog()
+            }}
+            color='primary'
+            autoFocus
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <EditClientForm
+        open={isEditOpen}
+        handleClose={() => setIsEditOpen(false)}
+        userData={data}
+        setData={setData}
+        currentUser={currentClient}
+      />
     </>
   )
 }
 
-export default UserListTable
+export default ClientListTable

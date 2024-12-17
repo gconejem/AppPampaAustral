@@ -1,14 +1,14 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo, forwardRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -29,7 +29,6 @@ import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 
 // DatePicker Imports
-import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 
 // Third-party Imports
@@ -49,7 +48,6 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
-import { format, addDays } from 'date-fns'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -58,14 +56,10 @@ import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddClient'
+import AddUserDrawer from './AddContact'
 import OptionMenu from '@core/components/option-menu'
-import CustomAvatar from '@core/components/mui/Avatar'
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-import PickersRange from './date'
 
 // Util Imports
-import { getInitials } from '@/utils/getInitials'
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
@@ -155,7 +149,7 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<UsersTypeWithAction>()
 
-const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
@@ -163,7 +157,6 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
 
-  const [startDate, setStartDate] = useState(new Date())
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
 
@@ -204,7 +197,7 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       },
       columnHelper.accessor('rut', {
-        header: 'Rut',
+        header: 'Nombre',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <div className='flex flex-col'>
@@ -216,11 +209,11 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('email', {
-        header: 'Nombre comercial',
+        header: 'Cargo',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
       columnHelper.accessor('role', {
-        header: 'Ciudad',
+        header: 'Email',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
             <Icon
@@ -233,7 +226,7 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('currentPlan', {
-        header: 'Segmento',
+        header: 'Teléfono 1',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
             {row.original.currentPlan}
@@ -241,27 +234,14 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('currentPlan', {
-        header: 'Contacto',
+        header: 'Teléfono 2',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
             {row.original.currentPlan}
           </Typography>
         )
       }),
-      columnHelper.accessor('status', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
-        )
-      }),
+
       columnHelper.accessor('action', {
         header: 'Acciones',
         cell: ({ row }) => (
@@ -331,28 +311,14 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
-    const { avatar, fullName } = params
-
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
-        </CustomAvatar>
-      )
-    }
-  }
-
   return (
     <>
       <Card>
         <CardHeader
-          title={<span className='text-xl '>Clientes</span>}
+          title={<span className='text-xl '>Contactos</span>}
           action={
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              + Nuevo Cliente
+              + Nuevo Contacto
             </Button>
           }
         />
@@ -502,4 +468,4 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   )
 }
 
-export default ClientListTable
+export default ContactsListTable
