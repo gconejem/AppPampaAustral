@@ -6,6 +6,7 @@ import { useEffect, useState, useMemo } from 'react'
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import type { Params } from 'next/dist/shared/lib/router/utils/route-matcher'
 
 // MUI Imports
 
@@ -51,7 +52,7 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
-import type { UsersType } from '@/types/apps/userTypes'
+import type { Cliente } from '@/types/cliente'
 import type { Locale } from '@configs/i18n'
 
 // Component Imports
@@ -76,7 +77,7 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type UsersTypeWithAction = UsersType & {
+type ClienteWithAction = Cliente & {
   action?: string
 }
 
@@ -135,11 +136,10 @@ const DebouncedInput = ({
 
 // Vars
 const userRoleObj: UserRoleType = {
-  admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+  Corporativo: { icon: 'ri-vip-crown-line', color: 'primary' },
+  Pyme: { icon: 'ri-computer-line', color: 'warning' },
+  Retail: { icon: 'ri-store-2-line', color: 'success' },
+  Gobierno: { icon: 'ri-government-line', color: 'info' }
 }
 
 const userStatusObj: UserStatusType = {
@@ -149,24 +149,25 @@ const userStatusObj: UserStatusType = {
 }
 
 // Column Definitions
-const columnHelper = createColumnHelper<UsersTypeWithAction>()
+const columnHelper = createColumnHelper<ClienteWithAction>()
 
-const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ClientListTable = ({ tableData }: { tableData?: Cliente[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
+  const [data, setData] = useState<Cliente[]>(tableData || [])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [currentClient, setCurrentClient] = useState<UsersType | null>(null)
+  const [currentClient, setCurrentClient] = useState<Cliente | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
+  const [selectedUser, setSelectedUser] = useState<ClienteWithAction | null>(null)
 
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang as Locale
 
-  const handleClickOpenDialog = (user: UsersTypeWithAction) => {
+  const handleClickOpenDialog = (user: ClienteWithAction) => {
     setSelectedUser(user)
     setOpenDialog(true)
   }
@@ -175,12 +176,12 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     setOpenDialog(false)
   }
 
-  const handleEditClient = (client: UsersType) => {
+  const handleEditClient = (client: Cliente) => {
     setCurrentClient(client)
     setIsEditOpen(true)
   }
 
-  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+  const columns = useMemo<ColumnDef<ClienteWithAction, any>[]>(
     () => [
       {
         id: 'select',
@@ -216,48 +217,47 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </div>
         )
       }),
-      columnHelper.accessor('email', {
+      columnHelper.accessor('nombreCliente', {
         header: 'Nombre comercial',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+        cell: ({ row }) => <Typography>{row.original.nombreCliente}</Typography>
       }),
-      columnHelper.accessor('role', {
-        header: 'Ciudad',
+      columnHelper.accessor('segmento', {
+        header: 'Segmento',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            <Icon
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
+            {row.original.segmento && userRoleObj[row.original.segmento] && (
+              <>
+                <Icon
+                  className={`text-${userRoleObj[row.original.segmento].color}`}
+                  sx={{ fontSize: '1.375rem' }}
+                >
+                  {userRoleObj[row.original.segmento].icon}
+                </Icon>
+                <Typography className='capitalize' color='text.primary'>
+                  {row.original.segmento}
+                </Typography>
+              </>
+            )}
           </div>
         )
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Segmento',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
+      columnHelper.accessor('contactos', {
         header: 'Contacto',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
+            {row.original.contactos?.[0]?.nombre || 'Sin contacto'}
           </Typography>
         )
       }),
-      columnHelper.accessor('status', {
+      columnHelper.accessor('estado', {
         header: 'Estado',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <Chip
               variant='tonal'
-              label={row.original.status}
+              label={row.original.estado}
               size='small'
-              color={userStatusObj[row.original.status]}
+              color={userStatusObj[row.original.estado as keyof typeof userStatusObj]}
               className='capitalize'
             />
           </div>
@@ -312,7 +312,7 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   )
 
   const table = useReactTable({
-    data: filteredData as UsersType[],
+    data: filteredData as Cliente[],
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -338,6 +338,21 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
+
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const response = await fetch('/api/clientes')
+        const clientes = await response.json()
+        setData(clientes)
+        setFilteredData(clientes)
+      } catch (error) {
+        console.error('Error fetching clients:', error)
+      }
+    }
+
+    fetchClientes()
+  }, [])
 
   return (
     <>
@@ -498,7 +513,7 @@ const ClientListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         handleClose={() => setIsEditOpen(false)}
         userData={data}
         setData={setData}
-        currentUser={currentClient}
+        currentUser={currentClient || data[0]}
       />
     </>
   )

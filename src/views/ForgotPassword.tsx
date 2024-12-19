@@ -37,7 +37,8 @@ const ForgotPasswordV2 = ({ mode }: { mode: Mode }) => {
   const borderedLightIllustration = '/images/illustrations/auth/v2-forgot-password-light-border.png'
 
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = (params?.lang as string) ?? 'es'
   const authBackground = useImageVariant(mode, lightImg, darkImg)
   const { settings } = useSettings()
 

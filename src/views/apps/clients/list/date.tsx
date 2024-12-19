@@ -20,14 +20,14 @@ type CustomInputProps = TextFieldProps & {
 
 const PickersRange = () => {
   // States
-  const [startDate, setStartDate] = useState<Date | null | undefined>(new Date())
-  const [endDate, setEndDate] = useState<Date | null | undefined>(addDays(new Date(), 15))
+  const [startDate, setStartDate] = useState<Date>(new Date())
+  const [endDate, setEndDate] = useState<Date>(addDays(new Date(), 15))
 
   const handleOnChange = (dates: any) => {
     const [start, end] = dates
 
-    setStartDate(start)
-    setEndDate(end)
+    setStartDate(start || new Date())
+    setEndDate(end || addDays(new Date(), 15))
   }
 
   const CustomInput = forwardRef((props: CustomInputProps, ref) => {

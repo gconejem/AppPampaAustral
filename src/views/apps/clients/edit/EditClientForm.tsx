@@ -29,14 +29,14 @@ import SearchIcon from '@mui/icons-material/Search'
 import { useForm, Controller } from 'react-hook-form'
 
 // Types Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { Cliente } from '@/types/cliente'
 
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: UsersType[]
-  setData: (data: UsersType[]) => void
-  currentUser: UsersType // Cliente a editar
+  userData?: Cliente[]
+  setData: (data: Cliente[]) => void
+  currentUser: Cliente // Cliente a editar
 }
 
 type FormValidateType = {

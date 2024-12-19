@@ -6,6 +6,7 @@ import { useState } from 'react'
 // Next Imports
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import type { Params } from 'next/dist/shared/lib/router/utils/route-matcher'
 
 // MUI Imports
 import Typography from '@mui/material/Typography'
@@ -76,7 +77,8 @@ const Login = ({ mode }: { mode: Mode }) => {
   // Hooks
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { lang: locale } = useParams()
+  const params = useParams<Params>()
+  const locale = params?.lang
   const { settings } = useSettings()
 
   const {
@@ -111,15 +113,18 @@ const Login = ({ mode }: { mode: Mode }) => {
     })
 
     if (res && res.ok && res.error === null) {
-      // Vars
-      const redirectURL = searchParams.get('redirectTo') ?? '/'
-
+      const redirectURL = searchParams?.get('redirectTo') ?? '/'
       router.replace(getLocalizedUrl(redirectURL, locale as Locale))
     } else {
-      if (res?.error) {
-        const error = JSON.parse(res.error)
-
-        setErrorState(error)
+      if (res?.error && typeof res.error === 'string') {
+        try {
+          const error = JSON.parse(res.error)
+          setErrorState(error)
+        } catch {
+          setErrorState({ message: ['Invalid credentials'] })
+        }
+      } else {
+        setErrorState({ message: ['An error occurred during login'] })
       }
     }
   }

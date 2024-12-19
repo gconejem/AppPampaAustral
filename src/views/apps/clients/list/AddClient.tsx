@@ -1,5 +1,5 @@
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -27,38 +27,88 @@ import SearchIcon from '@mui/icons-material/Search'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
+import axios from 'axios'
+import { toast } from 'react-hot-toast' // Para notificaciones
 
 // Types Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { Cliente } from '@/types/cliente'
 
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: UsersType[]
-  setData: (data: UsersType[]) => void
+  userData?: Cliente[]
+  setData: (data: Cliente[]) => void
 }
 
 type FormValidateType = {
   rut: string
-  fullName: string
-  username: string
-  email: string
-  role: string
-  plan: string
   status: string
+  razonSocial: string
+  nombreCliente: string
+  ciudad: string
+  comuna: string
+  direccion: string
+  telefono: string
+  sitioWeb: string
+  segmento: string
+  industria: string
+  vendedor: string
+  condicionesVenta: string
+  observaciones: string
+  fechaCreacion: string
 }
 
 type FormNonValidateType = {
   company: string
   country: string
   contact: string
+  pais: string
+  region: string
+}
+
+type Contacto = {
+  nombre: string
+  cargo: string
+  email: string
+  telefono1: string
+  telefono2: string
 }
 
 // Vars
 const initialData = {
   company: '',
   country: '',
-  contact: ''
+  contact: '',
+  pais: '',
+  region: ''
+}
+
+type RegionData = {
+  [key in 'Metropolitana' | 'Valparaíso' | 'Biobío']: {
+    ciudades: string[]
+    comunas: string[]
+  }
+}
+
+// Datos dummy para los selects
+const DUMMY_DATA = {
+  segmentos: ['Corporativo', 'Pyme', 'Retail', 'Gobierno'],
+  industrias: ['Tecnología', 'Manufactura', 'Retail', 'Servicios', 'Construcción'],
+  paises: ['Chile'],
+  regiones: {
+    'Metropolitana': {
+      ciudades: ['Santiago', 'Puente Alto', 'Maipú'],
+      comunas: ['Las Condes', 'Providencia', 'Santiago Centro', 'Ñuñoa']
+    },
+    'Valparaíso': {
+      ciudades: ['Valparaíso', 'Viña del Mar', 'Quilpué'],
+      comunas: ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana']
+    },
+    'Biobío': {
+      ciudades: ['Concepción', 'Talcahuano', 'Chillán'],
+      comunas: ['Concepción', 'Talcahuano', 'San Pedro de la Paz']
+    }
+  } as RegionData
 }
 
 const AddUserDrawer = (props: Props) => {
@@ -67,6 +117,15 @@ const AddUserDrawer = (props: Props) => {
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>(initialData)
+  const [contactos, setContactos] = useState<Contacto[]>([])
+  const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
+    nombre: '',
+    cargo: '',
+    email: '',
+    telefono1: '',
+    telefono2: ''
+  })
+  const [selectedRegion, setSelectedRegion] = useState('')
 
   // Hooks
   const {
@@ -77,40 +136,120 @@ const AddUserDrawer = (props: Props) => {
   } = useForm<FormValidateType>({
     defaultValues: {
       rut: '',
-      fullName: '',
-      username: '',
-      email: '',
-      role: '',
-      plan: '',
-      status: ''
+      status: '',
+      razonSocial: '',
+      nombreCliente: '',
+      ciudad: '',
+      comuna: '',
+      direccion: '',
+      telefono: '',
+      sitioWeb: '',
+      segmento: '',
+      industria: '',
+      vendedor: '',
+      condicionesVenta: '',
+      observaciones: '',
+      fechaCreacion: new Date().toISOString().split('T')[0]
     }
   })
 
-  const onSubmit = (data: FormValidateType) => {
-    const newUser: UsersType = {
-      id: (userData?.length && userData?.length + 1) || 1,
-      avatar: `/images/avatars/${Math.floor(Math.random() * 8) + 1}.png`,
-      rut: data.rut,
-      fullName: data.fullName,
-      username: data.username,
-      email: data.email,
-      role: data.role,
-      currentPlan: data.plan,
-      status: data.status,
-      company: formData.company,
-      country: formData.country,
-      contact: formData.contact
-    }
+  // Obtener la fecha actual en formato YYYY-MM-DD
+  const fechaActual = new Date().toISOString().split('T')[0]
 
-    setData([...(userData ?? []), newUser])
-    handleClose()
-    setFormData(initialData)
-    resetForm({ fullName: '', username: '', email: '', role: '', plan: '', status: '' })
+  // Función para crear cliente
+  const crearCliente = async (data: FormValidateType) => {
+    try {
+      const clienteData = {
+        rut: data.rut,
+        estado: data.status,
+        razonSocial: data.razonSocial,
+        nombreCliente: data.nombreCliente,
+        pais: formData.pais,
+        region: formData.region,
+        ciudad: data.ciudad,
+        comuna: data.comuna,
+        direccion: data.direccion,
+        telefono: data.telefono,
+        sitioWeb: data.sitioWeb,
+        segmento: data.segmento,
+        industria: data.industria,
+        contactos: {
+          create: contactos.map(contacto => ({
+            nombre: contacto.nombre,
+            cargo: contacto.cargo,
+            email: contacto.email,
+            telefono1: contacto.telefono1,
+            telefono2: contacto.telefono2
+          }))
+        },
+        condicionesComerciales: {
+          create: {
+            vendedor: data.vendedor,
+            condicionVenta: data.condicionesVenta,
+            observaciones: data.observaciones
+          }
+        }
+      }
+
+      const response = await axios.post('/api/clientes', clienteData)
+
+      if (response.status === 201) {
+        toast.success('Cliente creado exitosamente')
+        handleClose()
+        resetForm()
+        setContactos([])
+        // Actualizar la lista de clientes
+        if (props.setData && props.userData) {
+          props.setData([...props.userData, response.data])
+        }
+      }
+    } catch (error) {
+      console.error('Error al crear cliente:', error)
+      toast.error('Error al crear el cliente')
+    }
   }
+
+  // Actualizar onSubmit para usar la nueva función
+  const onSubmit = (data: FormValidateType) => {
+    crearCliente(data)
+  }
+
+  // Función para obtener clientes
+  const obtenerClientes = async () => {
+    try {
+      const response = await axios.get('/en/api/clientes')
+      if (response.status === 200 && props.setData) {
+        props.setData(response.data)
+      }
+    } catch (error) {
+      console.error('Error al obtener clientes:', error)
+      toast.error('Error al cargar los clientes')
+    }
+  }
+
+  // Cargar clientes al montar el componente
+  useEffect(() => {
+    obtenerClientes()
+  }, [])
 
   const handleReset = () => {
     handleClose()
     setFormData(initialData)
+  }
+
+  const agregarContacto = () => {
+    setContactos([...contactos, nuevoContacto])
+    setNuevoContacto({
+      nombre: '',
+      cargo: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
+  }
+
+  const eliminarContacto = (index: number) => {
+    setContactos(contactos.filter((_, i) => i !== index))
   }
 
   return (
@@ -130,20 +269,22 @@ const AddUserDrawer = (props: Props) => {
       </div>
       <Divider />
       <div className='p-5'>
-        <form onSubmit={handleSubmit(data => onSubmit(data))} className='flex flex-col gap-5'>
+        <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <Controller
-                name='rut'
+                name='fechaCreacion'
                 control={control}
-                rules={{ required: true }}
+                defaultValue={fechaActual}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Fecha de Creación'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    InputProps={{
+                      readOnly: true, // Hace el campo de solo lectura
+                    }}
+                    value={fechaActual} // Fuerza el valor a la fecha actual
                   />
                 )}
               />
@@ -172,7 +313,7 @@ const AddUserDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='rut'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -181,14 +322,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='ID Cliente (RUT)'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='razonSocial'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -197,14 +338,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Razón Social'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='nombreCliente'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -213,7 +354,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Cliente'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
@@ -244,64 +385,63 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
-                <InputLabel id='country'>Región</InputLabel>
+                <InputLabel>Región</InputLabel>
                 <Select
-                  fullWidth
-                  id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  label='País'
-                  labelId='country'
+                  value={selectedRegion}
+                  onChange={e => {
+                    setSelectedRegion(e.target.value)
+                    setFormData({ ...formData, region: e.target.value })
+                  }}
+                  label='Región'
                 >
-                  <MenuItem value='Chile'>Arica y Parinacota</MenuItem>
-                  <MenuItem value='Chile'>Tarapacá</MenuItem>
-                  <MenuItem value='Chile'>Antofagasta</MenuItem>
-                  <MenuItem value='Chile'>Atacama</MenuItem>
-                  <MenuItem value='Chile'>Coquimbo</MenuItem>
-                  <MenuItem value='Chile'>Vaparaíso</MenuItem>
-                  <MenuItem value='Chile'>Metropolitana</MenuItem>
-                  <MenuItem value='Chile'>OHiggins</MenuItem>
-                  <MenuItem value='Chile'>Maule</MenuItem>
-                  <MenuItem value='Chile'>Ñuble</MenuItem>
-                  <MenuItem value='Chile'>Biobío</MenuItem>
-                  <MenuItem value='Chile'>La Araucanía</MenuItem>
-                  <MenuItem value='Chile'>Los Ríos</MenuItem>
-                  <MenuItem value='Chile'>Los Lagos</MenuItem>
-                  <MenuItem value='Chile'>Aysén</MenuItem>
-                  <MenuItem value='Chile'>Magallanes</MenuItem>
+                  {Object.keys(DUMMY_DATA.regiones).map(region => (
+                    <MenuItem key={region} value={region}>{region}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='ciudad'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Ciudad'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Ciudad</InputLabel>
+                    <Select
+                      {...field}
+                      label='Ciudad'
+                      error={Boolean(errors.ciudad)}
+                    >
+                      {selectedRegion && DUMMY_DATA.regiones[selectedRegion as keyof RegionData].ciudades.map(ciudad => (
+                        <MenuItem key={ciudad} value={ciudad}>{ciudad}</MenuItem>
+                      ))}
+                    </Select>
+                    {errors.ciudad && <FormHelperText error>Este campo es requerido</FormHelperText>}
+                  </FormControl>
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='comuna'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Comuna'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Comuna</InputLabel>
+                    <Select
+                      {...field}
+                      label='Comuna'
+                      error={Boolean(errors.comuna)}
+                    >
+                      {selectedRegion && DUMMY_DATA.regiones[selectedRegion as keyof RegionData].comunas.map(comuna => (
+                        <MenuItem key={comuna} value={comuna}>{comuna}</MenuItem>
+                      ))}
+                    </Select>
+                    {errors.comuna && <FormHelperText error>Este campo es requerido</FormHelperText>}
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -309,7 +449,7 @@ const AddUserDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='direccion'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -318,14 +458,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Dirección'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='telefono'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -334,7 +474,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Teléfono'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
@@ -342,7 +482,7 @@ const AddUserDrawer = (props: Props) => {
 
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='sitioWeb'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -351,7 +491,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Web'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
@@ -359,44 +499,48 @@ const AddUserDrawer = (props: Props) => {
           </Grid>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Segmento
-                </InputLabel>
-                <Controller
-                  name='status'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
+              <Controller
+                name='segmento'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Segmento</InputLabel>
+                    <Select
+                      {...field}
+                      label='Segmento'
+                      error={Boolean(errors.segmento)}
+                    >
+                      {DUMMY_DATA.segmentos.map(segmento => (
+                        <MenuItem key={segmento} value={segmento}>{segmento}</MenuItem>
+                      ))}
                     </Select>
-                  )}
-                />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
-              </FormControl>
+                    {errors.segmento && <FormHelperText error>Este campo es requerido</FormHelperText>}
+                  </FormControl>
+                )}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Industria
-                </InputLabel>
-                <Controller
-                  name='status'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
+              <Controller
+                name='industria'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Industria</InputLabel>
+                    <Select
+                      {...field}
+                      label='Industria'
+                      error={Boolean(errors.industria)}
+                    >
+                      {DUMMY_DATA.industrias.map(industria => (
+                        <MenuItem key={industria} value={industria}>{industria}</MenuItem>
+                      ))}
                     </Select>
-                  )}
-                />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
-              </FormControl>
+                    {errors.industria && <FormHelperText error>Este campo es requerido</FormHelperText>}
+                  </FormControl>
+                )}
+              />
             </Grid>
           </Grid>
 
@@ -472,89 +616,75 @@ const AddUserDrawer = (props: Props) => {
                 </TableRow>
               </TableHead>
               <TableBody>
+                {/* Fila para nuevo contacto */}
                 <TableRow>
                   <TableCell>
                     <TextField
+                      value={nuevoContacto.nombre}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, nombre: e.target.value})}
                       placeholder='Nombre'
                       fullWidth
-                      variant='outlined'
                       size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
+                    />
                   </TableCell>
                   <TableCell>
-                    <FormControl fullWidth size='small'>
-                      <InputLabel>Cargo</InputLabel>
-                      <Select
-                        defaultValue=''
-                        label='Cargo'
-                        sx={{
-                          width: '200px',
-                          height: '40px'
-                        }}
-                      >
-                        <MenuItem value='Gerente'>Cargo</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
                     <TextField
+                      value={nuevoContacto.cargo}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, cargo: e.target.value})}
+                      placeholder='Cargo'
+                      fullWidth
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      value={nuevoContacto.email}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, email: e.target.value})}
                       placeholder='Email'
                       fullWidth
-                      variant='outlined'
                       size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
+                    />
                   </TableCell>
                   <TableCell>
-                    {' '}
                     <TextField
+                      value={nuevoContacto.telefono1}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono1: e.target.value})}
                       placeholder='Teléfono 1'
                       fullWidth
-                      variant='outlined'
                       size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
+                    />
                   </TableCell>
                   <TableCell>
-                    {' '}
                     <TextField
+                      value={nuevoContacto.telefono2}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono2: e.target.value})}
                       placeholder='Teléfono 2'
                       fullWidth
-                      variant='outlined'
                       size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
+                    />
                   </TableCell>
-
                   <TableCell>
-                    <IconButton size='small'>
+                    <IconButton onClick={agregarContacto}>
                       <i className='ri-add-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-edit-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-star-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-delete-bin-line' />
                     </IconButton>
                   </TableCell>
                 </TableRow>
+
+                {/* Lista de contactos agregados */}
+                {contactos.map((contacto, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{contacto.nombre}</TableCell>
+                    <TableCell>{contacto.cargo}</TableCell>
+                    <TableCell>{contacto.email}</TableCell>
+                    <TableCell>{contacto.telefono1}</TableCell>
+                    <TableCell>{contacto.telefono2}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => eliminarContacto(index)}>
+                        <i className='ri-delete-bin-line' />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -581,10 +711,18 @@ const AddUserDrawer = (props: Props) => {
           </Grid>
 
           <div className='flex items-center gap-4 mt-5'>
-            <Button variant='contained' type='submit'>
+            <Button 
+              variant='contained' 
+              type='submit'
+              disabled={Object.keys(errors).length > 0}
+            >
               Guardar
             </Button>
-            <Button variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
+            <Button 
+              variant='outlined' 
+              color='error' 
+              onClick={handleReset}
+            >
               Cancelar
             </Button>
           </div>

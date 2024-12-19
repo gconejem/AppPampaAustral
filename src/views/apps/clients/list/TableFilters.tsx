@@ -13,25 +13,45 @@ import Select from '@mui/material/Select'
 import PickersRange from './date' // Asegúrate de que esta importación esté correctamente referenciada
 
 // Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { Cliente } from '@/types/cliente'
 
-const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => void; tableData?: UsersType[] }) => {
+// Datos dummy para los filtros
+const DUMMY_DATA = {
+  estados: ['Activo', 'Inactivo', 'Bloqueado'],
+  industrias: ['Tecnología', 'Manufactura', 'Retail', 'Servicios', 'Construcción'],
+  segmentos: ['Corporativo', 'Pyme', 'Retail', 'Gobierno']
+}
+
+type EstadoType = '' | 'Activo' | 'Inactivo' | 'Bloqueado';
+type IndustriaType = '' | 'Tecnología' | 'Manufactura' | 'Retail' | 'Servicios' | 'Construcción';
+type SegmentoType = '' | 'Corporativo' | 'Pyme' | 'Retail' | 'Gobierno';
+
+interface TableFiltersProps {
+  setData: (data: Cliente[]) => void;
+  tableData?: Cliente[];
+}
+
+const TableFilters = ({ setData, tableData }: TableFiltersProps) => {
   // States
-  const [role, setRole] = useState<UsersType['role']>('')
-  const [plan, setPlan] = useState<UsersType['currentPlan']>('')
-  const [status] = useState<UsersType['status']>('')
+  const [segmentoFilter, setSegmentoFilter] = useState<SegmentoType>('')
+  const [industriaFilter, setIndustriaFilter] = useState<IndustriaType>('')
+  const [estadoFilter, setEstadoFilter] = useState<EstadoType>('')
 
   useEffect(() => {
-    const filteredData = tableData?.filter(user => {
-      if (role && user.role !== role) return false
-      if (plan && user.currentPlan !== plan) return false
-      if (status && user.status !== status) return false
+    if (tableData) {
+      // Usar Array.prototype.filter directamente
+      const filtered = Array.isArray(tableData) ? tableData.filter(cliente => {
+        // Solo aplicar filtros si hay un valor seleccionado
+        if (segmentoFilter && cliente.segmento !== segmentoFilter) return false;
+        if (industriaFilter && cliente.industria !== industriaFilter) return false;
+        if (estadoFilter && cliente.estado !== estadoFilter) return false;
+        
+        return true;
+      }) : [];
 
-      return true
-    })
-
-    setData(filteredData || [])
-  }, [role, plan, status, tableData, setData])
+      setData(filtered);
+    }
+  }, [segmentoFilter, industriaFilter, estadoFilter, tableData, setData]);
 
   return (
     <CardContent>
@@ -49,12 +69,15 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             <Select
               fullWidth
               id='select-role'
-              value={role}
-              onChange={e => setRole(e.target.value)}
+              value={estadoFilter}
+              onChange={e => setEstadoFilter(e.target.value as EstadoType)}
               label='Estado'
               labelId='role-select'
             >
-              <MenuItem value=''>...</MenuItem>
+              <MenuItem value=''>Todos</MenuItem>
+              {DUMMY_DATA.estados.map(estado => (
+                <MenuItem key={estado} value={estado}>{estado}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -65,12 +88,15 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             <Select
               fullWidth
               id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
+              value={industriaFilter}
+              onChange={e => setIndustriaFilter(e.target.value as IndustriaType)}
               label='Industria'
               labelId='plan-select'
             >
-              <MenuItem value=''>...</MenuItem>
+              <MenuItem value=''>Todas</MenuItem>
+              {DUMMY_DATA.industrias.map(industria => (
+                <MenuItem key={industria} value={industria}>{industria}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
