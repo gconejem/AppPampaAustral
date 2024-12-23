@@ -13,23 +13,28 @@ import Select from '@mui/material/Select'
 import PickersRange from './date' // Asegúrate de importar el componente PickersRange para el selector de fecha
 
 // Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { WorkType } from '@/types/apps/workTypes'
 
-const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => void; tableData?: UsersType[] }) => {
+type Props = {
+  setData: (data: WorkType[] | ((prevData: WorkType[]) => WorkType[])) => void
+  tableData?: WorkType[]
+}
+
+const TableFilters = ({ setData, tableData }: Props) => {
   // States
-  const [role, setRole] = useState<UsersType['role']>('')
-  const [status, setStatus] = useState<UsersType['status']>('')
+  const [estado, setEstado] = useState('')
+  const [estadoObra, setEstadoObra] = useState('')
 
   useEffect(() => {
     const filteredData = tableData?.filter(user => {
-      if (role && user.role !== role) return false
-      if (status && user.status !== status) return false
+      if (estado && user.estado !== estado) return false
+      if (estadoObra && user.estadoObra !== estadoObra) return false
 
       return true
     })
 
     setData(filteredData || [])
-  }, [role, status, tableData, setData])
+  }, [estado, estadoObra, tableData, setData])
 
   return (
     <CardContent>
@@ -47,8 +52,8 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
               fullWidth
               id='select-status'
               label='Select Status'
-              value={status}
-              onChange={e => setStatus(e.target.value)}
+              value={estado}
+              onChange={e => setEstado(e.target.value)}
               labelId='status-select'
               inputProps={{ placeholder: 'Select Status' }}
             >

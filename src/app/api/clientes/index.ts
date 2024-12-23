@@ -1,12 +1,17 @@
 import prisma from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 // Crear un cliente
 export const createCliente = async (data: Prisma.ClienteCreateInput) => {
   return prisma.cliente.create({
     data,
     include: {
-      contactos: true,
+      clientesContactos: {
+        include: {
+          contacto: true
+        }
+      },
       condicionesComerciales: true
     }
   })
@@ -16,7 +21,11 @@ export const createCliente = async (data: Prisma.ClienteCreateInput) => {
 export const getClientes = async () => {
   return prisma.cliente.findMany({
     include: {
-      contactos: true,
+      clientesContactos: {
+        include: {
+          contacto: true
+        }
+      },
       condicionesComerciales: true
     }
   })
@@ -27,7 +36,11 @@ export const getClienteById = async (id: number) => {
   return prisma.cliente.findUnique({
     where: { id },
     include: {
-      contactos: true,
+      clientesContactos: {
+        include: {
+          contacto: true
+        }
+      },
       condicionesComerciales: true
     }
   })
@@ -39,7 +52,11 @@ export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput)
     where: { id },
     data,
     include: {
-      contactos: true,
+      clientesContactos: {
+        include: {
+          contacto: true
+        }
+      },
       condicionesComerciales: true
     }
   })
@@ -47,7 +64,21 @@ export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput)
 
 // Eliminar un cliente
 export const deleteCliente = async (id: number) => {
-  return prisma.cliente.delete({
-    where: { id }
+  // Iniciamos una transacción para asegurar que todo se ejecute o nada
+  return prisma.$transaction(async (tx: typeof prisma) => {
+    // 1. Eliminamos solo las relaciones en ClienteContacto
+    await tx.clienteContacto.deleteMany({
+      where: { clienteId: id }
+    })
+
+    // 2. Eliminamos las condiciones comerciales
+    await tx.condicionComercial.deleteMany({
+      where: { clienteId: id }
+    })
+
+    // 3. Finalmente eliminamos el cliente
+    return tx.cliente.delete({
+      where: { id }
+    })
   })
 } 

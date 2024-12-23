@@ -24,12 +24,21 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
+import { toast } from 'react-hot-toast'
 
 // Types Imports
-import type { Cliente } from '@/types/cliente'
+import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
+import { initialFormData } from '@/types/forms/cliente'
+
+// Data Imports
+import { PAISES, REGIONES_CHILE, SEGMENTOS, INDUSTRIAS, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
+
+// Components Imports
+import ContactSearch from '../components/ContactSearch'
 
 type Props = {
   open: boolean
@@ -39,49 +48,37 @@ type Props = {
   currentUser: Cliente // Cliente a editar
 }
 
-type FormValidateType = {
-  rut: string
-  fullName: string
-  username: string
-  email: string
-  role: string
-  plan: string
-  status: string
-}
-
-type FormNonValidateType = {
-  company: string
-  country: string
-  contact: string
-  region: string
-  city: string
-  commune: string
-  address: string
-  phone: string
-  website: string
-  segment: string
-  industry: string
-}
-
-// Vars
-const initialData = {
-  company: '',
-  country: '',
-  contact: '',
-  region: '',
-  city: '',
-  commune: '',
-  address: '',
-  phone: '',
-  website: '',
-  segment: '',
-  industry: ''
-}
-
 const EditClientForm = (props: Props) => {
   const { open, handleClose, userData, setData, currentUser } = props
 
-  const [formData, setFormData] = useState<FormNonValidateType>(initialData)
+  const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
+  const [contactos, setContactos] = useState<Array<{contacto: Contacto, isPrincipal: boolean}>>([])
+  const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
+    nombre: '',
+    cargo: '',
+    email: '',
+    telefono1: '',
+    telefono2: ''
+  })
+  const [selectedRegion, setSelectedRegion] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const defaultValues: FormValidateType = {
+    rut: '',
+    estado: 'active',
+    razonSocial: '',
+    nombreCliente: '',
+    ciudad: '',
+    comuna: '',
+    direccion: '',
+    telefono: '',
+    sitioWeb: '',
+    segmento: '',
+    industria: '',
+    vendedor: '',
+    condicionVenta: '',
+    observaciones: ''
+  }
 
   const {
     control,
@@ -89,56 +86,167 @@ const EditClientForm = (props: Props) => {
     handleSubmit,
     formState: { errors }
   } = useForm<FormValidateType>({
-    defaultValues: {
-      rut: '',
-      fullName: '',
-      username: '',
-      email: '',
-      role: '',
-      plan: '',
-      status: ''
-    }
+    defaultValues,
+    mode: 'onChange'
   })
 
   // Cargar datos actuales del cliente
   useEffect(() => {
     if (currentUser) {
-      resetForm({
-        rut: currentUser.rut,
-        fullName: currentUser.fullName,
-        username: currentUser.username,
-        email: currentUser.email,
-        role: currentUser.role,
-        plan: currentUser.currentPlan,
-        status: currentUser.status
-      })
+      const formValues = {
+        rut: currentUser.rut || '',
+        estado: currentUser.estado || 'active',
+        razonSocial: currentUser.razonSocial || '',
+        nombreCliente: currentUser.nombreCliente || '',
+        ciudad: currentUser.ciudad || '',
+        comuna: currentUser.comuna || '',
+        direccion: currentUser.direccion || '',
+        telefono: currentUser.telefono || '',
+        sitioWeb: currentUser.sitioWeb || '',
+        segmento: currentUser.segmento || '',
+        industria: currentUser.industria || '',
+        vendedor: currentUser.condicionesComerciales?.vendedor || '',
+        condicionVenta: currentUser.condicionesComerciales?.condicionVenta || '',
+        observaciones: currentUser.condicionesComerciales?.observaciones || ''
+      }
+
+      console.log('Resetting form with values:', formValues)
+      resetForm(formValues)
+
+      // Inicializar formData
       setFormData({
-        company: currentUser.company || '',
-        country: currentUser.country || '',
-        contact: currentUser.contact || '',
-        region: '',
-        city: '',
-        commune: '',
-        address: '',
-        phone: '',
-        website: '',
-        segment: '',
-        industry: ''
+        region: currentUser.region || '',
+        city: currentUser.ciudad || '',
+        commune: currentUser.comuna || '',
+        address: currentUser.direccion || '',
+        phone: currentUser.telefono || '',
+        website: currentUser.sitioWeb || '',
+        segment: currentUser.segmento || '',
+        industry: currentUser.industria || '',
+        pais: currentUser.pais || '',
+        vendedor: currentUser.condicionesComerciales?.vendedor || '',
+        condicionVenta: currentUser.condicionesComerciales?.condicionVenta || '',
+        observaciones: currentUser.condicionesComerciales?.observaciones || ''
       })
+
+      // Cargar contactos existentes
+      const contactosExistentes = currentUser.clientesContactos?.map(cc => ({
+        id: cc.contacto?.id,
+        nombre: cc.contacto?.nombre || '',
+        cargo: cc.contacto?.cargo || '',
+        email: cc.contacto?.email || '',
+        telefono1: cc.contacto?.telefono1 || '',
+        telefono2: cc.contacto?.telefono2 || '',
+        isPrincipal: cc.isPrincipal || false
+      })) || []
+
+      setContactos(contactosExistentes.map(c => ({ contacto: c, isPrincipal: c.isPrincipal })))
+      setSelectedRegion(currentUser.region || '')
     }
   }, [currentUser, resetForm])
 
   // Guardar cambios en el cliente
-  const onSubmit = (data: FormValidateType) => {
-    const updatedData = userData?.map(user => (user.id === currentUser.id ? { ...user, ...data, ...formData } : user))
+  const onSubmit = async (data: FormValidateType) => {
+    try {
+      setIsSubmitting(true)
+      console.log('EditClientForm - Datos a actualizar:', { id: currentUser.id, ...data, ...formData })
 
-    setData(updatedData || [])
-    handleClose()
+      // Preparar datos según el esquema de Prisma
+      const clienteData = {
+        id: currentUser.id,
+        rut: data.rut,
+        razonSocial: data.razonSocial,
+        nombreCliente: data.nombreCliente,
+        estado: data.estado,
+        segmento: data.segmento,
+        industria: data.industria,
+        ciudad: data.ciudad,
+        comuna: data.comuna,
+        direccion: data.direccion,
+        telefono: data.telefono,
+        sitioWeb: data.sitioWeb,
+        region: formData.region,
+        pais: formData.pais,
+        clientesContactos: {
+          deleteMany: {},  // Eliminar relaciones existentes
+          create: contactos.map(contacto => ({
+            contacto: {
+              create: {
+                nombre: contacto.contacto.nombre,
+                cargo: contacto.contacto.cargo,
+                email: contacto.contacto.email,
+                telefono1: contacto.contacto.telefono1,
+                telefono2: contacto.contacto.telefono2
+              }
+            },
+            isPrincipal: contacto.isPrincipal || false
+          }))
+        },
+        condicionesComerciales: {
+          update: {
+            vendedor: formData.vendedor,
+            condicionVenta: formData.condicionVenta,
+            observaciones: formData.observaciones
+          }
+        }
+      }
+
+      const response = await fetch(`/api/clientes/${currentUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(clienteData)
+      })
+
+      if (response.ok) {
+        const updatedClient = await response.json()
+        console.log('EditClientForm - Cliente actualizado:', updatedClient)
+
+        // Actualizar la lista local
+        const updatedData = userData?.map(user => 
+          user.id === currentUser.id ? updatedClient : user
+        )
+        setData(updatedData || [])
+
+        toast.success('Cliente actualizado exitosamente')
+        handleClose()
+      } else {
+        throw new Error('Error al actualizar el cliente')
+      }
+    } catch (error) {
+      console.error('EditClientForm - Error:', error)
+      toast.error('Error al actualizar el cliente')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleReset = () => {
     handleClose()
-    setFormData(initialData)
+    setFormData(initialFormData)
+  }
+
+  const agregarContacto = () => {
+    setContactos([...contactos, { contacto: nuevoContacto, isPrincipal: contactos.length === 0 }])
+    setNuevoContacto({
+      nombre: '',
+      cargo: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
+  }
+
+  const eliminarContacto = (index: number) => {
+    setContactos(contactos.filter((_, i) => i !== index))
+  }
+
+  const marcarContactoPrincipal = (index: number) => {
+    setContactos(contactos.map((c, i) => ({
+      ...c,
+      isPrincipal: i === index
+    })))
   }
 
   return (
@@ -151,7 +259,7 @@ const EditClientForm = (props: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5'>Añadir Nuevo Cliente</Typography>
+        <Typography variant='h5' className='text-xl'>Editar Cliente</Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
@@ -171,36 +279,45 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Fecha de Creación'
                     placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.rut && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Estado
-                </InputLabel>
+                <InputLabel id="estado-label">Estado</InputLabel>
                 <Controller
-                  name='status'
+                  name="estado"
                   control={control}
-                  rules={{ required: true }}
+                  defaultValue="active"
                   render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>Activo</MenuItem>
-                      <MenuItem value='active'>Inactivo</MenuItem>
-                      <MenuItem value='inactive'>Bloqueado</MenuItem>
+                    <Select
+                      labelId="estado-label"
+                      label="Estado"
+                      {...field}
+                      error={Boolean(errors.estado)}
+                    >
+                      {ESTADOS_CLIENTE.map(estado => (
+                        <MenuItem key={estado.value} value={estado.value}>
+                          {estado.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
+                {errors.estado && (
+                  <FormHelperText error>
+                    Este campo es requerido
+                  </FormHelperText>
+                )}
               </FormControl>
             </Grid>
           </Grid>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='rut'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -209,14 +326,14 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='ID Cliente (RUT)'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.rut && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='razonSocial'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -225,14 +342,14 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Razón Social'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.razonSocial && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='nombreCliente'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -241,7 +358,7 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Cliente'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreCliente && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
@@ -257,87 +374,89 @@ const EditClientForm = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
-                <InputLabel id='country'>País</InputLabel>
+                <InputLabel>País</InputLabel>
                 <Select
                   fullWidth
                   id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
+                  value={formData.pais}
+                  onChange={e => setFormData({ ...formData, pais: e.target.value })}
                   label='País'
                   labelId='country'
                 >
-                  <MenuItem value='Chile'>Chile</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel id='country'>Región</InputLabel>
-                <Select
-                  fullWidth
-                  id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  label='País'
-                  labelId='country'
-                >
-                  <MenuItem value='Chile'>Arica y Parinacota</MenuItem>
-                  <MenuItem value='Chile'>Tarapacá</MenuItem>
-                  <MenuItem value='Chile'>Antofagasta</MenuItem>
-                  <MenuItem value='Chile'>Atacama</MenuItem>
-                  <MenuItem value='Chile'>Coquimbo</MenuItem>
-                  <MenuItem value='Chile'>Vaparaíso</MenuItem>
-                  <MenuItem value='Chile'>Metropolitana</MenuItem>
-                  <MenuItem value='Chile'>OHiggins</MenuItem>
-                  <MenuItem value='Chile'>Maule</MenuItem>
-                  <MenuItem value='Chile'>Ñuble</MenuItem>
-                  <MenuItem value='Chile'>Biobío</MenuItem>
-                  <MenuItem value='Chile'>La Araucanía</MenuItem>
-                  <MenuItem value='Chile'>Los Ríos</MenuItem>
-                  <MenuItem value='Chile'>Los Lagos</MenuItem>
-                  <MenuItem value='Chile'>Aysén</MenuItem>
-                  <MenuItem value='Chile'>Magallanes</MenuItem>
+                  {PAISES.map(pais => (
+                    <MenuItem key={pais.value} value={pais.value}>{pais.label}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={3}>
-              <Controller
-                name='fullName'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Ciudad'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
+              <FormControl fullWidth>
+                <InputLabel>Región</InputLabel>
+                <Select
+                  value={formData.region}
+                  onChange={e => {
+                    setSelectedRegion(e.target.value)
+                    setFormData({ ...formData, region: e.target.value })
+                  }}
+                  label='Región'
+                >
+                  {Object.keys(REGIONES_CHILE).map(region => (
+                    <MenuItem 
+                      key={region} 
+                      value={region}
+                    >
+                      {region}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
+
             <Grid item xs={12} sm={3}>
-              <Controller
-                name='fullName'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Comuna'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
+              <FormControl fullWidth>
+                <InputLabel>Ciudad</InputLabel>
+                <Select
+                  value={formData.city}
+                  onChange={e => {
+                    setFormData({ ...formData, city: e.target.value })
+                  }}
+                  label='Ciudad'
+                  disabled={!selectedRegion}
+                >
+                  {selectedRegion &&
+                    REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].ciudades.map(ciudad => (
+                      <MenuItem key={ciudad} value={ciudad}>
+                        {ciudad}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth>
+                <InputLabel>Comuna</InputLabel>
+                <Select
+                  value={formData.commune}
+                  onChange={e => setFormData({ ...formData, commune: e.target.value })}
+                  label='Comuna'
+                  disabled={!selectedRegion}
+                >
+                  {selectedRegion &&
+                    REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].comunas.map(comuna => (
+                      <MenuItem key={comuna} value={comuna}>
+                        {comuna}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='direccion'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -346,14 +465,14 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Dirección'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.direccion && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='telefono'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -362,7 +481,7 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Teléfono'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.telefono && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
@@ -370,7 +489,7 @@ const EditClientForm = (props: Props) => {
 
             <Grid item xs={12} sm={4}>
               <Controller
-                name='username'
+                name='sitioWeb'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -379,7 +498,7 @@ const EditClientForm = (props: Props) => {
                     fullWidth
                     label='Web'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.sitioWeb && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
               />
@@ -388,42 +507,44 @@ const EditClientForm = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Segmento
-                </InputLabel>
+                <InputLabel>Segmento</InputLabel>
                 <Controller
-                  name='status'
+                  name="segmento"
                   control={control}
-                  rules={{ required: true }}
                   render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
+                    <Select
+                      label="Segmento"
+                      {...field}
+                      error={Boolean(errors.segmento)}
+                    >
+                      {SEGMENTOS.map(segmento => (
+                        <MenuItem key={segmento.value} value={segmento.value}>
+                          {segmento.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Industria
-                </InputLabel>
+                <InputLabel>Industria</InputLabel>
                 <Controller
-                  name='status'
+                  name='industria'
                   control={control}
                   rules={{ required: true }}
+                  defaultValue={currentUser?.industria || ''}
                   render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
+                    <Select {...field} error={Boolean(errors.industria)}>
+                      {INDUSTRIAS.map(industria => (
+                        <MenuItem key={industria.value} value={industria.value}>
+                          {industria.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
@@ -432,7 +553,6 @@ const EditClientForm = (props: Props) => {
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
             <Grid item xs={6}>
-              {/* Aquí centramos el texto dentro del grid que ocupa el 50% del espacio */}
               <Typography
                 variant='h5'
                 sx={{
@@ -443,23 +563,14 @@ const EditClientForm = (props: Props) => {
               </Typography>
             </Grid>
 
-            <Grid item xs={6} container justifyContent='flex-end'>
-              {/* Alineamos la barra de búsqueda a la derecha dentro del grid que ocupa el 50% del espacio */}
-              <TextField
-                placeholder='Buscar Contacto'
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position='start'>
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{
-                  width: '400px', // Ajusta el ancho si es necesario
-                  height: '40px', // Ajusta la altura si es necesario
-                  '& .MuiInputBase-root': {
-                    height: '100%' // Asegura que el input tenga la altura correcta
+            <Grid item xs={6}>
+              <ContactSearch 
+                onContactSelect={(contact: Contacto) => {
+                  const newContact = {
+                    contacto: contact,
+                    isPrincipal: contactos.length === 0
                   }
+                  setContactos([...contactos, newContact])
                 }}
               />
             </Grid>
@@ -503,86 +614,182 @@ const EditClientForm = (props: Props) => {
                 <TableRow>
                   <TableCell>
                     <TextField
+                      value={nuevoContacto.nombre}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, nombre: e.target.value})}
                       placeholder='Nombre'
                       fullWidth
-                      variant='outlined'
                       size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
+                    />
                   </TableCell>
                   <TableCell>
-                    <FormControl fullWidth size='small'>
-                      <InputLabel>Cargo</InputLabel>
-                      <Select
-                        defaultValue=''
-                        label='Cargo'
+                    <TextField
+                      value={nuevoContacto.cargo}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, cargo: e.target.value})}
+                      placeholder='Cargo'
+                      fullWidth
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      value={nuevoContacto.email}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, email: e.target.value})}
+                      placeholder='Email'
+                      fullWidth
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      value={nuevoContacto.telefono1}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono1: e.target.value})}
+                      placeholder='Teléfono 1'
+                      fullWidth
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      value={nuevoContacto.telefono2}
+                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono2: e.target.value})}
+                      placeholder='Teléfono 2'
+                      fullWidth
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton onClick={agregarContacto}>
+                      <i className='ri-add-line' />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+
+                {contactos.map((contacto, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <TextField
+                        value={contacto.contacto.nombre}
+                        onChange={e => {
+                          const updatedContactos = [...contactos]
+                          updatedContactos[index] = {
+                            ...contacto,
+                            contacto: {
+                              ...contacto.contacto,
+                              nombre: e.target.value
+                            }
+                          }
+                          setContactos(updatedContactos)
+                        }}
+                        placeholder='Nombre'
+                        fullWidth
+                        size='small'
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={contacto.contacto.cargo}
+                        onChange={e => {
+                          const updatedContactos = [...contactos]
+                          updatedContactos[index] = {
+                            ...contacto,
+                            contacto: {
+                              ...contacto.contacto,
+                              cargo: e.target.value
+                            }
+                          }
+                          setContactos(updatedContactos)
+                        }}
+                        placeholder='Cargo'
+                        fullWidth
+                        size='small'
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {' '}
+                      <TextField
+                        placeholder='Email'
+                        fullWidth
+                        variant='outlined'
+                        size='small'
                         sx={{
                           width: '200px',
                           height: '40px'
                         }}
-                      >
-                        <MenuItem value='Gerente'>Cargo</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Email'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Teléfono 1'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Teléfono 2'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
+                        value={contacto.contacto.email}
+                        onChange={e => {
+                          const updatedContactos = [...contactos]
+                          updatedContactos[index] = {
+                            ...contacto,
+                            contacto: {
+                              ...contacto.contacto,
+                              email: e.target.value
+                            }
+                          }
+                          setContactos(updatedContactos)
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {' '}
+                      <TextField
+                        placeholder='Teléfono 1'
+                        fullWidth
+                        variant='outlined'
+                        size='small'
+                        sx={{
+                          width: '200px',
+                          height: '40px'
+                        }}
+                        value={contacto.contacto.telefono1}
+                        onChange={e => {
+                          const updatedContactos = [...contactos]
+                          updatedContactos[index] = {
+                            ...contacto,
+                            contacto: {
+                              ...contacto.contacto,
+                              telefono1: e.target.value
+                            }
+                          }
+                          setContactos(updatedContactos)
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {' '}
+                      <TextField
+                        placeholder='Teléfono 2'
+                        fullWidth
+                        variant='outlined'
+                        size='small'
+                        sx={{
+                          width: '200px',
+                          height: '40px'
+                        }}
+                        value={contacto.contacto.telefono2}
+                        onChange={e => {
+                          const updatedContactos = [...contactos]
+                          updatedContactos[index] = {
+                            ...contacto,
+                            contacto: {
+                              ...contacto.contacto,
+                              telefono2: e.target.value
+                            }
+                          }
+                          setContactos(updatedContactos)
+                        }}
+                      />
+                    </TableCell>
 
-                  <TableCell>
-                    <IconButton size='small'>
-                      <i className='ri-add-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-edit-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-star-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-delete-bin-line' />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
+                    <TableCell>
+                      <IconButton size='small' onClick={() => marcarContactoPrincipal(index)}>
+                        <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                      </IconButton>
+                      <IconButton size='small' onClick={() => eliminarContacto(index)}>
+                        <i className='ri-delete-bin-line' />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -594,25 +801,51 @@ const EditClientForm = (props: Props) => {
             <Grid item xs={12} sm={4}>
               <FormControl fullWidth>
                 <InputLabel>Vendedor</InputLabel>
-                <Select>
-                  <MenuItem value='Vendedor 1'>Vendedor 1</MenuItem>
-                  <MenuItem value='Vendedor 2'>Vendedor 2</MenuItem>
+                <Select
+                  value={formData.vendedor}
+                  onChange={e => setFormData({ ...formData, vendedor: e.target.value })}
+                >
+                  {VENDEDORES.map(vendedor => (
+                    <MenuItem key={vendedor.value} value={vendedor.value}>
+                      {vendedor.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Condiciones de Venta' placeholder='' />
+              <TextField 
+                fullWidth 
+                label='Condiciones de Venta' 
+                value={formData.condicionVenta}
+                onChange={e => setFormData({ ...formData, condicionVenta: e.target.value })}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Observaciones' placeholder='' />
+              <TextField 
+                fullWidth 
+                label='Observaciones' 
+                value={formData.observaciones}
+                onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
+              />
             </Grid>
           </Grid>
 
           <div className='flex items-center gap-4 mt-5'>
-            <Button variant='contained' type='submit'>
-              Guardar
+            <Button 
+              variant='contained' 
+              type='submit'
+              disabled={Object.keys(errors).length > 0 || isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
+            <Button 
+              variant='outlined' 
+              color='error' 
+              disabled={isSubmitting}
+              onClick={handleReset}
+            >
               Cancelar
             </Button>
           </div>

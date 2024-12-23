@@ -47,7 +47,7 @@ import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddWork'
+import AddWorkDrawer from './AddWork'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 
@@ -65,6 +65,25 @@ declare module '@tanstack/table-core' {
   interface FilterMeta {
     itemRank: RankingInfo
   }
+}
+
+type WorkType = {
+  id: string
+  numeroObra: string
+  fechaIngreso: string
+  estado: string
+  estadoObra: string
+  nombreObra: string
+  direccion: string
+  rut: string
+  nombreCliente: string
+  company: string
+  country: string
+  contact: string
+}
+
+type WorkTypeWithAction = WorkType & {
+  action?: string
 }
 
 type UsersTypeWithAction = UsersType & {
@@ -140,20 +159,21 @@ const userStatusObj: UserStatusType = {
 }
 
 // Column Definitions
-const columnHelper = createColumnHelper<UsersTypeWithAction>()
+const columnHelper = createColumnHelper<WorkTypeWithAction>()
 
-const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
+  const [data, setData] = useState<WorkTypeWithAction[]>([])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
 
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang as string || 'es'
 
-  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+  const columns = useMemo<ColumnDef<WorkTypeWithAction, any>[]>(
     () => [
       {
         id: 'select',
@@ -177,59 +197,41 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           />
         )
       },
-      columnHelper.accessor('fullName', {
-        header: 'User',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
-              </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          </div>
-        )
+      columnHelper.accessor('numeroObra', {
+        header: 'Número Obra',
+        cell: ({ row }) => <Typography>{row.original.numeroObra}</Typography>
       }),
-      columnHelper.accessor('email', {
-        header: 'Email',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+      columnHelper.accessor('estado', {
+        header: 'Estado',
+        cell: ({ row }) => <Typography>{row.original.estado}</Typography>
       }),
-      columnHelper.accessor('role', {
-        header: 'Role',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
+      columnHelper.accessor('nombreObra', {
+        header: 'Nombre Obra',
+        cell: ({ row }) => <Typography>{row.original.nombreObra}</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Plan',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('direccion', {
+        header: 'Dirección',
+        cell: ({ row }) => <Typography>{row.original.direccion}</Typography>
       }),
-      columnHelper.accessor('status', {
-        header: 'Status',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
-        )
+      columnHelper.accessor('rut', {
+        header: 'RUT',
+        cell: ({ row }) => <Typography>{row.original.rut}</Typography>
+      }),
+      columnHelper.accessor('nombreCliente', {
+        header: 'Nombre Cliente',
+        cell: ({ row }) => <Typography>{row.original.nombreCliente}</Typography>
+      }),
+      columnHelper.accessor('company', {
+        header: 'Company',
+        cell: ({ row }) => <Typography>{row.original.company}</Typography>
+      }),
+      columnHelper.accessor('country', {
+        header: 'Country',
+        cell: ({ row }) => <Typography>{row.original.country}</Typography>
+      }),
+      columnHelper.accessor('contact', {
+        header: 'Contact',
+        cell: ({ row }) => <Typography>{row.original.contact}</Typography>
       }),
       columnHelper.accessor('action', {
         header: 'Action',
@@ -264,12 +266,11 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, filteredData]
+    []
   )
 
   const table = useReactTable({
-    data: filteredData as UsersType[],
+    data: filteredData as WorkTypeWithAction[],
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -308,6 +309,19 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         </CustomAvatar>
       )
     }
+  }
+
+  const renderClient = (row: WorkType) => {
+    return (
+      <div className='flex items-center'>
+        {row.nombreCliente ? getInitials(row.nombreCliente) : ''}
+        <div className='flex flex-col'>
+          <Typography className='font-medium' color='text.primary'>
+            {row.nombreCliente}
+          </Typography>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -426,7 +440,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
-      <AddUserDrawer
+      <AddWorkDrawer
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}
         userData={data}

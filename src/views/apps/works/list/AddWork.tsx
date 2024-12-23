@@ -29,23 +29,39 @@ import SearchIcon from '@mui/icons-material/Search'
 import { useForm, Controller } from 'react-hook-form'
 
 // Types Imports
-import type { UsersType } from '@/types/apps/userTypes'
+type WorkType = {
+  id: string
+  numeroObra: string
+  fechaIngreso: string
+  estado: string
+  estadoObra: string
+  nombreObra: string
+  direccion: string
+  rut: string
+  nombreCliente: string
+  company: string
+  country: string
+  contact: string
+}
 
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: UsersType[]
-  setData: (data: UsersType[]) => void
+  userData?: WorkType[]
+  setData: (data: WorkType[]) => void
 }
 
 type FormValidateType = {
+  numeroObra: string
+  fechaIngreso: string
+  estado: string
+  estadoObra: string
+  nombreObra: string
+  direccion: string
   rut: string
-  fullName: string
-  username: string
-  email: string
-  role: string
-  plan: string
-  status: string
+  nombreCliente: string
+  telefono: string
+  web: string
 }
 
 type FormNonValidateType = {
@@ -76,36 +92,50 @@ const AddUserDrawer = (props: Props) => {
     formState: { errors }
   } = useForm<FormValidateType>({
     defaultValues: {
+      numeroObra: '',
+      fechaIngreso: '',
+      estado: '',
+      estadoObra: '',
+      nombreObra: '',
+      direccion: '',
       rut: '',
-      fullName: '',
-      username: '',
-      email: '',
-      role: '',
-      plan: '',
-      status: ''
+      nombreCliente: '',
+      telefono: '',
+      web: ''
     }
   })
 
   const onSubmit = (data: FormValidateType) => {
-    const newUser: UsersType = {
-      id: (userData?.length && userData?.length + 1) || 1,
-      avatar: `/images/avatars/${Math.floor(Math.random() * 8) + 1}.png`,
+    const newWork: WorkType = {
+      id: String((userData?.length && userData?.length + 1) || 1),
       rut: data.rut,
-      fullName: data.fullName,
-      username: data.username,
-      email: data.email,
-      role: data.role,
-      currentPlan: data.plan,
-      status: data.status,
+      numeroObra: data.numeroObra,
+      fechaIngreso: data.fechaIngreso,
+      estado: data.estado,
+      estadoObra: data.estadoObra,
+      nombreObra: data.nombreObra,
+      direccion: data.direccion,
+      nombreCliente: data.nombreCliente,
       company: formData.company,
       country: formData.country,
       contact: formData.contact
     }
 
-    setData([...(userData ?? []), newUser])
+    setData([...(userData ?? []), newWork])
     handleClose()
     setFormData(initialData)
-    resetForm({ fullName: '', username: '', email: '', role: '', plan: '', status: '' })
+    resetForm({
+      numeroObra: '',
+      fechaIngreso: '',
+      estado: '',
+      estadoObra: '',
+      nombreObra: '',
+      direccion: '',
+      rut: '',
+      nombreCliente: '',
+      telefono: '',
+      web: ''
+    })
   }
 
   const handleReset = () => {
@@ -203,7 +233,7 @@ const AddUserDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <Controller
-                name='fullName'
+                name='rut'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -212,14 +242,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='RUT'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.rut && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <Controller
-                name='fullName'
+                name='nombreCliente'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -228,7 +258,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Nombre del Cliente'
                     placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreCliente && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
@@ -242,9 +272,9 @@ const AddUserDrawer = (props: Props) => {
             <Grid item xs={12} sm={3}></Grid>
           </Grid>
           <Grid container spacing={5}>
-            <Grid item xs={12} sm={12}>
+            <Grid item xs={12} sm={4}>
               <Controller
-                name='fullName'
+                name='nombreObra'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -253,14 +283,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Nombre Obra'
                     placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreObra && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <Controller
-                name='username'
+                name='direccion'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -269,7 +299,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Dirección'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.direccion && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
@@ -309,23 +339,23 @@ const AddUserDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='fullName'
+                name='nombreObra'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='Comuna'
+                    label='Nombre Obra'
                     placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreObra && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='username'
+                name='direccion'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -334,14 +364,14 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Dirección'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.direccion && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <Controller
-                name='username'
+                name='telefono'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -350,7 +380,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Teléfono'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.telefono && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
@@ -358,7 +388,7 @@ const AddUserDrawer = (props: Props) => {
 
             <Grid item xs={12} sm={3}>
               <Controller
-                name='username'
+                name='web'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -367,7 +397,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Web'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.web && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
@@ -376,7 +406,7 @@ const AddUserDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={5}>
               <Controller
-                name='username'
+                name='nombreObra'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -385,7 +415,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Dirección'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreObra && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />
@@ -397,7 +427,7 @@ const AddUserDrawer = (props: Props) => {
 
             <Grid item xs={12} sm={5}>
               <Controller
-                name='username'
+                name='nombreObra'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
@@ -406,7 +436,7 @@ const AddUserDrawer = (props: Props) => {
                     fullWidth
                     label='Texto Mandante'
                     placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreObra && { error: true, helperText: 'This field is required.' })}
                   />
                 )}
               />

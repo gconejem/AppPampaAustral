@@ -44,18 +44,17 @@ const PickersRange = () => {
   return (
     <Grid container spacing={6}>
       <Grid item xs={12}>
-        {/* Ajustar el tamaño y la alineación del Datepicker */}
         <div style={{ maxWidth: '250px', marginLeft: '0px' }}>
           <AppReactDatepicker
             selectsRange
-            endDate={endDate}
-            selected={startDate}
-            startDate={startDate}
+            endDate={endDate || undefined}
+            selected={startDate || undefined}
+            startDate={startDate || undefined}
             id='date-range-picker'
             onChange={handleOnChange}
             shouldCloseOnSelect={false}
             customInput={
-              <CustomInput label='Rango de Fechas' start={startDate as Date | number} end={endDate as Date | number} />
+              <CustomInput label='Rango de Fechas' start={startDate || new Date()} end={endDate || new Date()} />
             }
           />
         </div>

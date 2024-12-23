@@ -1,20 +1,89 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { createCliente, getClientes, getClienteById, updateCliente, deleteCliente } from './index'
 
+// GET - Obtener todos los clientes
 export async function GET() {
   try {
     const clientes = await prisma.cliente.findMany({
       include: {
-        contactos: true,
+        clientesContactos: {
+          include: {
+            contacto: true
+          }
+        },
         condicionesComerciales: true
+      },
+      orderBy: {
+        fechaCreacion: 'desc'
       }
     })
 
-    return NextResponse.json(clientes)
+    return new Response(JSON.stringify(clientes))
   } catch (error) {
-    console.error('Error fetching clients:', error)
+    console.error('Error al obtener clientes:', error)
+    return new Response(JSON.stringify({ error: 'Error al obtener clientes' }), { status: 500 })
+  }
+}
+
+// POST - Crear un nuevo cliente
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const cliente = await createCliente(body)
+    return NextResponse.json(cliente, { status: 201 })
+  } catch (error) {
+    console.error('Error creating client:', error)
     return NextResponse.json(
-      { error: 'Error al obtener los clientes' },
+      { error: 'Error al crear el cliente' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT - Actualizar un cliente
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json()
+    const { id, ...data } = body
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID del cliente es requerido' },
+        { status: 400 }
+      )
+    }
+
+    const cliente = await updateCliente(id, data)
+    return NextResponse.json(cliente)
+  } catch (error) {
+    console.error('Error updating client:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar el cliente' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Eliminar un cliente
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID del cliente es requerido' },
+        { status: 400 }
+      )
+    }
+
+    await deleteCliente(Number(id))
+    return NextResponse.json({ message: 'Cliente eliminado correctamente' })
+  } catch (error) {
+    console.error('Error deleting client:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar el cliente' },
       { status: 500 }
     )
   }

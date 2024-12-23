@@ -13,25 +13,26 @@ import Select from '@mui/material/Select'
 import PickersRange from './date' // Asegúrate de que esta importación esté correctamente referenciada
 
 // Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { ContactType } from '@/types/apps/contactTypes'
 
-const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => void; tableData?: UsersType[] }) => {
+type Props = {
+  setData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
+  tableData?: ContactType[]
+}
+
+const TableFilters = ({ setData, tableData }: Props) => {
   // States
-  const [role, setRole] = useState<UsersType['role']>('')
-  const [plan, setPlan] = useState<UsersType['currentPlan']>('')
-  const [status] = useState<UsersType['status']>('')
+  const [nombre, setNombre] = useState('')
+  const [estado, setEstado] = useState('')
 
   useEffect(() => {
     const filteredData = tableData?.filter(user => {
-      if (role && user.role !== role) return false
-      if (plan && user.currentPlan !== plan) return false
-      if (status && user.status !== status) return false
-
+      if (nombre && user.nombre !== nombre) return false
       return true
     })
 
     setData(filteredData || [])
-  }, [role, plan, status, tableData, setData])
+  }, [nombre, tableData, setData])
 
   return (
     <CardContent>
@@ -49,8 +50,8 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             <Select
               fullWidth
               id='select-role'
-              value={role}
-              onChange={e => setRole(e.target.value)}
+              value={estado}
+              onChange={e => setEstado(e.target.value)}
               label='Estado'
               labelId='role-select'
             >
@@ -65,8 +66,8 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             <Select
               fullWidth
               id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
               label='Industria'
               labelId='plan-select'
             >

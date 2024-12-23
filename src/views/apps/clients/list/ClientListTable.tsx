@@ -6,10 +6,8 @@ import { useEffect, useState, useMemo } from 'react'
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import type { Params } from 'next/dist/shared/lib/router/utils/route-matcher'
 
 // MUI Imports
-
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -21,20 +19,21 @@ import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
 import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
+import InputAdornment from '@mui/material/InputAdornment'
 import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
+import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
-import DialogTitle from '@mui/material/DialogTitle'
-import type { TextFieldProps } from '@mui/material/TextField'
-import InputAdornment from '@mui/material/InputAdornment'
-
-// DatePicker Imports
-import 'react-datepicker/dist/react-datepicker.css'
+import DialogActions from '@mui/material/DialogActions'
+import Tooltip from '@mui/material/Tooltip'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
+import { toast } from 'react-hot-toast'
 import {
   createColumnHelper,
   flexRender,
@@ -45,274 +44,300 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   getPaginationRowModel,
-  getSortedRowModel
+  getSortedRowModel,
+  Table,
+  Row
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
-import type { ThemeColor } from '@core/types'
-import type { Cliente } from '@/types/cliente'
-import type { Locale } from '@configs/i18n'
+import type { Cliente } from '@/types/forms/cliente'
+
+// Interface Props
+interface Props {
+  userData: Cliente[]
+  setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
+}
 
 // Component Imports
-
-import EditClientForm from '../edit/EditClientForm'
 import TableFilters from './TableFilters'
-import AddUserDrawer from './AddClient'
+import AddClient from './AddClient'
+import EditClientForm from '../edit/EditClientForm'
 import OptionMenu from '@core/components/option-menu'
-
-// Util Imports
-import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-declare module '@tanstack/table-core' {
-  interface FilterFns {
-    fuzzy: FilterFn<unknown>
-  }
-  interface FilterMeta {
-    itemRank: RankingInfo
-  }
-}
+// Column Helper
+const columnHelper = createColumnHelper<Cliente>()
 
-type ClienteWithAction = Cliente & {
-  action?: string
-}
-
-type UserRoleType = {
-  [key: string]: { icon: string; color: string }
-}
-
-type UserStatusType = {
-  [key: string]: ThemeColor
-}
-
-// Styled Components
-const Icon = styled('i')({})
-
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
+const fuzzyFilter = (row: any, columnId: string, value: string, addMeta: any) => {
   const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
+  addMeta({ itemRank })
   return itemRank.passed
 }
 
-const DebouncedInput = ({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number
-  onChange: (value: string | number) => void
-  debounce?: number
-} & Omit<TextFieldProps, 'onChange'>) => {
-  // States
-  const [value, setValue] = useState(initialValue)
-
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value)
-    }, debounce)
-
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-
-  return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
+// Cerca del inicio del archivo, definir el objeto de configuración de segmentos
+const segmentConfig = {
+  corporativo: {
+    icon: 'ri-building-line',
+    color: 'primary'
+  },
+  pyme: {
+    icon: 'ri-store-2-line',
+    color: 'success'
+  },
+  retail: {
+    icon: 'ri-shopping-bag-line',
+    color: 'warning'
+  },
+  gobierno: {
+    icon: 'ri-government-line',
+    color: 'info'
+  },
+  institucional: {
+    icon: 'ri-bank-line',
+    color: 'secondary'
+  },
+  industrial: {
+    icon: 'ri-factory-line',
+    color: 'error'
+  }
 }
 
-// Vars
-const userRoleObj: UserRoleType = {
-  Corporativo: { icon: 'ri-vip-crown-line', color: 'primary' },
-  Pyme: { icon: 'ri-computer-line', color: 'warning' },
-  Retail: { icon: 'ri-store-2-line', color: 'success' },
-  Gobierno: { icon: 'ri-government-line', color: 'info' }
+// Nuevo componente para el modal de contactos
+const ContactsModal = ({ open, handleClose, contacts }: { 
+  open: boolean
+  handleClose: () => void
+  contacts: any[]
+}) => {
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Contactos del Cliente</DialogTitle>
+      <DialogContent>
+        {contacts.map((contact, index) => (
+          <div key={index} className="mb-4 p-4 border rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="ri-user-line text-primary" />
+              <Typography variant="subtitle1">{contact.contacto.nombre}</Typography>
+              {contact.isPrincipal && (
+                <Chip label="Principal" size="small" color="primary" />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <i className="ri-briefcase-line text-textSecondary" />
+                <Typography>{contact.contacto.cargo}</Typography>
+              </div>
+              <div className="flex items-center gap-2">
+                <i className="ri-mail-line text-textSecondary" />
+                <Typography>{contact.contacto.email}</Typography>
+              </div>
+              <div className="flex items-center gap-2">
+                <i className="ri-phone-line text-textSecondary" />
+                <Typography>{contact.contacto.telefono1}</Typography>
+              </div>
+              {contact.contacto.telefono2 && (
+                <div className="flex items-center gap-2">
+                  <i className="ri-phone-line text-textSecondary" />
+                  <Typography>{contact.contacto.telefono2}</Typography>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>Cerrar</Button>
+      </DialogActions>
+    </Dialog>
+  )
 }
 
-const userStatusObj: UserStatusType = {
-  active: 'success',
-  pending: 'warning',
-  inactive: 'secondary'
-}
-
-// Column Definitions
-const columnHelper = createColumnHelper<ClienteWithAction>()
-
-const ClientListTable = ({ tableData }: { tableData?: Cliente[] }) => {
+const ClientListTable = ({ userData, setData }: Props) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
+  const [editUserOpen, setEditUserOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<Cliente | null>(null)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState<Cliente[]>(tableData || [])
-  const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [currentClient, setCurrentClient] = useState<Cliente | null>(null)
+  const [filteredData, setFilteredData] = useState<Cliente[]>(userData || [])
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<ClienteWithAction | null>(null)
+  const [contactsModalOpen, setContactsModalOpen] = useState(false)
+  const [selectedContacts, setSelectedContacts] = useState<any[]>([])
 
-  // Hooks
-  const params = useParams()
-  const locale = params?.lang as Locale
+  useEffect(() => {
+    setFilteredData(userData || [])
+  }, [userData])
 
-  const handleClickOpenDialog = (user: ClienteWithAction) => {
-    setSelectedUser(user)
-    setOpenDialog(true)
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clientes/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Actualizar la lista local
+        const updatedData = userData.filter(client => client.id !== id)
+        setData(updatedData)
+        setFilteredData(updatedData)
+        toast.success('Cliente eliminado exitosamente')
+        handleCloseDialog()
+      } else {
+        throw new Error('Error al eliminar el cliente')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al eliminar el cliente')
+    }
   }
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
   }
 
-  const handleEditClient = (client: Cliente) => {
-    setCurrentClient(client)
-    setIsEditOpen(true)
+  const handleClickOpenDialog = (client: Cliente) => {
+    setSelectedUser(client)
+    setOpenDialog(true)
   }
 
-  const columns = useMemo<ColumnDef<ClienteWithAction, any>[]>(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('rut', {
-        header: 'Rut',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.rut}
-              </Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('nombreCliente', {
-        header: 'Nombre comercial',
-        cell: ({ row }) => <Typography>{row.original.nombreCliente}</Typography>
-      }),
-      columnHelper.accessor('segmento', {
-        header: 'Segmento',
-        cell: ({ row }) => (
+  const columns = useMemo(() => [
+    {
+      id: 'select',
+      header: ({ table }: { table: Table<Cliente> }) => (
+        <Checkbox
+          checked={table.getIsAllRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+        />
+      ),
+      cell: ({ row }: { row: Row<Cliente> }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      )
+    },
+    columnHelper.accessor('rut', {
+      header: 'RUT',
+      cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>
+    }),
+    columnHelper.accessor('razonSocial', {
+      header: 'NOMBRE COMERCIAL',
+      cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.nombreCliente}</Typography>
+    }),
+    columnHelper.accessor('segmento', {
+      header: 'SEGMENTO',
+      cell: ({ row }: { row: Row<Cliente> }) => {
+        const segment = row.original.segmento?.toLowerCase()
+        return (
           <div className='flex items-center gap-2'>
-            {row.original.segmento && userRoleObj[row.original.segmento] && (
+            {segment === 'corporativo' && (
               <>
-                <Icon
-                  className={`text-${userRoleObj[row.original.segmento].color}`}
-                  sx={{ fontSize: '1.375rem' }}
-                >
-                  {userRoleObj[row.original.segmento].icon}
-                </Icon>
-                <Typography className='capitalize' color='text.primary'>
-                  {row.original.segmento}
-                </Typography>
+                <i className='ri-building-line text-primary' />
+                <Typography>Corporativo</Typography>
+              </>
+            )}
+            {segment === 'pyme' && (
+              <>
+                <i className='ri-store-2-line text-success' />
+                <Typography>Pyme</Typography>
+              </>
+            )}
+            {segment === 'retail' && (
+              <>
+                <i className='ri-shopping-bag-line text-warning' />
+                <Typography>Retail</Typography>
+              </>
+            )}
+            {segment === 'gobierno' && (
+              <>
+                <i className='ri-government-line text-info' />
+                <Typography>Gobierno</Typography>
+              </>
+            )}
+            {segment === 'institucional' && (
+              <>
+                <i className='ri-bank-line text-secondary' />
+                <Typography>Institucional</Typography>
+              </>
+            )}
+            {segment === 'industrial' && (
+              <>
+                <i className='ri-factory-line text-error' />
+                <Typography>Industrial</Typography>
               </>
             )}
           </div>
         )
-      }),
-      columnHelper.accessor('contactos', {
-        header: 'Contacto',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.contactos?.[0]?.nombre || 'Sin contacto'}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('estado', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.estado}
-              size='small'
-              color={userStatusObj[row.original.estado as keyof typeof userStatusObj]}
-              className='capitalize'
+      }
+    }),
+    columnHelper.accessor('clientesContactos', {
+      header: 'CONTACTO',
+      cell: ({ row }: { row: Row<Cliente> }) => {
+        const contacts = row.original.clientesContactos || []
+        const hasContacts = contacts.length > 0
+        
+        return (
+          <div className="flex items-center gap-2">
+            <div 
+              className={`w-2 h-2 rounded-full ${
+                hasContacts ? 'bg-success' : 'bg-error'
+              }`} 
             />
-          </div>
-        )
-      }),
-      columnHelper.accessor('action', {
-        header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton>
-              <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
-            </IconButton>
-
-            <IconButton
+            <Button
+              variant="text"
+              size="small"
               onClick={() => {
-                setCurrentClient(row.original) // Asigna el cliente actual
-                setIsEditOpen(true) // Abre el formulario de edición
-              }}
-            >
-              <i className='ri-edit-box-line text-textSecondary' />
-            </IconButton>
-
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Estado',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Editar',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Eliminar',
-                  menuItemProps: {
-                    className: 'flex items-center gap-2 text-textSecondary',
-                    onClick: () => handleClickOpenDialog(row.original)
-                  }
+                if (hasContacts) {
+                  setSelectedContacts(contacts)
+                  setContactsModalOpen(true)
                 }
-              ]}
-            />
+              }}
+              disabled={!hasContacts}
+            >
+              {hasContacts ? `${contacts.length} contacto${contacts.length > 1 ? 's' : ''}` : 'Sin contactos'}
+            </Button>
           </div>
-        ),
-        enableSorting: false
-      })
-    ],
-    [data, filteredData]
-  )
+        )
+      }
+    }),
+    columnHelper.accessor('estado', {
+      header: 'ESTADO',
+      cell: ({ row }: { row: Row<Cliente> }) => (
+        <Chip 
+          label={row.original.estado} 
+          color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
+          size="small"
+        />
+      )
+    }),
+    {
+      id: 'actions',
+      header: 'ACCIONES',
+      cell: ({ row }: { row: Row<Cliente> }) => (
+        <div className='flex items-center'>
+          <IconButton 
+            onClick={() => {
+              setSelectedUser(row.original)
+              setEditUserOpen(true)
+            }}
+            size="small"
+          >
+            <i className="ri-pencil-line text-[16px] text-[#3366FF]" />
+          </IconButton>
+          <IconButton 
+            onClick={() => handleClickOpenDialog(row.original)}
+            size="small"
+            sx={{ '&:hover': { color: '#FF4C51' } }}
+          >
+            <i className="ri-delete-bin-6-line text-[16px] text-[#FF4C51]" />
+          </IconButton>
+        </div>
+      )
+    }
+  ], [])
 
   const table = useReactTable({
-    data: filteredData as Cliente[],
+    data: filteredData,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -321,12 +346,13 @@ const ClientListTable = ({ tableData }: { tableData?: Cliente[] }) => {
       rowSelection,
       globalFilter
     },
+    enableRowSelection: true,
+    manualPagination: false,
     initialState: {
       pagination: {
         pageSize: 10
       }
     },
-    enableRowSelection: true, //enable row selection for all rows
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -339,66 +365,21 @@ const ClientListTable = ({ tableData }: { tableData?: Cliente[] }) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const response = await fetch('/api/clientes')
-        const clientes = await response.json()
-        setData(clientes)
-        setFilteredData(clientes)
-      } catch (error) {
-        console.error('Error fetching clients:', error)
-      }
-    }
-
-    fetchClientes()
-  }, [])
-
   return (
     <>
       <Card>
         <CardHeader
-          title={<span className='text-xl '>Clientes</span>}
-          action={
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              + Nuevo Cliente
-            </Button>
-          }
+          title={<span className='text-xl'>Clientes</span>}
         />
-        <TableFilters setData={setFilteredData} tableData={data} />
-        <Divider />
-        <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          <Button
-            color='secondary'
-            variant='outlined'
-            startIcon={<i className='ri-upload-2-line text-xl' />}
-            className='max-sm:is-full'
-          >
-            Exportar
-          </Button>
 
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
-              style={{ width: '500px' }}
-              className='max-sm:is-full min-is-[200px]'
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position='start'>
-                    <i className='ri-search-line' /> {/* Icono de búsqueda */}
-                  </InputAdornment>
-                ),
-                sx: {
-                  padding: '8px', // Ajustamos el relleno para hacerlo más amplio
-                  borderRadius: '8px', // Borde redondeado similar a la imagen
-                  border: '1px solid #E0E0E0' // Color suave para el borde
-                }
-              }}
-            />
-          </div>
-        </div>
+        <TableFilters 
+          setData={setFilteredData} 
+          data={userData}
+          toggleAddUserDrawer={() => setAddUserOpen(!addUserOpen)}
+        />
+        <Divider />
+        
+        {/* Tabla con el mismo estilo que WorkListTable */}
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
             <thead>
@@ -406,114 +387,87 @@ const ClientListTable = ({ tableData }: { tableData?: Cliente[] }) => {
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
+                      {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
               ))}
             </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
+            <tbody>
+              {table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
+                  <td colSpan={table.getAllColumns().length} className='text-center p-4'>
+                    No hay datos disponibles
                   </td>
                 </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
+              ) : (
+                table.getRowModel().rows.map(row => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
         </div>
+        
         <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
           component='div'
-          className='border-bs'
+          rowsPerPageOptions={[10, 25, 50]}
           count={table.getFilteredRowModel().rows.length}
           rowsPerPage={table.getState().pagination.pageSize}
           page={table.getState().pagination.pageIndex}
-          SelectProps={{
-            inputProps: { 'aria-label': 'rows per page' }
-          }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
+          onPageChange={(_, page) => table.setPageIndex(page)}
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
+
+        <AddClient
+          open={addUserOpen}
+          handleClose={() => setAddUserOpen(false)}
+          userData={userData}
+          setData={setData}
+        />
+
+        {selectedUser && (
+          <EditClientForm
+            open={editUserOpen}
+            handleClose={() => setEditUserOpen(false)}
+            userData={userData}
+            setData={setData}
+            currentUser={selectedUser}
+          />
+        )}
       </Card>
-      <AddUserDrawer
-        open={addUserOpen}
-        handleClose={() => setAddUserOpen(!addUserOpen)}
-        userData={data}
-        setData={setData}
-      />
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        aria-labelledby='alert-dialog-title'
-        aria-describedby='alert-dialog-description'
-      >
-        <DialogTitle id='alert-dialog-title'>Eliminar Cliente</DialogTitle>
+      {/* Diálogo de confirmación para eliminar */}
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
-          <DialogContentText id='alert-dialog-description'>
-            ¿Seguro que desea eliminar el Cliente elegido?
+          <DialogContentText>
+            ¿Está seguro que desea eliminar este cliente?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color='secondary'>
-            Cerrar
+          <Button onClick={handleCloseDialog} color='primary'>
+            Cancelar
           </Button>
-          <Button
-            onClick={() => {
-              if (selectedUser) {
-                setData(data?.filter(user => user.id !== selectedUser.id))
-              }
-
-              handleCloseDialog()
-            }}
-            color='primary'
-            autoFocus
+          <Button 
+            onClick={() => selectedUser?.id && handleDelete(selectedUser.id)} 
+            color='error' 
+            variant='contained'
           >
             Eliminar
           </Button>
         </DialogActions>
       </Dialog>
-
-      <EditClientForm
-        open={isEditOpen}
-        handleClose={() => setIsEditOpen(false)}
-        userData={data}
-        setData={setData}
-        currentUser={currentClient || data[0]}
+      
+      <ContactsModal 
+        open={contactsModalOpen}
+        handleClose={() => setContactsModalOpen(false)}
+        contacts={selectedContacts}
       />
     </>
   )

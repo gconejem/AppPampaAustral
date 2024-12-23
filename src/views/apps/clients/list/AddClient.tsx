@@ -24,6 +24,11 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import CircularProgress from '@mui/material/CircularProgress'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -31,93 +36,30 @@ import axios from 'axios'
 import { toast } from 'react-hot-toast' // Para notificaciones
 
 // Types Imports
-import type { Cliente } from '@/types/cliente'
+import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
+import { initialFormData } from '@/types/forms/cliente'
+
+// Import data
+import { PAISES, REGIONES_CHILE, SEGMENTOS, INDUSTRIAS, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
+
+// Import components
+import ContactSearch from '../components/ContactSearch'
 
 type Props = {
   open: boolean
   handleClose: () => void
   userData?: Cliente[]
-  setData: (data: Cliente[]) => void
+  setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
 }
 
-type FormValidateType = {
-  rut: string
-  status: string
-  razonSocial: string
-  nombreCliente: string
-  ciudad: string
-  comuna: string
-  direccion: string
-  telefono: string
-  sitioWeb: string
-  segmento: string
-  industria: string
-  vendedor: string
-  condicionesVenta: string
-  observaciones: string
-  fechaCreacion: string
-}
 
-type FormNonValidateType = {
-  company: string
-  country: string
-  contact: string
-  pais: string
-  region: string
-}
-
-type Contacto = {
-  nombre: string
-  cargo: string
-  email: string
-  telefono1: string
-  telefono2: string
-}
-
-// Vars
-const initialData = {
-  company: '',
-  country: '',
-  contact: '',
-  pais: '',
-  region: ''
-}
-
-type RegionData = {
-  [key in 'Metropolitana' | 'Valparaíso' | 'Biobío']: {
-    ciudades: string[]
-    comunas: string[]
-  }
-}
-
-// Datos dummy para los selects
-const DUMMY_DATA = {
-  segmentos: ['Corporativo', 'Pyme', 'Retail', 'Gobierno'],
-  industrias: ['Tecnología', 'Manufactura', 'Retail', 'Servicios', 'Construcción'],
-  paises: ['Chile'],
-  regiones: {
-    'Metropolitana': {
-      ciudades: ['Santiago', 'Puente Alto', 'Maipú'],
-      comunas: ['Las Condes', 'Providencia', 'Santiago Centro', 'Ñuñoa']
-    },
-    'Valparaíso': {
-      ciudades: ['Valparaíso', 'Viña del Mar', 'Quilpué'],
-      comunas: ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana']
-    },
-    'Biobío': {
-      ciudades: ['Concepción', 'Talcahuano', 'Chillán'],
-      comunas: ['Concepción', 'Talcahuano', 'San Pedro de la Paz']
-    }
-  } as RegionData
-}
-
-const AddUserDrawer = (props: Props) => {
+const AddClienteDrawer = (props: Props) => {
   // Props
   const { open, handleClose, userData, setData } = props
 
   // States
-  const [formData, setFormData] = useState<FormNonValidateType>(initialData)
-  const [contactos, setContactos] = useState<Contacto[]>([])
+  const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
+  const [contactos, setContactos] = useState<Array<{contacto: Contacto, isPrincipal: boolean}>>([])
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
     cargo: '',
@@ -126,6 +68,29 @@ const AddUserDrawer = (props: Props) => {
     telefono2: ''
   })
   const [selectedRegion, setSelectedRegion] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchContactValue, setSearchContactValue] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+
+  // Al inicio del componente, definir defaultValues
+  const defaultValues: FormValidateType = {
+    rut: '',
+    estado: 'active',  // Valor por defecto
+    razonSocial: '',
+    nombreCliente: '',
+    ciudad: '',
+    comuna: '',
+    direccion: '',
+    telefono: '',
+    sitioWeb: '',
+    segmento: '',
+    industria: '',
+    vendedor: '',
+    condicionVenta: '',
+    observaciones: ''
+  }
 
   // Hooks
   const {
@@ -134,23 +99,8 @@ const AddUserDrawer = (props: Props) => {
     handleSubmit,
     formState: { errors }
   } = useForm<FormValidateType>({
-    defaultValues: {
-      rut: '',
-      status: '',
-      razonSocial: '',
-      nombreCliente: '',
-      ciudad: '',
-      comuna: '',
-      direccion: '',
-      telefono: '',
-      sitioWeb: '',
-      segmento: '',
-      industria: '',
-      vendedor: '',
-      condicionesVenta: '',
-      observaciones: '',
-      fechaCreacion: new Date().toISOString().split('T')[0]
-    }
+    defaultValues,
+    mode: 'onChange'
   })
 
   // Obtener la fecha actual en formato YYYY-MM-DD
@@ -159,9 +109,10 @@ const AddUserDrawer = (props: Props) => {
   // Función para crear cliente
   const crearCliente = async (data: FormValidateType) => {
     try {
+      setIsSubmitting(true)
       const clienteData = {
         rut: data.rut,
-        estado: data.status,
+        estado: data.estado,
         razonSocial: data.razonSocial,
         nombreCliente: data.nombreCliente,
         pais: formData.pais,
@@ -173,39 +124,47 @@ const AddUserDrawer = (props: Props) => {
         sitioWeb: data.sitioWeb,
         segmento: data.segmento,
         industria: data.industria,
-        contactos: {
+        clientesContactos: {
           create: contactos.map(contacto => ({
-            nombre: contacto.nombre,
-            cargo: contacto.cargo,
-            email: contacto.email,
-            telefono1: contacto.telefono1,
-            telefono2: contacto.telefono2
+            contacto: {
+              create: {
+                nombre: contacto.contacto.nombre,
+                cargo: contacto.contacto.cargo,
+                email: contacto.contacto.email,
+                telefono1: contacto.contacto.telefono1,
+                telefono2: contacto.contacto.telefono2
+              }
+            },
+            isPrincipal: false
           }))
         },
         condicionesComerciales: {
           create: {
             vendedor: data.vendedor,
-            condicionVenta: data.condicionesVenta,
+            condicionVenta: data.condicionVenta,
             observaciones: data.observaciones
           }
         }
       }
 
+      console.log('Datos a crear:', clienteData)
       const response = await axios.post('/api/clientes', clienteData)
+      console.log('Respuesta:', response.data)
 
       if (response.status === 201) {
         toast.success('Cliente creado exitosamente')
         handleClose()
         resetForm()
         setContactos([])
-        // Actualizar la lista de clientes
-        if (props.setData && props.userData) {
-          props.setData([...props.userData, response.data])
+        if (props.setData) {
+          props.setData((prevData: Cliente[]): Cliente[] => [...prevData, response.data])
         }
       }
     } catch (error) {
-      console.error('Error al crear cliente:', error)
+      console.error('Error:', error)
       toast.error('Error al crear el cliente')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -214,31 +173,13 @@ const AddUserDrawer = (props: Props) => {
     crearCliente(data)
   }
 
-  // Función para obtener clientes
-  const obtenerClientes = async () => {
-    try {
-      const response = await axios.get('/en/api/clientes')
-      if (response.status === 200 && props.setData) {
-        props.setData(response.data)
-      }
-    } catch (error) {
-      console.error('Error al obtener clientes:', error)
-      toast.error('Error al cargar los clientes')
-    }
-  }
-
-  // Cargar clientes al montar el componente
-  useEffect(() => {
-    obtenerClientes()
-  }, [])
-
   const handleReset = () => {
     handleClose()
-    setFormData(initialData)
+    setFormData(initialFormData)
   }
 
   const agregarContacto = () => {
-    setContactos([...contactos, nuevoContacto])
+    setContactos([...contactos, { contacto: nuevoContacto, isPrincipal: contactos.length === 0 }])
     setNuevoContacto({
       nombre: '',
       cargo: '',
@@ -252,6 +193,56 @@ const AddUserDrawer = (props: Props) => {
     setContactos(contactos.filter((_, i) => i !== index))
   }
 
+  // Función para buscar contactos
+  const searchContacts = async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      const response = await axios.get(`/api/contactos/search`, {
+        params: { q: query }
+      })
+      const data = response.data
+      console.log('Resultados de búsqueda:', data)
+      setSearchResults(data)
+    } catch (error) {
+      console.error('Error buscando contactos:', error)
+      toast.error('Error al buscar contactos')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // Manejar cambios en la búsqueda con debounce
+  const handleSearchChange = (value: string) => {
+    setSearchContactValue(value)
+    console.log('Valor de búsqueda:', value)
+    
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
+    }
+
+    const timeout = setTimeout(() => {
+      searchContacts(value)
+    }, 500)
+
+    setSearchTimeout(timeout)
+  }
+
+  // Agregar contacto desde los resultados de búsqueda
+  const handleAddContact = (contact: Contacto) => {
+    const newContact: {contacto: Contacto, isPrincipal: boolean} = {
+      contacto: contact,
+      isPrincipal: contactos.length === 0
+    }
+    setContactos([...contactos, newContact])
+    setSearchContactValue('')
+    setSearchResults([])
+  }
+
   return (
     <Drawer
       open={open}
@@ -262,7 +253,7 @@ const AddUserDrawer = (props: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5'>Añadir Nuevo Cliente</Typography>
+        <Typography variant='h5' className='text-xl'>Añadir Nuevo Cliente</Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
@@ -291,22 +282,26 @@ const AddUserDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Estado
-                </InputLabel>
+                <InputLabel id="estado-label">Estado</InputLabel>
                 <Controller
-                  name='status'
+                  name='estado'
                   control={control}
-                  rules={{ required: true }}
                   render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>Activo</MenuItem>
-                      <MenuItem value='active'>Inactivo</MenuItem>
-                      <MenuItem value='inactive'>Bloqueado</MenuItem>
+                    <Select
+                      labelId="estado-label"
+                      label="Estado"
+                      value={field.value ?? 'active'}
+                      onChange={field.onChange}
+                      error={Boolean(errors.estado)}
+                    >
+                      {ESTADOS_CLIENTE.map(estado => (
+                        <MenuItem key={estado.value} value={estado.value}>
+                          {estado.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
@@ -374,12 +369,14 @@ const AddUserDrawer = (props: Props) => {
                 <Select
                   fullWidth
                   id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
+                  value={formData.pais}
+                  onChange={e => setFormData({ ...formData, pais: e.target.value })}
                   label='País'
                   labelId='country'
                 >
-                  <MenuItem value='Chile'>Chile</MenuItem>
+                  {PAISES.map(pais => (
+                    <MenuItem key={pais.value} value={pais.value}>{pais.label}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -394,7 +391,7 @@ const AddUserDrawer = (props: Props) => {
                   }}
                   label='Región'
                 >
-                  {Object.keys(DUMMY_DATA.regiones).map(region => (
+                  {Object.keys(REGIONES_CHILE).map(region => (
                     <MenuItem key={region} value={region}>{region}</MenuItem>
                   ))}
                 </Select>
@@ -414,7 +411,7 @@ const AddUserDrawer = (props: Props) => {
                       label='Ciudad'
                       error={Boolean(errors.ciudad)}
                     >
-                      {selectedRegion && DUMMY_DATA.regiones[selectedRegion as keyof RegionData].ciudades.map(ciudad => (
+                      {selectedRegion && REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].ciudades.map(ciudad => (
                         <MenuItem key={ciudad} value={ciudad}>{ciudad}</MenuItem>
                       ))}
                     </Select>
@@ -436,7 +433,7 @@ const AddUserDrawer = (props: Props) => {
                       label='Comuna'
                       error={Boolean(errors.comuna)}
                     >
-                      {selectedRegion && DUMMY_DATA.regiones[selectedRegion as keyof RegionData].comunas.map(comuna => (
+                      {selectedRegion && REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].comunas.map(comuna => (
                         <MenuItem key={comuna} value={comuna}>{comuna}</MenuItem>
                       ))}
                     </Select>
@@ -499,48 +496,52 @@ const AddUserDrawer = (props: Props) => {
           </Grid>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
-              <Controller
-                name='segmento'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Segmento</InputLabel>
+              <FormControl fullWidth>
+                <InputLabel id="segmento-label">Segmento</InputLabel>
+                <Controller
+                  name='segmento'
+                  control={control}
+                  render={({ field }) => (
                     <Select
-                      {...field}
-                      label='Segmento'
+                      labelId="segmento-label"
+                      label="Segmento"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
                       error={Boolean(errors.segmento)}
                     >
-                      {DUMMY_DATA.segmentos.map(segmento => (
-                        <MenuItem key={segmento} value={segmento}>{segmento}</MenuItem>
+                      {SEGMENTOS.map(segmento => (
+                        <MenuItem key={segmento.value} value={segmento.value}>
+                          {segmento.label}
+                        </MenuItem>
                       ))}
                     </Select>
-                    {errors.segmento && <FormHelperText error>Este campo es requerido</FormHelperText>}
-                  </FormControl>
-                )}
-              />
+                  )}
+                />
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Controller
-                name='industria'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Industria</InputLabel>
+              <FormControl fullWidth>
+                <InputLabel id="industria-label">Industria</InputLabel>
+                <Controller
+                  name='industria'
+                  control={control}
+                  render={({ field }) => (
                     <Select
-                      {...field}
-                      label='Industria'
+                      labelId="industria-label"
+                      label="Industria"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
                       error={Boolean(errors.industria)}
                     >
-                      {DUMMY_DATA.industrias.map(industria => (
-                        <MenuItem key={industria} value={industria}>{industria}</MenuItem>
+                      {INDUSTRIAS.map(industria => (
+                        <MenuItem key={industria.value} value={industria.value}>
+                          {industria.label}
+                        </MenuItem>
                       ))}
                     </Select>
-                    {errors.industria && <FormHelperText error>Este campo es requerido</FormHelperText>}
-                  </FormControl>
-                )}
-              />
+                  )}
+                />
+              </FormControl>
             </Grid>
           </Grid>
 
@@ -548,34 +549,18 @@ const AddUserDrawer = (props: Props) => {
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
             <Grid item xs={6}>
-              {/* Aquí centramos el texto dentro del grid que ocupa el 50% del espacio */}
-              <Typography
-                variant='h5'
-                sx={{
-                  textAlign: 'left'
-                }}
-              >
+              <Typography variant='h5'>
                 Contactos
               </Typography>
             </Grid>
-
-            <Grid item xs={6} container justifyContent='flex-end'>
-              {/* Alineamos la barra de búsqueda a la derecha dentro del grid que ocupa el 50% del espacio */}
-              <TextField
-                placeholder='Buscar Contacto'
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position='start'>
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{
-                  width: '400px', // Ajusta el ancho si es necesario
-                  height: '40px', // Ajusta la altura si es necesario
-                  '& .MuiInputBase-root': {
-                    height: '100%' // Asegura que el input tenga la altura correcta
+            <Grid item xs={6}>
+              <ContactSearch 
+                onContactSelect={(contact) => {
+                  const newContact = {
+                    contacto: contact,
+                    isPrincipal: contactos.length === 0
                   }
+                  setContactos([...contactos, newContact])
                 }}
               />
             </Grid>
@@ -673,11 +658,24 @@ const AddUserDrawer = (props: Props) => {
                 {/* Lista de contactos agregados */}
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
-                    <TableCell>{contacto.nombre}</TableCell>
-                    <TableCell>{contacto.cargo}</TableCell>
-                    <TableCell>{contacto.email}</TableCell>
-                    <TableCell>{contacto.telefono1}</TableCell>
-                    <TableCell>{contacto.telefono2}</TableCell>
+                    <TableCell>{contacto.contacto.nombre}</TableCell>
+                    <TableCell>
+                      <TextField
+                        value={contacto.contacto.cargo}
+                        onChange={e => {
+                          const updatedContactos = contactos.map((c, i) =>
+                            i === index ? { ...c, contacto: { ...c.contacto, cargo: e.target.value } } : c
+                          )
+                          setContactos(updatedContactos)
+                        }}
+                        placeholder='Cargo'
+                        fullWidth
+                        size='small'
+                      />
+                    </TableCell>
+                    <TableCell>{contacto.contacto.email}</TableCell>
+                    <TableCell>{contacto.contacto.telefono1}</TableCell>
+                    <TableCell>{contacto.contacto.telefono2}</TableCell>
                     <TableCell>
                       <IconButton onClick={() => eliminarContacto(index)}>
                         <i className='ri-delete-bin-line' />
@@ -694,19 +692,43 @@ const AddUserDrawer = (props: Props) => {
           <Typography variant='h6'>Condiciones Comerciales</Typography>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel>Vendedor</InputLabel>
-                <Select>
-                  <MenuItem value='Vendedor 1'>Vendedor 1</MenuItem>
-                  <MenuItem value='Vendedor 2'>Vendedor 2</MenuItem>
-                </Select>
-              </FormControl>
+              <Controller
+                name='vendedor'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Vendedor</InputLabel>
+                    <Select {...field} error={Boolean(errors.vendedor)}>
+                      {VENDEDORES.map(vendedor => (
+                        <MenuItem key={vendedor.value} value={vendedor.value}>
+                          {vendedor.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Condiciones de Venta' placeholder='' />
+              <Controller
+                name='condicionVenta'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Condiciones de Venta' />
+                )}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Observaciones' placeholder='' />
+              <Controller
+                name='observaciones'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Observaciones' />
+                )}
+              />
             </Grid>
           </Grid>
 
@@ -714,13 +736,15 @@ const AddUserDrawer = (props: Props) => {
             <Button 
               variant='contained' 
               type='submit'
-              disabled={Object.keys(errors).length > 0}
+              disabled={Object.keys(errors).length > 0 || isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
             >
-              Guardar
+              {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
             <Button 
               variant='outlined' 
               color='error' 
+              disabled={isSubmitting}
               onClick={handleReset}
             >
               Cancelar
@@ -732,4 +756,4 @@ const AddUserDrawer = (props: Props) => {
   )
 }
 
-export default AddUserDrawer
+export default AddClienteDrawer

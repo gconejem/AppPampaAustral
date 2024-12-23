@@ -2,6 +2,7 @@
 
 // React Imports
 import { useEffect, useState, useMemo } from 'react'
+import { toast } from 'react-hot-toast'
 
 // Next Imports
 import Link from 'next/link'
@@ -51,13 +52,13 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
-import type { UsersType } from '@/types/apps/userTypes'
+import type { ContactType } from '@/types/apps/contactTypes'
 import type { Locale } from '@configs/i18n'
 
 // Component Imports
-import TableFilters from './TableFilters'
-import AddUserDrawer from './AddContact'
+import AddContact from './AddContact'
 import OptionMenu from '@core/components/option-menu'
+import EditContact from '../edit/EditContact'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -74,7 +75,7 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type UsersTypeWithAction = UsersType & {
+type ContactTypeWithAction = ContactType & {
   action?: string
 }
 
@@ -147,32 +148,110 @@ const userStatusObj: UserStatusType = {
 }
 
 // Column Definitions
-const columnHelper = createColumnHelper<UsersTypeWithAction>()
+const columnHelper = createColumnHelper<ContactTypeWithAction>()
 
-const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+const ContactsListTable = () => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
+  const [data, setData] = useState<ContactType[]>([])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
-
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
+  const [selectedContact, setSelectedContact] = useState<ContactType | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [editContactOpen, setEditContactOpen] = useState(false)
 
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang as string || 'es'
 
-  const handleClickOpenDialog = (user: UsersTypeWithAction) => {
-    setSelectedUser(user)
+  const handleClickOpenDialog = (contact: ContactTypeWithAction) => {
+    setSelectedContact(contact)
     setOpenDialog(true)
+  }
+
+  const fetchContacts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/contactos')
+      if (!response.ok) throw new Error('Error al cargar contactos')
+      const contacts = await response.json()
+      setData(contacts)
+      setFilteredData(contacts)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al cargar contactos')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeleteContact = async () => {
+    try {
+      if (!selectedContact) return
+      setIsDeleteLoading(true)
+      
+      const response = await fetch(`/api/contactos/${selectedContact.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) throw new Error('Error al eliminar contacto')
+
+      const newData = data.filter(contact => contact.id !== selectedContact.id)
+      setData(newData)
+      setFilteredData(newData)
+      
+      toast.success('Contacto eliminado exitosamente')
+      handleCloseDialog()
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar contacto')
+    } finally {
+      setIsDeleteLoading(false)
+    }
   }
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
   }
 
-  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+  const handleEditContact = (contact: ContactType) => {
+    setSelectedContact(contact)
+    setEditContactOpen(true)
+  }
+
+  const handleExportContacts = () => {
+    try {
+      // Crear CSV
+      const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2']
+      const csvData = data.map(contact => [
+        contact.nombre,
+        contact.cargo,
+        contact.email,
+        contact.telefono1,
+        contact.telefono2 || ''
+      ])
+      
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n')
+
+      // Crear y descargar el archivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', 'contactos.csv')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      toast.error('Error al exportar contactos')
+    }
+  }
+
+  const columns = useMemo<ColumnDef<ContactType, any>[]>(
     () => [
       {
         id: 'select',
@@ -196,95 +275,50 @@ const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           />
         )
       },
-      columnHelper.accessor('rut', {
-        header: 'Nombre',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.rut}
-              </Typography>
-            </div>
-          </div>
-        )
+      columnHelper.accessor('nombre', {
+        header: 'NOMBRE',
+        cell: ({ row }) => <Typography>{row.original.nombre}</Typography>
+      }),
+      columnHelper.accessor('cargo', {
+        header: 'CARGO',
+        cell: ({ row }) => <Typography>{row.original.cargo}</Typography>
       }),
       columnHelper.accessor('email', {
-        header: 'Cargo',
+        header: 'EMAIL',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
-      columnHelper.accessor('role', {
-        header: 'Email',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
+      columnHelper.accessor('telefono1', {
+        header: 'TELÉFONO 1',
+        cell: ({ row }) => <Typography>{row.original.telefono1}</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Teléfono 1',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
+      columnHelper.accessor('telefono2', {
+        header: 'TELÉFONO 2',
+        cell: ({ row }) => <Typography>{row.original.telefono2}</Typography>
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Teléfono 2',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-
       columnHelper.accessor('action', {
-        header: 'Acciones',
+        header: 'ACCIÓN',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-edit-box-line text-textSecondary' />
+            <IconButton className='text-primary'>
+              <i className='ri-pencil-line' onClick={() => handleEditContact(row.original)} />
             </IconButton>
-            <IconButton>
-              <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
+            <IconButton className='text-error'>
+              <i className='ri-delete-bin-line' onClick={() => handleClickOpenDialog(row.original)} />
             </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Estado',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Editar',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Eliminar',
-                  menuItemProps: {
-                    className: 'flex items-center gap-2 text-textSecondary',
-                    onClick: () => handleClickOpenDialog(row.original)
-                  }
-                }
-              ]}
-            />
           </div>
         ),
         enableSorting: false
       })
     ],
-    [data, filteredData]
+    []
   )
 
+  useEffect(() => {
+    fetchContacts()
+  }, [])
+
   const table = useReactTable({
-    data: filteredData as UsersType[],
+    data: filteredData as ContactType[],
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -315,14 +349,13 @@ const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     <>
       <Card>
         <CardHeader
-          title={<span className='text-xl '>Contactos</span>}
+          title={<span className='text-xl'>Contactos</span>}
           action={
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
               + Nuevo Contacto
             </Button>
           }
         />
-        <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
           <Button
@@ -330,108 +363,111 @@ const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
             className='max-sm:is-full'
+            onClick={handleExportContacts}
           >
             Exportar
           </Button>
-
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <DebouncedInput
+            <TextField
+              size='small'
               value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
-              style={{ width: '500px' }}
+              onChange={e => setGlobalFilter(String(e.target.value))}
+              placeholder='Buscar Contacto'
+              style={{ width: '250px' }}
               className='max-sm:is-full min-is-[200px]'
               InputProps={{
                 startAdornment: (
                   <InputAdornment position='start'>
-                    <i className='ri-search-line' /> {/* Icono de búsqueda */}
+                    <i className='ri-search-line text-xl' />
                   </InputAdornment>
-                ),
-                sx: {
-                  padding: '8px', // Ajustamos el relleno para hacerlo más amplio
-                  borderRadius: '8px', // Borde redondeado similar a la imagen
-                  border: '1px solid #E0E0E0' // Color suave para el borde
-                }
+                )
               }}
             />
           </div>
         </div>
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
-        </div>
+        {isLoading ? (
+          <Card>
+            <div className='flex items-center justify-center' style={{ minHeight: 'calc(100vh - 300px)' }}>
+              <i className='ri-loader-4-line text-primary text-4xl animate-spin' />
+            </div>
+          </Card>
+        ) : (
+          <div className='overflow-x-auto'>
+            <table className={tableStyles.table}>
+              <thead>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th key={header.id}>
+                        {header.isPlaceholder ? null : (
+                          <>
+                            <div
+                              className={classnames({
+                                'flex items-center': header.column.getIsSorted(),
+                                'cursor-pointer select-none': header.column.getCanSort()
+                              })}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: <i className='ri-arrow-up-s-line text-xl' />,
+                                desc: <i className='ri-arrow-down-s-line text-xl' />
+                              }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              {table.getFilteredRowModel().rows.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                      No data available
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+                <tbody>
+                  {table
+                    .getRowModel()
+                    .rows.slice(0, table.getState().pagination.pageSize)
+                    .map(row => {
+                      return (
+                        <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                          {row.getVisibleCells().map(cell => (
+                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              )}
+            </table>
+          </div>
+        )}
         <TablePagination
           rowsPerPageOptions={[10, 25, 50]}
           component='div'
-          className='border-bs'
+          className='border-t'
           count={table.getFilteredRowModel().rows.length}
           rowsPerPage={table.getState().pagination.pageSize}
           page={table.getState().pagination.pageIndex}
           SelectProps={{
             inputProps: { 'aria-label': 'rows per page' }
           }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
+          onPageChange={(_, page) => table.setPageIndex(page)}
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
-      <AddUserDrawer
+      <AddContact
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}
         userData={data}
         setData={setData}
+        setFilteredData={setFilteredData}
       />
       <Dialog
         open={openDialog}
@@ -439,31 +475,38 @@ const ContactsListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         aria-labelledby='alert-dialog-title'
         aria-describedby='alert-dialog-description'
       >
-        <DialogTitle id='alert-dialog-title'>Eliminar Cliente</DialogTitle>
+        <DialogTitle id='alert-dialog-title'>Eliminar Contacto</DialogTitle>
         <DialogContent>
           <DialogContentText id='alert-dialog-description'>
-            ¿Seguro que desea eliminar el Cliente elegido?
+            ¿Está seguro que desea eliminar este contacto?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color='secondary'>
+          <Button onClick={handleCloseDialog} variant='outlined' color='secondary'>
             Cerrar
           </Button>
           <Button
-            onClick={() => {
-              if (selectedUser) {
-                setData(data?.filter(user => user.id !== selectedUser.id))
-              }
-
-              handleCloseDialog()
-            }}
-            color='primary'
+            onClick={handleDeleteContact}
+            variant='contained'
+            color='error'
             autoFocus
+            disabled={isDeleteLoading}
+            startIcon={isDeleteLoading && <i className='ri-loader-4-line animate-spin' />}
           >
             Eliminar
           </Button>
         </DialogActions>
       </Dialog>
+      <EditContact
+        open={editContactOpen}
+        contact={selectedContact}
+        handleClose={() => {
+          setEditContactOpen(false)
+          setSelectedContact(null)
+        }}
+        setData={setData}
+        setFilteredData={setFilteredData}
+      />
     </>
   )
 }

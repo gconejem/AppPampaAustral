@@ -1,5 +1,6 @@
 // React Imports
 import { useState } from 'react'
+import { toast } from 'react-hot-toast'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -29,23 +30,22 @@ import SearchIcon from '@mui/icons-material/Search'
 import { useForm, Controller } from 'react-hook-form'
 
 // Types Imports
-import type { UsersType } from '@/types/apps/userTypes'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: UsersType[]
-  setData: (data: UsersType[]) => void
+  userData?: ContactType[]
+  setData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
+  setFilteredData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
 }
 
 type FormValidateType = {
-  rut: string
-  fullName: string
-  username: string
+  nombre: string
+  cargo: string
   email: string
-  role: string
-  plan: string
-  status: string
+  telefono1: string
+  telefono2?: string
 }
 
 type FormNonValidateType = {
@@ -61,9 +61,9 @@ const initialData = {
   contact: ''
 }
 
-const AddUserDrawer = (props: Props) => {
+const AddContactDrawer = (props: Props) => {
   // Props
-  const { open, handleClose, userData, setData } = props
+  const { open, handleClose, userData, setData, setFilteredData } = props
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>(initialData)
@@ -76,36 +76,40 @@ const AddUserDrawer = (props: Props) => {
     formState: { errors }
   } = useForm<FormValidateType>({
     defaultValues: {
-      rut: '',
-      fullName: '',
-      username: '',
+      nombre: '',
+      cargo: '',
       email: '',
-      role: '',
-      plan: '',
-      status: ''
+      telefono1: '',
+      telefono2: ''
     }
   })
 
-  const onSubmit = (data: FormValidateType) => {
-    const newUser: UsersType = {
-      id: (userData?.length && userData?.length + 1) || 1,
-      avatar: `/images/avatars/${Math.floor(Math.random() * 8) + 1}.png`,
-      rut: data.rut,
-      fullName: data.fullName,
-      username: data.username,
-      email: data.email,
-      role: data.role,
-      currentPlan: data.plan,
-      status: data.status,
-      company: formData.company,
-      country: formData.country,
-      contact: formData.contact
-    }
+  const onSubmit = async (data: FormValidateType) => {
+    try {
+      const response = await fetch('/api/contactos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
 
-    setData([...(userData ?? []), newUser])
-    handleClose()
-    setFormData(initialData)
-    resetForm({ fullName: '', username: '', email: '', role: '', plan: '', status: '' })
+      if (!response.ok) throw new Error('Error al crear contacto')
+
+      const newContact = await response.json()
+
+      setData(prev => {
+        const newData = [...prev, newContact]
+        setFilteredData(newData)
+        return newData
+      })
+
+      toast.success('Contacto creado exitosamente')
+      resetForm()
+      handleClose()
+    } catch (error: any) {
+      toast.error(error.message || 'Error al crear contacto')
+    }
   }
 
   const handleReset = () => {
@@ -123,463 +127,94 @@ const AddUserDrawer = (props: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5'>Añadir Nuevo Cliente</Typography>
+        <Typography variant='h5'>Añadir Nuevo Contacto</Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
       </div>
       <Divider />
       <div className='p-5'>
-        <form onSubmit={handleSubmit(data => onSubmit(data))} className='flex flex-col gap-5'>
+        <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
           <Grid container spacing={5}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <Controller
-                name='rut'
+                name='nombre'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='Fecha de Creación'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    label='Nombre'
+                    error={Boolean(errors.nombre)}
+                    helperText={errors.nombre && 'Este campo es requerido'}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Estado
-                </InputLabel>
-                <Controller
-                  name='status'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>Activo</MenuItem>
-                      <MenuItem value='active'>Inactivo</MenuItem>
-                      <MenuItem value='inactive'>Bloqueado</MenuItem>
-                    </Select>
-                  )}
-                />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
-              </FormControl>
-            </Grid>
-          </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12}>
               <Controller
-                name='fullName'
+                name='cargo'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='ID Cliente (RUT)'
-                    placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    label='Cargo'
+                    error={Boolean(errors.cargo)}
+                    helperText={errors.cargo && 'Este campo es requerido'}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12}>
               <Controller
-                name='fullName'
+                name='email'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='Razón Social'
-                    placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    type='email'
+                    label='Email'
+                    error={Boolean(errors.email)}
+                    helperText={errors.email && 'Este campo es requerido'}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12}>
               <Controller
-                name='fullName'
+                name='telefono1'
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='Cliente'
-                    placeholder='...'
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    label='Teléfono 1'
+                    error={Boolean(errors.telefono1)}
+                    helperText={errors.telefono1 && 'Este campo es requerido'}
                   />
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControlLabel
-                control={<Checkbox name='copySocialReason' />}
-                label='Copiar Razón Social'
-                sx={{ margin: '10px' }}
-              />
-            </Grid>
-          </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel id='country'>País</InputLabel>
-                <Select
-                  fullWidth
-                  id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  label='País'
-                  labelId='country'
-                >
-                  <MenuItem value='Chile'>Chile</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel id='country'>Región</InputLabel>
-                <Select
-                  fullWidth
-                  id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  label='País'
-                  labelId='country'
-                >
-                  <MenuItem value='Chile'>Arica y Parinacota</MenuItem>
-                  <MenuItem value='Chile'>Tarapacá</MenuItem>
-                  <MenuItem value='Chile'>Antofagasta</MenuItem>
-                  <MenuItem value='Chile'>Atacama</MenuItem>
-                  <MenuItem value='Chile'>Coquimbo</MenuItem>
-                  <MenuItem value='Chile'>Vaparaíso</MenuItem>
-                  <MenuItem value='Chile'>Metropolitana</MenuItem>
-                  <MenuItem value='Chile'>OHiggins</MenuItem>
-                  <MenuItem value='Chile'>Maule</MenuItem>
-                  <MenuItem value='Chile'>Ñuble</MenuItem>
-                  <MenuItem value='Chile'>Biobío</MenuItem>
-                  <MenuItem value='Chile'>La Araucanía</MenuItem>
-                  <MenuItem value='Chile'>Los Ríos</MenuItem>
-                  <MenuItem value='Chile'>Los Lagos</MenuItem>
-                  <MenuItem value='Chile'>Aysén</MenuItem>
-                  <MenuItem value='Chile'>Magallanes</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12}>
               <Controller
-                name='fullName'
+                name='telefono2'
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='Ciudad'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Controller
-                name='fullName'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Comuna'
-                    placeholder=''
-                    {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                    label='Teléfono 2'
                   />
                 )}
               />
             </Grid>
           </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='username'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Dirección'
-                    placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='username'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Teléfono'
-                    placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='username'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Web'
-                    placeholder=''
-                    {...(errors.username && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Segmento
-                </InputLabel>
-                <Controller
-                  name='status'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
-                    </Select>
-                  )}
-                />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country' error={Boolean(errors.status)}>
-                  Industria
-                </InputLabel>
-                <Controller
-                  name='status'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select label='Select Status' {...field} error={Boolean(errors.status)}>
-                      <MenuItem value='pending'>...</MenuItem>
-                      <MenuItem value='active'></MenuItem>
-                      <MenuItem value='inactive'></MenuItem>
-                    </Select>
-                  )}
-                />
-                {errors.status && <FormHelperText error>This field is required.</FormHelperText>}
-              </FormControl>
-            </Grid>
-          </Grid>
-
-          {/* Sección de Contactos */}
-          <Divider sx={{ my: 4 }} />
-          <Grid container alignItems='center' spacing={2}>
-            <Grid item xs={6}>
-              {/* Aquí centramos el texto dentro del grid que ocupa el 50% del espacio */}
-              <Typography
-                variant='h5'
-                sx={{
-                  textAlign: 'left'
-                }}
-              >
-                Contactos
-              </Typography>
-            </Grid>
-
-            <Grid item xs={6} container justifyContent='flex-end'>
-              {/* Alineamos la barra de búsqueda a la derecha dentro del grid que ocupa el 50% del espacio */}
-              <TextField
-                placeholder='Buscar Contacto'
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position='start'>
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{
-                  width: '400px', // Ajusta el ancho si es necesario
-                  height: '40px', // Ajusta la altura si es necesario
-                  '& .MuiInputBase-root': {
-                    height: '100%' // Asegura que el input tenga la altura correcta
-                  }
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <TableContainer sx={{ mt: 2 }}>
-            <Table>
-              <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
-                <TableRow>
-                  <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
-                  >
-                    NOMBRE
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
-                  >
-                    CARGO
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
-                  >
-                    EMAIL
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
-                  >
-                    TELÉFONO 1
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
-                  >
-                    TELÉFONO 2
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0' }}>
-                    ACCIÓN
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    <TextField
-                      placeholder='Nombre'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-                  <TableCell>
-                    <FormControl fullWidth size='small'>
-                      <InputLabel>Cargo</InputLabel>
-                      <Select
-                        defaultValue=''
-                        label='Cargo'
-                        sx={{
-                          width: '200px',
-                          height: '40px'
-                        }}
-                      >
-                        <MenuItem value='Gerente'>Cargo</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Email'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Teléfono 1'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-                  <TableCell>
-                    {' '}
-                    <TextField
-                      placeholder='Teléfono 2'
-                      fullWidth
-                      variant='outlined'
-                      size='small'
-                      sx={{
-                        width: '200px',
-                        height: '40px'
-                      }}
-                    ></TextField>
-                  </TableCell>
-
-                  <TableCell>
-                    <IconButton size='small'>
-                      <i className='ri-add-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-edit-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-star-line' />
-                    </IconButton>
-                    <IconButton size='small'>
-                      <i className='ri-delete-bin-line' />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Sección de Condiciones Comerciales */}
-          <Divider sx={{ my: 4 }} />
-          <Typography variant='h6'>Condiciones Comerciales</Typography>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel>Vendedor</InputLabel>
-                <Select>
-                  <MenuItem value='Vendedor 1'>Vendedor 1</MenuItem>
-                  <MenuItem value='Vendedor 2'>Vendedor 2</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Condiciones de Venta' placeholder='' />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField fullWidth label='Observaciones' placeholder='' />
-            </Grid>
-          </Grid>
-
           <div className='flex items-center gap-4 mt-5'>
             <Button variant='contained' type='submit'>
               Guardar
@@ -594,4 +229,4 @@ const AddUserDrawer = (props: Props) => {
   )
 }
 
-export default AddUserDrawer
+export default AddContactDrawer

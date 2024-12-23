@@ -8,45 +8,44 @@ datasource db {
 }
 
 model Cliente {
-  id                    Int                   @id @default(autoincrement())
-  fechaCreacion         DateTime              @default(now())
-  estado               String
-  rut                  String                @unique
-  razonSocial          String
-  nombreCliente        String
-  pais                 String
-  region               String
-  ciudad               String
-  comuna               String
-  direccion            String
-  telefono             String?
-  sitioWeb             String?
-  segmento             String?
-  industria            String?
-  contactos            Contacto[]
+  id                     Int                 @id @default(autoincrement())
+  fechaCreacion          DateTime            @default(now())
+  estado                 String
+  rut                    String              @unique
+  razonSocial            String
+  nombreCliente          String
+  pais                   String
+  region                 String
+  ciudad                 String
+  comuna                 String
+  direccion              String
+  telefono               String?
+  sitioWeb               String?
+  segmento               String?
+  industria              String?
+  clientesContactos      ClienteContacto[] // Relación many-to-many a través de la tabla de unión
   condicionesComerciales CondicionComercial?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 }
 
 model Contacto {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  cargo     String
-  email     String
-  telefono1 String
-  telefono2 String?
-  clienteId Int
-  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  id                Int               @id @default(autoincrement())
+  nombre            String
+  cargo             String
+  email             String
+  telefono1         String
+  telefono2         String?
+  clientesContactos ClienteContacto[] // Relación many-to-many a través de la tabla de unión
 }
 
 model CondicionComercial {
-  id              Int      @id @default(autoincrement())
-  vendedor        String
-  condicionVenta  String
-  observaciones   String?
-  clienteId       Int      @unique
-  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  id             Int     @id @default(autoincrement())
+  vendedor       String
+  condicionVenta String
+  observaciones  String?
+  clienteId      Int     @unique
+  cliente        Cliente @relation(fields: [clienteId], references: [id])
 }
 
 model User {
@@ -61,19 +60,19 @@ model User {
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
-  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -84,4 +83,17 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-} 
+}
+
+// Tabla de unión para la relación many-to-many
+model ClienteContacto {
+  id          Int      @id @default(autoincrement())
+  clienteId   Int
+  contactoId  Int
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  contacto    Contacto @relation(fields: [contactoId], references: [id])
+  isPrincipal Boolean  @default(false) // Para marcar el contacto principal
+  createdAt   DateTime @default(now())
+
+  @@unique([clienteId, contactoId])
+}
