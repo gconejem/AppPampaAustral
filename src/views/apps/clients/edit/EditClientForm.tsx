@@ -85,7 +85,8 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   })
 
   const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
-  const [contactos, setContactos] = useState<Array<{contacto: Contacto, isPrincipal: boolean}>>([])
+  const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean }>>([])
+
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
     cargo: '',
@@ -93,6 +94,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     telefono1: '',
     telefono2: ''
   })
+
   const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -142,7 +144,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
             cargo: cc.contacto?.cargo || '',
             email: cc.contacto?.email || '',
             telefono1: cc.contacto?.telefono1 || '',
-            telefono2: cc.contacto?.telefono2 || '',
+            telefono2: cc.contacto?.telefono2 || ''
           },
           isPrincipal: cc.isPrincipal || false
         }))
@@ -157,6 +159,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   const onSubmit = async (data: FormValidateType) => {
     try {
       setIsSubmitting(true)
+
       const dataToSend = {
         ...data,
         clientesContactos: contactos.map(c => ({
@@ -177,7 +180,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
       // Primero crear/actualizar los contactos
       const updatedContactos = await Promise.all(
-        contactos.map(async (c) => {
+        contactos.map(async c => {
           if (c.contacto.contactId) {
             // Actualizar contacto existente
             const response = await fetch(`/api/contactos/${c.contacto.contactId}`, {
@@ -188,25 +191,32 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 contactId: parseInt(String(c.contacto.contactId))
               })
             })
+
             if (!response.ok) {
               const errorData = await response.json()
+
               console.error('Error updating contact:', errorData)
               throw new Error('Error actualizando contacto existente')
             }
+
             return response.json()
           } else {
             // Crear nuevo contacto
-            delete c.contacto.contactId  // Eliminar el contactId para nuevos contactos
+            delete c.contacto.contactId // Eliminar el contactId para nuevos contactos
+
             const response = await fetch('/api/contactos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(c.contacto)
             })
+
             if (!response.ok) {
               const errorData = await response.json()
+
               console.error('Error creating contact:', errorData)
               throw new Error('Error creando nuevo contacto')
             }
+
             return response.json()
           }
         })
@@ -237,12 +247,14 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
       if (response.ok) {
         const updatedClient = await response.json()
+
         console.log('Updated Client:', updatedClient)
 
         setData((prevData: Cliente[]) => {
-          const newData: Cliente[] = prevData.map(client => 
+          const newData: Cliente[] = prevData.map(client =>
             client.clienteId === currentUser.clienteId ? updatedClient : client
           )
+
           return newData
         })
         toast.success('Cliente actualizado exitosamente')
@@ -277,24 +289,29 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   }
 
   const marcarContactoPrincipal = (index: number) => {
-    setContactos(contactos.map((c, i) => ({
-      ...c,
-      isPrincipal: i === index
-    })))
+    setContactos(
+      contactos.map((c, i) => ({
+        ...c,
+        isPrincipal: i === index
+      }))
+    )
   }
 
   const handleContactSelect = (contact: Contacto) => {
-    setContactos([...contactos, {
-      contacto: {
-        contactId: contact.contactId || undefined,
-        nombre: contact.nombre,
-        cargo: contact.cargo,
-        email: contact.email,
-        telefono1: contact.telefono1,
-        telefono2: contact.telefono2
-      },
-      isPrincipal: contactos.length === 0
-    }])
+    setContactos([
+      ...contactos,
+      {
+        contacto: {
+          contactId: contact.contactId || undefined,
+          nombre: contact.nombre,
+          cargo: contact.cargo,
+          email: contact.email,
+          telefono1: contact.telefono1,
+          telefono2: contact.telefono2
+        },
+        isPrincipal: contactos.length === 0
+      }
+    ])
   }
 
   return (
@@ -307,7 +324,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5' className='text-xl'>Editar Cliente</Typography>
+        <Typography variant='h5' className='text-xl'>
+          Editar Cliente
+        </Typography>
         <IconButton size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
@@ -334,18 +353,13 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id="estado-label">Estado</InputLabel>
+                <InputLabel id='estado-label'>Estado</InputLabel>
                 <Controller
-                  name="estado"
+                  name='estado'
                   control={control}
-                  defaultValue="active"
+                  defaultValue='active'
                   render={({ field }) => (
-                    <Select
-                      labelId="estado-label"
-                      label="Estado"
-                      {...field}
-                      error={Boolean(errors.estado)}
-                    >
+                    <Select labelId='estado-label' label='Estado' {...field} error={Boolean(errors.estado)}>
                       {ESTADOS_CLIENTE.map(estado => (
                         <MenuItem key={estado.value} value={estado.value}>
                           {estado.label}
@@ -354,11 +368,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                     </Select>
                   )}
                 />
-                {errors.estado && (
-                  <FormHelperText error>
-                    Este campo es requerido
-                  </FormHelperText>
-                )}
+                {errors.estado && <FormHelperText error>Este campo es requerido</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
@@ -432,7 +442,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   labelId='country'
                 >
                   {PAISES.map(pais => (
-                    <MenuItem key={pais.value} value={pais.value}>{pais.label}</MenuItem>
+                    <MenuItem key={pais.value} value={pais.value}>
+                      {pais.label}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -450,10 +462,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   label='Región'
                 >
                   {Object.keys(REGIONES_CHILE).map(region => (
-                    <MenuItem 
-                      key={region} 
-                      value={region}
-                    >
+                    <MenuItem key={region} value={region}>
                       {region}
                     </MenuItem>
                   ))}
@@ -557,14 +566,10 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
               <FormControl fullWidth>
                 <InputLabel>Segmento</InputLabel>
                 <Controller
-                  name="segmento"
+                  name='segmento'
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      label="Segmento"
-                      {...field}
-                      error={Boolean(errors.segmento)}
-                    >
+                    <Select label='Segmento' {...field} error={Boolean(errors.segmento)}>
                       {SEGMENTOS.map(segmento => (
                         <MenuItem key={segmento.value} value={segmento.value}>
                           {segmento.label}
@@ -612,9 +617,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
             </Grid>
 
             <Grid item xs={6}>
-              <ContactSearch 
-                onContactSelect={handleContactSelect}
-              />
+              <ContactSearch onContactSelect={handleContactSelect} />
             </Grid>
           </Grid>
 
@@ -657,7 +660,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <TableCell>
                     <TextField
                       value={nuevoContacto.nombre}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, nombre: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
                       placeholder='Nombre'
                       fullWidth
                       size='small'
@@ -666,7 +669,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <TableCell>
                     <TextField
                       value={nuevoContacto.cargo}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, cargo: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
                       placeholder='Cargo'
                       fullWidth
                       size='small'
@@ -675,7 +678,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <TableCell>
                     <TextField
                       value={nuevoContacto.email}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, email: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
                       placeholder='Email'
                       fullWidth
                       size='small'
@@ -684,7 +687,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <TableCell>
                     <TextField
                       value={nuevoContacto.telefono1}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono1: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono1: e.target.value })}
                       placeholder='Teléfono 1'
                       fullWidth
                       size='small'
@@ -693,7 +696,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <TableCell>
                     <TextField
                       value={nuevoContacto.telefono2}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono2: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono2: e.target.value })}
                       placeholder='Teléfono 2'
                       fullWidth
                       size='small'
@@ -713,6 +716,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                         value={contacto.contacto.nombre}
                         onChange={e => {
                           const updatedContactos = [...contactos]
+
                           updatedContactos[index] = {
                             ...contacto,
                             contacto: {
@@ -732,6 +736,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                         value={contacto.contacto.cargo}
                         onChange={e => {
                           const updatedContactos = [...contactos]
+
                           updatedContactos[index] = {
                             ...contacto,
                             contacto: {
@@ -760,6 +765,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                         value={contacto.contacto.email}
                         onChange={e => {
                           const updatedContactos = [...contactos]
+
                           updatedContactos[index] = {
                             ...contacto,
                             contacto: {
@@ -785,6 +791,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                         value={contacto.contacto.telefono1}
                         onChange={e => {
                           const updatedContactos = [...contactos]
+
                           updatedContactos[index] = {
                             ...contacto,
                             contacto: {
@@ -810,6 +817,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                         value={contacto.contacto.telefono2}
                         onChange={e => {
                           const updatedContactos = [...contactos]
+
                           updatedContactos[index] = {
                             ...contacto,
                             contacto: {
@@ -856,17 +864,17 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField 
-                fullWidth 
-                label='Condiciones de Venta' 
+              <TextField
+                fullWidth
+                label='Condiciones de Venta'
                 value={formData.condicionVenta}
                 onChange={e => setFormData({ ...formData, condicionVenta: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField 
-                fullWidth 
-                label='Observaciones' 
+              <TextField
+                fullWidth
+                label='Observaciones'
                 value={formData.observaciones}
                 onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
               />
@@ -874,20 +882,15 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
           </Grid>
 
           <div className='flex items-center gap-4 mt-5'>
-            <Button 
-              variant='contained' 
+            <Button
+              variant='contained'
               type='submit'
               disabled={Object.keys(errors).length > 0 || isSubmitting}
-              startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+              startIcon={isSubmitting ? <CircularProgress size={20} color='inherit' /> : null}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button 
-              variant='outlined' 
-              color='error' 
-              disabled={isSubmitting}
-              onClick={handleReset}
-            >
+            <Button variant='outlined' color='error' disabled={isSubmitting} onClick={handleReset}>
               Cancelar
             </Button>
           </div>

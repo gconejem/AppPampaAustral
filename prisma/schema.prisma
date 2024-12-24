@@ -115,15 +115,15 @@ model Producto {
   norma         String?        // Para paquetes
   listaPrecios  String?        // Para paquetes
   aplicaImpuesto Boolean       @default(true)
-  
+
   // Campos de auditoría
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  
+
   // Relaciones para paquetes
   productosEnPaquete ProductoPaquete[] @relation("PaqueteProductos")
   paquetesQueLoIncluyen ProductoPaquete[] @relation("ProductoEnPaquetes")
-  
+
   // Índices para optimizar búsquedas frecuentes
   @@index([sku])
   @@index([estado])
@@ -146,4 +146,66 @@ model ProductoPaquete {
 enum EstadoProducto {
   ACTIVO
   INACTIVO
+}
+
+model Obra {
+  obraId                    Int      @id @default(autoincrement())
+  fechaCreacion            DateTime @default(now())
+  numeroObra               String   @unique
+  fechaIngreso             DateTime
+  estado                   String
+  estadoObra               String
+  nombreObra               String
+  direccion                String
+  region                   String
+  comuna                   String
+  telefono                 String?
+  sitioWeb                 String?
+
+  // Datos del mandante
+  informeMandante          Boolean  @default(false)
+  textoMandante           String?
+
+  // Requisitos
+  acreditacionPersonal     Boolean  @default(false)
+  especificacionesTecnicas Boolean  @default(false)
+  acreditacionEquipos      Boolean  @default(false)
+  cartaCompromiso          Boolean  @default(false)
+  mandatoServiu            Boolean  @default(false)
+  otrosRequisitos          String?
+
+  // Facturación
+  razonSocial             String
+  rut                     String
+  giro                    String
+  direccionComercial      String
+  comunaFacturacion       String
+  telefonoFacturacion     String
+  listaPrecios            String
+  mailRecepcionFactura    String
+
+  // Referencias
+  estadoPago              Boolean  @default(false)
+  hes                     Boolean  @default(false)
+  oc                      Boolean  @default(false)
+  otrasReferencias        String?
+
+  // Relaciones
+  contactos               ContactoObra[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model ContactoObra {
+  id          Int      @id @default(autoincrement())
+  obraId      Int
+  obra        Obra     @relation(fields: [obraId], references: [obraId])
+  nombre      String
+  cargo       String
+  email       String
+  telefono1   String
+  telefono2   String?
+  isPrincipal Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

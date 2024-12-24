@@ -21,8 +21,15 @@ import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
+import CircularProgress from '@mui/material/CircularProgress'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 
 // Third-party Imports
+import axios from 'axios'
+import { toast } from 'react-hot-toast'
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
@@ -44,12 +51,14 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import type { ThemeColor } from '@core/types'
 import type { UsersType } from '@/types/apps/userTypes'
 import type { Locale } from '@configs/i18n'
+import type { Obra, WorkTypeWithAction } from '@/types/forms/obra'
 
 // Component Imports
 import TableFilters from './TableFilters'
 import AddWorkDrawer from './AddWork'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
+import EditWorksForm from '../edit/EditWorksForm'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -65,25 +74,6 @@ declare module '@tanstack/table-core' {
   interface FilterMeta {
     itemRank: RankingInfo
   }
-}
-
-type WorkType = {
-  id: string
-  numeroObra: string
-  fechaIngreso: string
-  estado: string
-  estadoObra: string
-  nombreObra: string
-  direccion: string
-  rut: string
-  nombreCliente: string
-  company: string
-  country: string
-  contact: string
-}
-
-type WorkTypeWithAction = WorkType & {
-  action?: string
 }
 
 type UsersTypeWithAction = UsersType & {
@@ -161,17 +151,41 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<WorkTypeWithAction>()
 
-const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
+const WorkListTable = () => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState<WorkTypeWithAction[]>([])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedObra, setSelectedObra] = useState<Obra | null>(null)
+  const [editObraOpen, setEditObraOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [obraToDelete, setObraToDelete] = useState<number | null>(null)
 
   // Hooks
   const params = useParams()
-  const locale = params?.lang as string || 'es'
+  const locale = (params?.lang as string) || 'es'
+
+  // Agregar este useEffect para cargar los datos
+  useEffect(() => {
+    const fetchObras = async () => {
+      try {
+        setIsLoading(true)
+        const response = await axios.get('/api/obras')
+
+        setData(response.data)
+      } catch (error) {
+        console.error('Error fetching obras:', error)
+        toast.error('Error al cargar las obras')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchObras()
+  }, [])
 
   const columns = useMemo<ColumnDef<WorkTypeWithAction, any>[]>(
     () => [
@@ -198,76 +212,107 @@ const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
         )
       },
       columnHelper.accessor('numeroObra', {
-        header: 'Número Obra',
-        cell: ({ row }) => <Typography>{row.original.numeroObra}</Typography>
+        header: 'NUMERO OBRA',
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px] font-medium'>
+            {row.original.numeroObra}
+          </Typography>
+        )
       }),
-      columnHelper.accessor('estado', {
-        header: 'Estado',
-        cell: ({ row }) => <Typography>{row.original.estado}</Typography>
+      columnHelper.accessor('razonSocial', {
+        header: 'NOMBRE CLIENTE',
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px]'>
+            {row.original.razonSocial}
+          </Typography>
+        )
       }),
       columnHelper.accessor('nombreObra', {
-        header: 'Nombre Obra',
-        cell: ({ row }) => <Typography>{row.original.nombreObra}</Typography>
+        header: 'NOMBRE OBRA',
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px]'>
+            {row.original.nombreObra}
+          </Typography>
+        )
       }),
       columnHelper.accessor('direccion', {
-        header: 'Dirección',
-        cell: ({ row }) => <Typography>{row.original.direccion}</Typography>
+        header: 'DIRECCIÓN',
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px]'>
+            {row.original.direccion}
+          </Typography>
+        )
       }),
       columnHelper.accessor('rut', {
         header: 'RUT',
-        cell: ({ row }) => <Typography>{row.original.rut}</Typography>
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px]'>
+            {row.original.rut}
+          </Typography>
+        )
       }),
-      columnHelper.accessor('nombreCliente', {
-        header: 'Nombre Cliente',
-        cell: ({ row }) => <Typography>{row.original.nombreCliente}</Typography>
-      }),
-      columnHelper.accessor('company', {
-        header: 'Company',
-        cell: ({ row }) => <Typography>{row.original.company}</Typography>
-      }),
-      columnHelper.accessor('country', {
-        header: 'Country',
-        cell: ({ row }) => <Typography>{row.original.country}</Typography>
-      }),
-      columnHelper.accessor('contact', {
-        header: 'Contact',
-        cell: ({ row }) => <Typography>{row.original.contact}</Typography>
+      columnHelper.accessor('estado', {
+        header: 'ESTADO',
+        cell: ({ row }) => (
+          <Chip
+            label={row.original.estado}
+            color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
+            variant='filled'
+            size='small'
+          />
+        )
       }),
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'ACCIONES',
         cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='ri-delete-bin-7-line text-textSecondary' />
+          <div className='flex items-center gap-2'>
+            <IconButton size='small' onClick={() => handleEdit(row.original)}>
+              <i className='ri-edit-line text-[18px] text-textSecondary' />
             </IconButton>
-            <IconButton>
-              <Link href={getLocalizedUrl('/apps/user/view', locale as Locale)} className='flex'>
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
+            <IconButton size='small' onClick={() => handleDeleteClick(row.original.obraId)}>
+              <i className='ri-delete-bin-line text-[18px] text-textSecondary' />
             </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Edit',
-                  icon: 'ri-edit-box-line',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            />
           </div>
-        ),
-        enableSorting: false
+        )
       })
     ],
     []
   )
+
+  const handleDeleteClick = (id: number) => {
+    setObraToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!obraToDelete) return
+
+    try {
+      await axios.delete(`/api/obras/${obraToDelete}`)
+      setData(prevData => prevData.filter(obra => obra.obraId !== obraToDelete))
+      toast.success('Obra eliminada correctamente')
+      setDeleteDialogOpen(false)
+    } catch (error) {
+      console.error('Error deleting obra:', error)
+      toast.error('Error al eliminar la obra')
+    }
+  }
+
+  const handleEdit = async (obra: Obra) => {
+    try {
+      console.log('Obra antes de la petición:', obra)
+      const response = await axios.get(`/api/obras/${obra.obraId}`)
+
+      console.log('Respuesta completa:', response.data)
+      console.log('Contactos en la respuesta:', response.data.contactos)
+
+      setSelectedObra(response.data)
+      setEditObraOpen(true)
+    } catch (error) {
+      console.error('Error al obtener datos:', error)
+      toast.error('Error al cargar los datos de la obra')
+    }
+  }
 
   const table = useReactTable({
     data: filteredData as WorkTypeWithAction[],
@@ -328,10 +373,15 @@ const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
     <>
       <Card>
         <CardHeader
-          title={<span className='text-xl '>Obras</span>}
+          title={<Typography variant='h6'>Obras</Typography>}
           action={
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              + Nueva Obra
+            <Button
+              variant='contained'
+              onClick={() => setAddUserOpen(true)}
+              startIcon={<i className='ri-add-line' />}
+              sx={{ borderRadius: '5px' }}
+            >
+              Nueva Obra
             </Button>
           }
         />
@@ -369,61 +419,67 @@ const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
             />
           </div>
         </div>
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
-        </div>
+        {isLoading ? (
+          <div className='flex justify-center p-5'>
+            <CircularProgress />
+          </div>
+        ) : (
+          <div className='overflow-x-auto'>
+            <table className={tableStyles.table}>
+              <thead>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th key={header.id}>
+                        {header.isPlaceholder ? null : (
+                          <>
+                            <div
+                              className={classnames({
+                                'flex items-center': header.column.getIsSorted(),
+                                'cursor-pointer select-none': header.column.getCanSort()
+                              })}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: <i className='ri-arrow-up-s-line text-xl' />,
+                                desc: <i className='ri-arrow-down-s-line text-xl' />
+                              }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              {table.getFilteredRowModel().rows.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                      No hay datos disponibles
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+                <tbody>
+                  {table
+                    .getRowModel()
+                    .rows.slice(0, table.getState().pagination.pageSize)
+                    .map(row => {
+                      return (
+                        <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                          {row.getVisibleCells().map(cell => (
+                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              )}
+            </table>
+          </div>
+        )}
         <TablePagination
           rowsPerPageOptions={[10, 25, 50]}
           component='div'
@@ -446,6 +502,24 @@ const WorkListTable = ({ tableData }: { tableData?: WorkType[] }) => {
         userData={data}
         setData={setData}
       />
+      <EditWorksForm
+        open={editObraOpen}
+        handleClose={() => setEditObraOpen(false)}
+        currentObra={selectedObra}
+        setData={setData}
+      />
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent>¿Está seguro que desea eliminar esta obra?</DialogContent>
+        <DialogActions>
+          <Button variant='outlined' color='secondary' onClick={() => setDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
