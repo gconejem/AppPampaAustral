@@ -6,13 +6,13 @@ export async function GET() {
   try {
     const contacts = await prisma.contacto.findMany({
       orderBy: {
-        nombre: 'asc'
+        contactId: 'desc'
       }
     })
     
     return NextResponse.json(contacts)
   } catch (error) {
-    return NextResponse.json({ error: 'Error loading contacts' }, { status: 500 })
+    return NextResponse.json({ error: 'Error getting contacts' }, { status: 500 })
   }
 }
 

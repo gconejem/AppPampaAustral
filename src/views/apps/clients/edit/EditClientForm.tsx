@@ -44,12 +44,45 @@ type Props = {
   open: boolean
   handleClose: () => void
   userData?: Cliente[]
-  setData: (data: Cliente[]) => void
-  currentUser: Cliente // Cliente a editar
+  setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
+  currentUser: Cliente
 }
 
-const EditClientForm = (props: Props) => {
-  const { open, handleClose, userData, setData, currentUser } = props
+const defaultValues: FormValidateType = {
+  rut: '',
+  estado: 'active',
+  razonSocial: '',
+  nombreCliente: '',
+  ciudad: '',
+  comuna: '',
+  direccion: '',
+  telefono: '',
+  sitioWeb: '',
+  segmento: '',
+  industria: '',
+  vendedor: '',
+  condicionVenta: '',
+  observaciones: ''
+}
+
+const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: Props): JSX.Element => {
+  console.log('EditClientForm Props:', { open, currentUser, userData })
+
+  const {
+    control,
+    reset: resetForm,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<FormValidateType>({
+    defaultValues,
+    mode: 'onChange'
+  })
+
+  console.log('Form defaultValues:', {
+    rut: currentUser?.rut,
+    razonSocial: currentUser?.razonSocial,
+    segmento: currentUser?.segmento
+  })
 
   const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
   const [contactos, setContactos] = useState<Array<{contacto: Contacto, isPrincipal: boolean}>>([])
@@ -63,34 +96,6 @@ const EditClientForm = (props: Props) => {
   const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const defaultValues: FormValidateType = {
-    rut: '',
-    estado: 'active',
-    razonSocial: '',
-    nombreCliente: '',
-    ciudad: '',
-    comuna: '',
-    direccion: '',
-    telefono: '',
-    sitioWeb: '',
-    segmento: '',
-    industria: '',
-    vendedor: '',
-    condicionVenta: '',
-    observaciones: ''
-  }
-
-  const {
-    control,
-    reset: resetForm,
-    handleSubmit,
-    formState: { errors }
-  } = useForm<FormValidateType>({
-    defaultValues,
-    mode: 'onChange'
-  })
-
-  // Cargar datos actuales del cliente
   useEffect(() => {
     if (currentUser) {
       const formValues = {
@@ -129,94 +134,123 @@ const EditClientForm = (props: Props) => {
         observaciones: currentUser.condicionesComerciales?.observaciones || ''
       })
 
-      // Cargar contactos existentes
-      const contactosExistentes = currentUser.clientesContactos?.map(cc => ({
-        id: cc.contacto?.id,
-        nombre: cc.contacto?.nombre || '',
-        cargo: cc.contacto?.cargo || '',
-        email: cc.contacto?.email || '',
-        telefono1: cc.contacto?.telefono1 || '',
-        telefono2: cc.contacto?.telefono2 || '',
-        isPrincipal: cc.isPrincipal || false
-      })) || []
+      if (currentUser.clientesContactos) {
+        const contactosExistentes = currentUser.clientesContactos?.map(cc => ({
+          contacto: {
+            contactId: cc.contacto?.contactId || undefined,
+            nombre: cc.contacto?.nombre || '',
+            cargo: cc.contacto?.cargo || '',
+            email: cc.contacto?.email || '',
+            telefono1: cc.contacto?.telefono1 || '',
+            telefono2: cc.contacto?.telefono2 || '',
+          },
+          isPrincipal: cc.isPrincipal || false
+        }))
 
-      setContactos(contactosExistentes.map(c => ({ contacto: c, isPrincipal: c.isPrincipal })))
+        setContactos(contactosExistentes)
+      }
+
       setSelectedRegion(currentUser.region || '')
     }
   }, [currentUser, resetForm])
 
-  // Guardar cambios en el cliente
   const onSubmit = async (data: FormValidateType) => {
     try {
       setIsSubmitting(true)
-      console.log('EditClientForm - Datos a actualizar:', { id: currentUser.id, ...data, ...formData })
-
-      // Preparar datos según el esquema de Prisma
-      const clienteData = {
-        id: currentUser.id,
-        rut: data.rut,
-        razonSocial: data.razonSocial,
-        nombreCliente: data.nombreCliente,
-        estado: data.estado,
-        segmento: data.segmento,
-        industria: data.industria,
-        ciudad: data.ciudad,
-        comuna: data.comuna,
-        direccion: data.direccion,
-        telefono: data.telefono,
-        sitioWeb: data.sitioWeb,
-        region: formData.region,
-        pais: formData.pais,
-        clientesContactos: {
-          deleteMany: {},  // Eliminar relaciones existentes
-          create: contactos.map(contacto => ({
-            contacto: {
-              create: {
-                nombre: contacto.contacto.nombre,
-                cargo: contacto.contacto.cargo,
-                email: contacto.contacto.email,
-                telefono1: contacto.contacto.telefono1,
-                telefono2: contacto.contacto.telefono2
-              }
-            },
-            isPrincipal: contacto.isPrincipal || false
-          }))
-        },
-        condicionesComerciales: {
-          update: {
-            vendedor: formData.vendedor,
-            condicionVenta: formData.condicionVenta,
-            observaciones: formData.observaciones
-          }
-        }
+      const dataToSend = {
+        ...data,
+        clientesContactos: contactos.map(c => ({
+          contacto: {
+            ...(c.contacto.contactId && { contactId: Number(c.contacto.contactId) }),
+            nombre: c.contacto.nombre,
+            cargo: c.contacto.cargo,
+            email: c.contacto.email,
+            telefono1: c.contacto.telefono1,
+            telefono2: c.contacto.telefono2
+          },
+          isPrincipal: c.isPrincipal
+        })),
+        vendedor: formData.vendedor,
+        condicionVenta: formData.condicionVenta,
+        observaciones: formData.observaciones
       }
 
-      const response = await fetch(`/api/clientes/${currentUser.id}`, {
+      // Primero crear/actualizar los contactos
+      const updatedContactos = await Promise.all(
+        contactos.map(async (c) => {
+          if (c.contacto.contactId) {
+            // Actualizar contacto existente
+            const response = await fetch(`/api/contactos/${c.contacto.contactId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...c.contacto,
+                contactId: parseInt(String(c.contacto.contactId))
+              })
+            })
+            if (!response.ok) {
+              const errorData = await response.json()
+              console.error('Error updating contact:', errorData)
+              throw new Error('Error actualizando contacto existente')
+            }
+            return response.json()
+          } else {
+            // Crear nuevo contacto
+            delete c.contacto.contactId  // Eliminar el contactId para nuevos contactos
+            const response = await fetch('/api/contactos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(c.contacto)
+            })
+            if (!response.ok) {
+              const errorData = await response.json()
+              console.error('Error creating contact:', errorData)
+              throw new Error('Error creando nuevo contacto')
+            }
+            return response.json()
+          }
+        })
+      )
+
+      // Luego actualizar el cliente con los contactos actualizados
+      const response = await fetch(`/api/clientes/${currentUser.clienteId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(clienteData)
+        body: JSON.stringify({
+          clienteId: currentUser.clienteId,
+          ...dataToSend,
+          clientesContactos: updatedContactos.map((contacto, index) => ({
+            contacto: {
+              contactId: parseInt(String(contacto.contactId)),
+              nombre: contacto.nombre,
+              cargo: contacto.cargo,
+              email: contacto.email,
+              telefono1: contacto.telefono1,
+              telefono2: contacto.telefono2
+            },
+            isPrincipal: contactos[index].isPrincipal
+          }))
+        })
       })
 
       if (response.ok) {
         const updatedClient = await response.json()
-        console.log('EditClientForm - Cliente actualizado:', updatedClient)
+        console.log('Updated Client:', updatedClient)
 
-        // Actualizar la lista local
-        const updatedData = userData?.map(user => 
-          user.id === currentUser.id ? updatedClient : user
-        )
-        setData(updatedData || [])
-
+        setData((prevData: Cliente[]) => {
+          const newData: Cliente[] = prevData.map(client => 
+            client.clienteId === currentUser.clienteId ? updatedClient : client
+          )
+          return newData
+        })
         toast.success('Cliente actualizado exitosamente')
         handleClose()
-      } else {
-        throw new Error('Error al actualizar el cliente')
       }
     } catch (error) {
-      console.error('EditClientForm - Error:', error)
-      toast.error('Error al actualizar el cliente')
+      console.error('Error in onSubmit:', error)
+      toast.error('Error al actualizar cliente')
     } finally {
       setIsSubmitting(false)
     }
@@ -247,6 +281,20 @@ const EditClientForm = (props: Props) => {
       ...c,
       isPrincipal: i === index
     })))
+  }
+
+  const handleContactSelect = (contact: Contacto) => {
+    setContactos([...contactos, {
+      contacto: {
+        contactId: contact.contactId || undefined,
+        nombre: contact.nombre,
+        cargo: contact.cargo,
+        email: contact.email,
+        telefono1: contact.telefono1,
+        telefono2: contact.telefono2
+      },
+      isPrincipal: contactos.length === 0
+    }])
   }
 
   return (
@@ -565,13 +613,7 @@ const EditClientForm = (props: Props) => {
 
             <Grid item xs={6}>
               <ContactSearch 
-                onContactSelect={(contact: Contacto) => {
-                  const newContact = {
-                    contacto: contact,
-                    isPrincipal: contactos.length === 0
-                  }
-                  setContactos([...contactos, newContact])
-                }}
+                onContactSelect={handleContactSelect}
               />
             </Grid>
           </Grid>

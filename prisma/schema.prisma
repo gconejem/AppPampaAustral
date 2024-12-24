@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Cliente {
-  id                     Int                 @id @default(autoincrement())
+  clienteId              Int                 @id @default(autoincrement())
   fechaCreacion          DateTime            @default(now())
   estado                 String
   rut                    String              @unique
@@ -23,20 +23,22 @@ model Cliente {
   sitioWeb               String?
   segmento               String?
   industria              String?
-  clientesContactos      ClienteContacto[] // Relación many-to-many a través de la tabla de unión
+  clientesContactos      ClienteContacto[]
   condicionesComerciales CondicionComercial?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 }
 
 model Contacto {
-  id                Int               @id @default(autoincrement())
-  nombre            String
-  cargo             String
-  email             String
-  telefono1         String
-  telefono2         String?
-  clientesContactos ClienteContacto[] // Relación many-to-many a través de la tabla de unión
+  contactId   Int      @id @default(autoincrement())
+  nombre      String
+  cargo       String
+  email       String
+  telefono1   String
+  telefono2   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  clientesContactos ClienteContacto[]
 }
 
 model CondicionComercial {
@@ -45,7 +47,7 @@ model CondicionComercial {
   condicionVenta String
   observaciones  String?
   clienteId      Int     @unique
-  cliente        Cliente @relation(fields: [clienteId], references: [id])
+  cliente        Cliente @relation(fields: [clienteId], references: [clienteId])
 }
 
 model User {
@@ -88,12 +90,60 @@ model Session {
 // Tabla de unión para la relación many-to-many
 model ClienteContacto {
   id          Int      @id @default(autoincrement())
-  clienteId   Int
-  contactoId  Int
-  cliente     Cliente  @relation(fields: [clienteId], references: [id])
-  contacto    Contacto @relation(fields: [contactoId], references: [id])
-  isPrincipal Boolean  @default(false) // Para marcar el contacto principal
+  clienteId   Int      // Referencia a Cliente.clienteId
+  contactId   Int      // Referencia a Contacto.contactId
+  isPrincipal Boolean  @default(false)
   createdAt   DateTime @default(now())
+  cliente     Cliente  @relation(fields: [clienteId], references: [clienteId])
+  contacto    Contacto @relation(fields: [contactId], references: [contactId])
 
-  @@unique([clienteId, contactoId])
+  @@unique([clienteId, contactId])
+}
+
+// Tabla de ejemplo con buenas prácticas
+model Producto {
+  productoId    Int            @id @default(autoincrement())
+  sku           String         @unique
+  nombre        String
+  descripcion   String?
+  area          String         // ÁREA del ensayo/servicio
+  familia       String         // FAMILIA del ensayo/servicio
+  esPaquete     Boolean        @default(false)
+  tipo          String         // TIPO de ensayo/servicio
+  precio        Decimal        @db.Decimal(10, 2)
+  estado        EstadoProducto @default(ACTIVO)
+  norma         String?        // Para paquetes
+  listaPrecios  String?        // Para paquetes
+  aplicaImpuesto Boolean       @default(true)
+  
+  // Campos de auditoría
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relaciones para paquetes
+  productosEnPaquete ProductoPaquete[] @relation("PaqueteProductos")
+  paquetesQueLoIncluyen ProductoPaquete[] @relation("ProductoEnPaquetes")
+  
+  // Índices para optimizar búsquedas frecuentes
+  @@index([sku])
+  @@index([estado])
+  @@index([familia])
+  @@index([area])
+}
+
+// Tabla para manejar la relación entre productos y paquetes
+model ProductoPaquete {
+  id          Int      @id @default(autoincrement())
+  paqueteId   Int      // ID del producto que es paquete
+  productoId  Int      // ID del producto incluido en el paquete
+  createdAt   DateTime @default(now())
+  paquete     Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
+  producto    Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
+
+  @@unique([paqueteId, productoId])
+}
+
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
 }

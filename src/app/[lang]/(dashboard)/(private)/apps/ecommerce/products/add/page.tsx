@@ -1,49 +1,19 @@
-// MUI Imports
-import Grid from '@mui/material/Grid'
+'use client'
 
-// Component Imports
-import ProductAddHeader from '@views/apps/ecommerce/products/add/ProductAddHeader'
-import ProductInformation from '@views/apps/ecommerce/products/add/ProductInformation'
-import ProductImage from '@views/apps/ecommerce/products/add/ProductImage'
-import ProductVariants from '@views/apps/ecommerce/products/add/ProductVariants'
-import ProductInventory from '@views/apps/ecommerce/products/add/ProductInventory'
-import ProductPricing from '@views/apps/ecommerce/products/add/ProductPricing'
-import ProductOrganize from '@views/apps/ecommerce/products/add/ProductOrganize'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import AddEnsayo from '@/views/apps/ecommerce/products/add/AddEnsayo'
 
-const eCommerceProductsAdd = () => {
+export default function Page() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Verificar si el usuario está autenticado aquí si es necesario
+  }, [])
+
   return (
-    <Grid container spacing={6}>
-      <Grid item xs={12}>
-        <ProductAddHeader />
-      </Grid>
-      <Grid item xs={12} md={8}>
-        <Grid container spacing={6}>
-          <Grid item xs={12}>
-            <ProductInformation />
-          </Grid>
-          <Grid item xs={12}>
-            <ProductImage />
-          </Grid>
-          <Grid item xs={12}>
-            <ProductVariants />
-          </Grid>
-          <Grid item xs={12}>
-            <ProductInventory />
-          </Grid>
-        </Grid>
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <Grid container spacing={6}>
-          <Grid item xs={12}>
-            <ProductPricing />
-          </Grid>
-          <Grid item xs={12}>
-            <ProductOrganize />
-          </Grid>
-        </Grid>
-      </Grid>
-    </Grid>
+    <div className='content-center'>
+      <AddEnsayo />
+    </div>
   )
 }
-
-export default eCommerceProductsAdd

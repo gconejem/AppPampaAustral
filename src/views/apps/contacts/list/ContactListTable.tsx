@@ -28,6 +28,9 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
+import Box from '@mui/material/Box'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 // DatePicker Imports
 import 'react-datepicker/dist/react-datepicker.css'
@@ -192,13 +195,13 @@ const ContactsListTable = () => {
       if (!selectedContact) return
       setIsDeleteLoading(true)
       
-      const response = await fetch(`/api/contactos/${selectedContact.id}`, {
+      const response = await fetch(`/api/contactos/${selectedContact.contactId}`, {
         method: 'DELETE'
       })
 
       if (!response.ok) throw new Error('Error al eliminar contacto')
 
-      const newData = data.filter(contact => contact.id !== selectedContact.id)
+      const newData = data.filter(contact => contact.contactId !== selectedContact.contactId)
       setData(newData)
       setFilteredData(newData)
       
@@ -298,14 +301,20 @@ const ContactsListTable = () => {
       columnHelper.accessor('action', {
         header: 'ACCIÓN',
         cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton className='text-primary'>
-              <i className='ri-pencil-line' onClick={() => handleEditContact(row.original)} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              color='primary'
+              onClick={() => handleEditContact(row.original)}
+            >
+              <EditIcon />
             </IconButton>
-            <IconButton className='text-error'>
-              <i className='ri-delete-bin-line' onClick={() => handleClickOpenDialog(row.original)} />
+            <IconButton
+              color='error'
+              onClick={() => handleClickOpenDialog(row.original)}
+            >
+              <DeleteIcon />
             </IconButton>
-          </div>
+          </Box>
         ),
         enableSorting: false
       })

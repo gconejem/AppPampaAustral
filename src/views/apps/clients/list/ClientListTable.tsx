@@ -154,20 +154,23 @@ const ContactsModal = ({ open, handleClose, contacts }: {
 }
 
 const ClientListTable = ({ userData, setData }: Props) => {
+  // Verificar si userData está definido, si no, usar array vacío
+  const safeUserData = userData || []
+
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [editUserOpen, setEditUserOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Cliente | null>(null)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [filteredData, setFilteredData] = useState<Cliente[]>(userData || [])
+  const [filteredData, setFilteredData] = useState<Cliente[]>(safeUserData)
   const [openDialog, setOpenDialog] = useState(false)
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
 
   useEffect(() => {
-    setFilteredData(userData || [])
-  }, [userData])
+    setFilteredData(safeUserData)
+  }, [safeUserData])
 
   const handleDelete = async (id: number) => {
     try {
@@ -177,7 +180,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
       if (response.ok) {
         // Actualizar la lista local
-        const updatedData = userData.filter(client => client.id !== id)
+        const updatedData = userData.filter(client => client.clienteId !== id)
         setData(updatedData)
         setFilteredData(updatedData)
         toast.success('Cliente eliminado exitosamente')
@@ -198,6 +201,12 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const handleClickOpenDialog = (client: Cliente) => {
     setSelectedUser(client)
     setOpenDialog(true)
+  }
+
+  const handleEditClick = (client: Cliente) => {
+    console.log('Edit clicked for client:', client)
+    setSelectedUser(client)
+    setEditUserOpen(true)
   }
 
   const columns = useMemo(() => [
@@ -222,7 +231,9 @@ const ClientListTable = ({ userData, setData }: Props) => {
     }),
     columnHelper.accessor('razonSocial', {
       header: 'NOMBRE COMERCIAL',
-      cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.nombreCliente}</Typography>
+      cell: ({ row }: { row: Row<Cliente> }) => (
+        <Typography>{row.original.nombreCliente || row.original.razonSocial}</Typography>
+      )
     }),
     columnHelper.accessor('segmento', {
       header: 'SEGMENTO',
@@ -316,10 +327,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
       cell: ({ row }: { row: Row<Cliente> }) => (
         <div className='flex items-center'>
           <IconButton 
-            onClick={() => {
-              setSelectedUser(row.original)
-              setEditUserOpen(true)
-            }}
+            onClick={() => handleEditClick(row.original)}
             size="small"
           >
             <i className="ri-pencil-line text-[16px] text-[#3366FF]" />
@@ -374,7 +382,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
         <TableFilters 
           setData={setFilteredData} 
-          data={userData}
+          data={safeUserData}
           toggleAddUserDrawer={() => setAddUserOpen(!addUserOpen)}
         />
         <Divider />
@@ -433,13 +441,16 @@ const ClientListTable = ({ userData, setData }: Props) => {
         />
 
         {selectedUser && (
-          <EditClientForm
-            open={editUserOpen}
-            handleClose={() => setEditUserOpen(false)}
-            userData={userData}
-            setData={setData}
-            currentUser={selectedUser}
-          />
+          <>
+            {console.log('Rendering EditClientForm with selectedUser:', selectedUser)}
+            <EditClientForm
+              open={editUserOpen}
+              handleClose={() => setEditUserOpen(false)}
+              userData={userData}
+              setData={setData}
+              currentUser={selectedUser}
+            />
+          </>
         )}
       </Card>
       {/* Diálogo de confirmación para eliminar */}
@@ -455,7 +466,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
             Cancelar
           </Button>
           <Button 
-            onClick={() => selectedUser?.id && handleDelete(selectedUser.id)} 
+            onClick={() => selectedUser?.clienteId && handleDelete(selectedUser.clienteId)} 
             color='error' 
             variant='contained'
           >

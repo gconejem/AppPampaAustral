@@ -47,7 +47,7 @@ export const initialFormData: FormNonValidateType = {
 }
 
 export interface Cliente {
-  id: number
+  clienteId: number
   fechaCreacion: Date
   estado: string
   rut: string
@@ -67,7 +67,7 @@ export interface Cliente {
 }
 
 export interface Contacto {
-  id?: number
+  contactId?: number
   nombre: string
   cargo: string
   email: string

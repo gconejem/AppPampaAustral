@@ -27,6 +27,12 @@ import Typography from '@mui/material/Typography'
 import Modal from '@mui/material/Modal'
 import Box from '@mui/material/Box'
 import type { TextFieldProps } from '@mui/material/TextField'
+import TableContainer from '@mui/material/TableContainer'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -69,10 +75,6 @@ declare module '@tanstack/table-core' {
   interface FilterMeta {
     itemRank: RankingInfo
   }
-}
-
-type ProductWithActionsType = ProductType & {
-  actions?: string
 }
 
 type ProductCategoryType = {
@@ -155,169 +157,336 @@ const productStatusObj: productStatusType = {
   Inactive: { title: 'Inactive', color: 'error' }
 }
 
-const columnHelper = createColumnHelper<ProductWithActionsType>()
+export interface Producto {
+  productoId: number
+  sku: string
+  nombre: string
+  descripcion?: string
+  area: string
+  familia: string
+  tipo: string
+  precio: number
+  estado: string
+  esPaquete: boolean
+  norma?: string
+  listaPrecios?: string
+  aplicaImpuesto: boolean
+  category?: string
+  status?: string
+  stock?: boolean
+}
 
-const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
+interface ProductoListItem {
+  id: string
+  nombre: string
+}
+
+const columnHelper = createColumnHelper<Producto>()
+
+const ProductListTable = () => {
+  // Estados para la tabla
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[productData])
-  const [filteredData, setFilteredData] = useState(data)
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [totalProductos, setTotalProductos] = useState(0)
+
+  // Estados para el modal de paquetes
   const [open, setOpen] = useState(false)
-
-  const [paqueteList, setPaqueteList] = useState<string[]>([]) // Lista de paquetes
-  const [productosList, setProductosList] = useState<string[]>(['Producto 1', 'Producto 2', 'Producto 3']) // Lista de productos
-  const [selectedProductos, setSelectedProductos] = useState<string[]>([])
-  const [selectedPaquetes, setSelectedPaquetes] = useState<string[]>([])
-
-  // Funciones para manejar la selección
-  const handleSelectProducto = (item: string) => {
-    setSelectedProductos(prev => (prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]))
-  }
-
-  const handleSelectPaquete = (item: string) => {
-    setSelectedPaquetes(prev => (prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]))
-  }
-
-  // Funciones para mover los elementos entre las listas
-  const handleMoveToPaquete = () => {
-    setPaqueteList(prev => [...prev, ...selectedProductos])
-    setProductosList(prev => prev.filter(item => !selectedProductos.includes(item)))
-    setSelectedProductos([]) // Limpia la selección
-  }
-
-  const handleMoveToProductos = () => {
-    setProductosList(prev => [...prev, ...selectedPaquetes])
-    setPaqueteList(prev => prev.filter(item => !selectedPaquetes.includes(item)))
-    setSelectedPaquetes([]) // Limpia la selección
-  }
-
-  const handleSave = () => {
-    // Lógica para guardar los datos del paquete
-    console.log('Datos del paquete guardados:', {
-      nombre,
-      sku,
-      norma,
-      listaPrecios,
-      precio,
-      aplicarImpuesto,
-      paqueteList
-    })
-
-    // Cierra el modal después de guardar
-    handleClose()
-  }
-
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
   const [norma, setNorma] = useState('')
   const [listaPrecios, setListaPrecios] = useState('')
   const [precio, setPrecio] = useState('')
-  const [aplicarImpuesto, setAplicarImpuesto] = useState(false)
-  const handleOpen = () => setOpen(true)
-  const handleClose = () => setOpen(false)
+  const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [buscarPaquete, setBuscarPaquete] = useState('')
+  const [buscarProductos, setBuscarProductos] = useState('')
+  const [paqueteList, setPaqueteList] = useState<ProductoListItem[]>([])
+  const [productosList, setProductosList] = useState<ProductoListItem[]>([])
+  const [selectedProductos, setSelectedProductos] = useState<string[]>([])
+  const [selectedPaquetes, setSelectedPaquetes] = useState<string[]>([])
 
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang || 'es'
 
-  const columns = useMemo<ColumnDef<ProductWithActionsType, any>[]>(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('sku', {
-        header: 'SKU',
-        cell: ({ row }) => <Typography>{row.original.sku}</Typography>
-      }),
-      columnHelper.accessor('productName', {
-        header: 'Ensayos/Servicio',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            <img src={row.original.image} width={38} height={38} className='rounded bg-actionHover' />
-            <div className='flex flex-col'>
-              <Typography className='font-medium' color='text.primary'>
-                {row.original.productName}
-              </Typography>
-              <Typography variant='body2'>{row.original.productBrand}</Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('qty', {
-        header: 'ÁREA',
-        cell: ({ row }) => <Typography>{row.original.qty}</Typography>
-      }),
-      columnHelper.accessor('category', {
-        header: 'FAMILIA',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            <CustomAvatar skin='light' color={productCategoryObj[row.original.category].color} size={30}>
-              <i className={classnames(productCategoryObj[row.original.category].icon, 'text-lg')} />
-            </CustomAvatar>
-            <Typography color='text.primary'>{row.original.category}</Typography>
-          </div>
-        )
-      }),
-      columnHelper.accessor('stock', {
-        header: 'PAQUETE',
-        cell: ({ row }) => <Switch defaultChecked={row.original.stock} />,
-        enableSorting: false
-      }),
-      columnHelper.accessor('sku', {
-        header: 'TIPO',
-        cell: ({ row }) => <Typography>{row.original.sku}</Typography>
-      }),
+  // Función para cargar productos
+  const cargarProductos = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/productos?page=${page + 1}&limit=${rowsPerPage}`)
+      const data = await response.json()
+      
+      if (data.productos) {
+        setProductos(data.productos)
+        setTotalProductos(data.meta.total)
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      columnHelper.accessor('actions', {
-        header: 'Acciones',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton size='small'>
-              <i className='ri-edit-box-line text-[22px] text-textSecondary' />
-            </IconButton>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary text-[22px]'
-              options={[
-                { text: 'Download', icon: 'ri-download-line', menuItemProps: { className: 'gap-2' } },
-                {
-                  text: 'Delete',
-                  icon: 'ri-delete-bin-7-line',
-                  menuItemProps: {
-                    className: 'gap-2',
-                    onClick: () => setData(data?.filter(product => product.id !== row.original.id))
-                  }
-                },
-                { text: 'Duplicate', icon: 'ri-stack-line', menuItemProps: { className: 'gap-2' } }
-              ]}
-            />
-          </div>
-        ),
-        enableSorting: false
+  // Función para buscar productos
+  const buscarProducto = async (query: string) => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/productos/search?q=${query}`)
+      const data = await response.json()
+      
+      if (Array.isArray(data)) {
+        setProductos(data)
+      }
+    } catch (error) {
+      console.error('Error al buscar productos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Función para eliminar producto
+  const eliminarProducto = async (id: number) => {
+    try {
+      const response = await fetch(`/api/productos/${id}`, {
+        method: 'DELETE'
       })
-    ],
-    [data, filteredData]
-  )
+      
+      if (response.ok) {
+        cargarProductos()
+      }
+    } catch (error) {
+      console.error('Error al eliminar producto:', error)
+    }
+  }
+
+  // Función para crear paquete
+  const crearPaquete = async () => {
+    try {
+      console.log('Iniciando creación de paquete...')
+      const response = await fetch('/api/productos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          nombre,
+          sku,
+          descripcion: '', // Campo requerido
+          area: 'Suelos', // Campo requerido
+          familia: 'Clasificación', // Campo requerido
+          tipo: 'Paquete',
+          precio: parseFloat(precio),
+          norma,
+          listaPrecios,
+          aplicaImpuesto,
+          esPaquete: true,
+          estado: 'ACTIVO',
+          productosEnPaquete: paqueteList.map(p => parseInt(p.id))
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Error en la respuesta:', errorData)
+        throw new Error(errorData.error || 'Error al crear el paquete')
+      }
+
+      const data = await response.json()
+      console.log('Paquete creado exitosamente:', data)
+      handleClose()
+      cargarProductos()
+    } catch (error) {
+      console.error('Error al crear paquete:', error)
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
+  }
+
+  const handleOpen = () => setOpen(true)
+  const handleClose = () => {
+    setOpen(false)
+    // Limpiar estados del modal
+    setNombre('')
+    setSku('')
+    setNorma('')
+    setListaPrecios('')
+    setPrecio('')
+    setAplicaImpuesto(false)
+    setPaqueteList([])
+    setSelectedProductos([])
+    setSelectedPaquetes([])
+  }
+
+  // Funciones para manejar la selección de productos
+  const handleSelectProducto = (item: ProductoListItem) => {
+    setSelectedProductos(prev => 
+      prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]
+    )
+  }
+
+  const handleSelectPaquete = (item: ProductoListItem) => {
+    setSelectedPaquetes(prev => 
+      prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]
+    )
+  }
+
+  // Funciones para mover productos entre listas
+  const handleMoveToPaquete = () => {
+    const productosAMover = productosList.filter(item => selectedProductos.includes(item.id))
+    setPaqueteList(prev => [...prev, ...productosAMover])
+    setProductosList(prev => prev.filter(item => !selectedProductos.includes(item.id)))
+    setSelectedProductos([])
+  }
+
+  const handleMoveToProductos = () => {
+    const productosAMover = paqueteList.filter(item => selectedPaquetes.includes(item.id))
+    setProductosList(prev => [...prev, ...productosAMover])
+    setPaqueteList(prev => prev.filter(item => !selectedPaquetes.includes(item.id)))
+    setSelectedPaquetes([])
+  }
+
+  // Cargar productos disponibles para el paquete
+  const cargarProductosDisponibles = async () => {
+    try {
+      const response = await fetch('/api/productos?esPaquete=false')
+      const data = await response.json()
+      if (data.productos) {
+        const productosFormateados = data.productos.map((p: Producto) => ({
+          id: p.productoId.toString(),
+          nombre: p.nombre
+        }))
+        setProductosList(productosFormateados)
+      }
+    } catch (error) {
+      console.error('Error al cargar productos disponibles:', error)
+    }
+  }
+
+  useEffect(() => {
+    cargarProductos()
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    if (globalFilter) {
+      buscarProducto(globalFilter)
+    } else {
+      cargarProductos()
+    }
+  }, [globalFilter])
+
+  useEffect(() => {
+    if (open) {
+      cargarProductosDisponibles()
+    }
+  }, [open])
+
+  const handleSave = () => {
+    crearPaquete()
+  }
+
+  // Asegurarse de que los valores de las celdas sean strings
+  const renderCellContent = (value: any): string => {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No'
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) return value.map(v => renderCellContent(v)).join(', ')
+      return JSON.stringify(value)
+    }
+    return String(value)
+  }
+
+  const columns = useMemo(() => [
+    {
+      id: 'select',
+      header: ({ table }: any) => (
+        <Checkbox
+          {...{
+            checked: table.getIsAllRowsSelected(),
+            indeterminate: table.getIsSomeRowsSelected(),
+            onChange: table.getToggleAllRowsSelectedHandler()
+          }}
+        />
+      ),
+      cell: ({ row }: any) => (
+        <Checkbox
+          {...{
+            checked: row.getIsSelected(),
+            disabled: !row.getCanSelect(),
+            indeterminate: row.getIsSomeSelected(),
+            onChange: row.getToggleSelectedHandler()
+          }}
+        />
+      )
+    },
+    {
+      accessorKey: 'sku',
+      header: 'SKU',
+      cell: ({ row }: any) => <Typography>{row.original.sku}</Typography>
+    },
+    {
+      accessorKey: 'nombre',
+      header: 'Ensayos/Servicio',
+      cell: ({ row }: any) => (
+        <div className='flex flex-col'>
+          <Typography className='font-medium' color='text.primary'>
+            {row.original.nombre}
+          </Typography>
+          <Typography variant='body2'>{row.original.descripcion}</Typography>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'area',
+      header: 'ÁREA',
+      cell: ({ row }: any) => <Typography>{row.original.area}</Typography>
+    },
+    {
+      accessorKey: 'familia',
+      header: 'FAMILIA',
+      cell: ({ row }: any) => <Typography>{row.original.familia}</Typography>
+    },
+    {
+      accessorKey: 'esPaquete',
+      header: 'PAQUETE',
+      cell: ({ row }: any) => <Switch checked={row.original.esPaquete} readOnly />,
+      enableSorting: false
+    },
+    {
+      accessorKey: 'tipo',
+      header: 'TIPO',
+      cell: ({ row }: any) => <Typography>{row.original.tipo}</Typography>
+    },
+    {
+      id: 'actions',
+      header: 'Acciones',
+      cell: ({ row }: any) => (
+        <div className='flex items-center'>
+          <IconButton size='small'>
+            <i className='ri-edit-box-line text-[22px] text-textSecondary' />
+          </IconButton>
+          <OptionMenu
+            iconButtonProps={{ size: 'medium' }}
+            iconClassName='text-textSecondary text-[22px]'
+            options={[
+              {
+                text: 'Eliminar',
+                icon: 'ri-delete-bin-7-line',
+                menuItemProps: {
+                  className: 'gap-2',
+                  onClick: () => eliminarProducto(row.original.productoId)
+                }
+              }
+            ]}
+          />
+        </div>
+      ),
+      enableSorting: false
+    }
+  ], [])
 
   const table = useReactTable({
-    data: filteredData as ProductType[],
+    data: productos,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -348,7 +517,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
     <>
       <Card>
         <CardHeader title='Productos' className='pbe-4' />
-        <TableFilters setData={setFilteredData} productData={data} />
+        <TableFilters setData={setProductos} productData={productos} />
         <Divider />
         <div className='flex justify-between flex-col items-start sm:flex-row sm:items-center gap-y-4 p-5'>
           <DebouncedInput
@@ -364,7 +533,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
             <Button
               variant='contained'
               component={Link}
-              href={getLocalizedUrl('/apps/ecommerce/products/add', locale as Locale)}
+              href={`/${locale}/apps/ecommerce/products/add`}
               startIcon={<i className='ri-add-line' />}
               className='max-sm:is-full is-auto'
             >
@@ -426,13 +595,11 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
           rowsPerPageOptions={[10, 25, 50]}
           component='div'
           className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+          count={totalProductos}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          onRowsPerPageChange={e => setRowsPerPage(Number(e.target.value))}
         />
         <Modal open={open} onClose={handleClose}>
           <Box sx={{ ...style, width: 1100, height: 650, padding: 4 }}>
@@ -475,7 +642,7 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
                 />
               </Grid>
               <Grid item xs={4} display='flex' alignItems='center'>
-                <Checkbox checked={aplicarImpuesto} onChange={e => setAplicarImpuesto(e.target.checked)} />
+                <Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} />
                 <Typography component='span'>Aplicar Impuesto</Typography>
               </Grid>
             </Grid>
@@ -522,13 +689,13 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
                     </Typography>
                   </Box>
                   {productosList.length > 0 ? (
-                    productosList.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
+                    productosList.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
-                          checked={selectedProductos.includes(item)}
+                          checked={selectedProductos.includes(item.id)}
                           onChange={() => handleSelectProducto(item)}
                         />
-                        <Typography component='span'>{item}</Typography>
+                        <Typography component='span'>{item.nombre}</Typography>
                       </div>
                     ))
                   ) : (
@@ -556,13 +723,13 @@ const ProductListTable = ({ productData }: { productData?: ProductType[] }) => {
                     </Typography>
                   </Box>
                   {paqueteList.length > 0 ? (
-                    paqueteList.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
+                    paqueteList.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
-                          checked={selectedPaquetes.includes(item)}
+                          checked={selectedPaquetes.includes(item.id)}
                           onChange={() => handleSelectPaquete(item)}
                         />
-                        <Typography component='span'>{item}</Typography>
+                        <Typography component='span'>{item.nombre}</Typography>
                       </div>
                     ))
                   ) : (

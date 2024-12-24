@@ -12,7 +12,7 @@ import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
 import IconButton from '@mui/material/IconButton'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
-import type { Contacto } from '@/types/forms/cliente'
+import type { ContactType as Contacto } from '@/types/apps/contactTypes'
 
 interface Props {
   onContactSelect: (contact: Contacto) => void
@@ -58,6 +58,19 @@ const ContactSearch = ({ onContactSelect }: Props) => {
     setSearchTimeout(timeout)
   }
 
+  const handleContactSelect = (contact: Contacto) => {
+    onContactSelect({
+      contactId: contact.contactId,
+      nombre: contact.nombre,
+      cargo: contact.cargo,
+      email: contact.email,
+      telefono1: contact.telefono1,
+      telefono2: contact.telefono2
+    })
+    setSearchValue('')
+    setSearchResults([])
+  }
+
   return (
     <div className="relative">
       <TextField
@@ -94,13 +107,9 @@ const ContactSearch = ({ onContactSelect }: Props) => {
         >
           {searchResults.map((contact) => (
             <ListItem
-              key={contact.id}
+              key={contact.contactId}
               button
-              onClick={() => {
-                onContactSelect(contact)
-                setSearchValue('')
-                setSearchResults([])
-              }}
+              onClick={() => handleContactSelect(contact)}
             >
               <ListItemText
                 primary={contact.nombre}
@@ -110,11 +119,7 @@ const ContactSearch = ({ onContactSelect }: Props) => {
                 <IconButton
                   edge="end"
                   size="small"
-                  onClick={() => {
-                    onContactSelect(contact)
-                    setSearchValue('')
-                    setSearchResults([])
-                  }}
+                  onClick={() => handleContactSelect(contact)}
                 >
                   <i className='ri-add-line' />
                 </IconButton>

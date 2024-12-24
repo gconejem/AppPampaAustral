@@ -70,7 +70,7 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
         ...data
       }
 
-      const response = await fetch(`/api/contactos/${contact.id}`, {
+      const response = await fetch(`/api/contactos/${contact.contactId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
       }
 
       setData(prev => {
-        const newData = prev.map(item => (item.id === contact.id ? updatedContact : item))
+        const newData = prev.map(item => (item.contactId === contact.contactId ? {...updatedContact, contactId: Number(contact.contactId)} : item))
         setFilteredData(newData)
         return newData
       })
