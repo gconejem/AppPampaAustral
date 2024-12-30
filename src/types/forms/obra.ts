@@ -8,51 +8,24 @@ export type ContactoObra = {
   isPrincipal: boolean
 }
 
-export type Obra = {
+export interface Obra {
   obraId: number
-  fechaCreacion?: Date
   numeroObra: string
-  fechaIngreso: Date
+  fechaIngreso: string
   estado: string
   estadoObra: string
   nombreObra: string
   direccion: string
   region: string
   comuna: string
-  telefono?: string
-  sitioWeb?: string
-
-  // Datos del mandante
-  informeMandante: boolean
-  textoMandante?: string
-
-  // Requisitos
-  acreditacionPersonal: boolean
-  especificacionesTecnicas: boolean
-  acreditacionEquipos: boolean
-  cartaCompromiso: boolean
-  mandatoServiu: boolean
-  otrosRequisitos: string
-
-  // Facturación
-  razonSocial: string
+  telefono: string
+  sitioWeb: string
+  nombreCliente: string
   rut: string
+  razonSocial: string
   giro: string
-  direccionComercial: string
-  comunaFacturacion: string
-  telefonoFacturacion: string
-  listaPrecios: string
-  mailRecepcionFactura: string
 
-  // Referencias
-  estadoPago: boolean
-  hes: boolean
-  oc: boolean
-  otrasReferencias: string
-
-  contactos: ContactoObra[]
-  createdAt?: Date
-  updatedAt?: Date
+  // ... resto de campos
 }
 
 export type FormValidateType = {
@@ -66,29 +39,30 @@ export type FormValidateType = {
   comuna: string
   telefono: string
   sitioWeb: string
-
-  informeMandante: boolean
-  textoMandante: string
-
-  acreditacionPersonal: boolean
-  especificacionesTecnicas: boolean
-  acreditacionEquipos: boolean
-  cartaCompromiso: boolean
-  mandatoServiu: boolean
-  otrosRequisitos: string
-
-  razonSocial: string
+  nombreCliente: string
   rut: string
+  razonSocial: string
   giro: string
   direccionComercial: string
   comunaFacturacion: string
   telefonoFacturacion: string
   listaPrecios: string
   mailRecepcionFactura: string
-
+  informeMandante: boolean
+  acreditacionPersonal: boolean
+  especificacionesTecnicas: boolean
+  acreditacionEquipos: boolean
+  cartaCompromiso: boolean
+  mandatoServiu: boolean
   estadoPago: boolean
   hes: boolean
   oc: boolean
+  sector: string
+  georreferencia: string
+  referencia: string
+  mandante: string
+  textoMandante: string
+  otrosRequisitos: string
   otrasReferencias: string
 }
 

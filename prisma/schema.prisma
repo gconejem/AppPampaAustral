@@ -194,6 +194,12 @@ model Obra {
   contactos               ContactoObra[]
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+
+  sector          String?
+  georreferencia  String?
+  referencia      String?
+  mandante        String?
+  nombreCliente   String
 }
 
 model ContactoObra {

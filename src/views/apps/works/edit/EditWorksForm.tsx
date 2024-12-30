@@ -1,9 +1,9 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 // MUI Imports
-import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
+import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
@@ -32,83 +32,112 @@ import { toast } from 'react-hot-toast'
 
 import ContactSearchObra from '../components/ContactSearchObra'
 
-// Types Imports
-import type { Obra } from '@/types/forms/obra'
+// Types
+import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
+
+// Data
+import { ESTADOS_OBRA, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 
 type Props = {
   open: boolean
   handleClose: () => void
-  currentObra: Obra | null
-  setData: (data: Obra[]) => void
+  obraData: Obra | null
+  setData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
 }
 
-type FormValidateType = {
-  obraId: number
-  fechaCreacion: string
-  numeroObra: string
-  fechaIngreso: string
-  estado: string
-  estadoObra: string
-  nombreObra: string
-  direccion: string
-  region: string
-  comuna: string
-  rut: string
-  razonSocial: string
-  giro: string
-  direccionComercial: string
-  comunaFacturacion: string
-  telefonoFacturacion: string
-  listaPrecios: string
-  mailRecepcionFactura: string
-  informeMandante: boolean
-  textoMandante: string
-  acreditacionPersonal: boolean
-  especificacionesTecnicas: boolean
-  acreditacionEquipos: boolean
-  cartaCompromiso: boolean
-  mandatoServiu: boolean
-  otrosRequisitos: string
-  estadoPago: boolean
-  hes: boolean
-  oc: boolean
-  otrasReferencias: string
-  telefono: string
-  sitioWeb: string
-}
+const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
+  // States
+  const [contactos, setContactos] = useState<ContactoObra[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
+  const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
-const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
+  // Form Hook
   const {
     control,
-    handleSubmit,
     reset,
+    handleSubmit,
     formState: { errors }
-  } = useForm<FormValidateType>({
-    defaultValues: {
-      obraId: 0,
-      fechaCreacion: '',
-      numeroObra: '',
-      fechaIngreso: '',
-      estado: '',
-      estadoObra: '',
-      nombreObra: '',
-      direccion: '',
-      region: '',
-      comuna: '',
-      rut: '',
-      razonSocial: '',
-      giro: '',
-      direccionComercial: '',
-      comunaFacturacion: '',
-      telefonoFacturacion: '',
-      listaPrecios: '',
-      mailRecepcionFactura: '',
-      telefono: '',
-      sitioWeb: ''
-    }
-  })
+  } = useForm<FormValidateType>()
 
-  const [contactos, setContactos] = useState<ContactoObra[]>([])
+  useEffect(() => {
+    console.log('EditWorksForm mounted')
+    console.log('open:', open)
+    console.log('obraData:', obraData)
+  }, [])
+
+  useEffect(() => {
+    if (obraData) {
+      console.log('Datos recibidos en EditWorksForm:', obraData)
+
+      const formData = {
+        numeroObra: obraData.numeroObra,
+        fechaIngreso: new Date(obraData.fechaIngreso).toISOString().split('T')[0],
+        estado: obraData.estado,
+        estadoObra: obraData.estadoObra,
+        nombreObra: obraData.nombreObra,
+        direccion: obraData.direccion,
+        region: obraData.region,
+        comuna: obraData.comuna,
+        telefono: obraData.telefono || '',
+        sitioWeb: obraData.sitioWeb || '',
+        nombreCliente: obraData.nombreCliente,
+        rut: obraData.rut,
+        razonSocial: obraData.razonSocial,
+        giro: obraData.giro,
+        direccionComercial: obraData.direccionComercial,
+        comunaFacturacion: obraData.comunaFacturacion,
+        telefonoFacturacion: obraData.telefonoFacturacion,
+        listaPrecios: obraData.listaPrecios,
+        mailRecepcionFactura: obraData.mailRecepcionFactura,
+        informeMandante: Boolean(obraData.informeMandante),
+        acreditacionPersonal: Boolean(obraData.acreditacionPersonal),
+        especificacionesTecnicas: Boolean(obraData.especificacionesTecnicas),
+        acreditacionEquipos: Boolean(obraData.acreditacionEquipos),
+        cartaCompromiso: Boolean(obraData.cartaCompromiso),
+        mandatoServiu: Boolean(obraData.mandatoServiu),
+        estadoPago: Boolean(obraData.estadoPago),
+        hes: Boolean(obraData.hes),
+        oc: Boolean(obraData.oc),
+        sector: obraData.sector || '',
+        georreferencia: obraData.georreferencia || '',
+        referencia: obraData.referencia || '',
+        mandante: obraData.mandante || '',
+        textoMandante: obraData.textoMandante || '',
+        otrosRequisitos: obraData.otrosRequisitos || '',
+        otrasReferencias: obraData.otrasReferencias || ''
+      }
+
+      console.log('Datos a cargar en el formulario:', formData)
+      reset(formData)
+      console.log('Formulario reseteado')
+
+      // Cargar contactos
+      if (obraData.contactos) {
+        setContactos(obraData.contactos)
+      }
+    }
+  }, [obraData, reset])
+
+  const onSubmit = async (data: FormValidateType) => {
+    try {
+      setIsSubmitting(true)
+      const response = await axios.put(`/api/obras/${obraData?.obraId}`, data)
+
+      if (response.status === 200) {
+        toast.success('Obra actualizada exitosamente')
+        handleClose()
+
+        // Actualizar la lista
+        setData(prevData => prevData.map(obra => (obra.obraId === obraData?.obraId ? response.data : obra)))
+      }
+    } catch (error) {
+      console.error('Error updating obra:', error)
+      toast.error('Error al actualizar la obra')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleAddContact = (contact: ContactoObra) => {
     setContactos(prev => [...prev, contact])
@@ -118,87 +147,6 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
     setContactos(prev => prev.filter(c => c.id !== contactId))
   }
 
-  useEffect(() => {
-    console.log('currentObra recibido en EditWorksForm:', currentObra)
-    console.log('Contactos recibidos:', currentObra?.contactos)
-
-    if (currentObra) {
-      console.log('Todos los campos de currentObra:', Object.keys(currentObra))
-
-      console.log('Reseteando formulario con datos:', {
-        obraId: currentObra.obraId,
-        fechaCreacion: currentObra.fechaCreacion,
-        numeroObra: currentObra.numeroObra
-
-        // ... resto de campos
-      })
-
-      reset({
-        obraId: currentObra.obraId,
-        fechaCreacion: currentObra.fechaCreacion || '',
-        numeroObra: currentObra.numeroObra || '',
-        fechaIngreso: currentObra.fechaIngreso || '',
-        estado: currentObra.estado || '',
-        estadoObra: currentObra.estadoObra || '',
-        nombreObra: currentObra.nombreObra || '',
-        direccion: currentObra.direccion || '',
-        region: currentObra.region || '',
-        comuna: currentObra.comuna || '',
-        rut: currentObra.rut || '',
-        razonSocial: currentObra.razonSocial || '',
-        giro: currentObra.giro || '',
-        direccionComercial: currentObra.direccionComercial || '',
-        comunaFacturacion: currentObra.comunaFacturacion || '',
-        telefonoFacturacion: currentObra.telefonoFacturacion || '',
-        listaPrecios: currentObra.listaPrecios || '',
-        mailRecepcionFactura: currentObra.mailRecepcionFactura || '',
-        informeMandante: currentObra.informeMandante || false,
-        textoMandante: currentObra.textoMandante || '',
-        acreditacionPersonal: currentObra.acreditacionPersonal || false,
-        especificacionesTecnicas: currentObra.especificacionesTecnicas || false,
-        acreditacionEquipos: currentObra.acreditacionEquipos || false,
-        cartaCompromiso: currentObra.cartaCompromiso || false,
-        mandatoServiu: currentObra.mandatoServiu || false,
-        otrosRequisitos: currentObra.otrosRequisitos || '',
-        estadoPago: currentObra.estadoPago || false,
-        hes: currentObra.hes || false,
-        oc: currentObra.oc || false,
-        otrasReferencias: currentObra.otrasReferencias || '',
-        telefono: currentObra.telefono || '',
-        sitioWeb: currentObra.sitioWeb || ''
-      })
-
-      if (currentObra.contactos) {
-        console.log('Estableciendo contactos:', currentObra.contactos)
-        setContactos(currentObra.contactos)
-      } else {
-        console.log('No hay contactos en currentObra')
-      }
-    }
-  }, [currentObra, reset])
-
-  const onSubmit = async (data: FormValidateType) => {
-    try {
-      if (currentObra?.obraId) {
-        const response = await axios.put(`/api/obras/${currentObra.obraId}`, {
-          ...data,
-          contactos
-        })
-
-        if (response.status === 200) {
-          setData(prevData =>
-            prevData.map(obra => (obra.obraId === currentObra.obraId ? { ...obra, ...response.data } : obra))
-          )
-          toast.success('Obra actualizada exitosamente')
-          handleClose()
-        }
-      }
-    } catch (error) {
-      console.error('Error al actualizar obra:', error)
-      toast.error('Error al actualizar la obra')
-    }
-  }
-
   return (
     <Drawer
       open={open}
@@ -206,7 +154,7 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
       variant='temporary'
       onClose={handleClose}
       ModalProps={{ keepMounted: true }}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: '75%' } } }}
+      sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between p-5'>
         <Typography variant='h5'>Editar Obra</Typography>
@@ -223,19 +171,23 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='numeroObra'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Número Obra' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Número Obra' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='fechaIngreso'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth type='date' label='Fecha Ingreso' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth type='date' label='Fecha Ingreso' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
-              <InputLabel>Estado</InputLabel>
+              <InputLabel shrink>Estado</InputLabel>
               <Controller
                 name='estado'
                 control={control}
@@ -250,29 +202,34 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Controller
-              name='estadoObra'
-              control={control}
-              render={({ field }) => (
-                <Select {...field} label='Estado Obra'>
-                  <MenuItem value='active'>Activo</MenuItem>
-                  <MenuItem value='inactive'>Inactivo</MenuItem>
-                </Select>
-              )}
-            />
+            <FormControl fullWidth>
+              <InputLabel shrink>Estado Obra</InputLabel>
+              <Controller
+                name='estadoObra'
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label='Estado Obra'>
+                    <MenuItem value='active'>Activo</MenuItem>
+                    <MenuItem value='inactive'>Inactivo</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='rut'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='RUT' />}
+              render={({ field }) => <TextField {...field} fullWidth label='RUT' InputLabelProps={{ shrink: true }} />}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='nombreCliente'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Nombre Cliente' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Nombre Cliente' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
         </Grid>
@@ -285,56 +242,72 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='nombreObra'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Nombre Obra' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Nombre Obra' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='direccion'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Dirección' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Dirección' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='region'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Región' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Región' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='comuna'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Comuna' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Comuna' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='sector'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Sector' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Sector' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='georreferencia'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Georreferencia' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Georreferencia' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='referencia'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Referencia' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Referencia' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='mandante'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Mandante' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Mandante' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -353,7 +326,9 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='textoMandante'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
         </Grid>
@@ -476,7 +451,16 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='otrosRequisitos'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth multiline rows={4} label='Otros Requisitos' />}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label='Otros Requisitos'
+                  InputLabelProps={{ shrink: true }}
+                />
+              )}
             />
           </Grid>
         </Grid>
@@ -489,49 +473,61 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='razonSocial'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Razón Social' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Razón Social' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='giro'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Giro' />}
+              render={({ field }) => <TextField {...field} fullWidth label='Giro' InputLabelProps={{ shrink: true }} />}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='direccionComercial'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Dirección Comercial' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Dirección Comercial' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='comunaFacturacion'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Comuna Facturación' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Comuna Facturación' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='telefonoFacturacion'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Teléfono Facturación' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Teléfono Facturación' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='listaPrecios'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Lista de Precios' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Lista de Precios' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='mailRecepcionFactura'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Email Recepción Factura' />}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Email Recepción Factura' InputLabelProps={{ shrink: true }} />
+              )}
             />
           </Grid>
         </Grid>
@@ -580,7 +576,16 @@ const EditWorksForm = ({ open, handleClose, currentObra, setData }: Props) => {
             <Controller
               name='otrasReferencias'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth multiline rows={4} label='Otras Referencias' />}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label='Otras Referencias'
+                  InputLabelProps={{ shrink: true }}
+                />
+              )}
             />
           </Grid>
         </Grid>

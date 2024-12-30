@@ -151,7 +151,7 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<WorkTypeWithAction>()
 
-const WorkListTable = () => {
+const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
@@ -504,8 +504,11 @@ const WorkListTable = () => {
       />
       <EditWorksForm
         open={editObraOpen}
-        handleClose={() => setEditObraOpen(false)}
-        currentObra={selectedObra}
+        handleClose={() => {
+          setEditObraOpen(false)
+          setSelectedObra(null)
+        }}
+        obraData={selectedObra}
         setData={setData}
       />
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

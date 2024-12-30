@@ -41,6 +41,12 @@ export type Obra = {
   updatedAt: Date
 
   contactos: ContactoObra[]
+
+  sector?: string
+  georreferencia?: string
+  referencia?: string
+  mandante?: string
+  nombreCliente: string
 }
 
 export type ContactoObra = {

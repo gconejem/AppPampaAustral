@@ -35,7 +35,7 @@ import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
 
 // Import data
-import { ESTADOS_OBRA, LISTAS_PRECIOS, REGIONES_CHILE } from '@/data/obraData'
+import { ESTADOS_OBRA, LISTAS_PRECIOS, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import ContactSearchObra from '../components/ContactSearchObra'
 
 type Props = {
@@ -52,6 +52,7 @@ const AddObraDrawer = (props: Props) => {
   const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
+  const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
   // Hooks
   const {
@@ -65,6 +66,7 @@ const AddObraDrawer = (props: Props) => {
 
   const onSubmit = async (data: FormValidateType) => {
     try {
+      console.log('Enviando datos:', data)
       setIsSubmitting(true)
       const response = await axios.post('/api/obras', data)
 
@@ -91,12 +93,49 @@ const AddObraDrawer = (props: Props) => {
     setFormData(initialFormData)
   }
 
-  const agregarContacto = (nuevoContacto: Omit<ContactoObra, 'isPrincipal'>) => {
-    setContactos([...contactos, { ...nuevoContacto, isPrincipal: contactos.length === 0 }])
+  const agregarContacto = (contacto: Omit<ContactoObra, 'isPrincipal'>) => {
+    if (!contacto.nombre || !contacto.email) {
+      toast.error('Nombre y email son requeridos')
+
+      return
+    }
+
+    setContactos(prev => [...prev, { ...contacto, isPrincipal: prev.length === 0 }])
+    setNuevoContacto({ cargo: '', nombre: '', email: '', telefono1: '', telefono2: '' })
   }
 
-  const eliminarContacto = (index: number) => {
-    setContactos(contactos.filter((_, i) => i !== index))
+  const editarContacto = (index: number) => {
+    setEditingContactId(index)
+    const contacto = contactos[index]
+
+    setNuevoContacto({
+      cargo: contacto.cargo,
+      nombre: contacto.nombre,
+      email: contacto.email,
+      telefono1: contacto.telefono1,
+      telefono2: contacto.telefono2
+    })
+  }
+
+  const guardarEdicion = () => {
+    if (editingContactId === null) return
+
+    setContactos(prev =>
+      prev.map((contacto, index) =>
+        index === editingContactId ? { ...nuevoContacto, isPrincipal: contacto.isPrincipal } : contacto
+      )
+    )
+    setEditingContactId(null)
+    setNuevoContacto({ cargo: '', nombre: '', email: '', telefono1: '', telefono2: '' })
+  }
+
+  const marcarComoPrincipal = (index: number) => {
+    setContactos(prev =>
+      prev.map((contacto, i) => ({
+        ...contacto,
+        isPrincipal: i === index
+      }))
+    )
   }
 
   return (
@@ -117,6 +156,7 @@ const AddObraDrawer = (props: Props) => {
       <Divider />
       <div className='p-5'>
         <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
+          {/* Primera sección: 4-3-2-3 */}
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
               <Controller
@@ -186,8 +226,50 @@ const AddObraDrawer = (props: Props) => {
             </Grid>
           </Grid>
 
+          {/* Segunda sección: 6-6 */}
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
+              <Controller
+                name='rut'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='RUT *'
+                    error={Boolean(errors.rut)}
+                    helperText={errors.rut && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='nombreCliente'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Nombre Cliente *'
+                    error={Boolean(errors.nombreCliente)}
+                    helperText={errors.nombreCliente && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Antecedentes */}
+          <Divider sx={{ my: 4 }} />
+          <Typography variant='h6'>Antecedentes</Typography>
+
+          {/* Nombre Obra: 12 */}
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
               <Controller
                 name='nombreObra'
                 control={control}
@@ -203,7 +285,10 @@ const AddObraDrawer = (props: Props) => {
                 )}
               />
             </Grid>
+          </Grid>
 
+          {/* Dirección y Región: 6-6 */}
+          <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <Controller
                 name='direccion'
@@ -220,269 +305,103 @@ const AddObraDrawer = (props: Props) => {
                 )}
               />
             </Grid>
-          </Grid>
 
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth error={Boolean(errors.region)}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
                 <InputLabel>Región *</InputLabel>
                 <Controller
                   name='region'
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      label='Región'
-                      onChange={e => {
-                        field.onChange(e)
-                        setSelectedRegion(e.target.value)
-                      }}
-                    >
-                      {Object.keys(REGIONES_CHILE).map(region => (
-                        <MenuItem key={region} value={region}>
-                          {region}
+                    <Select {...field} label='Región *'>
+                      {REGIONES_CHILE.map(region => (
+                        <MenuItem key={region.value} value={region.value}>
+                          {region.label}
                         </MenuItem>
                       ))}
                     </Select>
                   )}
                 />
-                {errors.region && <FormHelperText>Este campo es obligatorio</FormHelperText>}
               </FormControl>
             </Grid>
+          </Grid>
 
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth error={Boolean(errors.comuna)}>
+          {/* Comuna, Sector, Georreferencia, Referencia: 3-3-3-3 */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth>
                 <InputLabel>Comuna *</InputLabel>
                 <Controller
                   name='comuna'
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => (
-                    <Select {...field} label='Comuna'>
-                      {selectedRegion &&
-                        REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].comunas.map(comuna => (
-                          <MenuItem key={comuna} value={comuna}>
-                            {comuna}
-                          </MenuItem>
-                        ))}
+                    <Select {...field} label='Comuna *'>
+                      {COMUNAS.map(comuna => (
+                        <MenuItem key={comuna.value} value={comuna.value}>
+                          {comuna.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />
-                {errors.comuna && <FormHelperText>Este campo es obligatorio</FormHelperText>}
               </FormControl>
             </Grid>
-          </Grid>
 
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='rut'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='RUT'
-                    placeholder='...'
-                    {...(errors.rut && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='nombreCliente'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Nombre del Cliente'
-                    placeholder='...'
-                    {...(errors.nombreCliente && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
-              />
-            </Grid>
             <Grid item xs={12} sm={3}>
-              <Typography variant='h5' component='div'>
-                Antecedentes
-              </Typography>
+              <Controller
+                name='sector'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Sector' />}
+              />
             </Grid>
 
-            <Grid item xs={12} sm={3}></Grid>
+            <Grid item xs={12} sm={3}>
+              <Controller
+                name='georreferencia'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Georreferencia' />}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={3}>
+              <Controller
+                name='referencia'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Referencia' />}
+              />
+            </Grid>
           </Grid>
+
+          {/* Mandante, Informe Mandante, Texto Mandante: 4-4-4 */}
           <Grid container spacing={5}>
             <Grid item xs={12} sm={4}>
               <Controller
-                name='nombreObra'
+                name='mandante'
                 control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Nombre Obra'
-                    placeholder=''
-                    {...(errors.nombreObra && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='direccion'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Dirección'
-                    placeholder=''
-                    {...(errors.direccion && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
+                render={({ field }) => <TextField {...field} fullWidth label='Mandante' />}
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel id='country'>Región</InputLabel>
-                <Select
-                  fullWidth
-                  id='country'
-                  value={formData.country}
-                  onChange={e => setFormData({ ...formData, country: e.target.value })}
-                  label='País'
-                  labelId='country'
-                >
-                  <MenuItem value='Chile'>Arica y Parinacota</MenuItem>
-                  <MenuItem value='Chile'>Tarapacá</MenuItem>
-                  <MenuItem value='Chile'>Antofagasta</MenuItem>
-                  <MenuItem value='Chile'>Atacama</MenuItem>
-                  <MenuItem value='Chile'>Coquimbo</MenuItem>
-                  <MenuItem value='Chile'>Vaparaíso</MenuItem>
-                  <MenuItem value='Chile'>Metropolitana</MenuItem>
-                  <MenuItem value='Chile'>OHiggins</MenuItem>
-                  <MenuItem value='Chile'>Maule</MenuItem>
-                  <MenuItem value='Chile'>Ñuble</MenuItem>
-                  <MenuItem value='Chile'>Biobío</MenuItem>
-                  <MenuItem value='Chile'>La Araucanía</MenuItem>
-                  <MenuItem value='Chile'>Los Ríos</MenuItem>
-                  <MenuItem value='Chile'>Los Lagos</MenuItem>
-                  <MenuItem value='Chile'>Aysén</MenuItem>
-                  <MenuItem value='Chile'>Magallanes</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={3}>
-              <Controller
-                name='nombreObra'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Nombre Obra'
-                    placeholder=''
-                    {...(errors.nombreObra && { error: true, helperText: 'Este campo es requerido.' })}
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel
+                control={
+                  <Controller
+                    name='informeMandante'
+                    control={control}
+                    render={({ field }) => <Checkbox {...field} checked={field.value} />}
                   />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Controller
-                name='direccion'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Dirección'
-                    placeholder=''
-                    {...(errors.direccion && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Controller
-                name='telefono'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Teléfono'
-                    placeholder=''
-                    {...(errors.telefono && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
+                }
+                label='Informe a Mandante'
               />
             </Grid>
 
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={4}>
               <Controller
-                name='web'
+                name='textoMandante'
                 control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Web'
-                    placeholder=''
-                    {...(errors.web && { error: true, helperText: 'Este campo es requerido.' })}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={5}>
-              <Controller
-                name='nombreObra'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Dirección'
-                    placeholder=''
-                    {...(errors.nombreObra && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={2} style={{ display: 'flex', alignItems: 'center' }}>
-              <FormControlLabel control={<Checkbox />} label='Informe a Mandante' />
-            </Grid>
-
-            <Grid item xs={12} sm={5}>
-              <Controller
-                name='nombreObra'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Texto Mandante'
-                    placeholder=''
-                    {...(errors.nombreObra && { error: true, helperText: 'This field is required.' })}
-                  />
-                )}
+                render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' multiline rows={2} />}
               />
             </Grid>
           </Grid>
@@ -491,9 +410,9 @@ const AddObraDrawer = (props: Props) => {
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
             <Grid item xs={6}>
-              <Typography variant='h5'>Contactos</Typography>
+              <Typography variant='h6'>Contactos</Typography>
             </Grid>
-            <Grid item xs={6}>
+            <Grid item xs={6} container justifyContent='flex-end'>
               <ContactSearchObra
                 onContactSelect={contact => {
                   const newContact = {
@@ -583,20 +502,24 @@ const AddObraDrawer = (props: Props) => {
                     <TableCell>{contacto.telefono1}</TableCell>
                     <TableCell>{contacto.telefono2}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => eliminarContacto(index)}>
-                        <i className='ri-delete-bin-line' />
-                      </IconButton>
+                      {editingContactId === index ? (
+                        <IconButton size='small' color='success' onClick={guardarEdicion}>
+                          <i className='ri-check-line' />
+                        </IconButton>
+                      ) : (
+                        <IconButton size='small' color='info' onClick={() => editarContacto(index)}>
+                          <i className='ri-edit-line' />
+                        </IconButton>
+                      )}
                       <IconButton
-                        onClick={() => {
-                          const updatedContactos = contactos.map((c, i) => ({
-                            ...c,
-                            isPrincipal: i === index
-                          }))
-
-                          setContactos(updatedContactos)
-                        }}
+                        size='small'
+                        color={contacto.isPrincipal ? 'warning' : 'default'}
+                        onClick={() => marcarComoPrincipal(index)}
                       >
                         <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                      </IconButton>
+                      <IconButton size='small' color='error' onClick={() => eliminarContacto(index)}>
+                        <i className='ri-delete-bin-line' />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -604,35 +527,6 @@ const AddObraDrawer = (props: Props) => {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* Datos del Mandante */}
-          <Divider sx={{ my: 4 }} />
-          <Grid container spacing={5}>
-            <Grid item xs={12}>
-              <Typography variant='h5'>Datos del Mandante</Typography>
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='informeMandante'
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={<Checkbox {...field} checked={field.value} />}
-                    label='Informe a Mandante'
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='textoMandante'
-                control={control}
-                render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' multiline rows={2} />}
-              />
-            </Grid>
-          </Grid>
 
           {/* Requisitos */}
           <Divider sx={{ my: 4 }} />
