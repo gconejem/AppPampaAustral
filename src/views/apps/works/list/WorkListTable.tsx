@@ -163,6 +163,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [editObraOpen, setEditObraOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [obraToDelete, setObraToDelete] = useState<number | null>(null)
+  const [selectedObraId, setSelectedObraId] = useState<number | null>(null)
 
   // Hooks
   const params = useParams()
@@ -269,7 +270,13 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             <IconButton size='small' onClick={() => handleEdit(row.original)}>
               <i className='ri-edit-line text-[18px] text-textSecondary' />
             </IconButton>
-            <IconButton size='small' onClick={() => handleDeleteClick(row.original.obraId)}>
+            <IconButton
+              size='small'
+              onClick={() => {
+                setSelectedObraId(row.original.obraId)
+                setDeleteDialogOpen(true)
+              }}
+            >
               <i className='ri-delete-bin-line text-[18px] text-textSecondary' />
             </IconButton>
           </div>
@@ -279,19 +286,18 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     []
   )
 
-  const handleDeleteClick = (id: number) => {
-    setObraToDelete(id)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDelete = async () => {
-    if (!obraToDelete) return
-
+  const handleDeleteClick = async (obraId: number) => {
     try {
-      await axios.delete(`/api/obras/${obraToDelete}`)
-      setData(prevData => prevData.filter(obra => obra.obraId !== obraToDelete))
-      toast.success('Obra eliminada correctamente')
       setDeleteDialogOpen(false)
+
+      const response = await axios.delete(`/api/obras/${obraId}`)
+
+      if (response.status === 200) {
+        toast.success('Obra eliminada exitosamente')
+
+        // Actualizar la lista eliminando la obra
+        setData(prevData => prevData.filter(obra => obra.obraId !== obraId))
+      }
     } catch (error) {
       console.error('Error deleting obra:', error)
       toast.error('Error al eliminar la obra')
@@ -518,7 +524,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           <Button variant='outlined' color='secondary' onClick={() => setDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>
+          <Button variant='contained' color='error' onClick={() => selectedObraId && handleDeleteClick(selectedObraId)}>
             Eliminar
           </Button>
         </DialogActions>
