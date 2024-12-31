@@ -38,6 +38,12 @@ import { initialFormData } from '@/types/forms/obra'
 import { ESTADOS_OBRA, LISTAS_PRECIOS, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import ContactSearchObra from '../components/ContactSearchObra'
 
+// Agregar el enum o constante para los roles
+const ROLES_OBRA = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' }
+]
+
 type Props = {
   open: boolean
   handleClose: () => void
@@ -51,7 +57,14 @@ const AddObraDrawer = (props: Props) => {
   const [contactos, setContactos] = useState<ContactoObra[]>([])
   const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
+
+  const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono1: ''
+  })
+
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
   // Hooks
@@ -68,7 +81,20 @@ const AddObraDrawer = (props: Props) => {
     try {
       console.log('Enviando datos:', data)
       setIsSubmitting(true)
-      const response = await axios.post('/api/obras', data)
+
+      // Incluir los contactos en el payload
+      const payload = {
+        ...data,
+        contactos: contactos.map(contacto => ({
+          nombre: contacto.nombre,
+          rol: contacto.rol,
+          email: contacto.email,
+          telefono1: contacto.telefono1,
+          isPrincipal: contacto.isPrincipal
+        }))
+      }
+
+      const response = await axios.post('/api/obras', payload)
 
       if (response.status === 201) {
         toast.success('Obra creada exitosamente')
@@ -93,15 +119,28 @@ const AddObraDrawer = (props: Props) => {
     setFormData(initialFormData)
   }
 
-  const agregarContacto = (contacto: Omit<ContactoObra, 'isPrincipal'>) => {
-    if (!contacto.nombre || !contacto.email) {
-      toast.error('Nombre y email son requeridos')
+  const agregarContacto = () => {
+    // Validar campos requeridos
+    if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1) {
+      toast.error('Todos los campos son requeridos')
 
       return
     }
 
-    setContactos(prev => [...prev, { ...contacto, isPrincipal: prev.length === 0 }])
-    setNuevoContacto({ cargo: '', nombre: '', email: '', telefono1: '', telefono2: '' })
+    // Agregar el nuevo contacto a la lista
+    setContactos(prevContactos => [...prevContactos, { ...nuevoContacto, isPrincipal: prevContactos.length === 0 }])
+
+    // Limpiar el formulario
+    setNuevoContacto({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: ''
+    })
+  }
+
+  const eliminarContacto = (index: number) => {
+    setContactos(prevContactos => prevContactos.filter((_, i) => i !== index))
   }
 
   const editarContacto = (index: number) => {
@@ -408,42 +447,39 @@ const AddObraDrawer = (props: Props) => {
 
           {/* Contactos */}
           <Divider sx={{ my: 4 }} />
-          <Grid container alignItems='center' spacing={2}>
-            <Grid item xs={6}>
-              <Typography variant='h6'>Contactos</Typography>
-            </Grid>
-            <Grid item xs={6} container justifyContent='flex-end'>
-              <ContactSearchObra
-                onContactSelect={contact => {
-                  const newContact = {
-                    ...contact,
-                    isPrincipal: contactos.length === 0
-                  }
-
-                  setContactos([...contactos, newContact])
-                }}
-              />
-            </Grid>
-          </Grid>
+          <Typography variant='h6'>Contactos</Typography>
 
           <TableContainer sx={{ mt: 2 }}>
             <Table>
               <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>NOMBRE</TableCell>
-                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>CARGO</TableCell>
-                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>EMAIL</TableCell>
-                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>TELÉFONO 1</TableCell>
-                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>TELÉFONO 2</TableCell>
-                  <TableCell sx={{ fontWeight: '500' }}>ACCIÓN</TableCell>
+                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>ROL</TableCell>
+                  <TableCell sx={{ fontWeight: '500', width: '250px' }}>NOMBRE</TableCell>
+                  <TableCell sx={{ fontWeight: '500', width: '250px' }}>EMAIL</TableCell>
+                  <TableCell sx={{ fontWeight: '500', width: '200px' }}>TELÉFONO</TableCell>
+                  <TableCell sx={{ fontWeight: '500', width: '120px' }}>ACCIÓN</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {/* Fila para nuevo contacto */}
                 <TableRow>
                   <TableCell>
+                    <FormControl fullWidth size='small'>
+                      <Select
+                        value={nuevoContacto.rol || ''}
+                        onChange={e => setNuevoContacto({ ...nuevoContacto, rol: e.target.value })}
+                      >
+                        {ROLES_OBRA.map(rol => (
+                          <MenuItem key={rol.value} value={rol.value}>
+                            {rol.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell>
                     <TextField
-                      value={nuevoContacto.nombre}
+                      value={nuevoContacto.nombre || ''}
                       onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
                       placeholder='Nombre'
                       fullWidth
@@ -452,16 +488,7 @@ const AddObraDrawer = (props: Props) => {
                   </TableCell>
                   <TableCell>
                     <TextField
-                      value={nuevoContacto.cargo}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
-                      placeholder='Cargo'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.email}
+                      value={nuevoContacto.email || ''}
                       onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
                       placeholder='Email'
                       fullWidth
@@ -470,24 +497,15 @@ const AddObraDrawer = (props: Props) => {
                   </TableCell>
                   <TableCell>
                     <TextField
-                      value={nuevoContacto.telefono1}
+                      value={nuevoContacto.telefono1 || ''}
                       onChange={e => setNuevoContacto({ ...nuevoContacto, telefono1: e.target.value })}
-                      placeholder='Teléfono 1'
+                      placeholder='Teléfono'
                       fullWidth
                       size='small'
                     />
                   </TableCell>
                   <TableCell>
-                    <TextField
-                      value={nuevoContacto.telefono2}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono2: e.target.value })}
-                      placeholder='Teléfono 2'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => agregarContacto(nuevoContacto)}>
+                    <IconButton onClick={agregarContacto}>
                       <i className='ri-add-line' />
                     </IconButton>
                   </TableCell>
@@ -496,29 +514,14 @@ const AddObraDrawer = (props: Props) => {
                 {/* Lista de contactos agregados */}
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
+                    <TableCell>
+                      <Typography>{ROLES_OBRA.find(r => r.value === contacto.rol)?.label}</Typography>
+                    </TableCell>
                     <TableCell>{contacto.nombre}</TableCell>
-                    <TableCell>{contacto.cargo}</TableCell>
                     <TableCell>{contacto.email}</TableCell>
                     <TableCell>{contacto.telefono1}</TableCell>
-                    <TableCell>{contacto.telefono2}</TableCell>
                     <TableCell>
-                      {editingContactId === index ? (
-                        <IconButton size='small' color='success' onClick={guardarEdicion}>
-                          <i className='ri-check-line' />
-                        </IconButton>
-                      ) : (
-                        <IconButton size='small' color='info' onClick={() => editarContacto(index)}>
-                          <i className='ri-edit-line' />
-                        </IconButton>
-                      )}
-                      <IconButton
-                        size='small'
-                        color={contacto.isPrincipal ? 'warning' : 'default'}
-                        onClick={() => marcarComoPrincipal(index)}
-                      >
-                        <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                      </IconButton>
-                      <IconButton size='small' color='error' onClick={() => eliminarContacto(index)}>
+                      <IconButton onClick={() => eliminarContacto(index)}>
                         <i className='ri-delete-bin-line' />
                       </IconButton>
                     </TableCell>

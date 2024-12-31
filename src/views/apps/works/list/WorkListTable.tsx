@@ -55,7 +55,7 @@ import type { Obra, WorkTypeWithAction } from '@/types/forms/obra'
 
 // Component Imports
 import TableFilters from './TableFilters'
-import AddWorkDrawer from './AddWork'
+import AddWork from './AddWork'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import EditWorksForm from '../edit/EditWorksForm'
@@ -164,6 +164,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [obraToDelete, setObraToDelete] = useState<number | null>(null)
   const [selectedObraId, setSelectedObraId] = useState<number | null>(null)
+  const [addObraOpen, setAddObraOpen] = useState<boolean>(false)
 
   // Hooks
   const params = useParams()
@@ -188,8 +189,38 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     fetchObras()
   }, [])
 
-  const columns = useMemo<ColumnDef<WorkTypeWithAction, any>[]>(
+  const handleDeleteClick = async (id: number) => {
+    try {
+      const response = await axios.delete(`/api/obras/${id}`)
+
+      if (response.status === 200) {
+        toast.success('Obra eliminada exitosamente')
+        setData(prevData => prevData.filter(obra => obra.obraId !== id))
+      }
+    } catch (error) {
+      console.error('Error deleting obra:', error)
+      toast.error('Error al eliminar la obra')
+    } finally {
+      setDeleteDialogOpen(false)
+      setSelectedObraId(null)
+    }
+  }
+
+  const handleEdit = async (obra: Obra) => {
+    try {
+      const response = await axios.get(`/api/obras/${obra.obraId}`)
+
+      setSelectedObra(response.data)
+      setEditObraOpen(true)
+    } catch (error) {
+      console.error('Error al obtener datos:', error)
+      toast.error('Error al cargar los datos de la obra')
+    }
+  }
+
+  const columns = useMemo(
     () => [
+      // Columna de selección
       {
         id: 'select',
         header: ({ table }) => (
@@ -213,18 +244,10 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       },
       columnHelper.accessor('numeroObra', {
-        header: 'NUMERO OBRA',
-        cell: ({ row }) => (
-          <Typography variant='body2' className='text-[13px] font-medium'>
-            {row.original.numeroObra}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('razonSocial', {
-        header: 'NOMBRE CLIENTE',
+        header: 'OBRA',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
-            {row.original.razonSocial}
+            {row.original.numeroObra}
           </Typography>
         )
       }),
@@ -236,89 +259,74 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
-      columnHelper.accessor('direccion', {
-        header: 'DIRECCIÓN',
+      columnHelper.accessor('comuna', {
+        header: 'COMUNA',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
-            {row.original.direccion}
+            {row.original.comuna}
           </Typography>
         )
       }),
       columnHelper.accessor('rut', {
-        header: 'RUT',
+        header: 'RUT CLIENTE',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
             {row.original.rut}
           </Typography>
         )
       }),
+      columnHelper.accessor('nombreCliente', {
+        header: 'CLIENTE',
+        cell: ({ row }) => (
+          <Typography variant='body2' className='text-[13px]'>
+            {row.original.nombreCliente}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('contactos', {
+        header: 'ENCARGADO',
+        cell: ({ row }) => {
+          const encargado = row.original.contactos?.find(c => c.rol === 'encargado_obra')
+
+          return (
+            <Typography variant='body2' className='text-[13px]'>
+              {encargado?.nombre || '-'}
+            </Typography>
+          )
+        }
+      }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
         cell: ({ row }) => (
           <Chip
-            label={row.original.estado}
-            color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
-            variant='filled'
-            size='small'
+            label={row.original.estado === 'activo' ? 'Activo' : 'Inactivo'}
+            color={row.original.estado === 'activo' ? 'success' : 'error'}
+            sx={{ height: 24, fontSize: '0.75rem' }}
           />
         )
       }),
       columnHelper.accessor('action', {
         header: 'ACCIONES',
         cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <IconButton size='small' onClick={() => handleEdit(row.original)}>
-              <i className='ri-edit-line text-[18px] text-textSecondary' />
+          <div className='flex items-center'>
+            <IconButton onClick={() => handleEdit(row.original)} sx={{ color: 'primary.main' }}>
+              <i className='ri-pencil-line' />
             </IconButton>
             <IconButton
-              size='small'
               onClick={() => {
                 setSelectedObraId(row.original.obraId)
                 setDeleteDialogOpen(true)
               }}
+              sx={{ color: 'error.main' }}
             >
-              <i className='ri-delete-bin-line text-[18px] text-textSecondary' />
+              <i className='ri-delete-bin-line' />
             </IconButton>
           </div>
         )
       })
     ],
-    []
+    [handleEdit, setSelectedObraId, setDeleteDialogOpen]
   )
-
-  const handleDeleteClick = async (obraId: number) => {
-    try {
-      setDeleteDialogOpen(false)
-
-      const response = await axios.delete(`/api/obras/${obraId}`)
-
-      if (response.status === 200) {
-        toast.success('Obra eliminada exitosamente')
-
-        // Actualizar la lista eliminando la obra
-        setData(prevData => prevData.filter(obra => obra.obraId !== obraId))
-      }
-    } catch (error) {
-      console.error('Error deleting obra:', error)
-      toast.error('Error al eliminar la obra')
-    }
-  }
-
-  const handleEdit = async (obra: Obra) => {
-    try {
-      console.log('Obra antes de la petición:', obra)
-      const response = await axios.get(`/api/obras/${obra.obraId}`)
-
-      console.log('Respuesta completa:', response.data)
-      console.log('Contactos en la respuesta:', response.data.contactos)
-
-      setSelectedObra(response.data)
-      setEditObraOpen(true)
-    } catch (error) {
-      console.error('Error al obtener datos:', error)
-      toast.error('Error al cargar los datos de la obra')
-    }
-  }
 
   const table = useReactTable({
     data: filteredData as WorkTypeWithAction[],
@@ -502,12 +510,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
-      <AddWorkDrawer
-        open={addUserOpen}
-        handleClose={() => setAddUserOpen(!addUserOpen)}
-        userData={data}
-        setData={setData}
-      />
+      <AddWork open={addObraOpen} handleClose={() => setAddObraOpen(false)} setData={setData} />
       <EditWorksForm
         open={editObraOpen}
         handleClose={() => {

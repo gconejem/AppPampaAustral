@@ -155,8 +155,8 @@ const Permissions = () => {
     }
   }
 
-  // Función para crear un permiso
-  const createPermission = async (permissionData: { name: string; assignedTo: string[] }) => {
+  // Separar las funciones de crear y actualizar
+  const handleCreatePermission = async (permissionData: { name: string; assignedTo: string[] }) => {
     try {
       const response = await fetch('/api/permissions', {
         method: 'POST',
@@ -166,17 +166,18 @@ const Permissions = () => {
         body: JSON.stringify(permissionData)
       })
 
-      if (response.ok) {
-        // Recargar la lista de permisos
-        fetchPermissions()
+      if (!response.ok) {
+        throw new Error('Error al crear el permiso')
       }
+
+      fetchPermissions() // Recargar la lista
+      setOpen(false)
     } catch (error) {
-      console.error('Error al crear permiso:', error)
+      console.error('Error:', error)
     }
   }
 
-  // Función para actualizar un permiso
-  const updatePermission = async (id: string, permissionData: { name: string; assignedTo: string[] }) => {
+  const handleUpdatePermission = async (id: string, permissionData: { name: string; assignedTo: string[] }) => {
     try {
       const response = await fetch(`/api/permissions/${id}`, {
         method: 'PUT',
@@ -186,12 +187,14 @@ const Permissions = () => {
         body: JSON.stringify(permissionData)
       })
 
-      if (response.ok) {
-        // Recargar la lista de permisos
-        fetchPermissions()
+      if (!response.ok) {
+        throw new Error('Error al actualizar el permiso')
       }
+
+      fetchPermissions() // Recargar la lista
+      setOpen(false)
     } catch (error) {
-      console.error('Error al actualizar permiso:', error)
+      console.error('Error:', error)
     }
   }
 
@@ -305,6 +308,7 @@ const Permissions = () => {
 
   const handleAddPermission = () => {
     setEditValue('')
+    setOpen(true)
   }
 
   return (
@@ -320,12 +324,7 @@ const Permissions = () => {
               placeholder='Buscar Permisos...'
               className='max-sm:is-full'
             />
-            <OpenDialogOnElementClick
-              element={Button}
-              elementProps={buttonProps}
-              dialog={PermissionDialog}
-              dialogProps={{ editValue }}
-            />
+            <Button {...buttonProps} />
           </CardContent>
           <div className='overflow-x-auto'>
             <table className={tableStyles.table}>
@@ -403,14 +402,10 @@ const Permissions = () => {
         open={open}
         setOpen={setOpen}
         data={editValue}
-        onSubmit={(permissionData) => {
-          if (editValue) {
-            updatePermission(editValue, permissionData)
-          } else {
-            createPermission(permissionData)
-          }
-          setOpen(false)
-        }}
+        onSubmit={editValue ?
+          (data) => handleUpdatePermission(editValue, data) :
+          handleCreatePermission
+        }
       />
     </>
   )

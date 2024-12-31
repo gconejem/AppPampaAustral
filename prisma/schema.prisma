@@ -207,7 +207,7 @@ model ContactoObra {
   obraId      Int
   obra        Obra     @relation(fields: [obraId], references: [obraId])
   nombre      String
-  cargo       String
+  rol         String
   email       String
   telefono1   String
   telefono2   String?

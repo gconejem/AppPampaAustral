@@ -19,15 +19,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, assignedTo } = body
 
+    console.log('Recibiendo datos en API:', { name, assignedTo }) // Para debugging
+
+    // Validación
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json(
+        { error: 'El nombre del permiso es requerido' },
+        { status: 400 }
+      )
+    }
+
+    // Asegurarse de que assignedTo sea un array
+    const assignedToArray = Array.isArray(assignedTo) ? assignedTo : []
+
     const permission = await prisma.permission.create({
       data: {
         name,
-        assignedTo
+        assignedTo: assignedToArray
       }
     })
 
+    console.log('Permiso creado:', permission) // Para debugging
+
     return NextResponse.json(permission)
   } catch (error) {
-    return NextResponse.json({ error: 'Error al crear permiso' }, { status: 500 })
+    console.error('Error al crear permiso:', error) // Para debugging
+    return NextResponse.json(
+      { error: 'Error al crear permiso', details: error },
+      { status: 500 }
+    )
   }
 }
