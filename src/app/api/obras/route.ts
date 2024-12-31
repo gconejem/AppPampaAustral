@@ -8,17 +8,32 @@ export async function GET() {
   try {
     console.log('Fetching obras...')
 
+    // Verificación explícita de la conexión de Prisma
+    if (!prisma || !prisma.obra) {
+      console.error('Prisma client not properly initialized')
+      return NextResponse.json(
+        { error: 'Database connection error' },
+        { status: 500 }
+      )
+    }
+
     const obras = await prisma.obra.findMany({
       include: {
         contactos: true
       }
     })
 
-    return NextResponse.json(obras)
+    return NextResponse.json(obras || [])
   } catch (error) {
-    console.error('Error al obtener obras:', error)
-
-    return NextResponse.json({ error: 'Error al obtener las obras' }, { status: 500 })
+    console.error('Error detallado:', error)
+    return NextResponse.json(
+      {
+        error: 'Error al obtener las obras',
+        message: error.message,
+        name: error.name
+      },
+      { status: 500 }
+    )
   }
 }
 

@@ -199,10 +199,6 @@ const RolesTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: 'Role',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
             <Typography className='capitalize' color='text.primary'>
               {row.original.role}
             </Typography>

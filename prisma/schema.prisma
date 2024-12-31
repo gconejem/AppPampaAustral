@@ -215,3 +215,11 @@ model ContactoObra {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  assignedTo  String[] // Almacenará los roles asignados
+  createdDate DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
