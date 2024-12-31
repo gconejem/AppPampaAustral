@@ -70,26 +70,10 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
     if (obraData) {
       console.log('Datos recibidos en EditWorksForm:', obraData)
 
-      const formData = {
-        numeroObra: obraData.numeroObra,
-        fechaIngreso: new Date(obraData.fechaIngreso).toISOString().split('T')[0],
-        estado: obraData.estado,
-        estadoObra: obraData.estadoObra,
-        nombreObra: obraData.nombreObra,
-        direccion: obraData.direccion,
-        region: obraData.region,
-        comuna: obraData.comuna,
-        telefono: obraData.telefono || '',
-        sitioWeb: obraData.sitioWeb || '',
-        nombreCliente: obraData.nombreCliente,
-        rut: obraData.rut,
-        razonSocial: obraData.razonSocial,
-        giro: obraData.giro,
-        direccionComercial: obraData.direccionComercial,
-        comunaFacturacion: obraData.comunaFacturacion,
-        telefonoFacturacion: obraData.telefonoFacturacion,
-        listaPrecios: obraData.listaPrecios,
-        mailRecepcionFactura: obraData.mailRecepcionFactura,
+      const formattedData = {
+        ...obraData,
+        estado: obraData.estado || 'activo',
+        estadoObra: obraData.estadoObra || 'activo',
         informeMandante: Boolean(obraData.informeMandante),
         acreditacionPersonal: Boolean(obraData.acreditacionPersonal),
         especificacionesTecnicas: Boolean(obraData.especificacionesTecnicas),
@@ -98,18 +82,11 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
         mandatoServiu: Boolean(obraData.mandatoServiu),
         estadoPago: Boolean(obraData.estadoPago),
         hes: Boolean(obraData.hes),
-        oc: Boolean(obraData.oc),
-        sector: obraData.sector || '',
-        georreferencia: obraData.georreferencia || '',
-        referencia: obraData.referencia || '',
-        mandante: obraData.mandante || '',
-        textoMandante: obraData.textoMandante || '',
-        otrosRequisitos: obraData.otrosRequisitos || '',
-        otrasReferencias: obraData.otrasReferencias || ''
+        oc: Boolean(obraData.oc)
       }
 
-      console.log('Datos a cargar en el formulario:', formData)
-      reset(formData)
+      console.log('Datos a cargar en el formulario:', formattedData)
+      reset(formattedData)
       console.log('Formulario reseteado')
 
       // Cargar contactos
@@ -186,34 +163,45 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel shrink>Estado</InputLabel>
+            <FormControl fullWidth error={Boolean(errors.estado)}>
+              <InputLabel>Estado</InputLabel>
               <Controller
                 name='estado'
                 control={control}
-                render={({ field }) => (
-                  <Select {...field} label='Estado'>
-                    <MenuItem value='active'>Activo</MenuItem>
-                    <MenuItem value='inactive'>Inactivo</MenuItem>
-                    <MenuItem value='pending'>Pendiente</MenuItem>
+                defaultValue={obraData?.estado}
+                rules={{ required: true }}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Estado' value={value || ''} {...field}>
+                    {ESTADOS_OBRA.map(estado => (
+                      <MenuItem key={estado.value} value={estado.value}>
+                        {estado.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 )}
               />
+              {errors.estado && <FormHelperText>Este campo es requerido</FormHelperText>}
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel shrink>Estado Obra</InputLabel>
+            <FormControl fullWidth error={Boolean(errors.estadoObra)}>
+              <InputLabel>Estado Obra</InputLabel>
               <Controller
                 name='estadoObra'
                 control={control}
-                render={({ field }) => (
-                  <Select {...field} label='Estado Obra'>
-                    <MenuItem value='active'>Activo</MenuItem>
-                    <MenuItem value='inactive'>Inactivo</MenuItem>
+                defaultValue={obraData?.estadoObra}
+                rules={{ required: true }}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Estado Obra' value={value || ''} {...field}>
+                    {ESTADOS_OBRA.map(estado => (
+                      <MenuItem key={estado.value} value={estado.value}>
+                        {estado.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 )}
               />
+              {errors.estadoObra && <FormHelperText>Este campo es requerido</FormHelperText>}
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -387,16 +375,17 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
         <Divider sx={{ my: 4 }} />
         <Typography variant='h6'>Requisitos</Typography>
         <Grid container spacing={5}>
-          <Grid item xs={12} sm={6}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='acreditacionPersonal'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
+          <Grid item xs={12} sm={4}>
+            <Controller
+              name='acreditacionPersonal'
+              control={control}
+              defaultValue={false}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox {...field} checked={field.value} />}
+                  label='Acreditación de Personal'
                 />
-              }
-              label='Acreditación Personal'
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
