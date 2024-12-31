@@ -115,13 +115,22 @@ const DebouncedInput = ({
 // Column Definitions
 const columnHelper = createColumnHelper<PermissionsTypeWithAction>()
 
-const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[] }) => {
+// Añade estos tipos
+interface Permission {
+  id: string
+  name: string
+  assignedTo: string[]
+  createdDate: string
+  updatedAt: string
+}
+
+const Permissions = () => {
   // States
   const [open, setOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [editValue, setEditValue] = useState<string>('')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [data, setData] = useState(...[permissionsData])
+  const [permissions, setPermissions] = useState<Permission[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
 
   // Vars
@@ -132,8 +141,86 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
     className: 'max-sm:is-full'
   }
 
+  // Función para obtener los permisos
+  const fetchPermissions = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/permissions')
+      const data = await response.json()
+      setPermissions(data)
+    } catch (error) {
+      console.error('Error al cargar permisos:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Separar las funciones de crear y actualizar
+  const handleCreatePermission = async (permissionData: { name: string; assignedTo: string[] }) => {
+    try {
+      const response = await fetch('/api/permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(permissionData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al crear el permiso')
+      }
+
+      fetchPermissions() // Recargar la lista
+      setOpen(false)
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  const handleUpdatePermission = async (id: string, permissionData: { name: string; assignedTo: string[] }) => {
+    try {
+      const response = await fetch(`/api/permissions/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(permissionData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar el permiso')
+      }
+
+      fetchPermissions() // Recargar la lista
+      setOpen(false)
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  // Función para eliminar un permiso
+  const deletePermission = async (id: string) => {
+    try {
+      const response = await fetch(`/api/permissions/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Recargar la lista de permisos
+        fetchPermissions()
+      }
+    } catch (error) {
+      console.error('Error al eliminar permiso:', error)
+    }
+  }
+
+  // Cargar permisos al montar el componente
+  useEffect(() => {
+    fetchPermissions()
+  }, [])
+
   // Hooks
-  const columns = useMemo<ColumnDef<PermissionsTypeWithAction, any>[]>(
+  const columns = useMemo<ColumnDef<Permission, any>[]>(
     () => [
       columnHelper.accessor('name', {
         header: 'Nombre',
@@ -171,23 +258,22 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
         header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => handleEditPermission(row.original.name)}>
+            <IconButton onClick={() => handleEditPermission(row.original.id)}>
               <i className='ri-edit-box-line text-textSecondary' />
             </IconButton>
-            <IconButton>
-              <i className='ri-more-2-line text-textSecondary' />
+            <IconButton onClick={() => deletePermission(row.original.id)}>
+              <i className='ri-delete-bin-line text-textSecondary' />
             </IconButton>
           </div>
         ),
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
   const table = useReactTable({
-    data: data as PermissionRowType[],
+    data: permissions,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -215,104 +301,112 @@ const Permissions = ({ permissionsData }: { permissionsData?: PermissionRowType[
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  const handleEditPermission = (name: string) => {
+  const handleEditPermission = async (id: string) => {
     setOpen(true)
-    setEditValue(name)
+    setEditValue(id)
   }
 
   const handleAddPermission = () => {
     setEditValue('')
+    setOpen(true)
   }
 
   return (
     <>
-      <Card>
-        <CardContent className='flex flex-col gap-4 sm:flex-row items-start sm:items-center justify-between'>
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Buscar Permisos...'
-            className='max-sm:is-full'
+      {isLoading ? (
+        <div>Cargando...</div>
+      ) : (
+        <Card>
+          <CardContent className='flex flex-col gap-4 sm:flex-row items-start sm:items-center justify-between'>
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Buscar Permisos...'
+              className='max-sm:is-full'
+            />
+            <Button {...buttonProps} />
+          </CardContent>
+          <div className='overflow-x-auto'>
+            <table className={tableStyles.table}>
+              <thead>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th key={header.id}>
+                        {header.isPlaceholder ? null : (
+                          <>
+                            <div
+                              className={classnames({
+                                'flex items-center': header.column.getIsSorted(),
+                                'cursor-pointer select-none': header.column.getCanSort()
+                              })}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: <i className='ri-arrow-up-s-line text-xl' />,
+                                desc: <i className='ri-arrow-down-s-line text-xl' />
+                              }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              {table.getFilteredRowModel().rows.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
+                      No data available
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+                <tbody>
+                  {table
+                    .getRowModel()
+                    .rows.slice(0, table.getState().pagination.pageSize)
+                    .map(row => {
+                      return (
+                        <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                          {row.getVisibleCells().map(cell => (
+                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              )}
+            </table>
+          </div>
+          <TablePagination
+            rowsPerPageOptions={[5, 7, 10]}
+            component='div'
+            className='border-bs'
+            count={table.getFilteredRowModel().rows.length}
+            rowsPerPage={table.getState().pagination.pageSize}
+            page={table.getState().pagination.pageIndex}
+            SelectProps={{
+              inputProps: { 'aria-label': 'rows per page' }
+            }}
+            onPageChange={(_, page) => {
+              table.setPageIndex(page)
+            }}
+            onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
           />
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={buttonProps}
-            dialog={PermissionDialog}
-            dialogProps={{ editValue }}
-          />
-        </CardContent>
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
-        </div>
-        <TablePagination
-          rowsPerPageOptions={[5, 7, 10]}
-          component='div'
-          className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          SelectProps={{
-            inputProps: { 'aria-label': 'rows per page' }
-          }}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-        />
-      </Card>
-      <PermissionDialog open={open} setOpen={setOpen} data={editValue} />
+        </Card>
+      )}
+      <PermissionDialog
+        open={open}
+        setOpen={setOpen}
+        data={editValue}
+        onSubmit={editValue ?
+          (data) => handleUpdatePermission(editValue, data) :
+          handleCreatePermission
+        }
+      />
     </>
   )
 }
