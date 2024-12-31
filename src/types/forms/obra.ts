@@ -1,11 +1,10 @@
 export type ContactoObra = {
-  id: number
+  id?: number
+  rol: string
   nombre: string
-  cargo: string
   email: string
   telefono1: string
-  telefono2?: string
-  isPrincipal: boolean
+  isPrincipal?: boolean
 }
 
 export interface Obra {

@@ -220,11 +220,11 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
-      columnHelper.accessor('razonSocial', {
+      columnHelper.accessor('nombreCliente', {
         header: 'NOMBRE CLIENTE',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
-            {row.original.razonSocial}
+            {row.original.nombreCliente}
           </Typography>
         )
       }),
