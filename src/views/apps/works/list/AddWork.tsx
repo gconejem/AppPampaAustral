@@ -112,11 +112,24 @@ const AddObraDrawer = (props: Props) => {
     }
   }
 
-  const handleReset = () => {
-    props.handleClose()
+  const handleClose = () => {
+    // Limpiar el formulario antes de cerrar
     resetForm()
     setContactos([])
     setFormData(initialFormData)
+    setNuevoContacto({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: ''
+    })
+
+    // Llamar a la función handleClose proporcionada por las props
+    props.handleClose()
+  }
+
+  const handleReset = () => {
+    handleClose()
   }
 
   const agregarContacto = () => {
@@ -182,7 +195,7 @@ const AddObraDrawer = (props: Props) => {
       open={props.open}
       anchor='right'
       variant='temporary'
-      onClose={handleReset}
+      onClose={handleClose}
       ModalProps={{ keepMounted: true }}
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >

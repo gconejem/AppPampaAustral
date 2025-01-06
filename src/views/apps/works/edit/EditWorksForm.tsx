@@ -220,6 +220,44 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               )}
             />
           </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Región</InputLabel>
+              <Controller
+                name='region'
+                control={control}
+                defaultValue={obraData?.region || ''}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Región' value={value || ''} {...field}>
+                    {REGIONES_CHILE.map(region => (
+                      <MenuItem key={region.value} value={region.value}>
+                        {region.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Comuna</InputLabel>
+              <Controller
+                name='comuna'
+                control={control}
+                defaultValue={obraData?.comuna || ''}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Comuna' value={value || ''} {...field}>
+                    {COMUNAS.map(comuna => (
+                      <MenuItem key={comuna.value} value={comuna.value}>
+                        {comuna.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
         </Grid>
 
         {/* Sección de Antecedentes */}
@@ -241,24 +279,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               control={control}
               render={({ field }) => (
                 <TextField {...field} fullWidth label='Dirección' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='region'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Región' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='comuna'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Comuna' InputLabelProps={{ shrink: true }} />
               )}
             />
           </Grid>

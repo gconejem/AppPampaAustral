@@ -46,6 +46,8 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -216,6 +218,55 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       console.error('Error al obtener datos:', error)
       toast.error('Error al cargar los datos de la obra')
     }
+  }
+
+  const handleExport = () => {
+    const doc = new jsPDF()
+
+    // Obtener las obras seleccionadas
+    const selectedRows = table.getSelectedRowModel().rows
+
+    const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data // Si no hay selección, exportar todos
+
+    // Configurar el título
+    doc.setFontSize(15)
+    doc.text('Reporte de Obras', 14, 15)
+    doc.setFontSize(10)
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 25)
+
+    // Configurar las columnas para la tabla
+    const columns = [
+      { header: 'OBRA', dataKey: 'numeroObra' },
+      { header: 'NOMBRE OBRA', dataKey: 'nombreObra' },
+      { header: 'COMUNA', dataKey: 'comuna' },
+      { header: 'RUT CLIENTE', dataKey: 'rut' },
+      { header: 'CLIENTE', dataKey: 'nombreCliente' },
+      { header: 'ESTADO', dataKey: 'estado' }
+    ]
+
+    // Preparar los datos para la tabla
+    const rows = dataToExport.map(obra => ({
+      numeroObra: obra.numeroObra,
+      nombreObra: obra.nombreObra,
+      comuna: obra.comuna,
+      rut: obra.rut,
+      nombreCliente: obra.nombreCliente,
+      estado: obra.estado
+    }))
+
+    // Generar la tabla
+    doc.autoTable({
+      startY: 35,
+      head: [columns.map(col => col.header)],
+      body: rows.map(row => columns.map(col => row[col.dataKey as keyof typeof row])),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] }
+    })
+
+    // Guardar el PDF
+    doc.save('reporte-obras.pdf')
   }
 
   const columns = useMemo(
@@ -407,6 +458,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             color='secondary'
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
+            onClick={handleExport}
+            disabled={isLoading}
             className='max-sm:is-full'
           >
             Exportar
