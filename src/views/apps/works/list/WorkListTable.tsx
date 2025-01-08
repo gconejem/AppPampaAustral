@@ -26,6 +26,11 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
 
 // Third-party Imports
 import axios from 'axios'
@@ -46,6 +51,8 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -66,6 +73,9 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+
+// Data Imports
+import { ESTADOS_OBRA } from '@/data/obraData'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -153,7 +163,6 @@ const columnHelper = createColumnHelper<WorkTypeWithAction>()
 
 const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
-  const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState<WorkTypeWithAction[]>([])
   const [filteredData, setFilteredData] = useState(data)
@@ -165,6 +174,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [obraToDelete, setObraToDelete] = useState<number | null>(null)
   const [selectedObraId, setSelectedObraId] = useState<number | null>(null)
   const [addObraOpen, setAddObraOpen] = useState<boolean>(false)
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedObraForMenu, setSelectedObraForMenu] = useState<Obra | null>(null)
 
   // Hooks
   const params = useParams()
@@ -216,6 +227,65 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       console.error('Error al obtener datos:', error)
       toast.error('Error al cargar los datos de la obra')
     }
+  }
+
+  const handleExport = () => {
+    const doc = new jsPDF()
+
+    // Obtener las obras seleccionadas
+    const selectedRows = table.getSelectedRowModel().rows
+
+    const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data // Si no hay selección, exportar todos
+
+    // Configurar el título
+    doc.setFontSize(15)
+    doc.text('Reporte de Obras', 14, 15)
+    doc.setFontSize(10)
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 25)
+
+    // Configurar las columnas para la tabla
+    const columns = [
+      { header: 'OBRA', dataKey: 'numeroObra' },
+      { header: 'NOMBRE OBRA', dataKey: 'nombreObra' },
+      { header: 'COMUNA', dataKey: 'comuna' },
+      { header: 'RUT CLIENTE', dataKey: 'rut' },
+      { header: 'CLIENTE', dataKey: 'nombreCliente' },
+      { header: 'ESTADO', dataKey: 'estado' }
+    ]
+
+    // Preparar los datos para la tabla
+    const rows = dataToExport.map(obra => ({
+      numeroObra: obra.numeroObra,
+      nombreObra: obra.nombreObra,
+      comuna: obra.comuna,
+      rut: obra.rut,
+      nombreCliente: obra.nombreCliente,
+      estado: obra.estado
+    }))
+
+    // Generar la tabla
+    doc.autoTable({
+      startY: 35,
+      head: [columns.map(col => col.header)],
+      body: rows.map(row => columns.map(col => row[col.dataKey as keyof typeof row])),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] }
+    })
+
+    // Guardar el PDF
+    doc.save('reporte-obras.pdf')
+  }
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, obra: Obra) => {
+    setAnchorEl(event.currentTarget)
+    setSelectedObraForMenu(obra)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+    setSelectedObraForMenu(null)
   }
 
   const columns = useMemo(
@@ -321,11 +391,59 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             >
               <i className='ri-delete-bin-line' />
             </IconButton>
+            <IconButton
+              onClick={e => {
+                e.stopPropagation()
+                handleMenuOpen(e, row.original)
+              }}
+            >
+              <i className='ri-more-fill' />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl) && selectedObraForMenu?.obraId === row.original.obraId}
+              onClose={handleMenuClose}
+              transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              sx={{
+                '& .MuiPaper-root': {
+                  minWidth: '120px',
+                  boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+                  marginTop: '5px'
+                }
+              }}
+              slotProps={{
+                paper: {
+                  elevation: 0,
+                  sx: {
+                    overflow: 'visible',
+                    filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                    mt: 1.5,
+                    '&:before': {
+                      content: '""',
+                      display: 'block',
+                      position: 'absolute',
+                      top: 0,
+                      right: 14,
+                      width: 10,
+                      height: 10,
+                      bgcolor: 'background.paper',
+                      transform: 'translateY(-50%) rotate(45deg)',
+                      zIndex: 0
+                    }
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={handleMenuClose}>
+                <i className='ri-settings-line me-2' /> Opciones
+              </MenuItem>
+            </Menu>
           </div>
         )
       })
     ],
-    [handleEdit, setSelectedObraId, setDeleteDialogOpen]
+    [handleEdit, setSelectedObraId, setDeleteDialogOpen, handleMenuOpen, handleMenuClose]
   )
 
   const table = useReactTable({
@@ -391,7 +509,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           action={
             <Button
               variant='contained'
-              onClick={() => setAddUserOpen(true)}
+              onClick={() => setAddObraOpen(true)}
               startIcon={<i className='ri-add-line' />}
               sx={{ borderRadius: '5px' }}
             >
@@ -407,6 +525,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             color='secondary'
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
+            onClick={handleExport}
+            disabled={isLoading}
             className='max-sm:is-full'
           >
             Exportar
