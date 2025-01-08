@@ -34,9 +34,11 @@ import ContactSearchObra from '../components/ContactSearchObra'
 
 // Types
 import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
+import { initialFormData } from '@/types/forms/obra'
 
 // Data
 import { ESTADOS_OBRA, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
+import { formatRut, validateRut } from '@/utils/rut-utils'
 
 type Props = {
   open: boolean
@@ -52,13 +54,120 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
-  // Form Hook
+  // Validación de email
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
+
+    return emailRegex.test(email)
+  }
+
+  // Validación de teléfono chileno
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^\+?56?\d{9}$/
+
+    return phoneRegex.test(phone)
+  }
+
+  // Formatear teléfono mientras se escribe
+  const formatPhone = (phone: string) => {
+    let cleaned = phone.replace(/\D/g, '')
+
+    if (!cleaned.startsWith('56')) {
+      cleaned = '56' + cleaned
+    }
+
+    cleaned = cleaned.slice(0, 11)
+
+    return '+' + cleaned
+  }
+
+  // Manejadores para campos específicos
+  const handleNumeroObraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '')
+
+    setValue('numeroObra', value)
+  }
+
+  const handleFacturacionRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedRut = formatRut(e.target.value)
+
+    setValue('rut', formattedRut)
+  }
+
+  const handleFacturacionPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedPhone = formatPhone(e.target.value)
+
+    setValue('telefonoFacturacion', formattedPhone)
+  }
+
   const {
     control,
     reset,
     handleSubmit,
-    formState: { errors }
-  } = useForm<FormValidateType>()
+    formState: { errors },
+    setValue
+  } = useForm<FormValidateType>({
+    defaultValues: {
+      numeroObra: '',
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      estado: 'activo',
+      estadoObra: 'activo',
+      nombreObra: '',
+      direccion: '',
+      region: '',
+      comuna: '',
+      telefono: '',
+      sitioWeb: '',
+      nombreCliente: '',
+      rut: '',
+      razonSocial: '',
+      giro: '',
+      direccionComercial: '',
+      comunaFacturacion: '',
+      telefonoFacturacion: '',
+      listaPrecios: '',
+      mailRecepcionFactura: ''
+
+      // ... otros campos con valores por defecto
+    },
+    mode: 'onChange',
+    rules: {
+      numeroObra: {
+        required: 'El número de obra es requerido',
+        pattern: {
+          value: /^\d+$/,
+          message: 'Solo se permiten números'
+        }
+      },
+      fechaIngreso: {
+        required: 'La fecha es requerida',
+        validate: value => {
+          const date = new Date(value)
+
+          return date <= new Date() || 'La fecha no puede ser futura'
+        }
+      },
+      rut: {
+        required: 'El RUT es requerido',
+        validate: value => validateRut(value) || 'RUT inválido'
+      },
+      giro: {
+        required: 'El giro es requerido',
+        pattern: {
+          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+          message: 'Solo se permiten letras'
+        }
+      },
+      telefonoFacturacion: {
+        required: 'El teléfono es requerido',
+        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+      },
+      mailRecepcionFactura: {
+        required: 'El email es requerido',
+        validate: value => validateEmail(value) || 'Email inválido'
+      }
+    }
+  })
 
   useEffect(() => {
     console.log('EditWorksForm mounted')
@@ -151,8 +260,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             <Controller
               name='numeroObra'
               control={control}
+              rules={{
+                required: 'El número de obra es requerido',
+                pattern: {
+                  value: /^\d+$/,
+                  message: 'Solo se permiten números'
+                }
+              }}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Número Obra' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Número Obra *'
+                  onChange={handleNumeroObraChange}
+                  error={Boolean(errors.numeroObra)}
+                  helperText={errors.numeroObra?.message}
+                  inputProps={{
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*'
+                  }}
+                />
               )}
             />
           </Grid>
@@ -233,7 +360,23 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             <Controller
               name='rut'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='RUT' InputLabelProps={{ shrink: true }} />}
+              rules={{
+                required: 'El RUT es requerido',
+                validate: value => validateRut(value) || 'RUT inválido'
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='RUT *'
+                  onChange={handleFacturacionRutChange}
+                  error={Boolean(errors.rut)}
+                  helperText={errors.rut?.message}
+                  inputProps={{
+                    maxLength: 12
+                  }}
+                />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -496,7 +639,23 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             <Controller
               name='giro'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Giro' InputLabelProps={{ shrink: true }} />}
+              rules={{
+                required: 'El giro es requerido',
+                pattern: {
+                  value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+                  message: 'Solo se permiten letras'
+                }
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Giro *'
+                  onChange={handleFacturacionRutChange}
+                  error={Boolean(errors.giro)}
+                  helperText={errors.giro?.message}
+                />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -521,8 +680,22 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             <Controller
               name='telefonoFacturacion'
               control={control}
+              rules={{
+                required: 'El teléfono es requerido',
+                validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+              }}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Teléfono Facturación' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Teléfono *'
+                  onChange={handleFacturacionPhoneChange}
+                  error={Boolean(errors.telefonoFacturacion)}
+                  helperText={errors.telefonoFacturacion?.message}
+                  inputProps={{
+                    maxLength: 12
+                  }}
+                />
               )}
             />
           </Grid>
@@ -539,8 +712,18 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
             <Controller
               name='mailRecepcionFactura'
               control={control}
+              rules={{
+                required: 'El email es requerido',
+                validate: value => validateEmail(value) || 'Email inválido'
+              }}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Email Recepción Factura' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Mail Recepción Factura *'
+                  error={Boolean(errors.mailRecepcionFactura)}
+                  helperText={errors.mailRecepcionFactura?.message}
+                />
               )}
             />
           </Grid>

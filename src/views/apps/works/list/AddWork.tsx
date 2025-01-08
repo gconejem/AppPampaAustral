@@ -30,6 +30,8 @@ import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
+import { formatRut, validateRut } from '@/utils/rut-utils'
+
 // Types Imports
 import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
@@ -67,7 +69,7 @@ const AddObraDrawer = (props: Props) => {
 
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
-  // Hooks
+  // Hooks - ahora useForm tiene acceso al schema
   const {
     control,
     reset: resetForm,
@@ -77,8 +79,76 @@ const AddObraDrawer = (props: Props) => {
     trigger
   } = useForm<FormValidateType>({
     defaultValues: initialFormData,
-    mode: 'onChange'
+    mode: 'onChange',
+    rules: {
+      numeroObra: {
+        required: 'El número de obra es requerido',
+        pattern: {
+          value: /^\d+$/,
+          message: 'Solo se permiten números'
+        }
+      },
+      fechaIngreso: {
+        required: 'La fecha es requerida',
+        validate: value => {
+          const date = new Date(value)
+
+          return date <= new Date() || 'La fecha no puede ser futura'
+        }
+      },
+      rut: {
+        required: 'El RUT es requerido',
+        validate: value => validateRut(value) || 'RUT inválido'
+      },
+      nombreCliente: {
+        required: 'El nombre es requerido',
+        minLength: {
+          value: 3,
+          message: 'Mínimo 3 caracteres'
+        },
+        pattern: {
+          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+          message: 'Solo se permiten letras'
+        }
+      },
+      telefonoFacturacion: {
+        required: 'El teléfono es requerido',
+        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+      },
+      mailRecepcionFactura: {
+        required: 'El email es requerido',
+        validate: value => validateEmail(value) || 'Email inválido'
+      },
+      giro: {
+        required: 'El giro es requerido',
+        pattern: {
+          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+          message: 'Solo se permiten letras'
+        }
+      }
+    }
   })
+
+  // Manejador para el campo RUT
+  const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedRut = formatRut(e.target.value)
+
+    setValue('rut', formattedRut)
+  }
+
+  // Agregar manejador para teléfono de facturación
+  const handleFacturacionPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedPhone = formatPhone(e.target.value)
+
+    setValue('telefonoFacturacion', formattedPhone)
+  }
+
+  // Agregar manejador para RUT de facturación
+  const handleFacturacionRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedRut = formatRut(e.target.value)
+
+    setValue('rut', formattedRut)
+  }
 
   const onSubmit = async (data: FormValidateType) => {
     try {
@@ -135,10 +205,52 @@ const AddObraDrawer = (props: Props) => {
     handleClose()
   }
 
+  // Validación de email
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
+
+    return emailRegex.test(email)
+  }
+
+  // Validación de teléfono chileno
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^\+?56?\d{9}$/
+
+    return phoneRegex.test(phone)
+  }
+
+  // Formatear teléfono mientras se escribe
+  const formatPhone = (phone: string) => {
+    // Eliminar todo excepto números
+    let cleaned = phone.replace(/\D/g, '')
+
+    // Agregar +56 si no lo tiene
+    if (!cleaned.startsWith('56')) {
+      cleaned = '56' + cleaned
+    }
+
+    // Limitar a 11 caracteres (56 + 9 dígitos)
+    cleaned = cleaned.slice(0, 11)
+
+    return '+' + cleaned
+  }
+
   const agregarContacto = () => {
-    // Validar campos requeridos
-    if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1) {
-      toast.error('Todos los campos son requeridos')
+    // Validar campos requeridos y formato
+    if (!nuevoContacto.rol || !nuevoContacto.nombre) {
+      toast.error('Rol y nombre son requeridos')
+
+      return
+    }
+
+    if (!validateEmail(nuevoContacto.email)) {
+      toast.error('Email inválido')
+
+      return
+    }
+
+    if (!validatePhone(nuevoContacto.telefono1)) {
+      toast.error('Teléfono inválido. Debe ser un número chileno válido')
 
       return
     }
@@ -265,7 +377,7 @@ const AddObraDrawer = (props: Props) => {
       // Formatear la fecha correctamente
       const formattedData = {
         ...dummyObraData,
-        fechaIngreso: new Date(dummyObraData.fechaIngreso).toISOString().split('T')[0],
+        fechaIngreso: new Date(dummyObraData.fechaIngreso).toISOString().split('T')[0]
       }
 
       // Actualizar el formulario usando setValue para cada campo
@@ -294,11 +406,17 @@ const AddObraDrawer = (props: Props) => {
 
       // Mostrar mensaje de éxito
       toast.success('Datos de prueba cargados correctamente')
-
     } catch (error) {
       console.error('Error al cargar datos de prueba:', error)
       toast.error('Error al cargar los datos de prueba')
     }
+  }
+
+  // Manejador para el número de obra
+  const handleNumeroObraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '') // Elimina cualquier caracter que no sea número
+
+    setValue('numeroObra', value)
   }
 
   return (
@@ -314,12 +432,7 @@ const AddObraDrawer = (props: Props) => {
         <Typography variant='h5'>Nueva Obra</Typography>
         <div className='flex gap-2'>
           {/* Agregar botón para cargar datos dummy */}
-          <Button
-            size='small'
-            variant='outlined'
-            onClick={handleLoadDummyData}
-            sx={{ marginRight: 2 }}
-          >
+          <Button size='small' variant='outlined' onClick={handleLoadDummyData} sx={{ marginRight: 2 }}>
             Cargar Datos de Prueba
           </Button>
           <IconButton size='small' onClick={handleReset}>
@@ -336,14 +449,25 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='numeroObra'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El número de obra es requerido',
+                  pattern: {
+                    value: /^\d+$/,
+                    message: 'Solo se permiten números'
+                  }
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Número Obra *'
+                    onChange={handleNumeroObraChange}
                     error={Boolean(errors.numeroObra)}
-                    helperText={errors.numeroObra && 'Este campo es obligatorio'}
+                    helperText={errors.numeroObra?.message}
+                    inputProps={{
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
+                    }}
                   />
                 )}
               />
@@ -406,14 +530,21 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='rut'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El RUT es requerido',
+                  validate: value => validateRut(value) || 'RUT inválido'
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='RUT *'
+                    onChange={handleFacturacionRutChange}
                     error={Boolean(errors.rut)}
-                    helperText={errors.rut && 'Este campo es obligatorio'}
+                    helperText={errors.rut?.message}
+                    inputProps={{
+                      maxLength: 12
+                    }}
                   />
                 )}
               />
@@ -628,15 +759,30 @@ const AddObraDrawer = (props: Props) => {
                       placeholder='Email'
                       fullWidth
                       size='small'
+                      error={nuevoContacto.email && !validateEmail(nuevoContacto.email)}
+                      helperText={nuevoContacto.email && !validateEmail(nuevoContacto.email) ? 'Email inválido' : ''}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       value={nuevoContacto.telefono1 || ''}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono1: e.target.value })}
-                      placeholder='Teléfono'
+                      onChange={e => {
+                        const formattedPhone = formatPhone(e.target.value)
+
+                        setNuevoContacto({ ...nuevoContacto, telefono1: formattedPhone })
+                      }}
+                      placeholder='Teléfono (+56912345678)'
                       fullWidth
                       size='small'
+                      error={nuevoContacto.telefono1 && !validatePhone(nuevoContacto.telefono1)}
+                      helperText={
+                        nuevoContacto.telefono1 && !validatePhone(nuevoContacto.telefono1)
+                          ? 'Debe ser un número chileno válido'
+                          : ''
+                      }
+                      inputProps={{
+                        maxLength: 12 // +56912345678
+                      }}
                     />
                   </TableCell>
                   <TableCell>
@@ -778,14 +924,21 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='rut'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El RUT es requerido',
+                  validate: value => validateRut(value) || 'RUT inválido'
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='RUT *'
+                    onChange={handleFacturacionRutChange}
                     error={Boolean(errors.rut)}
-                    helperText={errors.rut && 'Este campo es obligatorio'}
+                    helperText={errors.rut?.message}
+                    inputProps={{
+                      maxLength: 12
+                    }}
                   />
                 )}
               />
@@ -795,14 +948,20 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='giro'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El giro es requerido',
+                  pattern: {
+                    value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+                    message: 'Solo se permiten letras'
+                  }
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Giro *'
                     error={Boolean(errors.giro)}
-                    helperText={errors.giro && 'Este campo es obligatorio'}
+                    helperText={errors.giro?.message}
                   />
                 )}
               />
@@ -846,14 +1005,21 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='telefonoFacturacion'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El teléfono es requerido',
+                  validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Teléfono *'
+                    onChange={handleFacturacionPhoneChange}
                     error={Boolean(errors.telefonoFacturacion)}
-                    helperText={errors.telefonoFacturacion && 'Este campo es obligatorio'}
+                    helperText={errors.telefonoFacturacion?.message}
+                    inputProps={{
+                      maxLength: 12
+                    }}
                   />
                 )}
               />
@@ -884,14 +1050,17 @@ const AddObraDrawer = (props: Props) => {
               <Controller
                 name='mailRecepcionFactura'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El email es requerido',
+                  validate: value => validateEmail(value) || 'Email inválido'
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Mail Recepción Factura *'
                     error={Boolean(errors.mailRecepcionFactura)}
-                    helperText={errors.mailRecepcionFactura && 'Este campo es obligatorio'}
+                    helperText={errors.mailRecepcionFactura?.message}
                   />
                 )}
               />
