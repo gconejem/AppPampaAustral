@@ -72,9 +72,12 @@ const AddObraDrawer = (props: Props) => {
     control,
     reset: resetForm,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    setValue,
+    trigger
   } = useForm<FormValidateType>({
-    defaultValues: initialFormData
+    defaultValues: initialFormData,
+    mode: 'onChange'
   })
 
   const onSubmit = async (data: FormValidateType) => {
@@ -190,6 +193,114 @@ const AddObraDrawer = (props: Props) => {
     )
   }
 
+  const dummyObraData: FormValidateType = {
+    // Datos básicos
+    numeroObra: 'OB002',
+    fechaIngreso: '2024-03-15',
+    estado: 'activo',
+    estadoObra: 'activo',
+
+    // Cliente
+    rut: '76.543.210-K',
+    nombreCliente: 'Constructora Ejemplo S.A.',
+    razonSocial: 'Constructora Ejemplo S.A.',
+
+    // Antecedentes
+    nombreObra: 'Construcción Edificio Central',
+    direccion: 'Av. Principal 123',
+    region: 'metropolitana',
+    comuna: 'santiago',
+    sector: 'Centro',
+    georreferencia: '-33.4489, -70.6693',
+    referencia: 'Frente al parque',
+
+    // Mandante
+    mandante: 'Inmobiliaria Principal',
+    informeMandante: true,
+    textoMandante: 'Informes semanales requeridos',
+
+    // Facturación
+    giro: 'Construcción y Desarrollo Inmobiliario',
+    direccionComercial: 'Calle Comercial 456',
+    comunaFacturacion: 'santiago',
+    telefonoFacturacion: '+56 2 2345 6789',
+    listaPrecios: 'lista1',
+    mailRecepcionFactura: 'facturas@constructoraejemplo.cl',
+
+    // Requisitos
+    acreditacionPersonal: true,
+    especificacionesTecnicas: true,
+    acreditacionEquipos: true,
+    cartaCompromiso: true,
+    mandatoServiu: true,
+    otrosRequisitos: 'Certificación ISO 9001',
+
+    // Referencias
+    estadoPago: true,
+    hes: true,
+    oc: true,
+    otrasReferencias: 'Referencia adicional'
+  } as const
+
+  // Los contactos se manejan por separado
+  const dummyContactos: ContactoObra[] = [
+    {
+      nombre: 'Juan Pérez',
+      rol: 'encargado_obra',
+      email: 'juan.perez@ejemplo.cl',
+      telefono1: '+56 9 8765 4321',
+      isPrincipal: true
+    },
+    {
+      nombre: 'María González',
+      rol: 'envio_informes',
+      email: 'maria.gonzalez@ejemplo.cl',
+      telefono1: '+56 9 9876 5432',
+      isPrincipal: false
+    }
+  ]
+
+  const handleLoadDummyData = () => {
+    try {
+      // Formatear la fecha correctamente
+      const formattedData = {
+        ...dummyObraData,
+        fechaIngreso: new Date(dummyObraData.fechaIngreso).toISOString().split('T')[0],
+      }
+
+      // Actualizar el formulario usando setValue para cada campo
+      Object.keys(formattedData).forEach(key => {
+        setValue(key as keyof FormValidateType, formattedData[key as keyof FormValidateType])
+      })
+
+      // Actualizar los checkboxes
+      setValue('informeMandante', Boolean(dummyObraData.informeMandante))
+      setValue('acreditacionPersonal', Boolean(dummyObraData.acreditacionPersonal))
+      setValue('especificacionesTecnicas', Boolean(dummyObraData.especificacionesTecnicas))
+      setValue('acreditacionEquipos', Boolean(dummyObraData.acreditacionEquipos))
+      setValue('cartaCompromiso', Boolean(dummyObraData.cartaCompromiso))
+      setValue('mandatoServiu', Boolean(dummyObraData.mandatoServiu))
+      setValue('estadoPago', Boolean(dummyObraData.estadoPago))
+      setValue('hes', Boolean(dummyObraData.hes))
+      setValue('oc', Boolean(dummyObraData.oc))
+
+      // Actualizar los estados locales
+      setFormData(formattedData)
+      setContactos(dummyContactos)
+      setSelectedRegion(dummyObraData.region)
+
+      // Forzar la actualización del formulario
+      trigger()
+
+      // Mostrar mensaje de éxito
+      toast.success('Datos de prueba cargados correctamente')
+
+    } catch (error) {
+      console.error('Error al cargar datos de prueba:', error)
+      toast.error('Error al cargar los datos de prueba')
+    }
+  }
+
   return (
     <Drawer
       open={props.open}
@@ -201,9 +312,20 @@ const AddObraDrawer = (props: Props) => {
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Nueva Obra</Typography>
-        <IconButton size='small' onClick={handleReset}>
-          <i className='ri-close-line text-2xl' />
-        </IconButton>
+        <div className='flex gap-2'>
+          {/* Agregar botón para cargar datos dummy */}
+          <Button
+            size='small'
+            variant='outlined'
+            onClick={handleLoadDummyData}
+            sx={{ marginRight: 2 }}
+          >
+            Cargar Datos de Prueba
+          </Button>
+          <IconButton size='small' onClick={handleReset}>
+            <i className='ri-close-line text-2xl' />
+          </IconButton>
+        </div>
       </div>
       <Divider />
       <div className='p-5'>
