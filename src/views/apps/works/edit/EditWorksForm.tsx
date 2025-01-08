@@ -144,6 +144,9 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
       <form onSubmit={handleSubmit(onSubmit)} className='p-5 space-y-4'>
         {/* Datos Principales */}
         <Grid container spacing={5}>
+          <Grid item xs={12}>
+            <Typography variant='h6'>Datos Principales</Typography>
+          </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='numeroObra'
@@ -159,6 +162,86 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               control={control}
               render={({ field }) => (
                 <TextField {...field} fullWidth type='date' label='Fecha Ingreso' InputLabelProps={{ shrink: true }} />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='nombreObra'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Nombre Obra' InputLabelProps={{ shrink: true }} />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='direccion'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Dirección' InputLabelProps={{ shrink: true }} />
+              )}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Antecedentes */}
+        <Divider sx={{ my: 4 }} />
+        <Grid container spacing={5}>
+          <Grid item xs={12}>
+            <Typography variant='h6'>Antecedentes</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Región</InputLabel>
+              <Controller
+                name='region'
+                control={control}
+                defaultValue={obraData?.region || ''}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Región' value={value || ''} {...field}>
+                    {REGIONES_CHILE.map(region => (
+                      <MenuItem key={region.value} value={region.value}>
+                        {region.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Comuna</InputLabel>
+              <Controller
+                name='comuna'
+                control={control}
+                defaultValue={obraData?.comuna || ''}
+                render={({ field: { value, ...field } }) => (
+                  <Select label='Comuna' value={value || ''} {...field}>
+                    {COMUNAS.map(comuna => (
+                      <MenuItem key={comuna.value} value={comuna.value}>
+                        {comuna.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='rut'
+              control={control}
+              render={({ field }) => <TextField {...field} fullWidth label='RUT' InputLabelProps={{ shrink: true }} />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='nombreCliente'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Nombre Cliente' InputLabelProps={{ shrink: true }} />
               )}
             />
           </Grid>
@@ -203,64 +286,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               />
               {errors.estadoObra && <FormHelperText>Este campo es requerido</FormHelperText>}
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='rut'
-              control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='RUT' InputLabelProps={{ shrink: true }} />}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='nombreCliente'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Nombre Cliente' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Sección de Antecedentes */}
-        <Divider sx={{ my: 4 }} />
-        <Typography variant='h6'>Antecedentes</Typography>
-        <Grid container spacing={5}>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='nombreObra'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Nombre Obra' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='direccion'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Dirección' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='region'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Región' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='comuna'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Comuna' InputLabelProps={{ shrink: true }} />
-              )}
-            />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller

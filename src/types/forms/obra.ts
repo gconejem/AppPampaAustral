@@ -1,5 +1,5 @@
 export type Obra = {
-  id: number
+  obraId: number
   numeroObra: string
   fechaIngreso: Date
   estado: string
@@ -12,16 +12,12 @@ export type Obra = {
   sitioWeb?: string
   informeMandante: boolean
   textoMandante?: string
-
-  // Requisitos
   acreditacionPersonal: boolean
   especificacionesTecnicas: boolean
   acreditacionEquipos: boolean
   cartaCompromiso: boolean
   mandatoServiu: boolean
   otrosRequisitos?: string
-
-  // Facturación
   razonSocial: string
   rut: string
   giro: string
@@ -30,31 +26,73 @@ export type Obra = {
   telefonoFacturacion: string
   listaPrecios: string
   mailRecepcionFactura: string
-
-  // Referencias
   estadoPago: boolean
   hes: boolean
   oc: boolean
   otrasReferencias?: string
-
-  createdAt: Date
-  updatedAt: Date
-
-  contactos: ContactoObra[]
-
   sector?: string
   georreferencia?: string
   referencia?: string
   mandante?: string
   nombreCliente: string
+  contactos: ContactoObra[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type ContactoObra = {
   id: number
+  obraId: number
   nombre: string
-  cargo: string
+  rol: string
   email: string
   telefono1: string
   telefono2?: string
-  obraId: number
+  isPrincipal: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type WorkTypeWithAction = Obra & {
+  action?: string
+}
+
+// Agregar el initialFormData que falta
+export const initialFormData = {
+  numeroObra: '',
+  fechaIngreso: new Date(),
+  estado: 'activo',
+  estadoObra: 'activo',
+  nombreObra: '',
+  direccion: '',
+  region: '',
+  comuna: '',
+  telefono: '',
+  sitioWeb: '',
+  informeMandante: false,
+  textoMandante: '',
+  acreditacionPersonal: false,
+  especificacionesTecnicas: false,
+  acreditacionEquipos: false,
+  cartaCompromiso: false,
+  mandatoServiu: false,
+  otrosRequisitos: '',
+  razonSocial: '',
+  rut: '',
+  giro: '',
+  direccionComercial: '',
+  comunaFacturacion: '',
+  telefonoFacturacion: '',
+  listaPrecios: '',
+  mailRecepcionFactura: '',
+  estadoPago: false,
+  hes: false,
+  oc: false,
+  otrasReferencias: '',
+  sector: '',
+  georreferencia: '',
+  referencia: '',
+  mandante: '',
+  nombreCliente: '',
+  contactos: []
 }
