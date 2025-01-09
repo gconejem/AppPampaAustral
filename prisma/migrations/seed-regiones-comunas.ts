@@ -1,0 +1,504 @@
+const { PrismaClient } = require('@prisma/client')
+
+const prisma = new PrismaClient()
+
+const regionesChile = [
+  {
+    codigo: '15',
+    nombre: 'Arica y Parinacota',
+    comunas: ['Arica', 'Camarones', 'Putre', 'General Lagos']
+  },
+  {
+    codigo: '01',
+    nombre: 'Tarapacá',
+    comunas: ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Camiña', 'Colchane', 'Huara', 'Pica']
+  },
+  {
+    codigo: '02',
+    nombre: 'Antofagasta',
+    comunas: [
+      'Antofagasta',
+      'Mejillones',
+      'Sierra Gorda',
+      'Taltal',
+      'Calama',
+      'Ollagüe',
+      'San Pedro de Atacama',
+      'Tocopilla',
+      'María Elena'
+    ]
+  },
+  {
+    codigo: '03',
+    nombre: 'Atacama',
+    comunas: [
+      'Copiapó',
+      'Caldera',
+      'Tierra Amarilla',
+      'Chañaral',
+      'Diego de Almagro',
+      'Vallenar',
+      'Alto del Carmen',
+      'Freirina',
+      'Huasco'
+    ]
+  },
+  {
+    codigo: '04',
+    nombre: 'Coquimbo',
+    comunas: [
+      'La Serena',
+      'Coquimbo',
+      'Andacollo',
+      'La Higuera',
+      'Paiguano',
+      'Vicuña',
+      'Illapel',
+      'Canela',
+      'Los Vilos',
+      'Salamanca',
+      'Ovalle',
+      'Combarbalá',
+      'Monte Patria',
+      'Punitaqui',
+      'Río Hurtado'
+    ]
+  },
+  {
+    codigo: '05',
+    nombre: 'Valparaíso',
+    comunas: [
+      'Valparaíso',
+      'Casablanca',
+      'Concón',
+      'Juan Fernández',
+      'Puchuncaví',
+      'Quintero',
+      'Viña del Mar',
+      'Isla de Pascua',
+      'Los Andes',
+      'Calle Larga',
+      'Rinconada',
+      'San Esteban',
+      'La Ligua',
+      'Cabildo',
+      'Papudo',
+      'Petorca',
+      'Zapallar',
+      'Quillota',
+      'La Calera',
+      'Hijuelas',
+      'La Cruz',
+      'Nogales',
+      'San Antonio',
+      'Algarrobo',
+      'Cartagena',
+      'El Quisco',
+      'El Tabo',
+      'Santo Domingo',
+      'San Felipe',
+      'Catemu',
+      'Llaillay',
+      'Panquehue',
+      'Putaendo',
+      'Santa María',
+      'Quilpué',
+      'Limache',
+      'Olmué',
+      'Villa Alemana'
+    ]
+  },
+  {
+    codigo: '13',
+    nombre: 'Metropolitana',
+    comunas: [
+      'Cerrillos',
+      'Cerro Navia',
+      'Conchalí',
+      'El Bosque',
+      'Estación Central',
+      'Huechuraba',
+      'Independencia',
+      'La Cisterna',
+      'La Florida',
+      'La Granja',
+      'La Pintana',
+      'La Reina',
+      'Las Condes',
+      'Lo Barnechea',
+      'Lo Espejo',
+      'Lo Prado',
+      'Macul',
+      'Maipú',
+      'Ñuñoa',
+      'Pedro Aguirre Cerda',
+      'Peñalolén',
+      'Providencia',
+      'Pudahuel',
+      'Quilicura',
+      'Quinta Normal',
+      'Recoleta',
+      'Renca',
+      'San Joaquín',
+      'San Miguel',
+      'San Ramón',
+      'Santiago',
+      'Vitacura',
+      'Puente Alto',
+      'Pirque',
+      'San José de Maipo',
+      'Colina',
+      'Lampa',
+      'Tiltil',
+      'San Bernardo',
+      'Buin',
+      'Calera de Tango',
+      'Paine',
+      'Melipilla',
+      'Alhué',
+      'Curacaví',
+      'María Pinto',
+      'San Pedro',
+      'Talagante',
+      'El Monte',
+      'Isla de Maipo',
+      'Padre Hurtado',
+      'Peñaflor'
+    ]
+  },
+  {
+    codigo: '06',
+    nombre: "O'Higgins",
+    comunas: [
+      'Rancagua',
+      'Codegua',
+      'Coinco',
+      'Coltauco',
+      'Doñihue',
+      'Graneros',
+      'Las Cabras',
+      'Machalí',
+      'Malloa',
+      'Mostazal',
+      'Olivar',
+      'Peumo',
+      'Pichidegua',
+      'Quinta de Tilcoco',
+      'Rengo',
+      'Requínoa',
+      'San Vicente',
+      'Pichilemu',
+      'La Estrella',
+      'Litueche',
+      'Marchihue',
+      'Navidad',
+      'Paredones',
+      'San Fernando',
+      'Chépica',
+      'Chimbarongo',
+      'Lolol',
+      'Nancagua',
+      'Palmilla',
+      'Peralillo',
+      'Placilla',
+      'Pumanque',
+      'Santa Cruz'
+    ]
+  },
+  {
+    codigo: '07',
+    nombre: 'Maule',
+    comunas: [
+      'Talca',
+      'Constitución',
+      'Curepto',
+      'Empedrado',
+      'Maule',
+      'Pelarco',
+      'Pencahue',
+      'Río Claro',
+      'San Clemente',
+      'San Rafael',
+      'Cauquenes',
+      'Chanco',
+      'Pelluhue',
+      'Curicó',
+      'Hualañé',
+      'Licantén',
+      'Molina',
+      'Rauco',
+      'Romeral',
+      'Sagrada Familia',
+      'Teno',
+      'Vichuquén',
+      'Linares',
+      'Colbún',
+      'Longaví',
+      'Parral',
+      'Retiro',
+      'San Javier',
+      'Villa Alegre',
+      'Yerbas Buenas'
+    ]
+  },
+  {
+    codigo: '16',
+    nombre: 'Ñuble',
+    comunas: [
+      'Chillán',
+      'Bulnes',
+      'Chillán Viejo',
+      'El Carmen',
+      'Pemuco',
+      'Pinto',
+      'Quillón',
+      'San Ignacio',
+      'Yungay',
+      'Quirihue',
+      'Cobquecura',
+      'Coelemu',
+      'Ninhue',
+      'Portezuelo',
+      'Ránquil',
+      'Treguaco',
+      'San Carlos',
+      'Coihueco',
+      'Ñiquén',
+      'San Fabián',
+      'San Nicolás'
+    ]
+  },
+  {
+    codigo: '08',
+    nombre: 'Biobío',
+    comunas: [
+      'Concepción',
+      'Coronel',
+      'Chiguayante',
+      'Florida',
+      'Hualqui',
+      'Lota',
+      'Penco',
+      'San Pedro de la Paz',
+      'Santa Juana',
+      'Talcahuano',
+      'Tomé',
+      'Hualpén',
+      'Lebu',
+      'Arauco',
+      'Cañete',
+      'Contulmo',
+      'Curanilahue',
+      'Los Álamos',
+      'Tirúa',
+      'Los Ángeles',
+      'Antuco',
+      'Cabrero',
+      'Laja',
+      'Mulchén',
+      'Nacimiento',
+      'Negrete',
+      'Quilaco',
+      'Quilleco',
+      'San Rosendo',
+      'Santa Bárbara',
+      'Tucapel',
+      'Yumbel',
+      'Alto Biobío'
+    ]
+  },
+  {
+    codigo: '09',
+    nombre: 'Araucanía',
+    comunas: [
+      'Temuco',
+      'Carahue',
+      'Cunco',
+      'Curarrehue',
+      'Freire',
+      'Galvarino',
+      'Gorbea',
+      'Lautaro',
+      'Loncoche',
+      'Melipeuco',
+      'Nueva Imperial',
+      'Padre Las Casas',
+      'Perquenco',
+      'Pitrufquén',
+      'Pucón',
+      'Saavedra',
+      'Teodoro Schmidt',
+      'Toltén',
+      'Vilcún',
+      'Villarrica',
+      'Cholchol',
+      'Angol',
+      'Collipulli',
+      'Curacautín',
+      'Ercilla',
+      'Lonquimay',
+      'Los Sauces',
+      'Lumaco',
+      'Purén',
+      'Renaico',
+      'Traiguén',
+      'Victoria'
+    ]
+  },
+  {
+    codigo: '14',
+    nombre: 'Los Ríos',
+    comunas: [
+      'Valdivia',
+      'Corral',
+      'Lanco',
+      'Los Lagos',
+      'Máfil',
+      'Mariquina',
+      'Paillaco',
+      'Panguipulli',
+      'La Unión',
+      'Futrono',
+      'Lago Ranco',
+      'Río Bueno'
+    ]
+  },
+  {
+    codigo: '10',
+    nombre: 'Los Lagos',
+    comunas: [
+      'Puerto Montt',
+      'Calbuco',
+      'Cochamó',
+      'Fresia',
+      'Frutillar',
+      'Los Muermos',
+      'Llanquihue',
+      'Maullín',
+      'Puerto Varas',
+      'Castro',
+      'Ancud',
+      'Chonchi',
+      'Curaco de Vélez',
+      'Dalcahue',
+      'Puqueldón',
+      'Queilén',
+      'Quellón',
+      'Quemchi',
+      'Quinchao',
+      'Osorno',
+      'Puerto Octay',
+      'Purranque',
+      'Puyehue',
+      'Río Negro',
+      'San Juan de la Costa',
+      'San Pablo',
+      'Chaitén',
+      'Futaleufú',
+      'Hualaihué',
+      'Palena'
+    ]
+  },
+  {
+    codigo: '11',
+    nombre: 'Aysén',
+    comunas: [
+      'Coihaique',
+      'Lago Verde',
+      'Aysén',
+      'Cisnes',
+      'Guaitecas',
+      'Cochrane',
+      "O'Higgins",
+      'Tortel',
+      'Chile Chico',
+      'Río Ibáñez'
+    ]
+  },
+  {
+    codigo: '12',
+    nombre: 'Magallanes',
+    comunas: [
+      'Punta Arenas',
+      'Laguna Blanca',
+      'Río Verde',
+      'San Gregorio',
+      'Cabo de Hornos',
+      'Antártica',
+      'Porvenir',
+      'Primavera',
+      'Timaukel',
+      'Natales',
+      'Torres del Paine'
+    ]
+  }
+]
+
+async function seedRegionesYComunas() {
+  try {
+    console.log('Iniciando seed de regiones y comunas...')
+
+    // Primero eliminar datos existentes
+    console.log('Eliminando datos existentes...')
+    await prisma.comuna.deleteMany()
+    await prisma.region.deleteMany()
+
+    for (const region of regionesChile) {
+      console.log(`\nCreando región: ${region.nombre} (código: ${region.codigo})`)
+
+      // Primero crear la región
+      const createdRegion = await prisma.region.create({
+        data: {
+          codigo: region.codigo,
+          nombre: region.nombre
+        }
+      })
+
+      // Luego crear las comunas una por una
+      const comunasCreadas = await Promise.all(
+        region.comunas.map(async comuna => {
+          const comunaData = {
+            codigo: `${region.codigo}-${comuna.toLowerCase().replace(/\s+/g, '-')}`,
+            nombre: comuna,
+            regionId: createdRegion.id
+          }
+
+          try {
+            const createdComuna = await prisma.comuna.create({
+              data: comunaData
+            })
+
+            console.log(`✓ Comuna creada: ${comuna}`)
+
+            return createdComuna
+          } catch (error) {
+            console.error(`✗ Error al crear comuna ${comuna}:`, error)
+
+            return null
+          }
+        })
+      )
+
+      const comunasExitosas = comunasCreadas.filter(c => c !== null)
+
+      console.log(`\nRegión ${region.nombre}: ${comunasExitosas.length}/${region.comunas.length} comunas creadas`)
+    }
+  } catch (error) {
+    console.error('Error en seed:', error)
+    throw error
+  }
+}
+
+async function main() {
+  try {
+    await seedRegionesYComunas()
+    console.log('Seed completado exitosamente')
+  } catch (error) {
+    console.error('Error al ejecutar seed:', error)
+    process.exit(1)
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+main()

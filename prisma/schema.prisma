@@ -149,71 +149,66 @@ enum EstadoProducto {
 }
 
 model Obra {
-  obraId                    Int      @id @default(autoincrement())
-  fechaCreacion            DateTime @default(now())
-  numeroObra               String   @unique
-  fechaIngreso             DateTime
-  estado                   String
-  estadoObra               String
-  nombreObra               String
-  direccion                String
-  region                   String
-  comuna                   String
-  telefono                 String?
-  sitioWeb                 String?
+  obraId               Int            @id @default(autoincrement())
+  numeroObra          String         @unique
+  fechaIngreso        DateTime
+  estado              String         @default("activo")
+  estadoObra          String         @default("Activo")
+  nombreObra          String
+  direccion           String
+  region              String
+  comuna              String
+  nombreCliente       String
 
-  // Datos del mandante
+  // Datos de facturación
+  razonSocial         String
+  rut                 String
+  giro                String
+  direccionComercial  String
+  comunaFacturacion   String
+  telefonoFacturacion String
+  listaPrecios        String
+  mailRecepcionFactura String
+
+  // Campos opcionales
+  telefono            String?
+  sitioWeb           String?
+  sector             String?
+  georreferencia     String?
+  referencia         String?
+  mandante           String?
+  textoMandante      String?
+  otrosRequisitos    String?
+  otrasReferencias   String?
+
+  // Campos booleanos
   informeMandante          Boolean  @default(false)
-  textoMandante           String?
-
-  // Requisitos
   acreditacionPersonal     Boolean  @default(false)
   especificacionesTecnicas Boolean  @default(false)
   acreditacionEquipos      Boolean  @default(false)
   cartaCompromiso          Boolean  @default(false)
   mandatoServiu            Boolean  @default(false)
-  otrosRequisitos          String?
-
-  // Facturación
-  razonSocial             String
-  rut                     String
-  giro                    String
-  direccionComercial      String
-  comunaFacturacion       String
-  telefonoFacturacion     String
-  listaPrecios            String
-  mailRecepcionFactura    String
-
-  // Referencias
   estadoPago              Boolean  @default(false)
   hes                     Boolean  @default(false)
   oc                      Boolean  @default(false)
-  otrasReferencias        String?
 
   // Relaciones
-  contactos               ContactoObra[]
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  contactos           ContactoObra[]
 
-  sector          String?
-  georreferencia  String?
-  referencia      String?
-  mandante        String?
-  nombreCliente   String
+  // Timestamps
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model ContactoObra {
   id          Int      @id @default(autoincrement())
-  obraId      Int
-  obra        Obra     @relation(fields: [obraId], references: [obraId])
   nombre      String
   rol         String
   email       String
   telefono1   String
-  telefono2   String?
   isPrincipal Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  obra        Obra     @relation(fields: [obraId], references: [obraId])
+  obraId      Int
 }
 
 model Permission {
@@ -222,4 +217,25 @@ model Permission {
   assignedTo  String[] // Almacenará los roles asignados
   createdDate DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  comunas   Comuna[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comuna {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  regionId  Int
+  region    Region   @relation(fields: [regionId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([regionId])
 }

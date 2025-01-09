@@ -1,5 +1,5 @@
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -39,6 +39,7 @@ import { initialFormData } from '@/types/forms/obra'
 // Import data
 import { ESTADOS_OBRA, LISTAS_PRECIOS, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import ContactSearchObra from '../components/ContactSearchObra'
+import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 
 // Agregar el enum o constante para los roles
 const ROLES_OBRA = [
@@ -57,7 +58,6 @@ const AddObraDrawer = (props: Props) => {
   // States
   const [formData, setFormData] = useState(initialFormData)
   const [contactos, setContactos] = useState<ContactoObra[]>([])
-  const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({
@@ -68,6 +68,13 @@ const AddObraDrawer = (props: Props) => {
   })
 
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
+
+  const { regiones, comunas, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
+
+  // Agrega un efecto para debug
+  useEffect(() => {
+    console.log('Estado actual:', { regiones, comunas, selectedRegion, loading })
+  }, [regiones, comunas, selectedRegion, loading])
 
   // Hooks - ahora useForm tiene acceso al schema
   const {
@@ -152,24 +159,31 @@ const AddObraDrawer = (props: Props) => {
 
   const onSubmit = async (data: FormValidateType) => {
     try {
-      console.log('Enviando datos:', data)
       setIsSubmitting(true)
+      console.log('Datos a enviar:', data)
 
-      // Incluir los contactos en el payload
+      // Preparar el payload con todos los datos necesarios
       const payload = {
         ...data,
+        region: data.region,
+        comuna: data.comuna,
+        estado: 'activo',
+        estadoObra: data.estadoObra || 'Activo',
+        fechaIngreso: new Date(data.fechaIngreso).toISOString(),
         contactos: contactos.map(contacto => ({
           nombre: contacto.nombre,
           rol: contacto.rol,
           email: contacto.email,
           telefono1: contacto.telefono1,
-          isPrincipal: contacto.isPrincipal
+          isPrincipal: contacto.isPrincipal || false
         }))
       }
 
+      console.log('Payload completo:', payload)
+
       const response = await axios.post('/api/obras', payload)
 
-      if (response.status === 201) {
+      if (response.data) {
         toast.success('Obra creada exitosamente')
         props.handleClose()
 
@@ -177,9 +191,9 @@ const AddObraDrawer = (props: Props) => {
           props.setData(prevData => [...prevData, response.data])
         }
       }
-    } catch (error) {
-      console.error('Error creating obra:', error)
-      toast.error('Error al crear la obra')
+    } catch (error: any) {
+      console.error('Error detallado:', error.response?.data || error)
+      toast.error(error.response?.data?.error || 'Error al guardar la obra')
     } finally {
       setIsSubmitting(false)
     }
@@ -617,17 +631,31 @@ const AddObraDrawer = (props: Props) => {
                 <Controller
                   name='region'
                   control={control}
-                  rules={{ required: true }}
+                  rules={{ required: 'La región es requerida' }}
                   render={({ field }) => (
-                    <Select {...field} label='Región *'>
-                      {REGIONES_CHILE.map(region => (
-                        <MenuItem key={region.value} value={region.value}>
-                          {region.label}
-                        </MenuItem>
-                      ))}
+                    <Select
+                      {...field}
+                      label='Región *'
+                      onChange={e => {
+                        const regionCodigo = e.target.value
+
+                        console.log('Región seleccionada (código):', regionCodigo)
+                        field.onChange(regionCodigo)
+                        setSelectedRegion(regionCodigo)
+                      }}
+                      disabled={loading}
+                      error={Boolean(errors.region)}
+                    >
+                      {Array.isArray(regiones) &&
+                        regiones.map((region: any) => (
+                          <MenuItem key={region.id} value={region.codigo}>
+                            {region.nombre}
+                          </MenuItem>
+                        ))}
                     </Select>
                   )}
                 />
+                {errors.region && <FormHelperText error>{errors.region.message}</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
@@ -640,17 +668,24 @@ const AddObraDrawer = (props: Props) => {
                 <Controller
                   name='comuna'
                   control={control}
-                  rules={{ required: true }}
+                  rules={{ required: 'La comuna es requerida' }}
                   render={({ field }) => (
-                    <Select {...field} label='Comuna *'>
-                      {COMUNAS.map(comuna => (
-                        <MenuItem key={comuna.value} value={comuna.value}>
-                          {comuna.label}
-                        </MenuItem>
-                      ))}
+                    <Select
+                      {...field}
+                      label='Comuna *'
+                      disabled={!selectedRegion || loading}
+                      error={Boolean(errors.comuna)}
+                    >
+                      {Array.isArray(comunas) &&
+                        comunas.map((comuna: any) => (
+                          <MenuItem key={comuna.id} value={comuna.id}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))}
                     </Select>
                   )}
                 />
+                {errors.comuna && <FormHelperText error>{errors.comuna.message}</FormHelperText>}
               </FormControl>
             </Grid>
 

@@ -40,17 +40,59 @@ export type Obra = {
   updatedAt: Date
 }
 
-export type ContactoObra = {
-  id: number
-  obraId: number
+export interface ContactoObra {
   nombre: string
   rol: string
   email: string
   telefono1: string
-  telefono2?: string
-  isPrincipal: boolean
-  createdAt: Date
-  updatedAt: Date
+  isPrincipal?: boolean
+}
+
+export interface FormValidateType {
+  numeroObra: string
+  fechaIngreso: string
+  estado?: string
+  estadoObra?: string
+  nombreObra: string
+  direccion: string
+  region: string
+  comuna: string
+  nombreCliente: string
+
+  // Datos de facturación
+  razonSocial: string
+  rut: string
+  giro: string
+  direccionComercial: string
+  comunaFacturacion: string
+  telefonoFacturacion: string
+  listaPrecios: string
+  mailRecepcionFactura: string
+
+  // Campos opcionales
+  telefono?: string
+  sitioWeb?: string
+  sector?: string
+  georreferencia?: string
+  referencia?: string
+  mandante?: string
+  textoMandante?: string
+  otrosRequisitos?: string
+  otrasReferencias?: string
+
+  // Campos booleanos
+  informeMandante?: boolean
+  acreditacionPersonal?: boolean
+  especificacionesTecnicas?: boolean
+  acreditacionEquipos?: boolean
+  cartaCompromiso?: boolean
+  mandatoServiu?: boolean
+  estadoPago?: boolean
+  hes?: boolean
+  oc?: boolean
+
+  // Contactos
+  contactos?: ContactoObra[]
 }
 
 export type WorkTypeWithAction = Obra & {

@@ -27,31 +27,66 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    console.log('Recibiendo datos:', body)
-    console.log('Contactos a crear:', body.contactos)
+    console.log('Datos recibidos en POST /api/obras:', body)
 
-    // Primero creamos la obra
+    // Obtener la región y comuna por sus códigos
+    const region = await prisma.region.findUnique({
+      where: { codigo: body.region },
+      select: { nombre: true }
+    })
+
+    // Buscar la comuna por ID en lugar de por nombre
+    const comuna = await prisma.comuna.findUnique({
+      where: {
+        id: parseInt(body.comuna)
+      },
+      select: { nombre: true }
+    })
+
+    if (!region || !comuna) {
+      console.error('Región o comuna no encontrada:', {
+        regionCodigo: body.region,
+        comunaId: body.comuna,
+        regionEncontrada: region,
+        comunaEncontrada: comuna
+      })
+
+      return NextResponse.json({ error: 'Región o comuna no válida', details: { region, comuna } }, { status: 400 })
+    }
+
+    // Crear la obra con todos los campos necesarios
     const obra = await prisma.obra.create({
       data: {
         numeroObra: body.numeroObra,
         fechaIngreso: new Date(body.fechaIngreso),
         estado: body.estado || 'activo',
-        estadoObra: body.estadoObra,
+        estadoObra: body.estadoObra || 'Activo',
         nombreObra: body.nombreObra,
         direccion: body.direccion,
-        region: body.region,
-        comuna: body.comuna,
-        telefono: body.telefono || '',
-        sitioWeb: body.sitioWeb || '',
+        region: region.nombre,
+        comuna: comuna.nombre,
         nombreCliente: body.nombreCliente,
-        rut: body.rut,
         razonSocial: body.razonSocial,
+        rut: body.rut,
         giro: body.giro,
         direccionComercial: body.direccionComercial,
         comunaFacturacion: body.comunaFacturacion,
         telefonoFacturacion: body.telefonoFacturacion,
         listaPrecios: body.listaPrecios,
         mailRecepcionFactura: body.mailRecepcionFactura,
+
+        // Campos opcionales
+        telefono: body.telefono || null,
+        sitioWeb: body.sitioWeb || null,
+        sector: body.sector || null,
+        georreferencia: body.georreferencia || null,
+        referencia: body.referencia || null,
+        mandante: body.mandante || null,
+        textoMandante: body.textoMandante || null,
+        otrosRequisitos: body.otrosRequisitos || null,
+        otrasReferencias: body.otrasReferencias || null,
+
+        // Campos booleanos
         informeMandante: body.informeMandante || false,
         acreditacionPersonal: body.acreditacionPersonal || false,
         especificacionesTecnicas: body.especificacionesTecnicas || false,
@@ -61,29 +96,11 @@ export async function POST(request: Request) {
         estadoPago: body.estadoPago || false,
         hes: body.hes || false,
         oc: body.oc || false,
-        sector: body.sector || null,
-        georreferencia: body.georreferencia || null,
-        referencia: body.referencia || null,
-        mandante: body.mandante || null,
-        textoMandante: body.textoMandante || null,
-        otrosRequisitos: body.otrosRequisitos || null,
-        otrasReferencias: body.otrasReferencias || null,
 
-        // Crear los contactos
+        // Crear los contactos si existen
         contactos: {
-          create: Array.isArray(body.contactos)
-            ? body.contactos.map((contacto: any) => ({
-                nombre: contacto.nombre,
-                rol: contacto.rol,
-                email: contacto.email,
-                telefono1: contacto.telefono1,
-                isPrincipal: contacto.isPrincipal || false
-              }))
-            : []
+          create: Array.isArray(body.contactos) ? body.contactos : []
         }
-      },
-      include: {
-        contactos: true
       }
     })
 
@@ -91,13 +108,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json(obra, { status: 201 })
   } catch (error) {
-    console.error('Error detallado:', error)
+    console.error('Error detallado al crear obra:', error)
 
     return NextResponse.json(
       {
         error: 'Error al crear la obra',
-        details: error,
-        message: error instanceof Error ? error.message : 'Error desconocido'
+        details: error instanceof Error ? error.message : 'Error desconocido'
       },
       { status: 500 }
     )

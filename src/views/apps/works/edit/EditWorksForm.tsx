@@ -31,6 +31,7 @@ import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
 import ContactSearchObra from '../components/ContactSearchObra'
+import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 
 // Types
 import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
@@ -53,6 +54,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
+
+  const { regiones, comunas, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
 
   // Validación de email
   const validateEmail = (email: string) => {
@@ -205,6 +208,40 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
     }
   }, [obraData, reset])
 
+  useEffect(() => {
+    if (obraData && regiones.length > 0) {
+      const regionEncontrada = regiones.find(r => r.nombre === obraData.region)
+
+      console.log('Región encontrada:', regionEncontrada)
+
+      if (regionEncontrada) {
+        // Establecer la región
+        setSelectedRegion(regionEncontrada.codigo)
+        setValue('region', regionEncontrada.codigo)
+
+        // Buscar y establecer la comuna después de cargar las comunas
+        const buscarYEstablecerComuna = async () => {
+          try {
+            const response = await fetch(`/api/ubicacion?regionId=${regionEncontrada.codigo}`)
+            const comunasData = await response.json()
+
+            const comunaEncontrada = comunasData.find((c: any) => c.nombre === obraData.comuna)
+
+            console.log('Comuna encontrada:', comunaEncontrada)
+
+            if (comunaEncontrada) {
+              setValue('comuna', comunaEncontrada.id)
+            }
+          } catch (error) {
+            console.error('Error al cargar comuna:', error)
+          }
+        }
+
+        buscarYEstablecerComuna()
+      }
+    }
+  }, [obraData, regiones, setValue])
+
   const onSubmit = async (data: FormValidateType) => {
     try {
       setIsSubmitting(true)
@@ -320,40 +357,61 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
-              <InputLabel>Región</InputLabel>
+              <InputLabel>Región *</InputLabel>
               <Controller
                 name='region'
                 control={control}
-                defaultValue={obraData?.region || ''}
-                render={({ field: { value, ...field } }) => (
-                  <Select label='Región' value={value || ''} {...field}>
-                    {REGIONES_CHILE.map(region => (
-                      <MenuItem key={region.value} value={region.value}>
-                        {region.label}
-                      </MenuItem>
-                    ))}
+                rules={{ required: 'La región es requerida' }}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    label='Región *'
+                    onChange={e => {
+                      const regionCodigo = e.target.value
+
+                      console.log('Región seleccionada (código):', regionCodigo)
+                      field.onChange(regionCodigo)
+                      setSelectedRegion(regionCodigo)
+                    }}
+                    disabled={loading}
+                    error={Boolean(errors.region)}
+                  >
+                    {Array.isArray(regiones) &&
+                      regiones.map((region: any) => (
+                        <MenuItem key={region.id} value={region.codigo}>
+                          {region.nombre}
+                        </MenuItem>
+                      ))}
                   </Select>
                 )}
               />
+              {errors.region && <FormHelperText error>{errors.region.message}</FormHelperText>}
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
-              <InputLabel>Comuna</InputLabel>
+              <InputLabel>Comuna *</InputLabel>
               <Controller
                 name='comuna'
                 control={control}
-                defaultValue={obraData?.comuna || ''}
-                render={({ field: { value, ...field } }) => (
-                  <Select label='Comuna' value={value || ''} {...field}>
-                    {COMUNAS.map(comuna => (
-                      <MenuItem key={comuna.value} value={comuna.value}>
-                        {comuna.label}
-                      </MenuItem>
-                    ))}
+                rules={{ required: 'La comuna es requerida' }}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    label='Comuna *'
+                    disabled={!selectedRegion || loading}
+                    error={Boolean(errors.comuna)}
+                  >
+                    {Array.isArray(comunas) &&
+                      comunas.map((comuna: any) => (
+                        <MenuItem key={comuna.id} value={comuna.id}>
+                          {comuna.nombre}
+                        </MenuItem>
+                      ))}
                   </Select>
                 )}
               />
+              {errors.comuna && <FormHelperText error>{errors.comuna.message}</FormHelperText>}
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
