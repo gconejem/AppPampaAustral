@@ -7,6 +7,8 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+import axios from 'axios'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -29,11 +31,16 @@ import Tooltip from '@mui/material/Tooltip'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CircularProgress from '@mui/material/CircularProgress'
+import Popover from '@mui/material/Popover'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
 
 // Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import { toast } from 'react-hot-toast'
+import type { Table, Row } from '@tanstack/react-table'
 import {
   createColumnHelper,
   flexRender,
@@ -44,9 +51,7 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   getPaginationRowModel,
-  getSortedRowModel,
-  Table,
-  Row
+  getSortedRowModel
 } from '@tanstack/react-table'
 
 // Type Imports
@@ -72,7 +77,9 @@ const columnHelper = createColumnHelper<Cliente>()
 
 const fuzzyFilter = (row: any, columnId: string, value: string, addMeta: any) => {
   const itemRank = rankItem(row.getValue(columnId), value)
+
   addMeta({ itemRank })
+
   return itemRank.passed
 }
 
@@ -105,40 +112,42 @@ const segmentConfig = {
 }
 
 // Nuevo componente para el modal de contactos
-const ContactsModal = ({ open, handleClose, contacts }: { 
+const ContactsModal = ({
+  open,
+  handleClose,
+  contacts
+}: {
   open: boolean
   handleClose: () => void
   contacts: any[]
 }) => {
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
       <DialogTitle>Contactos del Cliente</DialogTitle>
       <DialogContent>
         {contacts.map((contact, index) => (
-          <div key={index} className="mb-4 p-4 border rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <i className="ri-user-line text-primary" />
-              <Typography variant="subtitle1">{contact.contacto.nombre}</Typography>
-              {contact.isPrincipal && (
-                <Chip label="Principal" size="small" color="primary" />
-              )}
+          <div key={index} className='mb-4 p-4 border rounded-lg'>
+            <div className='flex items-center gap-2 mb-2'>
+              <i className='ri-user-line text-primary' />
+              <Typography variant='subtitle1'>{contact.contacto.nombre}</Typography>
+              {contact.isPrincipal && <Chip label='Principal' size='small' color='primary' />}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <i className="ri-briefcase-line text-textSecondary" />
+            <div className='grid grid-cols-2 gap-2'>
+              <div className='flex items-center gap-2'>
+                <i className='ri-briefcase-line text-textSecondary' />
                 <Typography>{contact.contacto.cargo}</Typography>
               </div>
-              <div className="flex items-center gap-2">
-                <i className="ri-mail-line text-textSecondary" />
+              <div className='flex items-center gap-2'>
+                <i className='ri-mail-line text-textSecondary' />
                 <Typography>{contact.contacto.email}</Typography>
               </div>
-              <div className="flex items-center gap-2">
-                <i className="ri-phone-line text-textSecondary" />
+              <div className='flex items-center gap-2'>
+                <i className='ri-phone-line text-textSecondary' />
                 <Typography>{contact.contacto.telefono1}</Typography>
               </div>
               {contact.contacto.telefono2 && (
-                <div className="flex items-center gap-2">
-                  <i className="ri-phone-line text-textSecondary" />
+                <div className='flex items-center gap-2'>
+                  <i className='ri-phone-line text-textSecondary' />
                   <Typography>{contact.contacto.telefono2}</Typography>
                 </div>
               )}
@@ -167,6 +176,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [openDialog, setOpenDialog] = useState(false)
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
+  const [changeStatusOpen, setChangeStatusOpen] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [selectedClientForMenu, setSelectedClientForMenu] = useState<Cliente | null>(null)
 
   useEffect(() => {
     setFilteredData(safeUserData)
@@ -181,6 +194,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
       if (response.ok) {
         // Actualizar la lista local
         const updatedData = userData.filter(client => client.clienteId !== id)
+
         setData(updatedData)
         setFilteredData(updatedData)
         toast.success('Cliente eliminado exitosamente')
@@ -209,140 +223,171 @@ const ClientListTable = ({ userData, setData }: Props) => {
     setEditUserOpen(true)
   }
 
-  const columns = useMemo(() => [
-    {
-      id: 'select',
-      header: ({ table }: { table: Table<Cliente> }) => (
-        <Checkbox
-          checked={table.getIsAllRowsSelected()}
-          onChange={table.getToggleAllRowsSelectedHandler()}
-        />
-      ),
-      cell: ({ row }: { row: Row<Cliente> }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-        />
-      )
-    },
-    columnHelper.accessor('rut', {
-      header: 'RUT',
-      cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>
-    }),
-    columnHelper.accessor('razonSocial', {
-      header: 'NOMBRE COMERCIAL',
-      cell: ({ row }: { row: Row<Cliente> }) => (
-        <Typography>{row.original.nombreCliente || row.original.razonSocial}</Typography>
-      )
-    }),
-    columnHelper.accessor('segmento', {
-      header: 'SEGMENTO',
-      cell: ({ row }: { row: Row<Cliente> }) => {
-        const segment = row.original.segmento?.toLowerCase()
-        return (
-          <div className='flex items-center gap-2'>
-            {segment === 'corporativo' && (
-              <>
-                <i className='ri-building-line text-primary' />
-                <Typography>Corporativo</Typography>
-              </>
-            )}
-            {segment === 'pyme' && (
-              <>
-                <i className='ri-store-2-line text-success' />
-                <Typography>Pyme</Typography>
-              </>
-            )}
-            {segment === 'retail' && (
-              <>
-                <i className='ri-shopping-bag-line text-warning' />
-                <Typography>Retail</Typography>
-              </>
-            )}
-            {segment === 'gobierno' && (
-              <>
-                <i className='ri-government-line text-info' />
-                <Typography>Gobierno</Typography>
-              </>
-            )}
-            {segment === 'institucional' && (
-              <>
-                <i className='ri-bank-line text-secondary' />
-                <Typography>Institucional</Typography>
-              </>
-            )}
-            {segment === 'industrial' && (
-              <>
-                <i className='ri-factory-line text-error' />
-                <Typography>Industrial</Typography>
-              </>
-            )}
-          </div>
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, cliente: Cliente) => {
+    event.stopPropagation()
+    setAnchorEl(prev => ({
+      ...prev,
+      [cliente.clienteId]: event.currentTarget
+    }))
+    setSelectedClientForMenu(cliente)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl({})
+    setSelectedClientForMenu(null)
+  }
+
+  const handleStatusChange = async (clienteId: number, newStatus: string) => {
+    try {
+      const response = await axios.patch(`/api/clientes/${clienteId}/status`, {
+        estado: newStatus
+      })
+
+      if (response.status === 200) {
+        toast.success('Estado actualizado exitosamente')
+        setData(prevData =>
+          prevData.map(cliente => (cliente.clienteId === clienteId ? { ...cliente, estado: newStatus } : cliente))
         )
       }
-    }),
-    columnHelper.accessor('clientesContactos', {
-      header: 'CONTACTO',
-      cell: ({ row }: { row: Row<Cliente> }) => {
-        const contacts = row.original.clientesContactos || []
-        const hasContacts = contacts.length > 0
-        
-        return (
-          <div className="flex items-center gap-2">
-            <div 
-              className={`w-2 h-2 rounded-full ${
-                hasContacts ? 'bg-success' : 'bg-error'
-              }`} 
-            />
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => {
-                if (hasContacts) {
-                  setSelectedContacts(contacts)
-                  setContactsModalOpen(true)
-                }
-              }}
-              disabled={!hasContacts}
-            >
-              {hasContacts ? `${contacts.length} contacto${contacts.length > 1 ? 's' : ''}` : 'Sin contactos'}
-            </Button>
-          </div>
-        )
-      }
-    }),
-    columnHelper.accessor('estado', {
-      header: 'ESTADO',
-      cell: ({ row }: { row: Row<Cliente> }) => (
-        <Chip 
-          label={row.original.estado} 
-          color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
-          size="small"
-        />
-      )
-    }),
-    {
-      id: 'actions',
-      header: 'ACCIONES',
-      cell: ({ row }: { row: Row<Cliente> }) => (
-        <div className='flex items-center'>
-          <IconButton 
-            onClick={() => handleEditClick(row.original)}
-            size="small"
-          >
-            <i className="ri-pencil-line text-[16px] text-[#3366FF]" />
-          </IconButton>
-          <IconButton 
-            onClick={() => handleClickOpenDialog(row.original)}
-            size="small"
-            sx={{ '&:hover': { color: '#FF4C51' } }}
-          >
-            <i className="ri-delete-bin-6-line text-[16px] text-[#FF4C51]" />
-          </IconButton>
-        </div>
-      )
+    } catch (error) {
+      console.error('Error actualizando estado:', error)
+      toast.error('Error al actualizar el estado')
+    } finally {
+      setChangeStatusOpen(false)
+      setSelectedStatus('')
+      handleMenuClose()
     }
-  ], [])
+  }
+
+  const columns = useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }: { table: Table<Cliente> }) => (
+          <Checkbox checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} />
+        ),
+        cell: ({ row }: { row: Row<Cliente> }) => (
+          <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
+        )
+      },
+      columnHelper.accessor('rut', {
+        header: 'RUT',
+        cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>
+      }),
+      columnHelper.accessor('razonSocial', {
+        header: 'CLIENTE',
+        cell: ({ row }: { row: Row<Cliente> }) => (
+          <Typography>{row.original.nombreCliente || row.original.razonSocial}</Typography>
+        )
+      }),
+      columnHelper.accessor('comuna', {
+        header: 'COMUNA',
+        cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.comuna}</Typography>
+      }),
+      columnHelper.accessor('segmento', {
+        header: 'SEGMENTO',
+        cell: ({ row }: { row: Row<Cliente> }) => {
+          const segment = row.original.segmento?.toLowerCase()
+
+          return (
+            <div className='flex items-center gap-2'>
+              {segment === 'corporativo' && (
+                <>
+                  <i className='ri-building-line text-primary' />
+                  <Typography>Corporativo</Typography>
+                </>
+              )}
+              {segment === 'pyme' && (
+                <>
+                  <i className='ri-store-2-line text-success' />
+                  <Typography>Pyme</Typography>
+                </>
+              )}
+              {segment === 'retail' && (
+                <>
+                  <i className='ri-shopping-bag-line text-warning' />
+                  <Typography>Retail</Typography>
+                </>
+              )}
+              {segment === 'gobierno' && (
+                <>
+                  <i className='ri-government-line text-info' />
+                  <Typography>Gobierno</Typography>
+                </>
+              )}
+              {segment === 'institucional' && (
+                <>
+                  <i className='ri-bank-line text-secondary' />
+                  <Typography>Institucional</Typography>
+                </>
+              )}
+              {segment === 'industrial' && (
+                <>
+                  <i className='ri-factory-line text-error' />
+                  <Typography>Industrial</Typography>
+                </>
+              )}
+            </div>
+          )
+        }
+      }),
+      columnHelper.accessor('clientesContactos', {
+        header: 'CONTACTO',
+        cell: ({ row }: { row: Row<Cliente> }) => {
+          const contacts = row.original.clientesContactos || []
+          const hasContacts = contacts.length > 0
+
+          return (
+            <div className='flex items-center gap-2'>
+              <div className={`w-2 h-2 rounded-full ${hasContacts ? 'bg-success' : 'bg-error'}`} />
+              <Button
+                variant='text'
+                size='small'
+                onClick={() => {
+                  if (hasContacts) {
+                    setSelectedContacts(contacts)
+                    setContactsModalOpen(true)
+                  }
+                }}
+                disabled={!hasContacts}
+              >
+                {hasContacts ? `${contacts.length} contacto${contacts.length > 1 ? 's' : ''}` : 'Sin contactos'}
+              </Button>
+            </div>
+          )
+        }
+      }),
+      columnHelper.accessor('estado', {
+        header: 'ESTADO',
+        cell: ({ row }: { row: Row<Cliente> }) => (
+          <Chip
+            label={row.original.estado}
+            color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
+            size='small'
+          />
+        )
+      }),
+      {
+        id: 'actions',
+        header: 'ACCIONES',
+        cell: ({ row }: { row: Row<Cliente> }) => (
+          <div className='flex items-center'>
+            <IconButton onClick={() => handleEditClick(row.original)} size='small'>
+              <i className='ri-pencil-line text-[16px] text-[#3366FF]' />
+            </IconButton>
+            <IconButton
+              onClick={() => handleClickOpenDialog(row.original)}
+              size='small'
+              sx={{ '&:hover': { color: '#FF4C51' } }}
+            >
+              <i className='ri-delete-bin-6-line text-[16px] text-[#FF4C51]' />
+            </IconButton>
+          </div>
+        )
+      }
+    ],
+    []
+  )
 
   const table = useReactTable({
     data: filteredData,
@@ -376,17 +421,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
   return (
     <>
       <Card>
-        <CardHeader
-          title={<span className='text-xl'>Clientes</span>}
-        />
+        <CardHeader title={<span className='text-xl'>Clientes</span>} />
 
-        <TableFilters 
-          setData={setFilteredData} 
+        <TableFilters
+          setData={setFilteredData}
           data={safeUserData}
           toggleAddUserDrawer={() => setAddUserOpen(!addUserOpen)}
         />
         <Divider />
-        
+
         {/* Tabla con el mismo estilo que WorkListTable */}
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
@@ -394,9 +437,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
+                    <th key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</th>
                   ))}
                 </tr>
               ))}
@@ -412,9 +453,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
                 table.getRowModel().rows.map(row => (
                   <tr key={row.id}>
                     {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
+                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                     ))}
                   </tr>
                 ))
@@ -422,7 +461,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
             </tbody>
           </table>
         </div>
-        
+
         <TablePagination
           component='div'
           rowsPerPageOptions={[10, 25, 50]}
@@ -433,12 +472,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
 
-        <AddClient
-          open={addUserOpen}
-          handleClose={() => setAddUserOpen(false)}
-          userData={userData}
-          setData={setData}
-        />
+        <AddClient open={addUserOpen} handleClose={() => setAddUserOpen(false)} userData={userData} setData={setData} />
 
         {selectedUser && (
           <>
@@ -457,29 +491,51 @@ const ClientListTable = ({ userData, setData }: Props) => {
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar este cliente?
-          </DialogContentText>
+          <DialogContentText>¿Está seguro que desea eliminar este cliente?</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color='primary'>
             Cancelar
           </Button>
-          <Button 
-            onClick={() => selectedUser?.clienteId && handleDelete(selectedUser.clienteId)} 
-            color='error' 
+          <Button
+            onClick={() => selectedUser?.clienteId && handleDelete(selectedUser.clienteId)}
+            color='error'
             variant='contained'
           >
             Eliminar
           </Button>
         </DialogActions>
       </Dialog>
-      
-      <ContactsModal 
+
+      <ContactsModal
         open={contactsModalOpen}
         handleClose={() => setContactsModalOpen(false)}
         contacts={selectedContacts}
       />
+
+      {/* Diálogo para cambiar estado */}
+      <Dialog open={changeStatusOpen} onClose={() => setChangeStatusOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Editar Estado</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
+              <MenuItem value='active'>Activo</MenuItem>
+              <MenuItem value='inactive'>Inactivo</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button variant='outlined' color='secondary' onClick={() => setChangeStatusOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            onClick={() => selectedUser && handleStatusChange(selectedUser.clienteId, selectedStatus)}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

@@ -34,59 +34,60 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
-    const obraId = parseInt(params.id)
 
-    console.log('Actualizando obra:', obraId)
-    console.log('Datos recibidos:', body)
+    console.log('Datos recibidos para actualizar:', body)
 
-    // Primero actualizamos la obra
-    const obra = await prisma.obra.update({
-      where: { obraId },
+    // Obtener la región y comuna por sus códigos/ids
+    const region = await prisma.region.findUnique({
+      where: { codigo: body.region },
+      select: { nombre: true }
+    })
+
+    const comuna = await prisma.comuna.findUnique({
+      where: { id: parseInt(body.comuna) },
+      select: { nombre: true }
+    })
+
+    if (!region || !comuna) {
+      console.error('Región o comuna no encontrada:', { region, comuna })
+
+      return NextResponse.json({ error: 'Región o comuna no válida' }, { status: 400 })
+    }
+
+    // Extraer los campos que no queremos enviar directamente a la actualización
+    const { contactos, createdAt, updatedAt, obraId, ...dataToUpdate } = body
+
+    // Actualizar la obra usando los nombres de región y comuna
+    const updatedObra = await prisma.obra.update({
+      where: {
+        obraId: parseInt(params.id)
+      },
       data: {
-        numeroObra: body.numeroObra,
+        ...dataToUpdate,
+        region: region.nombre,
+        comuna: comuna.nombre,
         fechaIngreso: new Date(body.fechaIngreso),
-        estado: body.estado,
-        estadoObra: body.estadoObra,
-        nombreObra: body.nombreObra,
-        direccion: body.direccion,
-        region: body.region,
-        comuna: body.comuna,
-        telefono: body.telefono || '',
-        sitioWeb: body.sitioWeb || '',
-        nombreCliente: body.nombreCliente,
-        rut: body.rut,
-        razonSocial: body.razonSocial,
-        giro: body.giro,
-        direccionComercial: body.direccionComercial,
-        comunaFacturacion: body.comunaFacturacion,
-        telefonoFacturacion: body.telefonoFacturacion,
-        listaPrecios: body.listaPrecios,
-        mailRecepcionFactura: body.mailRecepcionFactura,
-        informeMandante: body.informeMandante,
-        acreditacionPersonal: body.acreditacionPersonal,
-        especificacionesTecnicas: body.especificacionesTecnicas,
-        acreditacionEquipos: body.acreditacionEquipos,
-        cartaCompromiso: body.cartaCompromiso,
-        mandatoServiu: body.mandatoServiu,
-        estadoPago: body.estadoPago,
-        hes: body.hes,
-        oc: body.oc,
-        sector: body.sector || null,
-        georreferencia: body.georreferencia || null,
-        referencia: body.referencia || null,
-        mandante: body.mandante || null,
-        textoMandante: body.textoMandante || null,
-        otrosRequisitos: body.otrosRequisitos || null,
-        otrasReferencias: body.otrasReferencias || null
+
+        // Actualizar contactos si es necesario
+        contactos: {
+          deleteMany: {}, // Eliminar contactos existentes
+          create: contactos.map((contacto: any) => ({
+            nombre: contacto.nombre,
+            rol: contacto.rol,
+            email: contacto.email,
+            telefono1: contacto.telefono1,
+            isPrincipal: contacto.isPrincipal
+          }))
+        }
       },
       include: {
         contactos: true
       }
     })
 
-    console.log('Obra actualizada:', obra)
+    console.log('Obra actualizada:', updatedObra)
 
-    return NextResponse.json(obra)
+    return NextResponse.json(updatedObra)
   } catch (error) {
     console.error('Error updating obra:', error)
 

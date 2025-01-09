@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 
 // Date Imports
-import { format } from 'date-fns'
+import { format, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns'
 
 // Data Imports
 import { ESTADOS_OBRA } from '@/data/obraData'
@@ -41,25 +41,55 @@ const TableFilters = ({ setData, tableData }: Props) => {
   useEffect(() => {
     if (!tableData) return
 
-    const filteredData = tableData.filter(obra => {
-      // Filtrar por estado
-      if (estado && obra.estado !== estado) return false
+    let filteredData = [...tableData]
 
-      // Filtrar por rango de fecha
-      if (dateRange.start && dateRange.end) {
-        const obraDate = new Date(obra.fechaCreacion)
+    // Filtrar por estado
+    if (estado) {
+      filteredData = filteredData.filter(obra => obra.estado === estado)
+    }
 
-        return obraDate >= dateRange.start && obraDate <= dateRange.end
-      }
+    // Filtrar por rango de fechas
+    if (dateRange.start && dateRange.end) {
+      filteredData = filteredData.filter(obra => {
+        try {
+          const fechaCreacion = new Date(obra.createdAt)
+          const startDate = startOfDay(dateRange.start)
+          const endDate = endOfDay(dateRange.end)
 
-      return true
-    })
+          // Agregar logs para debugging
+          console.log('Comparando fechas para obra:', obra.numeroObra, {
+            fechaCreacion: fechaCreacion.toISOString(),
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          })
 
+          const isWithinRange = fechaCreacion >= startDate && fechaCreacion <= endDate
+
+          console.log('¿Está en el rango?:', isWithinRange)
+
+          return isWithinRange
+        } catch (error) {
+          console.error('Error al procesar fecha para obra:', obra.numeroObra, error)
+
+          return false
+        }
+      })
+    }
+
+    console.log('Datos filtrados:', filteredData.length, 'registros')
     setData(filteredData)
   }, [estado, dateRange, tableData, setData])
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
-    setDateRange({ start, end })
+    try {
+      console.log('Fechas recibidas:', {
+        start: start ? format(start, 'yyyy-MM-dd') : null,
+        end: end ? format(end, 'yyyy-MM-dd') : null
+      })
+      setDateRange({ start, end })
+    } catch (error) {
+      console.error('Error al cambiar fechas:', error)
+    }
   }
 
   return (
@@ -67,7 +97,12 @@ const TableFilters = ({ setData, tableData }: Props) => {
       <Grid container spacing={5} style={{ marginBottom: '16px' }}>
         {/* Rango de Fechas */}
         <Grid item xs={12} sm={3} sx={{ marginRight: '-79px' }}>
-          <PickersRange startDate={dateRange.start} endDate={dateRange.end} onChange={handleDateRangeChange} />
+          <PickersRange
+            startDate={dateRange.start}
+            endDate={dateRange.end}
+            onChange={handleDateRangeChange}
+            placeholderText='Filtrar por fecha de creación'
+          />
         </Grid>
 
         {/* Campo de Estado */}

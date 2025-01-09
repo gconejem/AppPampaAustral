@@ -31,6 +31,8 @@ import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
+import Box from '@mui/material/Box'
+import Popover from '@mui/material/Popover'
 
 // Third-party Imports
 import axios from 'axios'
@@ -58,7 +60,7 @@ import 'jspdf-autotable'
 import type { ThemeColor } from '@core/types'
 import type { UsersType } from '@/types/apps/userTypes'
 import type { Locale } from '@configs/i18n'
-import type { Obra, WorkTypeWithAction } from '@/types/forms/obra'
+import type { Obra, WorkTypeWithAction, ContactoObra } from '@/types/forms/obra'
 
 // Component Imports
 import TableFilters from './TableFilters'
@@ -66,6 +68,7 @@ import AddWork from './AddWork'
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import EditWorksForm from '../edit/EditWorksForm'
+import ViewContactsDialog from '../components/ViewContactsDialog'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -174,8 +177,15 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [obraToDelete, setObraToDelete] = useState<number | null>(null)
   const [selectedObraId, setSelectedObraId] = useState<number | null>(null)
   const [addObraOpen, setAddObraOpen] = useState<boolean>(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [menuState, setMenuState] = useState<{ [key: number]: HTMLElement | null }>({})
   const [selectedObraForMenu, setSelectedObraForMenu] = useState<Obra | null>(null)
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [obraToDuplicate, setObraToDuplicate] = useState<Obra | null>(null)
+  const [viewContactsOpen, setViewContactsOpen] = useState(false)
+  const [selectedContacts, setSelectedContacts] = useState<ContactoObra[]>([])
+  const [changeStatusOpen, setChangeStatusOpen] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
 
   // Hooks
   const params = useParams()
@@ -279,13 +289,58 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   }
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, obra: Obra) => {
-    setAnchorEl(event.currentTarget)
+    event.stopPropagation()
+    setAnchorEl(prev => ({
+      ...prev,
+      [obra.obraId]: event.currentTarget
+    }))
     setSelectedObraForMenu(obra)
   }
 
   const handleMenuClose = () => {
-    setAnchorEl(null)
+    setAnchorEl({})
     setSelectedObraForMenu(null)
+  }
+
+  const handleDuplicate = async (obra: Obra) => {
+    try {
+      const response = await axios.post('/api/obras/duplicate', { obraId: obra.obraId })
+
+      if (response.status === 201) {
+        toast.success('Obra duplicada exitosamente')
+
+        // Actualizar la lista de obras
+        setData(prevData => [...prevData, response.data])
+      }
+    } catch (error) {
+      console.error('Error duplicando obra:', error)
+      toast.error('Error al duplicar la obra')
+    } finally {
+      setDuplicateDialogOpen(false)
+      setObraToDuplicate(null)
+    }
+  }
+
+  const handleStatusChange = async (obraId: number, newStatus: string) => {
+    try {
+      const response = await axios.patch(`/api/obras/${obraId}/status`, {
+        estado: newStatus
+      })
+
+      if (response.status === 200) {
+        toast.success('Estado actualizado exitosamente')
+
+        // Actualizar el estado en la lista
+        setData(prevData => prevData.map(obra => (obra.obraId === obraId ? { ...obra, estado: newStatus } : obra)))
+      }
+    } catch (error) {
+      console.error('Error actualizando estado:', error)
+      toast.error('Error al actualizar el estado')
+    } finally {
+      setChangeStatusOpen(false)
+      setSelectedStatus('')
+      handleMenuClose()
+    }
   }
 
   const columns = useMemo(
@@ -384,66 +439,83 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             </IconButton>
             <IconButton
               onClick={() => {
-                setSelectedObraId(row.original.obraId)
-                setDeleteDialogOpen(true)
+                setSelectedContacts(row.original.contactos)
+                setViewContactsOpen(true)
               }}
-              sx={{ color: 'error.main' }}
+              sx={{ color: 'info.main' }}
             >
-              <i className='ri-delete-bin-line' />
+              <i className='ri-eye-line' />
             </IconButton>
             <IconButton
-              onClick={e => {
-                e.stopPropagation()
-                handleMenuOpen(e, row.original)
+              onClick={() => {
+                setObraToDuplicate(row.original)
+                setDuplicateDialogOpen(true)
               }}
+              sx={{ color: 'info.main' }}
             >
-              <i className='ri-more-fill' />
+              <i className='ri-file-copy-line' />
             </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl) && selectedObraForMenu?.obraId === row.original.obraId}
-              onClose={handleMenuClose}
-              transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-              sx={{
-                '& .MuiPaper-root': {
-                  minWidth: '120px',
-                  boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-                  marginTop: '5px'
-                }
-              }}
-              slotProps={{
-                paper: {
-                  elevation: 0,
+            <div style={{ position: 'relative' }}>
+              <IconButton
+                onClick={e => handleMenuOpen(e, row.original)}
+                aria-describedby={`popover-${row.original.obraId}`}
+              >
+                <i className='ri-more-fill' />
+              </IconButton>
+              <Popover
+                id={`popover-${row.original.obraId}`}
+                open={Boolean(anchorEl[row.original.obraId]) && selectedObraForMenu?.obraId === row.original.obraId}
+                anchorEl={anchorEl[row.original.obraId]}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
+                }}
+                PaperProps={{
                   sx: {
-                    overflow: 'visible',
-                    filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-                    mt: 1.5,
-                    '&:before': {
-                      content: '""',
-                      display: 'block',
-                      position: 'absolute',
-                      top: 0,
-                      right: 14,
-                      width: 10,
-                      height: 10,
-                      bgcolor: 'background.paper',
-                      transform: 'translateY(-50%) rotate(45deg)',
-                      zIndex: 0
-                    }
+                    minWidth: '150px',
+                    boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
+                    '& .MuiMenuItem-root': {
+                      px: 2,
+                      py: 1
+                    },
+                    marginTop: '5px'
                   }
-                }
-              }}
-            >
-              <MenuItem onClick={handleMenuClose}>
-                <i className='ri-settings-line me-2' /> Opciones
-              </MenuItem>
-            </Menu>
+                }}
+              >
+                <div className='py-2 px-1'>
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose()
+                      setSelectedObraId(row.original.obraId)
+                      setSelectedStatus(row.original.estado)
+                      setChangeStatusOpen(true)
+                    }}
+                  >
+                    <i className='ri-exchange-line me-2' /> Cambiar Estado
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose()
+                      setSelectedObraId(row.original.obraId)
+                      setDeleteDialogOpen(true)
+                    }}
+                    sx={{ color: 'error.main' }}
+                  >
+                    <i className='ri-delete-bin-line me-2' /> Eliminar
+                  </MenuItem>
+                </div>
+              </Popover>
+            </div>
           </div>
         )
       })
     ],
-    [handleEdit, setSelectedObraId, setDeleteDialogOpen, handleMenuOpen, handleMenuClose]
+    [handleEdit, setSelectedObraId, setDeleteDialogOpen, menuState]
   )
 
   const table = useReactTable({
@@ -649,6 +721,48 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Button>
           <Button variant='contained' color='error' onClick={() => selectedObraId && handleDeleteClick(selectedObraId)}>
             Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={duplicateDialogOpen} onClose={() => setDuplicateDialogOpen(false)} maxWidth='sm' fullWidth>
+        <DialogTitle>Duplicar Obra</DialogTitle>
+        <DialogContent>¿Está seguro que desea duplicar la obra {obraToDuplicate?.nombreObra}?</DialogContent>
+        <DialogActions>
+          <Button variant='outlined' color='secondary' onClick={() => setDuplicateDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button variant='contained' onClick={() => obraToDuplicate && handleDuplicate(obraToDuplicate)}>
+            Duplicar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <ViewContactsDialog
+        open={viewContactsOpen}
+        onClose={() => setViewContactsOpen(false)}
+        contacts={selectedContacts}
+      />
+      <Dialog open={changeStatusOpen} onClose={() => setChangeStatusOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Editar Estado</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
+              {ESTADOS_OBRA.map(estado => (
+                <MenuItem key={estado.value} value={estado.value}>
+                  {estado.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button variant='outlined' color='secondary' onClick={() => setChangeStatusOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            onClick={() => selectedObraId && handleStatusChange(selectedObraId, selectedStatus)}
+          >
+            Aceptar
           </Button>
         </DialogActions>
       </Dialog>
