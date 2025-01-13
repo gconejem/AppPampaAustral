@@ -3,6 +3,31 @@ const { hash } = require('bcryptjs')
 
 const prismaClient = new PrismaClient()
 
+async function seedListasPrecios() {
+  console.log('Iniciando la creación de listas de precios...')
+
+  const listasPrecios = [{ nombre: 'Lista 1' }, { nombre: 'Lista 2' }, { nombre: 'Lista 3' }]
+
+  for (const lista of listasPrecios) {
+    try {
+      await prismaClient.listaPrecio.upsert({
+        where: {
+          nombre: lista.nombre
+        },
+        update: {},
+        create: {
+          nombre: lista.nombre
+        }
+      })
+      console.log(`Lista de precios "${lista.nombre}" creada/actualizada exitosamente`)
+    } catch (error) {
+      console.error(`Error al crear/actualizar lista de precios "${lista.nombre}":`, error)
+    }
+  }
+
+  console.log('Proceso de creación de listas de precios completado')
+}
+
 async function main() {
   // Verificar si el usuario admin ya existe
   const existingAdmin = await prismaClient.user.findUnique({
@@ -136,6 +161,8 @@ async function main() {
 
     console.log('Cliente de prueba creado:', testCliente)
   }
+
+  await seedListasPrecios()
 
   console.log('Datos iniciales creados/verificados')
 }

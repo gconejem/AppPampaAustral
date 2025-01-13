@@ -40,16 +40,21 @@ export type ReviewType = {
 }
 
 export type ProductType = {
-  id: number
-  productName: string
-  category: string
-  stock: boolean
-  sku: number
-  price: string
-  qty: number
-  status: string
-  image: string
-  productBrand: string
+  productoId: number
+  sku: string
+  nombre: string
+  descripcion?: string
+  area: string
+  familia: string
+  esPaquete: boolean
+  tipo: string
+  precio: number
+  estado: 'ACTIVO' | 'INACTIVO'
+  norma?: string
+  listaPrecios?: string
+  aplicaImpuesto: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type OrderType = {

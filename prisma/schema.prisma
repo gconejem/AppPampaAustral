@@ -23,21 +23,21 @@ model Cliente {
   sitioWeb               String?
   segmento               String?
   industria              String?
-  clientesContactos      ClienteContacto[]
-  condicionesComerciales CondicionComercial?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
+  clientesContactos      ClienteContacto[]
+  condicionesComerciales CondicionComercial?
 }
 
 model Contacto {
-  contactId   Int      @id @default(autoincrement())
-  nombre      String
-  cargo       String
-  email       String
-  telefono1   String
-  telefono2   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  nombre            String
+  cargo             String
+  email             String
+  telefono1         String
+  telefono2         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  contactId         Int               @id @default(autoincrement())
   clientesContactos ClienteContacto[]
 }
 
@@ -87,134 +87,112 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Tabla de unión para la relación many-to-many
 model ClienteContacto {
   id          Int      @id @default(autoincrement())
-  clienteId   Int      // Referencia a Cliente.clienteId
-  contactId   Int      // Referencia a Contacto.contactId
+  clienteId   Int
   isPrincipal Boolean  @default(false)
   createdAt   DateTime @default(now())
+  contactId   Int
   cliente     Cliente  @relation(fields: [clienteId], references: [clienteId])
   contacto    Contacto @relation(fields: [contactId], references: [contactId])
 
   @@unique([clienteId, contactId])
 }
 
-// Tabla de ejemplo con buenas prácticas
 model Producto {
-  productoId    Int            @id @default(autoincrement())
-  sku           String         @unique
-  nombre        String
-  descripcion   String?
-  area          String         // ÁREA del ensayo/servicio
-  familia       String         // FAMILIA del ensayo/servicio
-  esPaquete     Boolean        @default(false)
-  tipo          String         // TIPO de ensayo/servicio
-  precio        Decimal        @db.Decimal(10, 2)
-  estado        EstadoProducto @default(ACTIVO)
-  norma         String?        // Para paquetes
-  listaPrecios  String?        // Para paquetes
-  aplicaImpuesto Boolean       @default(true)
-
-  // Campos de auditoría
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // Relaciones para paquetes
-  productosEnPaquete ProductoPaquete[] @relation("PaqueteProductos")
+  productoId            Int               @id @default(autoincrement())
+  sku                   String            @unique
+  nombre                String
+  descripcion           String?
+  area                  String
+  familia               String
+  esPaquete             Boolean           @default(false)
+  tipo                  String
+  precio                Decimal           @db.Decimal(10, 2)
+  estado                EstadoProducto    @default(ACTIVO)
+  norma                 String?
+  listaPrecioId         Int?
+  listaPrecio           ListaPrecio?      @relation(fields: [listaPrecioId], references: [id])
+  aplicaImpuesto        Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  productosEnPaquete    ProductoPaquete[] @relation("PaqueteProductos")
   paquetesQueLoIncluyen ProductoPaquete[] @relation("ProductoEnPaquetes")
 
-  // Índices para optimizar búsquedas frecuentes
   @@index([sku])
   @@index([estado])
   @@index([familia])
   @@index([area])
 }
 
-// Tabla para manejar la relación entre productos y paquetes
 model ProductoPaquete {
-  id          Int      @id @default(autoincrement())
-  paqueteId   Int      // ID del producto que es paquete
-  productoId  Int      // ID del producto incluido en el paquete
-  createdAt   DateTime @default(now())
-  paquete     Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
-  producto    Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
+  id         Int      @id @default(autoincrement())
+  paqueteId  Int
+  productoId Int
+  createdAt  DateTime @default(now())
+  paquete    Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
+  producto   Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
 
   @@unique([paqueteId, productoId])
 }
 
-enum EstadoProducto {
-  ACTIVO
-  INACTIVO
-}
-
 model Obra {
-  obraId               Int            @id @default(autoincrement())
-  numeroObra          String         @unique
-  fechaIngreso        DateTime
-  estado              String         @default("activo")
-  estadoObra          String         @default("Activo")
-  nombreObra          String
-  direccion           String
-  region              String
-  comuna              String
-  nombreCliente       String
-
-  // Datos de facturación
-  razonSocial         String
-  rut                 String
-  giro                String
-  direccionComercial  String
-  comunaFacturacion   String
-  telefonoFacturacion String
-  listaPrecios        String
-  mailRecepcionFactura String
-
-  // Campos opcionales
-  telefono            String?
-  sitioWeb           String?
-  sector             String?
-  georreferencia     String?
-  referencia         String?
-  mandante           String?
-  textoMandante      String?
-  otrosRequisitos    String?
-  otrasReferencias   String?
-
-  // Campos booleanos
-  informeMandante          Boolean  @default(false)
-  acreditacionPersonal     Boolean  @default(false)
-  especificacionesTecnicas Boolean  @default(false)
-  acreditacionEquipos      Boolean  @default(false)
-  cartaCompromiso          Boolean  @default(false)
-  mandatoServiu            Boolean  @default(false)
-  estadoPago              Boolean  @default(false)
-  hes                     Boolean  @default(false)
-  oc                      Boolean  @default(false)
-
-  // Relaciones
-  contactos           ContactoObra[]
-
-  // Timestamps
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  obraId                   Int            @id @default(autoincrement())
+  numeroObra               String         @unique
+  fechaIngreso             DateTime
+  estado                   String         @default("activo")
+  estadoObra               String         @default("Activo")
+  nombreObra               String
+  direccion                String
+  region                   String
+  comuna                   String
+  telefono                 String?
+  sitioWeb                 String?
+  informeMandante          Boolean        @default(false)
+  textoMandante            String?
+  acreditacionPersonal     Boolean        @default(false)
+  especificacionesTecnicas Boolean        @default(false)
+  acreditacionEquipos      Boolean        @default(false)
+  cartaCompromiso          Boolean        @default(false)
+  mandatoServiu            Boolean        @default(false)
+  otrosRequisitos          String?
+  razonSocial              String
+  rut                      String
+  giro                     String
+  direccionComercial       String
+  comunaFacturacion        String
+  telefonoFacturacion      String
+  listaPrecios             String
+  mailRecepcionFactura     String
+  estadoPago               Boolean        @default(false)
+  hes                      Boolean        @default(false)
+  oc                       Boolean        @default(false)
+  otrasReferencias         String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  georreferencia           String?
+  mandante                 String?
+  nombreCliente            String
+  referencia               String?
+  sector                   String?
+  contactos                ContactoObra[]
 }
 
 model ContactoObra {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
+  obraId      Int
   nombre      String
-  rol         String
   email       String
   telefono1   String
-  isPrincipal Boolean  @default(false)
-  obra        Obra     @relation(fields: [obraId], references: [obraId])
-  obraId      Int
+  isPrincipal Boolean @default(false)
+  rol         String
+  obra        Obra    @relation(fields: [obraId], references: [obraId])
 }
 
 model Permission {
   id          String   @id @default(cuid())
   name        String   @unique
-  assignedTo  String[] // Almacenará los roles asignados
+  assignedTo  String[]
   createdDate DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -223,9 +201,9 @@ model Region {
   id        Int      @id @default(autoincrement())
   codigo    String   @unique
   nombre    String
-  comunas   Comuna[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  comunas   Comuna[]
 }
 
 model Comuna {
@@ -233,9 +211,22 @@ model Comuna {
   codigo    String   @unique
   nombre    String
   regionId  Int
-  region    Region   @relation(fields: [regionId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  region    Region   @relation(fields: [regionId], references: [id])
 
   @@index([regionId])
+}
+
+model ListaPrecio {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  productos Producto[]
+}
+
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
 }

@@ -217,7 +217,7 @@ const ProductListTable = () => {
       setLoading(true)
       const response = await fetch(`/api/productos?page=${page + 1}&limit=${rowsPerPage}`)
       const data = await response.json()
-      
+
       if (data.productos) {
         setProductos(data.productos)
         setTotalProductos(data.meta.total)
@@ -235,7 +235,7 @@ const ProductListTable = () => {
       setLoading(true)
       const response = await fetch(`/api/productos/search?q=${query}`)
       const data = await response.json()
-      
+
       if (Array.isArray(data)) {
         setProductos(data)
       }
@@ -252,7 +252,7 @@ const ProductListTable = () => {
       const response = await fetch(`/api/productos/${id}`, {
         method: 'DELETE'
       })
-      
+
       if (response.ok) {
         cargarProductos()
       }
@@ -265,6 +265,7 @@ const ProductListTable = () => {
   const crearPaquete = async () => {
     try {
       console.log('Iniciando creación de paquete...')
+
       const response = await fetch('/api/productos', {
         method: 'POST',
         headers: {
@@ -289,23 +290,28 @@ const ProductListTable = () => {
 
       if (!response.ok) {
         const errorData = await response.json()
+
         console.error('Error en la respuesta:', errorData)
         throw new Error(errorData.error || 'Error al crear el paquete')
       }
 
       const data = await response.json()
+
       console.log('Paquete creado exitosamente:', data)
       handleClose()
       cargarProductos()
     } catch (error) {
       console.error('Error al crear paquete:', error)
+
       // Aquí podrías mostrar un mensaje de error al usuario
     }
   }
 
   const handleOpen = () => setOpen(true)
+
   const handleClose = () => {
     setOpen(false)
+
     // Limpiar estados del modal
     setNombre('')
     setSku('')
@@ -320,20 +326,17 @@ const ProductListTable = () => {
 
   // Funciones para manejar la selección de productos
   const handleSelectProducto = (item: ProductoListItem) => {
-    setSelectedProductos(prev => 
-      prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]
-    )
+    setSelectedProductos(prev => (prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]))
   }
 
   const handleSelectPaquete = (item: ProductoListItem) => {
-    setSelectedPaquetes(prev => 
-      prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]
-    )
+    setSelectedPaquetes(prev => (prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]))
   }
 
   // Funciones para mover productos entre listas
   const handleMoveToPaquete = () => {
     const productosAMover = productosList.filter(item => selectedProductos.includes(item.id))
+
     setPaqueteList(prev => [...prev, ...productosAMover])
     setProductosList(prev => prev.filter(item => !selectedProductos.includes(item.id)))
     setSelectedProductos([])
@@ -341,6 +344,7 @@ const ProductListTable = () => {
 
   const handleMoveToProductos = () => {
     const productosAMover = paqueteList.filter(item => selectedPaquetes.includes(item.id))
+
     setProductosList(prev => [...prev, ...productosAMover])
     setPaqueteList(prev => prev.filter(item => !selectedPaquetes.includes(item.id)))
     setSelectedPaquetes([])
@@ -351,11 +355,13 @@ const ProductListTable = () => {
     try {
       const response = await fetch('/api/productos?esPaquete=false')
       const data = await response.json()
+
       if (data.productos) {
         const productosFormateados = data.productos.map((p: Producto) => ({
           id: p.productoId.toString(),
           nombre: p.nombre
         }))
+
         setProductosList(productosFormateados)
       }
     } catch (error) {
@@ -389,101 +395,107 @@ const ProductListTable = () => {
   const renderCellContent = (value: any): string => {
     if (value === null || value === undefined) return ''
     if (typeof value === 'boolean') return value ? 'Sí' : 'No'
+
     if (typeof value === 'object') {
       if (Array.isArray(value)) return value.map(v => renderCellContent(v)).join(', ')
+
       return JSON.stringify(value)
     }
+
     return String(value)
   }
 
-  const columns = useMemo(() => [
-    {
-      id: 'select',
-      header: ({ table }: any) => (
-        <Checkbox
-          {...{
-            checked: table.getIsAllRowsSelected(),
-            indeterminate: table.getIsSomeRowsSelected(),
-            onChange: table.getToggleAllRowsSelectedHandler()
-          }}
-        />
-      ),
-      cell: ({ row }: any) => (
-        <Checkbox
-          {...{
-            checked: row.getIsSelected(),
-            disabled: !row.getCanSelect(),
-            indeterminate: row.getIsSomeSelected(),
-            onChange: row.getToggleSelectedHandler()
-          }}
-        />
-      )
-    },
-    {
-      accessorKey: 'sku',
-      header: 'SKU',
-      cell: ({ row }: any) => <Typography>{row.original.sku}</Typography>
-    },
-    {
-      accessorKey: 'nombre',
-      header: 'Ensayos/Servicio',
-      cell: ({ row }: any) => (
-        <div className='flex flex-col'>
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.nombre}
-          </Typography>
-          <Typography variant='body2'>{row.original.descripcion}</Typography>
-        </div>
-      )
-    },
-    {
-      accessorKey: 'area',
-      header: 'ÁREA',
-      cell: ({ row }: any) => <Typography>{row.original.area}</Typography>
-    },
-    {
-      accessorKey: 'familia',
-      header: 'FAMILIA',
-      cell: ({ row }: any) => <Typography>{row.original.familia}</Typography>
-    },
-    {
-      accessorKey: 'esPaquete',
-      header: 'PAQUETE',
-      cell: ({ row }: any) => <Switch checked={row.original.esPaquete} readOnly />,
-      enableSorting: false
-    },
-    {
-      accessorKey: 'tipo',
-      header: 'TIPO',
-      cell: ({ row }: any) => <Typography>{row.original.tipo}</Typography>
-    },
-    {
-      id: 'actions',
-      header: 'Acciones',
-      cell: ({ row }: any) => (
-        <div className='flex items-center'>
-          <IconButton size='small'>
-            <i className='ri-edit-box-line text-[22px] text-textSecondary' />
-          </IconButton>
-          <OptionMenu
-            iconButtonProps={{ size: 'medium' }}
-            iconClassName='text-textSecondary text-[22px]'
-            options={[
-              {
-                text: 'Eliminar',
-                icon: 'ri-delete-bin-7-line',
-                menuItemProps: {
-                  className: 'gap-2',
-                  onClick: () => eliminarProducto(row.original.productoId)
-                }
-              }
-            ]}
+  const columns = useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }: any) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
           />
-        </div>
-      ),
-      enableSorting: false
-    }
-  ], [])
+        ),
+        cell: ({ row }: any) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
+      {
+        accessorKey: 'sku',
+        header: 'SKU',
+        cell: ({ row }: any) => <Typography>{row.original.sku}</Typography>
+      },
+      {
+        accessorKey: 'nombre',
+        header: 'Ensayos/Servicio',
+        cell: ({ row }: any) => (
+          <div className='flex flex-col'>
+            <Typography className='font-medium' color='text.primary'>
+              {row.original.nombre}
+            </Typography>
+            <Typography variant='body2'>{row.original.descripcion}</Typography>
+          </div>
+        )
+      },
+      {
+        accessorKey: 'area',
+        header: 'ÁREA',
+        cell: ({ row }: any) => <Typography>{row.original.area}</Typography>
+      },
+      {
+        accessorKey: 'familia',
+        header: 'FAMILIA',
+        cell: ({ row }: any) => <Typography>{row.original.familia}</Typography>
+      },
+      {
+        accessorKey: 'esPaquete',
+        header: 'PAQUETE',
+        cell: ({ row }: any) => <Switch checked={row.original.esPaquete} readOnly />,
+        enableSorting: false
+      },
+      {
+        accessorKey: 'tipo',
+        header: 'TIPO',
+        cell: ({ row }: any) => <Typography>{row.original.tipo}</Typography>
+      },
+      {
+        id: 'actions',
+        header: 'Acciones',
+        cell: ({ row }: any) => (
+          <div className='flex items-center'>
+            <IconButton size='small'>
+              <i className='ri-edit-box-line text-[22px] text-textSecondary' />
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ size: 'medium' }}
+              iconClassName='text-textSecondary text-[22px]'
+              options={[
+                {
+                  text: 'Eliminar',
+                  icon: 'ri-delete-bin-7-line',
+                  menuItemProps: {
+                    className: 'gap-2',
+                    onClick: () => eliminarProducto(row.original.productoId)
+                  }
+                }
+              ]}
+            />
+          </div>
+        ),
+        enableSorting: false
+      }
+    ],
+    []
+  )
 
   const table = useReactTable({
     data: productos,
@@ -689,7 +701,7 @@ const ProductListTable = () => {
                     </Typography>
                   </Box>
                   {productosList.length > 0 ? (
-                    productosList.map((item) => (
+                    productosList.map(item => (
                       <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
                           checked={selectedProductos.includes(item.id)}
@@ -723,7 +735,7 @@ const ProductListTable = () => {
                     </Typography>
                   </Box>
                   {paqueteList.length > 0 ? (
-                    paqueteList.map((item) => (
+                    paqueteList.map(item => (
                       <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
                         <Checkbox
                           checked={selectedPaquetes.includes(item.id)}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -35,9 +36,15 @@ interface RequestData {
   estado: string
 }
 
+const LISTAS_PRECIO = [
+  { id: 1, nombre: 'Lista 1' },
+  { id: 2, nombre: 'Lista 2' },
+  { id: 3, nombre: 'Lista 3' }
+]
+
 const AddEnsayo = () => {
   const router = useRouter()
-  
+
   // Estados básicos del ensayo
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
@@ -48,6 +55,7 @@ const AddEnsayo = () => {
   const [norma, setNorma] = useState('')
   const [listaPrecios, setListaPrecios] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [selectedLista, setSelectedLista] = useState<number | ''>('')
 
   // Estados para el manejo de errores y éxito
   const [loading, setLoading] = useState(false)
@@ -59,11 +67,13 @@ const AddEnsayo = () => {
     if (!sku.trim()) return 'El SKU es requerido'
     if (!area.trim()) return 'El área es requerida'
     if (!familia.trim()) return 'La familia es requerida'
-    
+
     const precioNum = parseFloat(precio)
+
     if (!precio || isNaN(precioNum) || precioNum <= 0) {
       return 'El precio debe ser un número válido mayor a 0'
     }
+
     if (precioNum >= 100000000) {
       return 'El precio no puede ser mayor a 99,999,999.99'
     }
@@ -74,16 +84,29 @@ const AddEnsayo = () => {
   const handleSubmit = async () => {
     try {
       const validationError = validateForm()
+
       if (validationError) {
         setError(validationError)
+
         return
       }
 
       setLoading(true)
       setError('')
 
+      if (!precio.trim()) {
+        setError('El precio es requerido')
+
+        return
+      }
+
       const precioNum = parseFloat(precio)
-      const precioRedondeado = Math.round(precioNum * 100) / 100
+
+      if (isNaN(precioNum)) {
+        setError('El precio debe ser un número válido')
+
+        return
+      }
 
       const requestData: RequestData = {
         nombre,
@@ -92,7 +115,7 @@ const AddEnsayo = () => {
         area,
         familia,
         tipo: 'Ensayo',
-        precio: precioRedondeado,
+        precio: precioNum,
         norma,
         listaPrecios,
         aplicaImpuesto,
@@ -100,7 +123,7 @@ const AddEnsayo = () => {
         estado: 'ACTIVO'
       }
 
-      console.log('Enviando datos:', requestData)
+      console.log('Datos a enviar:', requestData)
 
       const response = await fetch('/api/productos', {
         method: 'POST',
@@ -112,10 +135,12 @@ const AddEnsayo = () => {
 
       if (!response.ok) {
         const data = await response.json()
+
         throw new Error(data.error || 'Error al crear el ensayo')
       }
 
       const data = await response.json()
+
       console.log('Respuesta:', data)
 
       setSuccess(true)
@@ -137,21 +162,11 @@ const AddEnsayo = () => {
         <CardContent>
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='Nombre del Ensayo'
-                value={nombre}
-                onChange={e => setNombre(e.target.value)}
-              />
+              <TextField fullWidth label='Nombre del Ensayo' value={nombre} onChange={e => setNombre(e.target.value)} />
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='SKU'
-                value={sku}
-                onChange={e => setSku(e.target.value)}
-              />
+              <TextField fullWidth label='SKU' value={sku} onChange={e => setSku(e.target.value)} />
             </Grid>
 
             <Grid item xs={12}>
@@ -191,21 +206,24 @@ const AddEnsayo = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='Norma'
-                value={norma}
-                onChange={e => setNorma(e.target.value)}
-              />
+              <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} />
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='Lista de Precios'
-                value={listaPrecios}
-                onChange={e => setListaPrecios(e.target.value)}
-              />
+              <FormControl fullWidth>
+                <InputLabel>Lista de Precios</InputLabel>
+                <Select
+                  value={selectedLista}
+                  label='Lista de Precios'
+                  onChange={e => setSelectedLista(Number(e.target.value))}
+                >
+                  {LISTAS_PRECIO.map(lista => (
+                    <MenuItem key={lista.id} value={lista.id}>
+                      {lista.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={6}>
@@ -213,7 +231,17 @@ const AddEnsayo = () => {
                 fullWidth
                 label='Precio'
                 value={precio}
-                onChange={e => setPrecio(e.target.value)}
+                onChange={e => {
+                  const value = e.target.value
+
+                  // Solo permitir números y punto decimal
+                  if (/^\d*\.?\d*$/.test(value)) {
+                    setPrecio(value)
+                  }
+                }}
+                required
+                error={!precio.trim()} // Mostrar error si está vacío
+                helperText={!precio.trim() ? 'El precio es requerido' : ''}
                 InputProps={{
                   startAdornment: <InputAdornment position='start'>$</InputAdornment>
                 }}
@@ -228,11 +256,7 @@ const AddEnsayo = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Button 
-                variant='contained' 
-                onClick={handleSubmit}
-                disabled={loading}
-              >
+              <Button variant='contained' onClick={handleSubmit} disabled={loading}>
                 {loading ? 'Guardando...' : 'Crear Ensayo'}
               </Button>
             </Grid>
@@ -255,4 +279,4 @@ const AddEnsayo = () => {
   )
 }
 
-export default AddEnsayo 
+export default AddEnsayo
