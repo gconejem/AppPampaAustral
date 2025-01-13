@@ -69,6 +69,7 @@ import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import EditWorksForm from '../edit/EditWorksForm'
 import ViewContactsDialog from '../components/ViewContactsDialog'
+import WorkPreview from '../preview/WorkPreview'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -186,6 +187,9 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [changeStatusOpen, setChangeStatusOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
   const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [selectedContact, setSelectedContact] = useState<any>(null)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
 
   // Hooks
   const params = useParams()
@@ -343,6 +347,16 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     }
   }
 
+  const handleContactClick = (contactos: ContactoObra[]) => {
+    setSelectedContacts(contactos)
+    setContactDialogOpen(true)
+  }
+
+  const handlePreview = (obra: Obra) => {
+    setSelectedObra(obra)
+    setPreviewDialogOpen(true)
+  }
+
   const columns = useMemo(
     () => [
       // Columna de selección
@@ -414,9 +428,13 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           const encargado = row.original.contactos?.find(c => c.rol === 'encargado_obra')
 
           return (
-            <Typography variant='body2' className='text-[13px]'>
+            <Button
+              variant='text'
+              onClick={() => handleContactClick(row.original.contactos)}
+              sx={{ textTransform: 'none' }}
+            >
               {encargado?.nombre || '-'}
-            </Typography>
+            </Button>
           )
         }
       }),
@@ -437,13 +455,7 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             <IconButton onClick={() => handleEdit(row.original)} sx={{ color: 'primary.main' }}>
               <i className='ri-pencil-line' />
             </IconButton>
-            <IconButton
-              onClick={() => {
-                setSelectedContacts(row.original.contactos)
-                setViewContactsOpen(true)
-              }}
-              sx={{ color: 'info.main' }}
-            >
+            <IconButton onClick={() => handlePreview(row.original)} sx={{ color: 'info.main' }}>
               <i className='ri-eye-line' />
             </IconButton>
             <IconButton
@@ -763,6 +775,47 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             onClick={() => selectedObraId && handleStatusChange(selectedObraId, selectedStatus)}
           >
             Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={previewDialogOpen} onClose={() => setPreviewDialogOpen(false)} maxWidth='lg' fullWidth>
+        <DialogTitle>Detalles de la Obra</DialogTitle>
+        <DialogContent>
+          <WorkPreview obra={selectedObra} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialogOpen(false)} variant='contained'>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle>Encargado de Obra</DialogTitle>
+        <DialogContent>
+          <table className='min-w-full divide-y divide-gray-200'>
+            <thead>
+              <tr>
+                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>NOMBRE</th>
+                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>CARGO</th>
+                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>EMAIL</th>
+                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>TELÉFONO</th>
+              </tr>
+            </thead>
+            <tbody className='divide-y divide-gray-200'>
+              {selectedContacts?.map(contact => (
+                <tr key={contact.id} className='hover:bg-gray-50'>
+                  <td className='py-3 px-4'>{contact.nombre}</td>
+                  <td className='py-3 px-4'>{contact.rol}</td>
+                  <td className='py-3 px-4'>{contact.email}</td>
+                  <td className='py-3 px-4'>{contact.telefono1}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setContactDialogOpen(false)} variant='contained'>
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>

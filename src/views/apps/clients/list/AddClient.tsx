@@ -52,14 +52,14 @@ type Props = {
   setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
 }
 
-
 const AddClienteDrawer = (props: Props) => {
   // Props
   const { open, handleClose, userData, setData } = props
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
-  const [contactos, setContactos] = useState<Array<{contacto: Contacto, isPrincipal: boolean}>>([])
+  const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean }>>([])
+
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
     cargo: '',
@@ -67,17 +67,20 @@ const AddClienteDrawer = (props: Props) => {
     telefono1: '',
     telefono2: ''
   })
+
   const [selectedRegion, setSelectedRegion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchContactValue, setSearchContactValue] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [comunas, setComunas] = useState<any[]>([])
+  const [regiones, setRegiones] = useState<any[]>([])
 
   // Al inicio del componente, definir defaultValues
   const defaultValues: FormValidateType = {
     rut: '',
-    estado: 'active',  // Valor por defecto
+    estado: 'active', // Valor por defecto
     razonSocial: '',
     nombreCliente: '',
     ciudad: '',
@@ -97,7 +100,8 @@ const AddClienteDrawer = (props: Props) => {
     control,
     reset: resetForm,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    setValue
   } = useForm<FormValidateType>({
     defaultValues,
     mode: 'onChange'
@@ -110,6 +114,7 @@ const AddClienteDrawer = (props: Props) => {
   const crearCliente = async (data: FormValidateType) => {
     try {
       setIsSubmitting(true)
+
       const clienteData = {
         rut: data.rut,
         estado: data.estado,
@@ -149,6 +154,7 @@ const AddClienteDrawer = (props: Props) => {
 
       console.log('Datos a crear:', clienteData)
       const response = await axios.post('/api/clientes', clienteData)
+
       console.log('Respuesta:', response.data)
 
       if (response.status === 201) {
@@ -156,6 +162,7 @@ const AddClienteDrawer = (props: Props) => {
         handleClose()
         resetForm()
         setContactos([])
+
         if (props.setData) {
           props.setData((prevData: Cliente[]): Cliente[] => [...prevData, response.data])
         }
@@ -197,15 +204,19 @@ const AddClienteDrawer = (props: Props) => {
   const searchContacts = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([])
+
       return
     }
 
     setIsSearching(true)
+
     try {
       const response = await axios.get(`/api/contactos/search`, {
         params: { q: query }
       })
+
       const data = response.data
+
       console.log('Resultados de búsqueda:', data)
       setSearchResults(data)
     } catch (error) {
@@ -220,7 +231,7 @@ const AddClienteDrawer = (props: Props) => {
   const handleSearchChange = (value: string) => {
     setSearchContactValue(value)
     console.log('Valor de búsqueda:', value)
-    
+
     if (searchTimeout) {
       clearTimeout(searchTimeout)
     }
@@ -234,13 +245,120 @@ const AddClienteDrawer = (props: Props) => {
 
   // Agregar contacto desde los resultados de búsqueda
   const handleAddContact = (contact: Contacto) => {
-    const newContact: {contacto: Contacto, isPrincipal: boolean} = {
+    const newContact: { contacto: Contacto; isPrincipal: boolean } = {
       contacto: contact,
       isPrincipal: contactos.length === 0
     }
+
     setContactos([...contactos, newContact])
     setSearchContactValue('')
     setSearchResults([])
+  }
+
+  // Datos de prueba
+  const datosEjemplo: FormValidateType = {
+    rut: '76.543.210-9',
+    estado: 'active',
+    razonSocial: 'Empresa de Prueba S.A.',
+    nombreCliente: 'Empresa de Prueba',
+    ciudad: 'Santiago',
+    comuna: 'Las Condes',
+    direccion: 'Av. Apoquindo 4800, Of. 1501',
+    telefono: '+56 2 2345 6789',
+    sitioWeb: 'www.empresaprueba.cl',
+    segmento: 'corporativo',
+    industria: 'construccion',
+    vendedor: 'vendedor1',
+    condicionVenta: '30 días',
+    observaciones: 'Cliente de prueba para testing'
+  }
+
+  const cargarDatosPrueba = () => {
+    // Cargar datos principales
+    Object.keys(datosEjemplo).forEach(key => {
+      setValue(key as keyof FormValidateType, datosEjemplo[key])
+    })
+
+    // Cargar datos no controlados por react-hook-form
+    setFormData({
+      ...formData,
+      pais: 'CL',
+      region: 'Metropolitana'
+    })
+    setSelectedRegion('Metropolitana')
+
+    // Cargar contactos
+    setContactos(contactosEjemplo)
+
+    toast.success('Datos de prueba cargados')
+  }
+
+  // Contactos de prueba
+  const contactosEjemplo = [
+    {
+      contacto: {
+        nombre: 'Juan Pérez',
+        cargo: 'Gerente General',
+        email: 'jperez@empresaprueba.cl',
+        telefono1: '+56 9 8765 4321',
+        telefono2: ''
+      },
+      isPrincipal: true
+    },
+    {
+      contacto: {
+        nombre: 'María González',
+        cargo: 'Jefe de Compras',
+        email: 'mgonzalez@empresaprueba.cl',
+        telefono1: '+56 9 8765 4322',
+        telefono2: ''
+      },
+      isPrincipal: false
+    }
+  ]
+
+  // Cargar regiones al montar el componente
+  useEffect(() => {
+    const fetchRegiones = async () => {
+      try {
+        const response = await axios.get('/api/ubicacion')
+
+        console.log('Regiones cargadas:', response.data)
+        setRegiones(response.data)
+      } catch (error) {
+        console.error('Error al cargar regiones:', error)
+        toast.error('Error al cargar regiones')
+      }
+    }
+
+    fetchRegiones()
+  }, [])
+
+  // Modificar handleRegionChange
+  const handleRegionChange = async (value: string) => {
+    setSelectedRegion(value)
+    setFormData({ ...formData, region: value })
+    setValue('comuna', '')
+
+    if (value) {
+      try {
+        const response = await axios.get('/api/ubicacion', {
+          params: { regionId: value }
+        })
+
+        console.log('Comunas recibidas:', response.data)
+
+        if (Array.isArray(response.data)) {
+          setComunas(response.data)
+        }
+      } catch (error) {
+        console.error('Error al cargar comunas:', error)
+        toast.error('Error al cargar comunas')
+        setComunas([])
+      }
+    } else {
+      setComunas([])
+    }
   }
 
   return (
@@ -253,10 +371,22 @@ const AddClienteDrawer = (props: Props) => {
       sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
-        <Typography variant='h5' className='text-xl'>Añadir Nuevo Cliente</Typography>
-        <IconButton size='small' onClick={handleReset}>
-          <i className='ri-close-line text-2xl' />
-        </IconButton>
+        <Typography variant='h5' className='text-xl'>
+          Añadir Nuevo Cliente
+        </Typography>
+        <div className='flex gap-2'>
+          <Button
+            variant='outlined'
+            color='primary'
+            onClick={cargarDatosPrueba}
+            startIcon={<i className='ri-database-2-line' />}
+          >
+            Cargar Datos de Prueba
+          </Button>
+          <IconButton size='small' onClick={handleReset}>
+            <i className='ri-close-line text-2xl' />
+          </IconButton>
+        </div>
       </div>
       <Divider />
       <div className='p-5'>
@@ -273,7 +403,7 @@ const AddClienteDrawer = (props: Props) => {
                     fullWidth
                     label='Fecha de Creación'
                     InputProps={{
-                      readOnly: true, // Hace el campo de solo lectura
+                      readOnly: true // Hace el campo de solo lectura
                     }}
                     value={fechaActual} // Fuerza el valor a la fecha actual
                   />
@@ -282,14 +412,14 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id="estado-label">Estado</InputLabel>
+                <InputLabel id='estado-label'>Estado</InputLabel>
                 <Controller
                   name='estado'
                   control={control}
                   render={({ field }) => (
                     <Select
-                      labelId="estado-label"
-                      label="Estado"
+                      labelId='estado-label'
+                      label='Estado'
                       value={field.value ?? 'active'}
                       onChange={field.onChange}
                       error={Boolean(errors.estado)}
@@ -375,7 +505,9 @@ const AddClienteDrawer = (props: Props) => {
                   labelId='country'
                 >
                   {PAISES.map(pais => (
-                    <MenuItem key={pais.value} value={pais.value}>{pais.label}</MenuItem>
+                    <MenuItem key={pais.value} value={pais.value}>
+                      {pais.label}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -383,44 +515,17 @@ const AddClienteDrawer = (props: Props) => {
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
                 <InputLabel>Región</InputLabel>
-                <Select
-                  value={selectedRegion}
-                  onChange={e => {
-                    setSelectedRegion(e.target.value)
-                    setFormData({ ...formData, region: e.target.value })
-                  }}
-                  label='Región'
-                >
-                  {Object.keys(REGIONES_CHILE).map(region => (
-                    <MenuItem key={region} value={region}>{region}</MenuItem>
+                <Select value={selectedRegion} onChange={e => handleRegionChange(e.target.value)} label='Región'>
+                  <MenuItem value=''>Seleccionar Región</MenuItem>
+                  {regiones.map(region => (
+                    <MenuItem key={region.id} value={region.id.toString()}>
+                      {region.nombre}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-
-            <Grid item xs={12} sm={3}>
-              <Controller
-                name='ciudad'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Ciudad</InputLabel>
-                    <Select
-                      {...field}
-                      label='Ciudad'
-                      error={Boolean(errors.ciudad)}
-                    >
-                      {selectedRegion && REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].ciudades.map(ciudad => (
-                        <MenuItem key={ciudad} value={ciudad}>{ciudad}</MenuItem>
-                      ))}
-                    </Select>
-                    {errors.ciudad && <FormHelperText error>Este campo es requerido</FormHelperText>}
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name='comuna'
                 control={control}
@@ -428,14 +533,17 @@ const AddClienteDrawer = (props: Props) => {
                 render={({ field }) => (
                   <FormControl fullWidth>
                     <InputLabel>Comuna</InputLabel>
-                    <Select
-                      {...field}
-                      label='Comuna'
-                      error={Boolean(errors.comuna)}
-                    >
-                      {selectedRegion && REGIONES_CHILE[selectedRegion as keyof typeof REGIONES_CHILE].comunas.map(comuna => (
-                        <MenuItem key={comuna} value={comuna}>{comuna}</MenuItem>
-                      ))}
+                    <Select {...field} label='Comuna' error={Boolean(errors.comuna)} disabled={!selectedRegion}>
+                      <MenuItem value=''>Seleccionar Comuna</MenuItem>
+                      {Array.isArray(comunas) && comunas.length > 0 ? (
+                        comunas.map(comuna => (
+                          <MenuItem key={comuna.id} value={comuna.id.toString()}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>No hay comunas disponibles</MenuItem>
+                      )}
                     </Select>
                     {errors.comuna && <FormHelperText error>Este campo es requerido</FormHelperText>}
                   </FormControl>
@@ -497,14 +605,14 @@ const AddClienteDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id="segmento-label">Segmento</InputLabel>
+                <InputLabel id='segmento-label'>Segmento</InputLabel>
                 <Controller
                   name='segmento'
                   control={control}
                   render={({ field }) => (
                     <Select
-                      labelId="segmento-label"
-                      label="Segmento"
+                      labelId='segmento-label'
+                      label='Segmento'
                       value={field.value ?? ''}
                       onChange={field.onChange}
                       error={Boolean(errors.segmento)}
@@ -521,14 +629,14 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id="industria-label">Industria</InputLabel>
+                <InputLabel id='industria-label'>Industria</InputLabel>
                 <Controller
                   name='industria'
                   control={control}
                   render={({ field }) => (
                     <Select
-                      labelId="industria-label"
-                      label="Industria"
+                      labelId='industria-label'
+                      label='Industria'
                       value={field.value ?? ''}
                       onChange={field.onChange}
                       error={Boolean(errors.industria)}
@@ -549,17 +657,16 @@ const AddClienteDrawer = (props: Props) => {
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
             <Grid item xs={6}>
-              <Typography variant='h5'>
-                Contactos
-              </Typography>
+              <Typography variant='h5'>Contactos</Typography>
             </Grid>
             <Grid item xs={6}>
-              <ContactSearch 
-                onContactSelect={(contact) => {
+              <ContactSearch
+                onContactSelect={contact => {
                   const newContact = {
                     contacto: contact,
                     isPrincipal: contactos.length === 0
                   }
+
                   setContactos([...contactos, newContact])
                 }}
               />
@@ -606,7 +713,7 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell>
                     <TextField
                       value={nuevoContacto.nombre}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, nombre: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
                       placeholder='Nombre'
                       fullWidth
                       size='small'
@@ -615,7 +722,7 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell>
                     <TextField
                       value={nuevoContacto.cargo}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, cargo: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
                       placeholder='Cargo'
                       fullWidth
                       size='small'
@@ -624,7 +731,7 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell>
                     <TextField
                       value={nuevoContacto.email}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, email: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
                       placeholder='Email'
                       fullWidth
                       size='small'
@@ -633,7 +740,7 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell>
                     <TextField
                       value={nuevoContacto.telefono1}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono1: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono1: e.target.value })}
                       placeholder='Teléfono 1'
                       fullWidth
                       size='small'
@@ -642,7 +749,7 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell>
                     <TextField
                       value={nuevoContacto.telefono2}
-                      onChange={(e) => setNuevoContacto({...nuevoContacto, telefono2: e.target.value})}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, telefono2: e.target.value })}
                       placeholder='Teléfono 2'
                       fullWidth
                       size='small'
@@ -666,6 +773,7 @@ const AddClienteDrawer = (props: Props) => {
                           const updatedContactos = contactos.map((c, i) =>
                             i === index ? { ...c, contacto: { ...c.contacto, cargo: e.target.value } } : c
                           )
+
                           setContactos(updatedContactos)
                         }}
                         placeholder='Cargo'
@@ -715,9 +823,7 @@ const AddClienteDrawer = (props: Props) => {
                 name='condicionVenta'
                 control={control}
                 rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField {...field} fullWidth label='Condiciones de Venta' />
-                )}
+                render={({ field }) => <TextField {...field} fullWidth label='Condiciones de Venta' />}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -725,28 +831,21 @@ const AddClienteDrawer = (props: Props) => {
                 name='observaciones'
                 control={control}
                 rules={{ required: true }}
-                render={({ field }) => (
-                  <TextField {...field} fullWidth label='Observaciones' />
-                )}
+                render={({ field }) => <TextField {...field} fullWidth label='Observaciones' />}
               />
             </Grid>
           </Grid>
 
           <div className='flex items-center gap-4 mt-5'>
-            <Button 
-              variant='contained' 
+            <Button
+              variant='contained'
               type='submit'
               disabled={Object.keys(errors).length > 0 || isSubmitting}
-              startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+              startIcon={isSubmitting ? <CircularProgress size={20} color='inherit' /> : null}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button 
-              variant='outlined' 
-              color='error' 
-              disabled={isSubmitting}
-              onClick={handleReset}
-            >
+            <Button variant='outlined' color='error' disabled={isSubmitting} onClick={handleReset}>
               Cancelar
             </Button>
           </div>

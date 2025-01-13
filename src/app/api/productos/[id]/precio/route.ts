@@ -7,26 +7,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const productoId = parseInt(params.id)
     const { precio, listaPrecioId } = await request.json()
 
-    const precioProducto = await prisma.precioProducto.upsert({
+    // Validar que el precio sea un número válido
+    if (isNaN(precio)) {
+      return NextResponse.json({ error: 'Precio inválido' }, { status: 400 })
+    }
+
+    // Actualizar el producto
+    const productoActualizado = await prisma.producto.update({
       where: {
-        productoId_listaPrecioId: {
-          productoId,
-          listaPrecioId
-        }
+        productoId
       },
-      update: {
-        precio
-      },
-      create: {
+      data: {
         precio,
-        productoId,
         listaPrecioId
       }
     })
 
-    return NextResponse.json(precioProducto)
+    return NextResponse.json(productoActualizado)
   } catch (error) {
-    console.error('Error al actualizar el precio:', error)
+    console.error('Error al actualizar precio:', error)
 
     return NextResponse.json({ error: 'Error al actualizar el precio' }, { status: 500 })
   }

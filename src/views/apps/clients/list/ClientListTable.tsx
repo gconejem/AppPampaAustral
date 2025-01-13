@@ -53,6 +53,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // Type Imports
 import type { Cliente } from '@/types/forms/cliente'
@@ -172,7 +174,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [selectedUser, setSelectedUser] = useState<Cliente | null>(null)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [filteredData, setFilteredData] = useState<Cliente[]>(safeUserData)
+  const [filteredData, setFilteredData] = useState<Cliente[]>(userData)
   const [openDialog, setOpenDialog] = useState(false)
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
@@ -180,10 +182,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [selectedStatus, setSelectedStatus] = useState('')
   const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
   const [selectedClientForMenu, setSelectedClientForMenu] = useState<Cliente | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     setFilteredData(safeUserData)
   }, [safeUserData])
+
+  useEffect(() => {
+    setIsLoading(false)
+  }, [userData])
 
   const handleDelete = async (id: number) => {
     try {
@@ -256,6 +263,43 @@ const ClientListTable = ({ userData, setData }: Props) => {
       setChangeStatusOpen(false)
       setSelectedStatus('')
       handleMenuClose()
+    }
+  }
+
+  const handleExport = () => {
+    try {
+      setIsLoading(true)
+      const doc = new jsPDF()
+
+      // Título
+      doc.text('Lista de Clientes', 14, 15)
+
+      // Datos para la tabla
+      const tableData = filteredData.map(client => [
+        client.rut,
+        client.nombreCliente,
+        client.segmento || '',
+        client.clientesContactos?.length ? 'Con Contacto' : 'Sin Contacto',
+        client.estado
+      ])
+
+      // Configuración de la tabla
+      autoTable(doc, {
+        head: [['RUT', 'NOMBRE COMERCIAL', 'SEGMENTO', 'CONTACTO', 'ESTADO']],
+        body: tableData,
+        startY: 20,
+        theme: 'grid'
+      })
+
+      // Guardar el PDF
+      doc.save('clientes.pdf')
+
+      toast.success('Exportación exitosa')
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      toast.error('Error al exportar')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -421,13 +465,63 @@ const ClientListTable = ({ userData, setData }: Props) => {
   return (
     <>
       <Card>
-        <CardHeader title={<span className='text-xl'>Clientes</span>} />
+        <CardHeader
+          title={<Typography variant='h6'>Clientes</Typography>}
+          action={
+            <Button
+              variant='contained'
+              onClick={() => setAddUserOpen(true)}
+              startIcon={<i className='ri-add-line' />}
+              sx={{ borderRadius: '5px' }}
+            >
+              Nuevo Cliente
+            </Button>
+          }
+        />
 
         <TableFilters
           setData={setFilteredData}
           data={safeUserData}
           toggleAddUserDrawer={() => setAddUserOpen(!addUserOpen)}
         />
+
+        <Divider />
+
+        <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
+          <Button
+            color='secondary'
+            variant='outlined'
+            startIcon={<i className='ri-upload-2-line text-xl' />}
+            onClick={handleExport}
+            disabled={isLoading}
+            className='max-sm:is-full'
+          >
+            Exportar
+          </Button>
+          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+            <TextField
+              size='small'
+              value={globalFilter ?? ''}
+              onChange={e => setGlobalFilter(e.target.value)}
+              placeholder='Buscar'
+              style={{ width: '500px' }}
+              className='max-sm:is-full min-is-[200px]'
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='ri-search-line' />
+                  </InputAdornment>
+                ),
+                sx: {
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: '1px solid #E0E0E0'
+                }
+              }}
+            />
+          </div>
+        </div>
+
         <Divider />
 
         {/* Tabla con el mismo estilo que WorkListTable */}

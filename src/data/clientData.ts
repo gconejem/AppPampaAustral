@@ -6,44 +6,86 @@ export const PAISES = [
 ]
 
 export const REGIONES_CHILE = {
-  'Metropolitana': {
-    ciudades: ['Santiago', 'Puente Alto', 'Maipú', 'La Florida', 'Las Condes'],
+  'Arica y Parinacota': {
+    comunas: ['Arica', 'Camarones', 'Putre', 'General Lagos']
+  },
+  Tarapacá: {
+    comunas: ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Camiña', 'Colchane', 'Huara', 'Pica']
+  },
+  Antofagasta: {
+    comunas: ['Antofagasta', 'Mejillones', 'Sierra Gorda', 'Taltal', 'Calama', 'Ollagüe', 'San Pedro de Atacama']
+  },
+  Atacama: {
+    comunas: ['Copiapó', 'Caldera', 'Tierra Amarilla', 'Chañaral', 'Diego de Almagro', 'Vallenar']
+  },
+  Coquimbo: {
+    comunas: ['La Serena', 'Coquimbo', 'Andacollo', 'La Higuera', 'Paiguano', 'Vicuña']
+  },
+  Valparaíso: {
+    comunas: ['Valparaíso', 'Casablanca', 'Concón', 'Juan Fernández', 'Puchuncaví', 'Quintero', 'Viña del Mar']
+  },
+  Metropolitana: {
     comunas: [
-      'Santiago', 'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central',
-      'Huechuraba', 'Independencia', 'La Cisterna', 'La Florida', 'La Granja',
-      'La Pintana', 'La Reina', 'Las Condes', 'Lo Barnechea', 'Lo Espejo',
-      'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 'Pedro Aguirre Cerda', 'Peñalolén',
-      'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal', 'Recoleta',
-      'Renca', 'San Joaquín', 'San Miguel', 'San Ramón', 'Vitacura'
+      'Santiago',
+      'Cerrillos',
+      'Cerro Navia',
+      'Conchalí',
+      'El Bosque',
+      'Estación Central',
+      'Huechuraba',
+      'Independencia',
+      'La Cisterna',
+      'La Florida',
+      'La Granja',
+      'La Pintana',
+      'La Reina',
+      'Las Condes',
+      'Lo Barnechea',
+      'Lo Espejo',
+      'Lo Prado',
+      'Macul',
+      'Maipú',
+      'Ñuñoa',
+      'Pedro Aguirre Cerda',
+      'Peñalolén',
+      'Providencia',
+      'Pudahuel',
+      'Quilicura',
+      'Quinta Normal',
+      'Recoleta',
+      'Renca',
+      'San Joaquín',
+      'San Miguel',
+      'San Ramón',
+      'Vitacura'
     ]
   },
-  'Valparaíso': {
-    ciudades: ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'San Antonio'],
-    comunas: [
-      'Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'Concón',
-      'San Antonio', 'Casablanca', 'Quintero', 'Puchuncaví', 'Quillota'
-    ]
+  "O'Higgins": {
+    comunas: ['Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros', 'Las Cabras']
   },
-  'Biobío': {
-    ciudades: ['Concepción', 'Talcahuano', 'Chillán', 'Los Ángeles', 'Coronel'],
-    comunas: [
-      'Concepción', 'Talcahuano', 'Chillán', 'Los Ángeles', 'Coronel',
-      'San Pedro de la Paz', 'Hualpén', 'Chiguayante', 'Tomé', 'Penco'
-    ]
+  Maule: {
+    comunas: ['Talca', 'Constitución', 'Curepto', 'Empedrado', 'Maule', 'Pelarco', 'Pencahue']
+  },
+  Ñuble: {
+    comunas: ['Chillán', 'Bulnes', 'Cobquecura', 'Coelemu', 'Coihueco', 'Chillán Viejo', 'El Carmen']
+  },
+  Biobío: {
+    comunas: ['Concepción', 'Coronel', 'Chiguayante', 'Florida', 'Hualqui', 'Lota', 'Penco']
   },
   'La Araucanía': {
-    ciudades: ['Temuco', 'Padre Las Casas', 'Villarrica', 'Angol', 'Victoria'],
-    comunas: [
-      'Temuco', 'Padre Las Casas', 'Villarrica', 'Angol', 'Victoria',
-      'Lautaro', 'Nueva Imperial', 'Pitrufquén', 'Pucón', 'Freire'
-    ]
+    comunas: ['Temuco', 'Carahue', 'Cunco', 'Curarrehue', 'Freire', 'Galvarino', 'Gorbea']
+  },
+  'Los Ríos': {
+    comunas: ['Valdivia', 'Corral', 'Lanco', 'Los Lagos', 'Máfil', 'Mariquina', 'Paillaco']
   },
   'Los Lagos': {
-    ciudades: ['Puerto Montt', 'Osorno', 'Castro', 'Puerto Varas', 'Ancud'],
-    comunas: [
-      'Puerto Montt', 'Osorno', 'Castro', 'Puerto Varas', 'Ancud',
-      'Llanquihue', 'Frutillar', 'Quellón', 'Calbuco', 'Purranque'
-    ]
+    comunas: ['Puerto Montt', 'Calbuco', 'Cochamó', 'Fresia', 'Frutillar', 'Los Muermos', 'Llanquihue']
+  },
+  Aysén: {
+    comunas: ['Coihaique', 'Lago Verde', 'Aisén', 'Cisnes', 'Guaitecas', 'Cochrane', "O'Higgins"]
+  },
+  Magallanes: {
+    comunas: ['Punta Arenas', 'Laguna Blanca', 'Río Verde', 'San Gregorio', 'Cabo de Hornos', 'Antártica']
   }
 }
 
@@ -80,7 +122,7 @@ export const ESTADOS_CLIENTE = [
   { value: 'inactive', label: 'Inactivo' },
   { value: 'pending', label: 'Pendiente' },
   { value: 'blocked', label: 'Bloqueado' }
-] 
+]
 
 export const VENDEDORES = [
   { value: 'Carlos Vega', label: 'Carlos Vega' },
