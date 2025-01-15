@@ -15,9 +15,9 @@ import type { Producto } from './ProductListTable'
 interface TableFiltersProps {
   productData: Producto[]
   setFilteredData: (data: Producto[]) => void
-  areas: Array<{ id: number; nombre: string }>
-  familias: Array<{ id: number; nombre: string }>
-  tipos: Array<{ id: number; nombre: string }>
+  areas: string[]
+  familias: string[]
+  tipos: string[]
 }
 
 const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: TableFiltersProps) => {
@@ -34,13 +34,39 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
       return
     }
 
-    const filteredData = productData.filter(product => {
-      const areaMatch = !selectedArea || product.area === selectedArea
-      const familiaMatch = !selectedFamilia || product.familia === selectedFamilia
-      const tipoMatch = !selectedTipo || product.tipo === selectedTipo
+    let filteredData = [...productData]
 
-      return areaMatch && familiaMatch && tipoMatch
-    })
+    // Aplicar filtros solo si hay valores seleccionados
+    if (selectedArea) {
+      filteredData = filteredData.filter(product => product.area === selectedArea)
+    }
+
+    if (selectedFamilia) {
+      filteredData = filteredData.filter(product => product.familia === selectedFamilia)
+    }
+
+    if (selectedTipo) {
+      filteredData = filteredData.filter(product => {
+        console.log('Filtrando producto:', {
+          nombre: product.nombre,
+          tipo: product.tipo,
+          esPaquete: product.esPaquete
+        })
+
+        if (selectedTipo === 'Paquete') {
+          return product.tipo === 'Paquete' || product.esPaquete === true
+        }
+
+        if (selectedTipo === 'Ensayo') {
+          return product.tipo === 'Ensayo' || product.esPaquete === false
+        }
+
+        return true
+      })
+    }
+
+    console.log('Filtros aplicados:', { selectedArea, selectedFamilia, selectedTipo })
+    console.log('Datos filtrados:', filteredData)
 
     setFilteredData(filteredData)
   }, [selectedArea, selectedFamilia, selectedTipo, productData, setFilteredData])
@@ -60,12 +86,11 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               labelId='area-select'
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
-              {Array.isArray(areas) &&
-                areas.map(area => (
-                  <MenuItem key={area.id} value={area.nombre}>
-                    {area.nombre}
-                  </MenuItem>
-                ))}
+              {areas.map(area => (
+                <MenuItem key={area} value={area}>
+                  {area}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -81,12 +106,11 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               labelId='familia-select'
             >
               <MenuItem value=''>Todas las familias</MenuItem>
-              {Array.isArray(familias) &&
-                familias.map(familia => (
-                  <MenuItem key={familia.id} value={familia.nombre}>
-                    {familia.nombre}
-                  </MenuItem>
-                ))}
+              {familias.map(familia => (
+                <MenuItem key={familia} value={familia}>
+                  {familia}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -102,12 +126,11 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               labelId='tipo-select'
             >
               <MenuItem value=''>Todos los tipos</MenuItem>
-              {Array.isArray(tipos) &&
-                tipos.map(tipo => (
-                  <MenuItem key={tipo.id} value={tipo.nombre}>
-                    {tipo.nombre}
-                  </MenuItem>
-                ))}
+              {tipos.map(tipo => (
+                <MenuItem key={tipo} value={tipo}>
+                  {tipo}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>

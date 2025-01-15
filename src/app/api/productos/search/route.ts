@@ -1,41 +1,41 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const query = searchParams.get('q')
-  const area = searchParams.get('area')
-  const familia = searchParams.get('familia')
-  const tipo = searchParams.get('tipo')
-  const estado = searchParams.get('estado')
-  
   try {
-    const whereClause: any = {
-      AND: []
+    const { searchParams } = new URL(request.url)
+    const query = searchParams.get('q')
+
+    if (!query) {
+      return NextResponse.json([])
     }
 
-    // Búsqueda por texto en nombre, SKU o descripción
-    if (query) {
-      whereClause.AND.push({
-        OR: [
-          { nombre: { contains: query, mode: 'insensitive' } },
-          { sku: { contains: query, mode: 'insensitive' } },
-          { descripcion: { contains: query, mode: 'insensitive' } }
-        ]
-      })
-    }
-
-    // Filtros específicos
-    if (area) whereClause.AND.push({ area })
-    if (familia) whereClause.AND.push({ familia })
-    if (tipo) whereClause.AND.push({ tipo })
-    if (estado) whereClause.AND.push({ estado })
-
-    // Si no hay condiciones AND, eliminar el array vacío
-    if (whereClause.AND.length === 0) delete whereClause.AND
+    console.log('Buscando productos con query:', query)
 
     const productos = await prisma.producto.findMany({
-      where: whereClause,
+      where: {
+        OR: [
+          {
+            nombre: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          },
+          {
+            sku: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          },
+          {
+            descripcion: {
+              contains: query,
+              mode: 'insensitive'
+            }
+          }
+        ]
+      },
       select: {
         productoId: true,
         sku: true,
@@ -48,14 +48,22 @@ export async function GET(request: Request) {
         estado: true,
         esPaquete: true,
         norma: true,
-        listaPrecios: true,
+        listaPrecioId: true,
         aplicaImpuesto: true
       }
     })
 
+    console.log('Productos encontrados:', productos)
+
     return NextResponse.json(productos)
   } catch (error) {
     console.error('Error searching productos:', error)
-    return NextResponse.json({ error: 'Error al buscar productos' }, { status: 500 })
+
+    return new NextResponse(JSON.stringify({ error: 'Error searching productos' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   }
-} 
+}

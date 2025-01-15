@@ -1,21 +1,35 @@
-import { NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 
-import prisma from '@/lib/prisma'
+const prisma = new PrismaClient()
 
-// GET - Obtener todas las listas de precios
 export async function GET() {
   try {
-    const listaPrecios = await prisma.listaPrecio.findMany({
-      include: {
-        precios: true
+    const listasPrecio = await prisma.listaPrecio.findMany({
+      select: {
+        id: true,
+        nombre: true,
+        precio: true
       }
     })
 
-    return NextResponse.json(listaPrecios)
+    const listasFormateadas = listasPrecio.map(lista => ({
+      id: lista.id,
+      nombre: lista.nombre,
+      precio: Number(lista.precio)
+    }))
+
+    console.log('Enviando listas de precios:', listasFormateadas)
+
+    return Response.json(listasFormateadas)
   } catch (error) {
     console.error('Error al obtener listas de precios:', error)
 
-    return NextResponse.json({ error: 'Error al obtener listas de precios' }, { status: 500 })
+    return new Response(JSON.stringify({ error: 'Error al obtener listas de precios' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   }
 }
 

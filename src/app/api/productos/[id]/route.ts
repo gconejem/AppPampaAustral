@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+import { prisma } from '@/lib/prisma'
 
 // GET - Obtener un producto específico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -33,31 +34,64 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json(producto)
   } catch (error) {
     console.error('Error al obtener producto:', error)
+
     return NextResponse.json({ error: 'Error al obtener producto' }, { status: 500 })
   }
 }
 
 // PUT - Actualizar un producto
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    if (!isValidId(params.id)) {
-      return NextResponse.json({ error: 'ID de producto inválido' }, { status: 400 })
-    }
+    const id = parseInt(params.id)
+    const data = await request.json()
 
-    const body = await req.json()
-    const { productoId, createdAt, updatedAt, productosEnPaquete, paquetesQueLoIncluyen, ...updateData } = body
+    console.log('Actualizando producto:', { id, data })
+
+    // Limpiar los datos antes de actualizar
+    const {
+      productoId,
+      createdAt,
+      updatedAt,
+      listaPrecio,
+      listaPrecios,
+      productosEnPaquete,
+      paquetesQueLoIncluyen,
+      ...updateData
+    } = data
 
     const producto = await prisma.producto.update({
       where: {
-        productoId: parseInt(params.id)
+        productoId: id
       },
-      data: updateData
+      data: {
+        nombre: updateData.nombre,
+        sku: updateData.sku,
+        descripcion: updateData.descripcion,
+        area: updateData.area,
+        familia: updateData.familia,
+        tipo: updateData.tipo,
+        precio: typeof updateData.precio === 'string' ? parseFloat(updateData.precio) : updateData.precio,
+        norma: updateData.norma,
+        aplicaImpuesto: updateData.aplicaImpuesto,
+        listaPrecioId: updateData.listaPrecioId ? parseInt(updateData.listaPrecioId) : null
+      },
+      include: {
+        listaPrecio: true // Incluir la relación con listaPrecio
+      }
     })
+
+    console.log('Producto actualizado:', producto)
 
     return NextResponse.json(producto)
   } catch (error) {
     console.error('Error al actualizar producto:', error)
-    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 })
+
+    return new NextResponse(JSON.stringify({ error: 'Error al actualizar el producto' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   }
 }
 
@@ -82,10 +116,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     // Eliminar las relaciones de paquetes
     await prisma.productoPaquete.deleteMany({
       where: {
-        OR: [
-          { productoId: parseInt(params.id) },
-          { paqueteId: parseInt(params.id) }
-        ]
+        OR: [{ productoId: parseInt(params.id) }, { paqueteId: parseInt(params.id) }]
       }
     })
 
@@ -99,10 +130,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ message: 'Producto eliminado correctamente' })
   } catch (error) {
     console.error('Error al eliminar producto:', error)
+
     return NextResponse.json({ error: 'Error al eliminar producto' }, { status: 500 })
   }
 }
 
 function isValidId(id: string): boolean {
   return !isNaN(parseInt(id)) && parseInt(id) > 0
-} 
+}
