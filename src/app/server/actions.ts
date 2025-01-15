@@ -1,4 +1,4 @@
-  /**
+/**
  * ! The server actions below are used to fetch the static data from the fake-db. If you're using an ORM
  * ! (Object-Relational Mapping) or a database, you can swap the code below with your own database queries.
  */
@@ -17,7 +17,7 @@ import { db as faqData } from '@/fake-db/pages/faq'
 import { db as pricingData } from '@/fake-db/pages/pricing'
 import { db as statisticsData } from '@/fake-db/pages/widgetExamples'
 import type { Cliente } from '@/types/forms/cliente'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export const getEcommerceData = async () => {
   return eCommerceData
@@ -50,9 +50,11 @@ export const getUserData = async (): Promise<Cliente[]> => {
         fechaCreacion: 'desc'
       }
     })
+
     return clientes
   } catch (error) {
     console.error('Error fetching clients:', error)
+
     return []
   }
 }

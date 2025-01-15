@@ -66,41 +66,69 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search') || ''
+    const tipo = searchParams.get('tipo') || ''
+    const familia = searchParams.get('familia') || ''
+    const area = searchParams.get('area') || ''
+
     const skip = (page - 1) * limit
 
-    const [productos, total] = await Promise.all([
-      prisma.producto.findMany({
-        skip,
-        take: limit,
-        include: {
-          listaPrecio: true
+    // Construir el where dinámicamente
+    const where = {
+      AND: [
+        {
+          OR: [
+            { nombre: { contains: search, mode: 'insensitive' } },
+            { codigo: { contains: search, mode: 'insensitive' } }
+          ]
         },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      }),
-      prisma.producto.count()
-    ])
+        tipo ? { tipoId: parseInt(tipo) } : {},
+        familia ? { familiaId: parseInt(familia) } : {},
+        area ? { areaId: parseInt(area) } : {}
+      ]
+    }
 
-    // Transformar los datos para el formato que espera el frontend
-    const productosFormateados = productos.map(producto => ({
-      ...producto,
-      listaPrecio: producto.listaPrecio
-        ? {
-            id: producto.listaPrecio.id,
-            nombre: producto.listaPrecio.nombre
-          }
-        : null
+    // Obtener total de registros
+    const total = await prisma.producto.count({ where })
+
+    // Obtener productos con paginación
+    const productos = await prisma.producto.findMany({
+      where,
+      include: {
+        tipo: true,
+        familia: true,
+        area: true,
+        precios: {
+          orderBy: {
+            fechaVigencia: 'desc'
+          },
+          take: 1
+        }
+      },
+      orderBy: {
+        nombre: 'asc'
+      },
+      skip,
+      take: limit
+    })
+
+    // Formatear la respuesta
+    const formattedProductos = productos.map(producto => ({
+      id: producto.id,
+      codigo: producto.codigo,
+      nombre: producto.nombre,
+      tipo: producto.tipo?.nombre || '',
+      familia: producto.familia?.nombre || '',
+      area: producto.area?.nombre || '',
+      precioActual: producto.precios[0]?.valor || 0,
+      estado: producto.estado
     }))
 
     return NextResponse.json({
-      productos: productosFormateados,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
+      productos: formattedProductos,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
     })
   } catch (error) {
     console.error('Error al obtener productos:', error)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   try {
@@ -9,39 +9,22 @@ export async function GET(request: Request) {
 
     console.log('API ubicacion llamada, regionId:', regionId)
 
-    if (regionId) {
-      // Obtener comunas de una región específica
-      const comunas = await prisma.comuna.findMany({
-        where: {
-          region: {
-            codigo: regionId
-          }
-        },
-        select: {
-          id: true,
-          codigo: true,
-          nombre: true
-        },
+    // Si no hay regionId, devolver todas las regiones
+    if (!regionId) {
+      const regiones = await prisma.region.findMany({
         orderBy: {
           nombre: 'asc'
         }
       })
 
-      console.log(`Comunas encontradas para región ${regionId}:`, comunas.length)
-
-      return NextResponse.json(comunas)
+      return NextResponse.json(regiones)
     }
 
-    // Obtener todas las regiones
-    const regiones = await prisma.region.findMany({
-      select: {
-        id: true,
-        codigo: true,
-        nombre: true,
-        _count: {
-          select: {
-            comunas: true
-          }
+    // Si hay regionId, buscar las comunas de esa región
+    const comunas = await prisma.comuna.findMany({
+      where: {
+        codigo: {
+          startsWith: regionId
         }
       },
       orderBy: {
@@ -49,16 +32,7 @@ export async function GET(request: Request) {
       }
     })
 
-    console.log('Total regiones encontradas:', regiones.length)
-    console.log(
-      'Conteo de comunas por región:',
-      regiones.map(r => ({
-        region: r.nombre,
-        comunas: r._count.comunas
-      }))
-    )
-
-    return NextResponse.json(regiones)
+    return NextResponse.json(comunas)
   } catch (error) {
     console.error('Error en API ubicacion:', error)
 
