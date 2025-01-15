@@ -4,33 +4,38 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    let productos
+    const listaId = params.id === 'all' ? null : parseInt(params.id)
 
-    if (params.id === 'all') {
-      // Obtener todos los productos
-      productos = await prisma.producto.findMany({
-        include: {
-          listaPrecio: true
+    const productos = await prisma.producto.findMany({
+      include: {
+        listasPrecios: {
+          include: {
+            listaPrecio: true
+          },
+          where: listaId
+            ? {
+                listaPrecioId: listaId
+              }
+            : undefined
         }
-      })
-    } else {
-      // Obtener productos de la lista específica Y productos sin asignar
-      productos = await prisma.producto.findMany({
-        where: {
-          OR: [
-            { listaPrecioId: parseInt(params.id) },
-            { listaPrecioId: null } // Incluir productos sin asignar
-          ]
-        },
-        include: {
-          listaPrecio: true
-        }
-      })
-    }
+      }
+    })
 
-    return NextResponse.json(productos)
+    // Formatear la respuesta
+    const productosFormateados = productos.map(producto => {
+      const listaPrecioActual = producto.listasPrecios.find(lp => lp.listaPrecioId === listaId)
+
+      return {
+        ...producto,
+        precio: listaPrecioActual?.precio || null,
+        activoEnLista: listaPrecioActual?.activo ?? false,
+        listaPrecio: listaPrecioActual?.listaPrecio || null
+      }
+    })
+
+    return NextResponse.json(productosFormateados)
   } catch (error) {
-    console.error('Error al obtener productos:', error)
+    console.error('Error:', error)
 
     return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 })
   }

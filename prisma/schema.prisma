@@ -111,10 +111,8 @@ model Producto {
   precio                Decimal?          @db.Decimal(10, 2)
   estado                EstadoProducto    @default(ACTIVO)
   norma                 String?
-  listaPrecioId         Int?
-  listaPrecio           ListaPrecio?      @relation(fields: [listaPrecioId], references: [id])
+  listasPrecios         ProductoListaPrecio[]
   aplicaImpuesto        Boolean           @default(true)
-  activoEnLista         Boolean           @default(true)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   productosEnPaquete    ProductoPaquete[] @relation("PaqueteProductos")
@@ -220,15 +218,30 @@ model Comuna {
 }
 
 model ListaPrecio {
-  id        Int        @id @default(autoincrement())
-  nombre    String     @unique
-  precio    Decimal    @db.Decimal(10, 2)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  productos Producto[]
+  id          Int                  @id @default(autoincrement())
+  nombre      String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  productos   ProductoListaPrecio[]
 }
 
 enum EstadoProducto {
   ACTIVO
   INACTIVO
+}
+
+model ProductoListaPrecio {
+  id            Int         @id @default(autoincrement())
+  productoId    Int
+  listaPrecioId Int
+  precio        Decimal?    @db.Decimal(10, 2)
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  producto      Producto    @relation(fields: [productoId], references: [productoId])
+  listaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
+
+  @@unique([productoId, listaPrecioId])
+  @@index([productoId])
+  @@index([listaPrecioId])
 }

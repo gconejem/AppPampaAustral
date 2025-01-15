@@ -138,21 +138,36 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
-    const id = parseInt(params.id)
+    const productoId = parseInt(params.id)
+    const { activoEnLista, precio, listaPrecioId } = body
 
-    const producto = await prisma.producto.update({
-      where: { productoId: id },
-      data: body
-    })
+    if (listaPrecioId) {
+      // Actualizar o crear la relación producto-lista de precios
+      await prisma.productoListaPrecio.upsert({
+        where: {
+          productoId_listaPrecioId: {
+            productoId,
+            listaPrecioId
+          }
+        },
+        update: {
+          activo: activoEnLista,
+          precio: precio ? parseFloat(precio) : null
+        },
+        create: {
+          productoId,
+          listaPrecioId,
+          activo: activoEnLista,
+          precio: precio ? parseFloat(precio) : null
+        }
+      })
+    }
 
-    return NextResponse.json(producto)
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error:', error)
 
-    return new NextResponse(JSON.stringify({ error: 'Error al actualizar producto' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
+    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 })
   }
 }
 

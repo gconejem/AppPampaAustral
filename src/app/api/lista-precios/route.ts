@@ -7,8 +7,7 @@ export async function GET() {
     const listaPrecios = await prisma.listaPrecio.findMany({
       select: {
         id: true,
-        nombre: true,
-        precio: true
+        nombre: true
       },
       orderBy: {
         nombre: 'asc'
@@ -27,5 +26,24 @@ export async function GET() {
         'Content-Type': 'application/json'
       }
     })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { nombre } = body
+
+    const listaPrecio = await prisma.listaPrecio.create({
+      data: {
+        nombre
+      }
+    })
+
+    return NextResponse.json(listaPrecio)
+  } catch (error) {
+    console.error('Error:', error)
+
+    return NextResponse.json({ error: 'Error al crear lista de precios' }, { status: 500 })
   }
 }

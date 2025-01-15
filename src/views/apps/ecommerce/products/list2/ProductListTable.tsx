@@ -29,19 +29,23 @@ import InputAdornment from '@mui/material/InputAdornment'
 interface ListaPrecio {
   id: number
   nombre: string
-  precio: number
+}
+
+interface ProductoListaPrecio {
+  id: number
+  precio: number | null
+  activo: boolean
+  listaPrecio: ListaPrecio
 }
 
 interface Producto {
+  productoId: number
   sku: string
   nombre: string
   area: string
   familia: string
   tipo: string
-  precio: number
-  listaPrecioId: number | null
-  listaPrecio?: ListaPrecio | null
-  activoEnLista: boolean
+  listasPrecios: ProductoListaPrecio[]
 }
 
 const ProductListTable = () => {
@@ -80,8 +84,16 @@ const ProductListTable = () => {
         const response = await fetch(`/api/productos/lista/${selectedList || 'all'}`)
         const data = await response.json()
 
-        // Ya no necesitamos filtrar aquí porque la API nos da los datos correctos
-        setProductos(data)
+        // Asegurarnos que todos los productos tengan el estado activo por defecto
+        const productosConActivo = data.map(producto => ({
+          ...producto,
+          listasPrecios: producto.listasPrecios.map(lp => ({
+            ...lp,
+            activo: lp.activo ?? true // Si activo es null o undefined, será true
+          }))
+        }))
+
+        setProductos(productosConActivo)
       } catch (error) {
         console.error('Error al cargar productos:', error)
       }
@@ -127,20 +139,17 @@ const ProductListTable = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          precio: parseFloat(newPrice)
+          precio: parseFloat(newPrice),
+          listaPrecioId: parseInt(selectedList)
         })
       })
 
       if (!response.ok) throw new Error('Error al actualizar precio')
 
-      // Mostrar mensaje de éxito
       setSuccessMessage('Precio actualizado correctamente')
-
-      // Recargar productos
       fetchProductos()
       setEditingPrice(null)
 
-      // Ocultar mensaje después de 3 segundos
       setTimeout(() => {
         setSuccessMessage('')
       }, 3000)
@@ -149,25 +158,63 @@ const ProductListTable = () => {
     }
   }
 
-  // Función para actualizar estado activo
+  // Función para actualizar estado activo de forma optimista
   const handleActiveToggle = async (productoId: number, currentActive: boolean) => {
     try {
+      // Primero actualizamos el estado local de forma optimista
+      setProductos(prevProductos =>
+        prevProductos.map(producto => {
+          if (producto.productoId === productoId) {
+            return {
+              ...producto,
+              listasPrecios: producto.listasPrecios.map(lp => ({
+                ...lp,
+                activo: !currentActive
+              }))
+            }
+          }
+
+          return producto
+        })
+      )
+
+      // Luego hacemos la llamada a la API
       const response = await fetch(`/api/productos/${productoId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          activoEnLista: !currentActive
+          activoEnLista: !currentActive,
+          listaPrecioId: parseInt(selectedList)
         })
       })
 
-      if (!response.ok) throw new Error('Error al actualizar estado')
+      if (!response.ok) {
+        throw new Error('Error al actualizar estado')
 
-      // Recargar productos
-      fetchProductos()
+        // Si hay error, revertimos el cambio
+        setProductos(prevProductos =>
+          prevProductos.map(producto => {
+            if (producto.productoId === productoId) {
+              return {
+                ...producto,
+                listasPrecios: producto.listasPrecios.map(lp => ({
+                  ...lp,
+                  activo: currentActive
+                }))
+              }
+            }
+
+            return producto
+          })
+        )
+      }
     } catch (error) {
       console.error('Error:', error)
+
+      // Mostrar mensaje de error si lo deseas
+      setSuccessMessage('Error al actualizar el estado')
     }
   }
 
@@ -252,7 +299,6 @@ const ProductListTable = () => {
                       <TextField
                         value={editingPrice.price}
                         onChange={e => {
-                          // Solo permitir números y punto decimal
                           const value = e.target.value
 
                           if (/^\d*\.?\d*$/.test(value)) {
@@ -276,22 +322,24 @@ const ProductListTable = () => {
                         onClick={() =>
                           setEditingPrice({
                             id: producto.productoId,
-                            price: producto.precio?.toString() || ''
+                            price: producto.listasPrecios[0]?.precio?.toString() || ''
                           })
                         }
                         sx={{ cursor: 'pointer' }}
                       >
-                        ${producto.precio?.toLocaleString() || 'Sin asignar'}
+                        ${producto.listasPrecios[0]?.precio?.toLocaleString() || 'Sin asignar'}
                       </Box>
                     )}
                   </TableCell>
                   <TableCell>
                     <Switch
-                      checked={producto.activoEnLista}
-                      onChange={() => handleActiveToggle(producto.productoId, producto.activoEnLista)}
+                      checked={producto.listasPrecios[0]?.activo ?? true}
+                      onChange={() =>
+                        handleActiveToggle(producto.productoId, producto.listasPrecios[0]?.activo ?? true)
+                      }
                     />
                   </TableCell>
-                  <TableCell>{producto.listaPrecio ? producto.listaPrecio.nombre : 'Sin asignar'}</TableCell>
+                  <TableCell>{producto.listasPrecios[0]?.listaPrecio.nombre || 'Sin asignar'}</TableCell>
                 </TableRow>
               ))
             ) : (
