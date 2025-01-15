@@ -135,6 +135,27 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 }
 
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const body = await request.json()
+    const id = parseInt(params.id)
+
+    const producto = await prisma.producto.update({
+      where: { productoId: id },
+      data: body
+    })
+
+    return NextResponse.json(producto)
+  } catch (error) {
+    console.error('Error:', error)
+
+    return new NextResponse(JSON.stringify({ error: 'Error al actualizar producto' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+}
+
 function isValidId(id: string): boolean {
   return !isNaN(parseInt(id)) && parseInt(id) > 0
 }

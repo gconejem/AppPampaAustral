@@ -13,36 +13,39 @@ export async function POST(request: Request) {
       nombre,
       sku,
       descripcion,
-      area = 'Suelos', // Valor por defecto para paquetes
-      familia = 'Clasificación', // Valor por defecto para paquetes
+      area = 'Suelos',
+      familia = 'Clasificación',
       tipo,
-      precio,
       norma,
-      listaPrecioId, // Cambiamos listaPrecios por listaPrecioId
       aplicaImpuesto = true,
       esPaquete = false
     } = body
 
     // Validar campos requeridos
-    const camposRequeridos = ['sku', 'nombre', 'tipo', 'precio', 'listaPrecioId'] // Agregamos listaPrecioId como requerido
-
-    const camposFaltantes = camposRequeridos.filter(campo => {
-      if (campo === 'precio') {
-        return !precio || isNaN(parseFloat(precio))
-      }
-
-      if (campo === 'listaPrecioId') {
-        return !listaPrecioId || isNaN(parseInt(listaPrecioId))
-      }
-
-      return !body[campo]
-    })
+    const camposRequeridos = ['sku', 'nombre', 'tipo']
+    const camposFaltantes = camposRequeridos.filter(campo => !body[campo])
 
     if (camposFaltantes.length > 0) {
       return NextResponse.json({ error: `Campos requeridos faltantes: ${camposFaltantes.join(', ')}` }, { status: 400 })
     }
 
-    // Crear el producto
+    // Verificar si el SKU ya existe
+    const existingProduct = await prisma.producto.findUnique({
+      where: { sku }
+    })
+
+    if (existingProduct) {
+      return NextResponse.json(
+        {
+          error: `Ya existe un producto con el SKU: ${sku}`
+        },
+        {
+          status: 400
+        }
+      )
+    }
+
+    // Crear el producto sin precio ni lista de precio
     const producto = await prisma.producto.create({
       data: {
         nombre,
@@ -51,15 +54,11 @@ export async function POST(request: Request) {
         area,
         familia,
         tipo,
-        precio: parseFloat(precio),
         norma: norma || null,
         aplicaImpuesto,
         estado: 'ACTIVO',
         esPaquete,
-        listaPrecioId: parseInt(listaPrecioId) // Asegurarnos de que se guarde como número
-      },
-      include: {
-        listaPrecio: true // Incluir la lista de precios en la respuesta
+        precio: null
       }
     })
 
@@ -68,7 +67,6 @@ export async function POST(request: Request) {
     return NextResponse.json(producto)
   } catch (error) {
     console.error('Error detallado al crear producto:', error)
-
     let errorMessage = 'Error al crear producto'
 
     if (error instanceof Error) {

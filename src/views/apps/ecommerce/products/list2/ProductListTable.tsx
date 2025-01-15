@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 
+import Alert from '@mui/material/Alert'
+import Snackbar from '@mui/material/Snackbar'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -18,6 +21,10 @@ import TableRow from '@mui/material/TableRow'
 import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
+import TextField from '@mui/material/TextField'
+import Switch from '@mui/material/Switch'
+import Box from '@mui/material/Box'
+import InputAdornment from '@mui/material/InputAdornment'
 
 interface ListaPrecio {
   id: number
@@ -34,6 +41,7 @@ interface Producto {
   precio: number
   listaPrecioId: number | null
   listaPrecio?: ListaPrecio | null
+  activoEnLista: boolean
 }
 
 const ProductListTable = () => {
@@ -41,6 +49,8 @@ const ProductListTable = () => {
   const [listaPrecios, setListaPrecios] = useState<ListaPrecio[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [editingPrice, setEditingPrice] = useState<{ id: number; price: string } | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string>('')
 
   // Cargar listas de precios
   useEffect(() => {
@@ -108,8 +118,72 @@ const ProductListTable = () => {
     }
   }
 
+  // Función para actualizar precio
+  const handlePriceUpdate = async (productoId: number, newPrice: string) => {
+    try {
+      const response = await fetch(`/api/productos/${productoId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          precio: parseFloat(newPrice)
+        })
+      })
+
+      if (!response.ok) throw new Error('Error al actualizar precio')
+
+      // Mostrar mensaje de éxito
+      setSuccessMessage('Precio actualizado correctamente')
+
+      // Recargar productos
+      fetchProductos()
+      setEditingPrice(null)
+
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => {
+        setSuccessMessage('')
+      }, 3000)
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  // Función para actualizar estado activo
+  const handleActiveToggle = async (productoId: number, currentActive: boolean) => {
+    try {
+      const response = await fetch(`/api/productos/${productoId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          activoEnLista: !currentActive
+        })
+      })
+
+      if (!response.ok) throw new Error('Error al actualizar estado')
+
+      // Recargar productos
+      fetchProductos()
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
   return (
     <Card>
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={3000}
+        onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity='success' sx={{ width: '100%' }}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
       <CardHeader
         title='Lista de Precios'
         action={
@@ -148,6 +222,7 @@ const ProductListTable = () => {
               <TableCell>FAMILIA</TableCell>
               <TableCell>TIPO</TableCell>
               <TableCell>PRECIO</TableCell>
+              <TableCell>ACTIVO</TableCell>
               <TableCell>LISTA PRECIO</TableCell>
             </TableRow>
           </TableHead>
@@ -172,8 +247,51 @@ const ProductListTable = () => {
                   <TableCell>{producto.area}</TableCell>
                   <TableCell>{producto.familia}</TableCell>
                   <TableCell>{producto.tipo}</TableCell>
-                  <TableCell>${producto.precio}</TableCell>
-                  <TableCell>{producto.listaPrecio ? `$${producto.listaPrecio.precio}` : 'Sin asignar'}</TableCell>
+                  <TableCell>
+                    {editingPrice?.id === producto.productoId ? (
+                      <TextField
+                        value={editingPrice.price}
+                        onChange={e => {
+                          // Solo permitir números y punto decimal
+                          const value = e.target.value
+
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setEditingPrice({ id: producto.productoId, price: value })
+                          }
+                        }}
+                        onBlur={() => handlePriceUpdate(producto.productoId, editingPrice.price)}
+                        onKeyPress={e => {
+                          if (e.key === 'Enter') {
+                            handlePriceUpdate(producto.productoId, editingPrice.price)
+                          }
+                        }}
+                        size='small'
+                        autoFocus
+                        InputProps={{
+                          startAdornment: <InputAdornment position='start'>$</InputAdornment>
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        onClick={() =>
+                          setEditingPrice({
+                            id: producto.productoId,
+                            price: producto.precio?.toString() || ''
+                          })
+                        }
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        ${producto.precio?.toLocaleString() || 'Sin asignar'}
+                      </Box>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={producto.activoEnLista}
+                      onChange={() => handleActiveToggle(producto.productoId, producto.activoEnLista)}
+                    />
+                  </TableCell>
+                  <TableCell>{producto.listaPrecio ? producto.listaPrecio.nombre : 'Sin asignar'}</TableCell>
                 </TableRow>
               ))
             ) : (

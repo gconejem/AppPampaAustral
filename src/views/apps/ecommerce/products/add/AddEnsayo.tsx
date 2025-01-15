@@ -101,47 +101,11 @@ const AddEnsayo = () => {
     e.preventDefault()
 
     try {
-      const validationError = validateForm()
-
-      if (validationError) {
-        setError(validationError)
-
+      // Validar solo los campos realmente necesarios
+      if (!nombre || !sku || !area || !familia) {
+        // Mostrar error de campos requeridos
         return
       }
-
-      setLoading(true)
-      setError('')
-
-      if (!precio.trim()) {
-        setError('El precio es requerido')
-
-        return
-      }
-
-      const precioNum = parseFloat(precio)
-
-      if (isNaN(precioNum)) {
-        setError('El precio debe ser un número válido')
-
-        return
-      }
-
-      const requestData: RequestData = {
-        nombre,
-        sku,
-        descripcion,
-        area,
-        familia,
-        tipo: 'Ensayo',
-        precio: precioNum,
-        norma,
-        listaPrecios: listaPrecioId ? parseInt(listaPrecioId) : null,
-        aplicaImpuesto,
-        esPaquete: false,
-        estado: 'ACTIVO'
-      }
-
-      console.log('Datos a enviar:', requestData)
 
       const response = await fetch('/api/productos', {
         method: 'POST',
@@ -149,30 +113,28 @@ const AddEnsayo = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...requestData,
-          listaPrecioId: listaPrecioId ? parseInt(listaPrecioId) : null
+          nombre,
+          sku,
+          descripcion,
+          area,
+          familia,
+          tipo: 'Ensayo',
+          norma,
+          aplicaImpuesto,
+          esPaquete: false
+
+          // Removemos precio y listaPrecioId que ya no son requeridos
         })
       })
 
       if (!response.ok) {
-        const data = await response.json()
-
-        throw new Error(data.error || 'Error al crear el ensayo')
+        throw new Error('Error al crear el ensayo')
       }
 
-      const data = await response.json()
-
-      console.log('Respuesta:', data)
-
-      setSuccess(true)
-      setTimeout(() => {
-        router.push('/apps/ecommerce/products/list')
-      }, 2000)
+      // Limpiar formulario o redirigir
+      router.push('/apps/ecommerce/products/list')
     } catch (error) {
-      console.error('Error al crear el ensayo:', error)
-      setError(error instanceof Error ? error.message : 'Error al crear el ensayo')
-    } finally {
-      setLoading(false)
+      console.error('Error:', error)
     }
   }
 
@@ -233,11 +195,19 @@ const AddEnsayo = () => {
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin='normal'>
                 <InputLabel>Lista de Precios</InputLabel>
-                <Select value={listaPrecioId} label='Lista de Precios' onChange={e => setListaPrecioId(e.target.value)}>
-                  <MenuItem value=''>Sin asignar</MenuItem>
+                <Select
+                  value={listaPrecios}
+                  onChange={e => setListaPrecios(e.target.value)}
+                  label='Lista de Precios'
+
+                  // Ya no es required
+                >
+                  <MenuItem value=''>
+                    <em>Seleccione una lista</em>
+                  </MenuItem>
                   {listaPrecios.map(lista => (
                     <MenuItem key={lista.id} value={lista.id}>
-                      {`${lista.nombre} - $${lista.precio}`}
+                      {lista.nombre}
                     </MenuItem>
                   ))}
                 </Select>
@@ -249,20 +219,12 @@ const AddEnsayo = () => {
                 fullWidth
                 label='Precio'
                 value={precio}
-                onChange={e => {
-                  const value = e.target.value
-
-                  // Solo permitir números y punto decimal
-                  if (/^\d*\.?\d*$/.test(value)) {
-                    setPrecio(value)
-                  }
-                }}
-                required
-                error={!precio.trim()} // Mostrar error si está vacío
-                helperText={!precio.trim() ? 'El precio es requerido' : ''}
+                onChange={e => setPrecio(e.target.value)}
                 InputProps={{
                   startAdornment: <InputAdornment position='start'>$</InputAdornment>
                 }}
+                // Ya no es required
+                sx={{ mb: 4 }}
               />
             </Grid>
 

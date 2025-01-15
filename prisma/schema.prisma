@@ -108,12 +108,13 @@ model Producto {
   familia               String
   esPaquete             Boolean           @default(false)
   tipo                  String
-  precio                Decimal           @db.Decimal(10, 2)
+  precio                Decimal?          @db.Decimal(10, 2)
   estado                EstadoProducto    @default(ACTIVO)
   norma                 String?
   listaPrecioId         Int?
   listaPrecio           ListaPrecio?      @relation(fields: [listaPrecioId], references: [id])
   aplicaImpuesto        Boolean           @default(true)
+  activoEnLista         Boolean           @default(true)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   productosEnPaquete    ProductoPaquete[] @relation("PaqueteProductos")
