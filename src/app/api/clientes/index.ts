@@ -1,20 +1,56 @@
-import prisma from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { PrismaClient } from '@prisma/client'
 
+import prisma from '@/lib/prisma'
+
 // Crear un cliente
 export const createCliente = async (data: Prisma.ClienteCreateInput) => {
-  return prisma.cliente.create({
-    data,
-    include: {
+  try {
+    // Asegurarnos de que estamos guardando el nombre de la comuna
+    const clienteData = {
+      ...data,
+
+      // Si la comuna viene como número, necesitamos convertirla a string
+      comuna: typeof data.comuna === 'number' ? String(data.comuna) : data.comuna, // Ya debería ser el nombre de la comuna
+      region: typeof data.region === 'number' ? String(data.region) : data.region, // Ya debería ser el nombre de la región
       clientesContactos: {
-        include: {
-          contacto: true
-        }
+        create: data.clientesContactos?.create?.map(contacto => ({
+          isPrincipal: contacto.isPrincipal,
+          contacto: {
+            create: {
+              nombre: contacto.contacto.create.nombre,
+              cargo: contacto.contacto.create.cargo,
+              email: contacto.contacto.create.email,
+              telefono1: contacto.contacto.create.telefono1,
+              telefono2: contacto.contacto.create.telefono2 || ''
+            }
+          }
+        }))
       },
-      condicionesComerciales: true
+      condicionesComerciales: {
+        create: {
+          vendedor: data.condicionesComerciales.create.vendedor,
+          condicionVenta: data.condicionesComerciales.create.condicionVenta,
+          observaciones: data.condicionesComerciales.create.observaciones
+        }
+      }
     }
-  })
+
+    return prisma.cliente.create({
+      data: clienteData,
+      include: {
+        clientesContactos: {
+          include: {
+            contacto: true
+          }
+        },
+        condicionesComerciales: true
+      }
+    })
+  } catch (error) {
+    console.error('Error creating client:', error)
+    throw error
+  }
 }
 
 // Obtener todos los clientes
@@ -81,4 +117,4 @@ export const deleteCliente = async (id: number) => {
       where: { id }
     })
   })
-} 
+}

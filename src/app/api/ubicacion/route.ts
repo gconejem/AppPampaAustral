@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     console.log('API ubicacion llamada, regionId:', regionId)
 
     if (regionId) {
-      // Obtener comunas de una región específica usando el código
+      // Obtener comunas de una región específica
       const comunas = await prisma.comuna.findMany({
         where: {
           region: {
@@ -22,10 +22,12 @@ export async function GET(request: Request) {
           codigo: true,
           nombre: true
         },
-        orderBy: { nombre: 'asc' }
+        orderBy: {
+          nombre: 'asc'
+        }
       })
 
-      console.log('API: Comunas encontradas:', comunas)
+      console.log(`Comunas encontradas para región ${regionId}:`, comunas.length)
 
       return NextResponse.json(comunas)
     }
@@ -35,12 +37,26 @@ export async function GET(request: Request) {
       select: {
         id: true,
         codigo: true,
-        nombre: true
+        nombre: true,
+        _count: {
+          select: {
+            comunas: true
+          }
+        }
       },
-      orderBy: { nombre: 'asc' }
+      orderBy: {
+        nombre: 'asc'
+      }
     })
 
-    console.log('API: Regiones encontradas:', regiones)
+    console.log('Total regiones encontradas:', regiones.length)
+    console.log(
+      'Conteo de comunas por región:',
+      regiones.map(r => ({
+        region: r.nombre,
+        comunas: r._count.comunas
+      }))
+    )
 
     return NextResponse.json(regiones)
   } catch (error) {

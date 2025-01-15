@@ -1,70 +1,78 @@
 import { useState, useEffect } from 'react'
 
+import axios from 'axios'
+
 export const useRegionesYComunas = () => {
   const [regiones, setRegiones] = useState<any[]>([])
   const [comunas, setComunas] = useState<any[]>([])
-  const [selectedRegion, setSelectedRegion] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [selectedRegion, setSelectedRegion] = useState<string>('')
+  const [loading, setLoading] = useState(true)
 
-  // Cargar regiones
+  // Cargar regiones y comunas al montar el componente
   useEffect(() => {
-    const fetchRegiones = async () => {
-      console.log('Iniciando fetchRegiones')
-      setLoading(true)
-
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/ubicacion')
-        console.log('Response status:', response.status)
+        setLoading(true)
 
-        const data = await response.json()
-        console.log('Datos de la API:', data)
+        // Primero cargar las regiones
+        const regionesResponse = await axios.get('/api/ubicacion')
+        const regionesData = regionesResponse.data
 
-        if (Array.isArray(data)) {
-          console.log('Estableciendo regiones:', data)
-          setRegiones(data)
-        } else {
-          console.error('Los datos no son un array:', data)
+        if (Array.isArray(regionesData)) {
+          setRegiones(regionesData)
+
+          // Cargar las comunas de todas las regiones
+          const comunasPromises = regionesData.map(region =>
+            axios.get('/api/ubicacion', {
+              params: { regionId: region.codigo }
+            })
+          )
+
+          const comunasResponses = await Promise.all(comunasPromises)
+          const todasLasComunas = comunasResponses.flatMap(response => response.data)
+
+          console.log('Regiones cargadas:', regionesData)
+          console.log('Comunas cargadas:', todasLasComunas)
+
+          setComunas(todasLasComunas)
         }
       } catch (error) {
-        console.error('Error al cargar regiones:', error)
+        console.error('Error cargando datos:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchRegiones()
-  }, [])
+    loadData()
+  }, []) // Solo se ejecuta al montar el componente
 
-  // Cargar comunas cuando se selecciona una región
+  // Mantener las comunas actualizadas cuando cambia la región seleccionada
   useEffect(() => {
-    if (!selectedRegion) {
-      setComunas([])
+    if (!selectedRegion || !regiones.length) return
 
-      return
-    }
-
-    const fetchComunas = async () => {
-      setLoading(true)
-
+    const loadComunasForRegion = async () => {
       try {
-        console.log('Cargando comunas para región:', selectedRegion)
-        const response = await fetch(`/api/ubicacion?regionId=${selectedRegion}`)
-        const data = await response.json()
+        const response = await axios.get('/api/ubicacion', {
+          params: { regionId: selectedRegion }
+        })
 
-        console.log('Comunas cargadas:', data)
+        if (Array.isArray(response.data)) {
+          // Actualizar las comunas manteniendo las demás
+          setComunas(prevComunas => {
+            const nuevasComunas = response.data
 
-        if (Array.isArray(data)) {
-          setComunas(data)
+            const comunasDeOtrasRegiones = prevComunas.filter(c => !nuevasComunas.find((nc: any) => nc.id === c.id))
+
+            return [...comunasDeOtrasRegiones, ...nuevasComunas]
+          })
         }
       } catch (error) {
-        console.error('Error al cargar comunas:', error)
-      } finally {
-        setLoading(false)
+        console.error('Error al cargar comunas de la región:', error)
       }
     }
 
-    fetchComunas()
-  }, [selectedRegion])
+    loadComunasForRegion()
+  }, [selectedRegion, regiones])
 
   return {
     regiones,

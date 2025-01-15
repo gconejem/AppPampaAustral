@@ -69,7 +69,9 @@ const AddObraDrawer = (props: Props) => {
 
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
-  const { regiones, comunas, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
+  const { regiones, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
+
+  const [comunas, setComunas] = useState<{ id: number; nombre: string }[]>([])
 
   // Agrega un efecto para debug
   useEffect(() => {
@@ -83,7 +85,8 @@ const AddObraDrawer = (props: Props) => {
     handleSubmit,
     formState: { errors },
     setValue,
-    trigger
+    trigger,
+    watch
   } = useForm<FormValidateType>({
     defaultValues: initialFormData,
     mode: 'onChange',
@@ -321,13 +324,13 @@ const AddObraDrawer = (props: Props) => {
 
   const dummyObraData: FormValidateType = {
     // Datos básicos
-    numeroObra: 'OB002',
+    numeroObra: '0',
     fechaIngreso: '2024-03-15',
     estado: 'activo',
     estadoObra: 'activo',
 
     // Cliente
-    rut: '76.543.210-K',
+    rut: '23033067-0',
     nombreCliente: 'Constructora Ejemplo S.A.',
     razonSocial: 'Constructora Ejemplo S.A.',
 
@@ -432,6 +435,30 @@ const AddObraDrawer = (props: Props) => {
 
     setValue('numeroObra', value)
   }
+
+  // Cargar comunas cuando cambia la región
+  useEffect(() => {
+    const fetchComunas = async () => {
+      if (!watch('region')) return
+
+      try {
+        const response = await fetch(`/api/ubicacion/comunas/${encodeURIComponent(watch('region'))}`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setComunas(data)
+
+          if (!data.find(c => c.nombre === watch('comuna'))) {
+            setValue('comuna', '')
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar comunas:', error)
+      }
+    }
+
+    fetchComunas()
+  }, [watch('region')])
 
   return (
     <Drawer
@@ -670,18 +697,12 @@ const AddObraDrawer = (props: Props) => {
                   control={control}
                   rules={{ required: 'La comuna es requerida' }}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      label='Comuna *'
-                      disabled={!selectedRegion || loading}
-                      error={Boolean(errors.comuna)}
-                    >
-                      {Array.isArray(comunas) &&
-                        comunas.map((comuna: any) => (
-                          <MenuItem key={comuna.id} value={comuna.id}>
-                            {comuna.nombre}
-                          </MenuItem>
-                        ))}
+                    <Select {...field} label='Comuna *' disabled={!watch('region')} error={Boolean(errors.comuna)}>
+                      {comunas.map(comuna => (
+                        <MenuItem key={comuna.id} value={comuna.nombre}>
+                          {comuna.nombre}
+                        </MenuItem>
+                      ))}
                     </Select>
                   )}
                 />

@@ -35,6 +35,13 @@ import Popover from '@mui/material/Popover'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
+import TableContainer from '@mui/material/TableContainer'
+import type Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -55,9 +62,11 @@ import {
 } from '@tanstack/react-table'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import dayjs from 'dayjs'
 
 // Type Imports
 import type { Cliente } from '@/types/forms/cliente'
+import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 
 // Interface Props
 interface Props {
@@ -180,13 +189,64 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
   const [changeStatusOpen, setChangeStatusOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
+  const [selectedSegmento, setSelectedSegmento] = useState('')
+  const [dateRange, setDateRange] = useState('')
   const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
   const [selectedClientForMenu, setSelectedClientForMenu] = useState<Cliente | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Solo necesitamos regiones y comunas del hook
+  const { regiones, comunas, loading } = useRegionesYComunas()
+
+  // Manejadores para los filtros
+  const handleGlobalFilter = (value: string) => {
+    setGlobalFilter(value)
+  }
+
+  const handleEstadoChange = (value: string) => {
+    setSelectedStatus(value)
+  }
+
+  const handleSegmentoChange = (value: string) => {
+    setSelectedSegmento(value)
+  }
+
+  const handleDateRangeChange = (value: string) => {
+    setDateRange(value)
+  }
+
+  // Efecto para aplicar todos los filtros
   useEffect(() => {
-    setFilteredData(safeUserData)
-  }, [safeUserData])
+    let filteredResults = [...safeUserData]
+
+    // Aplicar filtro de estado
+    if (selectedStatus) {
+      filteredResults = filteredResults.filter(item => item.estado === selectedStatus)
+    }
+
+    // Aplicar filtro de segmento
+    if (selectedSegmento) {
+      filteredResults = filteredResults.filter(item => item.segmento === selectedSegmento)
+    }
+
+    // Aplicar filtro de rango de fechas
+    if (dateRange) {
+      const [startStr, endStr] = dateRange.split(' - ')
+
+      if (startStr && endStr) {
+        const start = new Date(startStr)
+        const end = new Date(endStr)
+
+        filteredResults = filteredResults.filter(item => {
+          const date = new Date(item.fechaCreacion)
+
+          return date >= start && date <= end
+        })
+      }
+    }
+
+    setFilteredData(filteredResults)
+  }, [safeUserData, selectedStatus, selectedSegmento, dateRange])
 
   useEffect(() => {
     setIsLoading(false)
@@ -194,16 +254,11 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clientes/${id}`, {
-        method: 'DELETE'
-      })
+      const response = await axios.delete(`/api/clientes/${id}`)
 
-      if (response.ok) {
+      if (response.status === 200) {
         // Actualizar la lista local
-        const updatedData = userData.filter(client => client.clienteId !== id)
-
-        setData(updatedData)
-        setFilteredData(updatedData)
+        setData(prevData => prevData.filter(client => client.clienteId !== id))
         toast.success('Cliente eliminado exitosamente')
         handleCloseDialog()
       } else {
@@ -326,7 +381,21 @@ const ClientListTable = ({ userData, setData }: Props) => {
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
-        cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.comuna}</Typography>
+        cell: ({ row }) => {
+          const cliente = row.original
+
+          if (loading) {
+            return <Typography>Cargando...</Typography>
+          }
+
+          console.log('Cliente:', cliente)
+          console.log('Comuna del cliente:', cliente.comuna)
+          console.log('Comunas disponibles:', comunas)
+
+          const comunaNombre = comunas.find(c => c.id === Number(cliente.comuna))?.nombre
+
+          return <Typography>{comunaNombre || 'No especificada'}</Typography>
+        }
       }),
       columnHelper.accessor('segmento', {
         header: 'SEGMENTO',
@@ -414,20 +483,24 @@ const ClientListTable = ({ userData, setData }: Props) => {
       {
         id: 'actions',
         header: 'ACCIONES',
-        cell: ({ row }: { row: Row<Cliente> }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => handleEditClick(row.original)} size='small'>
-              <i className='ri-pencil-line text-[16px] text-[#3366FF]' />
-            </IconButton>
-            <IconButton
-              onClick={() => handleClickOpenDialog(row.original)}
-              size='small'
-              sx={{ '&:hover': { color: '#FF4C51' } }}
-            >
-              <i className='ri-delete-bin-6-line text-[16px] text-[#FF4C51]' />
-            </IconButton>
-          </div>
-        )
+        cell: ({ row }) => {
+          const cliente = row.original
+
+          return (
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Tooltip title='Editar'>
+                <IconButton color='primary' onClick={() => handleEditClick(cliente)}>
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title='Eliminar'>
+                <IconButton color='error' onClick={() => handleClickOpenDialog(cliente)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )
+        }
       }
     ],
     []
@@ -462,6 +535,9 @@ const ClientListTable = ({ userData, setData }: Props) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
+  // Función para alternar el drawer de nuevo cliente
+  const toggleAddUserDrawer = () => setAddUserOpen(!addUserOpen)
+
   return (
     <>
       <Card>
@@ -480,9 +556,14 @@ const ClientListTable = ({ userData, setData }: Props) => {
         />
 
         <TableFilters
-          setData={setFilteredData}
-          data={safeUserData}
-          toggleAddUserDrawer={() => setAddUserOpen(!addUserOpen)}
+          value={globalFilter ?? ''}
+          selectedEstado={selectedStatus}
+          selectedSegmento={selectedSegmento}
+          dateRange={dateRange}
+          handleFilter={handleGlobalFilter}
+          handleEstadoChange={handleEstadoChange}
+          handleSegmentoChange={handleSegmentoChange}
+          handleDateRangeChange={handleDateRangeChange}
         />
 
         <Divider />
@@ -566,7 +647,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
 
-        <AddClient open={addUserOpen} handleClose={() => setAddUserOpen(false)} userData={userData} setData={setData} />
+        {/* Drawer de nuevo cliente */}
+        <AddClient open={addUserOpen} handleClose={() => setAddUserOpen(false)} setData={setData} />
 
         {selectedUser && (
           <>

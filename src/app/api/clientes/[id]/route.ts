@@ -1,28 +1,26 @@
 import { NextResponse } from 'next/server'
+
 import { getClienteById, updateCliente, deleteCliente } from '../index'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 interface ContactoCliente {
   contacto: {
-    id?: number;
-    nombre: string;
-    cargo: string;
-    email: string;
-    telefono1: string;
-    telefono2?: string;
-  };
-  isPrincipal: boolean;
+    id?: number
+    nombre: string
+    cargo: string
+    email: string
+    telefono1: string
+    telefono2?: string
+  }
+  isPrincipal: boolean
 }
 
 // GET - Obtener un cliente por ID
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const cliente = await prisma.cliente.findUnique({
       where: {
-        clienteId: Number(params.id)
+        id: parseInt(params.id)
       },
       include: {
         clientesContactos: {
@@ -35,84 +33,74 @@ export async function GET(
     })
 
     if (!cliente) {
-      return NextResponse.json(
-        { error: 'Cliente no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
     }
 
     return NextResponse.json(cliente)
   } catch (error) {
     console.error('Error al obtener cliente:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener cliente' },
-      { status: 500 }
-    )
+
+    return NextResponse.json({ error: 'Error al obtener el cliente' }, { status: 500 })
   }
 }
 
 // PUT - Actualizar un cliente específico
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
+
     console.log('=== API PUT /clientes/[id] ===')
-    console.log('Body completo:', JSON.stringify(body, null, 2))
-    const { 
-      clienteId, 
-      clientesContactos, 
+    console.log('Body completo:', body)
+
+    // Extraer los datos que necesitamos actualizar
+    const {
+      clientesContactos,
       condicionesComerciales,
-      vendedor,
-      condicionVenta, 
+      fechaCreacion,
+      createdAt,
+      updatedAt,
+      vendedor, // Extraer estos campos que no pertenecen al modelo Cliente
+      condicionVenta,
       observaciones,
-      ...clienteData 
+      ...clienteData
     } = body
 
-    console.log('Contactos a procesar:', JSON.stringify(clientesContactos, null, 2))
+    // Preparar la actualización del cliente
+    const updateData = {
+      ...clienteData,
 
-    const updatedClient = await prisma.cliente.update({
-      where: { clienteId: parseInt(params.id) },
-      data: {
-        ...clienteData,
-        clientesContactos: {
-          deleteMany: {},
-          create: clientesContactos?.map((cc: ContactoCliente) => {
-            process.stdout.write(`\nProcesando contacto: ${JSON.stringify(cc, null, 2)}`)
-            const contactData = cc.contacto.id 
-              ? { connect: { contactId: cc.contacto.id } }
-              : { 
-                  create: {
-                    nombre: cc.contacto.nombre,
-                    cargo: cc.contacto.cargo,
-                    email: cc.contacto.email,
-                    telefono1: cc.contacto.telefono1,
-                    telefono2: cc.contacto.telefono2 || ''
-                  }
-                }
-            process.stdout.write(`\nDatos preparados: ${JSON.stringify(contactData, null, 2)}\n`)
-            return {
-              contacto: contactData,
-              isPrincipal: cc.isPrincipal
-            }
-          })
-        },
-        condicionesComerciales: {
-          upsert: {
-            create: {
-              vendedor: vendedor || '',
-              condicionVenta: condicionVenta || '',
-              observaciones: observaciones || ''
-            },
-            update: {
-              vendedor: vendedor || '',
-              condicionVenta: condicionVenta || '',
-              observaciones: observaciones || ''
-            }
+      // Manejar los contactos
+      clientesContactos: {
+        deleteMany: {}, // Eliminar todos los contactos existentes
+        create: clientesContactos.create // Usar directamente el array create que viene del frontend
+      },
+
+      // Manejar las condiciones comerciales
+      condicionesComerciales: {
+        upsert: {
+          where: {
+            clienteId: Number(params.id)
+          },
+          create: {
+            vendedor,
+            condicionVenta,
+            observaciones
+          },
+          update: {
+            vendedor,
+            condicionVenta,
+            observaciones
           }
         }
+      }
+    }
+
+    // Actualizar el cliente
+    const updatedCliente = await prisma.cliente.update({
+      where: {
+        clienteId: Number(params.id)
       },
+      data: updateData,
       include: {
         clientesContactos: {
           include: {
@@ -123,32 +111,57 @@ export async function PUT(
       }
     })
 
-    return NextResponse.json(updatedClient)
+    return NextResponse.json(updatedCliente)
   } catch (error) {
     console.error('=== ERROR EN API PUT /clientes/[id] ===')
     console.error('Error completo:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar el cliente' },
-      { status: 500 }
-    )
+
+    return NextResponse.json({ error: 'Error al actualizar el cliente' }, { status: 500 })
   }
 }
 
 // DELETE - Eliminar un cliente específico
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const deletedClient = await prisma.cliente.delete({
-      where: { clienteId: Number(params.id) }
+    const id = parseInt(params.id)
+
+    // Primero eliminar los contactos asociados
+    await prisma.clienteContacto.deleteMany({
+      where: {
+        clienteId: id
+      }
     })
-    return NextResponse.json({ message: 'Cliente eliminado correctamente' })
+
+    // Luego eliminar las condiciones comerciales
+    await prisma.condicionComercial.deleteMany({
+      where: {
+        clienteId: id
+      }
+    })
+
+    // Finalmente eliminar el cliente
+    const deletedCliente = await prisma.cliente.delete({
+      where: {
+        id: id
+      }
+    })
+
+    return NextResponse.json(deletedCliente)
   } catch (error) {
-    console.error('Error deleting client:', error)
-    return NextResponse.json(
-      { error: 'Error al eliminar el cliente' },
-      { status: 500 }
-    )
+    console.error('Error deleting cliente:', error)
+
+    // Si el error es por referencias de integridad
+    if (error.code === 'P2003') {
+      return NextResponse.json(
+        {
+          error: 'No se puede eliminar el cliente porque tiene obras asociadas. Elimine primero las obras.'
+        },
+        {
+          status: 400
+        }
+      )
+    }
+
+    return NextResponse.json({ error: 'Error deleting cliente' }, { status: 500 })
   }
-} 
+}

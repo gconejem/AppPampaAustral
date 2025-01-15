@@ -33,7 +33,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const cliente = await createCliente(body)
+
+    // Asegurarnos de que la comuna y región sean strings
+    const clienteData = {
+      ...body,
+      region: String(body.region),
+      comuna: String(body.comuna)
+    }
+
+    const cliente = await createCliente(clienteData)
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {

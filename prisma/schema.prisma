@@ -221,6 +221,7 @@ model Comuna {
 model ListaPrecio {
   id        Int        @id @default(autoincrement())
   nombre    String     @unique
+  precio    Decimal    @db.Decimal(10, 2)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   productos Producto[]

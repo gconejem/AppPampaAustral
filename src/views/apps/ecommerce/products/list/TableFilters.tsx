@@ -1,5 +1,5 @@
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -14,46 +14,36 @@ import type { Producto } from './ProductListTable'
 
 interface TableFiltersProps {
   productData: Producto[]
-  setData: (data: Producto[]) => void
+  setFilteredData: (data: Producto[]) => void
+  areas: Array<{ id: number; nombre: string }>
+  familias: Array<{ id: number; nombre: string }>
+  tipos: Array<{ id: number; nombre: string }>
 }
 
-const TableFilters = ({ productData, setData }: TableFiltersProps) => {
+const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: TableFiltersProps) => {
   // States
-  const [area, setArea] = useState('')
-  const [familia, setFamilia] = useState('')
-  const [tipo, setTipo] = useState('')
+  const [selectedArea, setSelectedArea] = useState('')
+  const [selectedFamilia, setSelectedFamilia] = useState('')
+  const [selectedTipo, setSelectedTipo] = useState('')
 
-  const filterData = () => {
-    const filteredData = productData?.filter(product => {
-      if (area && product.area !== area) return false
-      if (familia && product.familia !== familia) return false
-      if (tipo && product.tipo !== tipo) return false
+  // Efecto para aplicar filtros
+  useEffect(() => {
+    if (!Array.isArray(productData)) {
+      setFilteredData([])
 
-      return true
-    })
-
-    return filteredData ?? []
-  }
-
-  const handleFilterChange = (
-    type: 'area' | 'familia' | 'tipo',
-    value: string
-  ) => {
-    switch (type) {
-      case 'area':
-        setArea(value)
-        break
-      case 'familia':
-        setFamilia(value)
-        break
-      case 'tipo':
-        setTipo(value)
-        break
+      return
     }
 
-    const newData = filterData()
-    setData(newData)
-  }
+    const filteredData = productData.filter(product => {
+      const areaMatch = !selectedArea || product.area === selectedArea
+      const familiaMatch = !selectedFamilia || product.familia === selectedFamilia
+      const tipoMatch = !selectedTipo || product.tipo === selectedTipo
+
+      return areaMatch && familiaMatch && tipoMatch
+    })
+
+    setFilteredData(filteredData)
+  }, [selectedArea, selectedFamilia, selectedTipo, productData, setFilteredData])
 
   return (
     <CardContent>
@@ -65,15 +55,17 @@ const TableFilters = ({ productData, setData }: TableFiltersProps) => {
               fullWidth
               id='select-area'
               label='Área'
-              value={area}
-              onChange={e => handleFilterChange('area', e.target.value)}
+              value={selectedArea}
+              onChange={e => setSelectedArea(e.target.value)}
               labelId='area-select'
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
-              <MenuItem value='Suelos'>Suelos</MenuItem>
-              <MenuItem value='Hormigones'>Hormigones</MenuItem>
-              <MenuItem value='Asfaltos'>Asfaltos</MenuItem>
-              <MenuItem value='Agregados'>Agregados</MenuItem>
+              {Array.isArray(areas) &&
+                areas.map(area => (
+                  <MenuItem key={area.id} value={area.nombre}>
+                    {area.nombre}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
         </Grid>
@@ -83,17 +75,18 @@ const TableFilters = ({ productData, setData }: TableFiltersProps) => {
             <Select
               fullWidth
               id='select-familia'
-              value={familia}
-              onChange={e => handleFilterChange('familia', e.target.value)}
+              value={selectedFamilia}
+              onChange={e => setSelectedFamilia(e.target.value)}
               label='Familia'
               labelId='familia-select'
             >
               <MenuItem value=''>Todas las familias</MenuItem>
-              <MenuItem value='Clasificación'>Clasificación</MenuItem>
-              <MenuItem value='Compactación'>Compactación</MenuItem>
-              <MenuItem value='Densidad'>Densidad</MenuItem>
-              <MenuItem value='Resistencia'>Resistencia</MenuItem>
-              <MenuItem value='Deformación'>Deformación</MenuItem>
+              {Array.isArray(familias) &&
+                familias.map(familia => (
+                  <MenuItem key={familia.id} value={familia.nombre}>
+                    {familia.nombre}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
         </Grid>
@@ -103,14 +96,18 @@ const TableFilters = ({ productData, setData }: TableFiltersProps) => {
             <Select
               fullWidth
               id='select-tipo'
-              value={tipo}
-              onChange={e => handleFilterChange('tipo', e.target.value)}
+              value={selectedTipo}
+              onChange={e => setSelectedTipo(e.target.value)}
               label='Tipo'
               labelId='tipo-select'
             >
               <MenuItem value=''>Todos los tipos</MenuItem>
-              <MenuItem value='Ensayo'>Ensayo</MenuItem>
-              <MenuItem value='Paquete'>Paquete</MenuItem>
+              {Array.isArray(tipos) &&
+                tipos.map(tipo => (
+                  <MenuItem key={tipo.id} value={tipo.nombre}>
+                    {tipo.nombre}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
         </Grid>

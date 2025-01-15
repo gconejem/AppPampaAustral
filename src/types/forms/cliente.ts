@@ -3,6 +3,7 @@ export interface FormValidateType {
   estado: string
   razonSocial: string
   nombreCliente: string
+  region: string
   ciudad: string
   comuna: string
   direccion: string
@@ -47,16 +48,16 @@ export const initialFormData: FormNonValidateType = {
 }
 
 export interface Cliente {
-  clienteId: number
-  fechaCreacion: Date
-  estado: string
+  clienteId?: number
   rut: string
   razonSocial: string
-  nombreCliente: string
+  nombreCliente?: string
   pais: string
   region: string
+  comuna: number
+  fechaCreacion: Date
+  estado: string
   ciudad: string
-  comuna: string
   direccion: string
   telefono: string
   sitioWeb?: string

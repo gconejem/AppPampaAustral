@@ -5,26 +5,26 @@ import prisma from '@/lib/prisma'
 // GET - Obtener una obra específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const obraId = parseInt(params.id)
-
-    console.log('Buscando obra:', obraId)
+    console.log('Buscando obra:', params.id)
 
     const obra = await prisma.obra.findUnique({
-      where: { obraId },
+      where: {
+        obraId: parseInt(params.id)
+      },
       include: {
         contactos: true
       }
     })
 
-    console.log('Obra encontrada:', obra)
-
     if (!obra) {
       return NextResponse.json({ error: 'Obra no encontrada' }, { status: 404 })
     }
 
+    console.log('Obra encontrada:', obra)
+
     return NextResponse.json(obra)
   } catch (error) {
-    console.error('Error fetching obra:', error)
+    console.error('Error al obtener la obra:', error)
 
     return NextResponse.json({ error: 'Error al obtener la obra' }, { status: 500 })
   }
@@ -37,61 +37,65 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     console.log('Datos recibidos para actualizar:', body)
 
-    // Obtener la región y comuna por sus códigos/ids
-    const region = await prisma.region.findUnique({
-      where: { codigo: body.region },
-      select: { nombre: true }
-    })
+    // Si la comuna cambió, buscarla por nombre
+    let comunaNombre = body.comuna
 
-    const comuna = await prisma.comuna.findUnique({
-      where: { id: parseInt(body.comuna) },
-      select: { nombre: true }
-    })
+    if (body.comuna) {
+      const comunaData = await prisma.comuna.findFirst({
+        where: {
+          nombre: body.comuna
+        }
+      })
 
-    if (!region || !comuna) {
-      console.error('Región o comuna no encontrada:', { region, comuna })
+      if (!comunaData) {
+        return NextResponse.json({ error: 'Comuna no encontrada' }, { status: 400 })
+      }
 
-      return NextResponse.json({ error: 'Región o comuna no válida' }, { status: 400 })
+      comunaNombre = comunaData.nombre
     }
 
-    // Extraer los campos que no queremos enviar directamente a la actualización
-    const { contactos, createdAt, updatedAt, obraId, ...dataToUpdate } = body
-
-    // Actualizar la obra usando los nombres de región y comuna
+    // Actualizar la obra
     const updatedObra = await prisma.obra.update({
       where: {
         obraId: parseInt(params.id)
       },
       data: {
-        ...dataToUpdate,
-        region: region.nombre,
-        comuna: comuna.nombre,
+        numeroObra: body.numeroObra,
         fechaIngreso: new Date(body.fechaIngreso),
+        estado: body.estado,
+        estadoObra: body.estadoObra,
+        nombreObra: body.nombreObra,
+        direccion: body.direccion,
+        region: body.region,
+        comuna: comunaNombre,
+        sector: body.sector,
+        georreferencia: body.georreferencia,
+        referencia: body.referencia,
+        mandante: body.mandante,
+        informeMandante: body.informeMandante,
+        textoMandante: body.textoMandante,
+        razonSocial: body.razonSocial,
+        rut: body.rut,
+        giro: body.giro,
+        direccionComercial: body.direccionComercial,
+        comunaFacturacion: body.comunaFacturacion,
+        telefonoFacturacion: body.telefonoFacturacion,
+        listaPrecios: body.listaPrecios,
+        mailRecepcionFactura: body.mailRecepcionFactura,
+        nombreCliente: body.nombreCliente
 
-        // Actualizar contactos si es necesario
-        contactos: {
-          deleteMany: {}, // Eliminar contactos existentes
-          create: contactos.map((contacto: any) => ({
-            nombre: contacto.nombre,
-            rol: contacto.rol,
-            email: contacto.email,
-            telefono1: contacto.telefono1,
-            isPrincipal: contacto.isPrincipal
-          }))
-        }
+        // Otros campos que necesites actualizar...
       },
       include: {
         contactos: true
       }
     })
 
-    console.log('Obra actualizada:', updatedObra)
-
     return NextResponse.json(updatedObra)
   } catch (error) {
     console.error('Error updating obra:', error)
 
-    return NextResponse.json({ error: 'Error al actualizar la obra', details: error }, { status: 500 })
+    return NextResponse.json({ error: 'Error al actualizar la obra' }, { status: 500 })
   }
 }
 

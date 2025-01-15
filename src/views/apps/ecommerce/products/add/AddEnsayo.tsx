@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -36,11 +36,11 @@ interface RequestData {
   estado: string
 }
 
-const LISTAS_PRECIO = [
-  { id: 1, nombre: 'Lista 1' },
-  { id: 2, nombre: 'Lista 2' },
-  { id: 3, nombre: 'Lista 3' }
-]
+interface ListaPrecio {
+  id: number
+  nombre: string
+  precio: number
+}
 
 const AddEnsayo = () => {
   const router = useRouter()
@@ -53,14 +53,30 @@ const AddEnsayo = () => {
   const [familia, setFamilia] = useState('')
   const [precio, setPrecio] = useState('')
   const [norma, setNorma] = useState('')
-  const [listaPrecios, setListaPrecios] = useState('')
+  const [listaPrecios, setListaPrecios] = useState<ListaPrecio[]>([])
+  const [listaPrecioId, setListaPrecioId] = useState<string>('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
-  const [selectedLista, setSelectedLista] = useState<number | ''>('')
 
   // Estados para el manejo de errores y éxito
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  // Cargar listas de precios al montar el componente
+  useEffect(() => {
+    const fetchListaPrecios = async () => {
+      try {
+        const response = await fetch('/api/lista-precios')
+        const data = await response.json()
+
+        setListaPrecios(data)
+      } catch (error) {
+        console.error('Error al cargar listas de precios:', error)
+      }
+    }
+
+    fetchListaPrecios()
+  }, [])
 
   const validateForm = () => {
     if (!nombre.trim()) return 'El nombre es requerido'
@@ -81,7 +97,9 @@ const AddEnsayo = () => {
     return ''
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
     try {
       const validationError = validateForm()
 
@@ -117,7 +135,7 @@ const AddEnsayo = () => {
         tipo: 'Ensayo',
         precio: precioNum,
         norma,
-        listaPrecios,
+        listaPrecios: listaPrecioId ? parseInt(listaPrecioId) : null,
         aplicaImpuesto,
         esPaquete: false,
         estado: 'ACTIVO'
@@ -130,7 +148,10 @@ const AddEnsayo = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify({
+          ...requestData,
+          listaPrecioId: listaPrecioId ? parseInt(listaPrecioId) : null
+        })
       })
 
       if (!response.ok) {
@@ -156,7 +177,7 @@ const AddEnsayo = () => {
   }
 
   return (
-    <>
+    <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader title='Crear Ensayo' />
         <CardContent>
@@ -210,16 +231,13 @@ const AddEnsayo = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth margin='normal'>
                 <InputLabel>Lista de Precios</InputLabel>
-                <Select
-                  value={selectedLista}
-                  label='Lista de Precios'
-                  onChange={e => setSelectedLista(Number(e.target.value))}
-                >
-                  {LISTAS_PRECIO.map(lista => (
+                <Select value={listaPrecioId} label='Lista de Precios' onChange={e => setListaPrecioId(e.target.value)}>
+                  <MenuItem value=''>Sin asignar</MenuItem>
+                  {listaPrecios.map(lista => (
                     <MenuItem key={lista.id} value={lista.id}>
-                      {lista.nombre}
+                      {`${lista.nombre} - $${lista.precio}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -256,7 +274,7 @@ const AddEnsayo = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Button variant='contained' onClick={handleSubmit} disabled={loading}>
+              <Button variant='contained' type='submit' disabled={loading}>
                 {loading ? 'Guardando...' : 'Crear Ensayo'}
               </Button>
             </Grid>
@@ -275,7 +293,7 @@ const AddEnsayo = () => {
           Ensayo creado exitosamente
         </Alert>
       </Snackbar>
-    </>
+    </form>
   )
 }
 

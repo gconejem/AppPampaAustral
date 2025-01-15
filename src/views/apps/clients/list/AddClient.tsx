@@ -342,6 +342,8 @@ const AddClienteDrawer = (props: Props) => {
 
     if (value) {
       try {
+        console.log('Código de región seleccionado:', value)
+
         const response = await axios.get('/api/ubicacion', {
           params: { regionId: value }
         })
@@ -518,7 +520,7 @@ const AddClienteDrawer = (props: Props) => {
                 <Select value={selectedRegion} onChange={e => handleRegionChange(e.target.value)} label='Región'>
                   <MenuItem value=''>Seleccionar Región</MenuItem>
                   {regiones.map(region => (
-                    <MenuItem key={region.id} value={region.id.toString()}>
+                    <MenuItem key={region.id} value={region.codigo}>
                       {region.nombre}
                     </MenuItem>
                   ))}
@@ -537,7 +539,7 @@ const AddClienteDrawer = (props: Props) => {
                       <MenuItem value=''>Seleccionar Comuna</MenuItem>
                       {Array.isArray(comunas) && comunas.length > 0 ? (
                         comunas.map(comuna => (
-                          <MenuItem key={comuna.id} value={comuna.id.toString()}>
+                          <MenuItem key={comuna.id} value={comuna.id}>
                             {comuna.nombre}
                           </MenuItem>
                         ))

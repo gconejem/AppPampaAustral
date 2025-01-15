@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/libs/prisma'
+import prisma from '@/lib/prisma'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const comunas = await prisma.comuna.findMany({
       where: {
-        regionId: parseInt(params.id)
+        codigo: {
+          startsWith: params.id
+        }
       },
       orderBy: {
         nombre: 'asc'
       }
     })
+
+    console.log(`Comunas encontradas para región ${params.id}: ${comunas.length}`)
 
     return NextResponse.json(comunas)
   } catch (error) {

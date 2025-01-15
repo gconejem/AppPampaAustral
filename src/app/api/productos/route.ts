@@ -38,7 +38,8 @@ export async function POST(request: Request) {
         precio: parseFloat(precio),
         norma: norma || null,
         aplicaImpuesto,
-        estado: 'ACTIVO'
+        estado: 'ACTIVO',
+        listaPrecioId: body.listaPrecioId || null
       }
     })
 

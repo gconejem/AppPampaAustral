@@ -187,11 +187,15 @@ const ProductListTable = () => {
   // Estados para la tabla
   const [rowSelection, setRowSelection] = useState({})
   const [productos, setProductos] = useState<Producto[]>([])
+  const [filteredProductos, setFilteredProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [totalProductos, setTotalProductos] = useState(0)
+  const [areas, setAreas] = useState([])
+  const [familias, setFamilias] = useState([])
+  const [tipos, setTipos] = useState([])
 
   // Estados para el modal de paquetes
   const [open, setOpen] = useState(false)
@@ -210,6 +214,37 @@ const ProductListTable = () => {
 
   const params = useParams()
   const locale = params?.lang || 'es'
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productosRes, areasRes, familiasRes, tiposRes] = await Promise.all([
+          fetch('/api/productos'),
+          fetch('/api/areas'),
+          fetch('/api/familias'),
+          fetch('/api/tipos')
+        ])
+
+        const [productosData, areasData, familiasData, tiposData] = await Promise.all([
+          productosRes.json(),
+          areasRes.json(),
+          familiasRes.json(),
+          tiposRes.json()
+        ])
+
+        setProductos(productosData)
+        setFilteredProductos(productosData)
+        setAreas(areasData)
+        setFamilias(familiasData)
+        setTipos(tiposData)
+      } catch (error) {
+        console.error('Error cargando datos:', error)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Función para cargar productos
   const cargarProductos = async () => {
@@ -498,7 +533,7 @@ const ProductListTable = () => {
   )
 
   const table = useReactTable({
-    data: productos,
+    data: filteredProductos,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -529,7 +564,13 @@ const ProductListTable = () => {
     <>
       <Card>
         <CardHeader title='Productos' className='pbe-4' />
-        <TableFilters setData={setProductos} productData={productos} />
+        <TableFilters
+          productData={productos}
+          setFilteredData={setFilteredProductos}
+          areas={areas}
+          familias={familias}
+          tipos={tipos}
+        />
         <Divider />
         <div className='flex justify-between flex-col items-start sm:flex-row sm:items-center gap-y-4 p-5'>
           <DebouncedInput
