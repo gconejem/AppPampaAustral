@@ -14,18 +14,13 @@ export async function GET() {
       }
     })
 
-    console.log('Listas de precios disponibles:', listaPrecios)
+    console.log('Listas de precios encontradas:', listaPrecios)
 
-    return NextResponse.json(listaPrecios)
+    return NextResponse.json(listaPrecios || [])
   } catch (error) {
-    console.error('Error al cargar listas de precios:', error)
+    console.error('Error al obtener listas de precios:', error)
 
-    return new NextResponse(JSON.stringify({ error: 'Error al cargar listas de precios' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+    return NextResponse.json({ error: 'Error al obtener listas de precios' }, { status: 500 })
   }
 }
 

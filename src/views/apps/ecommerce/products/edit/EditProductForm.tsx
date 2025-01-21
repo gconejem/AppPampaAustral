@@ -3,6 +3,8 @@
 // React Imports
 import { useState, useEffect } from 'react'
 
+import { toast } from 'react-hot-toast'
+
 // MUI Imports
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -12,6 +14,9 @@ import Typography from '@mui/material/Typography'
 import MenuItem from '@mui/material/MenuItem'
 import Checkbox from '@mui/material/Checkbox'
 import Modal from '@mui/material/Modal'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
 
 // Types
 interface Producto {
@@ -41,10 +46,9 @@ interface EditProductFormProps {
   open: boolean
   onClose: () => void
   product: Producto | null
-  onSave: (product: Producto) => Promise<void>
+  onSave: (updatedProduct: Producto) => void
   areas: string[]
   familias: string[]
-  listasPrecios: ListaPrecio[]
 }
 
 const style = {
@@ -59,63 +63,50 @@ const style = {
   p: 4
 }
 
-const EditProductForm = ({ open, onClose, product, onSave, areas, familias, listasPrecios }: EditProductFormProps) => {
-  const [editingProduct, setEditingProduct] = useState<Producto | null>(product)
-  const [selectedListaPrecio, setSelectedListaPrecio] = useState<ListaPrecio | null>(null)
+const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: EditProductFormProps) => {
+  const [editingProduct, setEditingProduct] = useState<Producto | null>(null)
+  const [selectedListaPrecio, setSelectedListaPrecio] = useState('')
+  const [listaPreciosOptions, setListaPreciosOptions] = useState([])
 
+  // Cargar listas de precios al montar el componente
+  useEffect(() => {
+    fetch('/api/lista-precios')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Listas de precios cargadas:', data)
+        setListaPreciosOptions(data)
+      })
+      .catch(error => console.error('Error al cargar listas de precios:', error))
+  }, [])
+
+  // Cargar datos del producto cuando se abre el modal
   useEffect(() => {
     if (product) {
-      console.log('Producto recibido:', product)
-      console.log('Áreas disponibles:', areas)
-      console.log('Familias disponibles:', familias)
-      console.log('Listas de precios disponibles:', listasPrecios)
+      setEditingProduct(product)
 
-      setEditingProduct({
-        ...product,
-        precio: typeof product.precio === 'string' ? parseFloat(product.precio) : product.precio
-      })
-
-      // Buscar la lista de precios correspondiente
-      const listaPrecio = listasPrecios?.find(l => l.nombre === product.listaPrecios)
-
-      if (listaPrecio) {
-        setSelectedListaPrecio(listaPrecio)
+      // Si el producto tiene una lista de precios asignada, seleccionarla
+      if (product.listasPrecios && product.listasPrecios.length > 0) {
+        setSelectedListaPrecio(product.listasPrecios[0].listaPrecio.id.toString())
       }
     }
-  }, [product, areas, familias, listasPrecios])
-
-  const handleListaPrecioChange = (event: any) => {
-    const selectedId = parseInt(event.target.value)
-    const selected = listasPrecios.find(l => l.id === selectedId)
-
-    if (selected) {
-      setSelectedListaPrecio(selected)
-      setEditingProduct(prev => {
-        if (!prev) return prev
-
-        return {
-          ...prev,
-          listaPrecios: selected.nombre,
-          precio: selected.precio
-        }
-      })
-    }
-  }
+  }, [product])
 
   const handleSave = async () => {
     if (!editingProduct) return
 
     try {
-      console.log('Enviando datos para actualizar:', editingProduct)
-
       // Preparar los datos para enviar
       const dataToSend = {
         ...editingProduct,
-        listaPrecioId: selectedListaPrecio?.id,
-        precio: Number(editingProduct.precio)
-      }
 
-      console.log('Datos preparados para enviar:', dataToSend)
+        // Solo incluir lista de precios y precio si ambos están presentes
+        ...(selectedListaPrecio && editingProduct.precio
+          ? {
+              listaPrecioId: parseInt(selectedListaPrecio),
+              precio: editingProduct.precio
+            }
+          : {})
+      }
 
       const response = await fetch(`/api/productos/${editingProduct.productoId}`, {
         method: 'PUT',
@@ -125,23 +116,18 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias, list
         body: JSON.stringify(dataToSend)
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-
-        throw new Error(errorData.error || 'Error al actualizar el producto')
-      }
+      if (!response.ok) throw new Error('Error al actualizar producto')
 
       const updatedProduct = await response.json()
 
-      console.log('Producto actualizado:', updatedProduct)
+      // Mostrar notificación de éxito
+      toast.success('Producto actualizado correctamente')
 
+      // Actualizar el estado en el componente padre y cerrar el modal
       onSave(updatedProduct)
-      onClose() // Cerrar el modal después de guardar exitosamente
     } catch (error) {
-      console.error('Error al guardar cambios:', error)
-
-      // Aquí podrías mostrar un mensaje de error al usuario, por ejemplo:
-      alert(error instanceof Error ? error.message : 'Error al actualizar el producto')
+      console.error('Error:', error)
+      toast.error('Error al actualizar el producto')
     }
   }
 
@@ -149,11 +135,11 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias, list
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box sx={{ ...style, width: 800, height: 'auto', padding: 4 }}>
-        <Typography variant='h5' mb={3}>
-          Editar Ensayo
+      <Box sx={style}>
+        <Typography variant='h6' component='h2' sx={{ mb: 4 }}>
+          Editar Producto
         </Typography>
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           <Grid item xs={6}>
             <TextField
               label='Nombre del Ensayo'
@@ -225,22 +211,24 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias, list
             />
           </Grid>
           <Grid item xs={6}>
-            <TextField
-              select
-              label='Lista de Precios'
-              value={selectedListaPrecio?.id || ''}
-              onChange={handleListaPrecioChange}
-              fullWidth
-            >
-              <MenuItem value=''>
-                <em>Seleccione una lista de precios</em>
-              </MenuItem>
-              {listasPrecios.map(lista => (
-                <MenuItem key={lista.id} value={lista.id}>
-                  {lista.nombre} (${lista.precio})
+            <FormControl fullWidth>
+              <InputLabel id='lista-precios-label'>Lista de Precios</InputLabel>
+              <Select
+                label='Lista de Precios'
+                value={selectedListaPrecio}
+                onChange={e => setSelectedListaPrecio(e.target.value)}
+                labelId='lista-precios-label'
+              >
+                <MenuItem value=''>
+                  <em>Seleccione una lista</em>
                 </MenuItem>
-              ))}
-            </TextField>
+                {listaPreciosOptions.map(lista => (
+                  <MenuItem key={lista.id} value={lista.id}>
+                    {lista.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={6}>
             <TextField

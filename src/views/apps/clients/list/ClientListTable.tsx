@@ -63,10 +63,12 @@ import {
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import dayjs from 'dayjs'
+import * as XLSX from 'xlsx'
 
 // Type Imports
 import type { Cliente } from '@/types/forms/cliente'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
+import { ESTADOS_CLIENTE } from '@/data/constants'
 
 // Interface Props
 interface Props {
@@ -79,6 +81,7 @@ import TableFilters from './TableFilters'
 import AddClient from './AddClient'
 import EditClientForm from '../edit/EditClientForm'
 import OptionMenu from '@core/components/option-menu'
+import ClientPreview from '../preview/ClientPreview'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -190,10 +193,16 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [changeStatusOpen, setChangeStatusOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedSegmento, setSelectedSegmento] = useState('')
-  const [dateRange, setDateRange] = useState('')
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null])
   const [anchorEl, setAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
   const [selectedClientForMenu, setSelectedClientForMenu] = useState<Cliente | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [comunasMap, setComunasMap] = useState<{ [key: string]: string }>({})
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [filterStatus, setFilterStatus] = useState('')
 
   // Solo necesitamos regiones y comunas del hook
   const { regiones, comunas, loading } = useRegionesYComunas()
@@ -204,15 +213,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
   }
 
   const handleEstadoChange = (value: string) => {
-    setSelectedStatus(value)
+    setFilterStatus(value)
   }
 
   const handleSegmentoChange = (value: string) => {
     setSelectedSegmento(value)
   }
 
-  const handleDateRangeChange = (value: string) => {
-    setDateRange(value)
+  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
+    setDateRange(dates)
   }
 
   // Efecto para aplicar todos los filtros
@@ -220,8 +229,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
     let filteredResults = [...safeUserData]
 
     // Aplicar filtro de estado
-    if (selectedStatus) {
-      filteredResults = filteredResults.filter(item => item.estado === selectedStatus)
+    if (filterStatus) {
+      filteredResults = filteredResults.filter(item => item.estado === filterStatus)
     }
 
     // Aplicar filtro de segmento
@@ -230,43 +239,45 @@ const ClientListTable = ({ userData, setData }: Props) => {
     }
 
     // Aplicar filtro de rango de fechas
-    if (dateRange) {
-      const [startStr, endStr] = dateRange.split(' - ')
+    if (dateRange[0] && dateRange[1]) {
+      const [start, end] = dateRange
 
-      if (startStr && endStr) {
-        const start = new Date(startStr)
-        const end = new Date(endStr)
+      filteredResults = filteredResults.filter(item => {
+        const date = new Date(item.fechaCreacion)
 
-        filteredResults = filteredResults.filter(item => {
-          const date = new Date(item.fechaCreacion)
-
-          return date >= start && date <= end
-        })
-      }
+        return date >= start! && date <= end!
+      })
     }
 
     setFilteredData(filteredResults)
-  }, [safeUserData, selectedStatus, selectedSegmento, dateRange])
+  }, [safeUserData, filterStatus, selectedSegmento, dateRange])
 
   useEffect(() => {
     setIsLoading(false)
   }, [userData])
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (clienteId: number) => {
     try {
-      const response = await axios.delete(`/api/clientes/${id}`)
+      setIsDeleteLoading(true)
 
-      if (response.status === 200) {
-        // Actualizar la lista local
-        setData(prevData => prevData.filter(client => client.clienteId !== id))
-        toast.success('Cliente eliminado exitosamente')
-        handleCloseDialog()
-      } else {
-        throw new Error('Error al eliminar el cliente')
+      const response = await fetch(`/api/clientes/${clienteId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar cliente')
       }
+
+      // Actualizar la lista de clientes
+      setData(prevData => prevData.filter(client => client.clienteId !== clienteId))
+
+      toast.success('Cliente eliminado correctamente')
+      handleCloseDialog()
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al eliminar el cliente')
+    } finally {
+      setIsDeleteLoading(false)
     }
   }
 
@@ -279,8 +290,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
     setOpenDialog(true)
   }
 
-  const handleEditClick = (client: Cliente) => {
-    console.log('Edit clicked for client:', client)
+  const handleEdit = (client: Cliente) => {
     setSelectedUser(client)
     setEditUserOpen(true)
   }
@@ -299,64 +309,220 @@ const ClientListTable = ({ userData, setData }: Props) => {
     setSelectedClientForMenu(null)
   }
 
-  const handleStatusChange = async (clienteId: number, newStatus: string) => {
+  const handleStatusChange = async (clientId: number, newStatus: string) => {
     try {
-      const response = await axios.patch(`/api/clientes/${clienteId}/status`, {
-        estado: newStatus
-      })
+      const response = await axios.patch(`/api/clientes/${clientId}/status`, { estado: newStatus })
 
       if (response.status === 200) {
-        toast.success('Estado actualizado exitosamente')
-        setData(prevData =>
-          prevData.map(cliente => (cliente.clienteId === clienteId ? { ...cliente, estado: newStatus } : cliente))
+        // Actualizar ambos estados inmediatamente
+        const updatedData = filteredData.map(client =>
+          client.clienteId === clientId ? { ...client, estado: newStatus } : client
         )
+
+        setData(updatedData)
+        setFilteredData(updatedData)
+
+        toast.success('Estado actualizado exitosamente', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff'
+          }
+        })
       }
     } catch (error) {
-      console.error('Error actualizando estado:', error)
-      toast.error('Error al actualizar el estado')
+      console.error('Error al actualizar el estado:', error)
+      toast.error('Error al actualizar el estado', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
     } finally {
       setChangeStatusOpen(false)
       setSelectedStatus('')
-      handleMenuClose()
+      setSelectedClientId(null)
     }
   }
 
   const handleExport = () => {
     try {
       setIsLoading(true)
-      const doc = new jsPDF()
 
-      // Título
-      doc.text('Lista de Clientes', 14, 15)
+      const selectedRows = table.getSelectedRowModel().rows
 
-      // Datos para la tabla
-      const tableData = filteredData.map(client => [
-        client.rut,
-        client.nombreCliente,
-        client.segmento || '',
-        client.clientesContactos?.length ? 'Con Contacto' : 'Sin Contacto',
-        client.estado
-      ])
+      if (selectedRows.length === 0) {
+        toast.error('Por favor, seleccione al menos un cliente para exportar')
 
-      // Configuración de la tabla
-      autoTable(doc, {
-        head: [['RUT', 'NOMBRE COMERCIAL', 'SEGMENTO', 'CONTACTO', 'ESTADO']],
-        body: tableData,
-        startY: 20,
-        theme: 'grid'
+        return
+      }
+
+      // Preparar los datos para Excel con formato de tabla
+      const headers = [
+        ['INFORMACIÓN DEL CLIENTE'],
+        [], // Fila vacía para separación
+        [
+          'RUT',
+          'RAZÓN SOCIAL',
+          'NOMBRE CLIENTE',
+          'PAÍS',
+          'REGIÓN',
+          'COMUNA',
+          'DIRECCIÓN',
+          'TELÉFONO',
+          'SITIO WEB',
+          'SEGMENTO',
+          'INDUSTRIA',
+          'ESTADO',
+          'FECHA CREACIÓN',
+          'CONTACTO PRINCIPAL',
+          '',
+          '',
+          '',
+          '',
+          'CONDICIONES COMERCIALES',
+          '',
+          ''
+        ],
+        [
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'Nombre',
+          'Cargo',
+          'Email',
+          'Teléfono 1',
+          'Teléfono 2',
+          'Vendedor',
+          'Condición Venta',
+          'Observaciones'
+        ]
+      ]
+
+      const csvData = selectedRows.map(row => {
+        const cliente = row.original
+        const contactos = cliente.clientesContactos || []
+        const contactoPrincipal = contactos[0]?.contacto
+
+        // Función para escapar campos con comas o saltos de línea
+        const escapeField = (field: string | null | undefined) => {
+          if (!field) return ''
+          const needsQuotes = field.includes(',') || field.includes('\n') || field.includes('"')
+
+          return needsQuotes ? `"${field.replace(/"/g, '""')}"` : field
+        }
+
+        return [
+          escapeField(cliente.rut),
+          escapeField(cliente.razonSocial),
+          escapeField(cliente.nombreCliente),
+          escapeField(cliente.pais),
+          escapeField(cliente.region),
+          escapeField(comunasMap[cliente.comuna] || cliente.comuna),
+          escapeField(cliente.direccion),
+          escapeField(cliente.telefono),
+          escapeField(cliente.sitioWeb),
+          escapeField(cliente.segmento),
+          escapeField(cliente.industria),
+          escapeField(cliente.estado),
+          escapeField(new Date(cliente.fechaCreacion).toLocaleDateString()),
+          escapeField(contactoPrincipal?.nombre),
+          escapeField(contactoPrincipal?.cargo),
+          escapeField(contactoPrincipal?.email),
+          escapeField(contactoPrincipal?.telefono1),
+          escapeField(contactoPrincipal?.telefono2),
+          escapeField(cliente.condicionesComerciales?.vendedor),
+          escapeField(cliente.condicionesComerciales?.condicionVenta),
+          escapeField(cliente.condicionesComerciales?.observaciones)
+        ]
       })
 
-      // Guardar el PDF
-      doc.save('clientes.pdf')
+      // Agregar una fila vacía entre cada cliente para mejor legibilidad
+      const dataWithSpacing = csvData.reduce((acc: string[][], row: string[], index: number) => {
+        if (index > 0) acc.push([]) // Agregar fila vacía entre clientes
+        acc.push(row)
 
-      toast.success('Exportación exitosa')
+        return acc
+      }, [])
+
+      // Crear el contenido del CSV con formato mejorado
+      const allRows = [...headers, ...dataWithSpacing]
+      const csvContent = allRows.map(row => row.join(',')).join('\n')
+
+      const BOM = '\uFEFF'
+
+      const blob = new Blob([BOM + csvContent], {
+        type: 'text/csv;charset=utf-8'
+      })
+
+      const link = document.createElement('a')
+
+      link.href = URL.createObjectURL(blob)
+      link.download =
+        selectedRows.length === 1
+          ? `Cliente_${selectedRows[0].original.rut}.csv`
+          : `Clientes_${new Date().toISOString().split('T')[0]}.csv`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+
+      toast.success(`${selectedRows.length} cliente(s) exportado(s) exitosamente`)
     } catch (error) {
       console.error('Error al exportar:', error)
-      toast.error('Error al exportar')
+      toast.error('Error al exportar clientes')
     } finally {
       setIsLoading(false)
     }
   }
+
+  // Efecto para cargar las comunas de todos los clientes
+  useEffect(() => {
+    const fetchComunas = async () => {
+      try {
+        // Obtener todas las regiones primero
+        const regResponse = await fetch('/api/ubicacion/regiones')
+        const regiones = await regResponse.json()
+
+        // Para cada región, obtener sus comunas
+        const comunasPromises = regiones.map(region =>
+          fetch(`/api/ubicacion/comunas/${region.codigo}`).then(res => res.json())
+        )
+
+        const todasLasComunas = await Promise.all(comunasPromises)
+
+        // Crear un mapa de id -> nombre de comuna
+        const mapasComunas = todasLasComunas.flat().reduce(
+          (acc, comuna) => {
+            acc[comuna.id] = comuna.nombre
+
+            return acc
+          },
+          {} as { [key: string]: string }
+        )
+
+        setComunasMap(mapasComunas)
+      } catch (error) {
+        console.error('Error al cargar comunas:', error)
+      }
+    }
+
+    fetchComunas()
+  }, [])
 
   const columns = useMemo(
     () => [
@@ -381,20 +547,19 @@ const ClientListTable = ({ userData, setData }: Props) => {
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
-        cell: ({ row }) => {
-          const cliente = row.original
-
-          if (loading) {
-            return <Typography>Cargando...</Typography>
+        cell: ({ row }: { row: Row<Cliente> }) => {
+          // Si tenemos el nombre de la comuna en el mapa, lo mostramos
+          if (comunasMap[row.original.comuna]) {
+            return <Typography variant='body2'>{comunasMap[row.original.comuna]}</Typography>
           }
 
-          console.log('Cliente:', cliente)
-          console.log('Comuna del cliente:', cliente.comuna)
-          console.log('Comunas disponibles:', comunas)
+          // Si no tenemos el nombre pero tenemos el ID, mostramos el ID
+          if (row.original.comuna) {
+            return <Typography variant='body2'>{row.original.comuna}</Typography>
+          }
 
-          const comunaNombre = comunas.find(c => c.id === Number(cliente.comuna))?.nombre
-
-          return <Typography>{comunaNombre || 'No especificada'}</Typography>
+          // Si no tenemos nada, mostramos un guión
+          return <Typography variant='body2'>-</Typography>
         }
       }),
       columnHelper.accessor('segmento', {
@@ -481,29 +646,62 @@ const ClientListTable = ({ userData, setData }: Props) => {
         )
       }),
       {
-        id: 'actions',
+        accessorKey: 'actions',
         header: 'ACCIONES',
-        cell: ({ row }) => {
-          const cliente = row.original
-
-          return (
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Tooltip title='Editar'>
-                <IconButton color='primary' onClick={() => handleEditClick(cliente)}>
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title='Eliminar'>
-                <IconButton color='error' onClick={() => handleClickOpenDialog(cliente)}>
-                  <DeleteIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )
-        }
+        cell: ({ row }) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <IconButton
+              size='small'
+              color='info'
+              onClick={() => handlePreview(row.original)}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'info.light'
+                }
+              }}
+            >
+              <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <IconButton
+              size='small'
+              color='primary'
+              onClick={() => handleEdit(row.original)}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'primary.light'
+                }
+              }}
+            >
+              <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ className: 'cursor-pointer' }}
+              options={[
+                {
+                  text: 'Cambiar Estado',
+                  icon: 'ri-exchange-line',
+                  menuItemProps: {
+                    onClick: () => {
+                      setSelectedClientId(row.original.clienteId)
+                      setSelectedStatus(row.original.estado)
+                      setChangeStatusOpen(true)
+                    }
+                  }
+                },
+                {
+                  text: 'Eliminar',
+                  icon: 'ri-delete-bin-line',
+                  menuItemProps: {
+                    onClick: () => handleDeleteClick(row.original.clienteId)
+                  }
+                }
+              ]}
+            />
+          </Box>
+        )
       }
     ],
-    []
+    [comunasMap]
   )
 
   const table = useReactTable({
@@ -538,18 +736,63 @@ const ClientListTable = ({ userData, setData }: Props) => {
   // Función para alternar el drawer de nuevo cliente
   const toggleAddUserDrawer = () => setAddUserOpen(!addUserOpen)
 
+  // Función para manejar el clic en eliminar
+  const handleDeleteClick = (clientId: number) => {
+    setSelectedClientId(clientId)
+    setDeleteDialogOpen(true)
+  }
+
+  // Función para confirmar la eliminación
+  const handleDeleteConfirm = async () => {
+    if (!selectedClientId) return
+
+    try {
+      const response = await axios.delete(`/api/clientes/${selectedClientId}`)
+
+      if (response.status === 200) {
+        // Actualizar ambos estados inmediatamente
+        const updatedData = filteredData.filter(client => client.clienteId !== selectedClientId)
+
+        setData(updatedData)
+        setFilteredData(updatedData)
+
+        toast.success('Cliente eliminado exitosamente', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff'
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error al eliminar cliente:', error)
+      toast.error('Error al eliminar el cliente', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setSelectedClientId(null)
+    }
+  }
+
+  const handlePreview = (client: Cliente) => {
+    setSelectedUser(client)
+    setPreviewDialogOpen(true)
+  }
+
   return (
     <>
       <Card>
         <CardHeader
           title={<Typography variant='h6'>Clientes</Typography>}
           action={
-            <Button
-              variant='contained'
-              onClick={() => setAddUserOpen(true)}
-              startIcon={<i className='ri-add-line' />}
-              sx={{ borderRadius: '5px' }}
-            >
+            <Button variant='contained' onClick={() => setAddUserOpen(true)} startIcon={<i className='ri-add-line' />}>
               Nuevo Cliente
             </Button>
           }
@@ -557,7 +800,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
         <TableFilters
           value={globalFilter ?? ''}
-          selectedEstado={selectedStatus}
+          selectedEstado={filterStatus}
           selectedSegmento={selectedSegmento}
           dateRange={dateRange}
           handleFilter={handleGlobalFilter}
@@ -655,7 +898,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
             {console.log('Rendering EditClientForm with selectedUser:', selectedUser)}
             <EditClientForm
               open={editUserOpen}
-              handleClose={() => setEditUserOpen(false)}
+              handleClose={() => {
+                setEditUserOpen(false)
+                setSelectedUser(null)
+              }}
               userData={userData}
               setData={setData}
               currentUser={selectedUser}
@@ -663,21 +909,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
           </>
         )}
       </Card>
-      {/* Diálogo de confirmación para eliminar */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
+      {/* Diálogo de confirmación de eliminación */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>¿Está seguro que desea eliminar este cliente?</DialogContentText>
-        </DialogContent>
+        <DialogContent>¿Está seguro que desea eliminar este cliente? Esta acción no se puede deshacer.</DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color='primary'>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='primary'>
             Cancelar
           </Button>
-          <Button
-            onClick={() => selectedUser?.clienteId && handleDelete(selectedUser.clienteId)}
-            color='error'
-            variant='contained'
-          >
+          <Button onClick={handleDeleteConfirm} color='error' variant='contained'>
             Eliminar
           </Button>
         </DialogActions>
@@ -690,13 +930,25 @@ const ClientListTable = ({ userData, setData }: Props) => {
       />
 
       {/* Diálogo para cambiar estado */}
-      <Dialog open={changeStatusOpen} onClose={() => setChangeStatusOpen(false)} maxWidth='xs' fullWidth>
+      <Dialog
+        open={changeStatusOpen}
+        onClose={() => {
+          setChangeStatusOpen(false)
+          setSelectedStatus('')
+          setSelectedClientId(null)
+        }}
+        maxWidth='xs'
+        fullWidth
+      >
         <DialogTitle>Editar Estado</DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
-              <MenuItem value='active'>Activo</MenuItem>
-              <MenuItem value='inactive'>Inactivo</MenuItem>
+              {ESTADOS_CLIENTE.map(estado => (
+                <MenuItem key={estado.value} value={estado.value}>
+                  {estado.label}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </DialogContent>
@@ -706,9 +958,21 @@ const ClientListTable = ({ userData, setData }: Props) => {
           </Button>
           <Button
             variant='contained'
-            onClick={() => selectedUser && handleStatusChange(selectedUser.clienteId, selectedStatus)}
+            onClick={() => selectedClientId && handleStatusChange(selectedClientId, selectedStatus)}
           >
             Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={previewDialogOpen} onClose={() => setPreviewDialogOpen(false)} maxWidth='lg' fullWidth>
+        <DialogTitle>Detalles del Cliente</DialogTitle>
+        <DialogContent>
+          <ClientPreview client={selectedUser} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialogOpen(false)} variant='contained'>
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>

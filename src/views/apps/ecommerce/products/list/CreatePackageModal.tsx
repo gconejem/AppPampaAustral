@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react'
 
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import SearchIcon from '@mui/icons-material/Search'
+import { CircularProgress } from '@mui/material'
+import { toast } from 'react-hot-toast'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+
 // MUI Imports
 import {
   Modal,
@@ -15,7 +22,11 @@ import {
   FormControl,
   InputLabel,
   FormHelperText,
-  Grid
+  Grid,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material'
 
 const style = {
@@ -23,13 +34,34 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800,
+  width: '90%',
+  maxWidth: 900,
   bgcolor: 'background.paper',
   borderRadius: 1,
   boxShadow: 24,
-  p: 4,
-  maxHeight: '90vh',
-  overflow: 'auto'
+  p: 4
+}
+
+const listContainerStyle = {
+  border: '1px solid #e0e0e0',
+  borderRadius: '4px',
+  bgcolor: '#fff',
+  height: 300,
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column' as const
+}
+
+const listHeaderStyle = {
+  bgcolor: '#fafafa',
+  p: 1.5,
+  borderBottom: '1px solid #e0e0e0'
+}
+
+const listStyle = {
+  flex: 1,
+  overflow: 'auto',
+  p: 0
 }
 
 interface CreatePackageModalProps {
@@ -40,135 +72,321 @@ interface CreatePackageModalProps {
 interface ListaPrecio {
   id: number
   nombre: string
-  precio: number
+}
+
+interface Producto {
+  productoId: number
+  sku: string
+  nombre: string
+  precio?: number
+  cantidad?: number
+  area: string
+  familia: string
 }
 
 const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose }) => {
-  // Estados
-  const [nombrePaquete, setNombrePaquete] = useState('')
+  // Estados para el formulario
+  const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
   const [norma, setNorma] = useState('')
-  const [listaPrecioId, setListaPrecioId] = useState('')
+  const [listaPrecios, setListaPrecios] = useState('')
   const [precio, setPrecio] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
-  const [listaPrecios, setListaPrecios] = useState<ListaPrecio[]>([])
-  const [precioError, setPrecioError] = useState('')
 
-  // Cargar listas de precios
+  // Estados para búsqueda
+  const [buscarPaquete, setBuscarPaquete] = useState('')
+  const [buscarProductos, setBuscarProductos] = useState('')
+
+  // Estados para productos
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>([])
+  const [listaPreciosOptions, setListaPreciosOptions] = useState([])
+  const [selectedListaPrecio, setSelectedListaPrecio] = useState<string>('')
+
+  // Estados para manejar las selecciones
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([])
+  const [selectedPaquetes, setSelectedPaquetes] = useState<number[]>([])
+
+  // Cargar productos y listas de precios cuando se abre el modal
   useEffect(() => {
-    const fetchListaPrecios = async () => {
-      try {
-        const response = await fetch('/api/lista-precios')
-        const data = await response.json()
-
-        console.log('Listas de precios cargadas:', data) // Para debugging
-        setListaPrecios(data)
-      } catch (error) {
-        console.error('Error al cargar listas de precios:', error)
-      }
-    }
-
     if (open) {
-      // Solo cargar cuando el modal se abre
-      fetchListaPrecios()
+      // Cargar productos
+      fetch('/api/productos?esPaquete=false')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Productos cargados:', data)
+          setProductos(data)
+        })
+
+      // Cargar listas de precios
+      fetch('/api/lista-precios')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Listas de precios cargadas:', data)
+          setListaPreciosOptions(data)
+        })
     }
   }, [open])
 
-  // Validar precio
-  const handlePrecioChange = (value: string) => {
-    setPrecio(value)
+  const handleCreatePackage = async () => {
+    try {
+      // Validaciones básicas
+      if (!nombre || !sku || !selectedListaPrecio) {
+        toast.error('Por favor complete los campos requeridos')
 
-    if (!value) {
-      setPrecioError('El precio es requerido')
-    } else if (isNaN(Number(value))) {
-      setPrecioError('El precio debe ser un número')
-    } else if (Number(value) <= 0) {
-      setPrecioError('El precio debe ser mayor a 0')
-    } else {
-      setPrecioError('')
-    }
-  }
+        return
+      }
 
-  // Actualizar el precio cuando se selecciona una lista de precios
-  const handleListaPrecioChange = (event: any) => {
-    const selectedId = event.target.value
+      // Preparar los datos del paquete
+      const packageData = {
+        nombre,
+        sku,
+        descripcion: `Paquete que contiene ${productosSeleccionados.length} productos`,
+        norma,
+        tipo: 'Paquete', // Aseguramos que se guarde como paquete
+        esPaquete: true,
+        precio: precio ? parseFloat(precio) : 0,
+        listaPrecioId: parseInt(selectedListaPrecio),
+        aplicaImpuesto,
+        estado: 'ACTIVO',
 
-    setListaPrecioId(selectedId)
+        // Incluir los productos seleccionados
+        productos: productosSeleccionados.map(p => ({
+          productoId: p.productoId
+        }))
+      }
 
-    // Encontrar la lista de precios seleccionada
-    const selectedLista = listaPrecios.find(lista => lista.id === selectedId)
+      // Enviar la petición para crear el paquete
+      const response = await fetch('/api/productos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(packageData)
+      })
 
-    if (selectedLista) {
-      setPrecio(selectedLista.precio.toString())
-      setPrecioError('') // Limpiar error si existe
+      if (!response.ok) {
+        throw new Error('Error al crear el paquete')
+      }
+
+      const data = await response.json()
+
+      toast.success('Paquete creado exitosamente')
+      handleClose()
+
+      // Opcional: Recargar la lista de productos
+      window.location.reload()
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al crear el paquete')
     }
   }
 
   return (
     <Modal open={open} onClose={handleClose}>
       <Box sx={style}>
-        <Typography variant='h6' mb={2}>
-          Crear Nuevo Paquete
+        <Typography variant='h6' gutterBottom>
+          Crear Paquete
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label='Nombre del Paquete'
-              value={nombrePaquete}
-              onChange={e => setNombrePaquete(e.target.value)}
-            />
+
+        {/* Primera fila - Datos básicos */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={4}>
+            <TextField fullWidth label='Nombre' value={nombre} onChange={e => setNombre(e.target.value)} size='small' />
           </Grid>
-          <Grid item xs={6}>
-            <TextField fullWidth label='SKU' value={sku} onChange={e => setSku(e.target.value)} />
+          <Grid item xs={4}>
+            <TextField fullWidth label='SKU' value={sku} onChange={e => setSku(e.target.value)} size='small' />
           </Grid>
-          <Grid item xs={6}>
-            <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} />
+          <Grid item xs={4}>
+            <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} size='small' />
           </Grid>
-          <Grid item xs={6}>
-            <FormControl fullWidth error={!listaPrecioId}>
-              <InputLabel>Lista de Precios</InputLabel>
-              <Select value={listaPrecioId} onChange={handleListaPrecioChange} label='Lista de Precios'>
+        </Grid>
+
+        {/* Segunda fila - Precios */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={4}>
+            <FormControl fullWidth sx={{ mb: 4 }}>
+              <InputLabel id='lista-precios-label'>Lista de Precios</InputLabel>
+              <Select
+                label='Lista de Precios'
+                value={selectedListaPrecio}
+                onChange={e => setSelectedListaPrecio(e.target.value)}
+                labelId='lista-precios-label'
+              >
                 <MenuItem value=''>
-                  <em>Seleccione una lista de precios</em>
+                  <em>Seleccione una lista</em>
                 </MenuItem>
-                {listaPrecios.map(lista => (
+                {listaPreciosOptions.map(lista => (
                   <MenuItem key={lista.id} value={lista.id}>
-                    {`${lista.nombre} - $${lista.precio.toLocaleString()}`}
+                    {lista.nombre}
                   </MenuItem>
                 ))}
               </Select>
-              <FormHelperText>
-                {!listaPrecioId ? 'Seleccione una lista de precios' : 'El precio se actualizará automáticamente'}
-              </FormHelperText>
             </FormControl>
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               fullWidth
               label='Precio'
               value={precio}
-              onChange={e => handlePrecioChange(e.target.value)}
-              error={Boolean(precioError)}
-              helperText={precioError}
+              onChange={e => setPrecio(e.target.value)}
               InputProps={{
                 startAdornment: <InputAdornment position='start'>$</InputAdornment>
               }}
+              size='small'
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center' }}>
             <FormControlLabel
-              control={<Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} />}
+              control={
+                <Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} size='small' />
+              }
               label='Aplicar Impuesto'
             />
           </Grid>
         </Grid>
+
+        {/* Tercera fila - Búsqueda */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={6}>
+            <TextField
+              fullWidth
+              placeholder='Buscar en Paquete'
+              value={buscarPaquete}
+              onChange={e => setBuscarPaquete(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+              size='small'
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              fullWidth
+              placeholder='Buscar en Productos'
+              value={buscarProductos}
+              onChange={e => setBuscarProductos(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+              size='small'
+            />
+          </Grid>
+        </Grid>
+
+        {/* Cuarta fila - Listas de productos */}
+        <Grid container spacing={3}>
+          <Grid item xs={5}>
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
+              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderBottom: '1px solid #e0e0e0' }}>
+                <Typography variant='subtitle2'>PRODUCTOS ({productos.length})</Typography>
+              </Box>
+              <List sx={{ height: 300, overflow: 'auto' }}>
+                {productos
+                  .filter(p => p.nombre.toLowerCase().includes(buscarProductos.toLowerCase()))
+                  .map(producto => (
+                    <ListItem
+                      key={producto.productoId}
+                      dense
+                      button
+                      onClick={() => {
+                        // Solo marcar/desmarcar el checkbox
+                        if (selectedProducts.includes(producto.productoId)) {
+                          setSelectedProducts(prev => prev.filter(id => id !== producto.productoId))
+                        } else {
+                          setSelectedProducts(prev => [...prev, producto.productoId])
+                        }
+                      }}
+                    >
+                      <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                      <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} size='small' />
+                    </ListItem>
+                  ))}
+              </List>
+            </Box>
+          </Grid>
+
+          <Grid item xs={2} container alignItems='center' justifyContent='center'>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button
+                variant='contained'
+                size='small'
+                onClick={() => {
+                  // Mover productos seleccionados a la derecha
+                  const productsToMove = productos.filter(p => selectedProducts.includes(p.productoId))
+
+                  setProductosSeleccionados(prev => [...prev, ...productsToMove])
+                  setSelectedProducts([]) // Limpiar selección
+                }}
+                disabled={selectedProducts.length === 0}
+              >
+                <ArrowForwardIcon />
+              </Button>
+              <Button
+                variant='contained'
+                size='small'
+                onClick={() => {
+                  // Mover productos seleccionados a la izquierda
+                  setProductosSeleccionados(prev => prev.filter(p => !selectedPaquetes.includes(p.productoId)))
+                  setSelectedPaquetes([]) // Limpiar selección
+                }}
+                disabled={selectedPaquetes.length === 0}
+              >
+                <ArrowBackIcon />
+              </Button>
+            </Box>
+          </Grid>
+
+          <Grid item xs={5}>
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
+              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderBottom: '1px solid #e0e0e0' }}>
+                <Typography variant='subtitle2'>PAQUETE ({productosSeleccionados.length})</Typography>
+              </Box>
+              <List sx={{ height: 300, overflow: 'auto' }}>
+                {productosSeleccionados
+                  .filter(p => p.nombre.toLowerCase().includes(buscarPaquete.toLowerCase()))
+                  .map(producto => (
+                    <ListItem
+                      key={producto.productoId}
+                      dense
+                      button
+                      onClick={() => {
+                        // Solo marcar/desmarcar el checkbox
+                        if (selectedPaquetes.includes(producto.productoId)) {
+                          setSelectedPaquetes(prev => prev.filter(id => id !== producto.productoId))
+                        } else {
+                          setSelectedPaquetes(prev => [...prev, producto.productoId])
+                        }
+                      }}
+                    >
+                      <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                      <Checkbox edge='end' checked={selectedPaquetes.includes(producto.productoId)} size='small' />
+                    </ListItem>
+                  ))}
+              </List>
+            </Box>
+          </Grid>
+        </Grid>
+
+        {/* Botones de acción */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-          <Button onClick={handleClose} color='secondary'>
+          <Button variant='outlined' onClick={handleClose}>
             Cancelar
           </Button>
-          <Button onClick={handleClose} color='primary' variant='contained' disabled={Boolean(precioError)}>
-            Guardar
+          <Button
+            variant='contained'
+            onClick={handleCreatePackage}
+            disabled={!nombre || !sku || productosSeleccionados.length === 0}
+          >
+            Agregar Paquete
           </Button>
         </Box>
       </Box>

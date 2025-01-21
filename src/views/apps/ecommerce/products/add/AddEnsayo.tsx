@@ -193,23 +193,23 @@ const AddEnsayo = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin='normal'>
-                <InputLabel>Lista de Precios</InputLabel>
+              <FormControl fullWidth>
+                <InputLabel id='lista-precios-label'>Lista de Precios</InputLabel>
                 <Select
-                  value={listaPrecios}
-                  onChange={e => setListaPrecios(e.target.value)}
                   label='Lista de Precios'
-
-                  // Ya no es required
+                  value={listaPrecioId}
+                  onChange={e => setListaPrecioId(e.target.value)}
+                  labelId='lista-precios-label'
                 >
                   <MenuItem value=''>
                     <em>Seleccione una lista</em>
                   </MenuItem>
-                  {listaPrecios.map(lista => (
-                    <MenuItem key={lista.id} value={lista.id}>
-                      {lista.nombre}
-                    </MenuItem>
-                  ))}
+                  {Array.isArray(listaPrecios) &&
+                    listaPrecios.map(lista => (
+                      <MenuItem key={lista.id} value={lista.id}>
+                        {lista.nombre}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </Grid>

@@ -21,15 +21,24 @@ export async function GET(request: Request, { params }: { params: { id: string }
       }
     })
 
-    // Formatear la respuesta
+    // Formatear la respuesta asegurando que todos los productos estén asignados a la lista actual
     const productosFormateados = productos.map(producto => {
       const listaPrecioActual = producto.listasPrecios.find(lp => lp.listaPrecioId === listaId)
 
+      // Si no existe una relación con la lista actual, creamos una por defecto
+      const listaPrecioDefault = {
+        id: 0,
+        precio: null,
+        activo: true, // Por defecto activo
+        listaPrecio: {
+          id: listaId || 0,
+          nombre: `Lista ${listaId}`
+        }
+      }
+
       return {
         ...producto,
-        precio: listaPrecioActual?.precio || null,
-        activoEnLista: listaPrecioActual?.activo ?? false,
-        listaPrecio: listaPrecioActual?.listaPrecio || null
+        listasPrecios: [listaPrecioActual || listaPrecioDefault]
       }
     })
 

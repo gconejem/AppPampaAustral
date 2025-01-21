@@ -1,31 +1,43 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+import { prisma } from '@/lib/prisma'
 
 // GET - Obtener todos los contactos
 export async function GET() {
   try {
-    const contacts = await prisma.contacto.findMany({
+    const contactos = await prisma.contacto.findMany({
       orderBy: {
-        contactId: 'desc'
+        nombre: 'asc'
       }
     })
-    
-    return NextResponse.json(contacts)
+
+    return NextResponse.json(contactos)
   } catch (error) {
-    return NextResponse.json({ error: 'Error getting contacts' }, { status: 500 })
+    console.error('Error al obtener contactos:', error)
+
+    return NextResponse.json({ error: 'Error al obtener contactos' }, { status: 500 })
   }
 }
 
 // POST - Crear un nuevo contacto
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json()
-    const contact = await prisma.contacto.create({
-      data: body
+    const body = await request.json()
+
+    const contacto = await prisma.contacto.create({
+      data: {
+        nombre: body.nombre,
+        cargo: body.cargo,
+        email: body.email,
+        telefono1: body.telefono1,
+        telefono2: body.telefono2 || null
+      }
     })
-    
-    return NextResponse.json(contact)
+
+    return NextResponse.json(contacto, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Error creating contact' }, { status: 500 })
+    console.error('Error al crear contacto:', error)
+
+    return NextResponse.json({ error: 'Error al crear contacto' }, { status: 500 })
   }
-} 
+}

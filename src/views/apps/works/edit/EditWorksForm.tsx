@@ -41,21 +41,154 @@ import { initialFormData } from '@/types/forms/obra'
 import { ESTADOS_OBRA, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import { formatRut, validateRut } from '@/utils/rut-utils'
 
-type Props = {
+interface EditWorksFormProps {
   open: boolean
   handleClose: () => void
   obraData: Obra | null
   setData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
 }
 
-const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
+const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormProps) => {
   // States
   const [contactos, setContactos] = useState<ContactoObra[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
+  const [selectedRegion, setSelectedRegion] = useState<string>('')
+  const [selectedComuna, setSelectedComuna] = useState<string>('')
+  const [comunasList, setComunasList] = useState<any[]>([])
 
-  const { regiones, comunas, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
+  const { regiones, comunas } = useRegionesYComunas()
+
+  const {
+    control,
+    reset,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch
+  } = useForm<FormValidateType>({
+    defaultValues: {
+      numeroObra: '',
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      estado: 'activo',
+      estadoObra: 'activo',
+      nombreObra: '',
+      direccion: '',
+      region: '',
+      comuna: '',
+      telefono: '',
+      sitioWeb: '',
+      nombreCliente: '',
+      rut: '',
+      razonSocial: '',
+      giro: '',
+      direccionComercial: '',
+      comunaFacturacion: '',
+      telefonoFacturacion: '',
+      listaPrecios: '',
+      mailRecepcionFactura: ''
+    },
+    mode: 'onChange',
+    rules: {
+      numeroObra: {
+        required: 'El número de obra es requerido',
+        pattern: {
+          value: /^\d+$/,
+          message: 'Solo se permiten números'
+        }
+      },
+      fechaIngreso: {
+        required: 'La fecha es requerida',
+        validate: value => {
+          const date = new Date(value)
+
+          return date <= new Date() || 'La fecha no puede ser futura'
+        }
+      },
+      rut: {
+        required: 'El RUT es requerido',
+        validate: value => validateRut(value) || 'RUT inválido'
+      },
+      giro: {
+        required: 'El giro es requerido',
+        pattern: {
+          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
+          message: 'Solo se permiten letras'
+        }
+      },
+      telefonoFacturacion: {
+        required: 'El teléfono es requerido',
+        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+      },
+      mailRecepcionFactura: {
+        required: 'El email es requerido',
+        validate: value => validateEmail(value) || 'Email inválido'
+      }
+    }
+  })
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    if (obraData) {
+      // Prellenar el formulario con los datos de la obra
+      Object.keys(obraData).forEach(key => {
+        setValue(key as any, obraData[key as keyof Obra])
+      })
+
+      // Establecer región y comuna
+      setSelectedRegion(obraData.region || '')
+      setSelectedComuna(obraData.comuna || '')
+      setContactos(obraData.contactos || [])
+
+      // Cargar las comunas de la región seleccionada
+      if (obraData.region) {
+        fetchComunas(obraData.region)
+      }
+    }
+  }, [obraData])
+
+  // Función para cargar comunas
+  const fetchComunas = async (regionValue: string) => {
+    try {
+      const response = await fetch(`/api/ubicacion/comunas/${encodeURIComponent(regionValue)}`)
+
+      if (!response.ok) {
+        throw new Error('Error al cargar comunas')
+      }
+
+      const data = await response.json()
+
+      setComunasList(data)
+    } catch (error) {
+      console.error('Error al cargar comunas:', error)
+      toast.error('Error al cargar las comunas')
+    }
+  }
+
+  // Manejador para el cambio de región
+  const handleRegionChange = async (event: SelectChangeEvent<string>) => {
+    const regionValue = event.target.value
+
+    setSelectedRegion(regionValue)
+    setSelectedComuna('')
+    setValue('region', regionValue)
+    setValue('comuna', '')
+
+    if (regionValue) {
+      await fetchComunas(regionValue)
+    } else {
+      setComunasList([])
+    }
+  }
+
+  // Manejador para el cambio de comuna
+  const handleComunaChange = (event: SelectChangeEvent<string>) => {
+    const comunaValue = event.target.value
+
+    setSelectedComuna(comunaValue)
+    setValue('comuna', comunaValue)
+  }
 
   // Validación de email
   const validateEmail = (email: string) => {
@@ -102,145 +235,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
 
     setValue('telefonoFacturacion', formattedPhone)
   }
-
-  const {
-    control,
-    reset,
-    handleSubmit,
-    formState: { errors },
-    setValue
-  } = useForm<FormValidateType>({
-    defaultValues: {
-      numeroObra: '',
-      fechaIngreso: new Date().toISOString().split('T')[0],
-      estado: 'activo',
-      estadoObra: 'activo',
-      nombreObra: '',
-      direccion: '',
-      region: '',
-      comuna: '',
-      telefono: '',
-      sitioWeb: '',
-      nombreCliente: '',
-      rut: '',
-      razonSocial: '',
-      giro: '',
-      direccionComercial: '',
-      comunaFacturacion: '',
-      telefonoFacturacion: '',
-      listaPrecios: '',
-      mailRecepcionFactura: ''
-
-      // ... otros campos con valores por defecto
-    },
-    mode: 'onChange',
-    rules: {
-      numeroObra: {
-        required: 'El número de obra es requerido',
-        pattern: {
-          value: /^\d+$/,
-          message: 'Solo se permiten números'
-        }
-      },
-      fechaIngreso: {
-        required: 'La fecha es requerida',
-        validate: value => {
-          const date = new Date(value)
-
-          return date <= new Date() || 'La fecha no puede ser futura'
-        }
-      },
-      rut: {
-        required: 'El RUT es requerido',
-        validate: value => validateRut(value) || 'RUT inválido'
-      },
-      giro: {
-        required: 'El giro es requerido',
-        pattern: {
-          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
-          message: 'Solo se permiten letras'
-        }
-      },
-      telefonoFacturacion: {
-        required: 'El teléfono es requerido',
-        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
-      },
-      mailRecepcionFactura: {
-        required: 'El email es requerido',
-        validate: value => validateEmail(value) || 'Email inválido'
-      }
-    }
-  })
-
-  useEffect(() => {
-    console.log('EditWorksForm mounted')
-    console.log('open:', open)
-    console.log('obraData:', obraData)
-  }, [])
-
-  useEffect(() => {
-    if (obraData) {
-      console.log('Datos recibidos en EditWorksForm:', obraData)
-
-      const formattedData = {
-        ...obraData,
-        estado: obraData.estado || 'activo',
-        estadoObra: obraData.estadoObra || 'activo',
-        informeMandante: Boolean(obraData.informeMandante),
-        acreditacionPersonal: Boolean(obraData.acreditacionPersonal),
-        especificacionesTecnicas: Boolean(obraData.especificacionesTecnicas),
-        acreditacionEquipos: Boolean(obraData.acreditacionEquipos),
-        cartaCompromiso: Boolean(obraData.cartaCompromiso),
-        mandatoServiu: Boolean(obraData.mandatoServiu),
-        estadoPago: Boolean(obraData.estadoPago),
-        hes: Boolean(obraData.hes),
-        oc: Boolean(obraData.oc)
-      }
-
-      console.log('Datos a cargar en el formulario:', formattedData)
-      reset(formattedData)
-      console.log('Formulario reseteado')
-
-      // Cargar contactos
-      if (obraData.contactos) {
-        setContactos(obraData.contactos)
-      }
-    }
-  }, [obraData, reset])
-
-  useEffect(() => {
-    if (obraData && regiones.length > 0) {
-      const regionEncontrada = regiones.find(r => r.nombre === obraData.region)
-
-      console.log('Región encontrada:', regionEncontrada)
-
-      if (regionEncontrada) {
-        // Establecer la región
-        setSelectedRegion(regionEncontrada.codigo)
-        setValue('region', regionEncontrada.codigo)
-
-        // Buscar y establecer la comuna después de cargar las comunas
-        const buscarYEstablecerComuna = async () => {
-          try {
-            const response = await fetch(`/api/ubicacion?regionId=${regionEncontrada.codigo}`)
-            const comunasData = await response.json()
-
-            const comunaEncontrada = comunasData.find((c: any) => c.nombre === obraData.comuna)
-
-            console.log('Comuna encontrada:', comunaEncontrada)
-
-            if (comunaEncontrada) {
-              setValue('comuna', comunaEncontrada.id)
-            }
-          } catch (error) {
-            console.error('Error al cargar comuna:', error)
-          }
-        }
-
-        buscarYEstablecerComuna()
-      }
-    }
-  }, [obraData, regiones, setValue])
 
   const onSubmit = async (data: FormValidateType) => {
     try {
@@ -293,7 +287,9 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
           <Grid item xs={12}>
             <Typography variant='h6'>Datos Principales</Typography>
           </Grid>
-          <Grid item xs={12} sm={6}>
+
+          {/* Primera fila: Número Obra, Fecha Ingreso y Estado */}
+          <Grid item xs={12} sm={4}>
             <Controller
               name='numeroObra'
               control={control}
@@ -320,30 +316,67 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+
+          <Grid item xs={12} sm={4}>
             <Controller
               name='fechaIngreso'
               control={control}
+              rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} fullWidth type='date' label='Fecha Ingreso' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Fecha Ingreso *'
+                  type='date'
+                  InputLabelProps={{ shrink: true }}
+                  error={Boolean(errors.fechaIngreso)}
+                  helperText={errors.fechaIngreso && 'Este campo es obligatorio'}
+                />
               )}
             />
           </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <Controller
+              name='estado'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Estado' disabled value={field.value || 'activo'} />
+              )}
+            />
+          </Grid>
+
+          {/* Segunda fila: Nombre Obra y Dirección */}
           <Grid item xs={12} sm={6}>
             <Controller
               name='nombreObra'
               control={control}
+              rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Nombre Obra' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Nombre Obra *'
+                  error={Boolean(errors.nombreObra)}
+                  helperText={errors.nombreObra && 'Este campo es obligatorio'}
+                />
               )}
             />
           </Grid>
+
           <Grid item xs={12} sm={6}>
             <Controller
               name='direccion'
               control={control}
+              rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Dirección' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Dirección *'
+                  error={Boolean(errors.direccion)}
+                  helperText={errors.direccion && 'Este campo es obligatorio'}
+                />
               )}
             />
           </Grid>
@@ -357,61 +390,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
-              <InputLabel>Región *</InputLabel>
-              <Controller
-                name='region'
-                control={control}
-                rules={{ required: 'La región es requerida' }}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label='Región *'
-                    onChange={e => {
-                      const regionCodigo = e.target.value
-
-                      console.log('Región seleccionada (código):', regionCodigo)
-                      field.onChange(regionCodigo)
-                      setSelectedRegion(regionCodigo)
-                    }}
-                    disabled={loading}
-                    error={Boolean(errors.region)}
-                  >
-                    {Array.isArray(regiones) &&
-                      regiones.map((region: any) => (
-                        <MenuItem key={region.id} value={region.codigo}>
-                          {region.nombre}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                )}
-              />
-              {errors.region && <FormHelperText error>{errors.region.message}</FormHelperText>}
+              <InputLabel>Región</InputLabel>
+              <Select value={selectedRegion} label='Región' onChange={handleRegionChange}>
+                {regiones.map(region => (
+                  <MenuItem key={region.id} value={region.nombre}>
+                    {region.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
-              <InputLabel>Comuna *</InputLabel>
-              <Controller
-                name='comuna'
-                control={control}
-                rules={{ required: 'La comuna es requerida' }}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label='Comuna *'
-                    disabled={!selectedRegion || loading}
-                    error={Boolean(errors.comuna)}
-                  >
-                    {Array.isArray(comunas) &&
-                      comunas.map((comuna: any) => (
-                        <MenuItem key={comuna.id} value={comuna.id}>
-                          {comuna.nombre}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                )}
-              />
-              {errors.comuna && <FormHelperText error>{errors.comuna.message}</FormHelperText>}
+              <InputLabel>Comuna</InputLabel>
+              <Select value={selectedComuna} label='Comuna' onChange={handleComunaChange} disabled={!selectedRegion}>
+                {comunasList.map(comuna => (
+                  <MenuItem key={comuna.id} value={comuna.nombre}>
+                    {comuna.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -467,27 +465,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: Props) => {
               {errors.estado && <FormHelperText>Este campo es requerido</FormHelperText>}
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={Boolean(errors.estadoObra)}>
-              <InputLabel>Estado Obra</InputLabel>
-              <Controller
-                name='estadoObra'
-                control={control}
-                defaultValue={obraData?.estadoObra}
-                rules={{ required: true }}
-                render={({ field: { value, ...field } }) => (
-                  <Select label='Estado Obra' value={value || ''} {...field}>
-                    {ESTADOS_OBRA.map(estado => (
-                      <MenuItem key={estado.value} value={estado.value}>
-                        {estado.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.estadoObra && <FormHelperText>Este campo es requerido</FormHelperText>}
-            </FormControl>
-          </Grid>
+          <Grid item xs={12} sm={6}></Grid>
           <Grid item xs={12} sm={6}>
             <Controller
               name='sector'

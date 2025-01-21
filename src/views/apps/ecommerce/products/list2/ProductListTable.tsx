@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
+import { toast } from 'react-hot-toast'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -161,7 +162,20 @@ const ProductListTable = () => {
   // Función para actualizar estado activo de forma optimista
   const handleActiveToggle = async (productoId: number, currentActive: boolean) => {
     try {
-      // Primero actualizamos el estado local de forma optimista
+      const response = await fetch(`/api/productos/${productoId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          activoEnLista: !currentActive,
+          listaPrecioId: parseInt(selectedList)
+        })
+      })
+
+      if (!response.ok) throw new Error('Error al actualizar estado')
+
+      // Actualizar el estado local inmediatamente
       setProductos(prevProductos =>
         prevProductos.map(producto => {
           if (producto.productoId === productoId) {
@@ -178,43 +192,12 @@ const ProductListTable = () => {
         })
       )
 
-      // Luego hacemos la llamada a la API
-      const response = await fetch(`/api/productos/${productoId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          activoEnLista: !currentActive,
-          listaPrecioId: parseInt(selectedList)
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al actualizar estado')
-
-        // Si hay error, revertimos el cambio
-        setProductos(prevProductos =>
-          prevProductos.map(producto => {
-            if (producto.productoId === productoId) {
-              return {
-                ...producto,
-                listasPrecios: producto.listasPrecios.map(lp => ({
-                  ...lp,
-                  activo: currentActive
-                }))
-              }
-            }
-
-            return producto
-          })
-        )
-      }
+      setSuccessMessage('Estado actualizado correctamente')
     } catch (error) {
       console.error('Error:', error)
 
-      // Mostrar mensaje de error si lo deseas
-      setSuccessMessage('Error al actualizar el estado')
+      // Opcionalmente, revertir el cambio si hubo error
+      toast.error('Error al actualizar el estado')
     }
   }
 

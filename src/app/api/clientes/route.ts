@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import { createCliente, getClientes, getClienteById, updateCliente, deleteCliente } from './index'
 
 // GET - Obtener todos los clientes
@@ -34,18 +34,28 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    // Asegurarnos de que la comuna y región sean strings
-    const clienteData = {
-      ...body,
-      region: String(body.region),
-      comuna: String(body.comuna)
+    console.log('Body recibido en POST:', JSON.stringify(body, null, 2))
+
+    // Validaciones más específicas
+    if (!body.rut || !body.razonSocial || !body.nombreCliente) {
+      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const cliente = await createCliente(clienteData)
+    const cliente = await createCliente(body)
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {
-    console.error('Error creating client:', error)
+    console.error('Error completo al crear cliente:', error)
+
+    // Manejar errores específicos
+    if (error instanceof Error) {
+      if (error.message.includes('Ya existe un cliente con el RUT')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 409 } // Conflict
+        )
+      }
+    }
 
     return NextResponse.json({ error: 'Error al crear el cliente' }, { status: 500 })
   }

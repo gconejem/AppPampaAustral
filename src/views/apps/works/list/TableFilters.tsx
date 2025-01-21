@@ -1,126 +1,102 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
-import CardContent from '@mui/material/CardContent'
-import FormControl from '@mui/material/FormControl'
 import Grid from '@mui/material/Grid'
+import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
 
-// Date Imports
-import { format, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns'
-
-// Data Imports
-import { ESTADOS_OBRA } from '@/data/obraData'
-
-// Component Imports
+// Custom Component Imports
 import PickersRange from './date'
+import { ESTADOS_OBRA } from '@/data/constants'
 
-// Type Imports
-import type { WorkType } from '@/types/apps/workTypes'
-
-type Props = {
-  setData: (data: WorkType[] | ((prevData: WorkType[]) => WorkType[])) => void
-  tableData?: WorkType[]
+interface TableFiltersProps {
+  workData: any[]
+  setFilteredData: (data: any[]) => void
+  estados?: string[]
 }
 
-const TableFilters = ({ setData, tableData }: Props) => {
-  // States
-  const [estado, setEstado] = useState('')
+const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: TableFiltersProps) => {
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [selectedEstado, setSelectedEstado] = useState<string>('')
 
-  const [dateRange, setDateRange] = useState<{
-    start: Date | null
-    end: Date | null
-  }>({
-    start: null,
-    end: null
-  })
+  const handleDateChange = (start: Date | null, end: Date | null) => {
+    setStartDate(start)
+    setEndDate(end)
 
-  useEffect(() => {
-    if (!tableData) return
+    let filteredWorks = [...workData]
 
-    let filteredData = [...tableData]
+    if (start && end) {
+      filteredWorks = filteredWorks.filter(work => {
+        const workDate = new Date(work.createdAt)
 
-    // Filtrar por estado
+        return workDate >= start && workDate <= end
+      })
+    }
+
+    // Filtrar por estado de forma segura
+    if (selectedEstado) {
+      filteredWorks = filteredWorks.filter(
+        work => work.estado?.toString().toLowerCase() === selectedEstado.toString().toLowerCase()
+      )
+    }
+
+    setFilteredData(filteredWorks)
+  }
+
+  const handleEstadoChange = (event: any) => {
+    const estado = event.target.value
+
+    setSelectedEstado(estado)
+
+    let filteredWorks = [...workData]
+
+    // Filtrar por estado de forma segura
     if (estado) {
-      filteredData = filteredData.filter(obra => obra.estado === estado)
+      filteredWorks = filteredWorks.filter(
+        work => work.estado?.toString().toLowerCase() === estado.toString().toLowerCase()
+      )
     }
 
-    // Filtrar por rango de fechas
-    if (dateRange.start && dateRange.end) {
-      filteredData = filteredData.filter(obra => {
-        try {
-          const fechaCreacion = new Date(obra.createdAt)
-          const startDate = startOfDay(dateRange.start)
-          const endDate = endOfDay(dateRange.end)
+    if (startDate && endDate) {
+      filteredWorks = filteredWorks.filter(work => {
+        const workDate = new Date(work.createdAt)
 
-          // Agregar logs para debugging
-          console.log('Comparando fechas para obra:', obra.numeroObra, {
-            fechaCreacion: fechaCreacion.toISOString(),
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
-          })
-
-          const isWithinRange = fechaCreacion >= startDate && fechaCreacion <= endDate
-
-          console.log('¿Está en el rango?:', isWithinRange)
-
-          return isWithinRange
-        } catch (error) {
-          console.error('Error al procesar fecha para obra:', obra.numeroObra, error)
-
-          return false
-        }
+        return workDate >= startDate && workDate <= endDate
       })
     }
 
-    console.log('Datos filtrados:', filteredData.length, 'registros')
-    setData(filteredData)
-  }, [estado, dateRange, tableData, setData])
-
-  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
-    try {
-      console.log('Fechas recibidas:', {
-        start: start ? format(start, 'yyyy-MM-dd') : null,
-        end: end ? format(end, 'yyyy-MM-dd') : null
-      })
-      setDateRange({ start, end })
-    } catch (error) {
-      console.error('Error al cambiar fechas:', error)
-    }
+    setFilteredData(filteredWorks)
   }
 
   return (
-    <CardContent>
-      <Grid container spacing={5} style={{ marginBottom: '16px' }}>
-        {/* Rango de Fechas */}
-        <Grid item xs={12} sm={3} sx={{ marginRight: '-79px' }}>
-          <PickersRange
-            startDate={dateRange.start}
-            endDate={dateRange.end}
-            onChange={handleDateRangeChange}
-            placeholderText='Filtrar por fecha de creación'
-          />
-        </Grid>
-
-        {/* Campo de Estado */}
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel>Estado</InputLabel>
-            <Select value={estado} label='Estado' onChange={e => setEstado(e.target.value)}>
-              <MenuItem value=''>Todos</MenuItem>
-              {ESTADOS_OBRA.map(estado => (
-                <MenuItem key={estado.value} value={estado.value}>
-                  {estado.label}
+    <Grid container spacing={6} className='px-4 py-4'>
+      <Grid item xs={12} sm={6}>
+        <PickersRange
+          startDate={startDate}
+          endDate={endDate}
+          onChange={handleDateChange}
+          placeholderText='Filtrar por fecha de creación'
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <FormControl fullWidth>
+          <InputLabel id='estado-select-label'>Estado</InputLabel>
+          <Select labelId='estado-select-label' value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
+            <MenuItem value=''>Todos</MenuItem>
+            {Array.isArray(estados) &&
+              estados.map((estado: string) => (
+                <MenuItem key={estado} value={estado}>
+                  {estado}
                 </MenuItem>
               ))}
-            </Select>
-          </FormControl>
-        </Grid>
+          </Select>
+        </FormControl>
       </Grid>
-    </CardContent>
+    </Grid>
   )
 }
 

@@ -52,46 +52,80 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       productoId,
       createdAt,
       updatedAt,
-      listaPrecio,
-      listaPrecios,
+      listasPrecios,
+      listaPrecioId,
+      precio,
       productosEnPaquete,
-      paquetesQueLoIncluyen,
-      ...updateData
+      ...productoData
     } = data
 
-    const producto = await prisma.producto.update({
+    // Actualizar el producto
+    const updatedProduct = await prisma.producto.update({
       where: {
         productoId: id
       },
       data: {
-        nombre: updateData.nombre,
-        sku: updateData.sku,
-        descripcion: updateData.descripcion,
-        area: updateData.area,
-        familia: updateData.familia,
-        tipo: updateData.tipo,
-        precio: typeof updateData.precio === 'string' ? parseFloat(updateData.precio) : updateData.precio,
-        norma: updateData.norma,
-        aplicaImpuesto: updateData.aplicaImpuesto,
-        listaPrecioId: updateData.listaPrecioId ? parseInt(updateData.listaPrecioId) : null
+        ...productoData,
+
+        // Actualizar lista de precios si se proporciona
+        ...(listaPrecioId && precio
+          ? {
+              listasPrecios: {
+                upsert: {
+                  where: {
+                    productoId_listaPrecioId: {
+                      productoId: id,
+                      listaPrecioId
+                    }
+                  },
+                  create: {
+                    listaPrecioId,
+                    precio,
+                    activo: true
+                  },
+                  update: {
+                    precio,
+                    activo: true
+                  }
+                }
+              }
+            }
+          : {}),
+
+        // Actualizar productos en el paquete
+        ...(productosEnPaquete
+          ? {
+              productosEnPaquete: {
+                deleteMany: {}, // Primero eliminar todas las relaciones existentes
+                createMany: {
+                  // Luego crear las nuevas relaciones
+                  data: productosEnPaquete.map((p: { productoId: number }) => ({
+                    productoId: p.productoId
+                  }))
+                }
+              }
+            }
+          : {})
       },
       include: {
-        listaPrecio: true // Incluir la relación con listaPrecio
+        listasPrecios: {
+          include: {
+            listaPrecio: true
+          }
+        },
+        productosEnPaquete: {
+          include: {
+            producto: true
+          }
+        }
       }
     })
 
-    console.log('Producto actualizado:', producto)
-
-    return NextResponse.json(producto)
+    return NextResponse.json(updatedProduct)
   } catch (error) {
     console.error('Error al actualizar producto:', error)
 
-    return new NextResponse(JSON.stringify({ error: 'Error al actualizar el producto' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 })
   }
 }
 
@@ -102,29 +136,33 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: 'ID de producto inválido' }, { status: 400 })
     }
 
+    const productoId = parseInt(params.id)
+
     // Verificar que el producto existe
     const productoExists = await prisma.producto.findUnique({
-      where: {
-        productoId: parseInt(params.id)
-      }
+      where: { productoId }
     })
 
     if (!productoExists) {
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
     }
 
-    // Eliminar las relaciones de paquetes
+    // Eliminar en orden para manejar las dependencias
+    // 1. Eliminar relaciones con listas de precios
+    await prisma.productoListaPrecio.deleteMany({
+      where: { productoId }
+    })
+
+    // 2. Eliminar relaciones de paquetes
     await prisma.productoPaquete.deleteMany({
       where: {
-        OR: [{ productoId: parseInt(params.id) }, { paqueteId: parseInt(params.id) }]
+        OR: [{ productoId }, { paqueteId: productoId }]
       }
     })
 
-    // Eliminar el producto
+    // 3. Finalmente eliminar el producto
     await prisma.producto.delete({
-      where: {
-        productoId: parseInt(params.id)
-      }
+      where: { productoId }
     })
 
     return NextResponse.json({ message: 'Producto eliminado correctamente' })

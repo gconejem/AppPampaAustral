@@ -5,138 +5,74 @@ import { prisma } from '@/lib/prisma'
 // POST - Crear un nuevo producto
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const data = await request.json()
 
-    console.log('Datos recibidos:', body)
+    console.log('Datos recibidos:', data)
 
-    const {
-      nombre,
-      sku,
-      descripcion,
-      area = 'Suelos',
-      familia = 'Clasificación',
-      tipo,
-      norma,
-      aplicaImpuesto = true,
-      esPaquete = false
-    } = body
+    // Extraer los datos de listas de precios
+    const { listaPreciosData, ...productoData } = data
 
-    // Validar campos requeridos
-    const camposRequeridos = ['sku', 'nombre', 'tipo']
-    const camposFaltantes = camposRequeridos.filter(campo => !body[campo])
-
-    if (camposFaltantes.length > 0) {
-      return NextResponse.json({ error: `Campos requeridos faltantes: ${camposFaltantes.join(', ')}` }, { status: 400 })
-    }
-
-    // Verificar si el SKU ya existe
-    const existingProduct = await prisma.producto.findUnique({
-      where: { sku }
-    })
-
-    if (existingProduct) {
-      return NextResponse.json(
-        {
-          error: `Ya existe un producto con el SKU: ${sku}`
-        },
-        {
-          status: 400
-        }
-      )
-    }
-
-    // Crear el producto sin precio ni lista de precio
+    // Crear el producto con sus relaciones
     const producto = await prisma.producto.create({
       data: {
-        nombre,
-        sku,
-        descripcion: descripcion || null,
-        area,
-        familia,
-        tipo,
-        norma: norma || null,
-        aplicaImpuesto,
-        estado: 'ACTIVO',
-        esPaquete,
-        precio: null
+        ...productoData,
+
+        // Si hay datos de listas de precios, crear las relaciones
+        ...(listaPreciosData && {
+          listasPrecios: {
+            create: listaPreciosData.map((lp: any) => ({
+              listaPrecioId: lp.listaPrecioId,
+              precio: lp.precio,
+              activo: lp.activo
+            }))
+          }
+        })
+      },
+      include: {
+        listasPrecios: {
+          include: {
+            listaPrecio: true
+          }
+        }
       }
     })
-
-    console.log('Producto creado:', producto)
 
     return NextResponse.json(producto)
   } catch (error) {
-    console.error('Error detallado al crear producto:', error)
-    let errorMessage = 'Error al crear producto'
+    console.error('Error al crear producto:', error)
 
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-
-    return NextResponse.json({ error: errorMessage }, { status: 500 })
+    return NextResponse.json({ error: 'Error al crear producto' }, { status: 500 })
   }
 }
 
-// GET - Obtener todos los productos con sus precios
-export async function GET(request: Request) {
+// GET - Obtener todos los productos
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const esPaquete = searchParams.get('esPaquete')
-
-    const skip = (page - 1) * limit
-
-    const where: any = {}
-
-    if (esPaquete !== null) {
-      where.esPaquete = esPaquete === 'true'
-    }
-
-    const [productos, total] = await Promise.all([
-      prisma.producto.findMany({
-        skip,
-        take: limit,
-        where,
-        include: {
-          listaPrecio: true // Incluir la relación con lista de precios
-        },
-        orderBy: {
-          productoId: 'desc'
-        }
-      }),
-      prisma.producto.count({ where })
-    ])
-
-    // Formatear los productos para incluir la información de la lista de precios
-    const productosFormateados = productos.map(producto => ({
-      ...producto,
-      tipo: producto.esPaquete ? 'Paquete' : 'Ensayo',
-      listaPrecio: producto.listaPrecio
-        ? {
-            id: producto.listaPrecio.id,
-            nombre: producto.listaPrecio.nombre,
-            precio: producto.listaPrecio.precio
-          }
-        : null
-    }))
-
-    return NextResponse.json({
-      productos: productosFormateados,
-      meta: {
-        total,
-        page,
-        limit
+    const productos = await prisma.producto.findMany({
+      where: {
+        esPaquete: false,
+        estado: 'ACTIVO'
+      },
+      select: {
+        productoId: true,
+        sku: true,
+        nombre: true
       }
+    })
+
+    // Log para debugging
+    console.log('Productos a enviar:', productos)
+
+    // Devolver directamente el array de productos
+    return new Response(JSON.stringify(productos), {
+      headers: { 'Content-Type': 'application/json' }
     })
   } catch (error) {
     console.error('Error:', error)
 
-    return new NextResponse(JSON.stringify({ error: 'Error al obtener productos' }), {
+    return new Response(JSON.stringify({ error: 'Error al obtener productos' }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     })
   }
 }

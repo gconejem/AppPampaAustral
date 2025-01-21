@@ -2,11 +2,12 @@
 
 // React Imports
 import { useEffect, useState, useMemo } from 'react'
-import { toast } from 'react-hot-toast'
 
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+
+import { toast } from 'react-hot-toast'
 
 // MUI Imports
 
@@ -168,7 +169,7 @@ const ContactsListTable = () => {
 
   // Hooks
   const params = useParams()
-  const locale = params?.lang as string || 'es'
+  const locale = (params?.lang as string) || 'es'
 
   const handleClickOpenDialog = (contact: ContactTypeWithAction) => {
     setSelectedContact(contact)
@@ -178,11 +179,29 @@ const ContactsListTable = () => {
   const fetchContacts = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/contactos')
-      if (!response.ok) throw new Error('Error al cargar contactos')
-      const contacts = await response.json()
-      setData(contacts)
-      setFilteredData(contacts)
+
+      const [contactosResponse, clientesResponse] = await Promise.all([fetch('/api/contactos'), fetch('/api/clientes')])
+
+      if (!contactosResponse.ok || !clientesResponse.ok) throw new Error('Error al cargar contactos')
+
+      const contactosDirectos = await contactosResponse.json()
+      const clientes = await clientesResponse.json()
+
+      // Extraer contactos de clientes
+      const contactosClientes = clientes.flatMap((cliente: any) =>
+        cliente.clientesContactos.map((cc: any) => ({
+          ...cc.contacto,
+          clienteNombre: cliente.nombreCliente
+        }))
+      )
+
+      // Combinar y eliminar duplicados por contactId
+      const todosContactos = [...contactosDirectos, ...contactosClientes]
+
+      const contactosUnicos = Array.from(new Map(todosContactos.map(c => [c.contactId, c])).values())
+
+      setData(contactosUnicos)
+      setFilteredData(contactosUnicos)
     } catch (error: any) {
       toast.error(error.message || 'Error al cargar contactos')
     } finally {
@@ -194,7 +213,7 @@ const ContactsListTable = () => {
     try {
       if (!selectedContact) return
       setIsDeleteLoading(true)
-      
+
       const response = await fetch(`/api/contactos/${selectedContact.contactId}`, {
         method: 'DELETE'
       })
@@ -202,9 +221,10 @@ const ContactsListTable = () => {
       if (!response.ok) throw new Error('Error al eliminar contacto')
 
       const newData = data.filter(contact => contact.contactId !== selectedContact.contactId)
+
       setData(newData)
       setFilteredData(newData)
-      
+
       toast.success('Contacto eliminado exitosamente')
       handleCloseDialog()
     } catch (error: any) {
@@ -223,33 +243,58 @@ const ContactsListTable = () => {
     setEditContactOpen(true)
   }
 
-  const handleExportContacts = () => {
+  const handleExportSingleContact = (contact: ContactType) => {
     try {
-      // Crear CSV
       const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2']
-      const csvData = data.map(contact => [
+
+      const csvData = [[contact.nombre, contact.cargo, contact.email, contact.telefono1, contact.telefono2 || '']]
+
+      const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+
+      link.setAttribute('href', url)
+      link.setAttribute('download', `contacto_${contact.nombre}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Contacto exportado correctamente')
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      toast.error('Error al exportar el contacto')
+    }
+  }
+
+  const handleExportContacts = (contactsToExport: ContactType[]) => {
+    try {
+      const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2']
+
+      const csvData = contactsToExport.map(contact => [
         contact.nombre,
         contact.cargo,
         contact.email,
         contact.telefono1,
         contact.telefono2 || ''
       ])
-      
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => row.join(','))
-      ].join('\n')
 
-      // Crear y descargar el archivo
+      const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
+
       link.setAttribute('href', url)
-      link.setAttribute('download', 'contactos.csv')
+      link.setAttribute('download', `contactos_${new Date().toISOString().split('T')[0]}.csv`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      toast.success('Contactos exportados correctamente')
     } catch (error) {
+      console.error('Error al exportar:', error)
       toast.error('Error al exportar contactos')
     }
   }
@@ -302,16 +347,13 @@ const ContactsListTable = () => {
         header: 'ACCIÓN',
         cell: ({ row }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton
-              color='primary'
-              onClick={() => handleEditContact(row.original)}
-            >
+            <IconButton color='primary' onClick={() => handleEditContact(row.original)}>
               <EditIcon />
             </IconButton>
-            <IconButton
-              color='error'
-              onClick={() => handleClickOpenDialog(row.original)}
-            >
+            <IconButton color='secondary' onClick={() => handleExportSingleContact(row.original)}>
+              <i className='ri-download-2-line' />
+            </IconButton>
+            <IconButton color='error' onClick={() => handleClickOpenDialog(row.original)}>
               <DeleteIcon />
             </IconButton>
           </Box>
@@ -372,9 +414,16 @@ const ContactsListTable = () => {
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
             className='max-sm:is-full'
-            onClick={handleExportContacts}
+            onClick={() => {
+              const selectedRows = table.getSelectedRowModel().rows
+
+              const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data
+
+              handleExportContacts(dataToExport)
+            }}
           >
-            Exportar
+            Exportar CSV{' '}
+            {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : ''}
           </Button>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <TextField

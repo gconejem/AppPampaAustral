@@ -1,12 +1,12 @@
-const { PrismaClient } = require('@prisma/client')
-const { hash } = require('bcryptjs')
+import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcryptjs'
 
-const prismaClient = new PrismaClient()
+const prisma = new PrismaClient()
 
 const listasPrecios = [
-  { nombre: 'Lista 1', precio: 1000.0 },
-  { nombre: 'Lista 2', precio: 2000.0 },
-  { nombre: 'Lista 3', precio: 3000.0 }
+  { nombre: 'Lista 1', precio: 1000 },
+  { nombre: 'Lista 2', precio: 2000 },
+  { nombre: 'Lista 3', precio: 3000 }
 ]
 
 const regiones = [
@@ -417,7 +417,7 @@ const regiones = [
 async function seedListasPrecios() {
   for (const lista of listasPrecios) {
     try {
-      await prismaClient.listaPrecio.upsert({
+      await prisma.listaPrecio.upsert({
         where: {
           nombre: lista.nombre
         },
@@ -441,7 +441,7 @@ async function seedRegionesYComunas() {
 
   for (const region of regiones) {
     try {
-      const regionCreada = await prismaClient.region.upsert({
+      const regionCreada = await prisma.region.upsert({
         where: { codigo: region.codigo },
         update: { nombre: region.nombre },
         create: {
@@ -451,7 +451,7 @@ async function seedRegionesYComunas() {
       })
 
       for (const nombreComuna of region.comunas) {
-        await prismaClient.comuna.upsert({
+        await prisma.comuna.upsert({
           where: {
             codigo: `${region.codigo}-${nombreComuna.toLowerCase().replace(/\s+/g, '-')}`
           },
@@ -475,8 +475,10 @@ async function seedRegionesYComunas() {
 }
 
 async function main() {
+  console.log('Iniciando seed...')
+
   // Verificar si el usuario admin ya existe
-  const existingAdmin = await prismaClient.user.findUnique({
+  const existingAdmin = await prisma.user.findUnique({
     where: { email: 'admin@materio.com' }
   })
 
@@ -486,7 +488,7 @@ async function main() {
     // Crear usuario admin solo si no existe
     const hashedPassword = await hash('admin', 10)
 
-    adminUser = await prismaClient.user.create({
+    adminUser = await prisma.user.create({
       data: {
         name: 'Admin User',
         email: 'admin@materio.com',
@@ -496,7 +498,7 @@ async function main() {
     })
 
     // Crear sesión para el usuario
-    await prismaClient.session.create({
+    await prisma.session.create({
       data: {
         userId: adminUser.id,
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -505,7 +507,7 @@ async function main() {
     })
 
     // Crear cuenta (para auth)
-    await prismaClient.account.create({
+    await prisma.account.create({
       data: {
         userId: adminUser.id,
         type: 'credentials',
@@ -516,13 +518,13 @@ async function main() {
   }
 
   // Verificar si la obra de prueba ya existe
-  const existingObra = await prismaClient.obra.findFirst({
+  const existingObra = await prisma.obra.findFirst({
     where: { numeroObra: 'OB001' }
   })
 
   if (!existingObra) {
     // Crear obra de prueba
-    const testObra = await prismaClient.obra.create({
+    const testObra = await prisma.obra.create({
       data: {
         numeroObra: 'OB001',
         fechaIngreso: new Date('2024-12-31T17:05:08.163Z'),
@@ -559,13 +561,13 @@ async function main() {
   }
 
   // Verificar si el cliente de prueba ya existe
-  const existingCliente = await prismaClient.cliente.findUnique({
+  const existingCliente = await prisma.cliente.findUnique({
     where: { rut: '12345678-9' }
   })
 
   if (!existingCliente) {
     // Crear cliente de prueba
-    const testCliente = await prismaClient.cliente.create({
+    const testCliente = await prisma.cliente.create({
       data: {
         rut: '12345678-9',
         estado: 'active',
@@ -620,5 +622,5 @@ main()
     process.exit(1)
   })
   .finally(async () => {
-    await prismaClient.$disconnect()
+    await prisma.$disconnect()
   })

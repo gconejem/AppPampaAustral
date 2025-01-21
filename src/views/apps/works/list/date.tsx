@@ -18,7 +18,19 @@ interface PickersRangeProps {
 }
 
 const CustomInput = forwardRef((props: any, ref) => {
-  return <TextField fullWidth inputRef={ref} {...props} />
+  const { onClick } = props
+
+  return (
+    <TextField
+      fullWidth
+      inputRef={ref}
+      onClick={e => {
+        e.stopPropagation() // Prevenir propagación
+        onClick && onClick(e)
+      }}
+      {...props}
+    />
+  )
 })
 
 const PickersRange = ({ startDate, endDate, onChange, placeholderText }: PickersRangeProps) => {

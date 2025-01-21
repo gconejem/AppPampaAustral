@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import prisma from '@/libs/prisma'
 
 // GET - Obtener una obra específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    console.log('Buscando obra:', params.id)
-
     const obra = await prisma.obra.findUnique({
       where: {
         obraId: parseInt(params.id)
@@ -20,13 +18,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Obra no encontrada' }, { status: 404 })
     }
 
-    console.log('Obra encontrada:', obra)
-
     return NextResponse.json(obra)
   } catch (error) {
-    console.error('Error al obtener la obra:', error)
+    console.error('Error al obtener obra:', error)
 
-    return NextResponse.json({ error: 'Error al obtener la obra' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener obra' }, { status: 500 })
   }
 }
 
@@ -99,28 +95,26 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const id = parseInt(params.id)
-
     // Primero eliminar los contactos asociados
     await prisma.contactoObra.deleteMany({
       where: {
-        obraId: id
+        obraId: parseInt(params.id)
       }
     })
 
     // Luego eliminar la obra
-    const deletedObra = await prisma.obra.delete({
+    await prisma.obra.delete({
       where: {
-        obraId: id
+        obraId: parseInt(params.id)
       }
     })
 
-    return NextResponse.json(deletedObra)
+    return NextResponse.json({ message: 'Obra eliminada exitosamente' })
   } catch (error) {
-    console.error('Error deleting obra:', error)
+    console.error('Error al eliminar obra:', error)
 
-    return NextResponse.json({ error: 'Error deleting obra' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al eliminar la obra' }, { status: 500 })
   }
 }

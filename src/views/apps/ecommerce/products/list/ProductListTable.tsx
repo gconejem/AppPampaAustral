@@ -37,6 +37,7 @@ import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
+import Menu from '@mui/material/Menu'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -55,6 +56,7 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import { Toaster, toast } from 'react-hot-toast'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -66,6 +68,8 @@ import TableFilters from './TableFilters'
 import CustomAvatar from '@core/components/mui/Avatar'
 import OptionMenu from '@core/components/option-menu'
 import EditProductForm from '../edit/EditProductForm'
+import CreatePackageModal from './CreatePackageModal'
+import EditPackageModal from '../edit/EditPackageModal'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -230,6 +234,10 @@ const ProductListTable = () => {
     []
   )
 
+  const [openPackageModal, setOpenPackageModal] = useState(false)
+
+  const [editPackageModalOpen, setEditPackageModalOpen] = useState(false)
+
   const params = useParams()
   const locale = params?.lang || 'es'
 
@@ -301,17 +309,27 @@ const ProductListTable = () => {
   }
 
   // Función para eliminar producto
-  const eliminarProducto = async (id: number) => {
+  const eliminarProducto = async (productoId: number) => {
     try {
-      const response = await fetch(`/api/productos/${id}`, {
+      const response = await fetch(`/api/productos/${productoId}`, {
         method: 'DELETE'
       })
 
-      if (response.ok) {
-        cargarProductos()
+      if (!response.ok) {
+        throw new Error('Error al eliminar el producto')
       }
+
+      // Actualizar el estado local eliminando el producto
+      setProductos(prevProductos => prevProductos.filter(producto => producto.productoId !== productoId))
+
+      // Actualizar también los productos filtrados
+      setFilteredProductos(prevProductos => prevProductos.filter(producto => producto.productoId !== productoId))
+
+      // Mostrar notificación de éxito
+      toast.success('Producto eliminado correctamente')
     } catch (error) {
       console.error('Error al eliminar producto:', error)
+      toast.error('Error al eliminar el producto')
     }
   }
 
@@ -476,41 +494,77 @@ const ProductListTable = () => {
     return String(value)
   }
 
-  // Agregar función para abrir el modal de edición
+  // Función para abrir el modal correcto según el tipo
   const handleEditOpen = (producto: Producto) => {
-    console.log('Datos del producto a editar:', producto)
-    console.log('Listas de precios disponibles:', listasPrecios)
     setEditingProduct(producto)
-    setEditModalOpen(true)
-  }
 
-  // Agregar función para cerrar el modal de edición
-  const handleEditClose = () => {
-    setEditModalOpen(false)
-    setEditingProduct(null)
+    if (producto.esPaquete) {
+      setEditPackageModalOpen(true)
+    } else {
+      setEditModalOpen(true)
+    }
   }
 
   // Agregar función para guardar los cambios
-  const handleEditSave = async (updatedProduct: Producto) => {
-    try {
-      console.log('Guardando cambios:', updatedProduct)
+  const handleEditSave = (updatedProduct: Producto) => {
+    // Actualizar el estado local con el producto actualizado
+    setProductos(prevProductos =>
+      prevProductos.map(producto => (producto.productoId === updatedProduct.productoId ? updatedProduct : producto))
+    )
 
-      const response = await fetch(`/api/productos/${updatedProduct.productoId}`, {
-        method: 'PUT',
+    // Cerrar el modal
+    if (editingProduct && editingProduct.esPaquete) {
+      setEditPackageModalOpen(false)
+    } else {
+      setEditModalOpen(false)
+    }
+
+    // Recargar los productos para asegurar sincronización
+    cargarProductos()
+  }
+
+  // Función para duplicar producto
+  const duplicarProducto = async (producto: Producto) => {
+    try {
+      // Crear una copia del producto omitiendo campos que no queremos duplicar
+      const { productoId, createdAt, updatedAt, listasPrecios, ...productData } = producto
+
+      // Preparar los datos para el nuevo producto
+      const nuevoProducto = {
+        ...productData,
+        sku: `${productData.sku}-copy`,
+
+        // Si el producto original tiene listas de precios, las incluimos
+        listaPreciosData: producto.listasPrecios?.map(lp => ({
+          listaPrecioId: lp.listaPrecio.id,
+          precio: lp.precio,
+          activo: lp.activo
+        }))
+      }
+
+      const response = await fetch('/api/productos', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(updatedProduct)
+        body: JSON.stringify(nuevoProducto)
       })
 
       if (!response.ok) {
-        throw new Error('Error al actualizar el producto')
+        throw new Error('Error al duplicar el producto')
       }
 
-      handleEditClose()
-      cargarProductos()
+      const nuevoproducto = await response.json()
+
+      // Actualizar el estado local agregando el nuevo producto
+      setProductos(prevProductos => [...prevProductos, nuevoproducto])
+      setFilteredProductos(prevProductos => [...prevProductos, nuevoproducto])
+
+      // Mostrar notificación de éxito
+      toast.success('Producto duplicado correctamente')
     } catch (error) {
-      console.error('Error al actualizar producto:', error)
+      console.error('Error al duplicar producto:', error)
+      toast.error('Error al duplicar el producto')
     }
   }
 
@@ -589,6 +643,14 @@ const ProductListTable = () => {
               iconClassName='text-textSecondary text-[22px]'
               options={[
                 {
+                  text: 'Duplicar',
+                  icon: 'ri-file-copy-line',
+                  menuItemProps: {
+                    className: 'gap-2',
+                    onClick: () => duplicarProducto(row.original)
+                  }
+                },
+                {
                   text: 'Eliminar',
                   icon: 'ri-delete-bin-7-line',
                   menuItemProps: {
@@ -634,8 +696,31 @@ const ProductListTable = () => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
+  // Manejadores para el modal
+  const handleOpenPackageModal = () => setOpenPackageModal(true)
+  const handleClosePackageModal = () => setOpenPackageModal(false)
+
   return (
     <>
+      <Toaster
+        position='top-center'
+        toastOptions={{
+          success: {
+            style: {
+              background: '#4CAF50',
+              color: 'white'
+            }
+          },
+          error: {
+            style: {
+              background: '#EF5350',
+              color: 'white'
+            }
+          },
+          duration: 3000
+        }}
+      />
+
       <Card>
         <CardHeader title='Productos' className='pbe-4' />
         <TableFilters
@@ -654,7 +739,11 @@ const ProductListTable = () => {
             className='max-sm:is-full'
           />
           <div className='flex items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
-            <Button variant='contained' onClick={handleOpen} className='max-sm:is-full is-auto'>
+            <Button
+              variant='contained'
+              onClick={handleOpenPackageModal}
+              startIcon={<i className='ri-package-line text-[22px] text-textSecondary' />}
+            >
               Crear Paquete
             </Button>
             <Button
@@ -728,179 +817,20 @@ const ProductListTable = () => {
           onPageChange={(_, newPage) => setPage(newPage)}
           onRowsPerPageChange={e => setRowsPerPage(Number(e.target.value))}
         />
-        <Modal open={open} onClose={handleClose}>
-          <Box sx={style}>
-            <Typography variant='h5' mb={3}>
-              Crear Paquete
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label='Nombre del Paquete'
-                  value={nombre}
-                  onChange={e => setNombre(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField fullWidth label='SKU' value={sku} onChange={e => setSku(e.target.value)} />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={3} mt={2}>
-              <Grid item xs={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Lista de Precios</InputLabel>
-                  <Select
-                    value={listaPrecios}
-                    onChange={e => {
-                      setListaPrecios(e.target.value)
-
-                      // Actualizar el precio automáticamente
-                      const selectedList = listaPreciosOptions.find(l => l.id === e.target.value)
-
-                      if (selectedList) {
-                        setPrecio(selectedList.precio.toString())
-                      }
-                    }}
-                    label='Lista de Precios'
-                  >
-                    <MenuItem value=''>
-                      <em>Seleccione una lista</em>
-                    </MenuItem>
-                    {listaPreciosOptions.map(lista => (
-                      <MenuItem key={lista.id} value={lista.id}>
-                        {`${lista.nombre} - $${lista.precio.toLocaleString()}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label='Precio'
-                  value={precio}
-                  onChange={e => setPrecio(e.target.value)}
-                  InputProps={{ startAdornment: <Typography>$</Typography> }}
-                />
-              </Grid>
-              <Grid item xs={4} display='flex' alignItems='center'>
-                <Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} />
-                <Typography component='span'>Aplicar Impuesto</Typography>
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={3} mt={2}>
-              <Grid item xs={6}>
-                <TextField
-                  placeholder='Buscar en Paquete'
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position='start'>
-                        <SearchIcon />
-                      </InputAdornment>
-                    )
-                  }}
-                  onChange={e => setBuscarPaquete(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  placeholder='Buscar en Productos'
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position='start'>
-                        <SearchIcon />
-                      </InputAdornment>
-                    )
-                  }}
-                  onChange={e => setBuscarProductos(e.target.value)}
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={3} mt={4}>
-              <Grid item xs={5}>
-                <Box sx={{ border: '1px solid #f0efef', borderRadius: 2, height: 300, overflowY: 'auto' }}>
-                  <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
-                    <Typography variant='subtitle2' fontWeight='bold'>
-                      PRODUCTOS
-                    </Typography>
-                  </Box>
-                  {productosList.length > 0 ? (
-                    productosList.map(item => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
-                        <Checkbox
-                          checked={selectedProductos.includes(item.id)}
-                          onChange={() => handleSelectProducto(item)}
-                        />
-                        <Typography component='span'>{item.nombre}</Typography>
-                      </div>
-                    ))
-                  ) : (
-                    <Typography color='text.secondary' textAlign='center' p={1}>
-                      Sin productos
-                    </Typography>
-                  )}
-                </Box>
-              </Grid>
-              <Grid item xs={2} container direction='column' justifyContent='center' alignItems='center'>
-                <Button variant='contained' onClick={handleMoveToPaquete} sx={{ mb: 1 }}>
-                  <ArrowForwardIcon />
-                </Button>
-                <Button variant='contained' onClick={handleMoveToProductos}>
-                  <ArrowBackIcon />{' '}
-                </Button>
-              </Grid>
-              <Grid item xs={5}>
-                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, height: 300, overflowY: 'auto' }}>
-                  <Box sx={{ backgroundColor: '#f8f8f8', p: 1 }}>
-                    <Typography variant='subtitle2' fontWeight='bold'>
-                      PAQUETE
-                    </Typography>
-                  </Box>
-                  {paqueteList.length > 0 ? (
-                    paqueteList.map(item => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}>
-                        <Checkbox
-                          checked={selectedPaquetes.includes(item.id)}
-                          onChange={() => handleSelectPaquete(item)}
-                        />
-                        <Typography component='span'>{item.nombre}</Typography>
-                      </div>
-                    ))
-                  ) : (
-                    <Typography color='text.secondary' textAlign='center' p={1}>
-                      Sin productos
-                    </Typography>
-                  )}
-                </Box>
-              </Grid>
-            </Grid>
-            <Box mt={4} display='flex' justifyContent='flex-end' gap={2}>
-              <Button onClick={handleClose} color='secondary' variant='outlined'>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} color='primary' variant='contained'>
-                Agregar Paquete
-              </Button>
-            </Box>
-          </Box>
-        </Modal>
+        <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} />
         <EditProductForm
           open={editModalOpen}
-          onClose={handleEditClose}
+          onClose={() => setEditModalOpen(false)}
           product={editingProduct}
           onSave={handleEditSave}
           areas={areas}
           familias={familias}
-          listasPrecios={listasPrecios}
+        />
+        <EditPackageModal
+          open={editPackageModalOpen}
+          onClose={() => setEditPackageModalOpen(false)}
+          paquete={editingProduct}
+          onSave={handleEditSave}
         />
       </Card>
     </>

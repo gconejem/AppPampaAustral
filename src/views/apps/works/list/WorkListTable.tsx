@@ -33,6 +33,8 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import Popover from '@mui/material/Popover'
+import DeleteIcon from '@mui/icons-material/Delete'
+import PreviewIcon from '@mui/icons-material/Visibility'
 
 // Third-party Imports
 import axios from 'axios'
@@ -55,6 +57,8 @@ import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx'
+import { saveAs } from 'file-saver'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -79,7 +83,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 import tableStyles from '@core/styles/table.module.css'
 
 // Data Imports
-import { ESTADOS_OBRA } from '@/data/obraData'
+import { ESTADOS_OBRA } from '@/data/constants'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -162,20 +166,34 @@ const userStatusObj: UserStatusType = {
   inactive: 'secondary'
 }
 
-// Column Definitions
-const columnHelper = createColumnHelper<WorkTypeWithAction>()
+// Definir la interfaz para los datos de obra
+interface ObraType {
+  id: number
+  numeroObra: string
+  nombreObra: string
+  comuna: string
+  rutCliente: string
+  cliente: string
+  encargado: string
+  estado: string
 
-const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
+  // ... otros campos necesarios
+}
+
+// Column Definitions
+const columnHelper = createColumnHelper<ObraType>()
+
+// Column Definitions
+const WorkListTable = () => {
   // States
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState<WorkTypeWithAction[]>([])
-  const [filteredData, setFilteredData] = useState(data)
+  const [data, setData] = useState<ObraType[]>([])
+  const [filteredData, setFilteredData] = useState<ObraType[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [selectedObra, setSelectedObra] = useState<Obra | null>(null)
   const [editObraOpen, setEditObraOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [obraToDelete, setObraToDelete] = useState<number | null>(null)
   const [selectedObraId, setSelectedObraId] = useState<number | null>(null)
   const [addObraOpen, setAddObraOpen] = useState<boolean>(false)
   const [menuState, setMenuState] = useState<{ [key: number]: HTMLElement | null }>({})
@@ -195,16 +213,23 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const params = useParams()
   const locale = (params?.lang as string) || 'es'
 
-  // Agregar este useEffect para cargar los datos
+  // Cargar obras cuando el componente se monta
   useEffect(() => {
     const fetchObras = async () => {
       try {
         setIsLoading(true)
-        const response = await axios.get('/api/obras')
+        const response = await fetch('/api/obras')
 
-        setData(response.data)
+        if (!response.ok) {
+          throw new Error('Error al cargar las obras')
+        }
+
+        const data = await response.json()
+
+        setData(data)
+        setFilteredData(data)
       } catch (error) {
-        console.error('Error fetching obras:', error)
+        console.error('Error:', error)
         toast.error('Error al cargar las obras')
       } finally {
         setIsLoading(false)
@@ -214,17 +239,44 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     fetchObras()
   }, [])
 
-  const handleDeleteClick = async (id: number) => {
+  const handleDeleteClick = (id: number) => {
+    setSelectedObraId(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedObraId) return
+
     try {
-      const response = await axios.delete(`/api/obras/${id}`)
+      const response = await axios.delete(`/api/obras/${selectedObraId}`)
 
       if (response.status === 200) {
-        toast.success('Obra eliminada exitosamente')
-        setData(prevData => prevData.filter(obra => obra.obraId !== id))
+        // Actualizar ambos estados inmediatamente
+        const updatedData = data.filter(obra => obra.obraId !== selectedObraId)
+
+        setData(updatedData)
+        setFilteredData(updatedData) // Actualizar también los datos filtrados
+
+        // Mostrar notificación de éxito
+        toast.success('Obra eliminada exitosamente', {
+          duration: 3000, // Duración de 3 segundos
+          position: 'top-right', // Posición en la pantalla
+          style: {
+            background: '#10B981', // Color verde para éxito
+            color: '#fff'
+          }
+        })
       }
     } catch (error) {
       console.error('Error deleting obra:', error)
-      toast.error('Error al eliminar la obra')
+      toast.error('Error al eliminar la obra', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444', // Color rojo para error
+          color: '#fff'
+        }
+      })
     } finally {
       setDeleteDialogOpen(false)
       setSelectedObraId(null)
@@ -233,13 +285,26 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
 
   const handleEdit = async (obra: Obra) => {
     try {
+      // Obtener los datos actualizados de la obra
       const response = await axios.get(`/api/obras/${obra.obraId}`)
 
-      setSelectedObra(response.data)
-      setEditObraOpen(true)
+      if (response.data) {
+        // Guardar la obra seleccionada en el estado
+        setSelectedObra(response.data)
+
+        // Abrir el formulario de edición
+        setEditObraOpen(true)
+      }
     } catch (error) {
-      console.error('Error al obtener datos:', error)
-      toast.error('Error al cargar los datos de la obra')
+      console.error('Error al obtener los datos de la obra:', error)
+      toast.error('Error al cargar los datos de la obra', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
     }
   }
 
@@ -262,8 +327,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       { header: 'OBRA', dataKey: 'numeroObra' },
       { header: 'NOMBRE OBRA', dataKey: 'nombreObra' },
       { header: 'COMUNA', dataKey: 'comuna' },
-      { header: 'RUT CLIENTE', dataKey: 'rut' },
-      { header: 'CLIENTE', dataKey: 'nombreCliente' },
+      { header: 'RUT CLIENTE', dataKey: 'rutCliente' },
+      { header: 'CLIENTE', dataKey: 'cliente' },
       { header: 'ESTADO', dataKey: 'estado' }
     ]
 
@@ -272,8 +337,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       numeroObra: obra.numeroObra,
       nombreObra: obra.nombreObra,
       comuna: obra.comuna,
-      rut: obra.rut,
-      nombreCliente: obra.nombreCliente,
+      rutCliente: obra.rutCliente,
+      cliente: obra.cliente,
       estado: obra.estado
     }))
 
@@ -311,14 +376,31 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       const response = await axios.post('/api/obras/duplicate', { obraId: obra.obraId })
 
       if (response.status === 201) {
-        toast.success('Obra duplicada exitosamente')
+        // Actualizar ambos estados inmediatamente
+        const updatedData = [...data, response.data]
 
-        // Actualizar la lista de obras
-        setData(prevData => [...prevData, response.data])
+        setData(updatedData)
+        setFilteredData(updatedData)
+
+        toast.success('Obra duplicada exitosamente', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff'
+          }
+        })
       }
     } catch (error) {
       console.error('Error duplicando obra:', error)
-      toast.error('Error al duplicar la obra')
+      toast.error('Error al duplicar la obra', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
     } finally {
       setDuplicateDialogOpen(false)
       setObraToDuplicate(null)
@@ -327,23 +409,37 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
 
   const handleStatusChange = async (obraId: number, newStatus: string) => {
     try {
-      const response = await axios.patch(`/api/obras/${obraId}/status`, {
-        estado: newStatus
-      })
+      const response = await axios.patch(`/api/obras/${obraId}/status`, { estado: newStatus })
 
       if (response.status === 200) {
-        toast.success('Estado actualizado exitosamente')
+        // Actualizar ambos estados inmediatamente
+        const updatedData = data.map(obra => (obra.obraId === obraId ? { ...obra, estado: newStatus } : obra))
 
-        // Actualizar el estado en la lista
-        setData(prevData => prevData.map(obra => (obra.obraId === obraId ? { ...obra, estado: newStatus } : obra)))
+        setData(updatedData)
+        setFilteredData(updatedData)
+
+        toast.success('Estado actualizado exitosamente', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff'
+          }
+        })
       }
     } catch (error) {
-      console.error('Error actualizando estado:', error)
-      toast.error('Error al actualizar el estado')
+      console.error('Error al actualizar el estado:', error)
+      toast.error('Error al actualizar el estado', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
     } finally {
       setChangeStatusOpen(false)
-      setSelectedStatus('')
-      handleMenuClose()
+      setSelectedObraId(null)
     }
   }
 
@@ -355,6 +451,125 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const handlePreview = (obra: Obra) => {
     setSelectedObra(obra)
     setPreviewDialogOpen(true)
+  }
+
+  const handleExportCSV = () => {
+    try {
+      // Definir las columnas del CSV
+      const headers = [
+        'Número Obra',
+        'Nombre Obra',
+        'Fecha Ingreso',
+        'Estado',
+        'RUT',
+        'Nombre Cliente',
+        'Dirección',
+        'Región',
+        'Comuna',
+        'Razón Social',
+        'Giro',
+        'Teléfono Facturación',
+        'Email Facturación',
+        'Lista Precios'
+      ]
+
+      // Preparar los datos
+      const csvData = data.map(obra => [
+        obra.numeroObra,
+        obra.nombreObra,
+        new Date(obra.fechaIngreso).toLocaleDateString(),
+        obra.estado,
+        obra.rutCliente,
+        obra.cliente,
+        obra.direccion,
+        obra.region,
+        obra.comuna,
+        obra.razonSocial || '',
+        obra.giro || '',
+        obra.telefonoFacturacion || '',
+        obra.mailRecepcionFactura || '',
+        obra.listaPrecios || ''
+      ])
+
+      // Convertir a formato CSV
+      const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
+
+      // Crear el blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+
+      link.setAttribute('href', url)
+      link.setAttribute('download', `obras_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Archivo exportado correctamente')
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      toast.error('Error al exportar el archivo')
+    }
+  }
+
+  const handleExportSingleObra = (obra: Obra) => {
+    try {
+      const headers = [
+        'Número Obra',
+        'Nombre Obra',
+        'Fecha Ingreso',
+        'Estado',
+        'RUT',
+        'Nombre Cliente',
+        'Dirección',
+        'Región',
+        'Comuna',
+        'Razón Social',
+        'Giro',
+        'Teléfono Facturación',
+        'Email Facturación',
+        'Lista Precios'
+      ]
+
+      const csvData = [
+        [
+          obra.numeroObra,
+          obra.nombreObra,
+          new Date(obra.fechaIngreso).toLocaleDateString(),
+          obra.estado,
+          obra.rutCliente,
+          obra.cliente,
+          obra.direccion,
+          obra.region,
+          obra.comuna,
+          obra.razonSocial || '',
+          obra.giro || '',
+          obra.telefonoFacturacion || '',
+          obra.mailRecepcionFactura || '',
+          obra.listaPrecios || ''
+        ]
+      ]
+
+      const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+
+      link.setAttribute('href', url)
+      link.setAttribute('download', `obra_${obra.numeroObra}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Obra exportada correctamente')
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      toast.error('Error al exportar la obra')
+    }
   }
 
   const columns = useMemo(
@@ -406,23 +621,23 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </Typography>
         )
       }),
-      columnHelper.accessor('rut', {
+      columnHelper.accessor('rutCliente', {
         header: 'RUT CLIENTE',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
-            {row.original.rut}
+            {row.original.rutCliente}
           </Typography>
         )
       }),
-      columnHelper.accessor('nombreCliente', {
+      columnHelper.accessor('cliente', {
         header: 'CLIENTE',
         cell: ({ row }) => (
           <Typography variant='body2' className='text-[13px]'>
-            {row.original.nombreCliente}
+            {row.original.cliente}
           </Typography>
         )
       }),
-      columnHelper.accessor('contactos', {
+      columnHelper.accessor('encargado', {
         header: 'ENCARGADO',
         cell: ({ row }) => {
           const encargado = row.original.contactos?.find(c => c.rol === 'encargado_obra')
@@ -448,90 +663,82 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           />
         )
       }),
-      columnHelper.accessor('action', {
+      {
+        accessorKey: 'actions',
         header: 'ACCIONES',
         cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => handleEdit(row.original)} sx={{ color: 'primary.main' }}>
-              <i className='ri-pencil-line' />
-            </IconButton>
-            <IconButton onClick={() => handlePreview(row.original)} sx={{ color: 'info.main' }}>
-              <i className='ri-eye-line' />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <IconButton
+              size='small'
+              color='info'
+              onClick={() => handlePreview(row.original)}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'info.light'
+                }
+              }}
+            >
+              <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
             <IconButton
+              size='small'
+              color='warning'
               onClick={() => {
                 setObraToDuplicate(row.original)
                 setDuplicateDialogOpen(true)
               }}
-              sx={{ color: 'info.main' }}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'warning.light'
+                }
+              }}
             >
-              <i className='ri-file-copy-line' />
+              <i className='ri-file-copy-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
-            <div style={{ position: 'relative' }}>
-              <IconButton
-                onClick={e => handleMenuOpen(e, row.original)}
-                aria-describedby={`popover-${row.original.obraId}`}
-              >
-                <i className='ri-more-fill' />
-              </IconButton>
-              <Popover
-                id={`popover-${row.original.obraId}`}
-                open={Boolean(anchorEl[row.original.obraId]) && selectedObraForMenu?.obraId === row.original.obraId}
-                anchorEl={anchorEl[row.original.obraId]}
-                onClose={handleMenuClose}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right'
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right'
-                }}
-                PaperProps={{
-                  sx: {
-                    minWidth: '150px',
-                    boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.1)',
-                    '& .MuiMenuItem-root': {
-                      px: 2,
-                      py: 1
-                    },
-                    marginTop: '5px'
-                  }
-                }}
-              >
-                <div className='py-2 px-1'>
-                  <MenuItem
-                    onClick={() => {
-                      handleMenuClose()
+            <IconButton
+              size='small'
+              color='primary'
+              onClick={() => handleEdit(row.original)}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'primary.light'
+                }
+              }}
+            >
+              <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ className: 'cursor-pointer' }}
+              options={[
+                {
+                  text: 'Cambiar Estado',
+                  icon: 'ri-exchange-line',
+                  menuItemProps: {
+                    onClick: () => {
                       setSelectedObraId(row.original.obraId)
                       setSelectedStatus(row.original.estado)
                       setChangeStatusOpen(true)
-                    }}
-                  >
-                    <i className='ri-exchange-line me-2' /> Cambiar Estado
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleMenuClose()
-                      setSelectedObraId(row.original.obraId)
-                      setDeleteDialogOpen(true)
-                    }}
-                    sx={{ color: 'error.main' }}
-                  >
-                    <i className='ri-delete-bin-line me-2' /> Eliminar
-                  </MenuItem>
-                </div>
-              </Popover>
-            </div>
-          </div>
+                    }
+                  }
+                },
+                {
+                  text: 'Eliminar',
+                  icon: 'ri-delete-bin-line',
+                  menuItemProps: {
+                    onClick: () => handleDeleteClick(row.original.obraId)
+                  }
+                }
+              ]}
+            />
+          </Box>
         )
-      })
+      }
     ],
-    [handleEdit, setSelectedObraId, setDeleteDialogOpen, menuState]
+    [handleEdit, handlePreview, handleDeleteClick]
   )
 
   const table = useReactTable({
-    data: filteredData as WorkTypeWithAction[],
+    data: filteredData as ObraType[],
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -572,13 +779,13 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
     }
   }
 
-  const renderClient = (row: WorkType) => {
+  const renderClient = (row: ObraType) => {
     return (
       <div className='flex items-center'>
-        {row.nombreCliente ? getInitials(row.nombreCliente) : ''}
+        {row.cliente ? getInitials(row.cliente) : ''}
         <div className='flex flex-col'>
           <Typography className='font-medium' color='text.primary'>
-            {row.nombreCliente}
+            {row.cliente}
           </Typography>
         </div>
       </div>
@@ -602,18 +809,22 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           }
         />
 
-        <TableFilters setData={setFilteredData} tableData={data} />
+        <TableFilters workData={data} setFilteredData={setFilteredData} estados={ESTADOS_OBRA} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
           <Button
-            color='secondary'
             variant='outlined'
-            startIcon={<i className='ri-upload-2-line text-xl' />}
-            onClick={handleExport}
-            disabled={isLoading}
-            className='max-sm:is-full'
+            onClick={() => {
+              const selectedRows = table.getSelectedRowModel().rows
+
+              const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data
+
+              handleExportCSV(dataToExport)
+            }}
+            startIcon={<i className='ri-download-2-line' />}
           >
-            Exportar
+            Exportar CSV{' '}
+            {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : ''}
           </Button>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <DebouncedInput
@@ -714,7 +925,12 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
         />
       </Card>
-      <AddWork open={addObraOpen} handleClose={() => setAddObraOpen(false)} setData={setData} />
+      <AddWork
+        open={addObraOpen}
+        handleClose={() => setAddObraOpen(false)}
+        setData={setData}
+        setFilteredData={setFilteredData}
+      />
       <EditWorksForm
         open={editObraOpen}
         handleClose={() => {
@@ -726,12 +942,12 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       />
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent>¿Está seguro que desea eliminar esta obra?</DialogContent>
+        <DialogContent>¿Está seguro que desea eliminar esta obra? Esta acción no se puede deshacer.</DialogContent>
         <DialogActions>
-          <Button variant='outlined' color='secondary' onClick={() => setDeleteDialogOpen(false)}>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='primary'>
             Cancelar
           </Button>
-          <Button variant='contained' color='error' onClick={() => selectedObraId && handleDeleteClick(selectedObraId)}>
+          <Button onClick={handleDeleteConfirm} color='error' variant='contained'>
             Eliminar
           </Button>
         </DialogActions>
@@ -759,8 +975,8 @@ const WorkListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           <FormControl fullWidth sx={{ mt: 2 }}>
             <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
               {ESTADOS_OBRA.map(estado => (
-                <MenuItem key={estado.value} value={estado.value}>
-                  {estado.label}
+                <MenuItem key={estado} value={estado}>
+                  {estado}
                 </MenuItem>
               ))}
             </Select>

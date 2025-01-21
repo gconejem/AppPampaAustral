@@ -136,56 +136,63 @@ model ProductoPaquete {
 }
 
 model Obra {
-  obraId                   Int            @id @default(autoincrement())
-  numeroObra               String         @unique
-  fechaIngreso             DateTime
-  estado                   String         @default("activo")
-  estadoObra               String         @default("Activo")
-  nombreObra               String
-  direccion                String
-  region                   String
-  comuna                   String
-  telefono                 String?
-  sitioWeb                 String?
-  informeMandante          Boolean        @default(false)
-  textoMandante            String?
-  acreditacionPersonal     Boolean        @default(false)
-  especificacionesTecnicas Boolean        @default(false)
-  acreditacionEquipos      Boolean        @default(false)
-  cartaCompromiso          Boolean        @default(false)
-  mandatoServiu            Boolean        @default(false)
+  obraId               Int            @id @default(autoincrement())
+  numeroObra          String
+  fechaIngreso        DateTime
+  estado              String         @default("activo")
+  estadoObra          String
+  rut                 String
+  nombreCliente       String
+  razonSocial         String?
+  nombreObra          String
+  direccion           String
+  region              String
+  comuna              String
+  sector              String?
+  georreferencia      String?
+  referencia          String?
+  mandante            String?
+  informeMandante     Boolean        @default(false)
+  textoMandante       String?
+  giro                String?
+  direccionComercial  String?
+  comunaFacturacion   String?
+  telefonoFacturacion String?
+  listaPrecios        String?
+  mailRecepcionFactura String?
+
+  // Requisitos
+  acreditacionPersonal     Boolean @default(false)
+  especificacionesTecnicas Boolean @default(false)
+  acreditacionEquipos      Boolean @default(false)
+  cartaCompromiso          Boolean @default(false)
+  mandatoServiu            Boolean @default(false)
   otrosRequisitos          String?
-  razonSocial              String
-  rut                      String
-  giro                     String
-  direccionComercial       String
-  comunaFacturacion        String
-  telefonoFacturacion      String
-  listaPrecios             String
-  mailRecepcionFactura     String
-  estadoPago               Boolean        @default(false)
-  hes                      Boolean        @default(false)
-  oc                       Boolean        @default(false)
-  otrasReferencias         String?
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
-  georreferencia           String?
-  mandante                 String?
-  nombreCliente            String
-  referencia               String?
-  sector                   String?
-  contactos                ContactoObra[]
+
+  // Referencias
+  estadoPago        Boolean @default(false)
+  hes               Boolean @default(false)
+  oc                Boolean @default(false)
+  otrasReferencias  String?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  contactos         ContactoObra[]
 }
 
 model ContactoObra {
-  id          Int     @id @default(autoincrement())
-  obraId      Int
+  id          Int      @id @default(autoincrement())
   nombre      String
-  email       String
-  telefono1   String
-  isPrincipal Boolean @default(false)
   rol         String
-  obra        Obra    @relation(fields: [obraId], references: [obraId])
+  email       String?
+  telefono1   String?
+  telefono2   String?
+  isPrincipal Boolean  @default(false)
+  obraId      Int
+  obra        Obra     @relation(fields: [obraId], references: [obraId])
 }
 
 model Permission {

@@ -8,6 +8,7 @@ import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
 import FormHelperText from '@mui/material/FormHelperText'
@@ -24,6 +25,9 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -52,6 +56,20 @@ type Props = {
   handleClose: () => void
   userData?: Obra[]
   setData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
+  setFilteredData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
+}
+
+// Función de validación para teléfono
+const validatePhone = (value: string) => {
+  // Remover cualquier caracter que no sea número
+  const numericValue = value.replace(/\D/g, '')
+
+  // Validar longitud (9 dígitos para números chilenos)
+  if (numericValue.length !== 9) {
+    return 'El número debe tener 9 dígitos'
+  }
+
+  return true
 }
 
 const AddObraDrawer = (props: Props) => {
@@ -69,14 +87,16 @@ const AddObraDrawer = (props: Props) => {
 
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
 
-  const { regiones, selectedRegion, setSelectedRegion, loading } = useRegionesYComunas()
+  const { regiones, comunas } = useRegionesYComunas()
 
-  const [comunas, setComunas] = useState<{ id: number; nombre: string }[]>([])
+  const [selectedRegion, setSelectedRegion] = useState<string>('')
+  const [selectedComuna, setSelectedComuna] = useState<string>('')
+  const [comunasList, setComunasList] = useState<any[]>([])
 
   // Agrega un efecto para debug
   useEffect(() => {
-    console.log('Estado actual:', { regiones, comunas, selectedRegion, loading })
-  }, [regiones, comunas, selectedRegion, loading])
+    console.log('Estado actual:', { regiones, comunas })
+  }, [regiones, comunas])
 
   // Hooks - ahora useForm tiene acceso al schema
   const {
@@ -146,11 +166,11 @@ const AddObraDrawer = (props: Props) => {
     setValue('rut', formattedRut)
   }
 
-  // Agregar manejador para teléfono de facturación
-  const handleFacturacionPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedPhone = formatPhone(e.target.value)
+  // Manejador para el campo de teléfono
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '') // Solo permite números
 
-    setValue('telefonoFacturacion', formattedPhone)
+    setValue('telefono', value)
   }
 
   // Agregar manejador para RUT de facturación
@@ -163,13 +183,11 @@ const AddObraDrawer = (props: Props) => {
   const onSubmit = async (data: FormValidateType) => {
     try {
       setIsSubmitting(true)
-      console.log('Datos a enviar:', data)
 
-      // Preparar el payload con todos los datos necesarios
       const payload = {
         ...data,
-        region: data.region,
-        comuna: data.comuna,
+        region: selectedRegion,
+        comuna: selectedComuna,
         estado: 'activo',
         estadoObra: data.estadoObra || 'Activo',
         fechaIngreso: new Date(data.fechaIngreso).toISOString(),
@@ -182,21 +200,47 @@ const AddObraDrawer = (props: Props) => {
         }))
       }
 
-      console.log('Payload completo:', payload)
-
       const response = await axios.post('/api/obras', payload)
 
       if (response.data) {
-        toast.success('Obra creada exitosamente')
-        props.handleClose()
+        // Actualizar ambos estados inmediatamente
+        props.setData(prevData => [...prevData, response.data])
+        props.setFilteredData(prevData => [...prevData, response.data])
 
-        if (props.setData) {
-          props.setData(prevData => [...prevData, response.data])
-        }
+        toast.success('Obra creada exitosamente', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff'
+          }
+        })
+
+        // Limpiar formulario y estados
+        resetForm()
+        setContactos([])
+        setFormData(initialFormData)
+        setNuevoContacto({
+          rol: '',
+          nombre: '',
+          email: '',
+          telefono1: ''
+        })
+        setSelectedRegion('')
+        setSelectedComuna('')
+
+        props.handleClose()
       }
     } catch (error: any) {
       console.error('Error detallado:', error.response?.data || error)
-      toast.error(error.response?.data?.error || 'Error al guardar la obra')
+      toast.error(error.response?.data?.error || 'Error al guardar la obra', {
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff'
+        }
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -227,13 +271,6 @@ const AddObraDrawer = (props: Props) => {
     const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
 
     return emailRegex.test(email)
-  }
-
-  // Validación de teléfono chileno
-  const validatePhone = (phone: string) => {
-    const phoneRegex = /^\+?56?\d{9}$/
-
-    return phoneRegex.test(phone)
   }
 
   // Formatear teléfono mientras se escribe
@@ -436,29 +473,32 @@ const AddObraDrawer = (props: Props) => {
     setValue('numeroObra', value)
   }
 
-  // Cargar comunas cuando cambia la región
-  useEffect(() => {
-    const fetchComunas = async () => {
-      if (!watch('region')) return
+  const handleRegionChange = async (event: SelectChangeEvent<string>) => {
+    const regionValue = event.target.value
 
-      try {
-        const response = await fetch(`/api/ubicacion/comunas/${encodeURIComponent(watch('region'))}`)
+    setSelectedRegion(regionValue)
+    setSelectedComuna('')
+
+    try {
+      // Limpiar las comunas actuales
+      setComunasList([])
+
+      if (regionValue) {
+        const response = await fetch(`/api/ubicacion/comunas/${encodeURIComponent(regionValue)}`)
+
+        if (!response.ok) {
+          throw new Error('Error al cargar comunas')
+        }
+
         const data = await response.json()
 
-        if (response.ok) {
-          setComunas(data)
-
-          if (!data.find(c => c.nombre === watch('comuna'))) {
-            setValue('comuna', '')
-          }
-        }
-      } catch (error) {
-        console.error('Error al cargar comunas:', error)
+        setComunasList(data)
       }
+    } catch (error) {
+      console.error('Error al cargar comunas:', error)
+      toast.error('Error al cargar las comunas')
     }
-
-    fetchComunas()
-  }, [watch('region')])
+  }
 
   return (
     <Drawer
@@ -654,35 +694,14 @@ const AddObraDrawer = (props: Props) => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Región *</InputLabel>
-                <Controller
-                  name='region'
-                  control={control}
-                  rules={{ required: 'La región es requerida' }}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      label='Región *'
-                      onChange={e => {
-                        const regionCodigo = e.target.value
-
-                        console.log('Región seleccionada (código):', regionCodigo)
-                        field.onChange(regionCodigo)
-                        setSelectedRegion(regionCodigo)
-                      }}
-                      disabled={loading}
-                      error={Boolean(errors.region)}
-                    >
-                      {Array.isArray(regiones) &&
-                        regiones.map((region: any) => (
-                          <MenuItem key={region.id} value={region.codigo}>
-                            {region.nombre}
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  )}
-                />
-                {errors.region && <FormHelperText error>{errors.region.message}</FormHelperText>}
+                <InputLabel>Región</InputLabel>
+                <Select value={selectedRegion} label='Región' onChange={handleRegionChange}>
+                  {regiones.map(region => (
+                    <MenuItem key={region.id} value={region.nombre}>
+                      {region.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
               </FormControl>
             </Grid>
           </Grid>
@@ -691,22 +710,19 @@ const AddObraDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
-                <InputLabel>Comuna *</InputLabel>
-                <Controller
-                  name='comuna'
-                  control={control}
-                  rules={{ required: 'La comuna es requerida' }}
-                  render={({ field }) => (
-                    <Select {...field} label='Comuna *' disabled={!watch('region')} error={Boolean(errors.comuna)}>
-                      {comunas.map(comuna => (
-                        <MenuItem key={comuna.id} value={comuna.nombre}>
-                          {comuna.nombre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  )}
-                />
-                {errors.comuna && <FormHelperText error>{errors.comuna.message}</FormHelperText>}
+                <InputLabel>Comuna</InputLabel>
+                <Select
+                  value={selectedComuna}
+                  label='Comuna'
+                  onChange={e => setSelectedComuna(e.target.value)}
+                  disabled={!selectedRegion}
+                >
+                  {comunasList.map(comuna => (
+                    <MenuItem key={comuna.id} value={comuna.nombre}>
+                      {comuna.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
               </FormControl>
             </Grid>
 
@@ -1059,22 +1075,24 @@ const AddObraDrawer = (props: Props) => {
 
             <Grid item xs={12} sm={4}>
               <Controller
-                name='telefonoFacturacion'
+                name='telefono'
                 control={control}
                 rules={{
                   required: 'El teléfono es requerido',
-                  validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+                  validate: validatePhone
                 }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Teléfono *'
-                    onChange={handleFacturacionPhoneChange}
-                    error={Boolean(errors.telefonoFacturacion)}
-                    helperText={errors.telefonoFacturacion?.message}
+                    onChange={handlePhoneChange}
+                    error={Boolean(errors.telefono)}
+                    helperText={errors.telefono?.message}
                     inputProps={{
-                      maxLength: 12
+                      maxLength: 9,
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
                     }}
                   />
                 )}
