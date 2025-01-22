@@ -308,53 +308,133 @@ const WorkListTable = () => {
     }
   }
 
-  const handleExport = () => {
-    const doc = new jsPDF()
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4')
 
-    // Obtener las obras seleccionadas
-    const selectedRows = table.getSelectedRowModel().rows
+      // Obtener las obras seleccionadas
+      const selectedRows = table.getSelectedRowModel().rows
+      const obrasToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : [data[0]] // Si no hay selección, exportar la primera obra
 
-    const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data // Si no hay selección, exportar todos
+      obrasToExport.forEach((obra, index) => {
+        // Agregar nueva página para cada obra excepto la primera
+        if (index > 0) {
+          doc.addPage()
+        }
 
-    // Configurar el título
-    doc.setFontSize(15)
-    doc.text('Reporte de Obras', 14, 15)
-    doc.setFontSize(10)
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 25)
+        // Título de la obra
+        doc.setFontSize(16)
+        doc.text(`Obra: ${obra.nombreObra}`, 14, 20)
 
-    // Configurar las columnas para la tabla
-    const columns = [
-      { header: 'OBRA', dataKey: 'numeroObra' },
-      { header: 'NOMBRE OBRA', dataKey: 'nombreObra' },
-      { header: 'COMUNA', dataKey: 'comuna' },
-      { header: 'RUT CLIENTE', dataKey: 'rutCliente' },
-      { header: 'CLIENTE', dataKey: 'cliente' },
-      { header: 'ESTADO', dataKey: 'estado' }
-    ]
+        // Información básica
+        doc.setFontSize(12)
+        doc.text('Información General', 14, 30)
 
-    // Preparar los datos para la tabla
-    const rows = dataToExport.map(obra => ({
-      numeroObra: obra.numeroObra,
-      nombreObra: obra.nombreObra,
-      comuna: obra.comuna,
-      rutCliente: obra.rutCliente,
-      cliente: obra.cliente,
-      estado: obra.estado
-    }))
+        const infoGeneral = [
+          ['Número de Obra', obra.numeroObra],
+          ['Fecha Ingreso', new Date(obra.fechaIngreso).toLocaleDateString()],
+          ['Estado', obra.estado],
+          ['Sector', obra.sector || '-'],
+          ['Georreferencia', obra.georreferencia || '-'],
+          ['Referencia', obra.referencia || '-']
+        ]
 
-    // Generar la tabla
-    doc.autoTable({
-      startY: 35,
-      head: [columns.map(col => col.header)],
-      body: rows.map(row => columns.map(col => row[col.dataKey as keyof typeof row])),
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      alternateRowStyles: { fillColor: [245, 245, 245] }
-    })
+        doc.autoTable({
+          startY: 35,
+          head: [],
+          body: infoGeneral,
+          theme: 'plain',
+          styles: { fontSize: 10 }
+        })
 
-    // Guardar el PDF
-    doc.save('reporte-obras.pdf')
+        // Información del Cliente
+        doc.text('Información del Cliente', 14, doc.lastAutoTable.finalY + 10)
+
+        const infoCliente = [
+          ['RUT', obra.rut],
+          ['Razón Social', obra.razonSocial],
+          ['Nombre Cliente', obra.nombreCliente],
+          ['Dirección', obra.direccion],
+          ['Región', obra.region],
+          ['Comuna', obra.comuna]
+        ]
+
+        doc.autoTable({
+          startY: doc.lastAutoTable.finalY + 15,
+          head: [],
+          body: infoCliente,
+          theme: 'plain',
+          styles: { fontSize: 10 }
+        })
+
+        // Facturación
+        doc.text('Información de Facturación', 14, doc.lastAutoTable.finalY + 10)
+
+        const infoFacturacion = [
+          ['Dirección Comercial', obra.direccionComercial || '-'],
+          ['Comuna Facturación', obra.comunaFacturacion || '-'],
+          ['Teléfono', obra.telefonoFacturacion || '-'],
+          ['Lista de Precios', obra.listaPrecios || '-'],
+          ['Email Facturación', obra.mailRecepcionFactura || '-']
+        ]
+
+        doc.autoTable({
+          startY: doc.lastAutoTable.finalY + 15,
+          head: [],
+          body: infoFacturacion,
+          theme: 'plain',
+          styles: { fontSize: 10 }
+        })
+
+        // Requisitos
+        doc.text('Requisitos', 14, doc.lastAutoTable.finalY + 10)
+
+        const requisitos = [
+          ['Acreditación Personal', obra.acreditacionPersonal ? 'Sí' : 'No'],
+          ['Especificaciones Técnicas', obra.especificacionesTecnicas ? 'Sí' : 'No'],
+          ['Acreditación Equipos', obra.acreditacionEquipos ? 'Sí' : 'No'],
+          ['Carta Compromiso', obra.cartaCompromiso ? 'Sí' : 'No'],
+          ['Mandato SERVIU', obra.mandatoServiu ? 'Sí' : 'No'],
+          ['Otros Requisitos', obra.otrosRequisitos || '-']
+        ]
+
+        doc.autoTable({
+          startY: doc.lastAutoTable.finalY + 15,
+          head: [],
+          body: requisitos,
+          theme: 'plain',
+          styles: { fontSize: 10 }
+        })
+
+        // Contactos
+        if (obra.contactos && obra.contactos.length > 0) {
+          doc.text('Contactos', 14, doc.lastAutoTable.finalY + 10)
+          const contactosHeaders = [['Rol', 'Nombre', 'Email', 'Teléfono']]
+
+          const contactosData = obra.contactos.map(contacto => [
+            contacto.rol,
+            contacto.nombre,
+            contacto.email || '-',
+            contacto.telefono1 || '-'
+          ])
+
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 15,
+            head: contactosHeaders,
+            body: contactosData,
+            theme: 'striped',
+            styles: { fontSize: 10 }
+          })
+        }
+      })
+
+      // Guardar el PDF
+      doc.save(`obra-${obrasToExport[0].numeroObra}.pdf`)
+      toast.success('PDF generado exitosamente')
+    } catch (error) {
+      console.error('Error al generar PDF:', error)
+      toast.error('Error al generar el PDF')
+    }
   }
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, obra: Obra) => {
@@ -792,6 +872,20 @@ const WorkListTable = () => {
     )
   }
 
+  const exportButton = () => {
+    return (
+      <Button
+        color='secondary'
+        variant='outlined'
+        startIcon={<i className='ri-file-download-line' />}
+        onClick={exportToPDF}
+        disabled={!table.getSelectedRowModel().rows.length} // Deshabilitar si no hay filas seleccionadas
+      >
+        Exportar a PDF
+      </Button>
+    )
+  }
+
   return (
     <>
       <Card>
@@ -812,20 +906,7 @@ const WorkListTable = () => {
         <TableFilters workData={data} setFilteredData={setFilteredData} estados={ESTADOS_OBRA} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          <Button
-            variant='outlined'
-            onClick={() => {
-              const selectedRows = table.getSelectedRowModel().rows
-
-              const dataToExport = selectedRows.length > 0 ? selectedRows.map(row => row.original) : data
-
-              handleExportCSV(dataToExport)
-            }}
-            startIcon={<i className='ri-download-2-line' />}
-          >
-            Exportar CSV{' '}
-            {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : ''}
-          </Button>
+          {exportButton()}
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <DebouncedInput
               value={globalFilter ?? ''}

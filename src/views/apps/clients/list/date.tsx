@@ -1,66 +1,61 @@
 // React Imports
-import { useState, forwardRef } from 'react'
+import { forwardRef } from 'react'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
-import type { TextFieldProps } from '@mui/material/TextField'
 
-// Third-party Imports
-import { format, addDays } from 'date-fns'
+// Third Party Imports
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
+import { format } from 'date-fns'
+import es from 'date-fns/locale/es'
 
-// Component Imports
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-
-type CustomInputProps = TextFieldProps & {
-  label: string
-  end: Date | number
-  start: Date | number
+interface PickersRangeProps {
+  startDate: Date | null
+  endDate: Date | null
+  onChange: (start: Date | null, end: Date | null) => void
+  placeholderText?: string
 }
 
-const PickersRange = () => {
-  // States
-  const [startDate, setStartDate] = useState<Date>(new Date())
-  const [endDate, setEndDate] = useState<Date>(addDays(new Date(), 15))
-
-  const handleOnChange = (dates: any) => {
-    const [start, end] = dates
-
-    setStartDate(start || new Date())
-    setEndDate(end || addDays(new Date(), 15))
-  }
-
-  const CustomInput = forwardRef((props: CustomInputProps, ref) => {
-    const { label, start, end, ...rest } = props
-
-    const startDate = format(start, 'MM/dd/yyyy')
-    const endDate = end !== null ? ` - ${format(end, 'MM/dd/yyyy')}` : null
-
-    const value = `${startDate}${endDate !== null ? endDate : ''}`
-
-    return <TextField fullWidth inputRef={ref} {...rest} label={label} value={value} />
-  })
+const CustomInput = forwardRef((props: any, ref) => {
+  const { onClick } = props
 
   return (
-    <Grid container spacing={6}>
-      <Grid item xs={12}>
-        {/* Ajustar el tamaño y la alineación del Datepicker */}
-        <div style={{ maxWidth: '250px', marginLeft: '0px' }}>
-          <AppReactDatepicker
-            selectsRange
-            endDate={endDate}
-            selected={startDate}
-            startDate={startDate}
-            id='date-range-picker'
-            onChange={handleOnChange}
-            shouldCloseOnSelect={false}
-            customInput={
-              <CustomInput label='Rango de Fechas' start={startDate as Date | number} end={endDate as Date | number} />
-            }
-          />
-        </div>
-      </Grid>
-    </Grid>
+    <TextField
+      fullWidth
+      inputRef={ref}
+      onClick={onClick}
+      onKeyDown={e => e.preventDefault()}
+      readOnly
+      sx={{
+        width: '240px',
+        '& .MuiInputBase-input': {
+          cursor: 'pointer'
+        }
+      }}
+      {...props}
+    />
+  )
+})
+
+const PickersRange = ({ startDate, endDate, onChange, placeholderText }: PickersRangeProps) => {
+  return (
+    <div className='flex items-center'>
+      <DatePicker
+        selectsRange
+        endDate={endDate}
+        selected={startDate}
+        startDate={startDate}
+        onChange={(dates: [Date | null, Date | null]) => {
+          onChange(dates[0], dates[1])
+        }}
+        placeholderText={placeholderText || 'Filtrar por fecha de creación'}
+        customInput={<CustomInput />}
+        dateFormat='dd/MM/yyyy'
+        isClearable={true}
+        locale={es}
+      />
+    </div>
   )
 }
 

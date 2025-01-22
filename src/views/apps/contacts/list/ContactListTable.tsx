@@ -343,15 +343,13 @@ const ContactsListTable = () => {
         header: 'TELÉFONO 2',
         cell: ({ row }) => <Typography>{row.original.telefono2}</Typography>
       }),
-      columnHelper.accessor('action', {
-        header: 'ACCIÓN',
+      {
+        id: 'actions',
+        header: 'ACCIONES',
         cell: ({ row }) => (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <IconButton color='primary' onClick={() => handleEditContact(row.original)}>
               <EditIcon />
-            </IconButton>
-            <IconButton color='secondary' onClick={() => handleExportSingleContact(row.original)}>
-              <i className='ri-download-2-line' />
             </IconButton>
             <IconButton color='error' onClick={() => handleClickOpenDialog(row.original)}>
               <DeleteIcon />
@@ -359,7 +357,7 @@ const ContactsListTable = () => {
           </Box>
         ),
         enableSorting: false
-      })
+      }
     ],
     []
   )

@@ -77,6 +77,99 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     observaciones: currentUser?.condicionesComerciales?.observaciones || ''
   }
 
+  // Agregar las funciones de validación al inicio del componente
+  const formatRut = (value: string) => {
+    // Eliminar todo excepto números y k
+    let cleaned = value.replace(/[^0-9kK]/g, '')
+
+    // Convertir 'k' minúscula a mayúscula
+    cleaned = cleaned.toUpperCase()
+
+    // Limitar el largo
+    if (cleaned.length > 9) cleaned = cleaned.slice(0, 9)
+
+    // Si no hay caracteres, retornar string vacío
+    if (cleaned.length === 0) return ''
+
+    // Separar dígito verificador
+    const dv = cleaned.slice(-1)
+    let digits = cleaned.slice(0, -1)
+
+    // Agregar puntos
+    if (digits.length > 3) {
+      digits = digits.slice(0, -3) + '.' + digits.slice(-3)
+    }
+
+    if (digits.length > 7) {
+      digits = digits.slice(0, -7) + '.' + digits.slice(-7)
+    }
+
+    // Retornar RUT formateado
+    return `${digits}-${dv}`
+  }
+
+  const validateRut = (rut: string) => {
+    try {
+      if (!rut) return false
+
+      let cleaned = rut.replace(/\./g, '').replace(/-/g, '')
+
+      if (!/^[0-9]{7,9}[0-9Kk]$/.test(cleaned)) {
+        return false
+      }
+
+      cleaned = cleaned.toUpperCase()
+      const dv = cleaned.slice(-1)
+      const rutBody = cleaned.slice(0, -1)
+
+      if (isNaN(parseInt(rutBody))) {
+        return false
+      }
+
+      let suma = 0
+      let multiplicador = 2
+      const rutReverso = rutBody.split('').reverse()
+
+      for (let i = 0; i < rutReverso.length; i++) {
+        suma += parseInt(rutReverso[i]) * multiplicador
+        multiplicador = multiplicador === 7 ? 2 : multiplicador + 1
+      }
+
+      const dvEsperado = 11 - (suma % 11)
+      const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString()
+
+      return dv === dvCalculado
+    } catch (error) {
+      console.error('Error validando RUT:', error)
+
+      return false
+    }
+  }
+
+  const validatePhone = (phone: string) => {
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
+
+    return /^\+?[0-9]+$/.test(cleanPhone)
+  }
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  // Agregar esta función al inicio del componente, junto con las otras funciones de validación
+  const formatPhone = (value: string) => {
+    // Eliminar todo excepto números y +
+    let formatted = value.replace(/[^\d+]/g, '')
+
+    // Asegurar que solo haya un + al inicio
+    if (formatted.startsWith('+')) {
+      formatted = '+' + formatted.substring(1).replace(/\+/g, '')
+    }
+
+    return formatted
+  }
+
+  // Modificar el useForm para incluir las validaciones
   const {
     control,
     handleSubmit,
@@ -86,7 +179,29 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     getValues
   } = useForm({
     defaultValues,
-    mode: 'onChange'
+    mode: 'onChange',
+    resolver: async values => {
+      const errors: any = {}
+
+      if (!validateRut(values.rut)) {
+        errors.rut = {
+          type: 'manual',
+          message: 'RUT inválido. Formato: XX.XXX.XXX-X'
+        }
+      }
+
+      if (values.telefono && !validatePhone(values.telefono)) {
+        errors.telefono = {
+          type: 'manual',
+          message: 'Solo se permiten números y el signo + al inicio'
+        }
+      }
+
+      return {
+        values,
+        errors
+      }
+    }
   })
 
   // Inicializar formData
@@ -94,15 +209,19 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     pais: currentUser?.pais || 'Chile'
   })
 
-  // Al inicio del componente, después de los otros estados
-  const [contactos, setContactos] = useState<Contacto[]>(
+  // Modificar el estado inicial de contactos para que coincida con la estructura
+  const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean; id?: string }>>(
     currentUser?.clientesContactos?.map(cc => ({
-      contactId: cc.contacto.contactId,
-      nombre: cc.contacto.nombre,
-      cargo: cc.contacto.cargo,
-      email: cc.contacto.email,
-      telefono1: cc.contacto.telefono1,
-      telefono2: cc.contacto.telefono2 || ''
+      contacto: {
+        contactId: cc.contacto.contactId,
+        nombre: cc.contacto.nombre,
+        cargo: cc.contacto.cargo,
+        email: cc.contacto.email,
+        telefono1: cc.contacto.telefono1,
+        telefono2: cc.contacto.telefono2 || ''
+      },
+      isPrincipal: cc.isPrincipal,
+      id: cc.id
     })) || []
   )
 
@@ -114,10 +233,43 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     telefono2: ''
   })
 
-  // Función para agregar contacto
+  // Agregar estados para el manejo de contactos
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
+  const [editingContact, setEditingContact] = useState<Contacto>({
+    nombre: '',
+    cargo: '',
+    email: '',
+    telefono1: '',
+    telefono2: ''
+  })
+
+  // Modificar la función handleEditClick
+  const handleEditClick = (index: number) => {
+    setEditingContactIndex(index)
+
+    // Acceder correctamente a las propiedades del contacto
+    const contactoActual = contactos[index].contacto
+
+    setEditingContact({
+      nombre: contactoActual.nombre,
+      cargo: contactoActual.cargo,
+      email: contactoActual.email,
+      telefono1: contactoActual.telefono1,
+      telefono2: contactoActual.telefono2
+    })
+  }
+
+  // Modificar la función handleAddContacto
   const handleAddContacto = () => {
     if (nuevoContacto.nombre && nuevoContacto.email) {
-      setContactos([...contactos, nuevoContacto])
+      setContactos([
+        ...contactos,
+        {
+          contacto: { ...nuevoContacto },
+          isPrincipal: contactos.length === 0
+        }
+      ])
       setNuevoContacto({
         nombre: '',
         cargo: '',
@@ -131,6 +283,72 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   // Función para eliminar contacto
   const handleDeleteContacto = (index: number) => {
     setContactos(contactos.filter((_, i) => i !== index))
+  }
+
+  const handleCancelEdit = () => {
+    setEditingContactIndex(null)
+    setEditingContact({
+      nombre: '',
+      cargo: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingContact.nombre || !editingContact.email || !validateEmail(editingContact.email)) {
+      toast.error('Por favor complete los campos requeridos correctamente')
+
+      return
+    }
+
+    try {
+      // Actualizar el contacto usando el nuevo endpoint PATCH
+      const response = await axios.patch(`/api/clientes/${currentUser?.clienteId}/contactos`, {
+        id: contactos[editingContactIndex].id,
+        isPrincipal: contactos[editingContactIndex].isPrincipal,
+        contacto: {
+          contactId: contactos[editingContactIndex].contacto.contactId,
+          nombre: editingContact.nombre,
+          cargo: editingContact.cargo || '',
+          email: editingContact.email,
+          telefono1: editingContact.telefono1 || '',
+          telefono2: editingContact.telefono2 || ''
+        }
+      })
+
+      if (response.data) {
+        // Actualizar el estado local
+        const updatedContactos = [...contactos]
+
+        updatedContactos[editingContactIndex] = {
+          ...contactos[editingContactIndex],
+          contacto: response.data
+        }
+        setContactos(updatedContactos)
+
+        // Actualizar la UI
+        setData(prevData =>
+          prevData.map(cliente => {
+            if (cliente.clienteId === currentUser?.clienteId) {
+              return {
+                ...cliente,
+                clientesContactos: updatedContactos
+              }
+            }
+
+            return cliente
+          })
+        )
+
+        toast.success('Contacto actualizado exitosamente')
+        setEditingContactIndex(null)
+      }
+    } catch (error) {
+      console.error('Error al actualizar contacto:', error)
+      toast.error('Error al actualizar contacto')
+    }
   }
 
   // Efecto para cargar datos iniciales
@@ -244,47 +462,44 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
         return
       }
 
+      // Preparar solo los datos básicos del cliente
       const clienteData = {
-        ...data,
+        estado: data.estado,
+        rut: data.rut,
+        razonSocial: data.razonSocial,
+        nombreCliente: data.nombreCliente,
         pais: formData.pais,
         region: regionSeleccionada?.codigo || '',
-        comuna: comunaSeleccionada.nombre,
-        clientesContactos: contactos,
-        condicionesComerciales: {
+        ciudad: data.ciudad,
+        comuna: comunaSeleccionada.id,
+        direccion: data.direccion,
+        telefono: data.telefono,
+        sitioWeb: data.sitioWeb,
+        segmento: data.segmento,
+        industria: data.industria
+      }
+
+      // Primero actualizar los datos básicos del cliente
+      const response = await axios.put(`/api/clientes/${currentUser?.clienteId}`, clienteData)
+
+      if (response.data) {
+        // Luego actualizar las condiciones comerciales
+        await axios.put(`/api/clientes/${currentUser?.clienteId}/condiciones`, {
           vendedor: data.vendedor,
           condicionVenta: data.condicionVenta,
           observaciones: data.observaciones
-        }
-      }
-
-      const response = await axios.put(`/api/clientes/${currentUser.clienteId}`, clienteData)
-
-      if (response.data) {
-        setData(prevData =>
-          prevData.map(cliente => (cliente.clienteId === currentUser.clienteId ? response.data : cliente))
-        )
-
-        toast.success('Cliente actualizado exitosamente', {
-          duration: 3000,
-          position: 'top-right',
-          style: {
-            background: '#10B981',
-            color: '#fff'
-          }
         })
 
+        // Actualizar la UI
+        setData(prevData =>
+          prevData.map(cliente => (cliente.clienteId === currentUser?.clienteId ? response.data : cliente))
+        )
+        toast.success('Cliente actualizado exitosamente')
         handleClose()
       }
     } catch (error) {
       console.error('Error al actualizar cliente:', error)
-      toast.error('Error al actualizar el cliente', {
-        duration: 3000,
-        position: 'top-right',
-        style: {
-          background: '#EF4444',
-          color: '#fff'
-        }
-      })
+      toast.error('Error al actualizar cliente')
     } finally {
       setIsSubmitting(false)
     }
@@ -297,7 +512,15 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
       variant='temporary'
       onClose={handleClose}
       ModalProps={{ keepMounted: true }}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 500, md: 800 } } }}
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: {
+            xs: '90%', // En móviles
+            sm: '80%', // En tablets
+            md: '1000px' // En desktop, ancho fijo más grande
+          }
+        }
+      }}
     >
       <Box sx={{ p: 5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
@@ -349,14 +572,22 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 <Controller
                   name='rut'
                   control={control}
-                  rules={{ required: true }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
                       label='ID Cliente (RUT)'
+                      placeholder='12.345.678-9'
                       error={Boolean(errors.rut)}
-                      helperText={errors.rut && 'Este campo es requerido'}
+                      helperText={errors.rut ? errors.rut.message : ''}
+                      onChange={e => {
+                        const formatted = formatRut(e.target.value)
+
+                        field.onChange(formatted)
+                      }}
+                      inputProps={{
+                        maxLength: 12
+                      }}
                     />
                   )}
                 />
@@ -485,7 +716,21 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 <Controller
                   name='telefono'
                   control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Teléfono' />}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Teléfono'
+                      placeholder='+56912345678'
+                      error={Boolean(errors.telefono)}
+                      helperText={errors.telefono ? errors.telefono.message : ''}
+                      onChange={e => {
+                        const formatted = formatPhone(e.target.value)
+
+                        field.onChange(formatted)
+                      }}
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -557,12 +802,12 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>NOMBRE</TableCell>
-                        <TableCell>CARGO</TableCell>
-                        <TableCell>EMAIL</TableCell>
-                        <TableCell>TELÉFONO 1</TableCell>
-                        <TableCell>TELÉFONO 2</TableCell>
-                        <TableCell>ACCIÓN</TableCell>
+                        <TableCell sx={{ width: '20%' }}>NOMBRE</TableCell>
+                        <TableCell sx={{ width: '15%' }}>CARGO</TableCell>
+                        <TableCell sx={{ width: '25%' }}>EMAIL</TableCell>
+                        <TableCell sx={{ width: '15%' }}>TELÉFONO 1</TableCell>
+                        <TableCell sx={{ width: '15%' }}>TELÉFONO 2</TableCell>
+                        <TableCell sx={{ width: '10%', minWidth: '120px' }}>ACCIÓN</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -592,6 +837,10 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                             fullWidth
                             value={nuevoContacto.email}
                             onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
+                            error={nuevoContacto.email !== '' && !validateEmail(nuevoContacto.email)}
+                            helperText={
+                              nuevoContacto.email !== '' && !validateEmail(nuevoContacto.email) ? 'Email inválido' : ''
+                            }
                           />
                         </TableCell>
                         <TableCell>
@@ -600,7 +849,17 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                             size='small'
                             fullWidth
                             value={nuevoContacto.telefono1}
-                            onChange={e => setNuevoContacto({ ...nuevoContacto, telefono1: e.target.value })}
+                            onChange={e => {
+                              const formatted = formatPhone(e.target.value)
+
+                              setNuevoContacto({ ...nuevoContacto, telefono1: formatted })
+                            }}
+                            error={nuevoContacto.telefono1 !== '' && !validatePhone(nuevoContacto.telefono1)}
+                            helperText={
+                              nuevoContacto.telefono1 !== '' && !validatePhone(nuevoContacto.telefono1)
+                                ? 'Solo números y + al inicio'
+                                : ''
+                            }
                           />
                         </TableCell>
                         <TableCell>
@@ -620,17 +879,104 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                       </TableRow>
                       {/* Contactos existentes */}
                       {contactos.map((contacto, index) => (
-                        <TableRow key={contacto.contactId || index}>
-                          <TableCell>{contacto.nombre}</TableCell>
-                          <TableCell>{contacto.cargo}</TableCell>
-                          <TableCell>{contacto.email}</TableCell>
-                          <TableCell>{contacto.telefono1}</TableCell>
-                          <TableCell>{contacto.telefono2}</TableCell>
-                          <TableCell>
-                            <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </TableCell>
+                        <TableRow key={contacto.id || index}>
+                          {editingContactIndex === index ? (
+                            // Modo edición
+                            <>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.nombre}
+                                  onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                                  placeholder='Nombre'
+                                  fullWidth
+                                  size='small'
+                                  required
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.cargo}
+                                  onChange={e => setEditingContact({ ...editingContact, cargo: e.target.value })}
+                                  placeholder='Cargo'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.email}
+                                  onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                                  placeholder='Email'
+                                  fullWidth
+                                  size='small'
+                                  required
+                                  error={!validateEmail(editingContact.email)}
+                                  helperText={!validateEmail(editingContact.email) ? 'Email inválido' : ''}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.telefono1}
+                                  onChange={e => {
+                                    const formatted = formatPhone(e.target.value)
+
+                                    setEditingContact({ ...editingContact, telefono1: formatted })
+                                  }}
+                                  placeholder='Teléfono 1'
+                                  fullWidth
+                                  size='small'
+                                  error={editingContact.telefono1 !== '' && !validatePhone(editingContact.telefono1)}
+                                  helperText={
+                                    editingContact.telefono1 !== '' && !validatePhone(editingContact.telefono1)
+                                      ? 'Solo números y + al inicio'
+                                      : ''
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.telefono2}
+                                  onChange={e => {
+                                    const formatted = formatPhone(e.target.value)
+
+                                    setEditingContact({ ...editingContact, telefono2: formatted })
+                                  }}
+                                  placeholder='Teléfono 2'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell sx={{ minWidth: '120px' }}>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <IconButton color='success' onClick={handleSaveEdit}>
+                                    <i className='ri-check-line' />
+                                  </IconButton>
+                                  <IconButton color='error' onClick={handleCancelEdit}>
+                                    <i className='ri-close-line' />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </>
+                          ) : (
+                            // Modo visualización
+                            <>
+                              <TableCell>{contacto.contacto.nombre}</TableCell>
+                              <TableCell>{contacto.contacto.cargo}</TableCell>
+                              <TableCell>{contacto.contacto.email}</TableCell>
+                              <TableCell>{contacto.contacto.telefono1}</TableCell>
+                              <TableCell>{contacto.contacto.telefono2}</TableCell>
+                              <TableCell sx={{ minWidth: '120px' }}>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <IconButton color='info' onClick={() => handleEditClick(index)}>
+                                    <i className='ri-edit-line' />
+                                  </IconButton>
+                                  <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
+                                    <i className='ri-delete-bin-line' />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

@@ -24,11 +24,13 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
+import { format, parseISO } from 'date-fns'
 
 import ContactSearchObra from '../components/ContactSearchObra'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
@@ -40,6 +42,12 @@ import { initialFormData } from '@/types/forms/obra'
 // Data
 import { ESTADOS_OBRA, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import { formatRut, validateRut } from '@/utils/rut-utils'
+
+// Agregar el enum o constante para los roles
+const ROLES_OBRA = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' }
+]
 
 interface EditWorksFormProps {
   open: boolean
@@ -53,7 +61,16 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   const [contactos, setContactos] = useState<ContactoObra[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
-  const [editingContactId, setEditingContactId] = useState<number | null>(null)
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
+  const [editingContact, setEditingContact] = useState<ContactoObra>({
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono1: '',
+    telefono2: ''
+  })
+
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [selectedComuna, setSelectedComuna] = useState<string>('')
   const [comunasList, setComunasList] = useState<any[]>([])
@@ -69,25 +86,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     watch
   } = useForm<FormValidateType>({
     defaultValues: {
-      numeroObra: '',
-      fechaIngreso: new Date().toISOString().split('T')[0],
-      estado: 'activo',
-      estadoObra: 'activo',
-      nombreObra: '',
-      direccion: '',
-      region: '',
-      comuna: '',
-      telefono: '',
-      sitioWeb: '',
-      nombreCliente: '',
-      rut: '',
-      razonSocial: '',
-      giro: '',
-      direccionComercial: '',
-      comunaFacturacion: '',
-      telefonoFacturacion: '',
-      listaPrecios: '',
-      mailRecepcionFactura: ''
+      ...initialFormData,
+      fechaIngreso: new Date().toISOString().split('T')[0]
     },
     mode: 'onChange',
     rules: {
@@ -118,8 +118,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         }
       },
       telefonoFacturacion: {
-        required: 'El teléfono es requerido',
-        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+        required: 'El teléfono es requerido'
       },
       mailRecepcionFactura: {
         required: 'El email es requerido',
@@ -128,25 +127,32 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     }
   })
 
-  // Cargar datos iniciales
+  // Efecto para cargar los datos cuando se abre el drawer
   useEffect(() => {
     if (obraData) {
-      // Prellenar el formulario con los datos de la obra
-      Object.keys(obraData).forEach(key => {
-        setValue(key as any, obraData[key as keyof Obra])
+      // Formatear la fecha
+      const formattedDate = obraData.fechaIngreso ? format(new Date(obraData.fechaIngreso), 'yyyy-MM-dd') : ''
+
+      // Formatear el RUT antes de establecerlo en el formulario
+      const formattedRut = obraData.rut ? formatRut(obraData.rut) : ''
+
+      reset({
+        ...obraData,
+        fechaIngreso: formattedDate,
+        rut: formattedRut // Usar el RUT formateado
       })
 
-      // Establecer región y comuna
+      // Actualizar otros estados
+      setContactos(obraData.contactos || [])
       setSelectedRegion(obraData.region || '')
       setSelectedComuna(obraData.comuna || '')
-      setContactos(obraData.contactos || [])
 
       // Cargar las comunas de la región seleccionada
       if (obraData.region) {
         fetchComunas(obraData.region)
       }
     }
-  }, [obraData])
+  }, [obraData, reset])
 
   // Función para cargar comunas
   const fetchComunas = async (regionValue: string) => {
@@ -197,24 +203,24 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     return emailRegex.test(email)
   }
 
-  // Validación de teléfono chileno
-  const validatePhone = (phone: string) => {
-    const phoneRegex = /^\+?56?\d{9}$/
+  // Modificar la función de formateo de teléfono
+  const formatPhone = (value: string) => {
+    // Permitir solo números y el signo +
+    let formatted = value.replace(/[^\d+]/g, '')
 
-    return phoneRegex.test(phone)
-  }
-
-  // Formatear teléfono mientras se escribe
-  const formatPhone = (phone: string) => {
-    let cleaned = phone.replace(/\D/g, '')
-
-    if (!cleaned.startsWith('56')) {
-      cleaned = '56' + cleaned
+    // Asegurar que el + solo esté al inicio
+    if (formatted.includes('+')) {
+      formatted = '+' + formatted.replace(/\+/g, '')
     }
 
-    cleaned = cleaned.slice(0, 11)
+    return formatted
+  }
 
-    return '+' + cleaned
+  // Modificar la función de validación de teléfono
+  const validatePhone = (phone: string) => {
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
+
+    return /^\+?[0-9]+$/.test(cleanPhone)
   }
 
   // Manejadores para campos específicos
@@ -236,20 +242,29 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     setValue('telefonoFacturacion', formattedPhone)
   }
 
-  const onSubmit = async (data: FormValidateType) => {
+  const onSubmit = async (formData: FormValidateType) => {
     try {
       setIsSubmitting(true)
-      const response = await axios.put(`/api/obras/${obraData?.obraId}`, data)
+
+      // Asegurarnos de que la fecha esté en el formato correcto para la API
+      const dataToSubmit = {
+        ...formData,
+        fechaIngreso: formData.fechaIngreso ? new Date(formData.fechaIngreso).toISOString() : null
+      }
+
+      const response = await axios.put(`/api/obras/${obraData?.obraId}`, dataToSubmit)
 
       if (response.status === 200) {
+        // Actualizar los datos en la tabla
+        setData(prevData =>
+          prevData.map(obra => (obra.obraId === obraData?.obraId ? { ...obra, ...response.data } : obra))
+        )
+
         toast.success('Obra actualizada exitosamente')
         handleClose()
-
-        // Actualizar la lista
-        setData(prevData => prevData.map(obra => (obra.obraId === obraData?.obraId ? response.data : obra)))
       }
     } catch (error) {
-      console.error('Error updating obra:', error)
+      console.error('Error al actualizar obra:', error)
       toast.error('Error al actualizar la obra')
     } finally {
       setIsSubmitting(false)
@@ -262,6 +277,60 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
   const handleDeleteContact = (contactId: number) => {
     setContactos(prev => prev.filter(c => c.id !== contactId))
+  }
+
+  const editarContacto = (index: number) => {
+    setEditingContactIndex(index)
+    const contacto = contactos[index]
+
+    setEditingContact({
+      rol: contacto.rol || '',
+      nombre: contacto.nombre || '',
+      email: contacto.email || '',
+      telefono1: contacto.telefono1 || '',
+      telefono2: contacto.telefono2 || ''
+    })
+  }
+
+  const guardarEdicion = () => {
+    if (editingContactIndex === null) return
+
+    // Validaciones
+    if (!editingContact.nombre || !editingContact.email || !validateEmail(editingContact.email)) {
+      toast.error('Por favor complete los campos requeridos correctamente')
+
+      return
+    }
+
+    const updatedContactos = [...contactos]
+
+    updatedContactos[editingContactIndex] = {
+      ...contactos[editingContactIndex],
+      ...editingContact
+    }
+
+    setContactos(updatedContactos)
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
+
+    toast.success('Contacto actualizado exitosamente')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
   }
 
   return (
@@ -321,16 +390,22 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <Controller
               name='fechaIngreso'
               control={control}
-              rules={{ required: true }}
+              rules={{ required: 'La fecha es requerida' }}
               render={({ field }) => (
                 <TextField
                   {...field}
-                  fullWidth
-                  label='Fecha Ingreso *'
                   type='date'
+                  fullWidth
+                  label='Fecha Ingreso'
                   InputLabelProps={{ shrink: true }}
+                  onChange={e => {
+                    field.onChange(e)
+
+                    // Actualizar el valor inmediatamente
+                    setValue('fechaIngreso', e.target.value)
+                  }}
                   error={Boolean(errors.fechaIngreso)}
-                  helperText={errors.fechaIngreso && 'Este campo es obligatorio'}
+                  helperText={errors.fechaIngreso?.message}
                 />
               )}
             />
@@ -444,28 +519,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={Boolean(errors.estado)}>
-              <InputLabel>Estado</InputLabel>
-              <Controller
-                name='estado'
-                control={control}
-                defaultValue={obraData?.estado}
-                rules={{ required: true }}
-                render={({ field: { value, ...field } }) => (
-                  <Select label='Estado' value={value || ''} {...field}>
-                    {ESTADOS_OBRA.map(estado => (
-                      <MenuItem key={estado.value} value={estado.value}>
-                        {estado.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.estado && <FormHelperText>Este campo es requerido</FormHelperText>}
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}></Grid>
+
           <Grid item xs={12} sm={6}>
             <Controller
               name='sector'
@@ -502,7 +556,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <FormControlLabel
               control={
                 <Controller
@@ -514,7 +568,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='Informe a Mandante'
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Controller
               name='textoMandante'
               control={control}
@@ -540,50 +594,109 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>ROL</TableCell>
                 <TableCell>NOMBRE</TableCell>
-                <TableCell>CARGO</TableCell>
                 <TableCell>EMAIL</TableCell>
-                <TableCell>TELÉFONO 1</TableCell>
-                <TableCell>TELÉFONO 2</TableCell>
+                <TableCell>TELÉFONO</TableCell>
                 <TableCell>ACCIÓN</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {contactos.length > 0 ? (
-                contactos.map(contacto => (
-                  <TableRow key={contacto.id}>
-                    <TableCell>{contacto.nombre}</TableCell>
-                    <TableCell>{contacto.cargo}</TableCell>
-                    <TableCell>{contacto.email}</TableCell>
-                    <TableCell>{contacto.telefono1}</TableCell>
-                    <TableCell>{contacto.telefono2}</TableCell>
-                    <TableCell>
-                      <IconButton size='small' onClick={() => handleDeleteContact(contacto.id)}>
-                        <i className='ri-delete-bin-line' />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} align='center'>
-                    No hay contactos
-                  </TableCell>
+              {contactos.map((contacto, index) => (
+                <TableRow key={index}>
+                  {editingContactIndex === index ? (
+                    // Modo edición
+                    <>
+                      <TableCell>
+                        <FormControl fullWidth size='small'>
+                          <Select
+                            value={editingContact.rol}
+                            onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                          >
+                            {ROLES_OBRA.map(rol => (
+                              <MenuItem key={rol.value} value={rol.value}>
+                                {rol.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          fullWidth
+                          size='small'
+                          value={editingContact.nombre}
+                          onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          fullWidth
+                          size='small'
+                          value={editingContact.email}
+                          onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                          error={!validateEmail(editingContact.email)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          fullWidth
+                          size='small'
+                          value={editingContact.telefono1}
+                          onChange={e => {
+                            const formatted = formatPhone(e.target.value)
+
+                            setEditingContact({ ...editingContact, telefono1: formatted })
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton color='success' onClick={guardarEdicion}>
+                            <i className='ri-check-line' />
+                          </IconButton>
+                          <IconButton color='error' onClick={handleCancelEdit}>
+                            <i className='ri-close-line' />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </>
+                  ) : (
+                    // Modo visualización
+                    <>
+                      <TableCell>{ROLES_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
+                      <TableCell>{contacto.nombre}</TableCell>
+                      <TableCell>{contacto.email}</TableCell>
+                      <TableCell>{contacto.telefono1}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton color='info' onClick={() => editarContacto(index)}>
+                            <i className='ri-edit-line' />
+                          </IconButton>
+                          <IconButton color='error' onClick={() => handleDeleteContact(contacto.id)}>
+                            <i className='ri-delete-bin-line' />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
 
         {/* Sección de Requisitos */}
         <Divider sx={{ my: 4 }} />
-        <Typography variant='h6'>Requisitos</Typography>
         <Grid container spacing={5}>
+          <Grid item xs={12}>
+            <Typography variant='h6'>Requisitos</Typography>
+          </Grid>
+
           <Grid item xs={12} sm={4}>
             <Controller
               name='acreditacionPersonal'
               control={control}
-              defaultValue={false}
               render={({ field }) => (
                 <FormControlLabel
                   control={<Checkbox {...field} checked={field.value} />}
@@ -592,7 +705,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+
+          <Grid item xs={12} sm={4}>
             <FormControlLabel
               control={
                 <Controller
@@ -604,19 +718,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='Especificaciones Técnicas'
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='acreditacionEquipos'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                />
-              }
-              label='Acreditación Equipos'
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
+
+          <Grid item xs={12} sm={4}>
             <FormControlLabel
               control={
                 <Controller
@@ -628,7 +731,21 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='Carta Compromiso'
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+
+          <Grid item xs={12} sm={4}>
+            <FormControlLabel
+              control={
+                <Controller
+                  name='acreditacionEquipos'
+                  control={control}
+                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
+                />
+              }
+              label='Acreditación Equipos'
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
             <FormControlLabel
               control={
                 <Controller
@@ -640,6 +757,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='Mandato SERVIU'
             />
           </Grid>
+
           <Grid item xs={12}>
             <Controller
               name='otrosRequisitos'
@@ -717,20 +835,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               name='telefonoFacturacion'
               control={control}
               rules={{
-                required: 'El teléfono es requerido',
-                validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+                required: 'El teléfono es requerido'
               }}
               render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
                   label='Teléfono *'
-                  onChange={handleFacturacionPhoneChange}
+                  placeholder='+56 9 XXXX XXXX'
                   error={Boolean(errors.telefonoFacturacion)}
                   helperText={errors.telefonoFacturacion?.message}
-                  inputProps={{
-                    maxLength: 12
+                  value={field.value || ''}
+                  onChange={e => {
+                    const formatted = formatPhone(e.target.value)
+
+                    field.onChange(formatted)
                   }}
+                  inputProps={{
+                    inputMode: 'text'
+                  }}
+                  InputLabelProps={{ shrink: true }}
                 />
               )}
             />

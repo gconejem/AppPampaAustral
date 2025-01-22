@@ -7,14 +7,13 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 
-// Third-party Imports
+// Third Party Imports
 import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 import es from 'date-fns/locale/es'
-
-// Component Imports
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-import CustomInput from '@/views/components/custom-datepicker-input'
 
 // Data Imports
 import { ESTADOS_CLIENTE, SEGMENTOS } from '@/data/clientData'
@@ -40,34 +39,34 @@ const TableFilters = ({
   handleSegmentoChange,
   handleDateRangeChange
 }: Props) => {
-  const [startDate, endDate] = dateRange
-
   return (
-    <Box sx={{ p: 5, pb: 3, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
-        <AppReactDatepicker>
-          <DatePicker
-            selectsRange
-            monthsShown={1}
-            endDate={endDate}
-            selected={startDate}
-            startDate={startDate}
-            shouldCloseOnSelect={false}
-            locale={es}
-            dateFormat='dd/MM/yyyy'
-            id='date-range-picker'
-            customInput={
-              <CustomInput
-                label='Fecha de Creación'
-                start={startDate}
-                end={endDate}
-                size='small'
-                sx={{ width: '240px' }}
-              />
-            }
-            onChange={(dates: [Date | null, Date | null]) => handleDateRangeChange(dates)}
-          />
-        </AppReactDatepicker>
+    <Box className='flex flex-wrap items-center justify-between gap-4 p-6'>
+      <Box className='flex flex-wrap items-center gap-4'>
+        <DatePicker
+          selectsRange
+          endDate={dateRange[1]}
+          selected={dateRange[0]}
+          startDate={dateRange[0]}
+          onChange={(dates: [Date | null, Date | null]) => handleDateRangeChange(dates)}
+          customInput={
+            <TextField
+              size='small'
+              inputProps={{
+                readOnly: true,
+                placeholder: 'Filtrar por fecha de creación'
+              }}
+              sx={{
+                width: '240px',
+                '& .MuiInputBase-input': {
+                  cursor: 'pointer'
+                }
+              }}
+            />
+          }
+          dateFormat='dd/MM/yyyy'
+          isClearable={true}
+          locale={es}
+        />
 
         <FormControl size='small' sx={{ minWidth: '240px' }}>
           <InputLabel>Estado</InputLabel>

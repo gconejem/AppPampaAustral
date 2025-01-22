@@ -28,6 +28,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -59,17 +60,34 @@ type Props = {
   setFilteredData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
 }
 
-// Función de validación para teléfono
-const validatePhone = (value: string) => {
-  // Remover cualquier caracter que no sea número
-  const numericValue = value.replace(/\D/g, '')
+// Agregar la función de formateo de teléfono
+const formatPhone = (value: string) => {
+  // Permitir solo números y el signo +
+  let formatted = value.replace(/[^\d+]/g, '')
 
-  // Validar longitud (9 dígitos para números chilenos)
-  if (numericValue.length !== 9) {
-    return 'El número debe tener 9 dígitos'
+  // Asegurar que el + solo esté al inicio
+  if (formatted.includes('+')) {
+    formatted = '+' + formatted.replace(/\+/g, '')
   }
 
-  return true
+  return formatted
+}
+
+// Función de validación de teléfono
+const validatePhone = (phone: string) => {
+  const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
+
+  return /^\+?[0-9]+$/.test(cleanPhone)
+}
+
+// Agregar estos tipos si no existen
+type ContactoObra = {
+  rol: string
+  nombre: string
+  email: string
+  telefono1: string
+  telefono2?: string
+  isPrincipal?: boolean
 }
 
 const AddObraDrawer = (props: Props) => {
@@ -85,7 +103,15 @@ const AddObraDrawer = (props: Props) => {
     telefono1: ''
   })
 
-  const [editingContactId, setEditingContactId] = useState<number | null>(null)
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
+  const [editingContact, setEditingContact] = useState<ContactoObra>({
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono1: '',
+    telefono2: ''
+  })
 
   const { regiones, comunas } = useRegionesYComunas()
 
@@ -142,8 +168,7 @@ const AddObraDrawer = (props: Props) => {
         }
       },
       telefonoFacturacion: {
-        required: 'El teléfono es requerido',
-        validate: value => validatePhone(value) || 'Debe ser un número chileno válido'
+        required: 'El teléfono es requerido'
       },
       mailRecepcionFactura: {
         required: 'El email es requerido',
@@ -155,6 +180,22 @@ const AddObraDrawer = (props: Props) => {
           value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
           message: 'Solo se permiten letras'
         }
+      }
+    },
+    resolver: async values => {
+      const errors: any = {}
+
+      // Validar teléfono de facturación si existe
+      if (values.telefonoFacturacion && !validatePhone(values.telefonoFacturacion)) {
+        errors.telefonoFacturacion = {
+          type: 'manual',
+          message: 'Solo se permiten números y el signo + al inicio'
+        }
+      }
+
+      return {
+        values,
+        errors
       }
     }
   })
@@ -273,22 +314,6 @@ const AddObraDrawer = (props: Props) => {
     return emailRegex.test(email)
   }
 
-  // Formatear teléfono mientras se escribe
-  const formatPhone = (phone: string) => {
-    // Eliminar todo excepto números
-    let cleaned = phone.replace(/\D/g, '')
-
-    // Agregar +56 si no lo tiene
-    if (!cleaned.startsWith('56')) {
-      cleaned = '56' + cleaned
-    }
-
-    // Limitar a 11 caracteres (56 + 9 dígitos)
-    cleaned = cleaned.slice(0, 11)
-
-    return '+' + cleaned
-  }
-
   const agregarContacto = () => {
     // Validar campos requeridos y formato
     if (!nuevoContacto.rol || !nuevoContacto.nombre) {
@@ -326,28 +351,59 @@ const AddObraDrawer = (props: Props) => {
   }
 
   const editarContacto = (index: number) => {
-    setEditingContactId(index)
+    setEditingContactIndex(index)
     const contacto = contactos[index]
 
-    setNuevoContacto({
-      cargo: contacto.cargo,
-      nombre: contacto.nombre,
-      email: contacto.email,
-      telefono1: contacto.telefono1,
-      telefono2: contacto.telefono2
+    // Asegurarse de que todos los campos necesarios estén presentes
+    setEditingContact({
+      rol: contacto.rol || '',
+      nombre: contacto.nombre || '',
+      email: contacto.email || '',
+      telefono1: contacto.telefono1 || '',
+      telefono2: contacto.telefono2 || ''
     })
   }
 
   const guardarEdicion = () => {
-    if (editingContactId === null) return
+    if (editingContactIndex === null) return
 
-    setContactos(prev =>
-      prev.map((contacto, index) =>
-        index === editingContactId ? { ...nuevoContacto, isPrincipal: contacto.isPrincipal } : contacto
-      )
-    )
-    setEditingContactId(null)
-    setNuevoContacto({ cargo: '', nombre: '', email: '', telefono1: '', telefono2: '' })
+    // Validar campos requeridos
+    if (!editingContact.rol || !editingContact.nombre) {
+      toast.error('Rol y nombre son requeridos')
+
+      return
+    }
+
+    if (!validateEmail(editingContact.email)) {
+      toast.error('Email inválido')
+
+      return
+    }
+
+    if (!validatePhone(editingContact.telefono1)) {
+      toast.error('Teléfono inválido')
+
+      return
+    }
+
+    const updatedContactos = [...contactos]
+
+    updatedContactos[editingContactIndex] = {
+      ...editingContact,
+      isPrincipal: contactos[editingContactIndex].isPrincipal // Mantener el estado isPrincipal
+    }
+
+    setContactos(updatedContactos)
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
+
+    toast.success('Contacto actualizado exitosamente')
   }
 
   const marcarComoPrincipal = (index: number) => {
@@ -498,6 +554,18 @@ const AddObraDrawer = (props: Props) => {
       console.error('Error al cargar comunas:', error)
       toast.error('Error al cargar las comunas')
     }
+  }
+
+  // Función para cancelar la edición
+  const handleCancelEdit = () => {
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: ''
+    })
   }
 
   return (
@@ -867,17 +935,82 @@ const AddObraDrawer = (props: Props) => {
                 {/* Lista de contactos agregados */}
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
-                    <TableCell>
-                      <Typography>{ROLES_OBRA.find(r => r.value === contacto.rol)?.label}</Typography>
-                    </TableCell>
-                    <TableCell>{contacto.nombre}</TableCell>
-                    <TableCell>{contacto.email}</TableCell>
-                    <TableCell>{contacto.telefono1}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => eliminarContacto(index)}>
-                        <i className='ri-delete-bin-line' />
-                      </IconButton>
-                    </TableCell>
+                    {editingContactIndex === index ? (
+                      // Modo edición
+                      <>
+                        <TableCell>
+                          <FormControl fullWidth size='small'>
+                            <Select
+                              value={editingContact.rol}
+                              onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                            >
+                              {ROLES_OBRA.map(rol => (
+                                <MenuItem key={rol.value} value={rol.value}>
+                                  {rol.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={editingContact.nombre}
+                            onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                            fullWidth
+                            size='small'
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={editingContact.email}
+                            onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                            fullWidth
+                            size='small'
+                            error={!validateEmail(editingContact.email)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={editingContact.telefono1}
+                            onChange={e => {
+                              const formatted = formatPhone(e.target.value)
+
+                              setEditingContact({ ...editingContact, telefono1: formatted })
+                            }}
+                            fullWidth
+                            size='small'
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='success' onClick={guardarEdicion}>
+                              <i className='ri-check-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={handleCancelEdit}>
+                              <i className='ri-close-line' />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </>
+                    ) : (
+                      // Modo visualización
+                      <>
+                        <TableCell>{contacto.rol}</TableCell>
+                        <TableCell>{contacto.nombre}</TableCell>
+                        <TableCell>{contacto.email}</TableCell>
+                        <TableCell>{contacto.telefono1}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='info' onClick={() => editarContacto(index)}>
+                              <i className='ri-edit-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={() => eliminarContacto(index)}>
+                              <i className='ri-delete-bin-line' />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -1078,21 +1211,23 @@ const AddObraDrawer = (props: Props) => {
                 name='telefono'
                 control={control}
                 rules={{
-                  required: 'El teléfono es requerido',
-                  validate: validatePhone
+                  required: 'El teléfono es requerido'
                 }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Teléfono *'
-                    onChange={handlePhoneChange}
+                    placeholder='+56 9 XXXX XXXX'
                     error={Boolean(errors.telefono)}
                     helperText={errors.telefono?.message}
+                    onChange={e => {
+                      const formatted = formatPhone(e.target.value)
+
+                      field.onChange(formatted)
+                    }}
                     inputProps={{
-                      maxLength: 9,
-                      inputMode: 'numeric',
-                      pattern: '[0-9]*'
+                      inputMode: 'text'
                     }}
                   />
                 )}

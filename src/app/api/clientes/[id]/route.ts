@@ -35,59 +35,30 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const body = await request.json()
     const clienteId = parseInt(params.id)
+    const data = await req.json()
 
-    // Extraer todos los campos que no deben ir en la actualización directa
-    const {
-      clientesContactos,
-      condicionesComerciales,
-      clienteId: id,
-      createdAt,
-      updatedAt,
-      fechaCreacion,
-      vendedor, // Extraer estos campos
-      condicionVenta, // ya que van en condicionesComerciales
-      observaciones,
-      ...clienteData
-    } = body
-
-    // Actualizar el cliente y sus relaciones
-    const updatedCliente = await prisma.cliente.update({
+    // Actualizar solo los datos básicos del cliente
+    const clienteActualizado = await prisma.cliente.update({
       where: {
-        clienteId
+        clienteId: clienteId
       },
       data: {
-        ...clienteData,
-        comuna: String(clienteData.comuna),
-
-        // Actualizar o crear contactos
-        clientesContactos: {
-          deleteMany: {}, // Eliminar contactos existentes
-          create: clientesContactos.map((contacto: any) => ({
-            isPrincipal: false,
-            contacto: {
-              create: {
-                nombre: contacto.nombre,
-                cargo: contacto.cargo,
-                email: contacto.email,
-                telefono1: contacto.telefono1,
-                telefono2: contacto.telefono2 || ''
-              }
-            }
-          }))
-        },
-
-        // Actualizar condiciones comerciales
-        condicionesComerciales: {
-          update: {
-            vendedor: condicionesComerciales.vendedor,
-            condicionVenta: condicionesComerciales.condicionVenta,
-            observaciones: condicionesComerciales.observaciones
-          }
-        }
+        estado: data.estado,
+        rut: data.rut,
+        razonSocial: data.razonSocial,
+        nombreCliente: data.nombreCliente,
+        pais: data.pais,
+        region: data.region,
+        ciudad: data.ciudad,
+        comuna: String(data.comuna),
+        direccion: data.direccion,
+        telefono: data.telefono,
+        sitioWeb: data.sitioWeb,
+        segmento: data.segmento,
+        industria: data.industria
       },
       include: {
         clientesContactos: {
@@ -99,10 +70,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     })
 
-    return NextResponse.json(updatedCliente)
+    return NextResponse.json(clienteActualizado)
   } catch (error) {
     console.error('Error al actualizar cliente:', error)
 
-    return NextResponse.json({ error: 'Error al actualizar el cliente' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al actualizar cliente' }, { status: 500 })
   }
 }
