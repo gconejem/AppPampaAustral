@@ -124,82 +124,45 @@ const AddClienteDrawer = (props: Props) => {
     const dv = cleaned.slice(-1)
     let digits = cleaned.slice(0, -1)
 
-    // Agregar puntos
+    // Agregar puntos solo si hay suficientes dígitos
     if (digits.length > 3) {
-      digits = digits.slice(0, -3) + '.' + digits.slice(-3)
+      digits = digits.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')
     }
 
-    if (digits.length > 7) {
-      digits = digits.slice(0, -7) + '.' + digits.slice(-7)
-    }
-
-    // Retornar RUT formateado
-    return `${digits}-${dv}`
+    return digits.length > 0 ? `${digits}-${dv}` : dv
   }
 
   const validateRut = (rut: string) => {
-    try {
-      if (!rut) return false
+    // Si está vacío o es muy corto, permitirlo (para no mostrar error mientras escribe)
+    if (!rut || rut.length < 3) return true
 
-      // Eliminar puntos y guión
-      let cleaned = rut.replace(/\./g, '').replace(/-/g, '')
+    // Limpiar el RUT de puntos y guión
+    const cleanRut = rut.replace(/\./g, '').replace(/-/g, '').toUpperCase()
 
-      console.log('RUT antes de validar:', {
-        original: rut,
-        limpio: cleaned
-      })
+    // Si está incompleto, permitirlo
+    if (cleanRut.length < 8) return true
 
-      // Validar largo mínimo y que solo contenga números y K
-      if (!/^[0-9]{1,8}[0-9Kk]$/.test(cleaned)) {
-        // Modificado para aceptar 1-8 dígitos
-        console.log('RUT no cumple con el formato básico')
+    // Validar formato básico
+    if (!/^(\d{1,8})([0-9K])$/.test(cleanRut)) return false
 
-        return false
-      }
+    // Si llegó hasta aquí y no está completo, permitirlo
+    if (cleanRut.length < 8) return true
 
-      // Convertir a mayúscula el dígito verificador
-      cleaned = cleaned.toUpperCase()
+    const body = cleanRut.slice(0, -1)
+    const dv = cleanRut.slice(-1)
+    let sum = 0
+    let multiplier = 2
 
-      // Obtener dígito verificador y cuerpo del RUT
-      const dv = cleaned.slice(-1)
-      const rutBody = cleaned.slice(0, -1).padStart(8, '0') // Rellenar con ceros a la izquierda
-
-      console.log('Partes del RUT:', {
-        rutCompleto: cleaned,
-        rutBody,
-        dv
-      })
-
-      // Calcular dígito verificador
-      let suma = 0
-      let multiplicador = 2
-
-      // Calcular suma
-      const rutReverso = rutBody.split('').reverse()
-
-      for (let i = 0; i < rutReverso.length; i++) {
-        suma += parseInt(rutReverso[i]) * multiplicador
-        multiplicador = multiplicador === 7 ? 2 : multiplicador + 1
-      }
-
-      // Calcular dígito verificador esperado
-      const dvEsperado = 11 - (suma % 11)
-      const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString()
-
-      console.log('Validación DV:', {
-        suma,
-        dvEsperado,
-        dvCalculado,
-        dvRecibido: dv,
-        esValido: dv === dvCalculado
-      })
-
-      return dv === dvCalculado
-    } catch (error) {
-      console.error('Error validando RUT:', error)
-
-      return false
+    // Calcular dígito verificador solo si el RUT está completo
+    for (let i = body.length - 1; i >= 0; i--) {
+      sum += parseInt(body[i]) * multiplier
+      multiplier = multiplier === 7 ? 2 : multiplier + 1
     }
+
+    const expectedDV = 11 - (sum % 11)
+    const calculatedDV = expectedDV === 11 ? '0' : expectedDV === 10 ? 'K' : expectedDV.toString()
+
+    return dv === calculatedDV
   }
 
   // Modificar la función validatePhone para ser más flexible
@@ -692,22 +655,27 @@ const AddClienteDrawer = (props: Props) => {
               <Controller
                 name='rut'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: 'El RUT es requerido',
+                  validate: value => {
+                    // Si está escribiendo (menos de 8 caracteres), no mostrar error
+                    if (value.replace(/\D/g, '').length < 8) return true
+
+                    return validateRut(value) || 'RUT inválido'
+                  }
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
-                    label='ID Cliente (RUT)'
-                    placeholder='12.345.678-9'
+                    label='RUT *'
+                    placeholder='XX.XXX.XXX-X'
                     error={Boolean(errors.rut)}
-                    helperText={errors.rut ? errors.rut.message : ''}
+                    helperText={errors.rut?.message}
                     onChange={e => {
                       const formatted = formatRut(e.target.value)
 
                       field.onChange(formatted)
-                    }}
-                    inputProps={{
-                      maxLength: 12 // Máximo largo para formato XX.XXX.XXX-X
                     }}
                   />
                 )}
