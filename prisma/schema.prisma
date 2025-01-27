@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Cliente {
+  clienteId          Int                 @id @default(autoincrement())
+  fechaCreacion      DateTime            @default(now())
+  estado             String
+  rut                String              @unique
+  razonSocial        String
+  nombreCliente      String
+  pais               String
+  region             String
+  ciudad             String
+  comuna             String
+  direccion          String
+  telefono           String?
+  sitioWeb           String?
+  segmento           String?
+  industria          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime
+  ClienteContacto    ClienteContacto[]
+  CondicionComercial CondicionComercial?
+  Cotizacion         Cotizacion[]
+}
+
+model ClienteContacto {
+  id          Int          @id @default(autoincrement())
+  clienteId   Int
+  isPrincipal Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  contactId   Int
+  Cliente     Cliente      @relation(fields: [clienteId], references: [clienteId])
+  Contacto    Contacto     @relation(fields: [contactId], references: [contactId])
+  Cotizacion  Cotizacion[]
+
+  @@unique([clienteId, contactId])
+}
+
+model Comuna {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  regionId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Region    Region   @relation(fields: [regionId], references: [id])
+
+  @@index([regionId])
+}
+
+model CondicionComercial {
+  id             Int     @id @default(autoincrement())
+  vendedor       String
+  condicionVenta String
+  observaciones  String?
+  clienteId      Int     @unique
+  Cliente        Cliente @relation(fields: [clienteId], references: [clienteId])
+}
+
+model Contacto {
+  nombre          String
+  cargo           String
+  email           String
+  telefono1       String
+  telefono2       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  contactId       Int               @id @default(autoincrement())
+  ClienteContacto ClienteContacto[]
+}
+
+model ContactoObra {
+  id          Int     @id @default(autoincrement())
+  obraId      Int
+  nombre      String
+  email       String?
+  telefono1   String?
+  isPrincipal Boolean @default(false)
+  rol         String
+  telefono2   String?
+  Obra        Obra    @relation(fields: [obraId], references: [obraId])
+}
+
+model Cotizacion {
+  id                Int                 @id @default(autoincrement())
+  numeroCotizacion  String              @unique
+  fechaCreacion     DateTime            @default(now())
+  fechaInicio       DateTime
+  fechaFin          DateTime
+  estado            EstadoCotizacion    @default(PENDIENTE)
+  tipoCotizacion    String
+  clienteId         Int
+  obraId            Int?
+  vendedorId        String?
+  observaciones     String?
+  subtotal          Decimal             @db.Decimal(10, 2)
+  descuento         Decimal             @db.Decimal(10, 2)
+  impuesto          Decimal             @db.Decimal(10, 2)
+  total             Decimal             @db.Decimal(10, 2)
+  contactoId        Int?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  Cliente           Cliente             @relation(fields: [clienteId], references: [clienteId])
+  ClienteContacto   ClienteContacto?    @relation(fields: [contactoId], references: [id])
+  Obra              Obra?               @relation(fields: [obraId], references: [obraId])
+  DetalleCotizacion DetalleCotizacion[]
+}
+
+model DetalleCotizacion {
+  id             Int        @id @default(autoincrement())
+  cotizacionId   Int
+  productoId     Int
+  cantidad       Int
+  precioUnitario Decimal    @db.Decimal(10, 2)
+  descuento      Decimal    @db.Decimal(10, 2)
+  subtotal       Decimal    @db.Decimal(10, 2)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime
+  Cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id])
+  Producto       Producto   @relation(fields: [productoId], references: [productoId])
+}
+
+model ListaPrecio {
+  id                  Int                   @id @default(autoincrement())
+  nombre              String
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  ProductoListaPrecio ProductoListaPrecio[]
+}
+
+model Obra {
+  obraId                   Int            @id @default(autoincrement())
+  numeroObra               String
+  fechaIngreso             DateTime
+  estado                   String         @default("activo")
+  estadoObra               String
+  nombreObra               String
+  direccion                String
+  region                   String
+  comuna                   String
+  informeMandante          Boolean        @default(false)
+  textoMandante            String?
+  acreditacionPersonal     Boolean        @default(false)
+  especificacionesTecnicas Boolean        @default(false)
+  acreditacionEquipos      Boolean        @default(false)
+  cartaCompromiso          Boolean        @default(false)
+  mandatoServiu            Boolean        @default(false)
+  otrosRequisitos          String?
+  razonSocial              String?
+  rut                      String
+  giro                     String?
+  direccionComercial       String?
+  comunaFacturacion        String?
+  telefonoFacturacion      String?
+  listaPrecios             String?
+  mailRecepcionFactura     String?
+  estadoPago               Boolean        @default(false)
+  hes                      Boolean        @default(false)
+  oc                       Boolean        @default(false)
+  otrasReferencias         String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime
+  georreferencia           String?
+  mandante                 String?
+  nombreCliente            String
+  referencia               String?
+  sector                   String?
+  ContactoObra             ContactoObra[]
+  Cotizacion               Cotizacion[]
+}
+
+model Permission {
+  id          String   @id
+  name        String   @unique
+  assignedTo  String[]
+  createdDate DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model Producto {
+  productoId                                           Int                   @id @default(autoincrement())
+  sku                                                  String                @unique
+  nombre                                               String
+  descripcion                                          String?
+  area                                                 String?
+  familia                                              String?
+  esPaquete                                            Boolean               @default(false)
+  tipo                                                 String
+  precio                                               Decimal?              @db.Decimal(10, 2)
+  estado                                               EstadoProducto        @default(ACTIVO)
+  norma                                                String?
+  aplicaImpuesto                                       Boolean               @default(true)
+  createdAt                                            DateTime              @default(now())
+  updatedAt                                            DateTime
+  DetalleCotizacion                                    DetalleCotizacion[]
+  ProductoListaPrecio                                  ProductoListaPrecio[]
+  ProductoPaquete_ProductoPaquete_paqueteIdToProducto  ProductoPaquete[]     @relation("ProductoPaquete_paqueteIdToProducto")
+  ProductoPaquete_ProductoPaquete_productoIdToProducto ProductoPaquete[]     @relation("ProductoPaquete_productoIdToProducto")
+
+  @@index([area])
+  @@index([estado])
+  @@index([familia])
+  @@index([sku])
+}
+
+model ProductoListaPrecio {
+  id            Int         @id @default(autoincrement())
+  productoId    Int
+  listaPrecioId Int
+  precio        Decimal?    @db.Decimal(10, 2)
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  ListaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
+  Producto      Producto    @relation(fields: [productoId], references: [productoId])
+
+  @@unique([productoId, listaPrecioId])
+  @@index([listaPrecioId])
+  @@index([productoId])
+}
+
+model ProductoPaquete {
+  id                                            Int      @id @default(autoincrement())
+  paqueteId                                     Int
+  productoId                                    Int
+  createdAt                                     DateTime @default(now())
+  Producto_ProductoPaquete_paqueteIdToProducto  Producto @relation("ProductoPaquete_paqueteIdToProducto", fields: [paqueteId], references: [productoId])
+  Producto_ProductoPaquete_productoIdToProducto Producto @relation("ProductoPaquete_productoIdToProducto", fields: [productoId], references: [productoId])
+
+  @@unique([paqueteId, productoId])
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Comuna    Comuna[]
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id
+  name          String?
+  email         String?   @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  Account       Account[]
+  Session       Session[]
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  VENCIDA
+  CONVERTIDA
+}
+
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
+}
