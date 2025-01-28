@@ -2,9 +2,9 @@ import type { Prisma } from '@prisma/client'
 
 export type ContactoWithRelations = Prisma.contactoGetPayload<{
   include: {
-    ClienteContacto: {
+    clientesContactos: {
       include: {
-        Cliente: true
+        cliente: true
       }
     }
   }
