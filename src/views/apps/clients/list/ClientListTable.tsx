@@ -790,7 +790,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
     <>
       <Card>
         <CardHeader
-          title={<Typography variant='h6'>Clientes</Typography>}
+          title={<Typography variant='h5'>Clientes</Typography>}
           action={
             <Button variant='contained' onClick={() => setAddUserOpen(true)} startIcon={<i className='ri-add-line' />}>
               Nuevo Cliente
