@@ -32,11 +32,12 @@ const Layout = async ({ children, params }: ChildrenType & { params: { lang: Loc
   // Vars
   const headersList = await headers()
   const cookieStore = cookies()
-  const direction = i18n.langDirection[params.lang]
+  const lang = await params.lang
+  const direction = i18n.langDirection[lang]
 
   return (
-    <TranslationWrapper headersList={headersList} lang={params.lang}>
-      <html id='__next' lang={params.lang} dir={direction}>
+    <TranslationWrapper headersList={headersList} lang={lang}>
+      <html id='__next' lang={lang} dir={direction}>
         <body className='flex is-full min-bs-full flex-auto flex-col'>{children}</body>
       </html>
     </TranslationWrapper>

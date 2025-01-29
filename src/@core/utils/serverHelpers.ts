@@ -5,22 +5,21 @@ import { cookies } from 'next/headers'
 import 'server-only'
 
 // Type Imports
-import type { Settings } from '@core/contexts/settingsContext'
 import type { SystemMode } from '@core/types'
 
 // Config Imports
-import { themeConfig } from '@configs/themeConfig'
+import themeConfig from '@configs/themeConfig'
 
 export const getSettingsFromCookie = () => {
   const cookieStore = cookies()
-  const cookieName = themeConfig.settingsCookieName
+  const cookieName = themeConfig.settingsCookieName || 'materio-mui-next-demo-1'
 
   return JSON.parse(cookieStore.get(cookieName)?.value || '{}')
 }
 
 export const getMode = () => {
   const settings = getSettingsFromCookie()
-  return settings.mode || themeConfig.mode
+  return settings.mode || 'light'
 }
 
 export const getSystemMode = () => {

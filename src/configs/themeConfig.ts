@@ -53,7 +53,7 @@ export type Config = {
   toastPosition: ToastPosition
 }
 
-const themeConfig: Config = {
+const themeConfig = {
   templateName: 'PampAustral',
   homePageUrl: '/dashboards/crm',
   settingsCookieName: 'materio-mui-next-demo-1',
