@@ -1,5 +1,5 @@
 // Next Imports
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 
 // Third-party Imports
 import 'react-perfect-scrollbar/dist/css/styles.css'
@@ -31,6 +31,7 @@ export const metadata = {
 const Layout = async ({ children, params }: ChildrenType & { params: { lang: Locale } }) => {
   // Vars
   const headersList = await headers()
+  const cookieStore = cookies()
   const direction = i18n.langDirection[params.lang]
 
   return (

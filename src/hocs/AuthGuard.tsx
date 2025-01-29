@@ -1,7 +1,6 @@
 // Third-party Imports
 import { getServerSession } from 'next-auth'
-import { getCookies } from 'next-auth'
-import { headers } from 'next-auth'
+import { cookies, headers } from 'next/headers'
 
 // Type Imports
 import type { Locale } from '@configs/i18n'
@@ -13,8 +12,8 @@ import AuthRedirect from '@/components/AuthRedirect'
 export default async function AuthGuard({ children, locale }: ChildrenType & { locale: Locale }) {
   try {
     const session = await getServerSession()
-    const cookies = await getCookies()
-    const headersList = await headers()
+    const cookieStore = cookies()
+    const headersList = headers()
 
     return <>{session ? children : <AuthRedirect lang={locale} />}</>
   } catch (error) {

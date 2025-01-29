@@ -9,29 +9,23 @@ import type { Settings } from '@core/contexts/settingsContext'
 import type { SystemMode } from '@core/types'
 
 // Config Imports
-import themeConfig from '@configs/themeConfig'
+import { themeConfig } from '@configs/themeConfig'
 
-export const getSettingsFromCookie = (): Settings => {
+export const getSettingsFromCookie = () => {
   const cookieStore = cookies()
-
   const cookieName = themeConfig.settingsCookieName
 
   return JSON.parse(cookieStore.get(cookieName)?.value || '{}')
 }
 
 export const getMode = () => {
-  const settingsCookie = getSettingsFromCookie()
-
-  // Get mode from cookie or fallback to theme config
-  const _mode = settingsCookie.mode || themeConfig.mode
-
-  return _mode
+  const settings = getSettingsFromCookie()
+  return settings.mode || themeConfig.mode
 }
 
-export const getSystemMode = (): SystemMode => {
+export const getSystemMode = () => {
   const cookieStore = cookies()
   const mode = getMode()
-
   const colorPrefCookie = (cookieStore.get('colorPref')?.value || 'light') as SystemMode
 
   return (mode === 'system' ? colorPrefCookie : mode) || 'light'
