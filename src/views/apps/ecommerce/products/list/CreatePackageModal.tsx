@@ -88,10 +88,11 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   // Estados para el formulario
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
+  const [tipo, setTipo] = useState('Ensayo')
   const [norma, setNorma] = useState('')
-  const [listaPrecios, setListaPrecios] = useState('')
-  const [precio, setPrecio] = useState('')
+  const [precio, setPrecio] = useState<string>('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [selectedListaPrecio, setSelectedListaPrecio] = useState<string>('')
 
   // Estados para búsqueda
   const [buscarPaquete, setBuscarPaquete] = useState('')
@@ -101,7 +102,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [productos, setProductos] = useState<Producto[]>([])
   const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>([])
   const [listaPreciosOptions, setListaPreciosOptions] = useState([])
-  const [selectedListaPrecio, setSelectedListaPrecio] = useState<string>('')
 
   // Estados para manejar las selecciones
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
@@ -131,32 +131,43 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const handleCreatePackage = async () => {
     try {
       // Validaciones básicas
-      if (!nombre || !sku || !selectedListaPrecio) {
-        toast.error('Por favor complete los campos requeridos')
-
+      if (!nombre || !sku) {
+        toast.error('Por favor complete los campos nombre y SKU')
         return
       }
 
-      // Preparar los datos del paquete
-      const packageData = {
-        nombre,
-        sku,
-        descripcion: `Paquete que contiene ${productosSeleccionados.length} productos`,
-        norma,
-        tipo: 'Paquete', // Aseguramos que se guarde como paquete
-        esPaquete: true,
-        precio: precio ? parseFloat(precio) : 0,
-        listaPrecioId: parseInt(selectedListaPrecio),
-        aplicaImpuesto,
-        estado: 'ACTIVO',
-
-        // Incluir los productos seleccionados
-        productos: productosSeleccionados.map(p => ({
-          productoId: p.productoId
-        }))
+      // Validar precio
+      if (!precio || precio === '0') {
+        toast.error('Por favor ingrese un precio válido')
+        return
       }
 
-      // Enviar la petición para crear el paquete
+      // Validar lista de precios
+      if (!selectedListaPrecio) {
+        toast.error('Por favor seleccione una lista de precios')
+        return
+      }
+
+      // Convertir valores a números
+      const precioNumerico = Number(precio)
+      const listaPrecioId = parseInt(selectedListaPrecio)
+
+      // Crear el objeto con los datos
+      const packageData = {
+        sku: sku,
+        nombre: nombre,
+        tipo: 'Ensayo',
+        esPaquete: false,
+        norma: norma || '',
+        aplicaImpuesto: aplicaImpuesto,
+        precio: precioNumerico,
+        listaPrecio: listaPrecioId
+      }
+
+      // Log para debug
+      console.log('Precio antes de enviar:', precioNumerico, typeof precioNumerico)
+      console.log('Datos completos a enviar:', packageData)
+
       const response = await fetch('/api/productos', {
         method: 'POST',
         headers: {
@@ -165,20 +176,19 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         body: JSON.stringify(packageData)
       })
 
+      const data = await response.json()
+      console.log('Respuesta del servidor:', data)
+
       if (!response.ok) {
-        throw new Error('Error al crear el paquete')
+        throw new Error(data.error || 'Error al crear el producto')
       }
 
-      const data = await response.json()
-
-      toast.success('Paquete creado exitosamente')
+      toast.success('Producto creado exitosamente')
       handleClose()
-
-      // Opcional: Recargar la lista de productos
       window.location.reload()
     } catch (error) {
       console.error('Error:', error)
-      toast.error('Error al crear el paquete')
+      toast.error(error.message)
     }
   }
 
@@ -204,37 +214,47 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
         {/* Segunda fila - Precios */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={4}>
-            <FormControl fullWidth sx={{ mb: 4 }}>
-              <InputLabel id='lista-precios-label'>Lista de Precios</InputLabel>
-              <Select
-                label='Lista de Precios'
-                value={selectedListaPrecio}
-                onChange={e => setSelectedListaPrecio(e.target.value)}
-                labelId='lista-precios-label'
-              >
-                <MenuItem value=''>
-                  <em>Seleccione una lista</em>
-                </MenuItem>
-                {listaPreciosOptions.map(lista => (
-                  <MenuItem key={lista.id} value={lista.id}>
-                    {lista.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <TextField
               fullWidth
               label='Precio'
               value={precio}
-              onChange={e => setPrecio(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                if (!isNaN(Number(value))) {
+                  setPrecio(value)
+                  console.log('Precio actualizado:', value) // Debug
+                }
+              }}
+              type='number'
+              size='small'
+              required
+              error={!precio}
+              helperText={!precio ? 'El precio es requerido' : ''}
               InputProps={{
                 startAdornment: <InputAdornment position='start'>$</InputAdornment>
               }}
-              size='small'
             />
+          </Grid>
+          <Grid item xs={6}>
+            <FormControl fullWidth size='small' required error={!selectedListaPrecio}>
+              <InputLabel>Lista de Precios</InputLabel>
+              <Select
+                value={selectedListaPrecio}
+                label='Lista de Precios'
+                onChange={(e) => setSelectedListaPrecio(e.target.value)}
+              >
+                <MenuItem value=''>Seleccione una lista</MenuItem>
+                {listaPreciosOptions.map((lista: any) => (
+                  <MenuItem key={lista.id} value={lista.id.toString()}>
+                    {lista.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+              {!selectedListaPrecio && (
+                <FormHelperText>La lista de precios es requerida</FormHelperText>
+              )}
+            </FormControl>
           </Grid>
           <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center' }}>
             <FormControlLabel

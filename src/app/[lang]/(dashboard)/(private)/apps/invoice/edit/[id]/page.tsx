@@ -1,3 +1,5 @@
+'use client'
+
 // Next Imports
 import { redirect } from 'next/navigation'
 
@@ -8,7 +10,7 @@ import Grid from '@mui/material/Grid'
 import type { InvoiceType } from '@/types/apps/invoiceTypes'
 
 // Component Imports
-import EditCard from '@views/apps/invoice/edit/EditCard'
+import EditCard from '@/views/apps/invoice/edit/EditCard'
 import EditActions from '@views/apps/invoice/edit/EditActions'
 
 // Data Imports
@@ -32,26 +34,14 @@ import { getInvoiceData } from '@/app/server/actions'
   return res.json()
 } */
 
-const EditPage = async ({ params }: { params: { id: string } }) => {
-  // Vars
-  const data = await getInvoiceData()
-
-  const filteredData = data?.filter((invoice: InvoiceType) => invoice.id === params.id)[0]
-
-  if (!filteredData) {
-    redirect('/not-found')
-  }
-
-  return filteredData ? (
+const EditPage = ({ params }: { params: { id: string } }) => {
+  return (
     <Grid container spacing={6}>
-      <Grid item xs={12} md={9}>
-        <EditCard data={data} invoiceData={filteredData} id={params.id} />
-      </Grid>
-      <Grid item xs={12} md={3}>
-        <EditActions id={params.id} />
+      <Grid item xs={12}>
+        <EditCard id={params.id} />
       </Grid>
     </Grid>
-  ) : null
+  )
 }
 
 export default EditPage

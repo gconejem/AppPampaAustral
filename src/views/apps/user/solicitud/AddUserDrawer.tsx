@@ -75,7 +75,7 @@ const AddUserDrawer = (props: Props) => {
 
   const onSubmit = (data: FormValidateType) => {
     const newUser: UsersType = {
-      id: (userData?.length && userData?.length + 1) || 1,
+      id: String((userData?.length && userData?.length + 1) || 1),
       avatar: `/images/avatars/${Math.floor(Math.random() * 8) + 1}.png`,
       fullName: data.fullName,
       username: data.username,

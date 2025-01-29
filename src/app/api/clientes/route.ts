@@ -9,8 +9,17 @@ export async function GET() {
     console.log('Fetching clientes...')
 
     const clientes = await prisma.cliente.findMany({
-      include: {
+      take: 50, // Limitar resultados
+      select: {
+        clienteId: true,
+        nombreCliente: true,
+        rut: true,
+        razonSocial: true,
         clientesContactos: {
+          take: 1,
+          where: {
+            isPrincipal: true
+          },
           include: {
             contacto: true
           }
@@ -19,12 +28,9 @@ export async function GET() {
       }
     })
 
-    console.log('Clientes found:', clientes)
-
     return NextResponse.json(clientes)
   } catch (error) {
     console.error('Error al obtener clientes:', error)
-
     return NextResponse.json({ error: 'Error al obtener los clientes' }, { status: 500 })
   }
 }

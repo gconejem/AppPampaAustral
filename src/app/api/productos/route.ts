@@ -1,47 +1,62 @@
 import { NextResponse } from 'next/server'
+import { Decimal } from '@prisma/client/runtime/library'
 
 import { prisma } from '@/lib/prisma'
 
 // POST - Crear un nuevo producto
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const data = await request.json()
+    const data = await req.json()
+    console.log('Datos recibidos en API:', data)
+    console.log('Precio recibido:', data.precio)
 
-    console.log('Datos recibidos:', data)
+    // Verificar si el SKU ya existe
+    const existingProduct = await prisma.producto.findUnique({
+      where: { sku: data.sku }
+    })
 
-    // Extraer los datos de listas de precios
-    const { listaPreciosData, ...productoData } = data
+    if (existingProduct) {
+      return NextResponse.json(
+        { error: 'Ya existe un producto con este SKU' },
+        { status: 400 }
+      )
+    }
 
-    // Crear el producto con sus relaciones
+    // Asegurarnos que el precio sea un número válido
+    const precio = typeof data.precio === 'number' ? data.precio : 0
+
+    // Crear el producto
     const producto = await prisma.producto.create({
       data: {
-        ...productoData,
-
-        // Si hay datos de listas de precios, crear las relaciones
-        ...(listaPreciosData && {
-          listasPrecios: {
-            create: listaPreciosData.map((lp: any) => ({
-              listaPrecioId: lp.listaPrecioId,
-              precio: lp.precio,
-              activo: lp.activo
-            }))
-          }
-        })
-      },
-      include: {
+        sku: data.sku,
+        nombre: data.nombre,
+        descripcion: data.descripcion || '',
+        area: data.area || '',
+        familia: data.familia || '',
+        tipo: data.tipo || 'Ensayo',
+        esPaquete: data.esPaquete || false,
+        estado: 'ACTIVO',
+        norma: data.norma || '',
+        aplicaImpuesto: data.aplicaImpuesto || false,
+        precio: new Decimal(precio), // Usar el precio validado
         listasPrecios: {
-          include: {
-            listaPrecio: true
-          }
+          create: data.listaPrecio ? {
+            listaPrecioId: data.listaPrecio,
+            precio: new Decimal(precio), // Usar el mismo precio validado
+            activo: true
+          } : undefined
         }
       }
     })
 
+    console.log('Producto creado:', producto)
     return NextResponse.json(producto)
   } catch (error) {
-    console.error('Error al crear producto:', error)
-
-    return NextResponse.json({ error: 'Error al crear producto' }, { status: 500 })
+    console.error('Error detallado:', error)
+    return NextResponse.json(
+      { error: 'Error al crear producto: ' + error.message },
+      { status: 500 }
+    )
   }
 }
 
@@ -50,29 +65,31 @@ export async function GET() {
   try {
     const productos = await prisma.producto.findMany({
       where: {
-        esPaquete: false,
-        estado: 'ACTIVO'
+        estado: 'ACTIVO'  // Solo productos activos
       },
       select: {
         productoId: true,
         sku: true,
-        nombre: true
+        nombre: true,
+        precio: true,
+        tipo: true,
+        estado: true
       }
     })
 
-    // Log para debugging
-    console.log('Productos a enviar:', productos)
+    // Transformar los precios Decimal a números
+    const productosFormateados = productos.map(producto => ({
+      ...producto,
+      precio: Number(producto.precio)
+    }))
 
-    // Devolver directamente el array de productos
-    return new Response(JSON.stringify(productos), {
-      headers: { 'Content-Type': 'application/json' }
-    })
+    console.log('Productos enviados:', productosFormateados)
+    return NextResponse.json(productosFormateados)
   } catch (error) {
-    console.error('Error:', error)
-
-    return new Response(JSON.stringify({ error: 'Error al obtener productos' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
+    console.error('Error al obtener productos:', error)
+    return NextResponse.json(
+      { error: 'Error al obtener productos' },
+      { status: 500 }
+    )
   }
 }

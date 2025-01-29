@@ -1,8 +1,9 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { SyntheticEvent } from 'react'
+import { useRouter } from 'next/navigation'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -20,6 +21,15 @@ import Divider from '@mui/material/Divider'
 import InputLabel from '@mui/material/InputLabel'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
+import FormControl from '@mui/material/FormControl'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -33,268 +43,404 @@ import Logo from '@components/layout/shared/Logo'
 // Styled Component Imports
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 
-const EditCard = ({ invoiceData, id, data }: { invoiceData?: InvoiceType; id: string; data?: InvoiceType[] }) => {
-  // States
-  const [selectData, setSelectData] = useState<InvoiceType | null>(data?.[0] || null)
-  const [count, setCount] = useState(1)
-  const [issueDate, setIssueDate] = useState(new Date(invoiceData?.issuedDate ?? ''))
-  const [dueDate, setDueDate] = useState(new Date(invoiceData?.dueDate ?? ''))
+const EditCard = ({ id }: { id: string }) => {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [cotizacion, setCotizacion] = useState<any>(null)
+  const [clientes, setClientes] = useState<any[]>([])
+  const [obras, setObras] = useState<any[]>([])
+  const [productos, setProductos] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  // Hooks
-  const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
+  // Cargar clientes
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const response = await fetch('/api/clientes')
+        if (!response.ok) throw new Error('Error al cargar clientes')
+        const data = await response.json()
+        setClientes(data)
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
 
-  const deleteForm = (e: SyntheticEvent) => {
-    e.preventDefault()
+    fetchClientes()
+  }, [])
 
-    // @ts-ignore
-    e.target.closest('.repeater-item').remove()
+  // Cargar productos
+  useEffect(() => {
+    const fetchProductos = async () => {
+      try {
+        const response = await fetch('/api/productos')
+        if (!response.ok) throw new Error('Error al cargar productos')
+        const data = await response.json()
+        console.log('Productos cargados:', data)
+        setProductos(data)
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
+
+    fetchProductos()
+  }, [])
+
+  // Cargar obras cuando cambia el cliente
+  useEffect(() => {
+    const fetchObras = async () => {
+      if (!cotizacion?.clienteId) return
+
+      try {
+        const response = await fetch(`/api/obras?clienteId=${cotizacion.clienteId}`)
+        if (!response.ok) throw new Error('Error al cargar obras')
+        const data = await response.json()
+        setObras(data)
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
+
+    fetchObras()
+  }, [cotizacion?.clienteId])
+
+  useEffect(() => {
+    const fetchCotizacion = async () => {
+      try {
+        const response = await fetch(`/api/cotizaciones/${id}`)
+        if (!response.ok) throw new Error('Error al cargar la cotización')
+        const data = await response.json()
+        console.log('Cotización cargada:', data)
+        setCotizacion(data)
+      } catch (error) {
+        console.error('Error:', error)
+        setError('Error al cargar la cotización')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCotizacion()
+  }, [id])
+
+  // Función para calcular totales
+  const calcularTotales = (detalles: any[]) => {
+    const subtotal = detalles.reduce((acc, detalle) => acc + detalle.subtotal, 0)
+    const descuentoTotal = detalles.reduce((acc, detalle) => acc + (detalle.subtotal * (detalle.descuento || 0) / 100), 0)
+    const impuesto = (subtotal - descuentoTotal) * 0.19 // 19% IVA
+    const total = subtotal - descuentoTotal + impuesto
+
+    return {
+      subtotal,
+      descuento: descuentoTotal,
+      impuesto,
+      total
+    }
   }
 
+  // Función para actualizar un detalle
+  const handleUpdateDetalle = (detalleId: number, field: string, value: any) => {
+    setCotizacion(prev => {
+      const newDetalles = prev.detalles.map((detalle: any) => {
+        if (detalle.id === detalleId) {
+          const updatedDetalle = { ...detalle, [field]: value }
+
+          if (field === 'productoId') {
+            const producto = productos.find(p => p.productoId === value)
+            console.log('Producto encontrado:', producto)
+
+            if (producto) {
+              updatedDetalle.producto = producto
+              updatedDetalle.precioUnitario = Number(producto.precio)
+              updatedDetalle.cantidad = updatedDetalle.cantidad || 1
+
+              console.log('Detalle actualizado con producto:', {
+                productoId: updatedDetalle.productoId,
+                precio: updatedDetalle.precioUnitario,
+                cantidad: updatedDetalle.cantidad
+              })
+            }
+          }
+
+          // Asegurar que los valores sean números
+          updatedDetalle.cantidad = Number(updatedDetalle.cantidad) || 0
+          updatedDetalle.precioUnitario = Number(updatedDetalle.precioUnitario) || 0
+          updatedDetalle.descuento = Number(updatedDetalle.descuento) || 0
+
+          // Recalcular subtotal
+          updatedDetalle.subtotal =
+            updatedDetalle.cantidad *
+            updatedDetalle.precioUnitario *
+            (1 - (updatedDetalle.descuento / 100))
+
+          console.log('Cálculos finales:', {
+            cantidad: updatedDetalle.cantidad,
+            precio: updatedDetalle.precioUnitario,
+            descuento: updatedDetalle.descuento,
+            subtotal: updatedDetalle.subtotal
+          })
+
+          return updatedDetalle
+        }
+        return detalle
+      })
+
+      return {
+        ...prev,
+        detalles: newDetalles,
+        subtotal: newDetalles.reduce((acc, det) => acc + det.subtotal, 0)
+      }
+    })
+  }
+
+  if (loading) return <Typography>Cargando...</Typography>
+  if (error) return <Typography color="error">{error}</Typography>
+  if (!cotizacion) return <Typography>No se encontró la cotización</Typography>
+
   return (
-    <>
-      <Card>
-        <CardContent className='sm:!p-12'>
-          <Grid container spacing={6}>
-            <Grid item xs={12}>
-              <div className='p-6 rounded bg-actionHover'>
-                <div className='flex justify-between gap-4 flex-col sm:flex-row'>
-                  <div className='flex flex-col gap-6'>
-                    <div className='flex items-center'>
-                      <Logo />
-                    </div>
-                    <div>
-                      <Typography color='text.primary'>Office 149, 450 South Brand Brooklyn</Typography>
-                      <Typography color='text.primary'>San Diego County, CA 91905, USA</Typography>
-                      <Typography color='text.primary'>+1 (123) 456 7891, +44 (876) 543 2198</Typography>
-                    </div>
-                  </div>
-                  <div className='flex flex-col gap-2'>
-                    <div className='flex items-center gap-4'>
-                      <Typography variant='h5' className='min-is-[95px]'>
-                        Folio
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        size='small'
-                        value={id}
-                        InputProps={{
-                          disabled: true,
-                          startAdornment: <InputAdornment position='start'>#</InputAdornment>
-                        }}
-                      />
-                    </div>
-                    <div className='flex items-center'>
-                      <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Desde:
-                      </Typography>
-                      <AppReactDatepicker
-                        boxProps={{ className: 'is-full' }}
-                        selected={issueDate}
-                        id='payment-date'
-                        onChange={(date: Date | null) => date !== null && setIssueDate(date)}
-                        customInput={<TextField fullWidth size='small' />}
-                      />
-                    </div>
-                    <div className='flex items-center'>
-                      <Typography className='min-is-[95px] mie-4' color='text.primary'>
-                        Hasta:
-                      </Typography>
-                      <AppReactDatepicker
-                        boxProps={{ className: 'is-full' }}
-                        selected={dueDate}
-                        id='payment-date'
-                        onChange={(date: Date | null) => date !== null && setDueDate(date)}
-                        customInput={<TextField fullWidth size='small' />}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Grid>
-            <Grid item xs={12}>
-              <div className='flex justify-between flex-col gap-4 flex-wrap sm:flex-row'>
-                <div className='flex flex-col gap-4'>
-                  <Typography className='font-medium' color='text.primary'>
-                    Para:
-                  </Typography>
-                  <Select
-                    className='is-1/2 min-is-[220px] sm:is-auto'
-                    size='small'
-                    value={selectData?.id}
-                    onChange={e => {
-                      setSelectData(data?.slice(0, 5).filter(item => item.id === e.target.value)[0] || null)
-                    }}
-                  >
-                    {data?.slice(0, 5).map((invoice: InvoiceType, index) => (
-                      <MenuItem key={index} value={invoice.id}>
-                        {invoice.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <div>
-                    <Typography>Calle Santa Blanca 51, Chillán – Chile.</Typography>
-                    <Typography>Email: contacto@pampaustral.cl</Typography>
-                    <Typography>+56 42-223 82 90</Typography>
-                    <Typography>{selectData?.companyEmail}</Typography>
-                  </div>
-                </div>
-                <div className='flex flex-col gap-4'>
-                  <Typography className='font-medium' color='text.primary'></Typography>
-                  <div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
-                      <Typography></Typography>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <Typography className='min-is-[100px]'></Typography>
-                      <Typography></Typography>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Grid>
-            <Grid item xs={12}>
-              <Divider className='border-dashed' />
-            </Grid>
-            <Grid item xs={12}>
-              {Array.from(Array(count).keys()).map((item, index) => (
-                <div
-                  key={index}
-                  className={classnames('repeater-item flex relative mbe-4 border rounded', {
-                    'mbs-8': !isBelowMdScreen,
-                    '!mbs-14': index !== 0 && !isBelowMdScreen,
-                    'gap-5': isBelowMdScreen
-                  })}
-                >
-                  <Grid container spacing={5} className='m-0 pbe-5'>
-                    <Grid item lg={6} md={5} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Item
-                      </Typography>
-                      <Select fullWidth size='small' defaultValue='App Design' className='mbe-5'>
-                        <MenuItem value='App Design'>...</MenuItem>
-                        <MenuItem value='App Customization'>...</MenuItem>
-                        <MenuItem value='ABC Template'>...</MenuItem>
-                        <MenuItem value='App Development'>...</MenuItem>
-                      </Select>
-                      <TextField rows={2} fullWidth multiline size='small' defaultValue='Descripción' />
-                    </Grid>
-                    <Grid item lg={2} md={3} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Cantidad
-                      </Typography>
-                      <TextField
-                        {...(isBelowMdScreen && { fullWidth: true })}
-                        size='small'
-                        type='number'
-                        placeholder='24'
-                        defaultValue='24'
-                        className='mbe-5'
-                        InputProps={{ inputProps: { min: 0 } }}
-                      />
-                      <div className='flex flex-col'>
-                        <Typography component='span' color='text.primary'>
-                          Descuento
-                        </Typography>
-                        <div className='flex gap-2'>
-                          <Typography component='span' color='text.primary'>
-                            0%
-                          </Typography>
-                          <Tooltip title='Tax 1' placement='top'>
-                            <Typography component='span' color='text.primary'>
-                              0%
-                            </Typography>
-                          </Tooltip>
-                          <Tooltip title='Tax 2' placement='top'>
-                            <Typography component='span' color='text.primary'>
-                              0%
-                            </Typography>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    </Grid>
-                    <Grid item md={2} xs={12}>
-                      <Typography className='font-medium md:absolute md:-top-8' color='text.primary'>
-                        Precio
-                      </Typography>
-                      <Typography>$24.00</Typography>
-                    </Grid>
-                  </Grid>
-                  <div className='flex flex-col justify-start border-is'>
-                    <IconButton size='small' onClick={deleteForm}>
-                      <i className='ri-close-line text-actionActive text-2xl' />
-                    </IconButton>
-                  </div>
-                </div>
-              ))}
-              <Grid item xs={12}>
-                <Button
-                  size='small'
-                  variant='contained'
-                  onClick={() => setCount(count + 1)}
-                  startIcon={<i className='ri-add-line' />}
-                >
-                  Añadir Item
-                </Button>
-              </Grid>
-            </Grid>
-            <Grid item xs={12}>
-              <Divider className='border-dashed' />
-            </Grid>
-            <Grid item xs={12}>
-              <div className='flex justify-between flex-col gap-4 sm:flex-row'>
-                <div className='flex flex-col gap-4 order-2 sm:order-[unset]'>
-                  <div className='flex items-center gap-2'></div>
-                </div>
-                <div className='min-is-[200px]'>
-                  <div className='flex items-center justify-between'>
-                    <Typography>Subtotal:</Typography>
-                    <Typography className='font-medium' color='text.primary'>
-                      $1800
-                    </Typography>
-                  </div>
-                  <div className='flex items-center justify-between'>
-                    <Typography>Discount:</Typography>
-                    <Typography className='font-medium' color='text.primary'>
-                      $28
-                    </Typography>
-                  </div>
-                  <div className='flex items-center justify-between'>
-                    <Typography>Tax:</Typography>
-                    <Typography className='font-medium' color='text.primary'>
-                      21%
-                    </Typography>
-                  </div>
-                  <Divider className='mlb-2' />
-                  <div className='flex items-center justify-between'>
-                    <Typography>Total:</Typography>
-                    <Typography className='font-medium' color='text.primary'>
-                      $1690
-                    </Typography>
-                  </div>
-                </div>
-              </div>
-            </Grid>
-            <Grid item xs={12}>
-              <Divider className='border-dashed' />
-            </Grid>
-            <Grid item xs={12}></Grid>
+    <Card>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 4 }}>
+          Editar Cotización #{cotizacion.numeroCotizacion}
+        </Typography>
+
+        <Grid container spacing={4}>
+          {/* Cliente */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Cliente</InputLabel>
+              <Select
+                value={cotizacion.clienteId}
+                label="Cliente"
+                onChange={(e) => {
+                  const selectedClient = clientes.find(c => c.clienteId === e.target.value)
+                  setCotizacion({
+                    ...cotizacion,
+                    clienteId: e.target.value,
+                    cliente: selectedClient,
+                    obraId: '', // Resetear obra al cambiar cliente
+                    obra: null
+                  })
+                }}
+              >
+                {clientes.map((cliente) => (
+                  <MenuItem key={cliente.clienteId} value={cliente.clienteId}>
+                    {cliente.nombreCliente}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
-        </CardContent>
-      </Card>
-    </>
+
+          {/* Obra */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Obra</InputLabel>
+              <Select
+                value={cotizacion.obraId || ''}
+                label="Obra"
+                onChange={(e) => {
+                  const selectedObra = obras.find(o => o.obraId === e.target.value)
+                  setCotizacion({
+                    ...cotizacion,
+                    obraId: e.target.value,
+                    obra: selectedObra
+                  })
+                }}
+              >
+                {obras.map((obra) => (
+                  <MenuItem key={obra.obraId} value={obra.obraId}>
+                    {obra.nombreObra}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Estado */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={cotizacion.estado}
+                label="Estado"
+                onChange={(e) => setCotizacion({ ...cotizacion, estado: e.target.value })}
+              >
+                <MenuItem value="PENDIENTE">Pendiente</MenuItem>
+                <MenuItem value="APROBADA">Aprobada</MenuItem>
+                <MenuItem value="RECHAZADA">Rechazada</MenuItem>
+                <MenuItem value="VENCIDA">Vencida</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Fecha */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Fecha"
+              value={new Date(cotizacion.fechaCreacion).toLocaleDateString()}
+              disabled
+            />
+          </Grid>
+
+          {/* Detalles */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Detalles de la Cotización
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Producto</TableCell>
+                    <TableCell>Cantidad</TableCell>
+                    <TableCell>Precio Unitario</TableCell>
+                    <TableCell>Descuento (%)</TableCell>
+                    <TableCell>Subtotal</TableCell>
+                    <TableCell>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Array.isArray(cotizacion.detalles) && cotizacion.detalles.map((detalle: any) => (
+                    <TableRow key={detalle.id}>
+                      <TableCell>
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={detalle.productoId || ''}
+                            onChange={(e) => {
+                              console.log('Producto seleccionado ID:', e.target.value)
+                              handleUpdateDetalle(detalle.id, 'productoId', e.target.value)
+                            }}
+                          >
+                            {productos.map((producto) => (
+                              <MenuItem key={producto.productoId} value={producto.productoId}>
+                                {producto.nombre} - ${producto.precio}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={detalle.cantidad || ''}
+                          onChange={(e) => handleUpdateDetalle(detalle.id, 'cantidad', e.target.value)}
+                          inputProps={{ min: 1 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        ${detalle.precioUnitario?.toFixed(2) || '0.00'}
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={detalle.descuento || 0}
+                          onChange={(e) => handleUpdateDetalle(detalle.id, 'descuento', e.target.value)}
+                          inputProps={{ min: 0, max: 100 }}
+                        />
+                      </TableCell>
+                      <TableCell>${detalle.subtotal || 0}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            const newDetalles = cotizacion.detalles.filter((d: any) => d.id !== detalle.id)
+                            const totales = calcularTotales(newDetalles)
+                            setCotizacion({
+                              ...cotizacion,
+                              detalles: newDetalles,
+                              subtotal: totales.subtotal,
+                              descuento: totales.descuento,
+                              impuesto: totales.impuesto,
+                              total: totales.total
+                            })
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+
+          {/* Totales */}
+          <Grid item xs={12}>
+            <div className='flex justify-end'>
+              <div className='min-w-[300px]'>
+                <div className='flex justify-between mb-2'>
+                  <Typography>Subtotal:</Typography>
+                  <Typography>${cotizacion?.subtotal?.toLocaleString('es-CL') || '0'}</Typography>
+                </div>
+                <div className='flex justify-between mb-2'>
+                  <Typography>Descuento:</Typography>
+                  <Typography>${cotizacion?.descuento?.toLocaleString('es-CL') || '0'}</Typography>
+                </div>
+                <div className='flex justify-between mb-2'>
+                  <Typography>IVA (19%):</Typography>
+                  <Typography>${cotizacion?.impuesto?.toLocaleString('es-CL') || '0'}</Typography>
+                </div>
+                <Divider className='my-2' />
+                <div className='flex justify-between'>
+                  <Typography variant='h6'>Total:</Typography>
+                  <Typography variant='h6'>${cotizacion?.total?.toLocaleString('es-CL') || '0'}</Typography>
+                </div>
+              </div>
+            </div>
+          </Grid>
+
+          {/* Observaciones */}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Observaciones"
+              value={cotizacion.observaciones || ''}
+              onChange={(e) => setCotizacion({ ...cotizacion, observaciones: e.target.value })}
+            />
+          </Grid>
+        </Grid>
+
+        <div className='flex justify-end gap-4 mt-4'>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/cotizaciones/${id}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(cotizacion)
+                })
+
+                if (!response.ok) throw new Error('Error al actualizar la cotización')
+                router.push('/apps/invoice/list')
+              } catch (error) {
+                console.error('Error:', error)
+                setError('Error al actualizar la cotización')
+              }
+            }}
+          >
+            Guardar Cambios
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => router.back()}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

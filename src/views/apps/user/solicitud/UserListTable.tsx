@@ -149,8 +149,8 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
-  const [filteredData, setFilteredData] = useState(data)
+  const [data, setData] = useState<UsersType[]>(tableData || [])
+  const [filteredData, setFilteredData] = useState<UsersType[]>(tableData || [])
   const [globalFilter, setGlobalFilter] = useState('')
 
   // Hooks
@@ -200,17 +200,21 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }),
       columnHelper.accessor('role', {
         header: 'Cliente',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
+        cell: ({ row }) => {
+          const roleData = userRoleObj[row.original.role] || { icon: 'ri-user-line', color: 'primary' }
+
+          return (
+            <div className='flex items-center gap-2'>
+              <Icon
+                className={roleData.icon}
+                sx={{ color: `var(--mui-palette-${roleData.color}-main)`, fontSize: '1.375rem' }}
+              />
+              <Typography className='capitalize' color='text.primary'>
+                {row.original.role}
+              </Typography>
+            </div>
+          )
+        }
       }),
       columnHelper.accessor('currentPlan', {
         header: 'N° Obra',
@@ -321,17 +325,21 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   })
 
   const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
+    if (!params) return null;
+
     const { avatar, fullName } = params
 
     if (avatar) {
       return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
+    } else if (fullName) {
       return (
         <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
+          {getInitials(fullName)}
         </CustomAvatar>
       )
     }
+
+    return <CustomAvatar skin='light' size={34} />
   }
 
   return (

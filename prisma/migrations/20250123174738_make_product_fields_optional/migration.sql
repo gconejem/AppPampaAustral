@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Producto" ALTER COLUMN "area" DROP NOT NULL,
+ALTER COLUMN "familia" DROP NOT NULL;

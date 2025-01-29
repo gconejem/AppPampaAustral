@@ -27,6 +27,7 @@ model Cliente {
   updatedAt              DateTime            @updatedAt
   clientesContactos      ClienteContacto[]
   condicionesComerciales CondicionComercial?
+  cotizaciones           Cotizacion[]
 }
 
 model Contacto {
@@ -95,6 +96,7 @@ model ClienteContacto {
   contactId   Int
   cliente     Cliente  @relation(fields: [clienteId], references: [clienteId])
   contacto    Contacto @relation(fields: [contactId], references: [contactId])
+  cotizaciones         Cotizacion[]
 
   @@unique([clienteId, contactId])
 }
@@ -104,8 +106,8 @@ model Producto {
   sku                   String            @unique
   nombre                String
   descripcion           String?
-  area                  String
-  familia               String
+  area                  String?
+  familia               String?
   esPaquete             Boolean           @default(false)
   tipo                  String
   precio                Decimal?          @db.Decimal(10, 2)
@@ -117,6 +119,7 @@ model Producto {
   updatedAt             DateTime          @updatedAt
   productosEnPaquete    ProductoPaquete[] @relation("PaqueteProductos")
   paquetesQueLoIncluyen ProductoPaquete[] @relation("ProductoEnPaquetes")
+  detallesCotizacion   DetalleCotizacion[]
 
   @@index([sku])
   @@index([estado])
@@ -181,6 +184,7 @@ model Obra {
 
   // Relaciones
   contactos         ContactoObra[]
+  cotizaciones      Cotizacion[]
 }
 
 model ContactoObra {
@@ -249,6 +253,60 @@ model ProductoListaPrecio {
   listaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
 
   @@unique([productoId, listaPrecioId])
-  @@index([productoId])
-  @@index([listaPrecioId])
+}
+
+model Cotizacion {
+  id                Int       @id @default(autoincrement())
+  numeroCotizacion String    @unique // Número único de cotización
+  fechaCreacion    DateTime  @default(now())
+  fechaInicio      DateTime
+  fechaFin         DateTime
+  estado           EstadoCotizacion @default(PENDIENTE)
+  tipoCotizacion   String
+
+  // Relaciones con Cliente y Obra
+  clienteId        Int
+  cliente          Cliente   @relation(fields: [clienteId], references: [clienteId])
+  obraId           Int?
+  obra             Obra?     @relation(fields: [obraId], references: [obraId])
+
+  // Datos adicionales
+  vendedorId       String?   // ID del vendedor/usuario que creó la cotización
+  observaciones    String?
+  subtotal         Decimal   @db.Decimal(10, 2)
+  descuento        Decimal   @db.Decimal(10, 2)
+  impuesto         Decimal   @db.Decimal(10, 2)
+  total            Decimal   @db.Decimal(10, 2)
+
+  // Relaciones con detalles y contacto
+  detalles         DetalleCotizacion[]
+  contactoId       Int?
+  contacto         ClienteContacto? @relation(fields: [contactoId], references: [id])
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model DetalleCotizacion {
+  id            Int       @id @default(autoincrement())
+  cotizacionId  Int
+  productoId    Int
+  cantidad      Int
+  precioUnitario Decimal  @db.Decimal(10, 2)
+  descuento     Decimal   @db.Decimal(10, 2)
+  subtotal      Decimal   @db.Decimal(10, 2)
+
+  cotizacion    Cotizacion @relation(fields: [cotizacionId], references: [id])
+  producto      Producto   @relation(fields: [productoId], references: [productoId])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  VENCIDA
+  CONVERTIDA // Cuando se convierte en orden/factura
 }

@@ -1,12 +1,12 @@
-import { PrismaClient } from '@prisma/client'
-import { hash } from 'bcryptjs'
+const { PrismaClient } = require('@prisma/client')
+const { hash } = require('bcryptjs')
 
 const prisma = new PrismaClient()
 
 const listasPrecios = [
-  { nombre: 'Lista 1', precio: 1000 },
-  { nombre: 'Lista 2', precio: 2000 },
-  { nombre: 'Lista 3', precio: 3000 }
+  { id: 1, nombre: 'Lista 1' },
+  { id: 2, nombre: 'Lista 2' },
+  { id: 3, nombre: 'Lista 3' }
 ]
 
 const regiones = [
@@ -419,14 +419,13 @@ async function seedListasPrecios() {
     try {
       await prisma.listaPrecio.upsert({
         where: {
-          nombre: lista.nombre
+          id: lista.id || 1
         },
         update: {
-          precio: lista.precio
+          nombre: lista.nombre
         },
         create: {
-          nombre: lista.nombre,
-          precio: lista.precio
+          nombre: lista.nombre
         }
       })
       console.log(`Lista de precios "${lista.nombre}" creada/actualizada con éxito`)

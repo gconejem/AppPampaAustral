@@ -1,13 +1,11 @@
+'use client'
+
 // MUI Imports
 import Grid from '@mui/material/Grid'
 
 // Component Imports
-import AddCard from '@views/apps/invoice/add/AddCard'
-import AddActions from '@views/apps/invoice/add/AddActions'
+import AddCard from '@/views/apps/invoice/add/AddCard'
 import AddHeader from '@/views/apps/invoice/add/AddHeader'
-
-// Data Imports
-import { getInvoiceData } from '@/app/server/actions'
 
 /**
  * ! If you need data using an API call, uncomment the below API code, update the `process.env.API_URL` variable in the
@@ -27,24 +25,17 @@ import { getInvoiceData } from '@/app/server/actions'
   return res.json()
 }
  */
-const InvoiceAdd = async () => {
-  // Vars
-  const data = await getInvoiceData()
-
+const AddPage = () => {
   return (
     <Grid container spacing={6}>
-      {/* Header */}
       <Grid item xs={12}>
         <AddHeader />
       </Grid>
-      <Grid item xs={12} md={9}>
-        <AddCard invoiceData={data} />
-      </Grid>
-      <Grid item xs={12} md={3}>
-        <AddActions />
+      <Grid item xs={12}>
+        <AddCard />
       </Grid>
     </Grid>
   )
 }
 
-export default InvoiceAdd
+export default AddPage

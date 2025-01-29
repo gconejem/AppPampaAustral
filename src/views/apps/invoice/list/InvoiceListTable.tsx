@@ -30,6 +30,18 @@ import Tooltip from '@mui/material/Tooltip'
 import TablePagination from '@mui/material/TablePagination'
 import Grid from '@mui/material/Grid'
 import type { TextFieldProps } from '@mui/material/TextField'
+import TableContainer from '@mui/material/TableContainer'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContentText from '@mui/material/DialogContentText'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -139,293 +151,234 @@ const invoiceStatusObj: InvoiceStatusObj = {
 // Column Definitions
 const columnHelper = createColumnHelper<InvoiceTypeWithAction>()
 
-const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
-  // States
-  const [status, setStatus] = useState<InvoiceType['invoiceStatus']>('')
-  const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[invoiceData])
-  const [filteredData, setFilteredData] = useState(data)
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [creationDate, setCreationDate] = useState('')
-  const [quoteType, setQuoteType] = useState('')
+const InvoiceListTable = () => {
+  const [cotizaciones, setCotizaciones] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<number[]>([])
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
 
-  // Hooks
-  const { lang: locale } = useParams()
+  // Handler para selección de todas las filas
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelecteds = cotizaciones.map((n: any) => n.id)
+      setSelected(newSelecteds)
+      return
+    }
+    setSelected([])
+  }
 
-  const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
-    () => [
-      columnHelper.accessor('rut', {
-        header: 'Rut',
-        cell: ({ row }) => (
-          <div className='flex flex-col'>
-            {/* Texto principal con color negro */}
-            <Typography variant='body1' color='text.primary'>
-              160671982-3
-            </Typography>
-          </div>
-        )
-      }),
+  // Handler para selección individual
+  const handleSelect = (event: React.MouseEvent<HTMLButtonElement>, id: number) => {
+    event.stopPropagation() // Prevenir la propagación del evento
+    const selectedIndex = selected.indexOf(id)
+    let newSelected: number[] = []
 
-      columnHelper.accessor('name', {
-        header: 'Nombre Comercial',
-        cell: ({ row }) => (
-          <div className='flex flex-col'>
-            {/* Texto principal con color negro */}
-            <Typography variant='body1' color='text.primary'>
-              Nombre Comercial
-            </Typography>
-          </div>
-        )
-      }),
-
-      columnHelper.accessor('Ciudad', {
-        header: 'Ciudad',
-        cell: ({ row }) => (
-          <div className='flex flex-col'>
-            {/* Texto principal con color negro */}
-            <Typography variant='body1' color='text.primary'>
-              Chillán
-            </Typography>
-          </div>
-        )
-      }),
-
-      columnHelper.accessor('issuedDate', {
-        header: 'Segmento',
-        cell: ({ row }) => <Typography>Segmento</Typography>
-      }),
-
-      columnHelper.accessor('Contacto', {
-        header: 'Contacto',
-        cell: ({ row }) => (
-          <div className='flex flex-col'>
-            {/* Texto principal con color negro */}
-            <Typography variant='body1' color='text.primary'>
-              Ver
-            </Typography>
-          </div>
-        )
-      }),
-
-      columnHelper.accessor('invoiceStatus', {
-        header: 'Estado',
-        cell: () => (
-          <Chip
-            label='Pendiente'
-            sx={{
-              backgroundColor: '#ffebee', // Fondo rojo claro
-              color: '#f44336', // Texto rojo
-              fontWeight: 'bold',
-              borderRadius: '16px', // Bordes redondeados
-              padding: '0 8px', // Espaciado interno
-              height: '24px' // Altura del chip
-            }}
-          />
-        )
-      }),
-      columnHelper.accessor('action', {
-        header: 'Acciones',
-        cell: () => (
-          <div className='flex items-center gap-2'>
-            <IconButton color='default' size='small'>
-              <VisibilityIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton color='default' size='small'>
-              <AttachMoneyIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton color='default' size='small'>
-              <EditIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton color='default' size='small'>
-              <MoreVertIcon fontSize='small' />
-            </IconButton>
-          </div>
-        ),
-        enableSorting: false
-      })
-    ],
-    [data, filteredData]
-  )
-
-  const table = useReactTable({
-    data: filteredData as InvoiceType[],
-    columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      globalFilter
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    },
-    enableRowSelection: true,
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
-  })
-
-  const getAvatar = (params: Pick<InvoiceType, 'avatar' | 'name'>) => {
-    const { avatar, name } = params
-
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(name as string)}
-        </CustomAvatar>
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selected, id)
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selected.slice(1))
+    } else if (selectedIndex === selected.length - 1) {
+      newSelected = newSelected.concat(selected.slice(0, -1))
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1)
       )
+    }
+
+    setSelected(newSelected)
+  }
+
+  // Función para abrir el diálogo de confirmación
+  const handleDeleteClick = (id: number) => {
+    setCotizacionToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  // Función para eliminar cotización
+  const handleDelete = async () => {
+    if (!cotizacionToDelete) return
+
+    try {
+      const response = await fetch(`/api/cotizaciones/${cotizacionToDelete}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar la cotización')
+      }
+
+      // Actualizar la lista de cotizaciones
+      setCotizaciones(cotizaciones.filter((c: any) => c.id !== cotizacionToDelete))
+
+      // Remover de seleccionados si estaba seleccionado
+      setSelected(selected.filter(s => s !== cotizacionToDelete))
+
+      // Cerrar el diálogo
+      setDeleteDialogOpen(false)
+      setCotizacionToDelete(null)
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al eliminar la cotización')
     }
   }
 
+  // Cargar datos al montar el componente
   useEffect(() => {
-    const filteredData = data?.filter(invoice => {
-      if (status && invoice.invoiceStatus.toLowerCase().replace(/\s+/g, '-') !== status) return false
+    const fetchCotizaciones = async () => {
+      try {
+        const response = await fetch('/api/cotizaciones')
+        if (!response.ok) {
+          throw new Error('Error al cargar cotizaciones')
+        }
+        const data = await response.json()
+        console.log('Cotizaciones cargadas:', data)
+        setCotizaciones(data)
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-      return true
-    })
-
-    setFilteredData(filteredData)
-  }, [status, data, setFilteredData])
+    fetchCotizaciones()
+  }, [])
 
   return (
-    <Card>
-      <CardContent>
-        <Grid container spacing={2} justifyContent='space-between' alignItems='center'>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Fecha Creación</InputLabel>
-              <Select value={creationDate} onChange={e => setCreationDate(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Fecha1'>Fecha1</MenuItem>
-                <MenuItem value='Fecha2'>Fecha2</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+    <>
+      <Card>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={selected.length > 0 && selected.length < cotizaciones.length}
+                    checked={cotizaciones.length > 0 && selected.length === cotizaciones.length}
+                    onChange={handleSelectAll}
+                    inputProps={{ 'aria-label': 'select all' }}
+                  />
+                </TableCell>
+                <TableCell>N° COTIZACIÓN</TableCell>
+                <TableCell>CLIENTE</TableCell>
+                <TableCell>FECHA</TableCell>
+                <TableCell>ESTADO</TableCell>
+                <TableCell>ACCIONES</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    Cargando...
+                  </TableCell>
+                </TableRow>
+              ) : cotizaciones.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    No hay cotizaciones disponibles
+                  </TableCell>
+                </TableRow>
+              ) : (
+                cotizaciones.map((cotizacion: any) => {
+                  const isItemSelected = selected.includes(cotizacion.id)
 
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Tipo Cotización</InputLabel>
-              <Select value={quoteType} onChange={e => setQuoteType(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Tipo1'>Tipo1</MenuItem>
-                <MenuItem value='Tipo2'>Tipo2</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                  return (
+                    <TableRow
+                      key={cotizacion.id}
+                      hover
+                      role="checkbox"
+                      aria-checked={isItemSelected}
+                      selected={isItemSelected}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={isItemSelected}
+                          onClick={(e) => handleSelect(e as any, cotizacion.id)}
+                        />
+                      </TableCell>
+                      <TableCell>{cotizacion.numeroCotizacion}</TableCell>
+                      <TableCell>{cotizacion.cliente}</TableCell>
+                      <TableCell>{cotizacion.fecha}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={cotizacion.estado}
+                          color={cotizacion.estado === 'PENDIENTE' ? 'warning' : 'success'}
+                          variant='outlined'
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          <Tooltip title="Ver">
+                            <IconButton
+                              size="small"
+                              href={`/apps/invoice/preview/${cotizacion.id}`}
+                            >
+                              <i className="ri-eye-line" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Editar">
+                            <IconButton
+                              size="small"
+                              href={`/apps/invoice/edit/${cotizacion.id}`}
+                            >
+                              <i className="ri-pencil-line" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteClick(cotizacion.id)}
+                            >
+                              <i className="ri-delete-bin-line" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Estado</InputLabel>
-              <Select value={status} onChange={e => setStatus(e.target.value)}>
-                <MenuItem value=''>Todos</MenuItem>
-                <MenuItem value='Sent'>Sent</MenuItem>
-                <MenuItem value='Paid'>Paid</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-        <div className='flex justify-between items-center mt-4'>
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Confirmar eliminación
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            ¿Está seguro que desea eliminar esta cotización? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
           <Button
-            variant='outlined'
-            startIcon={<i className='ri-external-link-line' />}
-            onClick={() => console.log('Exportando...')}
-            style={{
-              color: '#6e6e6e',
-              borderColor: '#d1d1d1',
-              textTransform: 'none',
-              borderRadius: '8px'
-            }}
+            onClick={() => setDeleteDialogOpen(false)}
+            color="primary"
+            variant="outlined"
           >
-            Exportar
+            Cancelar
           </Button>
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Buscar'
-            className='min-is-[200px]'
-          />
-        </div>
-      </CardContent>
-
-      <div className='overflow-x-auto'>
-        <table className={tableStyles.table}>
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th key={header.id}>
-                    {header.isPlaceholder ? null : (
-                      <div
-                        className={classnames({
-                          'flex items-center': header.column.getIsSorted(),
-                          'cursor-pointer select-none': header.column.getCanSort()
-                        })}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <i className='ri-arrow-up-s-line text-xl' />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <i className='ri-arrow-down-s-line text-xl' />
-                        ) : null}
-                      </div>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-
-          {table.getFilteredRowModel().rows.length === 0 ? (
-            <tbody>
-              <tr>
-                <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                  No data available
-                </td>
-              </tr>
-            </tbody>
-          ) : (
-            <tbody>
-              {table
-                .getRowModel()
-                .rows.slice(0, table.getState().pagination.pageSize)
-                .map(row => (
-                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                    ))}
-                  </tr>
-                ))}
-            </tbody>
-          )}
-        </table>
-      </div>
-
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50]}
-        component='div'
-        count={table.getFilteredRowModel().rows.length}
-        rowsPerPage={table.getState().pagination.pageSize}
-        page={table.getState().pagination.pageIndex}
-        onPageChange={(_, page) => table.setPageIndex(page)}
-        onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-      />
-    </Card>
+          <Button
+            onClick={handleDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   )
 }
 

@@ -101,40 +101,52 @@ const AddEnsayo = () => {
     e.preventDefault()
 
     try {
-      // Validar solo los campos realmente necesarios
-      if (!nombre || !sku || !area || !familia) {
-        // Mostrar error de campos requeridos
+      // Validar campos requeridos
+      const validationError = validateForm()
+      if (validationError) {
+        setError(validationError)
         return
       }
+
+      // Convertir precio a número
+      const precioNumerico = parseFloat(precio)
+      const listaPrecioIdNumerico = parseInt(listaPrecioId)
+
+      // Crear objeto con los datos
+      const requestData = {
+        nombre,
+        sku,
+        descripcion,
+        area,
+        familia,
+        tipo: 'Ensayo',
+        norma,
+        aplicaImpuesto,
+        esPaquete: false,
+        precio: precioNumerico,        // Agregar precio
+        listaPrecio: listaPrecioIdNumerico  // Agregar lista de precios
+      }
+
+      console.log('Datos a enviar:', requestData) // Debug
 
       const response = await fetch('/api/productos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          nombre,
-          sku,
-          descripcion,
-          area,
-          familia,
-          tipo: 'Ensayo',
-          norma,
-          aplicaImpuesto,
-          esPaquete: false
-
-          // Removemos precio y listaPrecioId que ya no son requeridos
-        })
+        body: JSON.stringify(requestData)
       })
 
       if (!response.ok) {
-        throw new Error('Error al crear el ensayo')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al crear el ensayo')
       }
 
-      // Limpiar formulario o redirigir
+      setSuccess(true)
       router.push('/apps/ecommerce/products/list')
     } catch (error) {
       console.error('Error:', error)
+      setError(error.message)
     }
   }
 
