@@ -12,7 +12,7 @@ export const getUserData = async (): Promise<Cliente[]> => {
   try {
     const clientes = await prisma.cliente.findMany({
       include: {
-        clienteContactos: {
+        ClienteContacto: {
           include: {
             Contacto: true
           }
