@@ -6,9 +6,29 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import type { Cliente } from '@/types/forms/cliente'
+import type { Obra } from '@/types/forms/obra'
 
-export const getUserData = async (): Promise<Cliente[]> => {
+export const getUserData = async (): Promise<Obra[]> => {
+  try {
+    const obras = await prisma.obra.findMany({
+      include: {
+        ContactoObra: true
+      },
+      orderBy: {
+        fechaIngreso: 'desc'
+      }
+    })
+
+    return obras as Obra[]
+  } catch (error) {
+    console.error('Error fetching obras:', error)
+
+    return []
+  }
+}
+
+// Función específica para obtener clientes si la necesitas
+export const getClientData = async () => {
   try {
     const clientes = await prisma.cliente.findMany({
       include: {
@@ -24,7 +44,7 @@ export const getUserData = async (): Promise<Cliente[]> => {
       }
     })
 
-    return clientes as Cliente[]
+    return clientes
   } catch (error) {
     console.error('Error fetching clients:', error)
 

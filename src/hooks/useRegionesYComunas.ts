@@ -1,48 +1,43 @@
 import { useState, useEffect } from 'react'
 
+import { REGIONES_CHILE } from '@/data/clientData'
+
+interface Region {
+  id: number
+  nombre: string
+}
+
+interface Comuna {
+  id: number
+  nombre: string
+}
+
 export const useRegionesYComunas = () => {
-  const [regiones, setRegiones] = useState([])
-  const [comunas, setComunas] = useState([])
+  const [regiones, setRegiones] = useState<Region[]>([])
+  const [comunas, setComunas] = useState<Comuna[]>([])
   const [selectedRegion, setSelectedRegion] = useState('')
   const [selectedComuna, setSelectedComuna] = useState('')
 
-  // Cargar regiones al montar el componente
   useEffect(() => {
-    const fetchRegiones = async () => {
-      try {
-        const response = await fetch('/api/ubicacion/regiones')
-        const data = await response.json()
+    const regionesArray = Object.keys(REGIONES_CHILE).map((nombre, index) => ({
+      id: index + 1,
+      nombre
+    }))
 
-        setRegiones(data)
-      } catch (error) {
-        console.error('Error al cargar regiones:', error)
-      }
-    }
-
-    fetchRegiones()
+    setRegiones(regionesArray)
   }, [])
 
-  // Cargar comunas cuando cambia la región
   useEffect(() => {
-    const fetchComunas = async () => {
-      if (!selectedRegion) {
-        setComunas([])
+    if (selectedRegion && REGIONES_CHILE[selectedRegion]) {
+      const comunasArray = REGIONES_CHILE[selectedRegion].comunas.map((nombre, index) => ({
+        id: index + 1,
+        nombre
+      }))
 
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/ubicacion/comunas/${selectedRegion}`)
-        const data = await response.json()
-
-        setComunas(data)
-      } catch (error) {
-        console.error('Error al cargar comunas:', error)
-        setComunas([])
-      }
+      setComunas(comunasArray)
+    } else {
+      setComunas([])
     }
-
-    fetchComunas()
   }, [selectedRegion])
 
   return {
