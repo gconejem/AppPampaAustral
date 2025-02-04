@@ -35,6 +35,7 @@ import Box from '@mui/material/Box'
 import Popover from '@mui/material/Popover'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PreviewIcon from '@mui/icons-material/Visibility'
+import Alert from '@mui/material/Alert'
 
 // Third-party Imports
 import axios from 'axios'
@@ -183,13 +184,13 @@ interface ObraType {
 // Column Definitions
 const columnHelper = createColumnHelper<Obra>()
 
-const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
-  // Inicializar estados con valores por defecto
+const WorkListTable = () => {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const [data, setData] = useState<Obra[]>([]) // Inicializar como array vacío
+  const [data, setData] = useState<Obra[]>([])
   const [filteredData, setFilteredData] = useState<Obra[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const [selectedObra, setSelectedObra] = useState<Obra | null>(null)
   const [editObraOpen, setEditObraOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -212,19 +213,12 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
   const params = useParams()
   const locale = (params?.lang as string) || 'es'
 
-  // Efecto para manejar los datos iniciales
-  useEffect(() => {
-    if (tableData) {
-      setData(tableData)
-      setFilteredData(tableData)
-    }
-  }, [tableData])
-
-  // Cargar obras cuando el componente se monta
   useEffect(() => {
     const fetchObras = async () => {
       try {
-        setIsLoading(true)
+        setLoading(true)
+        setError(null)
+
         const response = await fetch('/api/obras')
 
         if (!response.ok) {
@@ -233,20 +227,22 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
 
         const data = await response.json()
 
-        setData(data)
-        setFilteredData(data)
+        if (Array.isArray(data)) {
+          setData(data)
+        } else {
+          console.error('Respuesta inesperada:', data)
+          setError('Error al cargar los datos')
+        }
       } catch (error) {
         console.error('Error:', error)
-        toast.error('Error al cargar las obras')
+        setError('Error al cargar las obras')
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
-    if (!tableData) {
-      fetchObras()
-    }
-  }, [tableData])
+    fetchObras()
+  }, [])
 
   const handleDeleteClick = (id: number) => {
     setSelectedObraId(id)
@@ -886,6 +882,14 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
     )
   }
 
+  if (error) {
+    return (
+      <Alert severity='error' sx={{ mb: 4 }}>
+        {error}
+      </Alert>
+    )
+  }
+
   return (
     <>
       <Card>
@@ -929,7 +933,7 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
             />
           </div>
         </div>
-        {isLoading ? (
+        {loading ? (
           <div className='flex justify-center p-5'>
             <CircularProgress />
           </div>

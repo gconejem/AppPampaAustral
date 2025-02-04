@@ -75,6 +75,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
+    console.log('Iniciando consulta de obras...')
+
     const obras = await prisma.obra.findMany({
       include: {
         ContactoObra: true
@@ -84,21 +86,26 @@ export async function GET() {
       }
     })
 
-    // Transformar los datos para el formato que espera la tabla
-    const formattedObras = obras.map(obra => ({
-      ...obra,
+    console.log(`Obras encontradas: ${obras.length}`)
 
-      // Usar los campos que sí existen en el modelo
-      cliente: obra.nombreCliente,
-      encargado: obra.ContactoObra.find(c => c.isPrincipal)?.nombre || '',
-      rutCliente: obra.rut,
-      estado: obra.estado
+    if (!obras) {
+      console.log('No se encontraron obras')
+
+      return NextResponse.json([])
+    }
+
+    // Formatear las fechas antes de enviar
+    const obrasFormateadas = obras.map(obra => ({
+      ...obra,
+      fechaIngreso: obra.fechaIngreso.toISOString(),
+      createdAt: obra.createdAt.toISOString(),
+      updatedAt: obra.updatedAt.toISOString()
     }))
 
-    return NextResponse.json(formattedObras)
+    return NextResponse.json(obrasFormateadas)
   } catch (error) {
     console.error('Error al obtener obras:', error)
 
-    return NextResponse.json({ error: 'Error al obtener obras' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener las obras' }, { status: 500 })
   }
 }
