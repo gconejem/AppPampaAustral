@@ -9,9 +9,9 @@ export type PrimaryColorConfig = {
 export const primaryColorConfig: PrimaryColorConfig[] = [
   {
     name: 'primary-1',
-    light: '#A379FF',
-    main: '#8C57FF',
-    dark: '#7E4EE6'
+    light: '#42a5f5',
+    main: '#1976d2',
+    dark: '#1565c0'
   },
   {
     name: 'primary-2',
@@ -39,10 +39,10 @@ export const primaryColorConfig: PrimaryColorConfig[] = [
   }
 ]
 
-// Renombramos esta configuración para evitar el conflicto
+// Configuración del tema por defecto
 export const themeColors = {
   light: {
-    primary: '#2196f3',
+    primary: '#1976d2',
     background: '#ffffff',
     paper: '#ffffff'
   }

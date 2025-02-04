@@ -50,7 +50,7 @@ export type Config = {
 }
 
 export const themeConfig: Config = {
-  templateName: 'Materio',
+  templateName: 'PampAustral',
   homePageUrl: '/home',
   settingsCookieName: 'materio-mui-next-demo',
   mode: 'light', // 'system', 'light', 'dark'
