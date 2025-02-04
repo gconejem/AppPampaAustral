@@ -184,9 +184,10 @@ interface ObraType {
 const columnHelper = createColumnHelper<Obra>()
 
 const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
-  const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState<Obra[]>(tableData || [])
-  const [filteredData, setFilteredData] = useState<Obra[]>(tableData || [])
+  // Inicializar estados con valores por defecto
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  const [data, setData] = useState<Obra[]>([]) // Inicializar como array vacío
+  const [filteredData, setFilteredData] = useState<Obra[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [selectedObra, setSelectedObra] = useState<Obra | null>(null)
@@ -211,10 +212,11 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
   const params = useParams()
   const locale = (params?.lang as string) || 'es'
 
-  // Manejar el caso cuando los datos son undefined inicialmente
+  // Efecto para manejar los datos iniciales
   useEffect(() => {
     if (tableData) {
       setData(tableData)
+      setFilteredData(tableData)
     }
   }, [tableData])
 
@@ -241,8 +243,10 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
       }
     }
 
-    fetchObras()
-  }, [])
+    if (!tableData) {
+      fetchObras()
+    }
+  }, [tableData])
 
   const handleDeleteClick = (id: number) => {
     setSelectedObraId(id)
@@ -493,8 +497,10 @@ const WorkListTable = ({ tableData }: { tableData?: Obra[] }) => {
   }
 
   const handleChangeStatusClick = (obra: Obra) => {
+    if (!obra?.obraId) return
+
     setSelectedObraId(obra.obraId)
-    setSelectedStatus(obra.estado) // Establecer el estado actual
+    setSelectedStatus(obra.estado || '')
     setChangeStatusOpen(true)
   }
 
