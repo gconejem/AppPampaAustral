@@ -94,13 +94,24 @@ export async function GET() {
       return NextResponse.json([])
     }
 
-    // Formatear las fechas antes de enviar
+    // Transformar los datos para el formato que espera la tabla
     const obrasFormateadas = obras.map(obra => ({
       ...obra,
       fechaIngreso: obra.fechaIngreso.toISOString(),
       createdAt: obra.createdAt.toISOString(),
-      updatedAt: obra.updatedAt.toISOString()
+      updatedAt: obra.updatedAt.toISOString(),
+
+      // Campos necesarios para la tabla
+      numeroObra: obra.numeroObra,
+      nombreObra: obra.nombreObra,
+      comuna: obra.comuna,
+      rutCliente: obra.rut,
+      cliente: obra.nombreCliente,
+      encargado: obra.ContactoObra.find(c => c.isPrincipal)?.nombre || 'Sin asignar',
+      estado: obra.estado
     }))
+
+    console.log('Obras formateadas:', obrasFormateadas)
 
     return NextResponse.json(obrasFormateadas)
   } catch (error) {
