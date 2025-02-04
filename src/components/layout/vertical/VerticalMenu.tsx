@@ -64,8 +64,8 @@ const VerticalMenu = () => {
 
   // Si el diccionario no está disponible, podemos mostrar valores por defecto
   const defaultLabels = {
-    formsAndTables: 'Forms & Tables',
-    appsPages: 'Apps & Pages'
+    formsAndTables: 'Principal',
+    appsPages: 'Mantenedores'
   }
 
   // Usar el operador de coalescencia nula para manejar el caso undefined

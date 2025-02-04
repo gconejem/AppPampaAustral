@@ -2,7 +2,7 @@
 import { useState } from 'react'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
+import Box from '@mui/material/Box'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
@@ -37,7 +37,6 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
       })
     }
 
-    // Filtrar por estado de forma segura
     if (selectedEstado) {
       filteredWorks = filteredWorks.filter(
         work => work.estado?.toString().toLowerCase() === selectedEstado.toString().toLowerCase()
@@ -54,7 +53,6 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
 
     let filteredWorks = [...workData]
 
-    // Filtrar por estado de forma segura
     if (estado) {
       filteredWorks = filteredWorks.filter(
         work => work.estado?.toString().toLowerCase() === estado.toString().toLowerCase()
@@ -73,19 +71,19 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
   }
 
   return (
-    <Grid container spacing={6} className='px-4 py-4'>
-      <Grid item xs={12} sm={6}>
-        <PickersRange
-          startDate={startDate}
-          endDate={endDate}
-          onChange={handleDateChange}
-          placeholderText='Filtrar por fecha de creación'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth>
-          <InputLabel id='estado-select-label'>Estado</InputLabel>
-          <Select labelId='estado-select-label' value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
+    <Box className='flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between'>
+      <Box className='flex flex-1 items-center gap-4'>
+        <Box className='flex-1 max-w-[240px]'>
+          <PickersRange
+            startDate={startDate}
+            endDate={endDate}
+            onChange={handleDateChange}
+            placeholderText='Filtrar por fecha de creación'
+          />
+        </Box>
+        <FormControl size='small' sx={{ minWidth: '240px' }}>
+          <InputLabel>Estado</InputLabel>
+          <Select value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
             <MenuItem value=''>Todos</MenuItem>
             {Array.isArray(estados) &&
               estados.map((estado: string) => (
@@ -95,8 +93,8 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
               ))}
           </Select>
         </FormControl>
-      </Grid>
-    </Grid>
+      </Box>
+    </Box>
   )
 }
 
