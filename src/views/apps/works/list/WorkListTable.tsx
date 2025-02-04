@@ -225,11 +225,11 @@ const WorkListTable = () => {
 
         const responseData = await response.json()
 
-        console.log('Datos recibidos:', responseData) // Debug
+        console.log('Datos recibidos:', responseData)
 
         if (Array.isArray(responseData)) {
           setData(responseData)
-          setFilteredData(responseData) // También actualizar filteredData
+          setFilteredData(responseData)
         } else {
           console.error('Respuesta inesperada:', responseData)
           setError('Error al cargar los datos')
@@ -494,45 +494,46 @@ const WorkListTable = () => {
   }
 
   const handleChangeStatusClick = (obra: Obra) => {
-    if (!obra?.obraId) return
-
-    setSelectedObraId(obra.obraId)
-    setSelectedStatus(obra.estado || '')
+    setSelectedObra(obra)
+    setSelectedStatus(obra.estado)
     setChangeStatusOpen(true)
   }
 
   const handleStatusChange = async () => {
-    if (!selectedObraId) return
+    if (!selectedObra) return
 
     try {
-      const newStatus = selectedStatus === 'activo' ? 'inactivo' : 'activo'
-
-      const response = await fetch(`/api/obras/${selectedObraId}/status`, {
+      const response = await fetch(`/api/obras/${selectedObra.obraId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ estado: newStatus })
+        body: JSON.stringify({ estado: selectedStatus })
       })
 
-      if (!response.ok) {
-        throw new Error('Error al actualizar el estado')
-      }
+      if (!response.ok) throw new Error('Error al actualizar el estado')
 
-      const updatedObra = await response.json()
-
-      // Actualizar la tabla
-      setData(prevData =>
-        prevData.map(obra => (obra.obraId === selectedObraId ? { ...obra, estado: newStatus } : obra))
+      // Actualizar el estado local de forma optimista
+      const updatedData = data.map(obra =>
+        obra.obraId === selectedObra.obraId
+          ? {
+              ...obra,
+              estado: selectedStatus
+            }
+          : obra
       )
 
-      toast.success(`Estado actualizado a ${newStatus}`)
+      setData(updatedData)
+      setFilteredData(updatedData)
+
+      toast.success('Estado actualizado correctamente')
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al actualizar el estado')
     } finally {
       setChangeStatusOpen(false)
-      setSelectedObraId(null)
+      setSelectedObra(null)
+      setSelectedStatus('')
     }
   }
 
@@ -668,42 +669,137 @@ const WorkListTable = () => {
   const columns = useMemo<ColumnDef<Obra>[]>(
     () => [
       {
-        id: 'obra',
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        )
+      },
+      columnHelper.accessor('numeroObra', {
         header: 'OBRA',
-        accessorFn: row => row.numeroObra
-      },
-      {
-        id: 'nombreObra',
+        cell: ({ row }) => row.original.numeroObra
+      }),
+      columnHelper.accessor('nombreObra', {
         header: 'NOMBRE OBRA',
-        accessorFn: row => row.nombreObra
-      },
-      {
-        id: 'comuna',
+        cell: ({ row }) => row.original.nombreObra
+      }),
+      columnHelper.accessor('comuna', {
         header: 'COMUNA',
-        accessorFn: row => row.comuna
-      },
-      {
-        id: 'rutCliente',
+        cell: ({ row }) => row.original.comuna
+      }),
+      columnHelper.accessor('rutCliente', {
         header: 'RUT CLIENTE',
-        accessorFn: row => row.rutCliente
-      },
-      {
-        id: 'cliente',
+        cell: ({ row }) => row.original.rutCliente
+      }),
+      columnHelper.accessor('cliente', {
         header: 'CLIENTE',
-        accessorFn: row => row.cliente
-      },
-      {
-        id: 'encargado',
-        header: 'ENCARGADO',
-        accessorFn: row => row.encargado
-      },
-      {
-        id: 'estado',
+        cell: ({ row }) => row.original.nombreCliente
+      }),
+      columnHelper.accessor(
+        row => {
+          const encargado = row.ContactoObra?.find(c => c.isPrincipal)
+
+          return encargado?.nombre || '-'
+        },
+        {
+          id: 'encargado',
+          header: 'ENCARGADO',
+          cell: ({ row }) => {
+            const contactos = row.original.ContactoObra
+
+            if (!contactos?.length) return '-'
+
+            return (
+              <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
+                {contactos.find(c => c.isPrincipal)?.nombre || '-'}
+              </div>
+            )
+          }
+        }
+      ),
+      columnHelper.accessor('estado', {
         header: 'ESTADO',
-        accessorFn: row => row.estado
+        cell: ({ row }) => (
+          <Chip
+            label={row.original.estado}
+            color={row.original.estado.toLowerCase() === 'activo' ? 'success' : 'error'}
+            sx={{
+              '& .MuiChip-label': { textTransform: 'capitalize' }
+            }}
+          />
+        )
+      }),
+      {
+        accessorKey: 'actions',
+        header: 'ACCIONES',
+        cell: ({ row }) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <IconButton
+              size='small'
+              color='info'
+              onClick={() => handlePreview(row.original)}
+              sx={{ '&:hover': { backgroundColor: 'info.light' } }}
+            >
+              <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <IconButton
+              size='small'
+              color='warning'
+              onClick={() => {
+                setObraToDuplicate(row.original)
+                setDuplicateDialogOpen(true)
+              }}
+              sx={{ '&:hover': { backgroundColor: 'warning.light' } }}
+            >
+              <i className='ri-file-copy-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <IconButton
+              size='small'
+              color='primary'
+              onClick={() => handleEdit(row.original)}
+              sx={{ '&:hover': { backgroundColor: 'primary.light' } }}
+            >
+              <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <OptionMenu
+              iconButtonProps={{ className: 'cursor-pointer' }}
+              options={[
+                {
+                  text: 'Cambiar Estado',
+                  icon: 'ri-exchange-line',
+                  menuItemProps: {
+                    onClick: () => handleChangeStatusClick(row.original)
+                  }
+                },
+                {
+                  text: 'Eliminar',
+                  icon: 'ri-delete-bin-line',
+                  menuItemProps: {
+                    onClick: () => handleDeleteClick(row.original.obraId)
+                  }
+                }
+              ]}
+            />
+          </Box>
+        )
       }
     ],
-    []
+    [handleEdit, handlePreview, handleDeleteClick, handleChangeStatusClick]
   )
 
   const table = useReactTable({

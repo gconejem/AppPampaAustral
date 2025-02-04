@@ -5,22 +5,20 @@ import { prisma } from '@/lib/prisma'
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const obraId = parseInt(params.id)
-    const body = await request.json()
+    const { estado } = await request.json()
 
     // Validar el estado
-    const newStatus = body.estado
-
-    if (!['activo', 'inactivo'].includes(newStatus)) {
+    if (!['activo', 'inactivo'].includes(estado)) {
       return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
     }
 
     // Actualizar el estado de la obra
     const updatedObra = await prisma.obra.update({
       where: {
-        obraId
+        obraId: obraId
       },
       data: {
-        estado: newStatus,
+        estado: estado,
         updatedAt: new Date()
       },
       include: {
@@ -32,6 +30,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } catch (error) {
     console.error('Error al actualizar estado:', error)
 
-    return NextResponse.json({ error: 'Error al actualizar el estado de la obra' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al actualizar el estado' }, { status: 500 })
   }
 }
