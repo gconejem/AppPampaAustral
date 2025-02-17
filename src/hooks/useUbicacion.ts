@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { REGIONES_CHILE } from '@/data/clientData'
 
@@ -23,39 +23,39 @@ type RegionesChile = {
 }
 
 export const useUbicacion = () => {
-  const [selectedRegion, setSelectedRegion] = useState<string>('')
+  const [regiones, setRegiones] = useState<Array<{ id: number; nombre: string }>>([])
+  const [comunas, setComunas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [selectedRegion, setSelectedRegion] = useState('')
 
-  const regiones = useMemo<Region[]>(() => {
-    return Object.keys(REGIONES_CHILE).map((nombre, index) => ({
+  // Cargar regiones al montar el componente
+  useEffect(() => {
+    console.log('Cargando regiones...')
+
+    const regionesArray = Object.keys(REGIONES_CHILE).map((nombre, index) => ({
       id: index + 1,
       nombre
     }))
+
+    setRegiones(regionesArray)
+    console.log('Regiones cargadas:', regionesArray)
   }, [])
 
-  const comunas = useMemo<Comuna[]>(() => {
-    if (!selectedRegion) return []
+  // Actualizar comunas cuando cambia la región
+  useEffect(() => {
+    console.log('Actualizando comunas para región:', selectedRegion)
 
-    const regionData = REGIONES_CHILE[selectedRegion]
+    if (selectedRegion && REGIONES_CHILE[selectedRegion]) {
+      const comunasArray = REGIONES_CHILE[selectedRegion].comunas.map((nombre, index) => ({
+        id: index + 1,
+        nombre
+      }))
 
-    console.log('Región seleccionada:', selectedRegion)
-    console.log('Datos de región:', regionData)
-
-    if (!regionData?.comunas) {
-      console.log('No se encontraron comunas para:', selectedRegion)
-
-      return []
+      setComunas(comunasArray)
+      console.log('Comunas actualizadas:', comunasArray)
+    } else {
+      setComunas([])
     }
-
-    const comunasArray = regionData.comunas.map((nombre, index) => ({
-      id: index + 1,
-      nombre,
-      regionId: regiones.find(r => r.nombre === selectedRegion)?.id || 0
-    }))
-
-    console.log('Comunas encontradas:', comunasArray)
-
-    return comunasArray
-  }, [selectedRegion, regiones])
+  }, [selectedRegion])
 
   const handleSetSelectedRegion = (value: string) => {
     console.log('Estableciendo región:', value)

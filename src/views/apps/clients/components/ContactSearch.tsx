@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
 import TextField from '@mui/material/TextField'
-import InputAdornment from '@mui/material/InputAdornment'
-import SearchIcon from '@mui/icons-material/Search'
+import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
@@ -12,124 +12,107 @@ import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
 import IconButton from '@mui/material/IconButton'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
-import type { ContactType as Contacto } from '@/types/apps/contactTypes'
 
-interface Props {
+import type { Contacto } from '@/types/forms/cliente'
+
+interface ContactSearchProps {
   onContactSelect: (contact: Contacto) => void
 }
 
-const ContactSearch = ({ onContactSelect }: Props) => {
-  const [searchValue, setSearchValue] = useState('')
-  const [searchResults, setSearchResults] = useState<Contacto[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<Contacto[]>([])
+  const [loading, setLoading] = useState(false)
+  const [inputValue, setInputValue] = useState('')
 
-  const searchContacts = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([])
-      return
-    }
+  const fetchContacts = async (search?: string) => {
+    setLoading(true)
 
-    setIsSearching(true)
     try {
-      const response = await axios.get(`/api/contactos/search`, {
-        params: { q: query }
-      })
-      setSearchResults(response.data)
+      const url = search ? `/api/contacts?search=${encodeURIComponent(search)}` : '/api/contacts'
+      const response = await fetch(url)
+
+      if (!response.ok) throw new Error('Error al obtener contactos')
+      const data = await response.json()
+
+      setOptions(data)
     } catch (error) {
-      console.error('Error buscando contactos:', error)
-      toast.error('Error al buscar contactos')
+      console.error('Error:', error)
+      toast.error('Error al cargar contactos')
+      setOptions([])
     } finally {
-      setIsSearching(false)
+      setLoading(false)
     }
   }
 
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value)
-    
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
-    }
+  // Cargar contactos iniciales
+  useEffect(() => {
+    fetchContacts()
+  }, [])
 
-    const timeout = setTimeout(() => {
-      searchContacts(value)
-    }, 500)
+  // Buscar cuando cambia el input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputValue) {
+        fetchContacts(inputValue)
+      } else {
+        // Cuando el input está vacío, cargar todos los contactos
+        fetchContacts()
+      }
+    }, 300)
 
-    setSearchTimeout(timeout)
-  }
-
-  const handleContactSelect = (contact: Contacto) => {
-    onContactSelect({
-      contactId: contact.contactId,
-      nombre: contact.nombre,
-      cargo: contact.cargo,
-      email: contact.email,
-      telefono1: contact.telefono1,
-      telefono2: contact.telefono2
-    })
-    setSearchValue('')
-    setSearchResults([])
-  }
+    return () => clearTimeout(timer)
+  }, [inputValue])
 
   return (
-    <div className="relative">
-      <TextField
-        fullWidth
-        size='small'
-        value={searchValue}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder='Buscar contacto existente...'
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position='start'>
-              <SearchIcon />
-            </InputAdornment>
-          ),
-          endAdornment: isSearching ? (
-            <InputAdornment position='end'>
-              <CircularProgress size={20} />
-            </InputAdornment>
-          ) : null
-        }}
-      />
+    <Autocomplete
+      open={open}
+      onOpen={() => setOpen(true)}
+      onClose={() => setOpen(false)}
+      isOptionEqualToValue={(option, value) => option.nombre === value.nombre}
+      getOptionLabel={option => option.nombre || ''}
+      options={options}
+      loading={loading}
+      onInputChange={(_, newInputValue) => {
+        setInputValue(newInputValue)
+      }}
+      onChange={(_, newValue) => {
+        if (newValue) {
+          onContactSelect(newValue)
 
-      {searchResults.length > 0 && (
-        <List 
-          sx={{ 
-            position: 'absolute',
-            width: '100%',
-            zIndex: 1000,
-            mt: 1,
-            bgcolor: 'background.paper',
-            boxShadow: 3,
-            borderRadius: 1
+          // Resetear el input y recargar todos los contactos
+          setInputValue('')
+          fetchContacts()
+        }
+      }}
+      renderInput={params => (
+        <TextField
+          {...params}
+          placeholder='Buscar contacto existente...'
+          size='small'
+          InputProps={{
+            ...params.InputProps,
+            endAdornment: (
+              <>
+                {loading ? <CircularProgress color='inherit' size={20} /> : null}
+                {params.InputProps.endAdornment}
+              </>
+            )
           }}
-        >
-          {searchResults.map((contact) => (
-            <ListItem
-              key={contact.contactId}
-              button
-              onClick={() => handleContactSelect(contact)}
-            >
-              <ListItemText
-                primary={contact.nombre}
-                secondary={`${contact.cargo} • ${contact.email}`}
-              />
-              <ListItemSecondaryAction>
-                <IconButton
-                  edge="end"
-                  size="small"
-                  onClick={() => handleContactSelect(contact)}
-                >
-                  <i className='ri-add-line' />
-                </IconButton>
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+        />
       )}
-    </div>
+      renderOption={(props, option) => (
+        <li {...props}>
+          <div>
+            <div>{option.nombre}</div>
+            <div style={{ fontSize: '0.8rem', color: 'gray' }}>
+              {option.cargo} - {option.email}
+            </div>
+          </div>
+        </li>
+      )}
+    />
   )
 }
 
-export default ContactSearch 
+export default ContactSearch

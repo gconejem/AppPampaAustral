@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -35,13 +35,18 @@ import Popover from '@mui/material/Popover'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
-import TableContainer from '@mui/material/TableContainer'
-import type Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
 import Box from '@mui/material/Box'
+import MuiLink from '@mui/material/Link'
+
+// Importar los componentes de tabla con alias
+import {
+  Table as MuiTable,
+  TableBody as MuiTableBody,
+  TableCell as MuiTableCell,
+  TableContainer as MuiTableContainer,
+  TableHead as MuiTableHead,
+  TableRow as MuiTableRow
+} from '@mui/material'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -153,7 +158,9 @@ const ContactsModal = ({
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-mail-line text-textSecondary' />
-                <Typography>{contact.contacto.email}</Typography>
+                <MuiLink href={`mailto:${contact.contacto.email}`} sx={{ textDecoration: 'none' }}>
+                  {contact.contacto.email}
+                </MuiLink>
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-phone-line text-textSecondary' />
@@ -176,9 +183,18 @@ const ContactsModal = ({
   )
 }
 
+// Definir el tipo para las opciones del menú
+interface OptionMenuItemType {
+  text: string
+  icon: string
+  menuItemProps?: {
+    onClick: () => void
+  }
+}
+
 const ClientListTable = ({ userData, setData }: Props) => {
-  // Verificar si userData está definido, si no, usar array vacío
-  const safeUserData = userData || []
+  // Asegurarnos de que userData siempre sea un array
+  const safeUserData = Array.isArray(userData) ? userData : []
 
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
@@ -186,7 +202,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [selectedUser, setSelectedUser] = useState<Cliente | null>(null)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [filteredData, setFilteredData] = useState<Cliente[]>(userData)
+  const [tableData, setTableData] = useState<Cliente[]>(safeUserData)
+
   const [openDialog, setOpenDialog] = useState(false)
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
@@ -203,6 +220,9 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState('')
+
+  // Mantener una copia local de los datos
+  const [localData, setLocalData] = useState<Cliente[]>(safeUserData)
 
   // Solo necesitamos regiones y comunas del hook
   const { regiones, comunas, loading } = useRegionesYComunas()
@@ -224,33 +244,47 @@ const ClientListTable = ({ userData, setData }: Props) => {
     setDateRange(dates)
   }
 
-  // Efecto para aplicar todos los filtros
+  // Efecto para aplicar filtros
   useEffect(() => {
-    let filteredResults = [...safeUserData]
+    const applyFilters = () => {
+      // Asegurarnos de que estamos trabajando con un array
+      let results = [...safeUserData]
 
-    // Aplicar filtro de estado
-    if (filterStatus) {
-      filteredResults = filteredResults.filter(item => item.estado === filterStatus)
+      if (filterStatus) {
+        results = results.filter(cliente => cliente.estado === filterStatus)
+      }
+
+      if (selectedSegmento) {
+        results = results.filter(cliente => cliente.segmento === selectedSegmento)
+      }
+
+      if (dateRange[0] && dateRange[1]) {
+        const [start, end] = dateRange
+
+        results = results.filter(item => {
+          const date = new Date(item.fechaCreacion)
+
+          return date >= start! && date <= end!
+        })
+      }
+
+      if (globalFilter) {
+        results = results.filter(cliente => {
+          const searchStr = globalFilter.toLowerCase()
+
+          return (
+            cliente.rut?.toLowerCase().includes(searchStr) ||
+            cliente.nombreCliente?.toLowerCase().includes(searchStr) ||
+            cliente.razonSocial?.toLowerCase().includes(searchStr)
+          )
+        })
+      }
+
+      setTableData(results)
     }
 
-    // Aplicar filtro de segmento
-    if (selectedSegmento) {
-      filteredResults = filteredResults.filter(item => item.segmento === selectedSegmento)
-    }
-
-    // Aplicar filtro de rango de fechas
-    if (dateRange[0] && dateRange[1]) {
-      const [start, end] = dateRange
-
-      filteredResults = filteredResults.filter(item => {
-        const date = new Date(item.fechaCreacion)
-
-        return date >= start! && date <= end!
-      })
-    }
-
-    setFilteredData(filteredResults)
-  }, [safeUserData, filterStatus, selectedSegmento, dateRange])
+    applyFilters()
+  }, [safeUserData, filterStatus, selectedSegmento, dateRange, globalFilter])
 
   useEffect(() => {
     setIsLoading(false)
@@ -290,10 +324,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
     setOpenDialog(true)
   }
 
-  const handleEdit = (client: Cliente) => {
+  const handleEdit = useCallback((client: Cliente) => {
     setSelectedUser(client)
     setEditUserOpen(true)
-  }
+  }, [])
+
+  const handleEditClose = useCallback(() => {
+    setEditUserOpen(false)
+    setSelectedUser(null)
+  }, [])
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, cliente: Cliente) => {
     event.stopPropagation()
@@ -315,12 +354,12 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
       if (response.status === 200) {
         // Actualizar ambos estados inmediatamente
-        const updatedData = filteredData.map(client =>
+        const updatedData = tableData.map(client =>
           client.clienteId === clientId ? { ...client, estado: newStatus } : client
         )
 
         setData(updatedData)
-        setFilteredData(updatedData)
+        setTableData(updatedData)
 
         toast.success('Estado actualizado exitosamente', {
           duration: 3000,
@@ -524,6 +563,28 @@ const ClientListTable = ({ userData, setData }: Props) => {
     fetchComunas()
   }, [])
 
+  // Función para cargar los clientes
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/clientes')
+
+      if (!response.ok) throw new Error('Error al cargar clientes')
+      const data = await response.json()
+
+      console.log('Datos recibidos:', data)
+      setData(data)
+      setTableData(data) // También actualizar los datos filtrados
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar los clientes')
+    }
+  }
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    fetchClients()
+  }, [])
+
   const columns = useMemo(
     () => [
       {
@@ -564,72 +625,75 @@ const ClientListTable = ({ userData, setData }: Props) => {
       }),
       columnHelper.accessor('segmento', {
         header: 'SEGMENTO',
-        cell: ({ row }: { row: Row<Cliente> }) => {
-          const segment = row.original.segmento?.toLowerCase()
+        cell: ({ row }) => {
+          const segmento = row.original.segmento
+
+          // Configuración de iconos y colores para cada segmento
+          const segmentConfig = {
+            'Corporativo Estratégico': {
+              icon: 'ri-building-4-line',
+              color: 'primary'
+            },
+            Consolidado: {
+              icon: 'ri-building-3-line',
+              color: 'success'
+            },
+            Expansión: {
+              icon: 'ri-line-chart-line',
+              color: 'warning'
+            },
+            Ocasional: {
+              icon: 'ri-store-2-line',
+              color: 'info'
+            },
+            'Nuevo prospecto': {
+              icon: 'ri-user-add-line',
+              color: 'secondary'
+            }
+          }
+
+          const config = segmentConfig[segmento as keyof typeof segmentConfig] || {
+            icon: 'ri-question-line',
+            color: 'default'
+          }
 
           return (
-            <div className='flex items-center gap-2'>
-              {segment === 'corporativo' && (
-                <>
-                  <i className='ri-building-line text-primary' />
-                  <Typography>Corporativo</Typography>
-                </>
-              )}
-              {segment === 'pyme' && (
-                <>
-                  <i className='ri-store-2-line text-success' />
-                  <Typography>Pyme</Typography>
-                </>
-              )}
-              {segment === 'retail' && (
-                <>
-                  <i className='ri-shopping-bag-line text-warning' />
-                  <Typography>Retail</Typography>
-                </>
-              )}
-              {segment === 'gobierno' && (
-                <>
-                  <i className='ri-government-line text-info' />
-                  <Typography>Gobierno</Typography>
-                </>
-              )}
-              {segment === 'institucional' && (
-                <>
-                  <i className='ri-bank-line text-secondary' />
-                  <Typography>Institucional</Typography>
-                </>
-              )}
-              {segment === 'industrial' && (
-                <>
-                  <i className='ri-factory-line text-error' />
-                  <Typography>Industrial</Typography>
-                </>
-              )}
-            </div>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <i
+                className={config.icon}
+                style={{ fontSize: '1.25rem', color: `var(--mui-palette-${config.color}-main)` }}
+              />
+              <Typography>{segmento}</Typography>
+            </Box>
           )
         }
       }),
-      columnHelper.accessor('clientesContactos', {
+      columnHelper.accessor('contacto', {
         header: 'CONTACTO',
-        cell: ({ row }: { row: Row<Cliente> }) => {
-          const contacts = row.original.clientesContactos || []
-          const hasContacts = contacts.length > 0
+        cell: ({ row }) => {
+          const cliente = row.original
+
+          if (!cliente.ClienteContacto || cliente.ClienteContacto.length === 0) {
+            return (
+              <div className='flex items-center gap-2'>
+                <div className='w-2 h-2 rounded-full bg-error' />
+                <Typography color='error'>Sin contactos</Typography>
+              </div>
+            )
+          }
 
           return (
             <div className='flex items-center gap-2'>
-              <div className={`w-2 h-2 rounded-full ${hasContacts ? 'bg-success' : 'bg-error'}`} />
+              <div className='w-2 h-2 rounded-full bg-success' />
               <Button
                 variant='text'
                 size='small'
                 onClick={() => {
-                  if (hasContacts) {
-                    setSelectedContacts(contacts)
-                    setContactsModalOpen(true)
-                  }
+                  setSelectedContacts(cliente.ClienteContacto)
+                  setContactsModalOpen(true)
                 }}
-                disabled={!hasContacts}
               >
-                {hasContacts ? `${contacts.length} contacto${contacts.length > 1 ? 's' : ''}` : 'Sin contactos'}
+                {cliente.ClienteContacto.length} contacto{cliente.ClienteContacto.length > 1 ? 's' : ''}
               </Button>
             </div>
           )
@@ -639,33 +703,25 @@ const ClientListTable = ({ userData, setData }: Props) => {
         header: 'ESTADO',
         cell: ({ row }: { row: Row<Cliente> }) => (
           <Chip
-            label={row.original.estado}
+            label={row.original.estado.toLowerCase() === 'active' ? 'Activo' : 'Inactivo'}
             color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
             size='small'
           />
         )
       }),
-      {
-        accessorKey: 'actions',
+      columnHelper.accessor('actions', {
         header: 'ACCIONES',
         cell: ({ row }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <IconButton
               size='small'
-              color='info'
-              onClick={() => handlePreview(row.original)}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'info.light'
+              color='primary'
+              onClick={() => {
+                if (row.original.clienteId) {
+                  setSelectedUser(row.original)
+                  setEditUserOpen(true)
                 }
               }}
-            >
-              <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
-            </IconButton>
-            <IconButton
-              size='small'
-              color='primary'
-              onClick={() => handleEdit(row.original)}
               sx={{
                 '&:hover': {
                   backgroundColor: 'primary.light'
@@ -674,17 +730,19 @@ const ClientListTable = ({ userData, setData }: Props) => {
             >
               <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
+
             <OptionMenu
-              iconButtonProps={{ className: 'cursor-pointer' }}
               options={[
                 {
                   text: 'Cambiar Estado',
                   icon: 'ri-exchange-line',
                   menuItemProps: {
                     onClick: () => {
-                      setSelectedClientId(row.original.clienteId)
-                      setSelectedStatus(row.original.estado)
-                      setChangeStatusOpen(true)
+                      if (row.original.clienteId) {
+                        setSelectedClientId(row.original.clienteId)
+                        setSelectedStatus(row.original.estado)
+                        setChangeStatusOpen(true)
+                      }
                     }
                   }
                 },
@@ -692,20 +750,24 @@ const ClientListTable = ({ userData, setData }: Props) => {
                   text: 'Eliminar',
                   icon: 'ri-delete-bin-line',
                   menuItemProps: {
-                    onClick: () => handleDeleteClick(row.original.clienteId)
+                    onClick: () => {
+                      if (row.original.clienteId) {
+                        handleDeleteClick(row.original.clienteId)
+                      }
+                    }
                   }
                 }
               ]}
             />
           </Box>
         )
-      }
+      })
     ],
     [comunasMap]
   )
 
   const table = useReactTable({
-    data: filteredData,
+    data: tableData,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -751,10 +813,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
       if (response.status === 200) {
         // Actualizar ambos estados inmediatamente
-        const updatedData = filteredData.filter(client => client.clienteId !== selectedClientId)
+        const updatedData = tableData.filter(client => client.clienteId !== selectedClientId)
 
         setData(updatedData)
-        setFilteredData(updatedData)
+        setTableData(updatedData)
 
         toast.success('Cliente eliminado exitosamente', {
           duration: 3000,
@@ -894,19 +956,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
         <AddClient open={addUserOpen} handleClose={() => setAddUserOpen(false)} setData={setData} />
 
         {selectedUser && (
-          <>
-            {console.log('Rendering EditClientForm with selectedUser:', selectedUser)}
-            <EditClientForm
-              open={editUserOpen}
-              handleClose={() => {
-                setEditUserOpen(false)
-                setSelectedUser(null)
-              }}
-              userData={userData}
-              setData={setData}
-              currentUser={selectedUser}
-            />
-          </>
+          <EditClientForm
+            open={editUserOpen}
+            handleClose={handleEditClose}
+            userData={safeUserData}
+            setData={setData}
+            currentUser={selectedUser}
+          />
         )}
       </Card>
       {/* Diálogo de confirmación de eliminación */}
@@ -923,44 +979,92 @@ const ClientListTable = ({ userData, setData }: Props) => {
         </DialogActions>
       </Dialog>
 
-      <ContactsModal
-        open={contactsModalOpen}
-        handleClose={() => setContactsModalOpen(false)}
-        contacts={selectedContacts}
-      />
+      {/* Modal para mostrar los contactos */}
+      <Dialog open={contactsModalOpen} onClose={() => setContactsModalOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>Contactos del Cliente</DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <MuiTableContainer>
+            <MuiTable>
+              <MuiTableHead>
+                <MuiTableRow>
+                  <MuiTableCell sx={{ fontWeight: 'bold' }}>Nombre</MuiTableCell>
+                  <MuiTableCell sx={{ fontWeight: 'bold' }}>Cargo</MuiTableCell>
+                  <MuiTableCell sx={{ fontWeight: 'bold' }}>Email</MuiTableCell>
+                  <MuiTableCell sx={{ fontWeight: 'bold' }}>Teléfono 1</MuiTableCell>
+                  <MuiTableCell sx={{ fontWeight: 'bold' }}>Teléfono 2</MuiTableCell>
+                </MuiTableRow>
+              </MuiTableHead>
+              <MuiTableBody>
+                {selectedContacts.map((contacto, index) => (
+                  <MuiTableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <MuiTableCell>{contacto.Contacto.nombre}</MuiTableCell>
+                    <MuiTableCell>{contacto.Contacto.cargo}</MuiTableCell>
+                    <MuiTableCell>
+                      <MuiLink
+                        href={`mailto:${contacto.Contacto.email}`}
+                        sx={{
+                          textDecoration: 'none',
+                          color: 'text.primary',
+                          '&:hover': { color: 'primary.main' }
+                        }}
+                      >
+                        {contacto.Contacto.email}
+                      </MuiLink>
+                    </MuiTableCell>
+                    <MuiTableCell>
+                      <MuiLink
+                        href={`tel:${contacto.Contacto.telefono1}`}
+                        sx={{
+                          textDecoration: 'none',
+                          color: 'text.primary',
+                          '&:hover': { color: 'primary.main' }
+                        }}
+                      >
+                        {contacto.Contacto.telefono1}
+                      </MuiLink>
+                    </MuiTableCell>
+                    <MuiTableCell>
+                      {contacto.Contacto.telefono2 && (
+                        <MuiLink
+                          href={`tel:${contacto.Contacto.telefono2}`}
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'text.primary',
+                            '&:hover': { color: 'primary.main' }
+                          }}
+                        >
+                          {contacto.Contacto.telefono2}
+                        </MuiLink>
+                      )}
+                    </MuiTableCell>
+                  </MuiTableRow>
+                ))}
+              </MuiTableBody>
+            </MuiTable>
+          </MuiTableContainer>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
+          <Button onClick={() => setContactsModalOpen(false)} variant='contained'>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Diálogo para cambiar estado */}
-      <Dialog
-        open={changeStatusOpen}
-        onClose={() => {
-          setChangeStatusOpen(false)
-          setSelectedStatus('')
-          setSelectedClientId(null)
-        }}
-        maxWidth='xs'
-        fullWidth
-      >
-        <DialogTitle>Editar Estado</DialogTitle>
+      {/* Diálogo de cambio de estado */}
+      <Dialog open={changeStatusOpen} onClose={() => setChangeStatusOpen(false)}>
+        <DialogTitle>Cambiar Estado</DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
-              {ESTADOS_CLIENTE.map(estado => (
-                <MenuItem key={estado.value} value={estado.value}>
-                  {estado.label}
-                </MenuItem>
-              ))}
+              <MenuItem value='active'>Activo</MenuItem>
+              <MenuItem value='inactive'>Inactivo</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button variant='outlined' color='secondary' onClick={() => setChangeStatusOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            variant='contained'
-            onClick={() => selectedClientId && handleStatusChange(selectedClientId, selectedStatus)}
-          >
-            Aceptar
+          <Button onClick={() => setChangeStatusOpen(false)}>Cancelar</Button>
+          <Button onClick={() => handleStatusChange(selectedClientId!, selectedStatus)} variant='contained'>
+            Guardar
           </Button>
         </DialogActions>
       </Dialog>

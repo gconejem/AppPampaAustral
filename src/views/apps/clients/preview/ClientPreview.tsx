@@ -1,4 +1,5 @@
 import { Typography, Grid, Card, CardContent } from '@mui/material'
+
 import type { Cliente } from '@/types/forms/cliente'
 
 interface ClientPreviewProps {
@@ -60,9 +61,9 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Ciudad
+                Región
               </Typography>
-              <Typography>{client.ciudad}</Typography>
+              <Typography>{client.region || client.condicionesComerciales?.region || '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
@@ -75,29 +76,6 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
                 Dirección
               </Typography>
               <Typography>{client.direccion}</Typography>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Información de Contacto */}
-      <Card>
-        <CardContent>
-          <Typography variant='h6' className='mb-4'>
-            Información de Contacto
-          </Typography>
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
-              <Typography variant='subtitle2' color='text.secondary'>
-                Teléfono
-              </Typography>
-              <Typography>{client.telefono || '-'}</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant='subtitle2' color='text.secondary'>
-                Sitio Web
-              </Typography>
-              <Typography>{client.sitioWeb || '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>
@@ -160,14 +138,21 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               </tr>
             </thead>
             <tbody className='divide-y divide-gray-200'>
-              {client.clientesContactos?.map(contacto => (
-                <tr key={contacto.id}>
-                  <td className='py-3 px-4'>{contacto.contacto.nombre}</td>
-                  <td className='py-3 px-4'>{contacto.contacto.cargo}</td>
-                  <td className='py-3 px-4'>{contacto.contacto.email}</td>
-                  <td className='py-3 px-4'>{contacto.contacto.telefono1}</td>
+              {client.ClienteContacto?.map((contacto, index) => (
+                <tr key={index}>
+                  <td className='py-3 px-4'>{contacto.Contacto.nombre}</td>
+                  <td className='py-3 px-4'>{contacto.Contacto.cargo}</td>
+                  <td className='py-3 px-4'>{contacto.Contacto.email}</td>
+                  <td className='py-3 px-4'>{contacto.Contacto.telefono1}</td>
                 </tr>
               ))}
+              {(!client.ClienteContacto || client.ClienteContacto.length === 0) && (
+                <tr>
+                  <td colSpan={4} className='py-3 px-4 text-center text-gray-500'>
+                    No hay contactos registrados
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </CardContent>

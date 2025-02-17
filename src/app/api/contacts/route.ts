@@ -3,13 +3,27 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Obtener todos los contactos
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search') || ''
+
     const contactos = await prisma.contacto.findMany({
+      where: search
+        ? {
+            OR: [
+              { nombre: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+              { cargo: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        : {},
       orderBy: {
         nombre: 'asc'
       }
     })
+
+    console.log('Contactos encontrados:', contactos) // Para debug
 
     return NextResponse.json(contactos)
   } catch (error) {

@@ -6,26 +6,48 @@ import { createCliente, getClientes, getClienteById, updateCliente, deleteClient
 // GET - Obtener todos los clientes
 export async function GET() {
   try {
-    console.log('Fetching clientes...')
-
+    // Consulta correcta a la tabla Cliente
     const clientes = await prisma.cliente.findMany({
       include: {
-        clientesContactos: {
+        ClienteContacto: {
           include: {
-            contacto: true
+            Contacto: true
           }
-        },
-        condicionesComerciales: true
+        }
       }
     })
 
-    console.log('Clientes found:', clientes)
+    // Para debug
+    console.log('Query de clientes ejecutada')
+    console.log('Total de clientes encontrados:', clientes.length)
 
-    return NextResponse.json(clientes)
+    // Log para ver si los contactos se están incluyendo
+    console.log('Ejemplo de ClienteContacto:', clientes[0]?.ClienteContacto)
+
+    // Mapear los campos exactamente como están en la BD
+    const clientesResponse = clientes.map(cliente => ({
+      clienteId: cliente.clienteId,
+      rut: cliente.rut,
+      nombreCliente: cliente.nombreCliente,
+      comuna: cliente.comuna,
+      segmento: cliente.segmento || 'Sin segmento',
+      estado: cliente.estado || 'active',
+      razonSocial: cliente.razonSocial,
+      pais: cliente.pais,
+      region: cliente.region,
+      ciudad: cliente.ciudad,
+      direccion: cliente.direccion,
+      fechaCreacion: cliente.fechaCreacion,
+      ClienteContacto: cliente.ClienteContacto
+    }))
+
+    console.log('Clientes mapeados:', JSON.stringify(clientesResponse, null, 2))
+
+    return NextResponse.json(clientesResponse)
   } catch (error) {
-    console.error('Error al obtener clientes:', error)
+    console.error('Error detallado al obtener clientes:', error)
 
-    return NextResponse.json({ error: 'Error al obtener los clientes' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener clientes' }, { status: 500 })
   }
 }
 

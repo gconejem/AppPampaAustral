@@ -16,8 +16,17 @@ import 'react-datepicker/dist/react-datepicker.css'
 import es from 'date-fns/locale/es'
 
 // Data Imports
-import { ESTADOS_CLIENTE, SEGMENTOS } from '@/data/clientData'
+import { SEGMENTOS } from '@/data/clientData'
 import { useUbicacion } from '@/hooks/useUbicacion'
+
+// Definir los nuevos segmentos
+const SEGMENTOS_NUEVOS = ['Corporativo Estratégico', 'Consolidado', 'Expansión', 'Ocasional', 'Nuevo prospecto']
+
+// Definir los estados
+const ESTADOS = [
+  { value: 'active', label: 'Activo' },
+  { value: 'inactive', label: 'Inactivo' }
+]
 
 interface Props {
   value: string
@@ -79,7 +88,7 @@ const TableFilters = ({
           <InputLabel>Estado</InputLabel>
           <Select value={selectedEstado} onChange={e => handleEstadoChange(e.target.value)} label='Estado'>
             <MenuItem value=''>Todos</MenuItem>
-            {ESTADOS_CLIENTE.map(estado => (
+            {ESTADOS.map(estado => (
               <MenuItem key={estado.value} value={estado.value}>
                 {estado.label}
               </MenuItem>
@@ -91,9 +100,9 @@ const TableFilters = ({
           <InputLabel>Segmento</InputLabel>
           <Select value={selectedSegmento} onChange={e => handleSegmentoChange(e.target.value)} label='Segmento'>
             <MenuItem value=''>Todos</MenuItem>
-            {SEGMENTOS.map(segmento => (
-              <MenuItem key={segmento.value} value={segmento.value}>
-                {segmento.label}
+            {SEGMENTOS_NUEVOS.map(segmento => (
+              <MenuItem key={segmento} value={segmento}>
+                {segmento}
               </MenuItem>
             ))}
           </Select>

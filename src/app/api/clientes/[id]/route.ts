@@ -77,3 +77,35 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Error al actualizar cliente' }, { status: 500 })
   }
 }
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const clientId = parseInt(params.id)
+
+    const client = await prisma.cliente.findUnique({
+      where: {
+        clienteId: clientId
+      },
+      include: {
+        ClienteContacto: {
+          include: {
+            Contacto: true
+          }
+        },
+        CondicionComercial: true
+      }
+    })
+
+    if (!client) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+    }
+
+    console.log('Cliente encontrado:', client)
+
+    return NextResponse.json(client)
+  } catch (error) {
+    console.error('Error al obtener cliente:', error)
+
+    return NextResponse.json({ error: 'Error al obtener cliente' }, { status: 500 })
+  }
+}

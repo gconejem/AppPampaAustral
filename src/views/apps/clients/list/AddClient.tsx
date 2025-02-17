@@ -37,7 +37,6 @@ import { toast } from 'react-hot-toast' // Para notificaciones
 
 // Types Imports
 import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
-import { initialFormData } from '@/types/forms/cliente'
 
 // Import data
 import { PAISES, REGIONES_CHILE, SEGMENTOS, INDUSTRIAS, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
@@ -53,12 +52,41 @@ type Props = {
   setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
 }
 
+// Modificar el initialFormData
+export const initialFormData: FormNonValidateType = {
+  region: '',
+  city: '',
+  commune: '',
+  address: '',
+  phone: '',
+  website: '',
+  segment: '',
+  industry: '',
+  pais: 'Chile', // Establecer Chile como valor por defecto
+  vendedor: '',
+  condicionVenta: '',
+  observaciones: ''
+}
+
+// Agregar el enum de condiciones de venta junto a los otros enums
+const CONDICIONES_VENTA = [
+  { value: 'Contado', label: 'Contado' },
+  { value: 'Credito30', label: 'Crédito 30 días' },
+  { value: 'Credito60', label: 'Crédito 60 días' },
+  { value: 'Otro', label: 'Otro' }
+] as const
+
 const AddClienteDrawer = (props: Props) => {
   // Props
   const { open, handleClose, userData, setData } = props
 
   // States
-  const [formData, setFormData] = useState<FormNonValidateType>(initialFormData)
+  const [formData, setFormData] = useState<FormNonValidateType>({
+    ...initialFormData,
+    pais: 'Chile', // Asegurar que Chile sea el valor por defecto
+    condicionesVenta: 'Contado' // Valor por defecto
+  })
+
   const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean }>>([])
 
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
@@ -210,7 +238,7 @@ const AddClienteDrawer = (props: Props) => {
     // Limpiar el teléfono de espacios y caracteres especiales
     const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
 
-    // Validar que solo contenga números y + al inicio (opcional)
+    // Validar que solo contenga números y el signo + al inicio (opcional)
     return /^\+?[0-9]+$/.test(cleanPhone)
   }
 
@@ -232,7 +260,8 @@ const AddClienteDrawer = (props: Props) => {
     reset: resetForm,
     handleSubmit,
     formState: { errors },
-    setValue
+    setValue,
+    watch
   } = useForm<FormValidateType>({
     defaultValues,
     mode: 'onChange',
@@ -584,6 +613,27 @@ const AddClienteDrawer = (props: Props) => {
     setContactos(updatedContactos)
   }
 
+  // Función para manejar el copiado de razón social
+  const handleCopyRazonSocial = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = event.target.checked
+
+    if (isChecked) {
+      // Obtener el valor actual de razón social
+      const razonSocialValue = watch('razonSocial')
+
+      // Establecer el valor en el campo cliente
+      setValue('nombreCliente', razonSocialValue)
+    }
+  }
+
+  // Modificar el handleChange para incluir condicionesVenta
+  const handleChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
   return (
     <Drawer
       open={open}
@@ -667,7 +717,7 @@ const AddClienteDrawer = (props: Props) => {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label='RUT'
+                    label='RUT *'
                     onChange={e => {
                       const formatted = formatRut(e.target.value)
 
@@ -692,9 +742,16 @@ const AddClienteDrawer = (props: Props) => {
                   <TextField
                     {...field}
                     fullWidth
-                    label='Razón Social'
+                    label='Razón Social *'
                     placeholder='...'
-                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
+                    onChange={e => {
+                      field.onChange(e)
+
+                      if (document.querySelector<HTMLInputElement>('input[name="copySocialReason"]')?.checked) {
+                        setValue('nombreCliente', e.target.value)
+                      }
+                    }}
+                    {...(errors.razonSocial && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
@@ -708,16 +765,16 @@ const AddClienteDrawer = (props: Props) => {
                   <TextField
                     {...field}
                     fullWidth
-                    label='Cliente'
+                    label='Cliente *'
                     placeholder='...'
-                    {...(errors.razonSocial && { error: true, helperText: 'This field is required.' })}
+                    {...(errors.nombreCliente && { error: true, helperText: 'Este campo es requerido.' })}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={3}>
               <FormControlLabel
-                control={<Checkbox name='copySocialReason' />}
+                control={<Checkbox name='copySocialReason' onChange={handleCopyRazonSocial} />}
                 label='Copiar Razón Social'
                 sx={{ margin: '10px' }}
               />
@@ -726,14 +783,15 @@ const AddClienteDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
-                <InputLabel id='country'>País</InputLabel>
+                <InputLabel id='country'>País *</InputLabel>
                 <Select
                   fullWidth
                   id='country'
                   value={formData.pais}
                   onChange={e => setFormData({ ...formData, pais: e.target.value })}
-                  label='País'
+                  label='País *'
                   labelId='country'
+                  defaultValue='Chile'
                 >
                   {PAISES.map(pais => (
                     <MenuItem key={pais.value} value={pais.value}>
@@ -745,8 +803,8 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
-                <InputLabel>Región</InputLabel>
-                <Select value={selectedRegion} onChange={e => handleRegionChange(e.target.value)} label='Región'>
+                <InputLabel>Región *</InputLabel>
+                <Select value={selectedRegion} onChange={e => handleRegionChange(e.target.value)} label='Región *'>
                   {regiones.map(region => (
                     <MenuItem key={region.id} value={region.nombre}>
                       {region.nombre}
@@ -757,12 +815,13 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Comuna</InputLabel>
+                <InputLabel>Comuna *</InputLabel>
                 <Controller
                   name='comuna'
                   control={control}
+                  rules={{ required: true }}
                   render={({ field }) => (
-                    <Select {...field} label='Comuna' disabled={!selectedRegion}>
+                    <Select {...field} label='Comuna *' disabled={!selectedRegion}>
                       <MenuItem value=''>Seleccione una comuna</MenuItem>
                       {comunas.map(comuna => (
                         <MenuItem key={comuna.id} value={comuna.nombre}>
@@ -834,23 +893,17 @@ const AddClienteDrawer = (props: Props) => {
           <Grid container spacing={5}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='segmento-label'>Segmento</InputLabel>
+                <InputLabel>Segmento</InputLabel>
                 <Controller
                   name='segmento'
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      labelId='segmento-label'
-                      label='Segmento'
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      error={Boolean(errors.segmento)}
-                    >
-                      {SEGMENTOS.map(segmento => (
-                        <MenuItem key={segmento.value} value={segmento.value}>
-                          {segmento.label}
-                        </MenuItem>
-                      ))}
+                    <Select {...field} label='Segmento'>
+                      <MenuItem value='Corporativo Estratégico'>Corporativo Estratégico</MenuItem>
+                      <MenuItem value='Consolidado'>Consolidado</MenuItem>
+                      <MenuItem value='Expansión'>Expansión</MenuItem>
+                      <MenuItem value='Ocasional'>Ocasional</MenuItem>
+                      <MenuItem value='Nuevo prospecto'>Nuevo prospecto</MenuItem>
                     </Select>
                   )}
                 />
@@ -858,23 +911,28 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id='industria-label'>Industria</InputLabel>
+                <InputLabel>Industria</InputLabel>
                 <Controller
                   name='industria'
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      labelId='industria-label'
-                      label='Industria'
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      error={Boolean(errors.industria)}
-                    >
-                      {INDUSTRIAS.map(industria => (
-                        <MenuItem key={industria.value} value={industria.value}>
-                          {industria.label}
-                        </MenuItem>
-                      ))}
+                    <Select {...field} label='Industria'>
+                      <MenuItem value='Construcción y Obras Civiles'>Construcción y Obras Civiles</MenuItem>
+                      <MenuItem value='Minería'>Minería</MenuItem>
+                      <MenuItem value='Energía y Medio Ambiente'>Energía y Medio Ambiente</MenuItem>
+                      <MenuItem value='Forestal'>Forestal</MenuItem>
+                      <MenuItem value='Infraestructura Vial y Transporte'>Infraestructura Vial y Transporte</MenuItem>
+                      <MenuItem value='Industria'>Industria</MenuItem>
+                      <MenuItem value='Telecomunicaciones'>Telecomunicaciones</MenuItem>
+                      <MenuItem value='Banca y Fianzas'>Banca y Fianzas</MenuItem>
+                      <MenuItem value='Turismo y Hotelería'>Turismo y Hotelería</MenuItem>
+                      <MenuItem value='Alimentación y Agroindustria'>Alimentación y Agroindustria</MenuItem>
+                      <MenuItem value='Logística y Distribución'>Logística y Distribución</MenuItem>
+                      <MenuItem value='Educación e Investigación'>Educación e Investigación</MenuItem>
+                      <MenuItem value='Consultora y Servicios Profesionales'>
+                        Consultora y Servicios Profesionales
+                      </MenuItem>
+                      <MenuItem value='Servicios Públicos y Gobierno'>Servicios Públicos y Gobierno</MenuItem>
                     </Select>
                   )}
                 />
@@ -1149,12 +1207,21 @@ const AddClienteDrawer = (props: Props) => {
               />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <Controller
-                name='condicionVenta'
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => <TextField {...field} fullWidth label='Condiciones de Venta' />}
-              />
+              <FormControl fullWidth>
+                <InputLabel id='condicionesVenta-label'>Condiciones de Venta</InputLabel>
+                <Select
+                  label='Condiciones de Venta'
+                  value={formData.condicionVenta}
+                  onChange={e => handleChange('condicionVenta', e.target.value)}
+                  labelId='condicionesVenta-label'
+                >
+                  {CONDICIONES_VENTA.map(condicion => (
+                    <MenuItem key={condicion.value} value={condicion.value}>
+                      {condicion.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
               <Controller

@@ -13,7 +13,17 @@ export const REGIONES_CHILE = {
     comunas: ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Camiña', 'Colchane', 'Huara', 'Pica']
   },
   Antofagasta: {
-    comunas: ['Antofagasta', 'Mejillones', 'Sierra Gorda', 'Taltal', 'Calama', 'Ollagüe', 'San Pedro de Atacama']
+    comunas: [
+      'Antofagasta',
+      'Mejillones',
+      'Sierra Gorda',
+      'Taltal',
+      'Calama',
+      'Ollagüe',
+      'San Pedro de Atacama',
+      'Tocopilla',
+      'María Elena'
+    ]
   },
   Atacama: {
     comunas: [
@@ -48,7 +58,46 @@ export const REGIONES_CHILE = {
     ]
   },
   Valparaíso: {
-    comunas: ['Valparaíso', 'Casablanca', 'Concón', 'Juan Fernández', 'Puchuncaví', 'Quintero', 'Viña del Mar']
+    comunas: [
+      'Valparaíso',
+      'Casablanca',
+      'Concón',
+      'Juan Fernández',
+      'Puchuncaví',
+      'Quintero',
+      'Viña del Mar',
+      'Isla de Pascua',
+      'Los Andes',
+      'Calle Larga',
+      'Rinconada',
+      'San Esteban',
+      'La Ligua',
+      'Cabildo',
+      'Papudo',
+      'Petorca',
+      'Zapallar',
+      'Quillota',
+      'Calera',
+      'Hijuelas',
+      'La Cruz',
+      'Nogales',
+      'San Antonio',
+      'Algarrobo',
+      'Cartagena',
+      'El Quisco',
+      'El Tabo',
+      'Santo Domingo',
+      'San Felipe',
+      'Catemu',
+      'Llaillay',
+      'Panquehue',
+      'Putaendo',
+      'Santa María',
+      'Quilpué',
+      'Limache',
+      'Olmué',
+      'Villa Alemana'
+    ]
   },
   Metropolitana: {
     comunas: [
@@ -83,35 +132,276 @@ export const REGIONES_CHILE = {
       'San Joaquín',
       'San Miguel',
       'San Ramón',
-      'Vitacura'
+      'Vitacura',
+      'Puente Alto',
+      'Pirque',
+      'San José de Maipo',
+      'Colina',
+      'Lampa',
+      'Tiltil',
+      'San Bernardo',
+      'Buin',
+      'Calera de Tango',
+      'Paine',
+      'Melipilla',
+      'Alhué',
+      'Curacaví',
+      'María Pinto',
+      'San Pedro',
+      'Talagante',
+      'El Monte',
+      'Isla de Maipo',
+      'Padre Hurtado',
+      'Peñaflor'
     ]
   },
   "O'Higgins": {
-    comunas: ['Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros', 'Las Cabras']
+    comunas: [
+      'Rancagua',
+      'Codegua',
+      'Coinco',
+      'Coltauco',
+      'Doñihue',
+      'Graneros',
+      'Las Cabras',
+      'Machalí',
+      'Malloa',
+      'Mostazal',
+      'Olivar',
+      'Peumo',
+      'Pichidegua',
+      'Quinta de Tilcoco',
+      'Rengo',
+      'Requínoa',
+      'San Vicente',
+      'Pichilemu',
+      'La Estrella',
+      'Litueche',
+      'Marchihue',
+      'Navidad',
+      'Paredones',
+      'San Fernando',
+      'Chépica',
+      'Chimbarongo',
+      'Lolol',
+      'Nancagua',
+      'Palmilla',
+      'Peralillo',
+      'Placilla',
+      'Pumanque',
+      'Santa Cruz'
+    ]
   },
   Maule: {
-    comunas: ['Talca', 'Constitución', 'Curepto', 'Empedrado', 'Maule', 'Pelarco', 'Pencahue']
+    comunas: [
+      'Talca',
+      'Constitución',
+      'Curepto',
+      'Empedrado',
+      'Maule',
+      'Pelarco',
+      'Pencahue',
+      'Río Claro',
+      'San Clemente',
+      'San Rafael',
+      'Cauquenes',
+      'Chanco',
+      'Pelluhue',
+      'Curicó',
+      'Hualañé',
+      'Licantén',
+      'Molina',
+      'Rauco',
+      'Romeral',
+      'Sagrada Familia',
+      'Teno',
+      'Vichuquén',
+      'Linares',
+      'Colbún',
+      'Longaví',
+      'Parral',
+      'Retiro',
+      'San Javier',
+      'Villa Alegre',
+      'Yerbas Buenas'
+    ]
   },
   Ñuble: {
-    comunas: ['Chillán', 'Bulnes', 'Cobquecura', 'Coelemu', 'Coihueco', 'Chillán Viejo', 'El Carmen']
+    comunas: [
+      'Chillán',
+      'Bulnes',
+      'Cobquecura',
+      'Coelemu',
+      'Coihueco',
+      'Chillán Viejo',
+      'El Carmen',
+      'Ninhue',
+      'Ñiquén',
+      'Pemuco',
+      'Pinto',
+      'Portezuelo',
+      'Quillón',
+      'Quirihue',
+      'Ránquil',
+      'San Carlos',
+      'San Fabián',
+      'San Ignacio',
+      'San Nicolás',
+      'Treguaco',
+      'Yungay'
+    ]
   },
   Biobío: {
-    comunas: ['Concepción', 'Coronel', 'Chiguayante', 'Florida', 'Hualqui', 'Lota', 'Penco']
+    comunas: [
+      'Concepción',
+      'Coronel',
+      'Chiguayante',
+      'Florida',
+      'Hualqui',
+      'Lota',
+      'Penco',
+      'San Pedro de la Paz',
+      'Santa Juana',
+      'Talcahuano',
+      'Tomé',
+      'Hualpén',
+      'Lebu',
+      'Arauco',
+      'Cañete',
+      'Contulmo',
+      'Curanilahue',
+      'Los Álamos',
+      'Tirúa',
+      'Los Ángeles',
+      'Antuco',
+      'Cabrero',
+      'Laja',
+      'Mulchén',
+      'Nacimiento',
+      'Negrete',
+      'Quilaco',
+      'Quilleco',
+      'San Rosendo',
+      'Santa Bárbara',
+      'Tucapel',
+      'Yumbel',
+      'Alto Biobío'
+    ]
   },
   'La Araucanía': {
-    comunas: ['Temuco', 'Carahue', 'Cunco', 'Curarrehue', 'Freire', 'Galvarino', 'Gorbea']
+    comunas: [
+      'Temuco',
+      'Carahue',
+      'Cunco',
+      'Curarrehue',
+      'Freire',
+      'Galvarino',
+      'Gorbea',
+      'Lautaro',
+      'Loncoche',
+      'Melipeuco',
+      'Nueva Imperial',
+      'Padre Las Casas',
+      'Perquenco',
+      'Pitrufquén',
+      'Pucón',
+      'Saavedra',
+      'Teodoro Schmidt',
+      'Toltén',
+      'Vilcún',
+      'Villarrica',
+      'Cholchol',
+      'Angol',
+      'Collipulli',
+      'Curacautín',
+      'Ercilla',
+      'Lonquimay',
+      'Los Sauces',
+      'Lumaco',
+      'Purén',
+      'Renaico',
+      'Traiguén',
+      'Victoria'
+    ]
   },
   'Los Ríos': {
-    comunas: ['Valdivia', 'Corral', 'Lanco', 'Los Lagos', 'Máfil', 'Mariquina', 'Paillaco']
+    comunas: [
+      'Valdivia',
+      'Corral',
+      'Lanco',
+      'Los Lagos',
+      'Máfil',
+      'Mariquina',
+      'Paillaco',
+      'Panguipulli',
+      'La Unión',
+      'Futrono',
+      'Lago Ranco',
+      'Río Bueno'
+    ]
   },
   'Los Lagos': {
-    comunas: ['Puerto Montt', 'Calbuco', 'Cochamó', 'Fresia', 'Frutillar', 'Los Muermos', 'Llanquihue']
+    comunas: [
+      'Puerto Montt',
+      'Calbuco',
+      'Cochamó',
+      'Fresia',
+      'Frutillar',
+      'Los Muermos',
+      'Llanquihue',
+      'Maullín',
+      'Puerto Varas',
+      'Castro',
+      'Ancud',
+      'Chonchi',
+      'Curaco de Vélez',
+      'Dalcahue',
+      'Puqueldón',
+      'Queilén',
+      'Quellón',
+      'Quemchi',
+      'Quinchao',
+      'Osorno',
+      'Puerto Octay',
+      'Purranque',
+      'Puyehue',
+      'Río Negro',
+      'San Juan de la Costa',
+      'San Pablo',
+      'Chaitén',
+      'Futaleufú',
+      'Hualaihué',
+      'Palena'
+    ]
   },
   Aysén: {
-    comunas: ['Coihaique', 'Lago Verde', 'Aisén', 'Cisnes', 'Guaitecas', 'Cochrane', "O'Higgins"]
+    comunas: [
+      'Coihaique',
+      'Lago Verde',
+      'Aysén',
+      'Cisnes',
+      'Guaitecas',
+      'Cochrane',
+      "O'Higgins",
+      'Tortel',
+      'Chile Chico',
+      'Río Ibáñez'
+    ]
   },
   Magallanes: {
-    comunas: ['Punta Arenas', 'Laguna Blanca', 'Río Verde', 'San Gregorio', 'Cabo de Hornos', 'Antártica']
+    comunas: [
+      'Punta Arenas',
+      'Laguna Blanca',
+      'Río Verde',
+      'San Gregorio',
+      'Cabo de Hornos',
+      'Antártica',
+      'Porvenir',
+      'Primavera',
+      'Timaukel',
+      'Natales',
+      'Torres del Paine'
+    ]
   }
 }
 
