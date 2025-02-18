@@ -8,24 +8,26 @@
 import { prisma } from '@/lib/prisma'
 import type { Obra } from '@/types/forms/obra'
 
-export const getUserData = async (): Promise<Obra[]> => {
+export const getUserData = async () => {
   try {
     const obras = await prisma.obra.findMany({
       include: {
-        contactos: true,
-        cotizaciones: true,
-        solicitudes: true
+        clientesContactos: {
+          include: {
+            contacto: true
+          }
+        },
+        cotizaciones: true
       },
       orderBy: {
         fechaIngreso: 'desc'
       }
     })
 
-    return obras as Obra[]
+    return obras
   } catch (error) {
-    console.error('Error fetching obras:', error)
-
-    return []
+    console.error('Error al obtener datos:', error)
+    throw error
   }
 }
 
