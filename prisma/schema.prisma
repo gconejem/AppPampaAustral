@@ -186,9 +186,9 @@ model Obra {
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  clientesContactos    ClienteContacto[]
-  cotizaciones        Cotizacion[]
-  solicitudes          Solicitud[]
+  contactos    ContactoObra[]
+  cotizaciones Cotizacion[]
+  solicitudes  Solicitud[]
 }
 
 model ContactoObra {
