@@ -34,12 +34,12 @@ export const getClientData = async () => {
   try {
     const clientes = await prisma.cliente.findMany({
       include: {
-        ClienteContacto: {
+        clientesContactos: {
           include: {
-            Contacto: true
+            contacto: true
           }
         },
-        CondicionComercial: true
+        condicionesComerciales: true
       },
       orderBy: {
         fechaCreacion: 'desc'
