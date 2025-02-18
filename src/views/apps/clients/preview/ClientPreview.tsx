@@ -1,4 +1,4 @@
-import { Typography, Grid, Card, CardContent } from '@mui/material'
+import { Typography, Grid, Card, CardContent, Table, TableHead, TableBody, TableRow, TableCell } from '@mui/material'
 
 import type { Cliente } from '@/types/forms/cliente'
 
@@ -9,21 +9,36 @@ interface ClientPreviewProps {
 const ClientPreview = ({ client }: ClientPreviewProps) => {
   if (!client) return null
 
+  // Agregar log para ver qué datos llegan al componente
+  console.log('Datos recibidos en preview:', client)
+
+  // Función para formatear la fecha
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
   return (
-    <div className='space-y-6'>
-      {/* Datos Principales */}
-      <Card>
+    <>
+      {/* Primera Card - Información del Cliente */}
+      <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Typography variant='h6' className='mb-4'>
-            Datos Principales
-          </Typography>
           <Grid container spacing={4}>
+            {/* Primera fila */}
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
-                RUT
+                Fecha de Creación
               </Typography>
-              <Typography>{client.rut}</Typography>
+              <Typography>{formatDate(client.fechaCreacion)}</Typography>
             </Grid>
+            <Grid item xs={12} md={6}>
+              {/* Espacio invisible */}
+            </Grid>
+
+            {/* Segunda fila */}
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Razón Social
@@ -32,27 +47,26 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Nombre Cliente
+                Estado
+              </Typography>
+              <Typography>{client.estado === 'active' ? 'Activo' : 'Inactivo'}</Typography>
+            </Grid>
+
+            {/* Tercera fila */}
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Cliente
               </Typography>
               <Typography>{client.nombreCliente}</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Estado
+                RUT
               </Typography>
-              <Typography>{client.estado}</Typography>
+              <Typography>{client.rut}</Typography>
             </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
 
-      {/* Ubicación */}
-      <Card>
-        <CardContent>
-          <Typography variant='h6' className='mb-4'>
-            Ubicación
-          </Typography>
-          <Grid container spacing={4}>
+            {/* Cuarta fila */}
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 País
@@ -63,56 +77,113 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Región
               </Typography>
-              <Typography>{client.region || client.condicionesComerciales?.region || '-'}</Typography>
+              <Typography>{client.region}</Typography>
             </Grid>
+
+            {/* Quinta fila: Comuna y Dirección */}
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Comuna
               </Typography>
               <Typography>{client.comuna}</Typography>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Dirección
               </Typography>
               <Typography>{client.direccion}</Typography>
             </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
 
-      {/* Información Comercial */}
-      <Card>
-        <CardContent>
-          <Typography variant='h6' className='mb-4'>
-            Información Comercial
-          </Typography>
-          <Grid container spacing={4}>
+            {/* Sexta fila: Teléfono y Sitio Web */}
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Teléfono
+              </Typography>
+              <Typography>{client.telefono}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Sitio Web
+              </Typography>
+              <Typography>{client.sitioWeb || '-'}</Typography>
+            </Grid>
+
+            {/* Séptima fila: Segmento e Industria */}
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Segmento
               </Typography>
-              <Typography>{client.segmento}</Typography>
+              <Typography>{client.segmento || '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Industria
               </Typography>
-              <Typography>{client.industria}</Typography>
+              <Typography>{client.industria || '-'}</Typography>
             </Grid>
-            <Grid item xs={12} md={6}>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Segunda Card - Tabla de Contactos */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography variant='h6' sx={{ mb: 4 }}>
+            Contactos Asignados
+          </Typography>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>NOMBRE</TableCell>
+                <TableCell>CARGO</TableCell>
+                <TableCell>EMAIL</TableCell>
+                <TableCell>TELÉFONO 1</TableCell>
+                <TableCell>TELÉFONO 2</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {client.clientesContactos && client.clientesContactos.length > 0 ? (
+                client.clientesContactos.map((contacto, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{contacto.contacto?.nombre}</TableCell>
+                    <TableCell>{contacto.contacto?.cargo}</TableCell>
+                    <TableCell>{contacto.contacto?.email}</TableCell>
+                    <TableCell>{contacto.contacto?.telefono1}</TableCell>
+                    <TableCell>{contacto.contacto?.telefono2 || '-'}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align='center'>
+                    No hay contactos asignados
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Tercera Card - Condiciones Comerciales */}
+      <Card>
+        <CardContent>
+          <Typography variant='h6' sx={{ mb: 4 }}>
+            Condiciones Comerciales
+          </Typography>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Vendedor
               </Typography>
               <Typography>{client.condicionesComerciales?.vendedor || '-'}</Typography>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Condición de Venta
+                Condiciones de Venta
               </Typography>
               <Typography>{client.condicionesComerciales?.condicionVenta || '-'}</Typography>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Observaciones
               </Typography>
@@ -121,43 +192,7 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
           </Grid>
         </CardContent>
       </Card>
-
-      {/* Contactos */}
-      <Card>
-        <CardContent>
-          <Typography variant='h6' className='mb-4'>
-            Contactos
-          </Typography>
-          <table className='min-w-full divide-y divide-gray-200'>
-            <thead>
-              <tr>
-                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>NOMBRE</th>
-                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>CARGO</th>
-                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>EMAIL</th>
-                <th className='py-3 px-4 text-left text-xs font-normal text-gray-500'>TELÉFONO</th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-gray-200'>
-              {client.ClienteContacto?.map((contacto, index) => (
-                <tr key={index}>
-                  <td className='py-3 px-4'>{contacto.Contacto.nombre}</td>
-                  <td className='py-3 px-4'>{contacto.Contacto.cargo}</td>
-                  <td className='py-3 px-4'>{contacto.Contacto.email}</td>
-                  <td className='py-3 px-4'>{contacto.Contacto.telefono1}</td>
-                </tr>
-              ))}
-              {(!client.ClienteContacto || client.ClienteContacto.length === 0) && (
-                <tr>
-                  <td colSpan={4} className='py-3 px-4 text-center text-gray-500'>
-                    No hay contactos registrados
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
-    </div>
+    </>
   )
 }
 

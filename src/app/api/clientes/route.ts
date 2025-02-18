@@ -6,48 +6,27 @@ import { createCliente, getClientes, getClienteById, updateCliente, deleteClient
 // GET - Obtener todos los clientes
 export async function GET() {
   try {
-    // Consulta correcta a la tabla Cliente
     const clientes = await prisma.cliente.findMany({
       include: {
-        ClienteContacto: {
+        clientesContactos: {
           include: {
-            Contacto: true
+            contacto: true
           }
-        }
+        },
+        condicionesComerciales: true,
+        cotizaciones: true,
+        solicitudes: true
+      },
+      orderBy: {
+        fechaCreacion: 'desc'
       }
     })
 
-    // Para debug
-    console.log('Query de clientes ejecutada')
-    console.log('Total de clientes encontrados:', clientes.length)
-
-    // Log para ver si los contactos se están incluyendo
-    console.log('Ejemplo de ClienteContacto:', clientes[0]?.ClienteContacto)
-
-    // Mapear los campos exactamente como están en la BD
-    const clientesResponse = clientes.map(cliente => ({
-      clienteId: cliente.clienteId,
-      rut: cliente.rut,
-      nombreCliente: cliente.nombreCliente,
-      comuna: cliente.comuna,
-      segmento: cliente.segmento || 'Sin segmento',
-      estado: cliente.estado || 'active',
-      razonSocial: cliente.razonSocial,
-      pais: cliente.pais,
-      region: cliente.region,
-      ciudad: cliente.ciudad,
-      direccion: cliente.direccion,
-      fechaCreacion: cliente.fechaCreacion,
-      ClienteContacto: cliente.ClienteContacto
-    }))
-
-    console.log('Clientes mapeados:', JSON.stringify(clientesResponse, null, 2))
-
-    return NextResponse.json(clientesResponse)
+    return NextResponse.json(clientes)
   } catch (error) {
     console.error('Error detallado al obtener clientes:', error)
 
-    return NextResponse.json({ error: 'Error al obtener clientes' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener los clientes' }, { status: 500 })
   }
 }
 
@@ -56,28 +35,28 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    console.log('Body recibido en POST:', JSON.stringify(body, null, 2))
-
-    // Validaciones más específicas
-    if (!body.rut || !body.razonSocial || !body.nombreCliente) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
-    }
-
-    const cliente = await createCliente(body)
+    const cliente = await prisma.cliente.create({
+      data: {
+        ...body,
+        fechaCreacion: new Date(),
+        clientesContactos: body.clientesContactos,
+        condicionesComerciales: body.condicionesComerciales
+      },
+      include: {
+        clientesContactos: {
+          include: {
+            contacto: true
+          }
+        },
+        condicionesComerciales: true,
+        cotizaciones: true,
+        solicitudes: true
+      }
+    })
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {
-    console.error('Error completo al crear cliente:', error)
-
-    // Manejar errores específicos
-    if (error instanceof Error) {
-      if (error.message.includes('Ya existe un cliente con el RUT')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 409 } // Conflict
-        )
-      }
-    }
+    console.error('Error al crear cliente:', error)
 
     return NextResponse.json({ error: 'Error al crear el cliente' }, { status: 500 })
   }

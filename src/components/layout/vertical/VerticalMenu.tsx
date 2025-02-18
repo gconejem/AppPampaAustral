@@ -97,7 +97,7 @@ const VerticalMenu = () => {
             renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
           >
             <MenuSection label={labels.formsAndTables}>
-              <MenuItem href={`/${locale}/apps/invoice/list`} icon={<i className='ri-calendar-line' />}>
+              <MenuItem href={`/${locale}/apps/invoice/list`} icon={<i className='ri-file-list-3-line' />}>
                 Cotizaciones
               </MenuItem>
 

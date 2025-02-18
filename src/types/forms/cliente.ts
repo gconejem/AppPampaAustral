@@ -51,20 +51,22 @@ export interface Cliente {
   clienteId?: number
   rut: string
   razonSocial: string
-  nombreCliente?: string
+  nombreCliente: string
   pais: string
   region: string
-  comuna: number
+  ciudad: string
+  comuna: string
+  direccion: string
+  telefono?: string
+  sitioWeb?: string
+  segmento?: string
+  industria?: string
   fechaCreacion: Date
   estado: string
-  ciudad: string
-  direccion: string
-  telefono: string
-  sitioWeb?: string
-  segmento: string
-  industria: string
   clientesContactos?: ClienteContacto[]
   condicionesComerciales?: CondicionComercial
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface Contacto {

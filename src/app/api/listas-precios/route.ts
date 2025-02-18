@@ -1,54 +1,67 @@
-import { PrismaClient } from '@prisma/client'
+import { NextResponse } from 'next/server'
 
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function POST(req: Request) {
   try {
-    const listasPrecio = await prisma.listaPrecio.findMany({
-      select: {
-        id: true,
-        nombre: true,
-        precio: true
-      }
-    })
-
-    const listasFormateadas = listasPrecio.map(lista => ({
-      id: lista.id,
-      nombre: lista.nombre,
-      precio: Number(lista.precio)
-    }))
-
-    console.log('Enviando listas de precios:', listasFormateadas)
-
-    return Response.json(listasFormateadas)
-  } catch (error) {
-    console.error('Error al obtener listas de precios:', error)
-
-    return new Response(JSON.stringify({ error: 'Error al obtener listas de precios' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-  }
-}
-
-// POST - Crear una nueva lista de precios
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const { nombre } = body
+    const body = await req.json()
 
     const listaPrecio = await prisma.listaPrecio.create({
       data: {
-        nombre
+        nombre: body.nombre,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     })
 
-    return NextResponse.json(listaPrecio, { status: 201 })
+    return NextResponse.json(listaPrecio)
   } catch (error) {
     console.error('Error al crear lista de precios:', error)
 
-    return NextResponse.json({ error: 'Error al crear lista de precios' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al crear la lista de precios' }, { status: 500 })
+  }
+}
+
+// Función auxiliar para inicializar las listas de precios
+async function initializeListasPrecios() {
+  const listasBase = [
+    { id: 1, nombre: 'Lista Base' },
+    { id: 2, nombre: 'Lista Preferencial' },
+    { id: 3, nombre: 'Lista Premium' }
+  ]
+
+  for (const lista of listasBase) {
+    const existingLista = await prisma.listaPrecio.findFirst({
+      where: { id: lista.id }
+    })
+
+    if (!existingLista) {
+      await prisma.listaPrecio.create({
+        data: {
+          id: lista.id,
+          nombre: lista.nombre,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+      console.log(`Lista de precios "${lista.nombre}" creada con ID ${lista.id}`)
+    }
+  }
+}
+
+export async function GET() {
+  try {
+    // Inicializar listas de precios si no existen
+    await initializeListasPrecios()
+
+    const listasPrecio = await prisma.listaPrecio.findMany()
+
+    console.log('Listas de precios existentes:', listasPrecio)
+
+    return NextResponse.json(listasPrecio)
+  } catch (error) {
+    console.error('Error al obtener listas de precios:', error)
+
+    return NextResponse.json({ error: 'Error al obtener las listas de precios' }, { status: 500 })
   }
 }

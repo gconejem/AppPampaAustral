@@ -100,9 +100,20 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
     }
 
-    console.log('Cliente encontrado:', client)
+    // Transformar los datos para que coincidan con la interfaz del frontend
+    const clienteFormateado = {
+      ...client,
+      clientesContactos: client.ClienteContacto.map(cc => ({
+        contacto: cc.Contacto,
+        isPrincipal: cc.isPrincipal
+      })),
+      condicionesComerciales: client.CondicionComercial
+    }
 
-    return NextResponse.json(client)
+    console.log('Condiciones comerciales:', client.CondicionComercial)
+    console.log('Cliente formateado:', clienteFormateado)
+
+    return NextResponse.json(clienteFormateado)
   } catch (error) {
     console.error('Error al obtener cliente:', error)
 

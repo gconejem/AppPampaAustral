@@ -2,65 +2,96 @@ import { NextResponse } from 'next/server'
 
 import { Decimal } from '@prisma/client/runtime/library'
 
+import { Prisma } from '@prisma/client'
+
 import { prisma } from '@/lib/prisma'
 
 // POST - Crear un nuevo producto
 export async function POST(req: Request) {
   try {
-    const data = await req.json()
+    const body = await req.json()
 
-    console.log('Datos recibidos en API:', data)
-    console.log('Precio recibido:', data.precio)
+    console.log('Datos recibidos en API:', body)
+    console.log('Precio recibido:', body.precio)
 
     // Verificar si el SKU ya existe
     const existingProduct = await prisma.producto.findUnique({
-      where: { sku: data.sku }
+      where: { sku: body.sku }
     })
 
     if (existingProduct) {
       return NextResponse.json({ error: 'Ya existe un producto con este SKU' }, { status: 400 })
     }
 
-    // Asegurarnos que el precio sea un número válido
-    const precio = typeof data.precio === 'number' ? data.precio : 0
+    // Verificar si existe la lista de precios antes de crear el producto
+    if (body.listaPrecio) {
+      const listaPrecio = await prisma.listaPrecio.findFirst({
+        where: { id: body.listaPrecio }
+      })
+
+      if (!listaPrecio) {
+        return NextResponse.json(
+          { error: `No existe una lista de precios con ID ${body.listaPrecio}` },
+          { status: 400 }
+        )
+      }
+    }
 
     // Crear el producto
     const producto = await prisma.producto.create({
       data: {
-        sku: data.sku,
-        nombre: data.nombre,
-        descripcion: data.descripcion || '',
-        area: data.area || '',
-        familia: data.familia || '',
-        tipo: data.tipo || 'Ensayo',
-        esPaquete: data.esPaquete || false,
+        sku: body.sku,
+        nombre: body.nombre,
+        descripcion: body.descripcion || '',
+        area: body.area || '',
+        familia: body.familia || '',
+        tipo: body.tipo || 'Ensayo',
+        esPaquete: body.esPaquete || false,
         estado: 'ACTIVO',
-        norma: data.norma || '',
-        aplicaImpuesto: data.aplicaImpuesto || false,
-        precio: new Decimal(precio),
+        norma: body.norma || '',
+        aplicaImpuesto: body.aplicaImpuesto || false,
+        precio: new Prisma.Decimal(body.precio),
         createdAt: new Date(),
-        updatedAt: new Date(),
-        ProductoListaPrecio: data.listaPrecio
-          ? {
-              create: {
-                listaPrecioId: data.listaPrecio,
-                precio: new Decimal(precio),
-                activo: true,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              }
-            }
-          : undefined
+        updatedAt: new Date()
       }
     })
 
-    console.log('Producto creado:', producto)
+    // Si se especificó una lista de precios, crear la relación
+    if (body.listaPrecio) {
+      await prisma.productoListaPrecio.create({
+        data: {
+          listaPrecio: {
+            connect: { id: Number(body.listaPrecio) }
+          },
+          producto: {
+            connect: { productoId: producto.productoId }
+          },
+          precio: new Prisma.Decimal(body.precio),
+          activo: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+    }
 
     return NextResponse.json(producto)
   } catch (error) {
     console.error('Error detallado:', error)
 
-    return NextResponse.json({ error: 'Error al crear producto: ' + error.message }, { status: 500 })
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return NextResponse.json({ error: 'Ya existe un producto con este SKU' }, { status: 400 })
+      }
+
+      if (error.code === 'P2025') {
+        return NextResponse.json({ error: 'La lista de precios especificada no existe' }, { status: 400 })
+      }
+    }
+
+    return NextResponse.json(
+      { error: 'Error al crear el producto', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -75,16 +106,46 @@ export async function GET() {
         productoId: true,
         sku: true,
         nombre: true,
-        precio: true,
+        descripcion: true,
+        area: true,
+        familia: true,
         tipo: true,
-        estado: true
+        norma: true,
+        precio: true,
+        esPaquete: true,
+        estado: true,
+        aplicaImpuesto: true,
+
+        // Incluir los productos que forman parte del paquete
+        productosEnPaquete: {
+          select: {
+            cantidad: true,
+            producto: {
+              select: {
+                productoId: true,
+                nombre: true,
+                descripcion: true,
+                area: true,
+                norma: true,
+                precio: true
+              }
+            }
+          }
+        }
       }
     })
 
     // Transformar los precios Decimal a números
     const productosFormateados = productos.map(producto => ({
       ...producto,
-      precio: Number(producto.precio)
+      precio: Number(producto.precio),
+      productosEnPaquete: producto.productosEnPaquete.map(pp => ({
+        ...pp,
+        producto: {
+          ...pp.producto,
+          precio: Number(pp.producto.precio)
+        }
+      }))
     }))
 
     console.log('Productos enviados:', productosFormateados)

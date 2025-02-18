@@ -673,7 +673,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         cell: ({ row }) => {
           const cliente = row.original
 
-          if (!cliente.ClienteContacto || cliente.ClienteContacto.length === 0) {
+          if (!cliente.clientesContactos || cliente.clientesContactos.length === 0) {
             return (
               <div className='flex items-center gap-2'>
                 <div className='w-2 h-2 rounded-full bg-error' />
@@ -689,11 +689,11 @@ const ClientListTable = ({ userData, setData }: Props) => {
                 variant='text'
                 size='small'
                 onClick={() => {
-                  setSelectedContacts(cliente.ClienteContacto)
+                  setSelectedContacts(cliente.clientesContactos)
                   setContactsModalOpen(true)
                 }}
               >
-                {cliente.ClienteContacto.length} contacto{cliente.ClienteContacto.length > 1 ? 's' : ''}
+                {cliente.clientesContactos.length} contacto{cliente.clientesContactos.length > 1 ? 's' : ''}
               </Button>
             </div>
           )
@@ -715,11 +715,47 @@ const ClientListTable = ({ userData, setData }: Props) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <IconButton
               size='small'
+              color='info'
+              onClick={async () => {
+                try {
+                  // Obtener los datos completos del cliente
+                  const response = await axios.get(`/api/clientes/${row.original.clienteId}`)
+                  const clienteCompleto = response.data
+
+                  console.log('Cliente completo desde API:', clienteCompleto)
+                  setSelectedUser(clienteCompleto)
+                  setPreviewDialogOpen(true)
+                } catch (error) {
+                  console.error('Error al obtener datos del cliente:', error)
+                  toast.error('Error al obtener datos del cliente')
+                }
+              }}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'info.light'
+                }
+              }}
+            >
+              <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+
+            <IconButton
+              size='small'
               color='primary'
-              onClick={() => {
-                if (row.original.clienteId) {
-                  setSelectedUser(row.original)
-                  setEditUserOpen(true)
+              onClick={async () => {
+                try {
+                  if (row.original.clienteId) {
+                    // Obtener los datos completos del cliente
+                    const response = await axios.get(`/api/clientes/${row.original.clienteId}`)
+                    const clienteCompleto = response.data
+
+                    console.log('Cliente completo para editar:', clienteCompleto)
+                    setSelectedUser(clienteCompleto)
+                    setEditUserOpen(true)
+                  }
+                } catch (error) {
+                  console.error('Error al obtener datos del cliente:', error)
+                  toast.error('Error al obtener datos del cliente')
                 }
               }}
               sx={{
@@ -841,11 +877,6 @@ const ClientListTable = ({ userData, setData }: Props) => {
       setDeleteDialogOpen(false)
       setSelectedClientId(null)
     }
-  }
-
-  const handlePreview = (client: Cliente) => {
-    setSelectedUser(client)
-    setPreviewDialogOpen(true)
   }
 
   return (
@@ -997,43 +1028,43 @@ const ClientListTable = ({ userData, setData }: Props) => {
               <MuiTableBody>
                 {selectedContacts.map((contacto, index) => (
                   <MuiTableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                    <MuiTableCell>{contacto.Contacto.nombre}</MuiTableCell>
-                    <MuiTableCell>{contacto.Contacto.cargo}</MuiTableCell>
+                    <MuiTableCell>{contacto.contacto.nombre}</MuiTableCell>
+                    <MuiTableCell>{contacto.contacto.cargo}</MuiTableCell>
                     <MuiTableCell>
                       <MuiLink
-                        href={`mailto:${contacto.Contacto.email}`}
+                        href={`mailto:${contacto.contacto.email}`}
                         sx={{
                           textDecoration: 'none',
                           color: 'text.primary',
                           '&:hover': { color: 'primary.main' }
                         }}
                       >
-                        {contacto.Contacto.email}
+                        {contacto.contacto.email}
                       </MuiLink>
                     </MuiTableCell>
                     <MuiTableCell>
                       <MuiLink
-                        href={`tel:${contacto.Contacto.telefono1}`}
+                        href={`tel:${contacto.contacto.telefono1}`}
                         sx={{
                           textDecoration: 'none',
                           color: 'text.primary',
                           '&:hover': { color: 'primary.main' }
                         }}
                       >
-                        {contacto.Contacto.telefono1}
+                        {contacto.contacto.telefono1}
                       </MuiLink>
                     </MuiTableCell>
                     <MuiTableCell>
-                      {contacto.Contacto.telefono2 && (
+                      {contacto.contacto.telefono2 && (
                         <MuiLink
-                          href={`tel:${contacto.Contacto.telefono2}`}
+                          href={`tel:${contacto.contacto.telefono2}`}
                           sx={{
                             textDecoration: 'none',
                             color: 'text.primary',
                             '&:hover': { color: 'primary.main' }
                           }}
                         >
-                          {contacto.Contacto.telefono2}
+                          {contacto.contacto.telefono2}
                         </MuiLink>
                       )}
                     </MuiTableCell>
@@ -1069,6 +1100,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         </DialogActions>
       </Dialog>
 
+      {/* Diálogo de Preview */}
       <Dialog open={previewDialogOpen} onClose={() => setPreviewDialogOpen(false)} maxWidth='lg' fullWidth>
         <DialogTitle>Detalles del Cliente</DialogTitle>
         <DialogContent>

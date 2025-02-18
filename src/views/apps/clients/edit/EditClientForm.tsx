@@ -118,8 +118,8 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
         region: currentUser.region,
         comuna: currentUser.comuna?.toString() || '',
         direccion: currentUser.direccion || '',
-        telefono: currentUser.telefono1 || '',
-        sitioWeb: currentUser.web || '',
+        telefono: currentUser.telefono || '',
+        sitioWeb: currentUser.sitioWeb || '',
         segmento: currentUser.segmento || '',
         industria: currentUser.industria || '',
         vendedor: currentUser.condicionesComerciales?.vendedor || '',
@@ -143,6 +143,8 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
         setContacts(mappedContacts)
       }
+
+      console.log('Condiciones comerciales:', currentUser.condicionesComerciales) // Debug
     }
   }, [currentUser, open, reset, setSelectedRegion, setSelectedComuna])
 

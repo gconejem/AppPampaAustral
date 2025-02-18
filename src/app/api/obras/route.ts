@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         otrasReferencias: body.otrasReferencias,
         createdAt: new Date(),
         updatedAt: new Date(),
-        ContactoObra: {
+        contactos: {
           create: body.contactos?.map((contacto: any) => ({
             nombre: contacto.nombre,
             rol: contacto.rol,
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         }
       },
       include: {
-        ContactoObra: true
+        contactos: true
       }
     })
 
@@ -79,44 +79,19 @@ export async function GET() {
 
     const obras = await prisma.obra.findMany({
       include: {
-        ContactoObra: true
+        contactos: true,
+        cotizaciones: true,
+        solicitudes: true
       },
       orderBy: {
         fechaIngreso: 'desc'
       }
     })
 
-    console.log(`Obras encontradas: ${obras.length}`)
-
-    if (!obras) {
-      console.log('No se encontraron obras')
-
-      return NextResponse.json([])
-    }
-
-    // Transformar los datos para el formato que espera la tabla
-    const obrasFormateadas = obras.map(obra => ({
-      ...obra,
-      fechaIngreso: obra.fechaIngreso.toISOString(),
-      createdAt: obra.createdAt.toISOString(),
-      updatedAt: obra.updatedAt.toISOString(),
-
-      // Campos necesarios para la tabla
-      numeroObra: obra.numeroObra,
-      nombreObra: obra.nombreObra,
-      comuna: obra.comuna,
-      rutCliente: obra.rut,
-      cliente: obra.nombreCliente,
-      encargado: obra.ContactoObra.find(c => c.isPrincipal)?.nombre || 'Sin asignar',
-      estado: obra.estado
-    }))
-
-    console.log('Obras formateadas:', obrasFormateadas)
-
-    return NextResponse.json(obrasFormateadas)
+    return NextResponse.json(obras)
   } catch (error) {
     console.error('Error al obtener obras:', error)
 
-    return NextResponse.json({ error: 'Error al obtener las obras' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener obras' }, { status: 500 })
   }
 }

@@ -12,7 +12,9 @@ export const getUserData = async (): Promise<Obra[]> => {
   try {
     const obras = await prisma.obra.findMany({
       include: {
-        ContactoObra: true
+        contactos: true,
+        cotizaciones: true,
+        solicitudes: true
       },
       orderBy: {
         fechaIngreso: 'desc'

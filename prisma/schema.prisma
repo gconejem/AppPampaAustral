@@ -7,8 +7,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Cliente {
+  clienteId              Int                 @id @default(autoincrement())
+  fechaCreacion          DateTime            @default(now())
+  estado                 String
+  rut                    String              @unique
+  razonSocial            String
+  nombreCliente          String
+  pais                   String
+  region                 String
+  ciudad                 String
+  comuna                 String
+  direccion              String
+  telefono               String?
+  sitioWeb               String?
+  segmento               String?
+  industria              String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  clientesContactos      ClienteContacto[]
+  condicionesComerciales CondicionComercial?
+  cotizaciones           Cotizacion[]
+  solicitudes            Solicitud[]
+}
+
+model Contacto {
+  nombre            String
+  cargo             String
+  email             String
+  telefono1         String
+  telefono2         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  contactId         Int               @id @default(autoincrement())
+  clientesContactos ClienteContacto[]
+}
+
+model CondicionComercial {
+  id             Int     @id @default(autoincrement())
+  vendedor       String
+  condicionVenta String
+  observaciones  String?
+  clienteId      Int     @unique
+  cliente        Cliente @relation(fields: [clienteId], references: [clienteId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
 model Account {
-  id                String  @id
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
@@ -20,45 +76,148 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
-model Cliente {
-  clienteId          Int                 @id @default(autoincrement())
-  fechaCreacion      DateTime            @default(now())
-  estado             String
-  rut                String              @unique
-  razonSocial        String
-  nombreCliente      String
-  pais               String
-  region             String
-  ciudad             String
-  comuna             String
-  direccion          String
-  telefono           String?
-  sitioWeb           String?
-  segmento           String?
-  industria          String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime
-  ClienteContacto    ClienteContacto[]
-  CondicionComercial CondicionComercial?
-  Cotizacion         Cotizacion[]
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ClienteContacto {
-  id          Int          @id @default(autoincrement())
-  clienteId   Int
-  isPrincipal Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  contactId   Int
-  Cliente     Cliente      @relation(fields: [clienteId], references: [clienteId])
-  Contacto    Contacto     @relation(fields: [contactId], references: [contactId])
-  Cotizacion  Cotizacion[]
+  id           Int          @id @default(autoincrement())
+  clienteId    Int
+  isPrincipal  Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  contactId    Int
+  cliente      Cliente      @relation(fields: [clienteId], references: [clienteId])
+  contacto     Contacto     @relation(fields: [contactId], references: [contactId])
+  cotizaciones Cotizacion[]
 
   @@unique([clienteId, contactId])
+}
+
+model Producto {
+  productoId            Int                   @id @default(autoincrement())
+  sku                   String                @unique
+  nombre                String
+  descripcion           String?
+  area                  String?
+  familia               String?
+  esPaquete             Boolean               @default(false)
+  tipo                  String
+  precio                Decimal?              @db.Decimal(10, 2)
+  estado                EstadoProducto        @default(ACTIVO)
+  norma                 String?
+  listasPrecios         ProductoListaPrecio[]
+  aplicaImpuesto        Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  productosEnPaquete    ProductoPaquete[]     @relation("PaqueteProductos")
+  paquetesQueLoIncluyen ProductoPaquete[]     @relation("ProductoEnPaquetes")
+  detallesCotizacion    DetalleCotizacion[]
+
+  @@index([sku])
+  @@index([estado])
+  @@index([familia])
+  @@index([area])
+}
+
+model ProductoPaquete {
+  id          Int      @id @default(autoincrement())
+  paqueteId   Int
+  productoId  Int
+  cantidad    Int      @default(1)
+  descripcion String?
+  createdAt   DateTime @default(now())
+  paquete     Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
+  producto    Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
+
+  @@unique([paqueteId, productoId])
+}
+
+model Obra {
+  obraId               Int      @id @default(autoincrement())
+  numeroObra           String
+  fechaIngreso         DateTime
+  estado               String   @default("activo")
+  estadoObra           String
+  rut                  String
+  nombreCliente        String
+  razonSocial          String?
+  nombreObra           String
+  direccion            String
+  region               String
+  comuna               String
+  sector               String?
+  georreferencia       String?
+  referencia           String?
+  mandante             String?
+  informeMandante      Boolean  @default(false)
+  textoMandante        String?
+  giro                 String?
+  direccionComercial   String?
+  comunaFacturacion    String?
+  telefonoFacturacion  String?
+  listaPrecios         String?
+  mailRecepcionFactura String?
+
+  // Requisitos
+  acreditacionPersonal     Boolean @default(false)
+  especificacionesTecnicas Boolean @default(false)
+  acreditacionEquipos      Boolean @default(false)
+  cartaCompromiso          Boolean @default(false)
+  mandatoServiu            Boolean @default(false)
+  otrosRequisitos          String?
+
+  // Referencias
+  estadoPago       Boolean @default(false)
+  hes              Boolean @default(false)
+  oc               Boolean @default(false)
+  otrasReferencias String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  contactos    ContactoObra[]
+  cotizaciones Cotizacion[]
+  solicitudes  Solicitud[]
+}
+
+model ContactoObra {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  rol         String
+  email       String?
+  telefono1   String?
+  telefono2   String?
+  isPrincipal Boolean @default(false)
+  obraId      Int
+  obra        Obra    @relation(fields: [obraId], references: [obraId])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  assignedTo  String[]
+  createdDate DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  comunas   Comuna[]
 }
 
 model Comuna {
@@ -67,165 +226,23 @@ model Comuna {
   nombre    String
   regionId  Int
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  Region    Region   @relation(fields: [regionId], references: [id])
+  updatedAt DateTime @updatedAt
+  region    Region   @relation(fields: [regionId], references: [id])
 
   @@index([regionId])
 }
 
-model CondicionComercial {
-  id             Int     @id @default(autoincrement())
-  vendedor       String
-  condicionVenta String
-  observaciones  String?
-  clienteId      Int     @unique
-  Cliente        Cliente @relation(fields: [clienteId], references: [clienteId])
-}
-
-model Contacto {
-  nombre          String
-  cargo           String
-  email           String
-  telefono1       String
-  telefono2       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  contactId       Int               @id @default(autoincrement())
-  ClienteContacto ClienteContacto[]
-}
-
-model ContactoObra {
-  id          Int     @id @default(autoincrement())
-  obraId      Int
-  nombre      String
-  email       String?
-  telefono1   String?
-  isPrincipal Boolean @default(false)
-  rol         String
-  telefono2   String?
-  Obra        Obra    @relation(fields: [obraId], references: [obraId])
-}
-
-model Cotizacion {
-  id                Int                 @id @default(autoincrement())
-  numeroCotizacion  String              @unique
-  fechaCreacion     DateTime            @default(now())
-  fechaInicio       DateTime
-  fechaFin          DateTime
-  estado            EstadoCotizacion    @default(PENDIENTE)
-  tipoCotizacion    String
-  clienteId         Int
-  obraId            Int?
-  vendedorId        String?
-  observaciones     String?
-  subtotal          Decimal             @db.Decimal(10, 2)
-  descuento         Decimal             @db.Decimal(10, 2)
-  impuesto          Decimal             @db.Decimal(10, 2)
-  total             Decimal             @db.Decimal(10, 2)
-  contactoId        Int?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  Cliente           Cliente             @relation(fields: [clienteId], references: [clienteId])
-  ClienteContacto   ClienteContacto?    @relation(fields: [contactoId], references: [id])
-  Obra              Obra?               @relation(fields: [obraId], references: [obraId])
-  DetalleCotizacion DetalleCotizacion[]
-}
-
-model DetalleCotizacion {
-  id             Int        @id @default(autoincrement())
-  cotizacionId   Int
-  productoId     Int
-  cantidad       Int
-  precioUnitario Decimal    @db.Decimal(10, 2)
-  descuento      Decimal    @db.Decimal(10, 2)
-  subtotal       Decimal    @db.Decimal(10, 2)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime
-  Cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id])
-  Producto       Producto   @relation(fields: [productoId], references: [productoId])
-}
-
 model ListaPrecio {
-  id                  Int                   @id @default(autoincrement())
-  nombre              String
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime
-  ProductoListaPrecio ProductoListaPrecio[]
+  id        Int                   @id @default(autoincrement())
+  nombre    String
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  productos ProductoListaPrecio[]
 }
 
-model Obra {
-  obraId                   Int            @id @default(autoincrement())
-  numeroObra               String
-  fechaIngreso             DateTime
-  estado                   String         @default("activo")
-  estadoObra               String
-  nombreObra               String
-  direccion                String
-  region                   String
-  comuna                   String
-  informeMandante          Boolean        @default(false)
-  textoMandante            String?
-  acreditacionPersonal     Boolean        @default(false)
-  especificacionesTecnicas Boolean        @default(false)
-  acreditacionEquipos      Boolean        @default(false)
-  cartaCompromiso          Boolean        @default(false)
-  mandatoServiu            Boolean        @default(false)
-  otrosRequisitos          String?
-  razonSocial              String?
-  rut                      String
-  giro                     String?
-  direccionComercial       String?
-  comunaFacturacion        String?
-  telefonoFacturacion      String?
-  listaPrecios             String?
-  mailRecepcionFactura     String?
-  estadoPago               Boolean        @default(false)
-  hes                      Boolean        @default(false)
-  oc                       Boolean        @default(false)
-  otrasReferencias         String?
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime
-  georreferencia           String?
-  mandante                 String?
-  nombreCliente            String
-  referencia               String?
-  sector                   String?
-  ContactoObra             ContactoObra[]
-  Cotizacion               Cotizacion[]
-}
-
-model Permission {
-  id          String   @id
-  name        String   @unique
-  assignedTo  String[]
-  createdDate DateTime @default(now())
-  updatedAt   DateTime
-}
-
-model Producto {
-  productoId                                           Int                   @id @default(autoincrement())
-  sku                                                  String                @unique
-  nombre                                               String
-  descripcion                                          String?
-  area                                                 String?
-  familia                                              String?
-  esPaquete                                            Boolean               @default(false)
-  tipo                                                 String
-  precio                                               Decimal?              @db.Decimal(10, 2)
-  estado                                               EstadoProducto        @default(ACTIVO)
-  norma                                                String?
-  aplicaImpuesto                                       Boolean               @default(true)
-  createdAt                                            DateTime              @default(now())
-  updatedAt                                            DateTime
-  DetalleCotizacion                                    DetalleCotizacion[]
-  ProductoListaPrecio                                  ProductoListaPrecio[]
-  ProductoPaquete_ProductoPaquete_paqueteIdToProducto  ProductoPaquete[]     @relation("ProductoPaquete_paqueteIdToProducto")
-  ProductoPaquete_ProductoPaquete_productoIdToProducto ProductoPaquete[]     @relation("ProductoPaquete_productoIdToProducto")
-
-  @@index([area])
-  @@index([estado])
-  @@index([familia])
-  @@index([sku])
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
 }
 
 model ProductoListaPrecio {
@@ -235,63 +252,102 @@ model ProductoListaPrecio {
   precio        Decimal?    @db.Decimal(10, 2)
   activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())
-  updatedAt     DateTime
-  ListaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
-  Producto      Producto    @relation(fields: [productoId], references: [productoId])
+  updatedAt     DateTime    @updatedAt
+  producto      Producto    @relation(fields: [productoId], references: [productoId])
+  listaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
 
   @@unique([productoId, listaPrecioId])
-  @@index([listaPrecioId])
-  @@index([productoId])
 }
 
-model ProductoPaquete {
-  id                                            Int      @id @default(autoincrement())
-  paqueteId                                     Int
-  productoId                                    Int
-  createdAt                                     DateTime @default(now())
-  Producto_ProductoPaquete_paqueteIdToProducto  Producto @relation("ProductoPaquete_paqueteIdToProducto", fields: [paqueteId], references: [productoId])
-  Producto_ProductoPaquete_productoIdToProducto Producto @relation("ProductoPaquete_productoIdToProducto", fields: [productoId], references: [productoId])
-
-  @@unique([paqueteId, productoId])
+enum TipoCotizacion {
+  A
+  B
+  C
 }
 
-model Region {
-  id        Int      @id @default(autoincrement())
-  codigo    String   @unique
-  nombre    String
+model Cotizacion {
+  id               Int                 @id @default(autoincrement())
+  numeroCotizacion String
+  tipoCotizacion   TipoCotizacion      @default(A)
+  fechaCreacion    DateTime            @default(now())
+  fechaInicio      DateTime
+  fechaFin         DateTime
+  estado           EstadoCotizacion    @default(BORRADOR)
+  nombreProyecto   String?
+  empresa          String?
+  ubicacion        String?
+  clienteId        Int?
+  cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
+  obraId           Int?
+  obra             Obra?               @relation(fields: [obraId], references: [obraId])
+  vendedorId       String?
+  observaciones    String?
+  subtotal         Decimal             @db.Decimal(10, 2)
+  descuento        Decimal             @db.Decimal(10, 2)
+  impuesto         Decimal             @db.Decimal(10, 2)
+  total            Decimal             @db.Decimal(10, 2)
+  detalles         DetalleCotizacion[]
+  contactoId       Int?
+  contacto         ClienteContacto?    @relation(fields: [contactoId], references: [id])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  solicitudes      Solicitud[]
+}
+
+model DetalleCotizacion {
+  id             Int     @id @default(autoincrement())
+  cotizacionId   Int
+  productoId     Int
+  cantidad       Int
+  precioUnitario Decimal @db.Decimal(10, 2)
+  descuento      Decimal @db.Decimal(10, 2)
+  subtotal       Decimal @db.Decimal(10, 2)
+
+  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id])
+  producto   Producto   @relation(fields: [productoId], references: [productoId])
+
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  Comuna    Comuna[]
-}
-
-model Session {
-  id           String   @id
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-  id            String    @id
-  name          String?
-  email         String?   @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  Account       Account[]
-  Session       Session[]
+  updatedAt DateTime @updatedAt
 }
 
 enum EstadoCotizacion {
-  PENDIENTE
-  APROBADA
+  BORRADOR
+  COTIZADA
+  GESTIONADA
+  ACEPTADA
+  SIN_RESPUESTA
   RECHAZADA
-  VENCIDA
-  CONVERTIDA
 }
 
-enum EstadoProducto {
-  ACTIVO
-  INACTIVO
+model Solicitud {
+  id                   Int      @id @default(autoincrement())
+  numeroSolicitud      String   @unique @default(uuid())
+  fechaCreacion        DateTime @default(now())
+  estadoOperativo      String   @default("PENDIENTE")
+  estadoAdministrativo String   @default("PENDIENTE")
+
+  // Campos opcionales
+  clienteId     Int?
+  cliente       Cliente?    @relation(fields: [clienteId], references: [clienteId])
+  obraId        Int?
+  obra          Obra?       @relation(fields: [obraId], references: [obraId])
+  cotizacionId  Int?
+  cotizacion    Cotizacion? @relation(fields: [cotizacionId], references: [id])
+  observaciones String?
+
+  @@map("solicitudes")
+}
+
+enum EstadoOperacional {
+  PENDIENTE
+  EN_PROCESO
+  FINALIZADO
+  CANCELADO
+}
+
+enum EstadoAdministrativo {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  EN_REVISION
 }
