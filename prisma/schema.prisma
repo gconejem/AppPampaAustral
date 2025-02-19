@@ -98,8 +98,6 @@ model ClienteContacto {
   cliente      Cliente      @relation(fields: [clienteId], references: [clienteId])
   contacto     Contacto     @relation(fields: [contactId], references: [contactId])
   cotizaciones Cotizacion[]
-  obra         Obra?        @relation(fields: [obraId], references: [obraId])
-  obraId       Int?
 
   @@unique([clienteId, contactId])
 }
