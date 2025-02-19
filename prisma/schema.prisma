@@ -320,11 +320,11 @@ enum EstadoCotizacion {
 }
 
 model Solicitud {
-  id                   Int      @id @default(autoincrement())
-  numeroSolicitud      String   @unique @default(uuid())
-  fechaCreacion        DateTime @default(now())
-  estadoOperativo      String   @default("PENDIENTE")
-  estadoAdministrativo String   @default("PENDIENTE")
+  id                   Int                   @id @default(autoincrement())
+  numeroSolicitud      Int                   @unique @default(autoincrement())
+  fechaCreacion        DateTime              @default(now())
+  estadoOperativo      EstadoOperacional     @default(PENDIENTE)
+  estadoAdministrativo EstadoAdministrativo  @default(PENDIENTE)
 
   // Campos opcionales
   clienteId     Int?

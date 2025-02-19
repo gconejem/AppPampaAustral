@@ -44,7 +44,6 @@ async function initializeListasPrecios() {
           updatedAt: new Date()
         }
       })
-      console.log(`Lista de precios "${lista.nombre}" creada con ID ${lista.id}`)
     }
   }
 }

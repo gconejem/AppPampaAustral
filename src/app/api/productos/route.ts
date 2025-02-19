@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 
-import { Decimal } from '@prisma/client/runtime/library'
-
 import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'

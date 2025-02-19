@@ -101,7 +101,7 @@ const VerticalMenu = () => {
                 Cotizaciones
               </MenuItem>
 
-              <MenuItem href={`/${locale}/apps/user/solicitudes`} icon={<i className='ri-calendar-line' />}>
+              <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />}>
                 Solicitudes
               </MenuItem>
 
