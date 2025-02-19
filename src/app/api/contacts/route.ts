@@ -6,30 +6,27 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const contactos = await prisma.contacto.findMany({
-      select: {
-        contactId: true,
-        nombre: true,
-        cargo: true,
-        email: true,
-        telefono1: true,
-        telefono2: true
+      include: {
+        clientesContactos: {
+          include: {
+            cliente: true
+          }
+        }
       }
     })
-
-    console.log('Contactos encontrados:', contactos)
 
     return NextResponse.json(contactos)
   } catch (error) {
     console.error('Error al obtener contactos:', error)
 
-    return NextResponse.json({ error: 'Error al obtener los contactos' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener contactos' }, { status: 500 })
   }
 }
 
 // POST - Crear un nuevo contacto
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json()
+    const body = await req.json()
 
     const contacto = await prisma.contacto.create({
       data: {
@@ -37,13 +34,11 @@ export async function POST(request: Request) {
         cargo: body.cargo,
         email: body.email,
         telefono1: body.telefono1,
-        telefono2: body.telefono2 || null,
-        updatedAt: new Date(),
-        createdAt: new Date()
+        telefono2: body.telefono2 || ''
       }
     })
 
-    return NextResponse.json(contacto, { status: 201 })
+    return NextResponse.json(contacto)
   } catch (error) {
     console.error('Error al crear contacto:', error)
 

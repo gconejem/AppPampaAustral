@@ -10,19 +10,19 @@ interface Props {
   }
 }
 
-async function getContactData() {
+const getContactData = async () => {
   try {
-    const contacts = await prisma.contacto.findMany({
+    const contactos = await prisma.contacto.findMany({
       include: {
-        ClienteContacto: {
+        clientesContactos: {
           include: {
-            Cliente: true
+            cliente: true
           }
         }
       }
     })
 
-    return contacts
+    return contactos
   } catch (error) {
     console.error('Error fetching contacts:', error)
 

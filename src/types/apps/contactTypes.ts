@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 
-export type ContactoWithRelations = Prisma.contactoGetPayload<{
+export type ContactoWithRelations = Prisma.ContactoGetPayload<{
   include: {
     clientesContactos: {
       include: {
