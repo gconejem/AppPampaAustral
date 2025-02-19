@@ -31,67 +31,34 @@ export async function GET() {
 }
 
 // POST - Crear un nuevo cliente
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json()
+    const body = await request.json()
 
-    // Validar que el body no sea null
-    if (!body) {
-      return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
-    }
-
-    // Extraer los datos del cliente y sus contactos
-    const { contactos, condicionesComerciales, ...clienteData } = body
-
-    // Crear el cliente y sus relaciones en una transacción
-    const cliente = await prisma.$transaction(async tx => {
-      // 1. Crear el cliente
-      const nuevoCliente = await tx.cliente.create({
-        data: {
-          ...clienteData,
-
-          // Asegurarse que estos campos existan
-          estado: clienteData.estado || 'ACTIVO',
-          fechaCreacion: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      })
-
-      // 2. Si hay contactos, crearlos o vincularlos
-      if (contactos && contactos.length > 0) {
-        for (const contacto of contactos) {
-          await tx.clienteContacto.create({
-            data: {
-              clienteId: nuevoCliente.clienteId,
-              contactId: contacto.contactId,
-              isPrincipal: contacto.isPrincipal || false
-            }
-          })
-        }
-      }
-
-      // 3. Si hay condiciones comerciales, crearlas
-      if (condicionesComerciales) {
-        await tx.condicionComercial.create({
-          data: {
-            ...condicionesComerciales,
-            clienteId: nuevoCliente.clienteId
+    const cliente = await prisma.cliente.create({
+      data: {
+        ...body,
+        fechaCreacion: new Date(),
+        clientesContactos: body.clientesContactos,
+        condicionesComerciales: body.condicionesComerciales
+      },
+      include: {
+        clientesContactos: {
+          include: {
+            contacto: true
           }
-        })
+        },
+        condicionesComerciales: true,
+        cotizaciones: true,
+        solicitudes: true
       }
-
-      return nuevoCliente
     })
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {
-    // Mejorar el manejo de errores
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('Error al crear cliente:', error)
 
-    console.error('Error al crear cliente:', errorMessage)
-
-    return NextResponse.json({ error: 'Error al crear el cliente', details: errorMessage }, { status: 500 })
+    return NextResponse.json({ error: 'Error al crear el cliente' }, { status: 500 })
   }
 }
 
