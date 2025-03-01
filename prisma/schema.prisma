@@ -29,6 +29,7 @@ model Cliente {
   condicionesComerciales CondicionComercial[]
   cotizaciones           Cotizacion[]
   solicitudes            Solicitud[]
+  agendas                Agenda[]
 }
 
 model Contacto {
@@ -59,8 +60,10 @@ model User {
   password      String?
   emailVerified DateTime?
   image         String?
+  roles         UserRol[]
   accounts      Account[]
   sessions      Session[]
+  agendas        AgendaAsignado[]
 }
 
 model Account {
@@ -189,6 +192,7 @@ model Obra {
   contactos    ContactoObra[]
   cotizaciones Cotizacion[]
   solicitudes  Solicitud[]
+  agendas       Agenda[]
 }
 
 model ContactoObra {
@@ -334,6 +338,7 @@ model Solicitud {
   cotizacionId  Int?
   cotizacion    Cotizacion? @relation(fields: [cotizacionId], references: [id])
   observaciones String?
+  agendas        Agenda[]
 
   @@map("solicitudes")
 }
@@ -350,4 +355,134 @@ enum EstadoAdministrativo {
   APROBADO
   RECHAZADO
   EN_REVISION
+}
+
+// Modelo para los servicios
+model Servicio {
+  id              Int       @id @default(autoincrement())
+  codigo          String    @unique
+  nombre          String
+  descripcion     String?
+  estado          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Modelo para equipos
+model Equipo {
+  id              Int       @id @default(autoincrement())
+  codigo          String    @unique
+  nombre          String
+  descripcion     String?
+  estado          Boolean   @default(true)
+  agendas         AgendaEquipo[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Modelo para las citas/agenda
+model Agenda {
+  id              Int       @id @default(autoincrement())
+  titulo          String
+  tipoVisita      String    // EVENTO, VISITA, etc.
+  esRecurrente    Boolean   @default(false)
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  estado          EstadoAgenda @default(AGENDADA)
+
+  // Ubicación y sector
+  sectorComercial String?
+  region          String?
+  comuna          String?
+  direccion       String?
+  referencia      String?
+
+  // Referencias
+  clienteId       Int?
+  cliente         Cliente?  @relation(fields: [clienteId], references: [clienteId])
+  obraId          Int?
+  obra            Obra?     @relation(fields: [obraId], references: [obraId])
+  solicitudId     Int?
+  solicitud       Solicitud? @relation(fields: [solicitudId], references: [id])
+
+  // Servicios asociados
+  servicios       AgendaServicio[]
+
+  // Participantes
+  asignados       AgendaAsignado[]
+  equipos         AgendaEquipo[]    // Mantener la relación con equipos
+
+  observaciones   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AgendaServicio {
+  id              Int       @id @default(autoincrement())
+  agendaId        Int
+  agenda          Agenda    @relation(fields: [agendaId], references: [id])
+  codigo          String
+  servicio        String
+  cantidad        Int
+  observacion     String?
+  esSegundaVisita Boolean   @default(false)
+}
+
+model AgendaAsignado {
+  id          Int      @id @default(autoincrement())
+  agendaId    Int
+  agenda      Agenda    @relation(fields: [agendaId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  esPrincipal Boolean  @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([agendaId, userId])
+}
+
+// Relación entre Agenda y Equipo
+model AgendaEquipo {
+  id          Int      @id @default(autoincrement())
+  agendaId    Int
+  agenda      Agenda   @relation(fields: [agendaId], references: [id])
+  equipoId    Int
+  equipo      Equipo   @relation(fields: [equipoId], references: [id])
+  cantidad    Int      @default(1)
+  observacion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([agendaId, equipoId])
+}
+
+enum EstadoAgenda {
+  AGENDADA
+  COMPLETADA
+  SUSPENDIDA
+  CANCELADA
+  EN_PROCESO
+}
+
+// Modelo para roles
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique // LABORATORISTA, ADMIN, etc.
+  descripcion String?
+  usuarios    UserRol[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Relación entre usuarios y roles
+model UserRol {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  rolId     Int
+  user      User     @relation(fields: [userId], references: [id])
+  rol       Rol      @relation(fields: [rolId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, rolId])
 }

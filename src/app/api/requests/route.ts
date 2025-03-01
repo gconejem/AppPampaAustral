@@ -1,42 +1,40 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+
 import type { NextRequest } from 'next/server'
 
-// GET - Obtener todas las solicitudes
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search')
+import { prisma } from '@/lib/prisma'
 
-    const solicitudes = await prisma.Solicitud.findMany({
-      where: {
-        OR: search ? [
-          { numeroSolicitud: { contains: search, mode: 'insensitive' } }
-        ] : undefined
-      },
+// GET - Obtener todas las solicitudes
+export async function GET() {
+  try {
+    console.log('Iniciando GET de requests...') // Log para debugging
+
+    const requests = await prisma.solicitud.findMany({
       include: {
         cliente: {
           select: {
-            nombreCliente: true,
+            clienteId: true,
+            razonSocial: true,
             rut: true
           }
         },
         obra: {
           select: {
+            obraId: true,
             nombreObra: true,
-            numeroObra: true
+            direccion: true
           }
         }
-      },
-      orderBy: {
-        fecha: 'desc'
       }
     })
 
-    return NextResponse.json(solicitudes)
+    console.log('Solicitudes encontradas:', requests) // Log para ver qué datos se obtienen
+
+    return NextResponse.json(requests)
   } catch (error) {
-    console.error('Error al obtener solicitudes:', error)
-    return NextResponse.json({ error: 'Error al obtener solicitudes' }, { status: 500 })
+    console.error('Error en GET /api/requests:', error)
+
+    return NextResponse.json({ error: 'Error al obtener las solicitudes' }, { status: 500 })
   }
 }
 
@@ -55,16 +53,10 @@ export async function POST(req: Request) {
     console.error('Error al crear solicitud:', error)
 
     if (error instanceof Error) {
-      return NextResponse.json(
-        { error: 'Error al crear la solicitud', details: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Error al crear la solicitud', details: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(
-      { error: 'Error al crear la solicitud' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al crear la solicitud' }, { status: 500 })
   }
 }
 
@@ -96,6 +88,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(solicitud)
   } catch (error) {
     console.error('Error al actualizar solicitud:', error)
+
     return NextResponse.json({ error: 'Error al actualizar la solicitud' }, { status: 500 })
   }
 }
@@ -117,6 +110,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ message: 'Solicitud eliminada correctamente' })
   } catch (error) {
     console.error('Error al eliminar solicitud:', error)
+
     return NextResponse.json({ error: 'Error al eliminar la solicitud' }, { status: 500 })
   }
 }

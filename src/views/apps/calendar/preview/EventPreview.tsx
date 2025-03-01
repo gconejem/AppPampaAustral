@@ -1,0 +1,337 @@
+import { Dialog, Typography, Box, IconButton, Button, Checkbox, FormControlLabel, Grid } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
+
+interface EventPreviewProps {
+  open: boolean
+  onClose: () => void
+  event: any | null
+}
+
+const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
+  console.log('EventPreview props:', { open, event })
+  console.log('Observaciones en EventPreview:', event?.extendedProps?.observaciones)
+
+  if (!event) {
+    console.log('No hay evento para mostrar')
+
+    return null
+  }
+
+  // Validar que el evento tenga los campos necesarios
+  if (!event.start || !event.title) {
+    console.error('El evento no tiene la estructura correcta:', event)
+
+    return null
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth='md'
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1,
+          padding: 2
+        }
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant='h6'>Detalles de la Cita</Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <IconButton onClick={onClose} size='small'>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </Box>
+
+        <Grid container spacing={4}>
+          {/* Primera fila: Tipo - Fecha - Hora */}
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Tipo de
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <FormControlLabel
+                  control={<Checkbox checked={event.extendedProps?.tipoVisita} disabled size='small' />}
+                  label='Evento'
+                />
+                <FormControlLabel
+                  control={<Checkbox checked={event.extendedProps?.esRecurrente} disabled size='small' />}
+                  label='Recurrente'
+                />
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Fecha
+              </Typography>
+              <Typography variant='body1'>
+                {new Date(event.start).toLocaleDateString('es-ES', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Hora
+              </Typography>
+              <Typography variant='body1'>
+                {new Date(event.start).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} -{' '}
+                {event.end
+                  ? new Date(event.end).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                  : 'No especificado'}
+              </Typography>
+            </Box>
+          </Grid>
+
+          {/* Segunda fila: Cliente - Obra - Solicitud */}
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Cliente
+              </Typography>
+              <Typography variant='body1'>{event.extendedProps?.cliente || event.title}</Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Obra
+              </Typography>
+              <Typography variant='body1'>{event.extendedProps?.obra || 'No especificada'}</Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Solicitud
+              </Typography>
+              <Typography variant='body1'>
+                {event.extendedProps?.solicitud ? `Solicitud ${event.extendedProps.solicitud}` : 'No especificada'}
+              </Typography>
+            </Box>
+          </Grid>
+
+          {/* Tercera fila: Sector Comercial - Región - Comuna */}
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Sector Comercial
+              </Typography>
+              <Typography variant='body1'>{event.extendedProps?.sector || 'No especificado'}</Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Región
+              </Typography>
+              <Typography variant='body1'>{event.extendedProps?.region || 'No especificada'}</Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Comuna
+              </Typography>
+              <Typography variant='body1'>{event.extendedProps?.comuna || 'No especificada'}</Typography>
+            </Box>
+          </Grid>
+
+          {/* Tercera fila: Estado - Servicios */}
+          <Grid item xs={4}>
+            <Box>
+              <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                Estado
+              </Typography>
+              <Box
+                sx={{
+                  display: 'inline-block',
+                  px: 2,
+                  py: 0.5,
+                  borderRadius: 1,
+                  bgcolor: event.backgroundColor + '20',
+                  color: event.backgroundColor
+                }}
+              >
+                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                  {event.extendedProps?.estado}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* Servicios */}
+          <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Servicios
+            </Typography>
+            {Array.isArray(event.extendedProps?.servicios) && event.extendedProps.servicios.length > 0 ? (
+              event.extendedProps.servicios.map((servicio: any, index: number) => (
+                <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Código
+                      </Typography>
+                      <Typography>{servicio.codigo}</Typography>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Servicio
+                      </Typography>
+                      <Typography>{servicio.nombre}</Typography>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Cantidad
+                      </Typography>
+                      <Typography>{servicio.cantidad}</Typography>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Segunda Visita
+                      </Typography>
+                      <Typography>{servicio.esSegundaVisita ? 'Sí' : 'No'}</Typography>
+                    </Grid>
+                    {servicio.observacion && (
+                      <Grid item xs={12}>
+                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                          Observación
+                        </Typography>
+                        <Typography>{servicio.observacion}</Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              ))
+            ) : (
+              <Typography color='text.secondary'>No hay servicios asignados</Typography>
+            )}
+          </Grid>
+
+          {/* Laboratoristas Asignados */}
+          <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Laboratoristas Asignados
+            </Typography>
+            {Array.isArray(event.extendedProps?.asignados) && event.extendedProps.asignados.length > 0 ? (
+              event.extendedProps.asignados.map((asignado: any, index: number) => (
+                <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Nombre
+                      </Typography>
+                      <Typography>{asignado.user.name}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Email
+                      </Typography>
+                      <Typography>{asignado.user.email}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Roles
+                      </Typography>
+                      <Box>
+                        {asignado.user.roles.map((userRol: any, rolIndex: number) => (
+                          <Typography key={rolIndex} component='div'>
+                            {userRol.rol.nombre}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))
+            ) : (
+              <Typography color='text.secondary'>No hay laboratoristas asignados</Typography>
+            )}
+          </Grid>
+
+          {/* Equipos */}
+          <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Equipos
+            </Typography>
+            {Array.isArray(event.extendedProps?.equipos) && event.extendedProps.equipos.length > 0 ? (
+              event.extendedProps.equipos.map((equipo: any, index: number) => (
+                <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Código
+                      </Typography>
+                      <Typography>{equipo.codigo}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Equipo
+                      </Typography>
+                      <Typography>{equipo.nombre}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Cantidad
+                      </Typography>
+                      <Typography>{equipo.cantidad}</Typography>
+                    </Grid>
+                    {equipo.observacion && (
+                      <Grid item xs={12} md={3}>
+                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                          Observación
+                        </Typography>
+                        <Typography>{equipo.observacion}</Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              ))
+            ) : (
+              <Typography color='text.secondary'>No hay equipos asignados</Typography>
+            )}
+          </Grid>
+
+          {/* Observaciones */}
+          {event.extendedProps?.observaciones && (
+            <Grid item xs={12}>
+              <Typography variant='h6' sx={{ mb: 2 }}>
+                Observaciones
+              </Typography>
+              <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Typography>{event.extendedProps.observaciones}</Typography>
+              </Box>
+            </Grid>
+          )}
+        </Grid>
+
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Button variant='outlined' onClick={onClose}>
+            Cerrar
+          </Button>
+        </Box>
+      </Box>
+    </Dialog>
+  )
+}
+
+export default EventPreview
