@@ -48,6 +48,9 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
   const [norma, setNorma] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [area, setArea] = useState('')
+  const [familia, setFamilia] = useState('')
   const [listaPrecios, setListaPrecios] = useState('')
   const [precio, setPrecio] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
@@ -65,6 +68,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [selectedInPackage, setSelectedInPackage] = useState<number[]>([])
 
+  // Opciones predefinidas
+  const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
+  const familiaOptions = ['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia']
+
   // Cargar datos iniciales cuando se abre el modal
   useEffect(() => {
     if (open && paquete) {
@@ -72,6 +79,9 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setNombre(paquete.nombre)
       setSku(paquete.sku)
       setNorma(paquete.norma || '')
+      setDescripcion(paquete.descripcion || '')
+      setArea(paquete.area || '')
+      setFamilia(paquete.familia || '')
       setPrecio(paquete.precio?.toString() || '')
       setAplicaImpuesto(paquete.aplicaImpuesto)
 
@@ -93,9 +103,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       const response = await fetch('/api/productos?esPaquete=false')
       const data = await response.json()
 
-      setProductos(data)
+      setProductos(Array.isArray(data.productos) ? data.productos : [])
     } catch (error) {
       console.error('Error al cargar productos:', error)
+      setProductos([])
     }
   }
 
@@ -134,6 +145,9 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           nombre,
           sku,
           norma,
+          descripcion,
+          area,
+          familia,
           precio: precio ? parseFloat(precio) : null,
           aplicaImpuesto,
           listaPrecioId: listaPrecios ? parseInt(listaPrecios) : undefined,
@@ -170,9 +184,53 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
             <TextField label='SKU' value={sku} onChange={e => setSku(e.target.value)} fullWidth />
           </Grid>
 
+          {/* Nueva fila para descripción */}
+          <Grid item xs={12}>
+            <TextField
+              label='Descripción'
+              value={descripcion}
+              onChange={e => setDescripcion(e.target.value)}
+              fullWidth
+              multiline
+              rows={3}
+            />
+          </Grid>
+
           {/* Segunda fila */}
           <Grid item xs={6}>
             <TextField label='Norma' value={norma} onChange={e => setNorma(e.target.value)} fullWidth />
+          </Grid>
+          <Grid item xs={6}>
+            <FormControl fullWidth>
+              <InputLabel>Área</InputLabel>
+              <Select value={area} label='Área' onChange={e => setArea(e.target.value)}>
+                <MenuItem value=''>
+                  <em>Ninguna</em>
+                </MenuItem>
+                {areaOptions.map(option => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Tercera fila */}
+          <Grid item xs={6}>
+            <FormControl fullWidth>
+              <InputLabel>Familia</InputLabel>
+              <Select value={familia} label='Familia' onChange={e => setFamilia(e.target.value)}>
+                <MenuItem value=''>
+                  <em>Ninguna</em>
+                </MenuItem>
+                {familiaOptions.map(option => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={6}>
             <FormControl fullWidth>
@@ -219,26 +277,27 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
               />
               <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
                 <List sx={{ height: 300, overflow: 'auto' }}>
-                  {productos
-                    .filter(p => !productosSeleccionados.some(ps => ps.productoId === p.productoId))
-                    .filter(p => p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()))
-                    .map(producto => (
-                      <ListItem
-                        key={producto.productoId}
-                        dense
-                        button
-                        onClick={() => {
-                          if (selectedProducts.includes(producto.productoId)) {
-                            setSelectedProducts(prev => prev.filter(id => id !== producto.productoId))
-                          } else {
-                            setSelectedProducts(prev => [...prev, producto.productoId])
-                          }
-                        }}
-                      >
-                        <ListItemText primary={producto.sku} secondary={producto.nombre} />
-                        <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} />
-                      </ListItem>
-                    ))}
+                  {Array.isArray(productos) &&
+                    productos
+                      .filter(p => !productosSeleccionados.some(ps => ps.productoId === p.productoId))
+                      .filter(p => p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()))
+                      .map(producto => (
+                        <ListItem
+                          key={producto.productoId}
+                          dense
+                          button
+                          onClick={() => {
+                            if (selectedProducts.includes(producto.productoId)) {
+                              setSelectedProducts(prev => prev.filter(id => id !== producto.productoId))
+                            } else {
+                              setSelectedProducts(prev => [...prev, producto.productoId])
+                            }
+                          }}
+                        >
+                          <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                          <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} />
+                        </ListItem>
+                      ))}
                 </List>
               </Box>
             </Grid>
