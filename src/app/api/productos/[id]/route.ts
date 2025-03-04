@@ -72,12 +72,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         aplicaImpuesto: data.aplicaImpuesto,
         precio: new Decimal(precio),
         updatedAt: new Date(),
-        ProductoListaPrecio: {
+        listasPrecios: {
           upsert: {
             where: {
               productoId_listaPrecioId: {
                 productoId: productoId,
-                listaPrecioId: data.listaPrecioId || 1 // Valor por defecto si no se proporciona
+                listaPrecioId: data.listaPrecioId || 1
               }
             },
             create: {
@@ -95,9 +95,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
       },
       include: {
-        ProductoListaPrecio: {
+        listasPrecios: {
           include: {
-            ListaPrecio: true
+            listaPrecio: true
           }
         }
       }

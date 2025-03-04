@@ -10,7 +10,6 @@ export async function POST(req: Request) {
     const body = await req.json()
 
     console.log('Datos recibidos en API:', body)
-    console.log('Precio recibido:', body.precio)
 
     // Verificar si el SKU ya existe
     const existingProduct = await prisma.producto.findUnique({
@@ -21,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Ya existe un producto con este SKU' }, { status: 400 })
     }
 
-    // Verificar si existe la lista de precios antes de crear el producto
+    // Verificar si existe la lista de precios
     if (body.listaPrecio) {
       const listaPrecio = await prisma.listaPrecio.findFirst({
         where: { id: body.listaPrecio }
@@ -32,6 +31,23 @@ export async function POST(req: Request) {
           { error: `No existe una lista de precios con ID ${body.listaPrecio}` },
           { status: 400 }
         )
+      }
+    }
+
+    // Si es un paquete, verificar que los productos existan
+    if (body.esPaquete && body.productos) {
+      const productIds = body.productos.map((p: { productoId: number }) => p.productoId)
+
+      const existingProducts = await prisma.producto.findMany({
+        where: {
+          productoId: {
+            in: productIds
+          }
+        }
+      })
+
+      if (existingProducts.length !== productIds.length) {
+        return NextResponse.json({ error: 'Uno o más productos no existen' }, { status: 400 })
       }
     }
 
@@ -72,6 +88,17 @@ export async function POST(req: Request) {
       })
     }
 
+    // Si es un paquete, crear las relaciones con los productos
+    if (body.esPaquete && body.productos) {
+      await prisma.productoPaquete.createMany({
+        data: body.productos.map((p: { productoId: number; cantidad: number }) => ({
+          paqueteId: producto.productoId,
+          productoId: p.productoId,
+          cantidad: p.cantidad || 1
+        }))
+      })
+    }
+
     return NextResponse.json(producto)
   } catch (error) {
     console.error('Error detallado:', error)
@@ -94,12 +121,27 @@ export async function POST(req: Request) {
 }
 
 // GET - Obtener todos los productos
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = (page - 1) * limit
+
+    // Obtener el total de productos
+    const total = await prisma.producto.count({
+      where: {
+        estado: 'ACTIVO'
+      }
+    })
+
+    // Obtener los productos paginados
     const productos = await prisma.producto.findMany({
       where: {
-        estado: 'ACTIVO' // Solo productos activos
+        estado: 'ACTIVO'
       },
+      skip,
+      take: limit,
       select: {
         productoId: true,
         sku: true,
@@ -113,8 +155,6 @@ export async function GET() {
         esPaquete: true,
         estado: true,
         aplicaImpuesto: true,
-
-        // Incluir los productos que forman parte del paquete
         productosEnPaquete: {
           select: {
             cantidad: true,
@@ -146,9 +186,12 @@ export async function GET() {
       }))
     }))
 
-    console.log('Productos enviados:', productosFormateados)
-
-    return NextResponse.json(productosFormateados)
+    return NextResponse.json({
+      productos: productosFormateados,
+      total,
+      page,
+      limit
+    })
   } catch (error) {
     console.error('Error al obtener productos:', error)
 

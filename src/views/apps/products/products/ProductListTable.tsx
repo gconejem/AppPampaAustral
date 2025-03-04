@@ -205,7 +205,7 @@ const ProductListTable = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [totalProductos, setTotalProductos] = useState(0)
-  const [areas, setAreas] = useState([])
+  const [areas, setAreas] = useState<string[]>([])
   const [familias, setFamilias] = useState([])
   const [tipos, setTipos] = useState(['Ensayo', 'Paquete'])
   const [listasPrecios, setListasPrecios] = useState([])
@@ -253,12 +253,13 @@ const ProductListTable = () => {
         if (data) {
           setProductos(data.productos || [])
           setFilteredProductos(data.productos || [])
-          setAreas(data.areas || [])
+          setAreas(['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros'])
           setFamilias(data.familias || [])
           setTipos(['Ensayo', 'Paquete'])
         }
       } catch (error) {
         console.error('Error cargando datos:', error)
+        toast.error('Error al cargar los datos')
       }
     }
 
@@ -273,19 +274,18 @@ const ProductListTable = () => {
       const data = await response.json()
 
       if (data.productos) {
-        // Asegurarnos de que el tipo esté correctamente establecido
         const productosFormateados = data.productos.map(p => ({
           ...p,
           tipo: p.esPaquete ? 'Paquete' : 'Ensayo'
         }))
 
-        console.log('Productos formateados:', productosFormateados)
-
         setProductos(productosFormateados)
-        setTotalProductos(data.meta.total)
+        setFilteredProductos(productosFormateados)
+        setTotalProductos(data.total || productosFormateados.length)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
+      toast.error('Error al cargar los productos')
     } finally {
       setLoading(false)
     }
@@ -568,6 +568,34 @@ const ProductListTable = () => {
     }
   }
 
+  const handleToggleStatus = async (producto: Producto) => {
+    try {
+      const newStatus = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+
+      const response = await fetch(`/api/productos/${producto.productoId}/estado`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ estado: newStatus })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cambiar el estado del producto')
+      }
+
+      // Actualizar el estado en la interfaz
+      setProductos(prevProductos =>
+        prevProductos.map(p => (p.productoId === producto.productoId ? { ...p, estado: newStatus } : p))
+      )
+
+      toast.success(`Producto ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cambiar el estado del producto')
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -601,12 +629,9 @@ const ProductListTable = () => {
         accessorKey: 'nombre',
         header: 'Ensayos/Servicio',
         cell: ({ row }: any) => (
-          <div className='flex flex-col'>
-            <Typography className='font-medium' color='text.primary'>
-              {row.original.nombre}
-            </Typography>
-            <Typography variant='body2'>{row.original.descripcion}</Typography>
-          </div>
+          <Typography className='font-medium' color='text.primary'>
+            {row.original.nombre}
+          </Typography>
         )
       },
       {
@@ -631,6 +656,12 @@ const ProductListTable = () => {
         cell: ({ row }: any) => <Typography>{row.original.tipo}</Typography>
       },
       {
+        accessorKey: 'estado',
+        header: 'ESTADO',
+        cell: ({ row }: any) => <Switch checked={row.original.estado === 'ACTIVO'} readOnly />,
+        enableSorting: false
+      },
+      {
         id: 'actions',
         header: 'Acciones',
         cell: ({ row }: any) => (
@@ -642,6 +673,14 @@ const ProductListTable = () => {
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary text-[22px]'
               options={[
+                {
+                  text: row.original.estado === 'ACTIVO' ? 'Desactivar' : 'Activar',
+                  icon: <Switch checked={row.original.estado === 'ACTIVO'} size='small' />,
+                  menuItemProps: {
+                    className: 'gap-2',
+                    onClick: () => handleToggleStatus(row.original)
+                  }
+                },
                 {
                   text: 'Duplicar',
                   icon: 'ri-file-copy-line',
@@ -815,7 +854,10 @@ const ProductListTable = () => {
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={(_, newPage) => setPage(newPage)}
-          onRowsPerPageChange={e => setRowsPerPage(Number(e.target.value))}
+          onRowsPerPageChange={e => {
+            setRowsPerPage(Number(e.target.value))
+            setPage(0) // Resetear a la primera página cuando se cambia el número de filas
+          }}
         />
         <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} />
         <EditProductForm

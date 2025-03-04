@@ -32,11 +32,11 @@ const AddEnsayo = () => {
     descripcion: '',
     area: '',
     familia: '',
-    tipo: 'Ensayo',
+    tipo: 'Ensayos',
     norma: '',
     precio: '',
     aplicaImpuesto: false,
-    listaPrecio: ''
+    listaPrecio: '1'
   })
 
   // Estados para las opciones de los selects
@@ -44,11 +44,27 @@ const AddEnsayo = () => {
 
   const [familias] = useState(['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia'])
 
-  const [listasPrecios] = useState([
-    { id: 1, nombre: 'Lista 1' },
-    { id: 2, nombre: 'Lista 2' },
-    { id: 3, nombre: 'Lista 3' }
-  ])
+  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Paquete'])
+
+  const formatNumber = (value: string) => {
+    // Eliminar cualquier caracter que no sea número
+    const numbers = value.replace(/[^\d]/g, '')
+
+    // Convertir a número y formatear con puntos
+    return numbers ? Number(numbers).toLocaleString('es-CL') : ''
+  }
+
+  const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value
+
+    // Guardar el valor sin formato en el estado
+    const numericValue = value.replace(/[^\d]/g, '')
+
+    setFormData(prev => ({
+      ...prev,
+      precio: numericValue
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +111,7 @@ const AddEnsayo = () => {
       <Grid container spacing={6}>
         <Grid item xs={12}>
           <Card>
-            <CardHeader title='Agregar Nuevo Ensayo' />
+            <CardHeader title='Añadir Producto' />
             <CardContent>
               <Grid container spacing={5}>
                 <Grid item xs={12} sm={6}>
@@ -155,37 +171,36 @@ const AddEnsayo = () => {
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Tipo</InputLabel>
+                    <Select
+                      value={formData.tipo}
+                      label='Tipo'
+                      onChange={e => setFormData({ ...formData, tipo: e.target.value })}
+                      required
+                    >
+                      {tipos.map(tipo => (
+                        <MenuItem key={tipo} value={tipo}>
+                          {tipo}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
                   <TextField fullWidth label='Norma' value={formData.norma} onChange={handleChange('norma')} />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label='Precio'
-                    type='number'
-                    value={formData.precio}
-                    onChange={handleChange('precio')}
+                    value={formatNumber(formData.precio)}
+                    onChange={handlePriceChange}
                     required
                     InputProps={{
                       startAdornment: <InputAdornment position='start'>$</InputAdornment>
                     }}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Lista de Precios</InputLabel>
-                    <Select
-                      value={formData.listaPrecio}
-                      label='Lista de Precios'
-                      onChange={e => setFormData({ ...formData, listaPrecio: e.target.value })}
-                      required
-                    >
-                      {listasPrecios.map(lista => (
-                        <MenuItem key={lista.id} value={lista.id}>
-                          {lista.nombre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
                 </Grid>
                 <Grid item xs={12}>
                   <FormControlLabel

@@ -6,9 +6,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const productos = await prisma.producto.findMany({
       include: {
-        ProductoListaPrecio: {
+        listasPrecios: {
           include: {
-            ListaPrecio: true
+            listaPrecio: true
           },
           where: params.id !== 'all' ? { listaPrecioId: parseInt(params.id) } : undefined
         }
@@ -24,11 +24,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
       familia: producto.familia,
       tipo: producto.tipo,
       precio: producto.precio,
-      listasPrecios: producto.ProductoListaPrecio.map(plp => ({
+      listasPrecios: producto.listasPrecios.map(plp => ({
         id: plp.id,
         precio: plp.precio,
         activo: plp.activo,
-        listaPrecio: plp.ListaPrecio
+        listaPrecio: plp.listaPrecio
       }))
     }))
 
