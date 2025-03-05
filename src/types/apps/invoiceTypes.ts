@@ -13,22 +13,15 @@ export type InvoiceClientType = {
   companyEmail: string
 }
 
-export type InvoiceType = {
-  id: string
-  name: string
-  total: number
-  avatar: string
-  service: string
-  dueDate: string
-  address: string
-  company: string
-  country: string
-  contact: string
-  avatarColor?: string
-  issuedDate: string
-  companyEmail: string
-  balance: string | number
-  invoiceStatus: InvoiceStatus
+export interface InvoiceType {
+  id: number
+  numeroCotizacion: string
+  fecha: string
+  empresa: string
+  comuna: string
+  tipo: 'A' | 'B' | 'C'
+  contacto: string
+  estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
 }
 
 export type InvoicePaymentType = {

@@ -84,11 +84,12 @@ const PreviewCard = () => {
               EN ATENCIÓN A:
             </Typography>
             {previewData.contacto && (
-              <>
+              <div>
                 <Typography>{previewData.contacto.nombre}</Typography>
                 <Typography>{previewData.contacto.email}</Typography>
                 <Typography>{previewData.contacto.cargo}</Typography>
-              </>
+                <Typography>{previewData.contacto.telefono1}</Typography>
+              </div>
             )}
           </Grid>
           <Grid item xs={6}>
@@ -106,10 +107,10 @@ const PreviewCard = () => {
           <Typography variant='subtitle2' sx={{ mb: 2 }}>
             DATOS DEL PROYECTO
           </Typography>
-          <Typography>{previewData.tipoCotizacion}</Typography>
-          <Typography>{previewData.nombreProyecto}</Typography>
-          <Typography>{previewData.empresa}</Typography>
-          <Typography>{previewData.ubicacion}</Typography>
+          <Typography>Tipo: {previewData.tipoCotizacion}</Typography>
+          <Typography>Proyecto: {previewData.nombreProyecto}</Typography>
+          <Typography>Empresa: {previewData.empresa}</Typography>
+          <Typography>Ubicación: {previewData.ubicacion}</Typography>
         </Box>
 
         {/* Tabla de Productos */}

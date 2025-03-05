@@ -280,6 +280,7 @@ model Cotizacion {
   nombreProyecto   String?
   empresa          String?
   ubicacion        String?
+  formaPago        String?             // Campo agregado para forma de pago
   clienteId        Int?
   cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   obraId           Int?

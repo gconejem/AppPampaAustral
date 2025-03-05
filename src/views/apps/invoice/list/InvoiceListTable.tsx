@@ -1,12 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useMemo } from 'react'
-
-// Next Imports
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -21,87 +16,340 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import Divider from '@mui/material/Divider'
+import { toast } from 'react-hot-toast'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Grid from '@mui/material/Grid'
+import Typography from '@mui/material/Typography'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 
 // Type Imports
 import type { InvoiceType } from '@/types/apps/invoiceTypes'
 
 const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
+  const [selectedRows, setSelectedRows] = useState<number[]>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [openPreview, setOpenPreview] = useState(false)
+  const [selectedCotizacion, setSelectedCotizacion] = useState<any>(null)
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
+  const [localData, setLocalData] = useState<InvoiceType[]>([])
+
+  // Inicializar localData con invoiceData
+  useEffect(() => {
+    if (invoiceData) {
+      setLocalData(invoiceData)
+    }
+  }, [invoiceData])
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && invoiceData) {
+      setSelectedRows(invoiceData.map(row => row.id))
+    } else {
+      setSelectedRows([])
+    }
+  }
+
+  const handleSelectOne = (checked: boolean, id: number) => {
+    if (checked) {
+      setSelectedRows(prev => [...prev, id])
+    } else {
+      setSelectedRows(prev => prev.filter(rowId => rowId !== id))
+    }
+  }
+
+  const handleExport = () => {
+    try {
+      setIsLoading(true)
+
+      if (selectedRows.length === 0) {
+        toast.error('Por favor, seleccione al menos una cotización para exportar')
+
+        return
+      }
+
+      // Preparar los datos para CSV
+      const headers = ['N° COTIZACIÓN', 'FECHA', 'EMPRESA', 'COMUNA', 'TIPO', 'CONTACTO', 'ESTADO']
+
+      const selectedData = invoiceData?.filter(row => selectedRows.includes(row.id)) || []
+
+      const csvData = selectedData.map(row => [
+        row.numeroCotizacion,
+        row.fecha,
+        row.empresa,
+        row.comuna,
+        row.tipo,
+        row.contacto,
+        row.estado
+      ])
+
+      // Crear el contenido del CSV
+      const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
+
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' })
+      const link = document.createElement('a')
+
+      link.href = URL.createObjectURL(blob)
+      link.download =
+        selectedData.length === 1
+          ? `Cotizacion_${selectedData[0].numeroCotizacion}.csv`
+          : `Cotizaciones_${new Date().toISOString().split('T')[0]}.csv`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+
+      toast.success(`${selectedData.length} cotización(es) exportada(s) exitosamente`)
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      toast.error('Error al exportar cotizaciones')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getEstadoColor = (estado: InvoiceType['estado']) => {
+    switch (estado) {
+      case 'BORRADOR':
+        return 'default'
+      case 'COTIZADA':
+        return 'info'
+      case 'GESTIONADA':
+        return 'warning'
+      case 'ACEPTADA':
+        return 'success'
+      case 'SIN_RESPUESTA':
+        return 'error'
+      case 'RECHAZADA':
+        return 'error'
+      default:
+        return 'default'
+    }
+  }
+
+  const getTipoColor = (tipo: InvoiceType['tipo']) => {
+    switch (tipo) {
+      case 'A':
+        return 'success'
+      case 'B':
+        return 'warning'
+      case 'C':
+        return 'error'
+      default:
+        return 'default'
+    }
+  }
+
+  const getTipoLabel = (tipo: InvoiceType['tipo']) => {
+    switch (tipo) {
+      case 'A':
+        return 'Tipo A'
+      case 'B':
+        return 'Tipo B'
+      case 'C':
+        return 'Tipo C'
+      default:
+        return tipo
+    }
+  }
+
+  const handlePreviewClick = async (id: number) => {
+    try {
+      const response = await fetch(`/api/cotizaciones/${id}`)
+      const data = await response.json()
+
+      setSelectedCotizacion(data)
+      setOpenPreview(true)
+    } catch (error) {
+      console.error('Error al cargar la cotización:', error)
+      toast.error('Error al cargar la cotización')
+    }
+  }
+
+  const handleEstadoClick = (event: React.MouseEvent<HTMLElement>, id: number) => {
+    setAnchorEl(event.currentTarget)
+    setSelectedRowId(id)
+  }
+
+  const handleEstadoClose = () => {
+    setAnchorEl(null)
+    setSelectedRowId(null)
+  }
+
+  const handleEstadoChange = async (newEstado: string) => {
+    if (!selectedRowId) return
+
+    try {
+      const response = await fetch(`/api/cotizaciones/${selectedRowId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estado: newEstado,
+          fechaActualizacion: new Date().toISOString()
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+
+        throw new Error(error || 'Error al actualizar el estado')
+      }
+
+      // Si la actualización en el servidor fue exitosa, actualizamos la UI
+      const updatedData = await response.json()
+
+      setLocalData(prevData =>
+        prevData.map(row => (row.id === selectedRowId ? { ...row, estado: updatedData.estado } : row))
+      )
+
+      toast.success('Estado actualizado correctamente')
+
+      // Opcional: Recargar los datos completos
+      const refreshResponse = await fetch('/api/cotizaciones')
+
+      if (refreshResponse.ok) {
+        const freshData = await refreshResponse.json()
+
+        setLocalData(freshData)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al actualizar el estado: ' + (error as Error).message)
+    }
+
+    handleEstadoClose()
+  }
+
+  // Modificar filteredData para usar localData en lugar de invoiceData
+  const filteredData = localData?.filter(row => {
+    if (!globalFilter) return true
+
+    const searchStr = globalFilter.toLowerCase()
+
+    return (
+      row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
+      row.empresa?.toLowerCase().includes(searchStr) ||
+      row.comuna?.toLowerCase().includes(searchStr) ||
+      row.contacto?.toLowerCase().includes(searchStr)
+    )
+  })
+
   return (
     <Card>
+      <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
+        <Button
+          color='secondary'
+          variant='outlined'
+          startIcon={<i className='ri-upload-2-line text-xl' />}
+          onClick={handleExport}
+          disabled={isLoading}
+          className='max-sm:is-full'
+        >
+          Exportar
+        </Button>
+        <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+          <TextField
+            size='small'
+            value={globalFilter}
+            onChange={e => setGlobalFilter(e.target.value)}
+            placeholder='Buscar'
+            style={{ width: '500px' }}
+            className='max-sm:is-full min-is-[200px]'
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <i className='ri-search-line' />
+                </InputAdornment>
+              ),
+              sx: {
+                padding: '8px',
+                borderRadius: '8px',
+                border: '1px solid #E0E0E0'
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <Divider />
+
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
+              <TableCell padding='checkbox'>
                 <Checkbox
-                  indeterminate={invoiceData?.length > 0 && invoiceData.length < invoiceData.length}
-                  checked={invoiceData?.length > 0 && invoiceData.length === invoiceData.length}
-                  onChange={(event) => {
-                    if (event.target.checked) {
-                      // Handle select all
-                    } else {
-                      // Handle select none
-                    }
-                  }}
+                  indeterminate={
+                    filteredData?.length ? selectedRows.length > 0 && selectedRows.length < filteredData.length : false
+                  }
+                  checked={filteredData?.length ? selectedRows.length === filteredData.length : false}
+                  onChange={event => handleSelectAll(event.target.checked)}
                   inputProps={{ 'aria-label': 'select all' }}
                 />
               </TableCell>
               <TableCell>N° COTIZACIÓN</TableCell>
-              <TableCell>CLIENTE</TableCell>
               <TableCell>FECHA</TableCell>
+              <TableCell>EMPRESA</TableCell>
+              <TableCell>COMUNA</TableCell>
+              <TableCell>TIPO</TableCell>
+              <TableCell>CONTACTO</TableCell>
               <TableCell>ESTADO</TableCell>
-              <TableCell>ACCIONES</TableCell>
+              <TableCell align='center'>ACCIONES</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {invoiceData?.map(row => (
+            {filteredData?.map(row => (
               <TableRow key={row.id}>
-                <TableCell padding="checkbox">
+                <TableCell padding='checkbox'>
                   <Checkbox
-                    checked={invoiceData.includes(row.id)}
-                    onChange={(event) => {
-                      if (event.target.checked) {
-                        // Handle select individual
-                      } else {
-                        // Handle deselect individual
-                      }
-                    }}
+                    checked={selectedRows.includes(row.id)}
+                    onChange={event => handleSelectOne(event.target.checked, row.id)}
                   />
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
-                <TableCell>{row.cliente}</TableCell>
                 <TableCell>{row.fecha}</TableCell>
+                <TableCell>{row.empresa}</TableCell>
+                <TableCell>{row.comuna}</TableCell>
                 <TableCell>
-                  <Chip
-                    label={row.estado}
-                    color={row.estado === 'PENDIENTE' ? 'warning' : 'success'}
-                    variant='outlined'
-                  />
+                  <Chip label={getTipoLabel(row.tipo)} color={getTipoColor(row.tipo)} variant='outlined' size='small' />
+                </TableCell>
+                <TableCell>{row.contacto}</TableCell>
+                <TableCell>
+                  <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Tooltip title="Ver">
-                      <IconButton
-                        size="small"
-                        href={`/apps/invoice/preview/${row.id}`}
-                      >
-                        <i className="ri-eye-line" />
+                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                    <Tooltip title='Ver'>
+                      <IconButton size='small' onClick={() => handlePreviewClick(row.id)}>
+                        <i className='ri-eye-line' />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Editar">
-                      <IconButton
-                        size="small"
-                        href={`/apps/invoice/edit/${row.id}`}
-                      >
-                        <i className="ri-pencil-line" />
+                    <Tooltip title='Editar'>
+                      <IconButton size='small' href={`/apps/invoice/edit/${row.id}`}>
+                        <i className='ri-pencil-line' />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Eliminar">
+                    <Tooltip title='Cambiar Estado'>
                       <IconButton
-                        size="small"
-                        color="error"
+                        size='small'
+                        onClick={e => handleEstadoClick(e, row.id)}
+                        color={getEstadoColor(row.estado) === 'error' ? 'error' : 'default'}
                       >
-                        <i className="ri-delete-bin-line" />
+                        <i className='ri-settings-4-line' />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -111,6 +359,115 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth='md' fullWidth>
+        <DialogTitle>Vista Previa de Cotización</DialogTitle>
+        <DialogContent>
+          {selectedCotizacion && (
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Typography variant='h6'>Datos de la Cotización</Typography>
+                <Typography>N° Cotización: {selectedCotizacion.numeroCotizacion}</Typography>
+                <Typography>Tipo: {selectedCotizacion.tipoCotizacion}</Typography>
+                <Typography>Estado: {selectedCotizacion.estado}</Typography>
+                <Typography>
+                  Fecha Emisión: {new Date(selectedCotizacion.fechaCreacion).toLocaleDateString('es-CL')}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant='h6'>Datos del Proyecto</Typography>
+                <Typography>Nombre: {selectedCotizacion.nombreProyecto}</Typography>
+                <Typography>Empresa: {selectedCotizacion.empresa}</Typography>
+                <Typography>Ubicación: {selectedCotizacion.ubicacion}</Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant='h6'>Contacto</Typography>
+                {selectedCotizacion.contacto && (
+                  <>
+                    <Typography>Nombre: {selectedCotizacion.contacto.nombre}</Typography>
+                    <Typography>Cargo: {selectedCotizacion.contacto.cargo}</Typography>
+                    <Typography>Email: {selectedCotizacion.contacto.email}</Typography>
+                    <Typography>Teléfono: {selectedCotizacion.contacto.telefono1}</Typography>
+                  </>
+                )}
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant='h6'>Detalles</Typography>
+                {selectedCotizacion.detalles?.map((detalle: any, index: number) => (
+                  <div key={index}>
+                    <Typography>Producto: {detalle.producto?.nombre}</Typography>
+                    <Typography>Cantidad: {detalle.cantidad}</Typography>
+                    <Typography>Precio: ${detalle.precioUnitario?.toLocaleString('es-CL')}</Typography>
+                    <Typography>Subtotal: ${detalle.subtotal?.toLocaleString('es-CL')}</Typography>
+                    <Divider sx={{ my: 1 }} />
+                  </div>
+                ))}
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant='h6'>Totales</Typography>
+                <Typography>Subtotal: ${selectedCotizacion.subtotal?.toLocaleString('es-CL')}</Typography>
+                <Typography>Descuento: ${selectedCotizacion.descuento?.toLocaleString('es-CL')}</Typography>
+                <Typography>IVA: ${selectedCotizacion.impuesto?.toLocaleString('es-CL')}</Typography>
+                <Typography variant='h6'>Total: ${selectedCotizacion.total?.toLocaleString('es-CL')}</Typography>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPreview(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleEstadoClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right'
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+      >
+        <MenuItem onClick={() => handleEstadoChange('BORRADOR')}>
+          <ListItemIcon>
+            <Chip label='BORRADOR' size='small' color='default' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Borrador</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEstadoChange('COTIZADA')}>
+          <ListItemIcon>
+            <Chip label='COTIZADA' size='small' color='info' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Cotizada</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEstadoChange('GESTIONADA')}>
+          <ListItemIcon>
+            <Chip label='GESTIONADA' size='small' color='warning' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Gestionada</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEstadoChange('ACEPTADA')}>
+          <ListItemIcon>
+            <Chip label='ACEPTADA' size='small' color='success' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Aceptada</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEstadoChange('SIN_RESPUESTA')}>
+          <ListItemIcon>
+            <Chip label='SIN RESPUESTA' size='small' color='error' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Sin Respuesta</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEstadoChange('RECHAZADA')}>
+          <ListItemIcon>
+            <Chip label='RECHAZADA' size='small' color='error' variant='outlined' />
+          </ListItemIcon>
+          <ListItemText>Rechazada</ListItemText>
+        </MenuItem>
+      </Menu>
     </Card>
   )
 }

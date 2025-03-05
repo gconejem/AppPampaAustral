@@ -34,9 +34,11 @@ import TableBody from '@mui/material/TableBody'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import SearchIcon from '@mui/icons-material/Search'
+import FormHelperText from '@mui/material/FormHelperText'
 
 // Third-party Imports
 import classnames from 'classnames'
+import { toast } from 'react-hot-toast'
 
 // Type Imports
 import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -58,6 +60,40 @@ interface ProductoEnPaquete {
   descripcion?: string
 }
 
+interface FormData {
+  numeroCotizacion: string
+  tipoCotizacion: 'A' | 'B' | 'C' | ''
+  estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
+  nombreProyecto: string
+  empresa: string
+  ubicacion: string
+  fechaInicio: Date | null
+  fechaFin: Date | null
+  clienteId: number | null
+  obraId: number | null
+  contactoId: number | null
+  subtotal: number
+  descuento: number
+  impuesto: number
+  total: number
+  observaciones: string
+  detalles: Array<{
+    productoId: number
+    cantidad: number
+    precioUnitario: number
+    descuento: number
+    subtotal: number
+  }>
+  formaPago: 'CONTADO' | 'CREDITO_30' | 'CREDITO_60' | 'CREDITO_90'
+}
+
+interface ValidationErrors {
+  tipoCotizacion: boolean
+  nombreProyecto: boolean
+  empresa: boolean
+  ubicacion: boolean
+}
+
 const AddCard = ({
   invoiceData,
   onFormDataChange
@@ -67,50 +103,117 @@ const AddCard = ({
 }) => {
   const router = useRouter()
 
-  // Estados base
-  const [formData, setFormData] = useState({
-    // Datos principales
+  // Actualizar el estado inicial
+  const initialFormData: FormData = {
     numeroCotizacion: '',
     tipoCotizacion: '',
     estado: 'BORRADOR',
-
-    // Fechas
-    fechaInicio: null,
-    fechaFin: null,
-
-    // Contacto
-    contacto: null as Contacto | null,
-
-    // Totales
+    nombreProyecto: '',
+    empresa: '',
+    ubicacion: '',
+    fechaInicio: new Date(),
+    fechaFin: new Date(new Date().setDate(new Date().getDate() + 15)), // 15 días desde hoy
+    clienteId: null,
+    obraId: null,
+    contactoId: null,
     subtotal: 0,
     descuento: 0,
     impuesto: 0,
     total: 0,
-
-    // Otros
     observaciones: '',
-    vendedorId: '', // Se puede obtener de la sesión
-    detalles: [] as Array<{
-      productoId: number
-      precio: number
-      cantidad: number
-      subtotal: number
-      descuento: number
-      descripcion?: string
-    }>,
+    detalles: [],
+    formaPago: 'CONTADO'
+  }
 
-    // Nuevos campos
-    nombreProyecto: '',
-    empresa: '',
-    ubicacion: ''
-  })
+  const initialValidationErrors: ValidationErrors = {
+    tipoCotizacion: false,
+    nombreProyecto: false,
+    empresa: false,
+    ubicacion: false
+  }
+
+  // Actualizar la declaración del estado
+  const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(initialValidationErrors)
+
+  // Función de validación
+  const validateForm = () => {
+    const errors = {
+      tipoCotizacion: !formData.tipoCotizacion,
+      empresa: !formData.empresa,
+      ubicacion: !formData.ubicacion,
+      nombreProyecto: !formData.nombreProyecto
+    }
+
+    setValidationErrors(errors)
+
+    return !Object.values(errors).some(error => error)
+  }
+
+  // Función para guardar
+  const handleSave = async () => {
+    try {
+      if (!validateForm()) {
+        toast.error('Por favor, complete todos los campos requeridos')
+
+        return
+      }
+
+      const dataToSend = {
+        numeroCotizacion: formData.numeroCotizacion,
+        tipoCotizacion: formData.tipoCotizacion,
+        estado: formData.estado,
+        fechaEmision: fechaEmision.toISOString(),
+        fechaVencimiento: fechaVencimiento.toISOString(),
+        fechaInicio: formData.fechaInicio?.toISOString() || '',
+        fechaFin: formData.fechaFin?.toISOString() || '',
+        nombreProyecto: formData.nombreProyecto,
+        empresa: formData.empresa,
+        ubicacion: formData.ubicacion,
+        subtotal: formData.subtotal,
+        descuento: formData.descuento,
+        impuesto: formData.impuesto,
+        total: formData.total,
+        observaciones: formData.observaciones,
+        clienteId: formData.clienteId,
+        obraId: formData.obraId,
+        contactoId: formData.contactoId,
+        detalles: formData.detalles.map(detalle => ({
+          productoId: detalle.productoId,
+          cantidad: detalle.cantidad,
+          precioUnitario: detalle.precioUnitario,
+          descuento: detalle.descuento || 0,
+          subtotal: detalle.subtotal
+        })),
+        formaPago: formData.formaPago
+      }
+
+      const response = await fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dataToSend)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+
+        throw new Error(error.message || 'Error al guardar la cotización')
+      }
+
+      toast.success('Cotización guardada exitosamente')
+      router.push('/apps/invoice/list')
+    } catch (error) {
+      console.error('Error al guardar:', error)
+      toast.error(error.message || 'Error al guardar la cotización')
+    }
+  }
 
   // States
   const [open, setOpen] = useState(false)
   const [count, setCount] = useState(1)
   const [selectData, setSelectData] = useState<InvoiceType | null>(null)
-  const [issuedDate, setIssuedDate] = useState<Date | null | undefined>(null)
-  const [dueDate, setDueDate] = useState<Date | null | undefined>(null)
   const [clientes, setClientes] = useState([])
   const [obras, setObras] = useState([])
 
@@ -139,6 +242,10 @@ const AddCard = ({
     }>
   >([])
 
+  // Agregar estado para la búsqueda de productos
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredProductos, setFilteredProductos] = useState(productos)
+
   // Agregar un estado para el descuento
   const [descuento, setDescuento] = useState<number>(0)
 
@@ -146,7 +253,7 @@ const AddCard = ({
   const [productRows, setProductRows] = useState([
     {
       id: 1,
-      productoId: '',
+      productoId: 0,
       cantidad: 1,
       descuento: 0,
       precio: 0,
@@ -163,13 +270,20 @@ const AddCard = ({
       nombre: string
       cargo: string
       email: string
-      telefono?: string
+      telefono1: string
     }>
   >([])
 
   // Agregar nuevo estado para áreas únicas
   const [areas, setAreas] = useState<string[]>([])
   const [selectedArea, setSelectedArea] = useState<string>('')
+
+  // Agregar estado para las fechas
+  const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
+
+  const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
+    new Date(new Date().setDate(new Date().getDate() + 15))
+  )
 
   // Hooks
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
@@ -226,28 +340,49 @@ const AddCard = ({
 
   // Modificar el useEffect de carga de productos
   useEffect(() => {
-    fetch('/api/productos')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Productos cargados (raw):', data) // Ver los datos crudos
+    fetch('/api/productos?limit=10')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar productos')
+        }
 
-        const productosConNorma = data.map((p: any) => {
-          console.log('Producto individual:', p) // Ver cada producto
-
-          return {
-            ...p,
-            nombreCompleto: `${p.nombre}${p.norma ? ` - ${p.norma}` : ''}`
-          }
-        })
-
-        setProductos(productosConNorma)
-
-        // Obtener áreas únicas
-        const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area).filter(Boolean)))
-
-        setAreas(uniqueAreas)
+        return res.json()
       })
-      .catch(error => console.error('Error al cargar productos:', error))
+      .then(response => {
+        console.log('Respuesta de productos (raw):', response)
+        const data = response.productos || []
+
+        const productosFormateados = data.map((p: any) => ({
+          productoId: p.productoId,
+          sku: p.sku,
+          nombre: p.nombre,
+          precio: p.precio || 0,
+          area: p.area || 'Sin área',
+          descripcion: p.descripcion || '',
+          esPaquete: p.esPaquete || false,
+          norma: p.norma || '',
+          nombreCompleto: `${p.nombre}${p.norma ? ` - ${p.norma}` : ''}`,
+          productosEnPaquete: p.productosEnPaquete || []
+        }))
+
+        console.log('Productos formateados:', productosFormateados)
+        setProductos(productosFormateados)
+        setFilteredProductos(productosFormateados)
+
+        // Obtener todas las áreas únicas y ordenarlas alfabéticamente
+        const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area || 'Sin área')))
+          .filter(area => area)
+          .sort((a, b) => a.localeCompare(b))
+
+        console.log('Áreas únicas:', uniqueAreas)
+        setAreas(uniqueAreas as string[])
+      })
+      .catch(error => {
+        console.error('Error al cargar productos:', error)
+        toast.error('Error al cargar los productos')
+        setProductos([])
+        setFilteredProductos([])
+      })
   }, [])
 
   // Agregar useEffect para cargar el número de cotización
@@ -273,11 +408,11 @@ const AddCard = ({
 
         // Mapear los datos para asegurar la estructura correcta
         const contactosMapeados = data.map((contacto: any) => ({
-          contactoId: contacto.contactId, // Asegurarnos de usar los nombres de campos correctos
+          contactoId: contacto.contactId,
           nombre: contacto.nombre,
           cargo: contacto.cargo,
           email: contacto.email,
-          telefono: contacto.telefono1 || contacto.telefono // Por si acaso el campo se llama diferente
+          telefono1: contacto.telefono1
         }))
 
         console.log('Contactos mapeados:', contactosMapeados)
@@ -298,7 +433,7 @@ const AddCard = ({
           nombre: data.contacto.nombre,
           cargo: data.contacto.cargo,
           email: data.contacto.email,
-          telefono: data.contacto.telefono
+          telefono1: data.contacto.telefono1
         }
       }))
     } else {
@@ -366,7 +501,7 @@ const AddCard = ({
 
   // Función para manejar el cambio de producto
   const handleProductoChange = async (e: SelectChangeEvent<string>, index: number) => {
-    const selectedProductId = e.target.value
+    const selectedProductId = Number(e.target.value)
     const selectedProduct = productos.find(p => p.productoId === selectedProductId)
 
     if (!selectedProduct) return
@@ -390,8 +525,8 @@ const AddCard = ({
           productoId: selectedProductId,
           precio: selectedProduct.precio * productRows[index].cantidad,
           area: selectedProduct.area || '',
-          esPaquete: true,
-          descripcion: selectedProduct.descripcion || ''
+          descripcion: selectedProduct.descripcion || '',
+          esPaquete: true
         }
 
         // Agregar los productos del paquete como subfilas
@@ -418,15 +553,13 @@ const AddCard = ({
         productoId: selectedProductId,
         precio: selectedProduct.precio * productRows[index].cantidad,
         area: selectedProduct.area || '',
-        descripcion: selectedProduct.descripcion || '',
-        norma: selectedProduct.norma
+        descripcion: selectedProduct.descripcion || ''
       }
-      console.log('Producto seleccionado:', selectedProduct) // Ver qué datos tiene el producto seleccionado
+      console.log('Producto seleccionado:', selectedProduct)
     }
 
     setProductRows(newRows)
-    calcularTotales(newRows) // Recalcular totales después de cambiar producto
-    setSelectedArea(selectedProduct.area || '')
+    calcularTotales(newRows)
   }
 
   // Función para manejar la visualización
@@ -512,7 +645,7 @@ const AddCard = ({
       ...productRows,
       {
         id: productRows.length + 1,
-        productoId: '',
+        productoId: 0,
         cantidad: 1,
         descuento: 0,
         precio: 0,
@@ -545,6 +678,18 @@ const AddCard = ({
 
     setProductRows(newRows)
     calcularTotales(newRows) // Recalcular totales después de eliminar
+  }
+
+  const handleError = (error: unknown) => {
+    console.error('Error:', error)
+    toast.error('Ha ocurrido un error al guardar la cotización')
+  }
+
+  const handleChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value || '' // Aseguramos que nunca sea null
+    }))
   }
 
   return (
@@ -582,31 +727,17 @@ const AddCard = ({
                         }}
                       />
                     </div>
-                    <div className='flex items-center'>
-                      <Typography className='min-is-[95px] mie-4' color='text.primary'>
+                    <div className='flex items-center gap-2 mb-4'>
+                      <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
                         Fecha Emisión:
                       </Typography>
-                      <AppReactDatepicker
-                        boxProps={{ className: 'is-full' }}
-                        selected={issuedDate}
-                        placeholderText='YYYY-MM-DD'
-                        dateFormat={'yyyy-MM-dd'}
-                        onChange={(date: Date | null) => setIssuedDate(date)}
-                        customInput={<TextField fullWidth size='small' />}
-                      />
+                      <Typography color='text.primary'>{fechaEmision.toLocaleDateString('es-CL')}</Typography>
                     </div>
-                    <div className='flex items-center'>
-                      <Typography className='min-is-[95px] mie-4' color='text.primary'>
+                    <div className='flex items-center gap-2'>
+                      <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
                         Fecha Vencimiento:
                       </Typography>
-                      <AppReactDatepicker
-                        boxProps={{ className: 'is-full' }}
-                        selected={dueDate}
-                        placeholderText='YYYY-MM-DD'
-                        dateFormat={'yyyy-MM-dd'}
-                        onChange={(date: Date | null) => setDueDate(date)}
-                        customInput={<TextField fullWidth size='small' />}
-                      />
+                      <Typography color='text.primary'>{fechaVencimiento.toLocaleDateString('es-CL')}</Typography>
                     </div>
                   </div>
                 </div>
@@ -615,18 +746,45 @@ const AddCard = ({
 
             {/* Campos principales */}
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel id='tipo-cotizacion-label'>Tipo de Cotización</InputLabel>
-                <Select
-                  label='Tipo de Cotización'
-                  value={formData.tipoCotizacion}
-                  onChange={e => updateFormData({ ...formData, tipoCotizacion: e.target.value })}
-                >
-                  <MenuItem value='A'>Tipo A</MenuItem>
-                  <MenuItem value='B'>Tipo B</MenuItem>
-                  <MenuItem value='C'>Tipo C</MenuItem>
-                </Select>
-              </FormControl>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={validationErrors.tipoCotizacion}>
+                    <InputLabel id='tipo-cotizacion-label' required>
+                      Tipo de Cotización
+                    </InputLabel>
+                    <Select
+                      label='Tipo de Cotización'
+                      value={formData.tipoCotizacion}
+                      onChange={e => {
+                        handleChange('tipoCotizacion', e.target.value as 'A' | 'B' | 'C' | '')
+                        setValidationErrors({ ...validationErrors, tipoCotizacion: false })
+                      }}
+                    >
+                      <MenuItem value='A'>Tipo A</MenuItem>
+                      <MenuItem value='B'>Tipo B</MenuItem>
+                      <MenuItem value='C'>Tipo C</MenuItem>
+                    </Select>
+                    {validationErrors.tipoCotizacion && <FormHelperText>Este campo es requerido</FormHelperText>}
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id='forma-pago-label'>Forma de Pago</InputLabel>
+                    <Select
+                      labelId='forma-pago-label'
+                      label='Forma de Pago'
+                      value={formData.formaPago}
+                      onChange={e => handleChange('formaPago', e.target.value)}
+                    >
+                      <MenuItem value='CONTADO'>Contado</MenuItem>
+                      <MenuItem value='CREDITO_30'>Crédito 30 días</MenuItem>
+                      <MenuItem value='CREDITO_60'>Crédito 60 días</MenuItem>
+                      <MenuItem value='CREDITO_90'>Crédito 90 días</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
             </Grid>
 
             {/* Segunda fila: Nombre del Proyecto, Empresa, Ubicación */}
@@ -635,46 +793,46 @@ const AddCard = ({
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
+                    required
                     label='Nombre del Proyecto'
-                    value={formData.nombreProyecto || ''}
-                    onChange={e => updateFormData({ ...formData, nombreProyecto: e.target.value })}
+                    value={formData.nombreProyecto}
+                    onChange={e => {
+                      handleChange('nombreProyecto', e.target.value)
+                      setValidationErrors({ ...validationErrors, nombreProyecto: false })
+                    }}
+                    error={validationErrors.nombreProyecto}
+                    helperText={validationErrors.nombreProyecto ? 'Este campo es requerido' : ''}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
+                    required
                     label='Empresa'
-                    value={formData.empresa || ''}
-                    onChange={e => updateFormData({ ...formData, empresa: e.target.value })}
+                    value={formData.empresa}
+                    onChange={e => {
+                      handleChange('empresa', e.target.value)
+                      setValidationErrors({ ...validationErrors, empresa: false })
+                    }}
+                    error={validationErrors.empresa}
+                    helperText={validationErrors.empresa ? 'Este campo es requerido' : ''}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
+                    required
                     label='Ubicación'
-                    value={formData.ubicacion || ''}
-                    onChange={e => updateFormData({ ...formData, ubicacion: e.target.value })}
+                    value={formData.ubicacion}
+                    onChange={e => {
+                      handleChange('ubicacion', e.target.value)
+                      setValidationErrors({ ...validationErrors, ubicacion: false })
+                    }}
+                    error={validationErrors.ubicacion}
+                    helperText={validationErrors.ubicacion ? 'Este campo es requerido' : ''}
                   />
                 </Grid>
               </Grid>
-            </Grid>
-
-            {/* Fechas */}
-            <Grid item xs={12} md={6}>
-              <AppReactDatepicker
-                label='Fecha Inicio'
-                name='fechaInicio'
-                value={formData.fechaInicio}
-                onChange={date => updateFormData({ ...formData, fechaInicio: date })}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <AppReactDatepicker
-                label='Fecha Fin'
-                name='fechaFin'
-                value={formData.fechaFin}
-                onChange={date => updateFormData({ ...formData, fechaFin: date })}
-              />
             </Grid>
 
             {/* Contacto con búsqueda y detalles */}
@@ -727,20 +885,49 @@ const AddCard = ({
                         nombre: newValue.nombre,
                         cargo: newValue.cargo,
                         email: newValue.email,
-                        telefono: newValue.telefono
+                        telefono1: newValue.telefono1
                       }
+                    })
+                  } else {
+                    // Limpiar los datos del contacto cuando se deselecciona
+                    updateFormData({
+                      contacto: null
                     })
                   }
                 }}
+                value={
+                  formData.contacto
+                    ? {
+                        nombre: formData.contacto.nombre,
+                        cargo: formData.contacto.cargo,
+                        email: formData.contacto.email,
+                        telefono1: formData.contacto.telefono1,
+                        contactoId: 0 // ID temporal para mantener la estructura
+                      }
+                    : null
+                }
               />
 
               {/* Detalles del contacto seleccionado */}
               {formData.contacto && (
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, position: 'relative' }}>
+                  <IconButton
+                    size='small'
+                    onClick={() => updateFormData({ contacto: null })}
+                    sx={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      color: 'text.secondary'
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                   <div className='flex flex-col gap-2'>
                     <Typography>{formData.contacto.nombre}</Typography>
                     <Typography>{formData.contacto.cargo}</Typography>
                     <Typography>{formData.contacto.email}</Typography>
+                    <Typography>{formData.contacto.telefono1}</Typography>
                   </div>
                 </Box>
               )}
@@ -830,7 +1017,7 @@ const AddCard = ({
                           newRows[index] = {
                             ...row,
                             area: e.target.value,
-                            productoId: ''
+                            productoId: 0
                           }
                           setProductRows(newRows)
                         }}
@@ -848,20 +1035,41 @@ const AddCard = ({
 
                   <Grid item xs={12} md={2}>
                     <FormControl fullWidth size='small'>
-                      <InputLabel>Producto</InputLabel>
-                      <Select
-                        value={row.productoId}
-                        onChange={e => handleProductoChange(e, index)}
+                      <Autocomplete
+                        size='small'
+                        options={productos.filter(p => !row.area || p.area === row.area)}
+                        getOptionLabel={option => `${option.nombre} - ${option.sku}`}
+                        value={productos.find(p => p.productoId === row.productoId) || null}
+                        onChange={(_, newValue) => {
+                          if (newValue) {
+                            const newRows = [...productRows]
+
+                            newRows[index] = {
+                              ...row,
+                              productoId: newValue.productoId,
+                              precio: newValue.precio * row.cantidad,
+                              area: newValue.area || '',
+                              descripcion: newValue.descripcion || ''
+                            }
+                            setProductRows(newRows)
+                            calcularTotales(newRows)
+                          }
+                        }}
                         disabled={row.esPaquete || row.esSubProducto}
-                      >
-                        {productos
-                          .filter(p => !row.area || p.area === row.area)
-                          .map(producto => (
-                            <MenuItem key={producto.productoId} value={producto.productoId}>
-                              {producto.nombre} {producto.esPaquete ? '(Paquete)' : ''}
-                            </MenuItem>
-                          ))}
-                      </Select>
+                        renderInput={params => <TextField {...params} label='Producto' size='small' />}
+                        renderOption={(props, option) => (
+                          <Box component='li' {...props}>
+                            <div>
+                              <Typography variant='body1'>
+                                {option.nombre} {option.esPaquete ? '(Paquete)' : ''}
+                              </Typography>
+                              <Typography variant='caption' color='text.secondary'>
+                                SKU: {option.sku}
+                              </Typography>
+                            </div>
+                          </Box>
+                        )}
+                      />
                     </FormControl>
                   </Grid>
 
@@ -987,18 +1195,6 @@ const AddCard = ({
                       }}
                     />
                   </Grid>
-
-                  <Grid item xs={12} md={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <IconButton
-                      color='error'
-                      onClick={() => handleDeleteRow(index)}
-                      sx={{
-                        visibility: row.esSubProducto ? 'hidden' : 'visible'
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Grid>
                 </Grid>
               ))}
 
@@ -1044,64 +1240,6 @@ const AddCard = ({
               }
             }}
           >
-            <Grid item>
-              <Button
-                color='primary'
-                variant='contained'
-                onClick={async () => {
-                  try {
-                    if (!formData.cliente?.clienteId) {
-                      throw new Error('Debe seleccionar un cliente')
-                    }
-
-                    const dataToSend = {
-                      numeroCotizacion: formData.numeroCotizacion,
-                      tipoCotizacion: formData.tipoCotizacion,
-                      estado: 'PENDIENTE',
-                      clienteId: formData.cliente.clienteId,
-                      obraId: formData.obra?.obraId || null,
-                      fechaInicio: new Date().toISOString(),
-                      fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                      subtotal: formData.subtotal,
-                      descuento: formData.descuento,
-                      impuesto: formData.impuesto,
-                      total: formData.total,
-                      observaciones: formData.observaciones,
-                      detalles: {
-                        create: formData.detalles.map(detalle => ({
-                          productoId: detalle.productoId,
-                          cantidad: detalle.cantidad,
-                          precioUnitario: detalle.precioUnitario,
-                          descuento: detalle.descuento || 0,
-                          subtotal: detalle.subtotal
-                        }))
-                      }
-                    }
-
-                    console.log('Datos a enviar:', JSON.stringify(dataToSend, null, 2))
-
-                    const response = await fetch('/api/cotizaciones', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify(dataToSend)
-                    })
-
-                    if (!response.ok) {
-                      throw new Error('Error al guardar la cotización')
-                    }
-
-                    router.push('/apps/invoice/list')
-                  } catch (error) {
-                    console.error('Error al guardar:', error)
-                    alert(error.message)
-                  }
-                }}
-              >
-                Guardar
-              </Button>
-            </Grid>
             <Grid item>
               <Button color='secondary' variant='outlined' onClick={handlePreview}>
                 Visualizar

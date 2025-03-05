@@ -1,54 +1,10 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const id = parseInt(params.id)
-    const data = await req.json()
+import { EstadoCotizacion } from '@prisma/client'
 
-    const cotizacion = await prisma.cotizacion.update({
-      where: { id },
-      data: {
-        tipoCotizacion: data.tipoCotizacion,
-        estado: data.estado,
-        clienteId: data.clienteId,
-        obraId: data.obraId,
-        contactoId: data.contacto?.id,
-        observaciones: data.observaciones,
-        detalles: {
-          deleteMany: {},
-          create: data.detalles.map((detalle: any) => ({
-            productoId: detalle.productoId,
-            cantidad: detalle.cantidad,
-            precioUnitario: detalle.precioUnitario,
-            descuento: detalle.descuento,
-            subtotal: detalle.subtotal
-          }))
-        }
-      },
-      include: {
-        cliente: true,
-        obra: true,
-        contacto: true,
-        detalles: {
-          include: {
-            producto: true
-          }
-        }
-      }
-    })
+import { prisma } from '@/lib/prisma'
 
-    return NextResponse.json(cotizacion)
-  } catch (error) {
-    console.error('Error al actualizar cotización:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar cotización' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
 
@@ -57,7 +13,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       include: {
         cliente: true,
         obra: true,
-        contacto: true,
+        contacto: {
+          include: {
+            contacto: true
+          }
+        },
         detalles: {
           include: {
             producto: true
@@ -67,18 +27,39 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     })
 
     if (!cotizacion) {
-      return NextResponse.json(
-        { error: 'Cotización no encontrada' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
     }
 
     return NextResponse.json(cotizacion)
   } catch (error) {
-    console.error('Error al obtener cotización:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener cotización' },
-      { status: 500 }
-    )
+    console.error('Error al obtener la cotización:', error)
+
+    return NextResponse.json({ error: 'Error al obtener la cotización' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = parseInt(params.id)
+    const body = await request.json()
+
+    // Validar que el estado sea uno válido
+    if (body.estado && !Object.values(EstadoCotizacion).includes(body.estado)) {
+      return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
+    }
+
+    const cotizacion = await prisma.cotizacion.update({
+      where: { id },
+      data: {
+        estado: body.estado,
+        updatedAt: new Date()
+      }
+    })
+
+    return NextResponse.json(cotizacion)
+  } catch (error) {
+    console.error('Error al actualizar la cotización:', error)
+
+    return NextResponse.json({ error: 'Error al actualizar la cotización' }, { status: 500 })
   }
 }

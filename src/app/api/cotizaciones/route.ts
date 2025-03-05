@@ -1,5 +1,6 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
@@ -38,9 +39,11 @@ export async function GET() {
     })
 
     console.log('Cotizaciones formateadas:', formattedCotizaciones)
+
     return NextResponse.json(formattedCotizaciones)
   } catch (error) {
     console.error('Error al obtener cotizaciones:', error)
+
     return NextResponse.json({ error: 'Error al obtener cotizaciones' }, { status: 500 })
   }
 }
@@ -48,6 +51,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+
     console.log('Datos recibidos en API:', body)
     console.log('Detalles recibidos:', JSON.stringify(body.detalles, null, 2))
 
@@ -61,10 +65,14 @@ export async function POST(req: Request) {
         numeroCotizacion: body.numeroCotizacion,
         tipoCotizacion: body.tipoCotizacion,
         estado: body.estado,
-        clienteId: body.clienteId,
-        obraId: body.obraId,
         fechaInicio: new Date(body.fechaInicio),
         fechaFin: new Date(body.fechaFin),
+        nombreProyecto: body.nombreProyecto,
+        empresa: body.empresa,
+        ubicacion: body.ubicacion,
+        formaPago: body.formaPago,
+        clienteId: body.clienteId,
+        obraId: body.obraId,
         subtotal: body.subtotal,
         descuento: body.descuento,
         impuesto: body.impuesto,
@@ -73,7 +81,8 @@ export async function POST(req: Request) {
         detalles: {
           create: body.detalles.create.map((detalle: any) => {
             // Calcular el subtotal si es null
-            const subtotal = detalle.subtotal ?? (detalle.cantidad * detalle.precioUnitario * (1 - (detalle.descuento || 0) / 100))
+            const subtotal =
+              detalle.subtotal ?? detalle.cantidad * detalle.precioUnitario * (1 - (detalle.descuento || 0) / 100)
 
             return {
               productoId: parseInt(detalle.productoId),
@@ -94,15 +103,17 @@ export async function POST(req: Request) {
       success: true,
       data: result
     })
-
   } catch (error: any) {
     console.error('Error al crear cotización:', error)
 
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Error al crear la cotización'
-    }, {
-      status: 500
-    })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Error al crear la cotización'
+      },
+      {
+        status: 500
+      }
+    )
   }
 }
