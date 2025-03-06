@@ -10,12 +10,17 @@ import MenuItem from '@mui/material/MenuItem'
 
 // Custom Component Imports
 import PickersRange from './date'
-import { ESTADOS_OBRA } from '@/data/constants'
+import { ESTADOS_OBRA } from '@/data/obraData'
+
+interface Estado {
+  value: string
+  label: string
+}
 
 interface TableFiltersProps {
   workData: any[]
   setFilteredData: (data: any[]) => void
-  estados?: string[]
+  estados?: Estado[]
 }
 
 const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: TableFiltersProps) => {
@@ -32,14 +37,16 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
     if (start && end) {
       filteredWorks = filteredWorks.filter(work => {
         const workDate = new Date(work.createdAt)
+        const startOfDay = new Date(start.setHours(0, 0, 0, 0))
+        const endOfDay = new Date(end.setHours(23, 59, 59, 999))
 
-        return workDate >= start && workDate <= end
+        return workDate >= startOfDay && workDate <= endOfDay
       })
     }
 
     if (selectedEstado) {
       filteredWorks = filteredWorks.filter(
-        work => work.estado?.toString().toLowerCase() === selectedEstado.toString().toLowerCase()
+        work => work.estadoObra?.toString().toLowerCase() === selectedEstado.toString().toLowerCase()
       )
     }
 
@@ -55,15 +62,17 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
 
     if (estado) {
       filteredWorks = filteredWorks.filter(
-        work => work.estado?.toString().toLowerCase() === estado.toString().toLowerCase()
+        work => work.estadoObra?.toString().toLowerCase() === estado.toString().toLowerCase()
       )
     }
 
     if (startDate && endDate) {
       filteredWorks = filteredWorks.filter(work => {
         const workDate = new Date(work.createdAt)
+        const startOfDay = new Date(startDate.setHours(0, 0, 0, 0))
+        const endOfDay = new Date(endDate.setHours(23, 59, 59, 999))
 
-        return workDate >= startDate && workDate <= endDate
+        return workDate >= startOfDay && workDate <= endOfDay
       })
     }
 
@@ -85,12 +94,11 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
           <InputLabel>Estado</InputLabel>
           <Select value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
             <MenuItem value=''>Todos</MenuItem>
-            {Array.isArray(estados) &&
-              estados.map((estado: string) => (
-                <MenuItem key={estado} value={estado}>
-                  {estado}
-                </MenuItem>
-              ))}
+            {estados.map(estado => (
+              <MenuItem key={estado.value} value={estado.value}>
+                {estado.label}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>

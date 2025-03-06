@@ -29,6 +29,7 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -75,6 +76,21 @@ const CONDICIONES_VENTA = [
   { value: 'Credito60', label: 'Crédito 60 días' },
   { value: 'Otro', label: 'Otro' }
 ] as const
+
+// Agregar el enum o constante para los roles
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
 
 const AddClienteDrawer = (props: Props) => {
   // Props
@@ -967,12 +983,12 @@ const AddClienteDrawer = (props: Props) => {
                   <TableCell
                     sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
                   >
-                    NOMBRE
+                    CARGO
                   </TableCell>
                   <TableCell
                     sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
                   >
-                    CARGO
+                    NOMBRE
                   </TableCell>
                   <TableCell
                     sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
@@ -998,19 +1014,24 @@ const AddClienteDrawer = (props: Props) => {
                 {/* Fila para nuevo contacto */}
                 <TableRow>
                   <TableCell>
+                    <FormControl fullWidth size='small'>
+                      <Select
+                        value={nuevoContacto.cargo}
+                        onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
+                      >
+                        {ROLES_CONTACTO.map(rol => (
+                          <MenuItem key={rol.value} value={rol.value}>
+                            {rol.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell>
                     <TextField
                       value={nuevoContacto.nombre}
                       onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
                       placeholder='Nombre'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.cargo}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
-                      placeholder='Cargo'
                       fullWidth
                       size='small'
                     />
@@ -1022,10 +1043,6 @@ const AddClienteDrawer = (props: Props) => {
                       placeholder='Email'
                       fullWidth
                       size='small'
-                      error={nuevoContacto.email !== '' && !validateEmail(nuevoContacto.email)}
-                      helperText={
-                        nuevoContacto.email !== '' && !validateEmail(nuevoContacto.email) ? 'Email inválido' : ''
-                      }
                     />
                   </TableCell>
                   <TableCell>
@@ -1039,12 +1056,6 @@ const AddClienteDrawer = (props: Props) => {
                       placeholder='Teléfono 1'
                       fullWidth
                       size='small'
-                      error={nuevoContacto.telefono1 !== '' && !validatePhone(nuevoContacto.telefono1)}
-                      helperText={
-                        nuevoContacto.telefono1 !== '' && !validatePhone(nuevoContacto.telefono1)
-                          ? 'Solo números y + al inicio'
-                          : ''
-                      }
                     />
                   </TableCell>
                   <TableCell>
@@ -1058,24 +1069,10 @@ const AddClienteDrawer = (props: Props) => {
                       placeholder='Teléfono 2'
                       fullWidth
                       size='small'
-                      error={nuevoContacto.telefono2 !== '' && !validatePhone(nuevoContacto.telefono2)}
-                      helperText={
-                        nuevoContacto.telefono2 !== '' && !validatePhone(nuevoContacto.telefono2)
-                          ? 'Solo números y + al inicio'
-                          : ''
-                      }
                     />
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      onClick={agregarContacto}
-                      disabled={
-                        !nuevoContacto.nombre ||
-                        !nuevoContacto.email ||
-                        !validateEmail(nuevoContacto.email) ||
-                        (nuevoContacto.telefono1 && !validatePhone(nuevoContacto.telefono1))
-                      }
-                    >
+                    <IconButton onClick={agregarContacto}>
                       <i className='ri-add-line' />
                     </IconButton>
                   </TableCell>
@@ -1088,20 +1085,24 @@ const AddClienteDrawer = (props: Props) => {
                       // Modo edición
                       <>
                         <TableCell>
+                          <FormControl fullWidth size='small'>
+                            <Select
+                              value={editingContact.cargo}
+                              onChange={e => setEditingContact({ ...editingContact, cargo: e.target.value })}
+                            >
+                              {ROLES_CONTACTO.map(rol => (
+                                <MenuItem key={rol.value} value={rol.value}>
+                                  {rol.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell>
                           <TextField
                             value={editingContact.nombre}
                             onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
                             placeholder='Nombre'
-                            fullWidth
-                            size='small'
-                            required
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.cargo}
-                            onChange={e => setEditingContact({ ...editingContact, cargo: e.target.value })}
-                            placeholder='Cargo'
                             fullWidth
                             size='small'
                           />
@@ -1113,9 +1114,6 @@ const AddClienteDrawer = (props: Props) => {
                             placeholder='Email'
                             fullWidth
                             size='small'
-                            required
-                            error={!validateEmail(editingContact.email)}
-                            helperText={!validateEmail(editingContact.email) ? 'Email inválido' : ''}
                           />
                         </TableCell>
                         <TableCell>
@@ -1129,12 +1127,6 @@ const AddClienteDrawer = (props: Props) => {
                             placeholder='Teléfono 1'
                             fullWidth
                             size='small'
-                            error={editingContact.telefono1 !== '' && !validatePhone(editingContact.telefono1)}
-                            helperText={
-                              editingContact.telefono1 !== '' && !validatePhone(editingContact.telefono1)
-                                ? 'Solo números y + al inicio'
-                                : ''
-                            }
                           />
                         </TableCell>
                         <TableCell>
@@ -1151,29 +1143,57 @@ const AddClienteDrawer = (props: Props) => {
                           />
                         </TableCell>
                         <TableCell>
-                          <IconButton color='success' onClick={handleSaveEdit}>
-                            <i className='ri-check-line' />
-                          </IconButton>
-                          <IconButton color='error' onClick={handleCancelEdit}>
-                            <i className='ri-close-line' />
-                          </IconButton>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='success' onClick={handleSaveEdit}>
+                              <i className='ri-check-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={handleCancelEdit}>
+                              <i className='ri-close-line' />
+                            </IconButton>
+                            <IconButton
+                              color={editingContact.isPrincipal ? 'warning' : 'default'}
+                              onClick={() =>
+                                setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
+                              }
+                            >
+                              <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
+                            </IconButton>
+                          </Box>
                         </TableCell>
                       </>
                     ) : (
                       // Modo visualización
                       <>
+                        <TableCell>
+                          {ROLES_CONTACTO.find(r => r.value === contacto.contacto.cargo)?.label ||
+                            contacto.contacto.cargo}
+                        </TableCell>
                         <TableCell>{contacto.contacto.nombre}</TableCell>
-                        <TableCell>{contacto.contacto.cargo}</TableCell>
                         <TableCell>{contacto.contacto.email}</TableCell>
                         <TableCell>{contacto.contacto.telefono1}</TableCell>
                         <TableCell>{contacto.contacto.telefono2}</TableCell>
                         <TableCell>
-                          <IconButton color='info' onClick={() => handleEditClick(index)}>
-                            <i className='ri-edit-line' />
-                          </IconButton>
-                          <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
-                            <i className='ri-delete-bin-line' />
-                          </IconButton>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='info' onClick={() => handleEditClick(index)}>
+                              <i className='ri-edit-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
+                              <i className='ri-delete-bin-line' />
+                            </IconButton>
+                            <IconButton
+                              color={contacto.isPrincipal ? 'warning' : 'default'}
+                              onClick={() => {
+                                const updatedContactos = contactos.map((c, i) => ({
+                                  ...c,
+                                  isPrincipal: i === index ? !c.isPrincipal : false
+                                }))
+
+                                setContactos(updatedContactos)
+                              }}
+                            >
+                              <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                            </IconButton>
+                          </Box>
                         </TableCell>
                       </>
                     )}

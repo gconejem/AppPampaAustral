@@ -8,58 +8,83 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // Crear la obra principal con los campos requeridos
-    const obra = await prisma.obra.create({
-      data: {
-        numeroObra: body.numeroObra,
-        fechaIngreso: new Date(body.fechaIngreso),
-        estado: body.estado || 'activo',
-        estadoObra: body.estadoObra,
-        rut: body.rut,
-        nombreCliente: body.nombreCliente,
-        razonSocial: body.razonSocial,
-        nombreObra: body.nombreObra,
-        direccion: body.direccion,
-        region: body.region,
-        comuna: body.comuna,
-        sector: body.sector,
-        georreferencia: body.georreferencia,
-        referencia: body.referencia,
-        mandante: body.mandante,
-        informeMandante: body.informeMandante || false,
-        textoMandante: body.textoMandante,
-        acreditacionPersonal: body.acreditacionPersonal || false,
-        especificacionesTecnicas: body.especificacionesTecnicas || false,
-        acreditacionEquipos: body.acreditacionEquipos || false,
-        cartaCompromiso: body.cartaCompromiso || false,
-        mandatoServiu: body.mandatoServiu || false,
-        otrosRequisitos: body.otrosRequisitos,
-        giro: body.giro,
-        direccionComercial: body.direccionComercial,
-        comunaFacturacion: body.comunaFacturacion,
-        telefonoFacturacion: body.telefonoFacturacion,
-        listaPrecios: body.listaPrecios,
-        mailRecepcionFactura: body.mailRecepcionFactura,
-        estadoPago: body.estadoPago || false,
-        hes: body.hes || false,
-        oc: body.oc || false,
-        otrasReferencias: body.otrasReferencias,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        contactos: {
-          create: body.contactos?.map((contacto: any) => ({
+    // Usar una transacción para asegurar que todo se guarde correctamente
+    const obra = await prisma.$transaction(async tx => {
+      // Crear la obra principal con los campos requeridos
+      const nuevaObra = await tx.obra.create({
+        data: {
+          numeroObra: body.numeroObra,
+          fechaIngreso: new Date(body.fechaIngreso),
+          estado: body.estado || 'activo',
+          estadoObra: body.estadoObra,
+          rut: body.rut,
+          nombreCliente: body.nombreCliente,
+          razonSocial: body.razonSocial,
+          nombreObra: body.nombreObra,
+          direccion: body.direccion,
+          region: body.region,
+          comuna: body.comuna,
+          sector: body.sector,
+          georreferencia: body.georreferencia,
+          referencia: body.referencia,
+          mandante: body.mandante,
+          informeMandante: body.informeMandante || false,
+          textoMandante: body.textoMandante,
+          acreditacionPersonal: body.acreditacionPersonal || false,
+          especificacionesTecnicas: body.especificacionesTecnicas || false,
+          acreditacionEquipos: body.acreditacionEquipos || false,
+          cartaCompromiso: body.cartaCompromiso || false,
+          mandatoServiu: body.mandatoServiu || false,
+          otrosRequisitos: body.otrosRequisitos,
+          giro: body.giro,
+          direccionComercial: body.direccionComercial,
+          comunaFacturacion: body.comunaFacturacion,
+          telefonoFacturacion: body.telefonoFacturacion,
+          listaPrecios: body.listaPrecios,
+          mailRecepcionFactura: body.mailRecepcionFactura,
+          estadoPago: body.estadoPago || false,
+          hes: body.hes || false,
+          oc: body.oc || false,
+          otrasReferencias: body.otrasReferencias,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+
+      // Crear los contactos uno por uno dentro de la transacción
+      for (const contacto of body.contactos || []) {
+        // Primero crear el contacto en la tabla Contacto
+        const nuevoContacto = await tx.contacto.create({
+          data: {
+            nombre: contacto.nombre,
+            cargo: contacto.rol, // Usamos el rol como cargo
+            email: contacto.email,
+            telefono1: contacto.telefono1,
+            telefono2: contacto.telefono2 || ''
+          }
+        })
+
+        // Luego crear el ContactoObra
+        await tx.contactoObra.create({
+          data: {
             nombre: contacto.nombre,
             rol: contacto.rol,
             email: contacto.email,
             telefono1: contacto.telefono1,
             telefono2: contacto.telefono2,
-            isPrincipal: contacto.isPrincipal || false
-          }))
-        }
-      },
-      include: {
-        contactos: true
+            isPrincipal: contacto.isPrincipal || false,
+            obraId: nuevaObra.obraId
+          }
+        })
       }
+
+      // Retornar la obra con sus contactos
+      return tx.obra.findUnique({
+        where: { obraId: nuevaObra.obraId },
+        include: {
+          contactos: true
+        }
+      })
     })
 
     return NextResponse.json(obra, { status: 201 })

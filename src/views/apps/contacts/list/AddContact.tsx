@@ -47,6 +47,9 @@ type FormValidateType = {
   email: string
   telefono1: string
   telefono2?: string
+  comuna?: string
+  direccion?: string
+  empresa?: string
 }
 
 type FormNonValidateType = {
@@ -61,6 +64,21 @@ const initialData = {
   country: '',
   contact: ''
 }
+
+// Agregar el enum o constante para los roles
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
 
 const AddContactDrawer = (props: Props) => {
   // Props
@@ -81,7 +99,10 @@ const AddContactDrawer = (props: Props) => {
       cargo: '',
       email: '',
       telefono1: '',
-      telefono2: ''
+      telefono2: '',
+      comuna: '',
+      direccion: '',
+      empresa: ''
     }
   })
 
@@ -133,7 +154,12 @@ const AddContactDrawer = (props: Props) => {
       variant='temporary'
       onClose={handleReset}
       ModalProps={{ keepMounted: true }}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
+      sx={{
+        '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } },
+        '& .MuiFormLabel-asterisk': {
+          color: 'red'
+        }
+      }}
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Añadir Nuevo Contacto</Typography>
@@ -154,7 +180,8 @@ const AddContactDrawer = (props: Props) => {
                   <TextField
                     {...field}
                     fullWidth
-                    label='Nombre'
+                    required
+                    label='Nombre y Apellido'
                     error={Boolean(errors.nombre)}
                     helperText={errors.nombre && 'Este campo es requerido'}
                   />
@@ -167,13 +194,17 @@ const AddContactDrawer = (props: Props) => {
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Cargo'
-                    error={Boolean(errors.cargo)}
-                    helperText={errors.cargo && 'Este campo es requerido'}
-                  />
+                  <FormControl fullWidth required error={Boolean(errors.cargo)}>
+                    <InputLabel id='cargo-label'>Cargo</InputLabel>
+                    <Select {...field} labelId='cargo-label' label='Cargo' error={Boolean(errors.cargo)}>
+                      {ROLES_CONTACTO.map(rol => (
+                        <MenuItem key={rol.value} value={rol.value}>
+                          {rol.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors.cargo && <FormHelperText>Este campo es requerido</FormHelperText>}
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -192,6 +223,7 @@ const AddContactDrawer = (props: Props) => {
                   <TextField
                     {...field}
                     fullWidth
+                    required
                     type='email'
                     label='Email'
                     error={Boolean(errors.email)}
@@ -207,18 +239,19 @@ const AddContactDrawer = (props: Props) => {
                 rules={{
                   required: 'Este campo es requerido',
                   pattern: {
-                    value: /^\+?56\s?9?\s?\d{8}$/,
-                    message: 'Debe ser un número válido (ej: +56912345678)'
+                    value: /^(?:\+?56)?[9]?\d{8}$/,
+                    message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
+                    required
                     label='Teléfono 1'
                     error={Boolean(errors.telefono1)}
                     helperText={errors.telefono1?.message}
-                    placeholder='+56912345678'
+                    placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
                       const isPlus = e.key === '+' && field.value === ''
@@ -228,7 +261,11 @@ const AddContactDrawer = (props: Props) => {
                       }
                     }}
                     onChange={e => {
-                      const value = e.target.value.replace(/[^\d+]/g, '')
+                      let value = e.target.value.replace(/[^\d+]/g, '')
+
+                      if (value.startsWith('+') && !value.startsWith('+56') && value.length > 1) {
+                        value = '+56' + value.substring(1)
+                      }
 
                       field.onChange(value)
                     }}
@@ -242,8 +279,8 @@ const AddContactDrawer = (props: Props) => {
                 control={control}
                 rules={{
                   pattern: {
-                    value: /^\+?56\s?9?\s?\d{8}$/,
-                    message: 'Debe ser un número válido (ej: +56912345678)'
+                    value: /^(?:\+?56)?[9]?\d{8}$/,
+                    message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
                 render={({ field }) => (
@@ -253,7 +290,7 @@ const AddContactDrawer = (props: Props) => {
                     label='Teléfono 2'
                     error={Boolean(errors.telefono2)}
                     helperText={errors.telefono2?.message}
-                    placeholder='+56912345678'
+                    placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
                       const isPlus = e.key === '+' && field.value === ''
@@ -263,12 +300,41 @@ const AddContactDrawer = (props: Props) => {
                       }
                     }}
                     onChange={e => {
-                      const value = e.target.value.replace(/[^\d+]/g, '')
+                      let value = e.target.value.replace(/[^\d+]/g, '')
+
+                      if (value.startsWith('+') && !value.startsWith('+56') && value.length > 1) {
+                        value = '+56' + value.substring(1)
+                      }
 
                       field.onChange(value)
                     }}
                   />
                 )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='empresa'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Empresa' error={Boolean(errors.empresa)} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='direccion'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Dirección' error={Boolean(errors.direccion)} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='comuna'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Comuna' error={Boolean(errors.comuna)} />}
               />
             </Grid>
           </Grid>

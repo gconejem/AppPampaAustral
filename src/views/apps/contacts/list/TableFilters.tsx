@@ -1,82 +1,87 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
+import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import FormControl from '@mui/material/FormControl'
 import Grid from '@mui/material/Grid'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
-import Select from '@mui/material/Select'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
+import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
 
-// DatePicker Imports
-import PickersRange from './date' // Asegúrate de que esta importación esté correctamente referenciada
-
-// Type Imports
-import type { ContactType } from '@/types/apps/contactTypes'
+// Types
+type DateRange = [Date | null, Date | null]
 
 type Props = {
-  setData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
-  tableData?: ContactType[]
+  onDateRangeChange: (range: DateRange) => void
 }
 
-const TableFilters = ({ setData, tableData }: Props) => {
+const TableFilters = ({ onDateRangeChange }: Props) => {
   // States
-  const [nombre, setNombre] = useState('')
-  const [estado, setEstado] = useState('')
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
 
-  useEffect(() => {
-    const filteredData = tableData?.filter(user => {
-      if (nombre && user.nombre !== nombre) return false
-      return true
-    })
+  const handleStartDateChange = (date: Date | null) => {
+    setStartDate(date)
+    onDateRangeChange([date, endDate])
+  }
 
-    setData(filteredData || [])
-  }, [nombre, tableData, setData])
+  const handleEndDateChange = (date: Date | null) => {
+    setEndDate(date)
+    onDateRangeChange([startDate, date])
+  }
+
+  const handleClearFilters = () => {
+    setStartDate(null)
+    setEndDate(null)
+    onDateRangeChange([null, null])
+  }
 
   return (
-    <CardContent>
-      <Grid container spacing={2} alignItems='center'>
-        {' '}
-        {/* Rango de Fechas */}
-        <Grid item xs={12} sm={3} sx={{ marginRight: '-79px' }}>
-          {' '}
-          <PickersRange />
+    <Card>
+      <CardContent>
+        <Grid container spacing={4} alignItems='center'>
+          <Grid item xs={12} md={5}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha inicio'
+                value={startDate}
+                onChange={handleStartDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha fin'
+                value={endDate}
+                onChange={handleEndDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Box display='flex' justifyContent='flex-end'>
+              <Button variant='outlined' color='secondary' onClick={handleClearFilters}>
+                Limpiar
+              </Button>
+            </Box>
+          </Grid>
         </Grid>
-        {/* Filtro de Estado */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth>
-            <InputLabel id='role-select'>Estado</InputLabel>
-            <Select
-              fullWidth
-              id='select-role'
-              value={estado}
-              onChange={e => setEstado(e.target.value)}
-              label='Estado'
-              labelId='role-select'
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        {/* Filtro de Industria */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth>
-            <InputLabel id='plan-select'>Industria</InputLabel>
-            <Select
-              fullWidth
-              id='select-plan'
-              value={nombre}
-              onChange={e => setNombre(e.target.value)}
-              label='Industria'
-              labelId='plan-select'
-            >
-              <MenuItem value=''>...</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-    </CardContent>
+      </CardContent>
+    </Card>
   )
 }
 

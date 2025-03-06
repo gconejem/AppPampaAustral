@@ -8,6 +8,7 @@ import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
 import FormHelperText from '@mui/material/FormHelperText'
@@ -60,15 +61,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   // States
   const [contactos, setContactos] = useState<ContactoObra[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({})
-  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
 
-  const [editingContact, setEditingContact] = useState<ContactoObra>({
+  const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({
+    obraId: 0,
     rol: '',
     nombre: '',
     email: '',
     telefono1: '',
     telefono2: ''
+  })
+
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
+  const [editingContact, setEditingContact] = useState<ContactoObra>({
+    obraId: 0,
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono1: '',
+    telefono2: '',
+    isPrincipal: false
   })
 
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } =
@@ -84,6 +96,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   } = useForm<FormValidateType>({
     defaultValues: {
       ...initialFormData,
+      estado: 'activa',
+      estadoObra: 'activa',
       fechaIngreso: new Date().toISOString().split('T')[0]
     },
     mode: 'onChange',
@@ -138,7 +152,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       })
 
       // Actualizar estados
-      setContactos(obraData.ContactoObra || [])
+      setContactos(obraData.contactos || [])
       setSelectedRegion(obraData.region || '')
       setSelectedComuna(obraData.comuna || '')
     }
@@ -163,10 +177,19 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   }
 
   // Validación de email
-  const validateEmail = (email: string) => {
+  const validateEmail = (email: string | undefined) => {
+    if (!email) return false
     const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
 
     return emailRegex.test(email)
+  }
+
+  // Validación de teléfono
+  const validatePhone = (phone: string | undefined) => {
+    if (!phone) return false
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
+
+    return /^\+?[0-9]+$/.test(cleanPhone)
   }
 
   // Modificar la función de formateo de teléfono
@@ -180,13 +203,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     }
 
     return formatted
-  }
-
-  // Modificar la función de validación de teléfono
-  const validatePhone = (phone: string) => {
-    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '')
-
-    return /^\+?[0-9]+$/.test(cleanPhone)
   }
 
   // Manejadores para campos específicos
@@ -250,11 +266,13 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     const contacto = contactos[index]
 
     setEditingContact({
+      obraId: contacto.obraId,
       rol: contacto.rol || '',
       nombre: contacto.nombre || '',
       email: contacto.email || '',
       telefono1: contacto.telefono1 || '',
-      telefono2: contacto.telefono2 || ''
+      telefono2: contacto.telefono2 || '',
+      isPrincipal: contacto.isPrincipal
     })
   }
 
@@ -278,11 +296,13 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     setContactos(updatedContactos)
     setEditingContactIndex(null)
     setEditingContact({
+      obraId: 0,
       rol: '',
       nombre: '',
       email: '',
       telefono1: '',
-      telefono2: ''
+      telefono2: '',
+      isPrincipal: false
     })
 
     toast.success('Contacto actualizado exitosamente')
@@ -291,11 +311,13 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   const handleCancelEdit = () => {
     setEditingContactIndex(null)
     setEditingContact({
+      obraId: 0,
       rol: '',
       nombre: '',
       email: '',
       telefono1: '',
-      telefono2: ''
+      telefono2: '',
+      isPrincipal: false
     })
   }
 
@@ -624,6 +646,14 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                           <IconButton color='error' onClick={handleCancelEdit}>
                             <i className='ri-close-line' />
                           </IconButton>
+                          <IconButton
+                            color={editingContact.isPrincipal ? 'warning' : 'default'}
+                            onClick={() =>
+                              setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
+                            }
+                          >
+                            <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
+                          </IconButton>
                         </Box>
                       </TableCell>
                     </>
@@ -641,6 +671,19 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                           </IconButton>
                           <IconButton color='error' onClick={() => handleDeleteContact(contacto.id)}>
                             <i className='ri-delete-bin-line' />
+                          </IconButton>
+                          <IconButton
+                            color={contacto.isPrincipal ? 'warning' : 'default'}
+                            onClick={() => {
+                              const updatedContactos = contactos.map(c => ({
+                                ...c,
+                                isPrincipal: c.id === contacto.id ? !c.isPrincipal : false
+                              }))
+
+                              setContactos(updatedContactos)
+                            }}
+                          >
+                            <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
                           </IconButton>
                         </Box>
                       </TableCell>

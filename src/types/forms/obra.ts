@@ -64,6 +64,15 @@ export interface FormValidateType {
   mandante?: string
   sector?: string
   referencia?: string
+  georreferencia?: string
+  informeMandante?: boolean
+  textoMandante?: string
+  acreditacionPersonal?: boolean
+  especificacionesTecnicas?: boolean
+  acreditacionEquipos?: boolean
+  cartaCompromiso?: boolean
+  mandatoServiu?: boolean
+  otrosRequisitos?: string
 
   // Campos de facturación
   razonSocial?: string
@@ -71,8 +80,15 @@ export interface FormValidateType {
   direccionComercial?: string
   comunaFacturacion?: string
   telefonoFacturacion?: string
+  telefono?: string
   listaPrecios?: string
   mailRecepcionFactura?: string
+
+  // Referencias
+  estadoPago?: boolean
+  hes?: boolean
+  oc?: boolean
+  otrasReferencias?: string
 }
 
 export const initialFormData = {

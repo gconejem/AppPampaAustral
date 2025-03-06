@@ -84,7 +84,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 import tableStyles from '@core/styles/table.module.css'
 
 // Data Imports
-import { ESTADOS_OBRA } from '@/data/constants'
+import { ESTADOS_OBRA } from '@/data/obraData'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -508,7 +508,7 @@ const WorkListTable = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ estado: selectedStatus })
+        body: JSON.stringify({ estadoObra: selectedStatus })
       })
 
       if (!response.ok) throw new Error('Error al actualizar el estado')
@@ -518,7 +518,7 @@ const WorkListTable = () => {
         obra.obraId === selectedObra.obraId
           ? {
               ...obra,
-              estado: selectedStatus
+              estadoObra: selectedStatus
             }
           : obra
       )
@@ -732,17 +732,37 @@ const WorkListTable = () => {
           }
         }
       ),
-      columnHelper.accessor('estado', {
+      columnHelper.accessor('estadoObra', {
         header: 'ESTADO',
-        cell: ({ row }) => (
-          <Chip
-            label={row.original.estado}
-            color={row.original.estado.toLowerCase() === 'activo' ? 'success' : 'error'}
-            sx={{
-              '& .MuiChip-label': { textTransform: 'capitalize' }
-            }}
-          />
-        )
+        cell: ({ row }) => {
+          const estado = row.original.estadoObra?.toLowerCase()
+          let color: 'success' | 'error' | 'warning' | 'info' = 'error'
+
+          switch (estado) {
+            case 'activa':
+              color = 'success'
+              break
+            case 'terminada':
+              color = 'info'
+              break
+            case 'bloqueada':
+              color = 'error'
+              break
+            case 'inactiva':
+              color = 'warning'
+              break
+          }
+
+          return (
+            <Chip
+              label={row.original.estadoObra}
+              color={color}
+              sx={{
+                '& .MuiChip-label': { textTransform: 'capitalize' }
+              }}
+            />
+          )
+        }
       }),
       {
         accessorKey: 'actions',
@@ -883,43 +903,41 @@ const WorkListTable = () => {
     <>
       <Card>
         <CardHeader
-          title={<Typography variant='h6'>Obras</Typography>}
+          title='Lista de Obras'
           action={
-            <Button
-              variant='contained'
-              onClick={() => setAddObraOpen(true)}
-              startIcon={<i className='ri-add-line' />}
-              sx={{ borderRadius: '5px' }}
-            >
-              Nueva Obra
-            </Button>
+            <div className='flex items-center gap-2'>
+              <Button variant='contained' onClick={() => setAddObraOpen(true)}>
+                Agregar Obra
+              </Button>
+            </div>
           }
         />
-
-        <TableFilters workData={data} setFilteredData={setFilteredData} estados={ESTADOS_OBRA} />
         <Divider />
-        <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          {exportButton()}
-          <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
-              style={{ width: '500px' }}
-              className='max-sm:is-full min-is-[200px]'
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position='start'>
-                    <i className='ri-search-line' /> {/* Icono de búsqueda */}
-                  </InputAdornment>
-                ),
-                sx: {
-                  padding: '8px', // Ajustamos el relleno para hacerlo más amplio
-                  borderRadius: '8px', // Borde redondeado similar a la imagen
-                  border: '1px solid #E0E0E0' // Color suave para el borde
-                }
-              }}
-            />
+        <TableFilters workData={data} setFilteredData={setFilteredData} estados={ESTADOS_OBRA} />
+        <div className='p-5'>
+          <div className='flex items-center justify-between flex-wrap gap-4'>
+            {exportButton()}
+            <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
+              <DebouncedInput
+                value={globalFilter ?? ''}
+                onChange={value => setGlobalFilter(String(value))}
+                placeholder='Buscar' // Ajusté el texto a "Buscar" como en la imagen
+                style={{ width: '500px' }}
+                className='max-sm:is-full min-is-[200px]'
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <i className='ri-search-line' /> {/* Icono de búsqueda */}
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    padding: '8px', // Ajustamos el relleno para hacerlo más amplio
+                    borderRadius: '8px', // Borde redondeado similar a la imagen
+                    border: '1px solid #E0E0E0' // Color suave para el borde
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
         {loading ? (
@@ -1049,8 +1067,10 @@ const WorkListTable = () => {
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Estado</InputLabel>
             <Select value={selectedStatus} label='Estado' onChange={e => setSelectedStatus(e.target.value)}>
-              <MenuItem value='activo'>Activo</MenuItem>
-              <MenuItem value='inactivo'>Inactivo</MenuItem>
+              <MenuItem value='activa'>Activa</MenuItem>
+              <MenuItem value='terminada'>Terminada</MenuItem>
+              <MenuItem value='bloqueada'>Bloqueada</MenuItem>
+              <MenuItem value='inactiva'>Inactiva</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>

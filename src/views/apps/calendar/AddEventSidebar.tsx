@@ -121,6 +121,15 @@ interface EquipoAgendado {
   nombre: string
 }
 
+interface ContactoObra {
+  id: number
+  rol: string
+  nombre: string
+  email?: string
+  telefono?: string
+  esPrincipal: boolean
+}
+
 const initialData: FormData = {
   titulo: '',
   tipoVisita: '',
@@ -169,6 +178,36 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   // Agregar estado para comunas
   const [comunas, setComunas] = useState<string[]>([])
+
+  // Nuevo estado para los contactos de la obra
+  const [contactosObra, setContactosObra] = useState<ContactoObra[]>([
+    {
+      id: 1,
+      rol: 'Supervisor',
+      nombre: 'Juan Pérez',
+      email: 'juan.perez@empresa.com',
+      telefono: '+56 9 1234 5678',
+      esPrincipal: false
+    },
+    {
+      id: 2,
+      rol: 'Jefe de Obra',
+      nombre: 'María González',
+      email: 'maria.gonzalez@empresa.com',
+      telefono: '+56 9 8765 4321',
+      esPrincipal: false
+    },
+    {
+      id: 3,
+      rol: 'Encargado de Seguridad',
+      nombre: 'Carlos Rodríguez',
+      email: 'carlos.rodriguez@empresa.com',
+      telefono: '+56 9 5555 5555',
+      esPrincipal: false
+    }
+  ])
+
+  const [contactosSeleccionados, setContactosSeleccionados] = useState<ContactoObra[]>([])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -294,6 +333,71 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     fetchComunas()
   }, [formData.region])
 
+  // Agregar efecto para cargar los contactos cuando se selecciona una obra
+  useEffect(() => {
+    const contactosEjemplo = [
+      {
+        id: 1,
+        rol: 'Supervisor',
+        nombre: 'Juan Pérez',
+        email: 'juan.perez@empresa.com',
+        telefono: '+56 9 1234 5678',
+        esPrincipal: false
+      },
+      {
+        id: 2,
+        rol: 'Jefe de Obra',
+        nombre: 'María González',
+        email: 'maria.gonzalez@empresa.com',
+        telefono: '+56 9 8765 4321',
+        esPrincipal: false
+      },
+      {
+        id: 3,
+        rol: 'Encargado de Seguridad',
+        nombre: 'Carlos Rodríguez',
+        email: 'carlos.rodriguez@empresa.com',
+        telefono: '+56 9 5555 5555',
+        esPrincipal: false
+      }
+    ]
+
+    const fetchContactosObra = async () => {
+      if (!formData.obraId) {
+        setContactosObra([])
+        setContactosSeleccionados([])
+
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/obras/${formData.obraId}/contactos`)
+
+        if (!response.ok) {
+          console.log('No se pudieron cargar los contactos de la API, usando datos de ejemplo')
+          setContactosObra(contactosEjemplo)
+
+          return
+        }
+
+        const data = await response.json()
+
+        if (data && data.length > 0) {
+          setContactosObra(data)
+        } else {
+          console.log('No hay contactos en la API, usando datos de ejemplo')
+          setContactosObra(contactosEjemplo)
+        }
+      } catch (error) {
+        console.error('Error al cargar contactos:', error)
+        console.log('Error al cargar contactos, usando datos de ejemplo')
+        setContactosObra(contactosEjemplo)
+      }
+    }
+
+    fetchContactosObra()
+  }, [formData.obraId])
+
   const handleSubmit = async () => {
     try {
       // Validación detallada de campos requeridos
@@ -415,6 +519,31 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
     setEquiposAgendados(prev => [...prev, nuevoEquipo])
     setEquipoSeleccionado(null)
+  }
+
+  const handleToggleContacto = (contacto: ContactoObra) => {
+    setContactosSeleccionados(prev => {
+      const isSelected = prev.some(c => c.id === contacto.id)
+
+      if (isSelected) {
+        return prev.filter(c => c.id !== contacto.id)
+      }
+
+      return [...prev, contacto]
+    })
+  }
+
+  const handleMarcarPrincipal = (contacto: ContactoObra) => {
+    setContactosObra(prev =>
+      prev.map(c => ({
+        ...c,
+        esPrincipal: c.id === contacto.id ? !c.esPrincipal : false
+      }))
+    )
+  }
+
+  const handleEliminarContacto = (contactoId: number) => {
+    setContactosSeleccionados(prev => prev.filter(c => c.id !== contactoId))
   }
 
   const theme = useTheme()
@@ -839,49 +968,64 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
         </Grid>
         <Grid container spacing={2} mt={2}>
-          {/* Fila de la tabla */}
-          <Grid item xs={4}>
-            <Typography>Solicitante</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography>Nombre Encargado</Typography>
-          </Grid>
-          <Grid item xs={2} style={{ textAlign: 'left' }}>
-            <IconButton size='small'>
-              <AddIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <EditIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <StarIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <DeleteIcon />
-            </IconButton>
-          </Grid>
-
-          {/* Segunda fila con campo de texto para ingresar datos */}
-          <Grid item xs={4}>
-            <Typography>Solicitante</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <TextField label='Nombre' fullWidth />
-          </Grid>
-          <Grid item xs={2} style={{ textAlign: 'left' }}>
-            <IconButton size='small'>
-              <AddIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <EditIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <StarIcon />
-            </IconButton>
-            <IconButton size='small'>
-              <DeleteIcon />
-            </IconButton>
-          </Grid>
+          {/* Lista de contactos */}
+          {contactosObra.map(contacto => (
+            <Grid container spacing={2} key={contacto.id} sx={{ width: '100%', ml: 0, mt: 1 }}>
+              <Grid item xs={4}>
+                <Typography>{contacto.rol}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography>{contacto.nombre}</Typography>
+              </Grid>
+              <Grid item xs={2} style={{ textAlign: 'left' }}>
+                <IconButton
+                  size='small'
+                  onClick={() => handleToggleContacto(contacto)}
+                  color={contactosSeleccionados.some(c => c.id === contacto.id) ? 'primary' : 'default'}
+                >
+                  <AddIcon />
+                </IconButton>
+                <IconButton
+                  size='small'
+                  onClick={() => handleMarcarPrincipal(contacto)}
+                  sx={{
+                    backgroundColor: contacto.esPrincipal ? 'rgba(255, 215, 0, 0.08)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: contacto.esPrincipal ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
+                >
+                  <StarIcon
+                    sx={{
+                      color: contacto.esPrincipal ? '#FFD700' : '#757575',
+                      transform: contacto.esPrincipal ? 'scale(1.2)' : 'scale(1)',
+                      transition: 'all 0.2s ease-in-out',
+                      filter: contacto.esPrincipal ? 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.5))' : 'none'
+                    }}
+                  />
+                </IconButton>
+                <IconButton size='small' onClick={() => handleEliminarContacto(contacto.id)} color='error'>
+                  <DeleteIcon />
+                </IconButton>
+              </Grid>
+            </Grid>
+          ))}
+          {/* Mensaje cuando no hay obra seleccionada */}
+          {!formData.obraId && (
+            <Grid item xs={12}>
+              <Typography variant='body2' color='textSecondary' align='center'>
+                Seleccione una obra para ver sus contactos
+              </Typography>
+            </Grid>
+          )}
+          {/* Mensaje cuando la obra no tiene contactos */}
+          {formData.obraId && contactosObra.length === 0 && (
+            <Grid item xs={12}>
+              <Typography variant='body2' color='textSecondary' align='center'>
+                Esta obra no tiene contactos asignados
+              </Typography>
+            </Grid>
+          )}
         </Grid>
         <Grid container spacing={2} mt={4}>
           <Grid item xs={12}>

@@ -1,6 +1,8 @@
 export const ESTADOS_OBRA = [
-  { value: 'activo', label: 'Activo' },
-  { value: 'inactivo', label: 'Inactivo' }
+  { value: 'activa', label: 'Activa' },
+  { value: 'terminada', label: 'Terminada' },
+  { value: 'bloqueada', label: 'Bloqueada' },
+  { value: 'inactiva', label: 'Inactiva' }
 ]
 
 export const LISTAS_PRECIOS = [

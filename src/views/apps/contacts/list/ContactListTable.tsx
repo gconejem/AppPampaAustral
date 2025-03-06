@@ -154,22 +154,31 @@ const userStatusObj: UserStatusType = {
 // Column Definitions
 const columnHelper = createColumnHelper<ContactTypeWithAction>()
 
-const ContactsListTable = () => {
+interface ContactListTableProps {
+  data: ContactType[]
+}
+
+const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState<ContactType[]>([])
+  const [data, setData] = useState<ContactType[]>(initialData)
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
   const [isDeleteLoading, setIsDeleteLoading] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedContact, setSelectedContact] = useState<ContactType | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [editContactOpen, setEditContactOpen] = useState(false)
 
   // Hooks
   const params = useParams()
   const locale = (params?.lang as string) || 'es'
+
+  useEffect(() => {
+    setData(initialData)
+    setFilteredData(initialData)
+  }, [initialData])
 
   const handleClickOpenDialog = (contact: ContactTypeWithAction) => {
     setSelectedContact(contact)
@@ -333,6 +342,10 @@ const ContactsListTable = () => {
           />
         )
       },
+      columnHelper.accessor('contactId', {
+        header: 'ID',
+        cell: ({ row }) => <Typography>{row.original.contactId}</Typography>
+      }),
       columnHelper.accessor('nombre', {
         header: 'NOMBRE',
         cell: ({ row }) => <Typography>{row.original.nombre}</Typography>
@@ -389,9 +402,15 @@ const ContactsListTable = () => {
     initialState: {
       pagination: {
         pageSize: 10
-      }
+      },
+      sorting: [
+        {
+          id: 'contactId',
+          desc: true
+        }
+      ]
     },
-    enableRowSelection: true, //enable row selection for all rows
+    enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -579,4 +598,4 @@ const ContactsListTable = () => {
   )
 }
 
-export default ContactsListTable
+export default ContactListTable

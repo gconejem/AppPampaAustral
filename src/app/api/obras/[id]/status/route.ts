@@ -5,10 +5,12 @@ import { prisma } from '@/lib/prisma'
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const obraId = parseInt(params.id)
-    const { estado } = await request.json()
+    const { estadoObra } = await request.json()
 
     // Validar el estado
-    if (!['activo', 'inactivo'].includes(estado)) {
+    const estadosValidos = ['activa', 'terminada', 'bloqueada', 'inactiva']
+
+    if (!estadosValidos.includes(estadoObra.toLowerCase())) {
       return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
     }
 
@@ -18,11 +20,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         obraId: obraId
       },
       data: {
-        estado: estado,
+        estadoObra: estadoObra,
         updatedAt: new Date()
-      },
-      include: {
-        ContactoObra: true
       }
     })
 

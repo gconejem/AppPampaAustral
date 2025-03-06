@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const obra = await prisma.obra.findUnique({
       where: { obraId },
       include: {
-        ContactoObra: true
+        contactos: true
       }
     })
 
@@ -35,7 +35,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     console.log('Datos recibidos para actualizar:', body)
 
     // Extraer los contactos del body
-    const { ContactoObra, ...obraData } = body
+    const { contactos, ...obraData } = body
 
     // Actualizar la obra
     const updatedObra = await prisma.obra.update({
@@ -47,10 +47,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         updatedAt: new Date(),
 
         // Actualizar los contactos si existen
-        ContactoObra: ContactoObra
+        contactos: contactos
           ? {
               deleteMany: {}, // Eliminar contactos existentes
-              create: ContactoObra.map((contacto: any) => ({
+              create: contactos.map((contacto: any) => ({
                 nombre: contacto.nombre,
                 rol: contacto.rol,
                 email: contacto.email,
@@ -62,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           : undefined
       },
       include: {
-        ContactoObra: true // Usar ContactoObra en lugar de contactos
+        contactos: true
       }
     })
 

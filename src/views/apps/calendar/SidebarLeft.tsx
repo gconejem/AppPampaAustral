@@ -1,5 +1,5 @@
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import SearchIcon from '@mui/icons-material/Search' // Importamos el ícono de búsqueda
-import { TextField, InputAdornment } from '@mui/material'
+import { TextField, InputAdornment, Autocomplete } from '@mui/material'
 import Box from '@mui/material/Box'
 
 // Third-party imports
@@ -28,6 +28,23 @@ import SidebarMiniCalendar from './SidebarMiniCalendar'
 // Slice Imports
 import { filterAllCalendarLabels, filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
 
+// Interfaces
+interface Cliente {
+  clienteId: number
+  razonSocial: string
+  rut: string
+  nombreCliente: string
+}
+
+interface Obra {
+  obraId: number
+  numeroObra: string
+  nombreObra: string
+  direccion: string
+  comuna: string
+  region: string
+}
+
 const SidebarLeft = (props: SidebarLeftProps) => {
   // Props
   const {
@@ -40,29 +57,85 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     handleAddEventSidebarToggle
   } = props
 
-  // Custom Filters State
-  const [clienteFilter, setClienteFilter] = useState<CalendarFiltersType | 'None'>('None')
-  const [obraFilter, setObraFilter] = useState<CalendarFiltersType | 'None'>('None')
+  // Estados para los filtros
+  const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
+  const [obraFilter, setObraFilter] = useState<Obra | null>(null)
   const [laboratoristaFilter, setLaboratoristaFilter] = useState<CalendarFiltersType | 'None'>('None')
 
-  const handleFilterChange = (filterType: string, value: CalendarFiltersType | 'None') => {
+  // Estado para la lista de clientes y obras
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [obras, setObras] = useState<Obra[]>([])
+  const [loadingClientes, setLoadingClientes] = useState(true)
+  const [loadingObras, setLoadingObras] = useState(true)
+
+  // Cargar clientes al montar el componente
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const response = await fetch('/api/clientes')
+
+        if (!response.ok) throw new Error('Error al cargar clientes')
+        const data = await response.json()
+
+        setClientes(data)
+      } catch (error) {
+        console.error('Error cargando clientes:', error)
+      } finally {
+        setLoadingClientes(false)
+      }
+    }
+
+    fetchClientes()
+  }, [])
+
+  // Cargar obras al montar el componente
+  useEffect(() => {
+    const fetchObras = async () => {
+      try {
+        const response = await fetch('/api/obras')
+
+        if (!response.ok) throw new Error('Error al cargar obras')
+        const data = await response.json()
+
+        setObras(data)
+      } catch (error) {
+        console.error('Error cargando obras:', error)
+      } finally {
+        setLoadingObras(false)
+      }
+    }
+
+    fetchObras()
+  }, [])
+
+  const handleFilterChange = (filterType: string, value: any) => {
     switch (filterType) {
       case 'Cliente':
         setClienteFilter(value)
+
+        if (value) {
+          dispatch(filterCalendarLabel(value.razonSocial))
+        }
+
         break
       case 'Obra':
         setObraFilter(value)
+
+        if (value) {
+          dispatch(filterCalendarLabel(value.nombreObra))
+        }
+
         break
       case 'Laboratorista':
         setLaboratoristaFilter(value)
+
+        if (value !== 'None') {
+          dispatch(filterCalendarLabel(value))
+        }
+
         break
       default:
         break
-    }
-
-    // Dispatch the filter change only if the value is not 'None'
-    if (value !== 'None') {
-      dispatch(filterCalendarLabel(value))
     }
   }
 
@@ -132,35 +205,78 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           Filtros
         </Typography>
 
-        {/* Campo Cliente */}
+        {/* Campo Cliente con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
-          <TextField
-            variant='outlined'
-            placeholder='Cliente'
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position='start'>
-                  <SearchIcon />
-                </InputAdornment>
-              )
-            }}
-            onChange={e => handleFilterChange('Cliente', e.target.value as CalendarFiltersType)}
+          <Autocomplete
+            options={clientes}
+            getOptionLabel={option => `${option.razonSocial} (${option.rut})`}
+            value={clienteFilter}
+            onChange={(_, newValue) => handleFilterChange('Cliente', newValue)}
+            loading={loadingClientes}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Cliente'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box>
+                  <Typography variant='body1'>{option.razonSocial}</Typography>
+                  <Typography variant='caption' color='textSecondary'>
+                    RUT: {option.rut}
+                  </Typography>
+                </Box>
+              </li>
+            )}
           />
         </FormControl>
 
-        {/* Campo Obra con ícono de búsqueda */}
+        {/* Campo Obra con Autocomplete */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <TextField
-            variant='outlined'
-            placeholder='Obra'
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position='start'>
-                  <SearchIcon />
-                </InputAdornment>
-              )
-            }}
-            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
+          <Autocomplete
+            options={obras}
+            getOptionLabel={option => `${option.nombreObra} (${option.numeroObra})`}
+            value={obraFilter}
+            onChange={(_, newValue) => handleFilterChange('Obra', newValue)}
+            loading={loadingObras}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Obra'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box>
+                  <Typography variant='body1'>{option.nombreObra}</Typography>
+                  <Typography variant='caption' color='textSecondary' display='block'>
+                    N° Obra: {option.numeroObra}
+                  </Typography>
+                  <Typography variant='caption' color='textSecondary' display='block'>
+                    {option.direccion}, {option.comuna}
+                  </Typography>
+                </Box>
+              </li>
+            )}
           />
         </FormControl>
 
@@ -173,30 +289,6 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           >
             <MenuItem value='None'> Laboratorista</MenuItem>
             <MenuItem value='Laboratorista'>Laboratorista</MenuItem>
-          </Select>
-        </FormControl>
-
-        {/* Sector Comercial */}
-        <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <Select
-            value={obraFilter}
-            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
-            displayEmpty
-          >
-            <MenuItem value='None'>Sector Comercial</MenuItem>
-            <MenuItem value='Obra'></MenuItem>
-          </Select>
-        </FormControl>
-
-        {/* Comuna */}
-        <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <Select
-            value={obraFilter}
-            onChange={e => handleFilterChange('Obra', e.target.value as CalendarFiltersType)}
-            displayEmpty
-          >
-            <MenuItem value='None'>Comuna</MenuItem>
-            <MenuItem value='Obra'></MenuItem>
           </Select>
         </FormControl>
       </div>
