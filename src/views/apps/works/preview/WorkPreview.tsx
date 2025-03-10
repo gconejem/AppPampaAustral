@@ -32,12 +32,6 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Estado
-              </Typography>
-              <Typography>{obra.estado}</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant='subtitle2' color='text.secondary'>
                 Estado Obra
               </Typography>
               <Typography>{obra.estadoObra}</Typography>

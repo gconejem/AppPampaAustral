@@ -37,6 +37,7 @@ import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import MuiLink from '@mui/material/Link'
+import InputLabel from '@mui/material/InputLabel'
 
 // Importar los componentes de tabla con alias
 import {
@@ -220,6 +221,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState('')
+  const [motivoBloqueo, setMotivoBloqueo] = useState('')
 
   // Mantener una copia local de los datos
   const [localData, setLocalData] = useState<Cliente[]>(safeUserData)
@@ -350,16 +352,23 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
   const handleStatusChange = async (clientId: number, newStatus: string) => {
     try {
-      const response = await axios.patch(`/api/clientes/${clientId}/status`, { estado: newStatus })
+      const updateData = {
+        estado: newStatus,
+        motivoBloqueo: newStatus === 'blocked' ? motivoBloqueo : null
+      }
+
+      const response = await axios.patch(`/api/clientes/${clientId}/status`, updateData)
 
       if (response.status === 200) {
-        // Actualizar ambos estados inmediatamente
         const updatedData = tableData.map(client =>
-          client.clienteId === clientId ? { ...client, estado: newStatus } : client
+          client.clienteId === clientId
+            ? { ...client, estado: newStatus, motivoBloqueo: updateData.motivoBloqueo }
+            : client
         )
 
         setData(updatedData)
         setTableData(updatedData)
+        setMotivoBloqueo('') // Limpiar el motivo después de guardar
 
         toast.success('Estado actualizado exitosamente', {
           duration: 3000,
@@ -600,6 +609,18 @@ const ClientListTable = ({ userData, setData }: Props) => {
         header: 'RUT',
         cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>
       }),
+      columnHelper.accessor('fechaCreacion', {
+        header: 'FECHA INGRESO',
+        cell: ({ row }: { row: Row<Cliente> }) => (
+          <Typography>
+            {new Date(row.original.fechaCreacion).toLocaleDateString('es-CL', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            })}
+          </Typography>
+        )
+      }),
       columnHelper.accessor('razonSocial', {
         header: 'CLIENTE',
         cell: ({ row }: { row: Row<Cliente> }) => (
@@ -701,13 +722,28 @@ const ClientListTable = ({ userData, setData }: Props) => {
       }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
-        cell: ({ row }: { row: Row<Cliente> }) => (
-          <Chip
-            label={row.original.estado.toLowerCase() === 'active' ? 'Activo' : 'Inactivo'}
-            color={row.original.estado.toLowerCase() === 'active' ? 'success' : 'warning'}
-            size='small'
-          />
-        )
+        cell: ({ row }: { row: Row<Cliente> }) => {
+          const estado = row.original.estado.toLowerCase()
+          let color = 'default'
+          let label = 'Desconocido'
+
+          switch (estado) {
+            case 'active':
+              color = 'success'
+              label = 'Activo'
+              break
+            case 'inactive':
+              color = 'warning'
+              label = 'Inactivo'
+              break
+            case 'blocked':
+              color = 'error'
+              label = 'Bloqueado'
+              break
+          }
+
+          return <Chip label={label} color={color} size='small' />
+        }
       }),
       columnHelper.accessor('actions', {
         header: 'ACCIONES',
@@ -1082,19 +1118,66 @@ const ClientListTable = ({ userData, setData }: Props) => {
       </Dialog>
 
       {/* Diálogo de cambio de estado */}
-      <Dialog open={changeStatusOpen} onClose={() => setChangeStatusOpen(false)}>
-        <DialogTitle>Cambiar Estado</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} displayEmpty>
+      <Dialog
+        open={changeStatusOpen}
+        onClose={() => {
+          setChangeStatusOpen(false)
+          setMotivoBloqueo('') // Limpiar el motivo al cerrar
+        }}
+        maxWidth='sm'
+        fullWidth
+      >
+        <DialogTitle>Editar Estado</DialogTitle>
+        <DialogContent sx={{ minWidth: '400px', pt: 4 }}>
+          <FormControl fullWidth size='small'>
+            <Select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              displayEmpty
+              sx={{
+                minHeight: 40,
+                '& .MuiSelect-select': {
+                  py: 1.5,
+                  width: '100%'
+                }
+              }}
+            >
+              <MenuItem value='' disabled>
+                Seleccione un estado
+              </MenuItem>
               <MenuItem value='active'>Activo</MenuItem>
               <MenuItem value='inactive'>Inactivo</MenuItem>
+              <MenuItem value='blocked'>Bloqueado</MenuItem>
             </Select>
           </FormControl>
+
+          {selectedStatus === 'blocked' && (
+            <TextField
+              fullWidth
+              label='Motivo del Bloqueo'
+              multiline
+              rows={3}
+              value={motivoBloqueo}
+              onChange={e => setMotivoBloqueo(e.target.value)}
+              sx={{ mt: 4 }}
+              required
+            />
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setChangeStatusOpen(false)}>Cancelar</Button>
-          <Button onClick={() => handleStatusChange(selectedClientId!, selectedStatus)} variant='contained'>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => {
+              setChangeStatusOpen(false)
+              setMotivoBloqueo('') // Limpiar el motivo al cancelar
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => handleStatusChange(selectedClientId!, selectedStatus)}
+            variant='contained'
+            disabled={selectedStatus === 'blocked' && !motivoBloqueo.trim()}
+          >
             Guardar
           </Button>
         </DialogActions>

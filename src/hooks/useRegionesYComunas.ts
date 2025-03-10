@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+import { REGIONES_CHILE } from '@/data/clientData'
+
 // Definir las interfaces si no existen en el archivo de tipos
 interface Region {
   id: number
@@ -11,50 +13,47 @@ interface Comuna {
   nombre: string
 }
 
+// Definir el tipo para REGIONES_CHILE
+type RegionData = {
+  comunas: string[]
+}
+
+type RegionesChileType = {
+  [key: string]: RegionData
+}
+
 export const useRegionesYComunas = () => {
   const [regiones, setRegiones] = useState<Region[]>([])
   const [comunas, setComunas] = useState<Comuna[]>([])
   const [selectedRegion, setSelectedRegion] = useState('')
   const [selectedComuna, setSelectedComuna] = useState('')
 
-  // Cargar las regiones desde el archivo local o API
+  // Cargar las regiones desde REGIONES_CHILE
   useEffect(() => {
-    const regiones = [
-      { id: 1, nombre: 'Metropolitana' },
-      { id: 2, nombre: 'Valparaíso' },
-      { id: 3, nombre: 'Biobío' }
+    const regionesArray = Object.keys(REGIONES_CHILE as RegionesChileType).map((nombre: string, index: number) => ({
+      id: index + 1,
+      nombre
+    }))
 
-      // ... otras regiones
-    ]
-
-    setRegiones(regiones)
+    setRegiones(regionesArray)
   }, [])
 
   // Cargar las comunas cuando cambia la región
   useEffect(() => {
-    if (!selectedRegion) {
+    if (!selectedRegion || !(REGIONES_CHILE as RegionesChileType)[selectedRegion]) {
       setComunas([])
 
       return
     }
 
-    // Mapa de comunas por región
-    const comunasPorRegion: { [key: string]: Comuna[] } = {
-      Metropolitana: [
-        { id: 1, nombre: 'Santiago' },
-        { id: 2, nombre: 'Las Condes' },
-        { id: 3, nombre: 'Providencia' }
-      ],
-      Valparaíso: [
-        { id: 4, nombre: 'Viña del Mar' },
-        { id: 5, nombre: 'Valparaíso' },
-        { id: 6, nombre: 'Concón' }
-      ]
+    const comunasArray = (REGIONES_CHILE as RegionesChileType)[selectedRegion].comunas.map(
+      (nombre: string, index: number) => ({
+        id: index + 1,
+        nombre
+      })
+    )
 
-      // ... otras comunas por región
-    }
-
-    setComunas(comunasPorRegion[selectedRegion] || [])
+    setComunas(comunasArray)
   }, [selectedRegion])
 
   return {

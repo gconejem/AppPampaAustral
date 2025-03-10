@@ -14,28 +14,44 @@ export async function POST(request: Request) {
     // Obtener la obra original con sus contactos
     const originalObra = await prisma.obra.findUnique({
       where: { obraId },
-      include: { ContactoObra: true }
+      include: { contactos: true }
     })
 
     if (!originalObra) {
       return NextResponse.json({ error: 'Obra no encontrada' }, { status: 404 })
     }
 
+    // Obtener el último número de obra
+    const lastObra = await prisma.obra.findFirst({
+      orderBy: {
+        numeroObra: 'desc'
+      }
+    })
+
+    // Generar el nuevo número de obra
+    let nextNumeroObra = '1'
+
+    if (lastObra) {
+      const lastNumber = parseInt(lastObra.numeroObra)
+
+      nextNumeroObra = (lastNumber + 1).toString()
+    }
+
     // Crear una copia de la obra
-    const { obraId: _, ContactoObra, createdAt, updatedAt, ...obraData } = originalObra
+    const { obraId: _, contactos, ...obraData } = originalObra
 
     const duplicatedObra = await prisma.obra.create({
       data: {
         ...obraData,
-        numeroObra: `${obraData.numeroObra}-COPIA`,
+        numeroObra: nextNumeroObra,
         createdAt: new Date(),
         updatedAt: new Date(),
-        ContactoObra: {
-          create: ContactoObra.map(({ id, obraId, ...contactData }) => contactData)
+        contactos: {
+          create: contactos.map(({ id, obraId, ...contactData }) => contactData)
         }
       },
       include: {
-        ContactoObra: true
+        contactos: true
       }
     })
 

@@ -8,12 +8,17 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
-import InputAdornment from '@mui/material/InputAdornment'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
 
 // Third Party Imports
-import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import es from 'date-fns/locale/es'
 
 // Data Imports
 import { SEGMENTOS } from '@/data/clientData'
@@ -25,7 +30,8 @@ const SEGMENTOS_NUEVOS = ['Corporativo Estratégico', 'Consolidado', 'Expansión
 // Definir los estados
 const ESTADOS = [
   { value: 'active', label: 'Activo' },
-  { value: 'inactive', label: 'Inactivo' }
+  { value: 'inactive', label: 'Inactivo' },
+  { value: 'blocked', label: 'Bloqueado' }
 ]
 
 interface Props {
@@ -55,60 +61,88 @@ const TableFilters = ({
 }: Props) => {
   const { regiones } = useUbicacion()
 
+  const handleStartDateChange = (date: Date | null) => {
+    handleDateRangeChange([date, dateRange[1]])
+  }
+
+  const handleEndDateChange = (date: Date | null) => {
+    handleDateRangeChange([dateRange[0], date])
+  }
+
+  const handleClearFilters = () => {
+    handleDateRangeChange([null, null])
+  }
+
   return (
-    <Box className='flex flex-wrap items-center justify-between gap-4 p-6'>
-      <Box className='flex flex-wrap items-center gap-4'>
-        <DatePicker
-          selectsRange
-          endDate={dateRange[1]}
-          selected={dateRange[0]}
-          startDate={dateRange[0]}
-          onChange={(dates: [Date | null, Date | null]) => handleDateRangeChange(dates)}
-          customInput={
-            <TextField
-              size='small'
-              inputProps={{
-                readOnly: true,
-                placeholder: 'Filtrar por fecha de creación'
-              }}
-              sx={{
-                width: '240px',
-                '& .MuiInputBase-input': {
-                  cursor: 'pointer'
-                }
-              }}
-            />
-          }
-          dateFormat='dd/MM/yyyy'
-          isClearable={true}
-          locale={es}
-        />
+    <Card>
+      <CardContent>
+        <Grid container spacing={2} alignItems='center'>
+          <Grid item xs={12} md={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha inicio'
+                value={dateRange[0]}
+                onChange={handleStartDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
 
-        <FormControl size='small' sx={{ minWidth: '240px' }}>
-          <InputLabel>Estado</InputLabel>
-          <Select value={selectedEstado} onChange={e => handleEstadoChange(e.target.value)} label='Estado'>
-            <MenuItem value=''>Todos</MenuItem>
-            {ESTADOS.map(estado => (
-              <MenuItem key={estado.value} value={estado.value}>
-                {estado.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          <Grid item xs={12} md={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha fin'
+                value={dateRange[1]}
+                onChange={handleEndDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
 
-        <FormControl size='small' sx={{ minWidth: '240px' }}>
-          <InputLabel>Segmento</InputLabel>
-          <Select value={selectedSegmento} onChange={e => handleSegmentoChange(e.target.value)} label='Segmento'>
-            <MenuItem value=''>Todos</MenuItem>
-            {SEGMENTOS_NUEVOS.map(segmento => (
-              <MenuItem key={segmento} value={segmento}>
-                {segmento}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-    </Box>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Estado</InputLabel>
+              <Select value={selectedEstado} onChange={e => handleEstadoChange(e.target.value)} label='Estado'>
+                <MenuItem value=''>Todos</MenuItem>
+                {ESTADOS.map(estado => (
+                  <MenuItem key={estado.value} value={estado.value}>
+                    {estado.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Segmento</InputLabel>
+              <Select value={selectedSegmento} onChange={e => handleSegmentoChange(e.target.value)} label='Segmento'>
+                <MenuItem value=''>Todos</MenuItem>
+                {SEGMENTOS_NUEVOS.map(segmento => (
+                  <MenuItem key={segmento} value={segmento}>
+                    {segmento}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={2}>
+            <Button fullWidth variant='outlined' color='secondary' onClick={handleClearFilters}>
+              Limpiar
+            </Button>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
   )
 }
 

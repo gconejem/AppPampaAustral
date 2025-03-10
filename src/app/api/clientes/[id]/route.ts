@@ -87,12 +87,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
         clienteId: clientId
       },
       include: {
-        ClienteContacto: {
+        clientesContactos: {
           include: {
-            Contacto: true
+            contacto: true
           }
         },
-        CondicionComercial: true
+        condicionesComerciales: true
       }
     })
 
@@ -103,14 +103,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
     // Transformar los datos para que coincidan con la interfaz del frontend
     const clienteFormateado = {
       ...client,
-      clientesContactos: client.ClienteContacto.map(cc => ({
-        contacto: cc.Contacto,
+      clientesContactos: client.clientesContactos.map(cc => ({
+        contacto: cc.contacto,
         isPrincipal: cc.isPrincipal
       })),
-      condicionesComerciales: client.CondicionComercial
+      condicionesComerciales: client.condicionesComerciales
     }
 
-    console.log('Condiciones comerciales:', client.CondicionComercial)
+    console.log('Condiciones comerciales:', client.condicionesComerciales)
     console.log('Cliente formateado:', clienteFormateado)
 
     return NextResponse.json(clienteFormateado)

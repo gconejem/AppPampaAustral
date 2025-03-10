@@ -63,14 +63,14 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   const [editingContact, setEditingContact] = useState<Contacto | null>(null)
 
   const [contacts, setContacts] = useState<Contacto[]>(() => {
-    if (currentUser.ClienteContacto && currentUser.ClienteContacto.length > 0) {
-      return currentUser.ClienteContacto.map(cc => ({
-        nombre: cc.Contacto.nombre,
-        cargo: cc.Contacto.cargo,
-        email: cc.Contacto.email,
-        telefono1: cc.Contacto.telefono1,
-        telefono2: cc.Contacto.telefono2 || '',
-        isPrincipal: cc.isPrincipal
+    if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
+      return currentUser.clientesContactos.map(cc => ({
+        nombre: cc.contacto?.nombre || '',
+        cargo: cc.contacto?.cargo || '',
+        email: cc.contacto?.email || '',
+        telefono1: cc.contacto?.telefono1 || '',
+        telefono2: cc.contacto?.telefono2 || '',
+        isPrincipal: cc.isPrincipal || false
       }))
     }
 
@@ -108,8 +108,15 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     if (currentUser && open) {
       console.log('Current user data:', currentUser)
 
+      // Obtener la primera condición comercial si existe
+      const condicionComercial = Array.isArray(currentUser.condicionesComerciales)
+        ? currentUser.condicionesComerciales[0]
+        : currentUser.condicionesComerciales
+
+      console.log('Condición comercial:', condicionComercial) // Debug
+
       reset({
-        fechaCreacion: currentUser.fechaCreacion,
+        fechaCreacion: new Date(currentUser.fechaCreacion).toISOString().split('T')[0],
         estado: currentUser.estado,
         rut: currentUser.rut,
         razonSocial: currentUser.razonSocial,
@@ -122,23 +129,23 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
         sitioWeb: currentUser.sitioWeb || '',
         segmento: currentUser.segmento || '',
         industria: currentUser.industria || '',
-        vendedor: currentUser.condicionesComerciales?.vendedor || '',
-        condicionVenta: currentUser.condicionesComerciales?.condicionVenta || '',
-        observaciones: currentUser.condicionesComerciales?.observaciones || ''
+        vendedor: condicionComercial?.vendedor || '',
+        condicionVenta: condicionComercial?.condicionVenta || '',
+        observaciones: condicionComercial?.observaciones || ''
       })
       setSelectedRegion(currentUser.region)
       setSelectedComuna(currentUser.comuna?.toString() || '')
 
-      console.log('Current user contacts:', currentUser.ClienteContacto) // Debug
+      console.log('Current user contacts:', currentUser.clientesContactos) // Debug
 
-      if (currentUser.ClienteContacto && currentUser.ClienteContacto.length > 0) {
-        const mappedContacts = currentUser.ClienteContacto.map(cc => ({
-          nombre: cc.Contacto.nombre,
-          cargo: cc.Contacto.cargo,
-          email: cc.Contacto.email,
-          telefono1: cc.Contacto.telefono1,
-          telefono2: cc.Contacto.telefono2 || '',
-          isPrincipal: cc.isPrincipal
+      if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
+        const mappedContacts = currentUser.clientesContactos.map(cc => ({
+          nombre: cc.contacto?.nombre || '',
+          cargo: cc.contacto?.cargo || '',
+          email: cc.contacto?.email || '',
+          telefono1: cc.contacto?.telefono1 || '',
+          telefono2: cc.contacto?.telefono2 || '',
+          isPrincipal: cc.isPrincipal || false
         }))
 
         setContacts(mappedContacts)
@@ -152,11 +159,34 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
     try {
       setIsSubmitting(true)
 
-      const response = await axios.patch(`/api/clientes/${currentUser.clienteId}`, data)
+      // Preparar los datos para la actualización
+      const updateData = {
+        ...data,
+        condicionesComerciales: Array.isArray(currentUser.condicionesComerciales)
+          ? [
+              {
+                id: currentUser.condicionesComerciales[0]?.id,
+                vendedor: data.vendedor,
+                condicionVenta: data.condicionVenta,
+                observaciones: data.observaciones,
+                clienteId: currentUser.clienteId
+              }
+            ]
+          : {
+              vendedor: data.vendedor,
+              condicionVenta: data.condicionVenta,
+              observaciones: data.observaciones,
+              clienteId: currentUser.clienteId
+            }
+      }
+
+      const response = await axios.patch(`/api/clientes/${currentUser.clienteId}`, updateData)
 
       if (response.status === 200) {
         setData((prevData: Cliente[]) =>
-          prevData.map(cliente => (cliente.clienteId === currentUser.clienteId ? { ...cliente, ...data } : cliente))
+          prevData.map(cliente =>
+            cliente.clienteId === currentUser.clienteId ? { ...cliente, ...updateData } : cliente
+          )
         )
 
         toast.success('Cliente actualizado exitosamente')
@@ -226,6 +256,7 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                     <Select {...field} label='Estado'>
                       <MenuItem value='active'>Activo</MenuItem>
                       <MenuItem value='inactive'>Inactivo</MenuItem>
+                      <MenuItem value='blocked'>Bloqueado</MenuItem>
                     </Select>
                   </FormControl>
                 )}
@@ -409,18 +440,19 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
             {/* Sección de Contactos */}
             <Grid item xs={12}>
-              <Typography variant='h6' sx={{ mb: 4 }}>
-                Contactos
-              </Typography>
-
-              <Box sx={{ mb: 4 }}>
-                <ContactSearch
-                  value={searchValue}
-                  setValue={setSearchValue}
-                  contacts={contacts}
-                  setContacts={setContacts}
-                />
-              </Box>
+              <Grid container spacing={2} alignItems='center' sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant='h6'>Contactos</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <ContactSearch
+                    value={searchValue}
+                    setValue={setSearchValue}
+                    contacts={contacts}
+                    setContacts={setContacts}
+                  />
+                </Grid>
+              </Grid>
 
               <TableContainer>
                 <Table sx={{ minWidth: 650 }}>
@@ -481,9 +513,28 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                               />
                             </TableCell>
                             <TableCell>
-                              <IconButton size='small' onClick={() => handleSaveEdit(index)} color='primary'>
-                                <i className='ri-save-line' style={{ fontSize: '1.25rem' }} />
-                              </IconButton>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <IconButton size='small' onClick={() => handleSaveEdit(index)} color='primary'>
+                                  <i className='ri-save-line' style={{ fontSize: '1.25rem' }} />
+                                </IconButton>
+                                <IconButton size='small' onClick={() => setEditingContactIndex(null)} color='error'>
+                                  <i className='ri-close-line' style={{ fontSize: '1.25rem' }} />
+                                </IconButton>
+                                <IconButton
+                                  color={editingContact?.isPrincipal ? 'warning' : 'default'}
+                                  size='small'
+                                  onClick={() => {
+                                    if (editingContact) {
+                                      setEditingContact({
+                                        ...editingContact,
+                                        isPrincipal: !editingContact.isPrincipal
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <i className={`ri-star-${editingContact?.isPrincipal ? 'fill' : 'line'}`} />
+                                </IconButton>
+                              </Box>
                             </TableCell>
                           </>
                         ) : (
@@ -513,6 +564,20 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                                 >
                                   <DeleteIcon fontSize='small' />
                                 </IconButton>
+                                <IconButton
+                                  color={contact.isPrincipal ? 'warning' : 'default'}
+                                  size='small'
+                                  onClick={() => {
+                                    const updatedContacts = contacts.map((c, i) => ({
+                                      ...c,
+                                      isPrincipal: i === index ? !c.isPrincipal : false
+                                    }))
+
+                                    setContacts(updatedContacts)
+                                  }}
+                                >
+                                  <i className={`ri-star-${contact.isPrincipal ? 'fill' : 'line'}`} />
+                                </IconButton>
                               </Box>
                             </TableCell>
                           </>
@@ -537,8 +602,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 control={control}
                 render={({ field }) => (
                   <FormControl fullWidth>
-                    <InputLabel>Vendedor</InputLabel>
-                    <Select {...field} label='Vendedor'>
+                    <InputLabel id='vendedor-label'>Vendedor</InputLabel>
+                    <Select {...field} labelId='vendedor-label' label='Vendedor' value={field.value || ''}>
+                      <MenuItem value=''>Seleccione un vendedor</MenuItem>
                       <MenuItem value='Juan Pérez'>Juan Pérez</MenuItem>
                       <MenuItem value='María González'>María González</MenuItem>
                       <MenuItem value='Pedro Soto'>Pedro Soto</MenuItem>
@@ -554,8 +620,14 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 control={control}
                 render={({ field }) => (
                   <FormControl fullWidth>
-                    <InputLabel>Condición de Venta</InputLabel>
-                    <Select {...field} label='Condición de Venta'>
+                    <InputLabel id='condicion-venta-label'>Condición de Venta</InputLabel>
+                    <Select
+                      {...field}
+                      labelId='condicion-venta-label'
+                      label='Condición de Venta'
+                      value={field.value || ''}
+                    >
+                      <MenuItem value=''>Seleccione una condición</MenuItem>
                       <MenuItem value='Contado'>Contado</MenuItem>
                       <MenuItem value='Crédito 30 días'>Crédito 30 días</MenuItem>
                       <MenuItem value='Crédito 60 días'>Crédito 60 días</MenuItem>

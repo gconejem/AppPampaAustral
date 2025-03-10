@@ -11,7 +11,6 @@ import MenuItem from '@mui/material/MenuItem'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
-import FormHelperText from '@mui/material/FormHelperText'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
@@ -23,31 +22,43 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
-import InputAdornment from '@mui/material/InputAdornment'
-import SearchIcon from '@mui/icons-material/Search'
 import Box from '@mui/material/Box'
+import FormHelperText from '@mui/material/FormHelperText'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 
-import ContactSearchObra from '../components/ContactSearchObra'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
+import ClientSearch from '@/views/apps/clients/components/ClientSearch'
+import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 
 // Types
 import type { Obra, FormValidateType, ContactoObra } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
 
 // Data
-import { ESTADOS_OBRA, REGIONES_CHILE, COMUNAS } from '@/data/obraData'
 import { formatRut, validateRut } from '@/utils/rut-utils'
+import { LISTAS_PRECIOS } from '@/data/obraData'
 
 // Agregar el enum o constante para los roles
 const ROLES_OBRA = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
   { value: 'envio_informes', label: 'Envío de Informes' }
+]
+
+// Agregar la constante para los mandantes
+const MANDANTES = [
+  { value: 'Dirección de Obras Hidráulicas', label: 'Dirección de Obras Hidráulicas' },
+  { value: 'ESSBIO', label: 'ESSBIO' },
+  { value: 'JUNJI', label: 'JUNJI' },
+  { value: 'Ministerio Obras Públicas', label: 'Ministerio Obras Públicas' },
+  { value: 'Municipalidad', label: 'Municipalidad' },
+  { value: 'No definido', label: 'No definido' },
+  { value: 'Particular', label: 'Particular' },
+  { value: 'SERVIU', label: 'SERVIU' }
 ]
 
 interface EditWorksFormProps {
@@ -92,7 +103,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     handleSubmit,
     formState: { errors },
     setValue,
-    watch
+    watch,
+    trigger
   } = useForm<FormValidateType>({
     defaultValues: {
       ...initialFormData,
@@ -145,11 +157,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       const formattedDate = obraData.fechaIngreso ? format(new Date(obraData.fechaIngreso), 'yyyy-MM-dd') : ''
       const formattedRut = obraData.rut ? formatRut(obraData.rut) : ''
 
-      reset({
+      // Asegurarnos de que los booleanos se inicialicen correctamente
+      const formattedData = {
         ...obraData,
         fechaIngreso: formattedDate,
-        rut: formattedRut
-      })
+        rut: formattedRut,
+
+        // Convertir explícitamente a booleanos
+        informeMandante: Boolean(obraData.informeMandante ?? false),
+        acreditacionPersonal: Boolean(obraData.acreditacionPersonal ?? false),
+        especificacionesTecnicas: Boolean(obraData.especificacionesTecnicas ?? false),
+        acreditacionEquipos: Boolean(obraData.acreditacionEquipos ?? false),
+        cartaCompromiso: Boolean(obraData.cartaCompromiso ?? false),
+        mandatoServiu: Boolean(obraData.mandatoServiu ?? false),
+        estadoPago: Boolean(obraData.estadoPago ?? false),
+        hes: Boolean(obraData.hes ?? false),
+        oc: Boolean(obraData.oc ?? false)
+      }
+
+      // Forzar la actualización de los valores del formulario
+      reset(formattedData)
 
       // Actualizar estados
       setContactos(obraData.contactos || [])
@@ -228,18 +255,47 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     try {
       setIsSubmitting(true)
 
-      // Asegurarnos de que la fecha esté en el formato correcto para la API
+      // Asegurarnos de que los booleanos se envíen correctamente
       const dataToSubmit = {
         ...formData,
-        fechaIngreso: formData.fechaIngreso ? new Date(formData.fechaIngreso).toISOString() : null
+        fechaIngreso: formData.fechaIngreso ? new Date(formData.fechaIngreso).toISOString() : null,
+
+        // Asegurar que los booleanos sean true/false y no undefined
+        informeMandante: Boolean(formData.informeMandante),
+        acreditacionPersonal: Boolean(formData.acreditacionPersonal),
+        especificacionesTecnicas: Boolean(formData.especificacionesTecnicas),
+        acreditacionEquipos: Boolean(formData.acreditacionEquipos),
+        cartaCompromiso: Boolean(formData.cartaCompromiso),
+        mandatoServiu: Boolean(formData.mandatoServiu),
+        estadoPago: Boolean(formData.estadoPago),
+        hes: Boolean(formData.hes),
+        oc: Boolean(formData.oc)
       }
 
       const response = await axios.put(`/api/obras/${obraData?.obraId}`, dataToSubmit)
 
       if (response.status === 200) {
-        // Actualizar los datos en la tabla
+        // Actualizar los datos en la tabla asegurando que los booleanos se mantengan
         setData(prevData =>
-          prevData.map(obra => (obra.obraId === obraData?.obraId ? { ...obra, ...response.data } : obra))
+          prevData.map(obra => {
+            if (obra.obraId === obraData?.obraId) {
+              return {
+                ...obra,
+                ...response.data,
+                informeMandante: Boolean(response.data.informeMandante),
+                acreditacionPersonal: Boolean(response.data.acreditacionPersonal),
+                especificacionesTecnicas: Boolean(response.data.especificacionesTecnicas),
+                acreditacionEquipos: Boolean(response.data.acreditacionEquipos),
+                cartaCompromiso: Boolean(response.data.cartaCompromiso),
+                mandatoServiu: Boolean(response.data.mandatoServiu),
+                estadoPago: Boolean(response.data.estadoPago),
+                hes: Boolean(response.data.hes),
+                oc: Boolean(response.data.oc)
+              }
+            }
+
+            return obra
+          })
         )
 
         toast.success('Obra actualizada exitosamente')
@@ -328,7 +384,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       variant='temporary'
       onClose={handleClose}
       ModalProps={{ keepMounted: true }}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: '75%', sm: '75%' } } }}
+      sx={{ '& .MuiDrawer-paper': { width: { xs: '90%', sm: '90%' } } }}
     >
       <div className='flex items-center justify-between p-5'>
         <Typography variant='h5'>Editar Obra</Typography>
@@ -350,25 +406,15 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <Controller
               name='numeroObra'
               control={control}
-              rules={{
-                required: 'El número de obra es requerido',
-                pattern: {
-                  value: /^\d+$/,
-                  message: 'Solo se permiten números'
-                }
-              }}
               render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
-                  label='Número Obra *'
-                  onChange={handleNumeroObraChange}
-                  error={Boolean(errors.numeroObra)}
-                  helperText={errors.numeroObra?.message}
-                  inputProps={{
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*'
+                  label='Número Obra'
+                  InputProps={{
+                    readOnly: true
                   }}
+                  disabled
                 />
               )}
             />
@@ -388,8 +434,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   InputLabelProps={{ shrink: true }}
                   onChange={e => {
                     field.onChange(e)
-
-                    // Actualizar el valor inmediatamente
                     setValue('fechaIngreso', e.target.value)
                   }}
                   error={Boolean(errors.fechaIngreso)}
@@ -401,15 +445,85 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
           <Grid item xs={12} sm={4}>
             <Controller
-              name='estado'
+              name='estadoObra'
               control={control}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Estado' disabled value={field.value || 'activo'} />
+                <FormControl fullWidth>
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    {...field}
+                    label='Estado'
+                    onChange={e => {
+                      field.onChange(e)
+                      setValue('estadoObra', e.target.value)
+                    }}
+                  >
+                    <MenuItem value='activa'>Activa</MenuItem>
+                    <MenuItem value='terminada'>Terminada</MenuItem>
+                    <MenuItem value='bloqueada'>Bloqueada</MenuItem>
+                    <MenuItem value='inactiva'>Inactiva</MenuItem>
+                  </Select>
+                </FormControl>
               )}
             />
           </Grid>
 
-          {/* Segunda fila: Nombre Obra y Dirección */}
+          {/* Barra de búsqueda de clientes */}
+          <Grid item xs={12}>
+            <ClientSearch
+              onClientSelect={cliente => {
+                setValue('rut', cliente.rut)
+                setValue('nombreCliente', cliente.nombreCliente)
+                setValue('razonSocial', cliente.razonSocial)
+                trigger(['rut', 'nombreCliente', 'razonSocial'])
+              }}
+            />
+          </Grid>
+
+          {/* Segunda fila: RUT y Nombre Cliente */}
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='rut'
+              control={control}
+              rules={{
+                required: 'El RUT es requerido',
+                validate: value => validateRut(value) || 'RUT inválido'
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='RUT *'
+                  onChange={handleFacturacionRutChange}
+                  error={Boolean(errors.rut)}
+                  helperText={errors.rut?.message}
+                  inputProps={{
+                    maxLength: 12
+                  }}
+                />
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='nombreCliente'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Nombre Cliente' InputLabelProps={{ shrink: true }} />
+              )}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Antecedentes */}
+        <Divider sx={{ my: 4 }} />
+        <Grid container spacing={5}>
+          <Grid item xs={12}>
+            <Typography variant='h6'>Antecedentes</Typography>
+          </Grid>
+
+          {/* Nombre Obra y Dirección */}
           <Grid item xs={12} sm={6}>
             <Controller
               name='nombreObra'
@@ -443,14 +557,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-        </Grid>
 
-        {/* Antecedentes */}
-        <Divider sx={{ my: 4 }} />
-        <Grid container spacing={5}>
-          <Grid item xs={12}>
-            <Typography variant='h6'>Antecedentes</Typography>
-          </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
               <InputLabel>Región</InputLabel>
@@ -475,39 +582,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='rut'
-              control={control}
-              rules={{
-                required: 'El RUT es requerido',
-                validate: value => validateRut(value) || 'RUT inválido'
-              }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label='RUT *'
-                  onChange={handleFacturacionRutChange}
-                  error={Boolean(errors.rut)}
-                  helperText={errors.rut?.message}
-                  inputProps={{
-                    maxLength: 12
-                  }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='nombreCliente'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Nombre Cliente' InputLabelProps={{ shrink: true }} />
-              )}
-            />
-          </Grid>
-
           <Grid item xs={12} sm={6}>
             <Controller
               name='sector'
@@ -536,13 +610,22 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Controller
-              name='mandante'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Mandante' InputLabelProps={{ shrink: true }} />
-              )}
-            />
+            <FormControl fullWidth>
+              <InputLabel>Mandante</InputLabel>
+              <Controller
+                name='mandante'
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label='Mandante'>
+                    {MANDANTES.map(mandante => (
+                      <MenuItem key={mandante.value} value={mandante.value}>
+                        {mandante.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
           </Grid>
           <Grid item xs={12}>
             <FormControlLabel
@@ -570,11 +653,25 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         {/* Sección de Contactos */}
         <Divider sx={{ my: 4 }} />
         <Grid container alignItems='center' spacing={2}>
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={6}>
             <Typography variant='h6'>Contactos</Typography>
           </Grid>
-          <Grid item xs={6} container justifyContent='flex-end'>
-            <ContactSearchObra onContactSelect={handleAddContact} />
+          <Grid item xs={12} sm={6}>
+            <ContactSearch
+              onContactSelect={contact => {
+                const newContact: ContactoObra = {
+                  obraId: obraData?.obraId || 0,
+                  nombre: contact.nombre,
+                  rol: contact.cargo || '',
+                  email: contact.email,
+                  telefono1: contact.telefono1,
+                  telefono2: contact.telefono2 || '',
+                  isPrincipal: contactos.length === 0
+                }
+
+                handleAddContact(newContact)
+              }}
+            />
           </Grid>
         </Grid>
 
@@ -716,71 +813,59 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='especificacionesTecnicas'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
+            <Controller
+              name='especificacionesTecnicas'
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox {...field} checked={field.value} />}
+                  label='Especificaciones Técnicas (EETT)'
                 />
-              }
-              label='Especificaciones Técnicas'
+              )}
             />
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='cartaCompromiso'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
+            <Controller
+              name='acreditacionEquipos'
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox {...field} checked={field.value} />}
+                  label='Acreditación de Equipos'
                 />
-              }
-              label='Carta Compromiso'
+              )}
             />
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='acreditacionEquipos'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                />
-              }
-              label='Acreditación Equipos'
+            <Controller
+              name='cartaCompromiso'
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='Carta de Compromiso' />
+              )}
             />
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Controller
-                  name='mandatoServiu'
-                  control={control}
-                  render={({ field }) => <Checkbox {...field} checked={field.value} />}
+            <Controller
+              name='mandatoServiu'
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox {...field} checked={field.value} />}
+                  label='Mandato y Envío de Informes a SERVIU'
                 />
-              }
-              label='Mandato SERVIU'
+              )}
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid item xs={12} sm={4}>
             <Controller
               name='otrosRequisitos'
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  multiline
-                  rows={4}
-                  label='Otros Requisitos'
-                  InputLabelProps={{ shrink: true }}
-                />
-              )}
+              render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos' />}
             />
           </Grid>
         </Grid>
@@ -869,13 +954,23 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Controller
-              name='listaPrecios'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Lista de Precios' InputLabelProps={{ shrink: true }} />
-              )}
-            />
+            <FormControl fullWidth error={Boolean(errors.listaPrecios)}>
+              <InputLabel>Lista de Precios</InputLabel>
+              <Controller
+                name='listaPrecios'
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label='Lista de Precios'>
+                    {LISTAS_PRECIOS.map(lista => (
+                      <MenuItem key={lista.value} value={lista.value}>
+                        {lista.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+              {errors.listaPrecios && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
@@ -900,9 +995,12 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
         {/* Sección de Referencias */}
         <Divider sx={{ my: 4 }} />
-        <Typography variant='h6'>Referencias</Typography>
         <Grid container spacing={5}>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12}>
+            <Typography variant='h6'>Referencias</Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={3}>
             <FormControlLabel
               control={
                 <Controller
@@ -914,7 +1012,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='Estado Pago'
             />
           </Grid>
-          <Grid item xs={12} sm={4}>
+
+          <Grid item xs={12} sm={3}>
             <FormControlLabel
               control={
                 <Controller
@@ -926,7 +1025,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='HES'
             />
           </Grid>
-          <Grid item xs={12} sm={4}>
+
+          <Grid item xs={12} sm={3}>
             <FormControlLabel
               control={
                 <Controller
@@ -938,19 +1038,13 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               label='OC'
             />
           </Grid>
-          <Grid item xs={12}>
+
+          <Grid item xs={12} sm={3}>
             <Controller
               name='otrasReferencias'
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  multiline
-                  rows={4}
-                  label='Otras Referencias'
-                  InputLabelProps={{ shrink: true }}
-                />
+                <TextField {...field} fullWidth label='Otras Referencias' InputLabelProps={{ shrink: true }} />
               )}
             />
           </Grid>

@@ -153,39 +153,35 @@ const AddClienteDrawer = (props: Props) => {
   // Función para formatear el RUT mientras se escribe
   const formatRut = (value: string) => {
     try {
-      // Permitir solo números, K y guión
+      // Eliminar todo excepto números, k/K y guión
       let cleaned = value.replace(/[^0-9kK-]/g, '')
 
-      // Si hay más de un guión, dejar solo el último
-      if ((cleaned.match(/-/g) || []).length > 1) {
+      // Si no hay caracteres válidos, retornar vacío
+      if (!cleaned) return ''
+
+      // Permitir escribir libremente hasta tener suficientes caracteres
+      if (cleaned.length <= 8) return cleaned
+
+      // Si ya tiene guión, separar cuerpo y dígito verificador
+      if (cleaned.includes('-')) {
         const parts = cleaned.split('-')
 
-        cleaned = parts.slice(0, -1).join('') + '-' + parts.slice(-1)
+        cleaned = parts[0] + (parts[1] ? parts[1].charAt(0) : '')
       }
 
-      // Convertir 'k' minúscula a mayúscula
-      cleaned = cleaned.toUpperCase()
+      // Separar el cuerpo y el dígito verificador
+      const body = cleaned.slice(0, -1)
+      const dv = cleaned.slice(-1)
 
-      // Formatear con puntos y guión
-      if (cleaned.length > 1) {
-        const body = cleaned.slice(0, -1).replace(/-/g, '')
-        const dv = cleaned.slice(-1)
+      // Formatear el cuerpo con puntos
+      const reversedBody = body.split('').reverse().join('')
+      const chunks = reversedBody.match(/.{1,3}/g) || []
+      const formattedBody = chunks.join('.').split('').reverse().join('')
 
-        // Agregar puntos al cuerpo del RUT
-        let formattedBody = body
+      // Convertir 'k' a 'K' si es el dígito verificador
+      const digitoVerificador = dv.toUpperCase() === 'K' ? 'K' : dv
 
-        if (body.length > 3) {
-          formattedBody = body.slice(0, -3) + '.' + body.slice(-3)
-        }
-
-        if (body.length > 6) {
-          formattedBody = formattedBody.slice(0, -7) + '.' + formattedBody.slice(-7)
-        }
-
-        cleaned = formattedBody + '-' + dv
-      }
-
-      return cleaned
+      return formattedBody + '-' + digitoVerificador
     } catch (error) {
       console.error('Error formateando RUT:', error)
 
@@ -198,48 +194,44 @@ const AddClienteDrawer = (props: Props) => {
     try {
       if (!rut) return false
 
+      // Si está escribiendo, no validar aún
+      if (rut.length < 3) return true
+
       // Limpiar el RUT de puntos y guión
       const cleaned = rut.replace(/\./g, '').replace(/-/g, '').toUpperCase()
 
-      // Validar largo mínimo y que solo contenga números y K
-      if (!/^\d{7,9}[0-9K]$/.test(cleaned)) {
-        console.log('Formato inválido:', cleaned)
-
+      // Validar que tenga el formato correcto (7-9 dígitos + dígito verificador)
+      if (!/^[0-9]{7,9}[0-9K]$/.test(cleaned)) {
         return false
       }
 
       // Obtener dígito verificador y cuerpo del RUT
-      const dv = cleaned.slice(-1)
+      const dv = cleaned.charAt(cleaned.length - 1)
       const rutBody = cleaned.slice(0, -1)
+      const rutNumber = parseInt(rutBody)
+
+      // Validar que el número del RUT esté en un rango válido
+      if (rutNumber < 1000000) {
+        return false
+      }
 
       // Calcular dígito verificador
       let suma = 0
-      let factor = 2
+      let multiplicador = 2
 
-      // Calcular suma de derecha a izquierda
+      // Calcular suma ponderada
       for (let i = rutBody.length - 1; i >= 0; i--) {
-        suma += parseInt(rutBody.charAt(i)) * factor
-        factor = factor === 7 ? 2 : factor + 1
+        suma += parseInt(rutBody.charAt(i)) * multiplicador
+        multiplicador = multiplicador === 7 ? 2 : multiplicador + 1
       }
 
       // Calcular dígito verificador esperado
       const dvEsperado = 11 - (suma % 11)
-      let dvCalculado
+      let dvCalculado = ''
 
       if (dvEsperado === 11) dvCalculado = '0'
       else if (dvEsperado === 10) dvCalculado = 'K'
       else dvCalculado = dvEsperado.toString()
-
-      console.log('Validación RUT:', {
-        original: rut,
-        cleaned,
-        rutBody,
-        dv,
-        suma,
-        dvEsperado,
-        dvCalculado,
-        esValido: dv === dvCalculado
-      })
 
       return dv === dvCalculado
     } catch (error) {
@@ -729,10 +721,16 @@ const AddClienteDrawer = (props: Props) => {
               <Controller
                 name='rut'
                 control={control}
-                rules={{ required: true }}
+                rules={{
+                  required: true,
+                  validate: {
+                    validRut: value => validateRut(value) || 'RUT inválido. Formato: XX.XXX.XXX-X'
+                  }
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    fullWidth
                     label='RUT *'
                     onChange={e => {
                       const formatted = formatRut(e.target.value)
@@ -743,7 +741,7 @@ const AddClienteDrawer = (props: Props) => {
                     helperText={errors.rut ? errors.rut.message : ''}
                     placeholder='12.345.678-9'
                     inputProps={{
-                      maxLength: 12
+                      maxLength: 15
                     }}
                   />
                 )}
@@ -788,11 +786,10 @@ const AddClienteDrawer = (props: Props) => {
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'center' }}>
               <FormControlLabel
                 control={<Checkbox name='copySocialReason' onChange={handleCopyRazonSocial} />}
                 label='Copiar Razón Social'
-                sx={{ margin: '10px' }}
               />
             </Grid>
           </Grid>
@@ -1213,9 +1210,15 @@ const AddClienteDrawer = (props: Props) => {
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Vendedor</InputLabel>
-                    <Select {...field} error={Boolean(errors.vendedor)}>
+                  <FormControl fullWidth sx={{ backgroundColor: 'white' }}>
+                    <InputLabel id='vendedor-label'>Vendedor</InputLabel>
+                    <Select
+                      {...field}
+                      labelId='vendedor-label'
+                      label='Vendedor'
+                      error={Boolean(errors.vendedor)}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(58, 53, 65, 0.22)' } }}
+                    >
                       {VENDEDORES.map(vendedor => (
                         <MenuItem key={vendedor.value} value={vendedor.value}>
                           {vendedor.label}

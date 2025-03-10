@@ -175,19 +175,31 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Vendedor
               </Typography>
-              <Typography>{client.condicionesComerciales?.vendedor || '-'}</Typography>
+              <Typography>
+                {client.condicionesComerciales && client.condicionesComerciales.length > 0
+                  ? client.condicionesComerciales[0].vendedor
+                  : '-'}
+              </Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Condiciones de Venta
               </Typography>
-              <Typography>{client.condicionesComerciales?.condicionVenta || '-'}</Typography>
+              <Typography>
+                {client.condicionesComerciales && client.condicionesComerciales.length > 0
+                  ? client.condicionesComerciales[0].condicionVenta
+                  : '-'}
+              </Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Observaciones
               </Typography>
-              <Typography>{client.condicionesComerciales?.observaciones || '-'}</Typography>
+              <Typography>
+                {client.condicionesComerciales && client.condicionesComerciales.length > 0
+                  ? client.condicionesComerciales[0].observaciones
+                  : '-'}
+              </Typography>
             </Grid>
           </Grid>
         </CardContent>

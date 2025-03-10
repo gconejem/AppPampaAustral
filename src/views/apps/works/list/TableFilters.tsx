@@ -2,14 +2,21 @@
 import { useState } from 'react'
 
 // MUI Imports
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
+import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 
-// Custom Component Imports
-import PickersRange from './date'
+// Data Imports
 import { ESTADOS_OBRA } from '@/data/obraData'
 
 interface Estado {
@@ -24,41 +31,51 @@ interface TableFiltersProps {
 }
 
 const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: TableFiltersProps) => {
+  // States
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [selectedEstado, setSelectedEstado] = useState<string>('')
 
-  const handleDateChange = (start: Date | null, end: Date | null) => {
-    setStartDate(start)
-    setEndDate(end)
+  const handleStartDateChange = (date: Date | null) => {
+    setStartDate(date)
+    applyFilters(date, endDate, selectedEstado)
+  }
 
-    let filteredWorks = [...workData]
-
-    if (start && end) {
-      filteredWorks = filteredWorks.filter(work => {
-        const workDate = new Date(work.createdAt)
-        const startOfDay = new Date(start.setHours(0, 0, 0, 0))
-        const endOfDay = new Date(end.setHours(23, 59, 59, 999))
-
-        return workDate >= startOfDay && workDate <= endOfDay
-      })
-    }
-
-    if (selectedEstado) {
-      filteredWorks = filteredWorks.filter(
-        work => work.estadoObra?.toString().toLowerCase() === selectedEstado.toString().toLowerCase()
-      )
-    }
-
-    setFilteredData(filteredWorks)
+  const handleEndDateChange = (date: Date | null) => {
+    setEndDate(date)
+    applyFilters(startDate, date, selectedEstado)
   }
 
   const handleEstadoChange = (event: any) => {
     const estado = event.target.value
 
     setSelectedEstado(estado)
+    applyFilters(startDate, endDate, estado)
+  }
 
+  const handleClearFilters = () => {
+    setStartDate(null)
+    setEndDate(null)
+    setSelectedEstado('')
+    setFilteredData(workData)
+  }
+
+  const applyFilters = (start: Date | null, end: Date | null, estado: string) => {
     let filteredWorks = [...workData]
+
+    if (start && end) {
+      filteredWorks = filteredWorks.filter(work => {
+        const workDate = new Date(work.createdAt)
+        const startOfDay = new Date(start)
+
+        startOfDay.setHours(0, 0, 0, 0)
+        const endOfDay = new Date(end)
+
+        endOfDay.setHours(23, 59, 59, 999)
+
+        return workDate >= startOfDay && workDate <= endOfDay
+      })
+    }
 
     if (estado) {
       filteredWorks = filteredWorks.filter(
@@ -66,43 +83,64 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
       )
     }
 
-    if (startDate && endDate) {
-      filteredWorks = filteredWorks.filter(work => {
-        const workDate = new Date(work.createdAt)
-        const startOfDay = new Date(startDate.setHours(0, 0, 0, 0))
-        const endOfDay = new Date(endDate.setHours(23, 59, 59, 999))
-
-        return workDate >= startOfDay && workDate <= endOfDay
-      })
-    }
-
     setFilteredData(filteredWorks)
   }
 
   return (
-    <Box className='flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between'>
-      <Box className='flex flex-1 items-center gap-4'>
-        <Box className='flex-1 max-w-[240px]'>
-          <PickersRange
-            startDate={startDate}
-            endDate={endDate}
-            onChange={handleDateChange}
-            placeholderText='Filtrar por fecha de creación'
-          />
-        </Box>
-        <FormControl size='small' sx={{ minWidth: '240px' }}>
-          <InputLabel>Estado</InputLabel>
-          <Select value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
-            <MenuItem value=''>Todos</MenuItem>
-            {estados.map(estado => (
-              <MenuItem key={estado.value} value={estado.value}>
-                {estado.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-    </Box>
+    <Card>
+      <CardContent>
+        <Grid container spacing={4} alignItems='center'>
+          <Grid item xs={12} md={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha inicio'
+                value={startDate}
+                onChange={handleStartDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha fin'
+                value={endDate}
+                onChange={handleEndDateChange}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Estado</InputLabel>
+              <Select value={selectedEstado} label='Estado' onChange={handleEstadoChange}>
+                <MenuItem value=''>Todos</MenuItem>
+                {estados.map(estado => (
+                  <MenuItem key={estado.value} value={estado.value}>
+                    {estado.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Box display='flex' justifyContent='flex-end'>
+              <Button variant='outlined' color='secondary' onClick={handleClearFilters}>
+                Limpiar
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
   )
 }
 
