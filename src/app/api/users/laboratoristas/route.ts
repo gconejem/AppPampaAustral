@@ -4,44 +4,25 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Obtener el ID del rol LABORATORISTA
-    const rolLaboratorista = await prisma.rol.findUnique({
-      where: {
-        nombre: 'LABORATORISTA'
-      }
-    })
-
-    if (!rolLaboratorista) {
-      return NextResponse.json({ error: 'Rol LABORATORISTA no encontrado' }, { status: 404 })
-    }
-
-    // Obtener usuarios con rol LABORATORISTA
+    // Obtener usuarios que tienen el rol de laboratorista
     const laboratoristas = await prisma.user.findMany({
       where: {
         roles: {
           some: {
-            rolId: rolLaboratorista.id
+            rol: {
+              nombre: 'LABORATORISTA'
+            }
           }
         }
       },
-      include: {
-        roles: {
-          include: {
-            rol: true
-          }
-        }
+      select: {
+        id: true,
+        name: true,
+        email: true
       }
     })
 
-    // Formatear la respuesta
-    const formattedLaboratoristas = laboratoristas.map(lab => ({
-      id: lab.id,
-      nombre: lab.name || '',
-      email: lab.email || '',
-      rol: 'LABORATORISTA'
-    }))
-
-    return NextResponse.json(formattedLaboratoristas)
+    return NextResponse.json(laboratoristas)
   } catch (error) {
     console.error('Error al obtener laboratoristas:', error)
 

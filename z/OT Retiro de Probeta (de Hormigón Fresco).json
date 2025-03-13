@@ -1,0 +1,79 @@
+{
+   "data":[
+      {
+         "CLAVE":"2024123136131PC-04001",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2024123136131PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "hora_retiro":"11:40",
+            "num_tarjeta":"24418",
+            "ot_muestreo":"119767",
+            "fecha_retiro":"2/1/2025",
+            "nTarjetaArray":[
+               "24418"
+            ],
+            "temp_fin_curado":"21.3",
+            "forma_transporte":"Camioneta",
+            "condicion_al_retirar":"Sin observaciones",
+            "condicion_transporte":"Caja de traslado"
+         },
+         "CORRELATIV":"001",
+         "FKLBDOCVER":"R-12-99004",
+         "FKLBRUTSER":"HOR014"
+      }
+   ],
+   "usuario":{
+      "id":"21",
+      "rut":"10863686-6",
+      "fullName":"Felix Opazo",
+      "permisos":"",
+      "createdAt":"1621373406657",
+      "updatedAt":"1621373406797",
+      "lastSeenAt":"1621373406797",
+      "emailStatus":"confirmed",
+      "emailAddress":"opazo@pampaustral.cl",
+      "isSuperAdmin":"false",
+      "hasBillingCard":"false",
+      "emailProofToken":"",
+      "tosAcceptedByIp":"::ffff:201.239.36.113",
+      "billingCardBrand":"",
+      "billingCardLast4":"",
+      "stripeCustomerId":"",
+      "billingCardExpYear":"",
+      "passwordResetToken":"",
+      "billingCardExpMonth":"",
+      "emailChangeCandidate":"",
+      "emailProofTokenExpiresAt":"0",
+      "passwordResetTokenExpiresAt":"0"
+   },
+   "funcionario":{
+      "RUT":"10863686-6",
+      "CARGO":"",
+      "CODIGO":"124",
+      "COMUOC":"",
+      "NOMBRE":"Felix Opazo",
+      "COMUCOT":"",
+      "TIPODOC":"",
+      "LISTAPRE":{
+         "ESTADO":"A",
+         "NOMBRE":"General",
+         "DESCRIPC":"Lista de precios general",
+         "INTERNET":"N",
+         "LISTAPRE":"TA"
+      },
+      "WEB_BODE":"",
+      "WEB_CAJA":"",
+      "WEB_SUCU":"A",
+      "CRAYNOAUT":"",
+      "FUNCIONES":"LJSPM0TIH",
+      "NOMBRECOM":"Felix Opazo",
+      "NOMBREUSO":"Felix Opazo",
+      "WEBVERPRE":"",
+      "STKBODVEF2":""
+   }
+}

@@ -6,27 +6,22 @@ import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
-import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
-import Select from '@mui/material/Select'
-import SearchIcon from '@mui/icons-material/Search' // Importamos el ícono de búsqueda
+import SearchIcon from '@mui/icons-material/Search'
 import { TextField, InputAdornment, Autocomplete } from '@mui/material'
 import Box from '@mui/material/Box'
 
 // Third-party imports
-
 import classnames from 'classnames'
 
 // Types Imports
-import type { SidebarLeftProps, CalendarFiltersType } from '@/types/apps/calendarTypes'
-import type { ThemeColor } from '@core/types'
+import type { SidebarLeftProps } from '@/types/apps/calendarTypes'
 
-// Styled Component Imports
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+// Component Imports
 import SidebarMiniCalendar from './SidebarMiniCalendar'
 
 // Slice Imports
-import { filterAllCalendarLabels, filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
+import { filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
 
 // Interfaces
 interface Cliente {
@@ -45,6 +40,17 @@ interface Obra {
   region: string
 }
 
+interface Laboratorista {
+  id: string
+  name: string
+  email: string
+}
+
+interface SectorComercial {
+  id: string
+  nombre: string
+}
+
 const SidebarLeft = (props: SidebarLeftProps) => {
   // Props
   const {
@@ -60,13 +66,21 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   // Estados para los filtros
   const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
   const [obraFilter, setObraFilter] = useState<Obra | null>(null)
-  const [laboratoristaFilter, setLaboratoristaFilter] = useState<CalendarFiltersType | 'None'>('None')
+  const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista | null>(null)
+  const [sectorComercialFilter, setSectorComercialFilter] = useState<string | null>(null)
+  const [comunaFilter, setComunaFilter] = useState<string | null>(null)
 
   // Estado para la lista de clientes y obras
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [obras, setObras] = useState<Obra[]>([])
+  const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
+  const [sectoresComerciales, setSectoresComerciales] = useState<string[]>([])
+  const [comunas, setComunas] = useState<string[]>([])
   const [loadingClientes, setLoadingClientes] = useState(true)
   const [loadingObras, setLoadingObras] = useState(true)
+  const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
+  const [loadingSectores, setLoadingSectores] = useState(true)
+  const [loadingComunas, setLoadingComunas] = useState(true)
 
   // Cargar clientes al montar el componente
   useEffect(() => {
@@ -108,6 +122,66 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     fetchObras()
   }, [])
 
+  // Cargar laboratoristas al montar el componente
+  useEffect(() => {
+    const fetchLaboratoristas = async () => {
+      try {
+        const response = await fetch('/api/users/laboratoristas')
+
+        if (!response.ok) throw new Error('Error al cargar laboratoristas')
+        const data = await response.json()
+
+        setLaboratoristas(data)
+      } catch (error) {
+        console.error('Error cargando laboratoristas:', error)
+      } finally {
+        setLoadingLaboratoristas(false)
+      }
+    }
+
+    fetchLaboratoristas()
+  }, [])
+
+  // Cargar sectores comerciales al montar el componente
+  useEffect(() => {
+    const fetchSectoresComerciales = async () => {
+      try {
+        const response = await fetch('/api/agenda/sectores')
+
+        if (!response.ok) throw new Error('Error al cargar sectores comerciales')
+        const data = await response.json()
+
+        setSectoresComerciales(data)
+      } catch (error) {
+        console.error('Error cargando sectores comerciales:', error)
+      } finally {
+        setLoadingSectores(false)
+      }
+    }
+
+    fetchSectoresComerciales()
+  }, [])
+
+  // Cargar comunas al montar el componente
+  useEffect(() => {
+    const fetchComunas = async () => {
+      try {
+        const response = await fetch('/api/agenda/comunas')
+
+        if (!response.ok) throw new Error('Error al cargar comunas')
+        const data = await response.json()
+
+        setComunas(data)
+      } catch (error) {
+        console.error('Error cargando comunas:', error)
+      } finally {
+        setLoadingComunas(false)
+      }
+    }
+
+    fetchComunas()
+  }, [])
+
   const handleFilterChange = (filterType: string, value: any) => {
     switch (filterType) {
       case 'Cliente':
@@ -129,7 +203,23 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       case 'Laboratorista':
         setLaboratoristaFilter(value)
 
-        if (value !== 'None') {
+        if (value) {
+          dispatch(filterCalendarLabel(value.id))
+        }
+
+        break
+      case 'SectorComercial':
+        setSectorComercialFilter(value)
+
+        if (value) {
+          dispatch(filterCalendarLabel(value))
+        }
+
+        break
+      case 'Comuna':
+        setComunaFilter(value)
+
+        if (value) {
           dispatch(filterCalendarLabel(value))
         }
 
@@ -194,6 +284,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             }
           }}
           currentDate={calendarApi?.getDate()}
+          calendarRef={{ current: calendarApi }}
         />
       </Box>
 
@@ -280,16 +371,90 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           />
         </FormControl>
 
-        {/* Select para Laboratorista */}
-        <FormControl fullWidth variant='outlined' className='mbe-2'>
-          <Select
+        {/* Campo Laboratorista con Autocomplete */}
+        <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
+          <Autocomplete
+            options={laboratoristas}
+            getOptionLabel={option => option.name}
             value={laboratoristaFilter}
-            onChange={e => handleFilterChange('Laboratorista', e.target.value as CalendarFiltersType)}
-            displayEmpty
-          >
-            <MenuItem value='None'> Laboratorista</MenuItem>
-            <MenuItem value='Laboratorista'>Laboratorista</MenuItem>
-          </Select>
+            onChange={(_, newValue) => handleFilterChange('Laboratorista', newValue)}
+            loading={loadingLaboratoristas}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Laboratorista'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box>
+                  <Typography variant='body1'>{option.name}</Typography>
+                  <Typography variant='caption' color='textSecondary'>
+                    {option.email}
+                  </Typography>
+                </Box>
+              </li>
+            )}
+          />
+        </FormControl>
+
+        {/* Campo Sector Comercial con Autocomplete */}
+        <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
+          <Autocomplete
+            options={sectoresComerciales}
+            value={sectorComercialFilter}
+            onChange={(_, newValue) => handleFilterChange('SectorComercial', newValue)}
+            loading={loadingSectores}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Sector Comercial'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+          />
+        </FormControl>
+
+        {/* Campo Comuna con Autocomplete */}
+        <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
+          <Autocomplete
+            options={comunas}
+            value={comunaFilter}
+            onChange={(_, newValue) => handleFilterChange('Comuna', newValue)}
+            loading={loadingComunas}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Comuna'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+          />
         </FormControl>
       </div>
     </Drawer>

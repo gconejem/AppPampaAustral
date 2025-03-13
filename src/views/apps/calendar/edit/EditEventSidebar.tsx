@@ -13,10 +13,15 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
-import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import Autocomplete from '@mui/material/Autocomplete'
 import EditIcon from '@mui/icons-material/Edit'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import SaveIcon from '@mui/icons-material/Save'
+import CloseIcon from '@mui/icons-material/Close'
+
+// Hooks
+import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 
 // Types
 interface EditEventSidebarProps {
@@ -57,6 +62,7 @@ interface ServicioAgendado {
 interface LaboratoristaAgendado {
   id: string
   nombre: string
+  email: string
   esPrincipal?: boolean
 }
 
@@ -82,23 +88,8 @@ interface Obra {
 interface Solicitud {
   id: number
   numeroSolicitud: number
-}
-
-interface Servicio {
-  id: number
-  codigo: string
-  nombre: string
-}
-
-interface Laboratorista {
-  id: string
-  name: string
-}
-
-interface Equipo {
-  id: number
-  codigo: string
-  nombre: string
+  cliente?: Cliente
+  obra?: Obra
 }
 
 // Datos iniciales vacíos
@@ -134,25 +125,20 @@ const EditEventSidebar = ({
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
 
   // Estados para los servicios
-  const [servicios, setServicios] = useState<Servicio[]>([])
   const [serviciosAgendados, setServiciosAgendados] = useState<ServicioAgendado[]>([])
-  const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null)
-  const [cantidad, setCantidad] = useState<string>('')
-  const [observacion, setObservacion] = useState<string>('')
-  const [esSegundaVisita, setEsSegundaVisita] = useState<boolean>(false)
 
   // Estados para laboratoristas
-  const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
-  const [laboratoristaSeleccionado, setLaboratoristaSeleccionado] = useState<Laboratorista | null>(null)
   const [laboratoristasAgendados, setLaboratoristasAgendados] = useState<LaboratoristaAgendado[]>([])
 
   // Estados para equipos
-  const [equipos, setEquipos] = useState<Equipo[]>([])
-  const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null)
   const [equiposAgendados, setEquiposAgendados] = useState<EquipoAgendado[]>([])
 
-  // Agregar estado para comunas
-  const [comunas, setComunas] = useState<string[]>([])
+  // Usar el hook de regiones y comunas
+  const { regiones, comunas, setSelectedRegion } = useRegionesYComunas()
+
+  // Estados para edición en línea de servicios
+  const [editingIndex, setEditingIndex] = useState<number>(-1)
+  const [editingService, setEditingService] = useState<ServicioAgendado | null>(null)
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -178,23 +164,32 @@ const EditEventSidebar = ({
 
         setSolicitudes(solicitudesData)
 
-        // Cargar servicios disponibles
-        const serviciosRes = await fetch('/api/agenda/servicios')
-        const serviciosData = await serviciosRes.json()
-
-        setServicios(serviciosData)
-
         // Cargar laboratoristas (usuarios con rol específico)
         const laboratoristasRes = await fetch('/api/users?role=laboratorista')
         const laboratoristasData = await laboratoristasRes.json()
 
-        setLaboratoristas(laboratoristasData)
+        const formattedLaboratoristas = laboratoristasData.map((lab: any) => ({
+          id: lab.id,
+          nombre: lab.name,
+          email: lab.email,
+          esPrincipal: false
+        }))
+
+        setLaboratoristasAgendados(formattedLaboratoristas)
 
         // Cargar equipos disponibles
         const equiposRes = await fetch('/api/agenda/equipos')
         const equiposData = await equiposRes.json()
 
-        setEquipos(equiposData)
+        const formattedEquipos = equiposData.map((eq: any) => ({
+          id: eq.id,
+          codigo: eq.codigo,
+          nombre: eq.nombre,
+          cantidad: 1,
+          observacion: ''
+        }))
+
+        setEquiposAgendados(formattedEquipos)
 
         console.log('Carga inicial de datos completada')
       } catch (error) {
@@ -228,18 +223,19 @@ const EditEventSidebar = ({
       // Convertir laboratoristas del formato del evento al formato del formulario
       const formattedLaboratoristas =
         selectedEvent.extendedProps?.asignados?.map((a: any) => ({
-          id: a.user.id,
-          nombre: a.user.name,
-          esPrincipal: a.esPrincipal
+          id: a?.id || a?.user?.id,
+          nombre: a?.name || a?.user?.name || 'No especificado',
+          email: a?.email || a?.user?.email || '',
+          esPrincipal: a?.esPrincipal || false
         })) || []
 
       // Convertir equipos del formato del evento al formato del formulario
       const formattedEquipos =
         selectedEvent.extendedProps?.equipos?.map((e: any) => ({
-          id: e.equipo?.id,
-          codigo: e.codigo,
-          nombre: e.nombre,
-          cantidad: e.cantidad,
+          id: e.equipo?.id || e.id,
+          codigo: e.equipo?.codigo || e.codigo || '',
+          nombre: e.equipo?.nombre || e.nombre || '',
+          cantidad: e.cantidad || 1,
           observacion: e.observacion || ''
         })) || []
 
@@ -253,10 +249,10 @@ const EditEventSidebar = ({
         esRecurrente: selectedEvent.extendedProps?.esRecurrente || false,
         fechaInicio: formatDate(selectedEvent.start),
         fechaFin: formatDate(selectedEvent.end),
-        clienteId: selectedEvent.extendedProps?.cliente?.clienteId,
-        obraId: selectedEvent.extendedProps?.obra?.obraId,
-        solicitudId: selectedEvent.extendedProps?.solicitud?.id,
-        sectorComercial: selectedEvent.extendedProps?.sector || '',
+        clienteId: selectedEvent.extendedProps?.cliente?.id || selectedEvent.extendedProps?.clienteId,
+        obraId: selectedEvent.extendedProps?.obra?.id || selectedEvent.extendedProps?.obraId,
+        solicitudId: selectedEvent.extendedProps?.solicitud?.id || selectedEvent.extendedProps?.solicitudId,
+        sectorComercial: selectedEvent.extendedProps?.sectorComercial || '',
         region: selectedEvent.extendedProps?.region || '',
         comuna: selectedEvent.extendedProps?.comuna || '',
         direccion: selectedEvent.extendedProps?.direccion || '',
@@ -267,32 +263,20 @@ const EditEventSidebar = ({
         equipos: []
       })
 
+      // Para debugging
+      console.log('Cliente ID:', selectedEvent.extendedProps?.cliente?.id || selectedEvent.extendedProps?.clienteId)
+      console.log('Obra ID:', selectedEvent.extendedProps?.obra?.id || selectedEvent.extendedProps?.obraId)
+      console.log(
+        'Solicitud ID:',
+        selectedEvent.extendedProps?.solicitud?.id || selectedEvent.extendedProps?.solicitudId
+      )
+
       // Establecer servicios, laboratoristas y equipos agendados
       setServiciosAgendados(formattedServicios)
       setLaboratoristasAgendados(formattedLaboratoristas)
       setEquiposAgendados(formattedEquipos)
     }
   }, [selectedEvent, editEventSidebarOpen])
-
-  // Efecto para cargar comunas cuando se selecciona una región
-  useEffect(() => {
-    const fetchComunas = async () => {
-      if (formData.region) {
-        try {
-          const response = await fetch(`/api/comunas?region=${formData.region}`)
-          const data = await response.json()
-
-          setComunas(data.map((c: any) => c.nombre))
-        } catch (error) {
-          console.error('Error al cargar comunas:', error)
-        }
-      } else {
-        setComunas([])
-      }
-    }
-
-    fetchComunas()
-  }, [formData.region])
 
   const handleSubmit = async () => {
     try {
@@ -366,81 +350,8 @@ const EditEventSidebar = ({
     }
   }
 
-  const handleAgregarServicio = () => {
-    if (!servicioSeleccionado || !cantidad) return
-
-    const nuevoServicio: ServicioAgendado = {
-      codigo: servicioSeleccionado.codigo,
-      servicio: servicioSeleccionado.nombre,
-      cantidad: parseInt(cantidad),
-      observacion: observacion,
-      esSegundaVisita: esSegundaVisita
-    }
-
-    setServiciosAgendados(prev => [...prev, nuevoServicio])
-
-    // Limpiar campos
-    setServicioSeleccionado(null)
-    setCantidad('')
-    setObservacion('')
-    setEsSegundaVisita(false)
-  }
-
-  const handleRemoverServicio = (index: number) => {
-    setServiciosAgendados(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const handleAgregarLaboratorista = () => {
-    if (!laboratoristaSeleccionado) return
-
-    // Verificar que no esté ya agregado
-    const yaExiste = laboratoristasAgendados.some(lab => lab.id === laboratoristaSeleccionado.id)
-
-    if (yaExiste) {
-      alert('Este laboratorista ya ha sido agregado')
-
-      return
-    }
-
-    const nuevoLaboratorista: LaboratoristaAgendado = {
-      id: laboratoristaSeleccionado.id,
-      nombre: laboratoristaSeleccionado.name
-    }
-
-    setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
-
-    // Limpiar campo
-    setLaboratoristaSeleccionado(null)
-  }
-
   const handleRemoverLaboratorista = (index: number) => {
     setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const handleAgregarEquipo = () => {
-    if (!equipoSeleccionado) return
-
-    // Verificar que no esté ya agregado
-    const yaExiste = equiposAgendados.some(eq => eq.id === equipoSeleccionado.id)
-
-    if (yaExiste) {
-      alert('Este equipo ya ha sido agregado')
-
-      return
-    }
-
-    const nuevoEquipo: EquipoAgendado = {
-      id: equipoSeleccionado.id,
-      codigo: equipoSeleccionado.codigo,
-      nombre: equipoSeleccionado.nombre,
-      cantidad: 1,
-      observacion: ''
-    }
-
-    setEquiposAgendados(prev => [...prev, nuevoEquipo])
-
-    // Limpiar campo
-    setEquipoSeleccionado(null)
   }
 
   const handleRemoverEquipo = (index: number) => {
@@ -456,530 +367,654 @@ const EditEventSidebar = ({
   }
 
   return (
-    <Drawer
-      anchor='right'
-      open={editEventSidebarOpen}
-      onClose={handleEditEventSidebarToggle}
-      sx={{
-        '& .MuiDrawer-paper': {
-          width: '80%',
-          maxWidth: '100vw',
-          padding: '16px',
-          boxSizing: 'border-box'
-        }
-      }}
-    >
-      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <Grid container alignItems='center' justifyContent='space-between' spacing={2} sx={{ mb: 6 }}>
-          <Grid item xs={9}>
-            <Box display='flex' alignItems='center' gap={1}>
-              <Typography variant='h5'>Editar Visita</Typography>
-              <Typography variant='body2' color='textSecondary'>
-                * Campo obligatorio
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={2}>
-            <Box display='flex' alignItems='center' gap={1}>
-              <Typography variant='body2'>Estado</Typography>
-              {editandoEstado ? (
-                <FormControl size='small'>
-                  <Select
-                    value={estado}
-                    onChange={e => {
-                      setEstado(e.target.value)
-                      setEditandoEstado(false)
-                    }}
-                    autoFocus
-                    onBlur={() => setEditandoEstado(false)}
-                  >
-                    <MenuItem value='AGENDADA'>Agendada</MenuItem>
-                    <MenuItem value='COMPLETADA'>Completada</MenuItem>
-                    <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
-                    <MenuItem value='CANCELADA'>Cancelada</MenuItem>
-                    <MenuItem value='EN_PROCESO'>En Proceso</MenuItem>
-                  </Select>
-                </FormControl>
-              ) : (
-                <>
-                  <Typography variant='body2'>{estado}</Typography>
-                  <IconButton size='small' onClick={() => setEditandoEstado(true)}>
-                    <EditIcon fontSize='small' />
-                  </IconButton>
-                </>
-              )}
-            </Box>
-          </Grid>
-
-          <Grid item xs={1} display='flex' justifyContent='flex-end'>
-            <Button variant='outlined' color='error' onClick={handleEditEventSidebarToggle}>
-              Cancelar
-            </Button>
-          </Grid>
-        </Grid>
-
-        {/* Contenido del formulario */}
-        <Box sx={{ flex: 1, overflowY: 'auto', pt: 2 }}>
-          <Grid container spacing={3}>
-            {/* Primera fila: Tipo/Recurrente, Fecha, Hora inicio, Hora término */}
-            <Grid item xs={3}>
-              <Box>
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel id='tipo-visita-label'>Tipo de Visita</InputLabel>
-                  <Select
-                    labelId='tipo-visita-label'
-                    value={formData.tipoVisita}
-                    onChange={e => handleInputChange('tipoVisita', e.target.value)}
-                    label='Tipo de Visita'
-                  >
-                    <MenuItem value='VISITA'>Visita</MenuItem>
-                    <MenuItem value='EVENTO'>Evento</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.esRecurrente}
-                      onChange={e => handleInputChange('esRecurrente', e.target.checked)}
-                    />
-                  }
-                  label='Es recurrente'
-                />
+    <>
+      <Drawer
+        anchor='right'
+        open={editEventSidebarOpen}
+        onClose={handleEditEventSidebarToggle}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: '80%',
+            maxWidth: '100vw',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }
+        }}
+      >
+        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <Grid container alignItems='center' justifyContent='space-between' spacing={2} sx={{ mb: 6 }}>
+            <Grid item xs={9}>
+              <Box display='flex' alignItems='center' gap={1}>
+                <Typography variant='h5'>Editar Visita</Typography>
+                <Typography variant='body2' color='textSecondary'>
+                  * Campo obligatorio
+                </Typography>
               </Box>
             </Grid>
 
-            {/* Fecha */}
-            <Grid item xs={3}>
-              <TextField
-                fullWidth
-                label='Fecha'
-                type='date'
-                value={formData.fechaInicio.split('T')[0]}
-                onChange={e => {
-                  const time = formData.fechaInicio.split('T')[1] || '00:00'
-
-                  handleInputChange('fechaInicio', `${e.target.value}T${time}`)
-
-                  // Si la fecha de término está vacía, usamos la misma fecha
-                  if (!formData.fechaFin) {
-                    handleInputChange('fechaFin', `${e.target.value}T00:00`)
-                  }
-                }}
-                InputLabelProps={{
-                  shrink: true
-                }}
-                required
-              />
-            </Grid>
-
-            {/* Hora inicio */}
-            <Grid item xs={3}>
-              <TextField
-                fullWidth
-                label='Hora inicio'
-                type='time'
-                value={formData.fechaInicio.split('T')[1] || ''}
-                onChange={e => {
-                  const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
-
-                  handleInputChange('fechaInicio', `${date}T${e.target.value}`)
-                }}
-                InputLabelProps={{
-                  shrink: true
-                }}
-                required
-              />
-            </Grid>
-
-            {/* Hora término */}
-            <Grid item xs={3}>
-              <TextField
-                fullWidth
-                label='Hora término'
-                type='time'
-                value={formData.fechaFin.split('T')[1] || ''}
-                onChange={e => {
-                  const date =
-                    formData.fechaFin.split('T')[0] ||
-                    formData.fechaInicio.split('T')[0] ||
-                    new Date().toISOString().split('T')[0]
-
-                  handleInputChange('fechaFin', `${date}T${e.target.value}`)
-                }}
-                InputLabelProps={{
-                  shrink: true
-                }}
-                required
-              />
-            </Grid>
-
-            {/* Segunda fila: Cliente, Obra, Solicitud */}
-            {/* Cliente */}
-            <Grid item xs={4}>
-              <Autocomplete
-                options={clientes}
-                getOptionLabel={option => option.razonSocial}
-                value={clientes.find(c => c.clienteId === formData.clienteId) || null}
-                onChange={(_, newValue) => handleInputChange('clienteId', newValue?.clienteId)}
-                renderInput={params => <TextField {...params} label='Cliente' required />}
-              />
-            </Grid>
-
-            {/* Obra */}
-            <Grid item xs={4}>
-              <Autocomplete
-                options={obras}
-                getOptionLabel={option => option.nombreObra}
-                value={obras.find(o => o.obraId === formData.obraId) || null}
-                onChange={(_, newValue) => handleInputChange('obraId', newValue?.obraId)}
-                renderInput={params => <TextField {...params} label='Obra' />}
-              />
-            </Grid>
-
-            {/* Solicitud */}
-            <Grid item xs={4}>
-              <Autocomplete
-                options={solicitudes}
-                getOptionLabel={option => `#${option.numeroSolicitud}`}
-                value={solicitudes.find(s => s.id === formData.solicitudId) || null}
-                onChange={(_, newValue) => handleInputChange('solicitudId', newValue?.id)}
-                renderInput={params => <TextField {...params} label='Solicitud' />}
-              />
-            </Grid>
-
-            {/* Sector Comercial */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label='Sector Comercial'
-                value={formData.sectorComercial}
-                onChange={e => handleInputChange('sectorComercial', e.target.value)}
-                required
-              />
-            </Grid>
-
-            {/* Región */}
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel id='region-label'>Región</InputLabel>
-                <Select
-                  labelId='region-label'
-                  value={formData.region}
-                  onChange={e => handleInputChange('region', e.target.value)}
-                  label='Región'
-                >
-                  <MenuItem value='Metropolitana'>Metropolitana</MenuItem>
-                  <MenuItem value='Valparaíso'>Valparaíso</MenuItem>
-                  <MenuItem value='Biobío'>Biobío</MenuItem>
-                  <MenuItem value='Coquimbo'>Coquimbo</MenuItem>
-                  <MenuItem value="O'Higgins">O&apos;Higgins</MenuItem>
-                  <MenuItem value='Maule'>Maule</MenuItem>
-                  <MenuItem value='Araucanía'>Araucanía</MenuItem>
-                  <MenuItem value='Los Lagos'>Los Lagos</MenuItem>
-                  <MenuItem value='Antofagasta'>Antofagasta</MenuItem>
-                  <MenuItem value='Los Ríos'>Los Ríos</MenuItem>
-                  <MenuItem value='Atacama'>Atacama</MenuItem>
-                  <MenuItem value='Ñuble'>Ñuble</MenuItem>
-                  <MenuItem value='Tarapacá'>Tarapacá</MenuItem>
-                  <MenuItem value='Arica y Parinacota'>Arica y Parinacota</MenuItem>
-                  <MenuItem value='Magallanes'>Magallanes</MenuItem>
-                  <MenuItem value='Aysén'>Aysén</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Comuna */}
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel id='comuna-label'>Comuna</InputLabel>
-                <Select
-                  labelId='comuna-label'
-                  value={formData.comuna}
-                  onChange={e => handleInputChange('comuna', e.target.value)}
-                  label='Comuna'
-                  disabled={!formData.region}
-                >
-                  {comunas.map(comuna => (
-                    <MenuItem key={comuna} value={comuna}>
-                      {comuna}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Dirección */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label='Dirección'
-                value={formData.direccion}
-                onChange={e => handleInputChange('direccion', e.target.value)}
-                required
-              />
-            </Grid>
-
-            {/* Referencia */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label='Referencia'
-                value={formData.referencia}
-                onChange={e => handleInputChange('referencia', e.target.value)}
-              />
-            </Grid>
-
-            {/* Sección de Servicios */}
-            <Grid item xs={12}>
-              <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold' }}>
-                Servicios
-              </Typography>
-
-              <Box sx={{ mb: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Autocomplete
-                      options={servicios}
-                      getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-                      value={servicioSeleccionado}
-                      onChange={(_, newValue) => setServicioSeleccionado(newValue)}
-                      renderInput={params => <TextField {...params} label='Servicio' />}
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label='Cant.'
-                      type='number'
-                      value={cantidad}
-                      onChange={e => setCantidad(e.target.value)}
-                      inputProps={{ min: 1 }}
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Button
-                      variant='contained'
-                      fullWidth
-                      onClick={handleAgregarServicio}
-                      disabled={!servicioSeleccionado || !cantidad}
-                      sx={{ height: '100%' }}
+            <Grid item xs={2}>
+              <Box display='flex' alignItems='center' gap={1}>
+                <Typography variant='body2'>Estado</Typography>
+                {editandoEstado ? (
+                  <FormControl size='small'>
+                    <Select
+                      value={estado}
+                      onChange={e => {
+                        setEstado(e.target.value)
+                        setEditandoEstado(false)
+                      }}
+                      autoFocus
+                      onBlur={() => setEditandoEstado(false)}
                     >
-                      <AddIcon />
-                    </Button>
-                  </Grid>
-                </Grid>
+                      <MenuItem value='AGENDADA'>Agendada</MenuItem>
+                      <MenuItem value='COMPLETADA'>Completada</MenuItem>
+                      <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
+                      <MenuItem value='CANCELADA'>Cancelada</MenuItem>
+                      <MenuItem value='EN_PROCESO'>En Proceso</MenuItem>
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <>
+                    <Typography variant='body2'>{estado}</Typography>
+                    <IconButton size='small' onClick={() => setEditandoEstado(true)}>
+                      <EditIcon fontSize='small' />
+                    </IconButton>
+                  </>
+                )}
+              </Box>
+            </Grid>
 
+            <Grid item xs={1} display='flex' justifyContent='flex-end'>
+              <Button variant='outlined' color='error' onClick={handleEditEventSidebarToggle}>
+                Cancelar
+              </Button>
+            </Grid>
+          </Grid>
+
+          {/* Contenido del formulario */}
+          <Box sx={{ flex: 1, overflowY: 'auto', pt: 2 }}>
+            <Grid container spacing={3}>
+              {/* Primera fila: Tipo/Recurrente, Fecha, Hora inicio, Hora término */}
+              <Grid item xs={3}>
+                <Box>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel id='tipo-visita-label'>Tipo de Visita</InputLabel>
+                    <Select
+                      labelId='tipo-visita-label'
+                      value={formData.tipoVisita}
+                      onChange={e => handleInputChange('tipoVisita', e.target.value)}
+                      label='Tipo de Visita'
+                    >
+                      <MenuItem value='VISITA'>Visita</MenuItem>
+                      <MenuItem value='EVENTO'>Evento</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.esRecurrente}
+                        onChange={e => handleInputChange('esRecurrente', e.target.checked)}
+                      />
+                    }
+                    label='Es recurrente'
+                  />
+                </Box>
+              </Grid>
+
+              {/* Fecha */}
+              <Grid item xs={3}>
                 <TextField
                   fullWidth
-                  label='Observación'
-                  value={observacion}
-                  onChange={e => setObservacion(e.target.value)}
-                  sx={{ mt: 2 }}
-                />
+                  label='Fecha'
+                  type='date'
+                  value={formData.fechaInicio.split('T')[0]}
+                  onChange={e => {
+                    const time = formData.fechaInicio.split('T')[1] || '00:00'
 
-                <FormControlLabel
-                  control={<Checkbox checked={esSegundaVisita} onChange={e => setEsSegundaVisita(e.target.checked)} />}
-                  label='Es segunda visita'
-                />
-              </Box>
+                    handleInputChange('fechaInicio', `${e.target.value}T${time}`)
 
-              {serviciosAgendados.length > 0 ? (
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                  {serviciosAgendados.map((servicio, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        p: 1,
-                        mb: 1,
-                        borderBottom: index < serviciosAgendados.length - 1 ? '1px solid #f0f0f0' : 'none'
-                      }}
-                    >
+                    // Si la fecha de término está vacía, usamos la misma fecha
+                    if (!formData.fechaFin) {
+                      handleInputChange('fechaFin', `${e.target.value}T00:00`)
+                    }
+                  }}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                  required
+                />
+              </Grid>
+
+              {/* Hora inicio */}
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label='Hora inicio'
+                  type='time'
+                  value={formData.fechaInicio.split('T')[1] || ''}
+                  onChange={e => {
+                    const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
+
+                    handleInputChange('fechaInicio', `${date}T${e.target.value}`)
+                  }}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                  required
+                />
+              </Grid>
+
+              {/* Hora término */}
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label='Hora término'
+                  type='time'
+                  value={formData.fechaFin.split('T')[1] || ''}
+                  onChange={e => {
+                    const date =
+                      formData.fechaFin.split('T')[0] ||
+                      formData.fechaInicio.split('T')[0] ||
+                      new Date().toISOString().split('T')[0]
+
+                    handleInputChange('fechaFin', `${date}T${e.target.value}`)
+                  }}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                  required
+                />
+              </Grid>
+
+              {/* Segunda fila: Cliente, Obra, Solicitud */}
+              {/* Cliente */}
+              <Grid item xs={4}>
+                <Autocomplete
+                  options={clientes}
+                  getOptionLabel={option => option.razonSocial}
+                  value={clientes.find(c => c.clienteId === formData.clienteId) || null}
+                  onChange={(_, newValue) => handleInputChange('clienteId', newValue?.clienteId)}
+                  renderInput={params => <TextField {...params} label='Cliente' required />}
+                />
+              </Grid>
+
+              {/* Obra */}
+              <Grid item xs={4}>
+                <Autocomplete
+                  options={obras}
+                  getOptionLabel={option => option.nombreObra}
+                  value={obras.find(o => o.obraId === formData.obraId) || null}
+                  onChange={(_, newValue) => handleInputChange('obraId', newValue?.obraId)}
+                  renderInput={params => <TextField {...params} label='Obra' />}
+                />
+              </Grid>
+
+              {/* Solicitud */}
+              <Grid item xs={4}>
+                <Autocomplete
+                  options={solicitudes}
+                  getOptionLabel={option => {
+                    const clienteInfo = option.cliente ? ` - ${option.cliente.razonSocial}` : ''
+                    const obraInfo = option.obra ? ` - ${option.obra.nombreObra}` : ''
+
+                    return `Solicitud #${option.numeroSolicitud}${clienteInfo}${obraInfo}`
+                  }}
+                  value={solicitudes.find(s => s.id === formData.solicitudId) || null}
+                  onChange={(_, newValue) => {
+                    if (newValue) {
+                      setFormData(prev => ({
+                        ...prev,
+                        solicitudId: newValue.id,
+                        clienteId: prev.clienteId || newValue.cliente?.clienteId,
+                        obraId: prev.obraId || newValue.obra?.obraId
+                      }))
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        solicitudId: undefined
+                      }))
+                    }
+                  }}
+                  renderInput={params => <TextField {...params} label='Solicitud' />}
+                  renderOption={(props, option) => (
+                    <li {...props}>
                       <Box>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          {servicio.servicio}
-                        </Typography>
-                        <Typography variant='caption' color='textSecondary'>
-                          Cant: {servicio.cantidad} {servicio.esSegundaVisita ? '(2da visita)' : ''}
-                        </Typography>
-                        {servicio.observacion && (
-                          <Typography variant='caption' display='block' color='textSecondary'>
-                            Obs: {servicio.observacion}
+                        <Typography variant='body1'>Solicitud #{option.numeroSolicitud}</Typography>
+                        {option.cliente && (
+                          <Typography variant='caption' color='textSecondary'>
+                            Cliente: {option.cliente.razonSocial}
+                          </Typography>
+                        )}
+                        {option.obra && (
+                          <Typography variant='caption' color='textSecondary' display='block'>
+                            Obra: {option.obra.nombreObra}
                           </Typography>
                         )}
                       </Box>
-                      <IconButton size='small' onClick={() => handleRemoverServicio(index)}>
-                        <DeleteIcon fontSize='small' />
-                      </IconButton>
-                    </Box>
-                  ))}
+                    </li>
+                  )}
+                />
+              </Grid>
+
+              {/* Sector Comercial, Región y Comuna en la misma fila */}
+              <Grid item xs={4}>
+                <TextField
+                  fullWidth
+                  label='Sector Comercial'
+                  value={formData.sectorComercial}
+                  onChange={e => handleInputChange('sectorComercial', e.target.value)}
+                  required
+                />
+              </Grid>
+
+              <Grid item xs={4}>
+                <FormControl fullWidth required>
+                  <InputLabel id='region-label'>Región</InputLabel>
+                  <Select
+                    labelId='region-label'
+                    value={formData.region}
+                    onChange={e => {
+                      handleInputChange('region', e.target.value)
+                      setSelectedRegion(e.target.value)
+
+                      // Limpiar comuna al cambiar región
+                      handleInputChange('comuna', '')
+                    }}
+                    label='Región'
+                  >
+                    {regiones.map(region => (
+                      <MenuItem key={region.id} value={region.nombre}>
+                        {region.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={4}>
+                <FormControl fullWidth required>
+                  <InputLabel id='comuna-label'>Comuna</InputLabel>
+                  <Select
+                    labelId='comuna-label'
+                    value={formData.comuna}
+                    onChange={e => handleInputChange('comuna', e.target.value)}
+                    label='Comuna'
+                    disabled={!formData.region}
+                  >
+                    {comunas.map(comuna => (
+                      <MenuItem key={comuna.id} value={comuna.nombre}>
+                        {comuna.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Dirección y Referencia en la misma fila 6-6 */}
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    fullWidth
+                    label='Dirección'
+                    value={formData.direccion}
+                    onChange={e => handleInputChange('direccion', e.target.value)}
+                    required
+                  />
+                  <IconButton
+                    size='small'
+                    sx={{ ml: 1 }}
+                    onClick={() => handleInputChange('referencia', formData.direccion)}
+                    disabled={!formData.direccion}
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
                 </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                  <Typography variant='body2'>No hay servicios agregados</Typography>
+              </Grid>
+
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label='Referencia'
+                  value={formData.referencia}
+                  onChange={e => handleInputChange('referencia', e.target.value)}
+                />
+              </Grid>
+
+              {/* Sección de Servicios */}
+              <Grid item xs={12}>
+                <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Servicios
+                </Typography>
+
+                {/* Tabla de servicios */}
+                <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
+                  <Grid container>
+                    <Grid item xs={2}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                        CÓDIGO
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                        SERVICIOS
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={1}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                        CANT.
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                        DESCRIPCIÓN
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                        2DA VISITA
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+                        ACCIÓN
+                      </Typography>
+                    </Grid>
+                  </Grid>
                 </Box>
-              )}
-            </Grid>
 
-            {/* Sección de Laboratoristas */}
-            <Grid item xs={12}>
-              <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold' }}>
-                Laboratoristas
-              </Typography>
+                {serviciosAgendados.length > 0 ? (
+                  serviciosAgendados.map((servicio, index) => {
+                    const isEditing = editingIndex === index
+                    const tempData = editingService && editingIndex === index ? editingService : servicio
 
-              <Box sx={{ mb: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={9}>
-                    <Autocomplete
-                      options={laboratoristas}
-                      getOptionLabel={option => option.name}
-                      value={laboratoristaSeleccionado}
-                      onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
-                      renderInput={params => <TextField {...params} label='Laboratorista' />}
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Button
-                      variant='contained'
-                      fullWidth
-                      onClick={handleAgregarLaboratorista}
-                      disabled={!laboratoristaSeleccionado}
-                      sx={{ height: '100%' }}
-                    >
-                      <AddIcon />
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
+                    return (
+                      <Grid
+                        container
+                        key={index}
+                        sx={{ borderBottom: '1px solid #e0e0e0', padding: '8px 0', alignItems: 'center' }}
+                      >
+                        <Grid item xs={2}>
+                          <Typography>{servicio.codigo}</Typography>
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Typography>{servicio.servicio}</Typography>
+                        </Grid>
+                        <Grid item xs={1}>
+                          {isEditing ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={tempData.cantidad}
+                              onChange={e => {
+                                const newService = { ...tempData, cantidad: parseInt(e.target.value) }
 
-              {laboratoristasAgendados.length > 0 ? (
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                  {laboratoristasAgendados.map((laboratorista, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        p: 1,
-                        mb: 1,
-                        borderBottom: index < laboratoristasAgendados.length - 1 ? '1px solid #f0f0f0' : 'none'
-                      }}
-                    >
-                      <Typography variant='body2'>{laboratorista.nombre}</Typography>
-                      <IconButton size='small' onClick={() => handleRemoverLaboratorista(index)}>
-                        <DeleteIcon fontSize='small' />
-                      </IconButton>
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                  <Typography variant='body2'>No hay laboratoristas asignados</Typography>
-                </Box>
-              )}
-            </Grid>
+                                setEditingService(newService)
+                              }}
+                              inputProps={{ min: 1, style: { padding: '4px 8px' } }}
+                              fullWidth
+                            />
+                          ) : (
+                            <Typography>{servicio.cantidad}</Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={3}>
+                          {isEditing ? (
+                            <TextField
+                              size='small'
+                              value={tempData.observacion || ''}
+                              onChange={e => {
+                                const newService = { ...tempData, observacion: e.target.value }
 
-            {/* Sección de Equipos */}
-            <Grid item xs={12}>
-              <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold' }}>
-                Equipos
-              </Typography>
+                                setEditingService(newService)
+                              }}
+                              fullWidth
+                            />
+                          ) : (
+                            <Typography>{servicio.observacion}</Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={2}>
+                          {isEditing ? (
+                            <Checkbox
+                              checked={tempData.esSegundaVisita}
+                              onChange={e => {
+                                const newService = { ...tempData, esSegundaVisita: e.target.checked }
 
-              <Box sx={{ mb: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={9}>
-                    <Autocomplete
-                      options={equipos}
-                      getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-                      value={equipoSeleccionado}
-                      onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
-                      renderInput={params => <TextField {...params} label='Equipo' />}
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Button
-                      variant='contained'
-                      fullWidth
-                      onClick={handleAgregarEquipo}
-                      disabled={!equipoSeleccionado}
-                      sx={{ height: '100%' }}
-                    >
-                      <AddIcon />
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
+                                setEditingService(newService)
+                              }}
+                              size='small'
+                            />
+                          ) : (
+                            <Typography>{servicio.esSegundaVisita ? 'Sí' : 'No'}</Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Box display='flex' gap={1} justifyContent='center'>
+                            {isEditing ? (
+                              <>
+                                <IconButton
+                                  size='small'
+                                  color='primary'
+                                  onClick={() => {
+                                    const updatedServices = [...serviciosAgendados]
 
-              {equiposAgendados.length > 0 ? (
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                  {equiposAgendados.map((equipo, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        p: 1,
-                        mb: 1,
-                        borderBottom: index < equiposAgendados.length - 1 ? '1px solid #f0f0f0' : 'none'
-                      }}
-                    >
-                      <Box>
+                                    updatedServices[index] = editingService!
+                                    setServiciosAgendados(updatedServices)
+                                    setEditingIndex(-1)
+                                    setEditingService(null)
+                                  }}
+                                >
+                                  <SaveIcon fontSize='small' />
+                                </IconButton>
+                                <IconButton
+                                  size='small'
+                                  color='error'
+                                  onClick={() => {
+                                    setEditingIndex(-1)
+                                    setEditingService(null)
+                                  }}
+                                >
+                                  <CloseIcon fontSize='small' />
+                                </IconButton>
+                              </>
+                            ) : (
+                              <IconButton
+                                size='small'
+                                color='primary'
+                                onClick={() => {
+                                  setEditingIndex(index)
+                                  setEditingService({ ...servicio })
+                                }}
+                              >
+                                <EditIcon fontSize='small' />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    )
+                  })
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+                    <Typography variant='body2'>No hay servicios agregados</Typography>
+                  </Box>
+                )}
+              </Grid>
+
+              {/* Sección de Laboratoristas y Equipos */}
+              <Grid container item spacing={2} xs={12}>
+                {/* Laboratoristas */}
+                <Grid item xs={6}>
+                  <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+                    Laboratorista
+                  </Typography>
+
+                  {/* Tabla de laboratoristas */}
+                  <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
+                    <Grid container>
+                      <Grid item xs={5}>
                         <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          {equipo.nombre}
+                          NOMBRE
                         </Typography>
-                        <Typography variant='caption' color='textSecondary'>
-                          Cant: {equipo.cantidad}
+                      </Grid>
+                      <Grid item xs={5}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                          EMAIL
                         </Typography>
-                        {equipo.observacion && (
-                          <Typography variant='caption' display='block' color='textSecondary'>
-                            Obs: {equipo.observacion}
-                          </Typography>
-                        )}
-                      </Box>
-                      <IconButton size='small' onClick={() => handleRemoverEquipo(index)}>
-                        <DeleteIcon fontSize='small' />
-                      </IconButton>
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                  <Typography variant='body2'>No hay equipos asignados</Typography>
-                </Box>
-              )}
-            </Grid>
+                      </Grid>
+                      <Grid item xs={2}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+                          ACCIÓN
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
 
-            {/* Observaciones */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label='Observaciones'
-                multiline
-                rows={4}
-                value={formData.observaciones}
-                onChange={e => handleInputChange('observaciones', e.target.value)}
-              />
+                  {laboratoristasAgendados.length > 0 ? (
+                    laboratoristasAgendados.map((laboratorista, index) => (
+                      <Grid
+                        container
+                        key={index}
+                        sx={{
+                          borderBottom: '1px solid #e0e0e0',
+                          padding: '8px 4px',
+                          alignItems: 'center',
+                          '&:hover': {
+                            backgroundColor: theme => theme.palette.action.hover
+                          }
+                        }}
+                      >
+                        <Grid item xs={5}>
+                          <Typography variant='body2'>{laboratorista.nombre}</Typography>
+                        </Grid>
+                        <Grid item xs={5}>
+                          <Typography variant='body2'>{laboratorista.email}</Typography>
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Box display='flex' gap={1} justifyContent='center'>
+                            <IconButton
+                              size='small'
+                              color='error'
+                              onClick={() => handleRemoverLaboratorista(index)}
+                              sx={{
+                                padding: '4px',
+                                '&:hover': {
+                                  backgroundColor: theme => theme.palette.error.light
+                                }
+                              }}
+                            >
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    ))
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+                      <Typography variant='body2'>No hay laboratoristas asignados</Typography>
+                    </Box>
+                  )}
+                </Grid>
+
+                {/* Equipos */}
+                <Grid item xs={6}>
+                  <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+                    Equipo
+                  </Typography>
+
+                  {/* Tabla de equipos */}
+                  <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
+                    <Grid container>
+                      <Grid item xs={5}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                          CÓDIGO
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={5}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
+                          EQUIPO
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={2}>
+                        <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+                          ACCIÓN
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {equiposAgendados.length > 0 ? (
+                    equiposAgendados.map((equipo, index) => (
+                      <Grid
+                        container
+                        key={index}
+                        sx={{
+                          borderBottom: '1px solid #e0e0e0',
+                          padding: '8px 4px',
+                          alignItems: 'center',
+                          '&:hover': {
+                            backgroundColor: theme => theme.palette.action.hover
+                          }
+                        }}
+                      >
+                        <Grid item xs={5}>
+                          <Typography variant='body2'>{equipo.codigo}</Typography>
+                        </Grid>
+                        <Grid item xs={5}>
+                          <Typography variant='body2'>{equipo.nombre}</Typography>
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Box display='flex' gap={1} justifyContent='center'>
+                            <IconButton
+                              size='small'
+                              color='error'
+                              onClick={() => handleRemoverEquipo(index)}
+                              sx={{
+                                padding: '4px',
+                                '&:hover': {
+                                  backgroundColor: theme => theme.palette.error.light
+                                }
+                              }}
+                            >
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    ))
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+                      <Typography variant='body2'>No hay equipos asignados</Typography>
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
+
+              {/* Observaciones */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label='Observaciones'
+                  value={formData.observaciones}
+                  onChange={e => handleInputChange('observaciones', e.target.value)}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* Botón Actualizar */}
+          <Grid container spacing={2} mt={2} mb={2}>
+            <Grid item xs={12} display='flex' justifyContent='flex-start'>
+              <Button variant='contained' color='primary' onClick={handleSubmit}>
+                Actualizar Visita
+              </Button>
             </Grid>
           </Grid>
         </Box>
-
-        {/* Botón Actualizar */}
-        <Grid container spacing={2} mt={2} mb={2}>
-          <Grid item xs={12} display='flex' justifyContent='flex-start'>
-            <Button variant='contained' color='primary' onClick={handleSubmit}>
-              Actualizar Visita
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
-    </Drawer>
+      </Drawer>
+    </>
   )
 }
 

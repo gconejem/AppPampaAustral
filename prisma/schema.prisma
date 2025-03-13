@@ -68,6 +68,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   agendas        AgendaAsignado[]
+  ordenesTrabajo OrdenTrabajo[]
 }
 
 model Account {
@@ -414,10 +415,11 @@ model Agenda {
 
   // Servicios asociados
   servicios       AgendaServicio[]
+  ordenesTrabajo  OrdenTrabajo[]    // Nueva relación con OrdenTrabajo
 
   // Participantes
   asignados       AgendaAsignado[]
-  equipos         AgendaEquipo[]    // Mantener la relación con equipos
+  equipos         AgendaEquipo[]
 
   observaciones   String?
   createdAt       DateTime  @default(now())
@@ -492,4 +494,146 @@ model UserRol {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, rolId])
+}
+
+// Modelos para Ordenes de Trabajo
+model OrdenTrabajo {
+  id            String   @id @default(cuid())
+  clave         String   @unique
+  estado        String
+  origen        String
+  fklbrutas     String
+  correlativ    String
+  fklbdocver    String
+  fklbrutser    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relación con el usuario existente
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  // Relación con Agenda
+  agendaId      Int?
+  agenda        Agenda?  @relation(fields: [agendaId], references: [id])
+
+  // Tipo de OT
+  tipoOT        TipoOrdenTrabajo
+
+  // Relaciones con modelos específicos
+  aceptacionVisita AceptacionVisita?
+  densidad      Densidad?
+  hormigonFresco HormigonFresco?
+  testigos      Testigos?
+  extraccionAsfaltica ExtraccionAsfaltica?
+  muestreoMaterial MuestreoMaterial?
+  retiroProbeta RetiroProbeta?
+}
+
+enum TipoOrdenTrabajo {
+  ACEPTACION_VISITA
+  DENSIDADES
+  HORMIGON_FRESCO
+  TESTIGOS
+  EXTRACCION_ASFALTICA
+  MUESTREO_MATERIAL
+  RETIRO_PROBETA
+}
+
+model AceptacionVisita {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  horaSalida    String?
+  horaLlegada   String?
+  movilizacion  String?
+  emailNotificacion String?
+  nombrePersonaRecibe String?
+  rutPersonaRecibe String?
+  gpsInicio     String?
+  gpsFin        String?
+  horainicio    DateTime?
+  horafin       DateTime?
+}
+
+model Densidad {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  item          String?
+  marca         String?
+  modelo        String?
+  controles     Json?    // Almacenar como JSON ya que es complejo
+  codigoEquipo  String?
+  descripSuelo  String?
+  listaChequeo  Json?    // Almacenar como JSON
+}
+
+model HormigonFresco {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  item          String?
+  clima         String?
+  tAmbiente     Float?
+  tHormigon     Float?
+  numTarjeta    String?
+  tipoHormigon  String?
+  volumenHormigon Float?
+  cantidadProbetas Int?
+  conoAsentamiento Float?
+  elementoHormigonado String?
+  ubicacionHormigonado String?
+  caracteristicasMezcla String?
+  probetas      Json?    // Almacenar como JSON
+}
+
+model Testigos {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  grado         String?
+  diametro      String?
+  itemTestigo   String?
+  tipoTestigo   String?
+  numeroTarjeta String?
+  fechaMuestreo DateTime?
+  tipoPavimento String?
+  controles     Json?    // Almacenar como JSON
+}
+
+model ExtraccionAsfaltica {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  item          String?
+  metodo        String?
+  bitumen       Boolean?
+  cubicidad     Boolean?
+  granulometria Boolean?
+  fechaMuestreo DateTime?
+  procedenciaAsfalto String?
+  controles     Json?    // Almacenar como JSON
+}
+
+model MuestreoMaterial {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  controles     Json?    // Almacenar como JSON
+  obsServicio   String?
+}
+
+model RetiroProbeta {
+  id            String   @id @default(cuid())
+  ordenTrabajoId String  @unique
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+  horaRetiro    String?
+  numTarjeta    String?
+  otMuestreo    String?
+  fechaRetiro   DateTime?
+  tempFinCurado Float?
+  formaTransporte String?
+  condicionAlRetirar String?
+  condicionTransporte String?
 }

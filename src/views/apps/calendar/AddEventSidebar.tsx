@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react'
 
-import { useTheme } from '@mui/material/styles'
-
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
-import EditIcon from '@mui/icons-material/Edit'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import TextField from '@mui/material/TextField'
@@ -16,13 +13,50 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
-import AddIcon from '@mui/icons-material/Add'
-import StarIcon from '@mui/icons-material/Star'
-import DeleteIcon from '@mui/icons-material/Delete'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import EditIcon from '@mui/icons-material/Edit'
+import AddIcon from '@mui/icons-material/Add'
 import Autocomplete from '@mui/material/Autocomplete'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import Divider from '@mui/material/Divider'
+import TableContainer from '@mui/material/TableContainer'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+
+import { useUbicacion } from '@/hooks/useUbicacion'
+import ContactSearch from '@/views/apps/clients/components/ContactSearch'
+
+// Constantes
+const ROLES_CONTACTO = [
+  { value: 'Encargado de Obra', label: 'Encargado de Obra' },
+  { value: 'Envío de Informes', label: 'Envío de Informes' },
+  { value: 'Dueño Representante', label: 'Dueño Representante' },
+  { value: 'Jefe de Obra / Planta', label: 'Jefe de Obra / Planta' },
+  { value: 'Supervisor', label: 'Supervisor' },
+  { value: 'Administrador de Obra', label: 'Administrador de Obra' },
+  { value: 'Encargado de Calidad', label: 'Encargado de Calidad' },
+  { value: 'Autocontrol', label: 'Autocontrol' },
+  { value: 'Profesional', label: 'Profesional' },
+  { value: 'Laboratorista', label: 'Laboratorista' },
+  { value: 'Otro', label: 'Otro (Especificar)' }
+] as const
+
+// Funciones de utilidad
+const formatPhone = (value: string) => {
+  // Permitir solo números y el signo +
+  let formatted = value.replace(/[^\d+]/g, '')
+
+  // Asegurar que el + solo esté al inicio
+  if (formatted.includes('+')) {
+    formatted = '+' + formatted.replace(/\+/g, '')
+  }
+
+  return formatted
+}
 
 // Types
 interface AddEventSidebarProps {
@@ -97,9 +131,8 @@ interface ServicioAgendado {
 
 interface Laboratorista {
   id: string
-  nombre: string
+  name: string
   email: string
-  rol: string
 }
 
 interface LaboratoristaAgendado {
@@ -121,12 +154,13 @@ interface EquipoAgendado {
   nombre: string
 }
 
-interface ContactoObra {
-  id: number
+interface ContactoObraForm {
+  id?: string
   rol: string
   nombre: string
-  email?: string
-  telefono?: string
+  email: string
+  telefono: string
+  telefono2?: string
   esPrincipal: boolean
 }
 
@@ -176,38 +210,55 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null)
   const [equiposAgendados, setEquiposAgendados] = useState<EquipoAgendado[]>([])
 
-  // Agregar estado para comunas
-  const [comunas, setComunas] = useState<string[]>([])
-
   // Nuevo estado para los contactos de la obra
-  const [contactosObra, setContactosObra] = useState<ContactoObra[]>([
-    {
-      id: 1,
-      rol: 'Supervisor',
-      nombre: 'Juan Pérez',
-      email: 'juan.perez@empresa.com',
-      telefono: '+56 9 1234 5678',
-      esPrincipal: false
-    },
-    {
-      id: 2,
-      rol: 'Jefe de Obra',
-      nombre: 'María González',
-      email: 'maria.gonzalez@empresa.com',
-      telefono: '+56 9 8765 4321',
-      esPrincipal: false
-    },
-    {
-      id: 3,
-      rol: 'Encargado de Seguridad',
-      nombre: 'Carlos Rodríguez',
-      email: 'carlos.rodriguez@empresa.com',
-      telefono: '+56 9 5555 5555',
-      esPrincipal: false
-    }
-  ])
+  const [contactos, setContactos] = useState<ContactoObraForm[]>([])
 
-  const [contactosSeleccionados, setContactosSeleccionados] = useState<ContactoObra[]>([])
+  const [nuevoContacto, setNuevoContacto] = useState<ContactoObraForm>({
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono: '',
+    esPrincipal: false
+  })
+
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
+  const [editingContact, setEditingContact] = useState<ContactoObraForm>({
+    rol: '',
+    nombre: '',
+    email: '',
+    telefono: '',
+    esPrincipal: false
+  })
+
+  // Renombrar comunas del hook para evitar conflictos
+  const { regiones, comunas: comunasRegion, selectedRegion, setSelectedRegion } = useUbicacion()
+
+  // Convertir las fechas string a objetos Date para los datepickers
+  const [fechaInicio, setFechaInicio] = useState<Date | null>(
+    formData.fechaInicio ? new Date(formData.fechaInicio) : new Date()
+  )
+
+  const [fechaFin, setFechaFin] = useState<Date | null>(formData.fechaFin ? new Date(formData.fechaFin) : new Date())
+
+  // Actualizar formData cuando cambien las fechas
+  useEffect(() => {
+    if (fechaInicio) {
+      setFormData(prev => ({
+        ...prev,
+        fechaInicio: fechaInicio.toISOString()
+      }))
+    }
+  }, [fechaInicio])
+
+  useEffect(() => {
+    if (fechaFin) {
+      setFormData(prev => ({
+        ...prev,
+        fechaFin: fechaFin.toISOString()
+      }))
+    }
+  }, [fechaFin])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -281,7 +332,14 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const response = await fetch('/api/users/laboratoristas')
         const data = await response.json()
 
-        setLaboratoristas(data)
+        // Transformar los datos al formato esperado
+        const formattedLaboratoristas = data.map((lab: any) => ({
+          id: lab.id,
+          name: lab.name,
+          email: lab.email
+        }))
+
+        setLaboratoristas(formattedLaboratoristas)
       } catch (error) {
         console.error('Error cargando laboratoristas:', error)
       }
@@ -310,34 +368,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   console.log('Estado actual de equipos:', equipos)
 
-  // Agregar efecto para cargar comunas cuando cambia la región
-  useEffect(() => {
-    const fetchComunas = async () => {
-      if (!formData.region) {
-        setComunas([])
-
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/comunas/${formData.region}`)
-        const data = await response.json()
-
-        setComunas(data)
-      } catch (error) {
-        console.error('Error cargando comunas:', error)
-        setComunas([])
-      }
-    }
-
-    fetchComunas()
-  }, [formData.region])
-
   // Agregar efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
     const contactosEjemplo = [
       {
-        id: 1,
+        id: '1',
         rol: 'Supervisor',
         nombre: 'Juan Pérez',
         email: 'juan.perez@empresa.com',
@@ -345,7 +380,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         esPrincipal: false
       },
       {
-        id: 2,
+        id: '2',
         rol: 'Jefe de Obra',
         nombre: 'María González',
         email: 'maria.gonzalez@empresa.com',
@@ -353,19 +388,18 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         esPrincipal: false
       },
       {
-        id: 3,
+        id: '3',
         rol: 'Encargado de Seguridad',
         nombre: 'Carlos Rodríguez',
         email: 'carlos.rodriguez@empresa.com',
         telefono: '+56 9 5555 5555',
         esPrincipal: false
       }
-    ]
+    ] as ContactoObraForm[]
 
     const fetchContactosObra = async () => {
       if (!formData.obraId) {
-        setContactosObra([])
-        setContactosSeleccionados([])
+        setContactos([])
 
         return
       }
@@ -375,7 +409,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
         if (!response.ok) {
           console.log('No se pudieron cargar los contactos de la API, usando datos de ejemplo')
-          setContactosObra(contactosEjemplo)
+          setContactos(
+            contactosEjemplo.map(c => ({
+              ...c,
+              esPrincipal: false
+            }))
+          )
 
           return
         }
@@ -383,15 +422,30 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const data = await response.json()
 
         if (data && data.length > 0) {
-          setContactosObra(data)
+          setContactos(
+            data.map(c => ({
+              ...c,
+              esPrincipal: false
+            }))
+          )
         } else {
           console.log('No hay contactos en la API, usando datos de ejemplo')
-          setContactosObra(contactosEjemplo)
+          setContactos(
+            contactosEjemplo.map(c => ({
+              ...c,
+              esPrincipal: false
+            }))
+          )
         }
       } catch (error) {
         console.error('Error al cargar contactos:', error)
         console.log('Error al cargar contactos, usando datos de ejemplo')
-        setContactosObra(contactosEjemplo)
+        setContactos(
+          contactosEjemplo.map(c => ({
+            ...c,
+            esPrincipal: false
+          }))
+        )
       }
     }
 
@@ -487,8 +541,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     }
 
     setServiciosAgendados(prev => [...prev, nuevoServicio])
-
-    // Limpiar campos
     setServicioSeleccionado(null)
     setCantidad('')
     setObservacion('')
@@ -500,7 +552,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
     const nuevoLaboratorista: LaboratoristaAgendado = {
       id: laboratoristaSeleccionado.id,
-      nombre: laboratoristaSeleccionado.nombre,
+      nombre: laboratoristaSeleccionado.name,
       email: laboratoristaSeleccionado.email
     }
 
@@ -521,32 +573,51 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setEquipoSeleccionado(null)
   }
 
-  const handleToggleContacto = (contacto: ContactoObra) => {
-    setContactosSeleccionados(prev => {
-      const isSelected = prev.some(c => c.id === contacto.id)
-
-      if (isSelected) {
-        return prev.filter(c => c.id !== contacto.id)
-      }
-
-      return [...prev, contacto]
+  const handleEditClick = (index: number) => {
+    setEditingContactIndex(index)
+    setEditingContact({
+      ...contactos[index]
     })
   }
 
-  const handleMarcarPrincipal = (contacto: ContactoObra) => {
-    setContactosObra(prev =>
-      prev.map(c => ({
-        ...c,
-        esPrincipal: c.id === contacto.id ? !c.esPrincipal : false
-      }))
-    )
+  const handleSaveEdit = () => {
+    if (editingContactIndex !== null) {
+      const updatedContactos = contactos.map((contacto, index) =>
+        index === editingContactIndex ? editingContact : contacto
+      )
+
+      setContactos(updatedContactos)
+      setEditingContactIndex(null)
+    }
   }
 
-  const handleEliminarContacto = (contactoId: number) => {
-    setContactosSeleccionados(prev => prev.filter(c => c.id !== contactoId))
+  const handleCancelEdit = () => {
+    setEditingContactIndex(null)
   }
 
-  const theme = useTheme()
+  const handleDeleteContacto = (index: number) => {
+    const updatedContactos = contactos.filter((_, i) => i !== index)
+
+    setContactos(updatedContactos)
+  }
+
+  const agregarContacto = () => {
+    if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono) return
+
+    const newContact: ContactoObraForm = {
+      ...nuevoContacto,
+      esPrincipal: contactos.length === 0
+    }
+
+    setContactos([...contactos, newContact])
+    setNuevoContacto({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono: '',
+      esPrincipal: false
+    })
+  }
 
   return (
     <Drawer
@@ -648,57 +719,84 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={3}>
             <TextField
               fullWidth
+              label='Fecha *'
               type='date'
-              label='Fecha'
-              InputLabelProps={{ shrink: true }}
-              value={formData.fechaInicio.split('T')[0]}
+              value={fechaInicio ? fechaInicio.toISOString().split('T')[0] : ''}
               onChange={e => {
-                const fecha = e.target.value
+                const newDate = new Date(e.target.value)
 
-                setFormData({
-                  ...formData,
-                  fechaInicio: `${fecha}T${formData.fechaInicio.split('T')[1] || '00:00'}`
-                })
+                if (fechaInicio) {
+                  newDate.setHours(fechaInicio.getHours(), fechaInicio.getMinutes())
+                }
+
+                setFechaInicio(newDate)
+
+                // Si la fecha de término está vacía, usamos la misma fecha
+                if (!fechaFin) {
+                  const endDate = new Date(newDate)
+
+                  endDate.setHours(newDate.getHours() + 1)
+                  setFechaFin(endDate)
+                }
+              }}
+              InputLabelProps={{
+                shrink: true
               }}
             />
           </Grid>
 
-          {/* Hora Inicio */}
+          {/* Hora inicio */}
           <Grid item xs={3}>
             <TextField
               fullWidth
+              label='Hora inicio *'
               type='time'
-              label='Hora Inicio'
-              InputLabelProps={{ shrink: true }}
-              value={formData.fechaInicio.split('T')[1]?.slice(0, 5) || ''}
+              value={
+                fechaInicio
+                  ? `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
+                  : ''
+              }
               onChange={e => {
-                const hora = e.target.value
-                const fecha = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
+                const [hours, minutes] = e.target.value.split(':').map(Number)
+                const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
 
-                setFormData({
-                  ...formData,
-                  fechaInicio: `${fecha}T${hora}`
-                })
+                newDate.setHours(hours, minutes)
+                setFechaInicio(newDate)
+
+                // Actualizar fecha fin si es necesario
+                if (!fechaFin || fechaFin <= newDate) {
+                  const endDate = new Date(newDate)
+
+                  endDate.setHours(newDate.getHours() + 1)
+                  setFechaFin(endDate)
+                }
+              }}
+              InputLabelProps={{
+                shrink: true
               }}
             />
           </Grid>
 
-          {/* Hora Término */}
+          {/* Hora término */}
           <Grid item xs={3}>
             <TextField
               fullWidth
+              label='Hora término *'
               type='time'
-              label='Hora Término'
-              InputLabelProps={{ shrink: true }}
-              value={formData.fechaFin.split('T')[1]?.slice(0, 5) || ''}
+              value={
+                fechaFin
+                  ? `${fechaFin.getHours().toString().padStart(2, '0')}:${fechaFin.getMinutes().toString().padStart(2, '0')}`
+                  : ''
+              }
               onChange={e => {
-                const hora = e.target.value
-                const fecha = formData.fechaFin.split('T')[0] || formData.fechaInicio.split('T')[0]
+                const [hours, minutes] = e.target.value.split(':').map(Number)
+                const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
 
-                setFormData({
-                  ...formData,
-                  fechaFin: `${fecha}T${hora}`
-                })
+                newDate.setHours(hours, minutes)
+                setFechaFin(newDate)
+              }}
+              InputLabelProps={{
+                shrink: true
               }}
             />
           </Grid>
@@ -864,17 +962,21 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               <InputLabel>Región *</InputLabel>
               <Select
                 label='Región *'
-                value={formData.region}
-                onChange={e =>
+                value={selectedRegion}
+                onChange={e => {
+                  setSelectedRegion(e.target.value)
                   setFormData(prev => ({
                     ...prev,
                     region: e.target.value,
-                    comuna: '' // Limpiar comuna al cambiar región
+                    comuna: ''
                   }))
-                }
+                }}
               >
-                <MenuItem value='Región Metropolitana'>Región Metropolitana</MenuItem>
-                <MenuItem value='Región de Valparaíso'>Región de Valparaíso</MenuItem>
+                {regiones.map(region => (
+                  <MenuItem key={region.id} value={region.nombre}>
+                    {region.nombre}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -882,16 +984,16 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           {/* Comuna */}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
-              <InputLabel>Comuna</InputLabel>
+              <InputLabel>Comuna *</InputLabel>
               <Select
-                label='Comuna'
+                label='Comuna *'
                 value={formData.comuna}
                 onChange={e => setFormData(prev => ({ ...prev, comuna: e.target.value }))}
-                disabled={!formData.region}
+                disabled={!selectedRegion}
               >
-                {comunas.map(comuna => (
-                  <MenuItem key={comuna} value={comuna}>
-                    {comuna}
+                {comunasRegion.map(comuna => (
+                  <MenuItem key={comuna.id} value={comuna.nombre}>
+                    {comuna.nombre}
                   </MenuItem>
                 ))}
               </Select>
@@ -949,84 +1051,252 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             />
           </Grid>
         </Grid>
-        <Grid container spacing={2} mt={4} sx={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '5px' }}>
-          {/* Cabecera de la tabla */}
-          <Grid item xs={4}>
-            <Typography variant='subtitle2' align='left'>
-              ROL
-            </Typography>
+        <Divider sx={{ my: 4 }} />
+        <Grid container alignItems='center' spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant='h5'>Contactos</Typography>
           </Grid>
           <Grid item xs={6}>
-            <Typography variant='subtitle2' align='left'>
-              NOMBRE
-            </Typography>
-          </Grid>
-          <Grid item xs={2}>
-            <Typography variant='subtitle2' align='left'>
-              ACCIÓN
-            </Typography>
+            <ContactSearch
+              onContactSelect={contact => {
+                const newContact: ContactoObraForm = {
+                  nombre: contact.nombre,
+                  rol: contact.cargo || '',
+                  email: contact.email,
+                  telefono: contact.telefono1,
+                  esPrincipal: contactos.length === 0
+                }
+
+                setContactos([...contactos, newContact])
+              }}
+            />
           </Grid>
         </Grid>
-        <Grid container spacing={2} mt={2}>
-          {/* Lista de contactos */}
-          {contactosObra.map(contacto => (
-            <Grid container spacing={2} key={contacto.id} sx={{ width: '100%', ml: 0, mt: 1 }}>
-              <Grid item xs={4}>
-                <Typography>{contacto.rol}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography>{contacto.nombre}</Typography>
-              </Grid>
-              <Grid item xs={2} style={{ textAlign: 'left' }}>
-                <IconButton
-                  size='small'
-                  onClick={() => handleToggleContacto(contacto)}
-                  color={contactosSeleccionados.some(c => c.id === contacto.id) ? 'primary' : 'default'}
+
+        <TableContainer sx={{ mt: 2 }}>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
+              <TableRow>
+                <TableCell
+                  sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                 >
-                  <AddIcon />
-                </IconButton>
-                <IconButton
-                  size='small'
-                  onClick={() => handleMarcarPrincipal(contacto)}
-                  sx={{
-                    backgroundColor: contacto.esPrincipal ? 'rgba(255, 215, 0, 0.08)' : 'transparent',
-                    '&:hover': {
-                      backgroundColor: contacto.esPrincipal ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.04)'
-                    }
-                  }}
+                  CARGO
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                 >
-                  <StarIcon
-                    sx={{
-                      color: contacto.esPrincipal ? '#FFD700' : '#757575',
-                      transform: contacto.esPrincipal ? 'scale(1.2)' : 'scale(1)',
-                      transition: 'all 0.2s ease-in-out',
-                      filter: contacto.esPrincipal ? 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.5))' : 'none'
-                    }}
+                  NOMBRE
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
+                >
+                  EMAIL
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
+                >
+                  TELÉFONO 1
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
+                >
+                  TELÉFONO 2
+                </TableCell>
+                <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0' }}>
+                  ACCIÓN
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {/* Lista de contactos agregados */}
+              {contactos.map((contacto, index) => (
+                <TableRow key={index}>
+                  {editingContactIndex === index ? (
+                    // Modo edición
+                    <>
+                      <TableCell>
+                        <FormControl fullWidth size='small'>
+                          <Select
+                            value={editingContact.rol}
+                            onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                          >
+                            {ROLES_CONTACTO.map(rol => (
+                              <MenuItem key={rol.value} value={rol.value}>
+                                {rol.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={editingContact.nombre}
+                          onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                          placeholder='Nombre'
+                          fullWidth
+                          size='small'
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={editingContact.email}
+                          onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                          placeholder='Email'
+                          fullWidth
+                          size='small'
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={editingContact.telefono}
+                          onChange={e => {
+                            const formatted = formatPhone(e.target.value)
+
+                            setEditingContact({ ...editingContact, telefono: formatted })
+                          }}
+                          placeholder='Teléfono 1'
+                          fullWidth
+                          size='small'
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={editingContact.telefono2}
+                          onChange={e => {
+                            const formatted = formatPhone(e.target.value)
+
+                            setEditingContact({ ...editingContact, telefono2: formatted })
+                          }}
+                          placeholder='Teléfono 2'
+                          fullWidth
+                          size='small'
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton color='success' onClick={handleSaveEdit}>
+                            <i className='ri-check-line' />
+                          </IconButton>
+                          <IconButton color='error' onClick={handleCancelEdit}>
+                            <i className='ri-close-line' />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </>
+                  ) : (
+                    // Modo visualización
+                    <>
+                      <TableCell>{contacto.rol}</TableCell>
+                      <TableCell>{contacto.nombre}</TableCell>
+                      <TableCell>{contacto.email}</TableCell>
+                      <TableCell>{contacto.telefono}</TableCell>
+                      <TableCell>{contacto.telefono2}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton color='info' onClick={() => handleEditClick(index)}>
+                            <i className='ri-edit-line' />
+                          </IconButton>
+                          <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
+                            <i className='ri-delete-bin-line' />
+                          </IconButton>
+                          <IconButton
+                            color={contacto.esPrincipal ? 'warning' : 'default'}
+                            onClick={() => {
+                              const updatedContactos = contactos.map((c, i) => ({
+                                ...c,
+                                esPrincipal: i === index ? !c.esPrincipal : false
+                              }))
+
+                              setContactos(updatedContactos)
+                            }}
+                          >
+                            <i className={`ri-star-${contacto.esPrincipal ? 'fill' : 'line'}`} />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </>
+                  )}
+                </TableRow>
+              ))}
+
+              {/* Fila para nuevo contacto */}
+              <TableRow>
+                <TableCell>
+                  <FormControl fullWidth size='small'>
+                    <Select
+                      value={nuevoContacto.rol}
+                      onChange={e => setNuevoContacto({ ...nuevoContacto, rol: e.target.value })}
+                      displayEmpty
+                    >
+                      <MenuItem value='' disabled>
+                        Seleccionar Cargo
+                      </MenuItem>
+                      {ROLES_CONTACTO.map(cargo => (
+                        <MenuItem key={cargo.value} value={cargo.value}>
+                          {cargo.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    value={nuevoContacto.nombre}
+                    onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
+                    placeholder='Nombre'
+                    fullWidth
+                    size='small'
                   />
-                </IconButton>
-                <IconButton size='small' onClick={() => handleEliminarContacto(contacto.id)} color='error'>
-                  <DeleteIcon />
-                </IconButton>
-              </Grid>
-            </Grid>
-          ))}
-          {/* Mensaje cuando no hay obra seleccionada */}
-          {!formData.obraId && (
-            <Grid item xs={12}>
-              <Typography variant='body2' color='textSecondary' align='center'>
-                Seleccione una obra para ver sus contactos
-              </Typography>
-            </Grid>
-          )}
-          {/* Mensaje cuando la obra no tiene contactos */}
-          {formData.obraId && contactosObra.length === 0 && (
-            <Grid item xs={12}>
-              <Typography variant='body2' color='textSecondary' align='center'>
-                Esta obra no tiene contactos asignados
-              </Typography>
-            </Grid>
-          )}
-        </Grid>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    value={nuevoContacto.email}
+                    onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
+                    placeholder='Email'
+                    fullWidth
+                    size='small'
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    value={nuevoContacto.telefono}
+                    onChange={e => {
+                      const formatted = formatPhone(e.target.value)
+
+                      setNuevoContacto({ ...nuevoContacto, telefono: formatted })
+                    }}
+                    placeholder='Teléfono 1'
+                    fullWidth
+                    size='small'
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    value={nuevoContacto.telefono2}
+                    onChange={e => {
+                      const formatted = formatPhone(e.target.value)
+
+                      setNuevoContacto({ ...nuevoContacto, telefono2: formatted })
+                    }}
+                    placeholder='Teléfono 2'
+                    fullWidth
+                    size='small'
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    onClick={agregarContacto}
+                    disabled={
+                      !nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono
+                    }
+                  >
+                    <i className='ri-add-line' />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
         <Grid container spacing={2} mt={4}>
           <Grid item xs={12}>
             <Typography variant='h5' sx={{ fontWeight: '' }}>
@@ -1089,7 +1359,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             />
           </Grid>
 
-          {/* Botón Agregar */}
+          {/* Botón Agregar Servicio */}
           <Grid item xs={12} sm={2}>
             <Button
               variant='contained'
@@ -1097,385 +1367,207 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               fullWidth
               startIcon={<AddIcon />}
               onClick={handleAgregarServicio}
-              disabled={!servicioSeleccionado || !cantidad}
             >
-              Agregar
+              Agregar Servicio
             </Button>
           </Grid>
         </Grid>
 
-        {/* Tabla de servicios agregados */}
-        <Grid container spacing={2} sx={{ marginTop: 2 }}>
-          <Grid item xs={12}>
-            <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
-              <Grid container>
-                <Grid item xs={2}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                    CÓDIGO
-                  </Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                    SERVICIOS
-                  </Typography>
-                </Grid>
-                <Grid item xs={1}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                    CANT.
-                  </Typography>
-                </Grid>
-                <Grid item xs={3}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                    DESCRIPCIÓN
-                  </Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                    2DA VISITA
-                  </Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                    ACCIÓN
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {serviciosAgendados.map((servicio, index) => (
-              <Grid
-                container
-                key={index}
-                sx={{ borderBottom: '1px solid #e0e0e0', padding: '8px 0', alignItems: 'center' }}
-              >
-                <Grid item xs={2}>
-                  <Typography>{servicio.codigo}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography>{servicio.servicio}</Typography>
-                </Grid>
-                <Grid item xs={1}>
-                  <Typography>{servicio.cantidad}</Typography>
-                </Grid>
-                <Grid item xs={3}>
-                  <Typography>{servicio.observacion}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography>{servicio.esSegundaVisita ? 'Sí' : 'No'}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Box display='flex' gap={1} justifyContent='center'>
+        {/* Lista de servicios agregados */}
+        <TableContainer sx={{ mt: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Código</TableCell>
+                <TableCell>Servicio</TableCell>
+                <TableCell>Cantidad</TableCell>
+                <TableCell>Observación</TableCell>
+                <TableCell>2a Visita</TableCell>
+                <TableCell>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {serviciosAgendados.map((servicio, index) => (
+                <TableRow key={index}>
+                  <TableCell>{servicio.codigo}</TableCell>
+                  <TableCell>{servicio.servicio}</TableCell>
+                  <TableCell>{servicio.cantidad}</TableCell>
+                  <TableCell>{servicio.observacion}</TableCell>
+                  <TableCell>{servicio.esSegundaVisita ? 'Sí' : 'No'}</TableCell>
+                  <TableCell>
                     <IconButton
-                      size='small'
-                      color='primary'
-                      onClick={() => {
-                        // Implementar edición
-                      }}
-                    >
-                      <EditIcon fontSize='small' />
-                    </IconButton>
-                    <IconButton
-                      size='small'
                       color='error'
-                      onClick={() => {
-                        setServiciosAgendados(prev => prev.filter((_, i) => i !== index))
-                      }}
+                      onClick={() => setServiciosAgendados(prev => prev.filter((_, i) => i !== index))}
                     >
-                      <DeleteIcon fontSize='small' />
+                      <i className='ri-delete-bin-line' />
                     </IconButton>
-                  </Box>
-                </Grid>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Sección de laboratoristas y equipos */}
+        <Grid container spacing={2} mt={4}>
+          {/* Laboratoristas */}
+          <Grid item xs={6}>
+            <Typography variant='h5' sx={{ mb: 2 }}>
+              Laboratoristas
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={10}>
+                <Autocomplete
+                  fullWidth
+                  options={laboratoristas}
+                  getOptionLabel={option => `${option.name} (${option.email})`}
+                  value={laboratoristaSeleccionado}
+                  onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
+                  renderInput={params => (
+                    <TextField
+                      {...params}
+                      label='Laboratorista'
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position='start'>
+                            <SearchIcon />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  )}
+                />
               </Grid>
-            ))}
+              <Grid item xs={2}>
+                <Button variant='contained' color='primary' fullWidth onClick={handleAgregarLaboratorista}>
+                  Agregar
+                </Button>
+              </Grid>
+            </Grid>
+
+            {/* Lista de laboratoristas agregados */}
+            <TableContainer sx={{ mt: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {laboratoristasAgendados.map((laboratorista, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{laboratorista.nombre}</TableCell>
+                      <TableCell>{laboratorista.email}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color='error'
+                          onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+
+          {/* Equipos */}
+          <Grid item xs={6}>
+            <Typography variant='h5' sx={{ mb: 2 }}>
+              Equipos
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={10}>
+                <Autocomplete
+                  fullWidth
+                  options={equipos}
+                  getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+                  value={equipoSeleccionado}
+                  onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
+                  renderInput={params => (
+                    <TextField
+                      {...params}
+                      label='Equipo'
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position='start'>
+                            <SearchIcon />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={2}>
+                <Button variant='contained' color='primary' fullWidth onClick={handleAgregarEquipo}>
+                  Agregar
+                </Button>
+              </Grid>
+            </Grid>
+
+            {/* Lista de equipos agregados */}
+            <TableContainer sx={{ mt: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Código</TableCell>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {equiposAgendados.map((equipo, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{equipo.codigo}</TableCell>
+                      <TableCell>{equipo.nombre}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color='error'
+                          onClick={() => setEquiposAgendados(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Grid>
         </Grid>
-        <Grid container spacing={2} mt={2}>
-          {/* Título Laboratorista */}
-          <Grid item xs={6}>
-            <Box display='flex' alignItems='center' justifyContent='flex-start' mb={3}>
-              <Typography variant='h6' sx={{ color: 'primary.main' }}>
-                Laboratorista
-              </Typography>
-            </Box>
 
-            {/* Barra de búsqueda de laboratoristas */}
-            <Box display='flex' gap={1} alignItems='flex-start'>
-              <Autocomplete
-                size='small'
-                fullWidth
-                options={laboratoristas}
-                getOptionLabel={option => `${option.nombre} (${option.email})`}
-                value={laboratoristaSeleccionado}
-                onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
-                renderInput={params => (
-                  <TextField
-                    {...params}
-                    label='Buscar Laboratorista'
-                    size='small'
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: (
-                        <InputAdornment position='start'>
-                          <SearchIcon fontSize='small' color='action' />
-                        </InputAdornment>
-                      )
-                    }}
-                  />
-                )}
-              />
-              <Button
-                variant='contained'
-                color='primary'
-                size='small'
-                onClick={handleAgregarLaboratorista}
-                disabled={!laboratoristaSeleccionado}
-                sx={{
-                  minWidth: '40px',
-                  width: '40px',
-                  height: '40px',
-                  p: 0,
-                  borderRadius: '8px'
-                }}
-              >
-                <AddIcon fontSize='small' />
-              </Button>
-            </Box>
-
-            {/* Tabla de laboratoristas agregados */}
-            <Box
-              mt={2}
-              sx={{
-                backgroundColor: theme => theme.palette.grey[50],
-                padding: '12px',
-                borderRadius: '8px',
-                border: theme => `1px solid ${theme.palette.divider}`
-              }}
-            >
-              <Grid container>
-                <Grid item xs={5}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary' }}>
-                    NOMBRE
-                  </Typography>
-                </Grid>
-                <Grid item xs={5}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary' }}>
-                    EMAIL
-                  </Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                    ACCIÓN
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {laboratoristasAgendados.map((laboratorista, index) => (
-              <Grid
-                container
-                key={index}
-                sx={{
-                  borderBottom: theme => `1px solid ${theme.palette.divider}`,
-                  padding: '8px 4px',
-                  alignItems: 'center',
-                  '&:hover': {
-                    backgroundColor: theme => theme.palette.action.hover
-                  }
-                }}
-              >
-                <Grid item xs={5}>
-                  <Typography variant='body2'>{laboratorista.nombre}</Typography>
-                </Grid>
-                <Grid item xs={5}>
-                  <Typography variant='body2'>{laboratorista.email}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Box display='flex' gap={1} justifyContent='center'>
-                    <IconButton
-                      size='small'
-                      color='error'
-                      onClick={() => {
-                        setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))
-                      }}
-                      sx={{
-                        padding: '4px',
-                        '&:hover': {
-                          backgroundColor: theme => theme.palette.error.light
-                        }
-                      }}
-                    >
-                      <DeleteIcon fontSize='small' />
-                    </IconButton>
-                  </Box>
-                </Grid>
-              </Grid>
-            ))}
-          </Grid>
-
-          {/* Título Equipo */}
-          <Grid item xs={6}>
-            <Box display='flex' alignItems='center' justifyContent='flex-start' mb={3}>
-              <Typography variant='h6' sx={{ color: 'primary.main' }}>
-                Equipo
-              </Typography>
-            </Box>
-
-            {/* Barra de búsqueda de equipos */}
-            <Box display='flex' gap={1} alignItems='flex-start'>
-              <Autocomplete
-                size='small'
-                fullWidth
-                options={equipos}
-                getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-                value={equipoSeleccionado}
-                onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
-                renderInput={params => (
-                  <TextField
-                    {...params}
-                    label='Buscar Equipo'
-                    size='small'
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: (
-                        <InputAdornment position='start'>
-                          <SearchIcon fontSize='small' color='action' />
-                        </InputAdornment>
-                      )
-                    }}
-                  />
-                )}
-                noOptionsText='No hay equipos'
-                loading={equipos.length === 0}
-                loadingText='Cargando equipos...'
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Typography variant='body2'>
-                      {option.codigo} - {option.nombre}
-                    </Typography>
-                  </li>
-                )}
-              />
-              <Button
-                variant='contained'
-                color='primary'
-                size='small'
-                onClick={handleAgregarEquipo}
-                disabled={!equipoSeleccionado}
-                sx={{
-                  minWidth: '40px',
-                  width: '40px',
-                  height: '40px',
-                  p: 0,
-                  borderRadius: '8px'
-                }}
-              >
-                <AddIcon fontSize='small' />
-              </Button>
-            </Box>
-
-            {/* Tabla de equipos agregados */}
-            <Box
-              mt={2}
-              sx={{
-                backgroundColor: theme => theme.palette.grey[50],
-                padding: '12px',
-                borderRadius: '8px',
-                border: theme => `1px solid ${theme.palette.divider}`
-              }}
-            >
-              <Grid container>
-                <Grid item xs={5}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary' }}>
-                    CÓDIGO
-                  </Typography>
-                </Grid>
-                <Grid item xs={5}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary' }}>
-                    EQUIPO
-                  </Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant='subtitle2' sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                    ACCIÓN
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {equiposAgendados.map((equipo, index) => (
-              <Grid
-                container
-                key={index}
-                sx={{
-                  borderBottom: theme => `1px solid ${theme.palette.divider}`,
-                  padding: '8px 4px',
-                  alignItems: 'center',
-                  '&:hover': {
-                    backgroundColor: theme => theme.palette.action.hover
-                  }
-                }}
-              >
-                <Grid item xs={5}>
-                  <Typography variant='body2'>{equipo.codigo}</Typography>
-                </Grid>
-                <Grid item xs={5}>
-                  <Typography variant='body2'>{equipo.nombre}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Box display='flex' gap={1} justifyContent='center'>
-                    <IconButton
-                      size='small'
-                      color='error'
-                      onClick={() => {
-                        setEquiposAgendados(prev => prev.filter((_, i) => i !== index))
-                      }}
-                      sx={{
-                        padding: '4px',
-                        '&:hover': {
-                          backgroundColor: theme => theme.palette.error.light
-                        }
-                      }}
-                    >
-                      <DeleteIcon fontSize='small' />
-                    </IconButton>
-                  </Box>
-                </Grid>
-              </Grid>
-            ))}
-          </Grid>
-        </Grid>
-        <Grid container spacing={2} mt={2}>
-          {/* Observaciones */}
+        {/* Campo de Observaciones */}
+        <Grid container spacing={2} mt={4}>
           <Grid item xs={12}>
+            <Typography variant='h5' sx={{ mb: 2 }}>
+              Observaciones
+            </Typography>
             <TextField
               fullWidth
-              label='Observaciones'
-              placeholder='Observaciones de la visita'
               multiline
-              rows={2}
-              size='small'
+              rows={4}
+              placeholder='Ingrese cualquier observación o nota adicional sobre la visita'
               value={formData.observaciones}
-              onChange={e =>
-                setFormData(prev => ({
-                  ...prev,
-                  observaciones: e.target.value
-                }))
-              }
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  padding: '8px'
-                }
-              }}
+              onChange={e => setFormData(prev => ({ ...prev, observaciones: e.target.value }))}
             />
           </Grid>
         </Grid>
 
-        {/* Botón Agregar */}
-        <Grid container spacing={2} mt={2}>
-          <Grid item xs={12} display='flex' justifyContent='flex-start'>
-            <Button variant='contained' color='primary' onClick={handleSubmit}>
-              Agendar
-            </Button>
+        {/* Botón Agendar */}
+        <Grid container spacing={2} mt={4}>
+          <Grid item xs={12}>
+            <Box display='flex' justifyContent='flex-start'>
+              <Button variant='contained' color='primary' onClick={handleSubmit}>
+                Agendar
+              </Button>
+            </Box>
           </Grid>
         </Grid>
       </Box>

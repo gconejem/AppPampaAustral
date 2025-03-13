@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -8,31 +8,41 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useTheme } from '@mui/material/styles'
 
 interface SidebarMiniCalendarProps {
-  onDateSelect?: (date: Date) => void
+  onDateSelect: (date: Date) => void
   currentDate?: Date
+  calendarRef?: React.RefObject<any>
 }
 
-const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: SidebarMiniCalendarProps) => {
+const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarRef }: SidebarMiniCalendarProps) => {
   const theme = useTheme()
   const [selectedDate, setSelectedDate] = useState(currentDate)
   const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth())
   const [currentYear, setCurrentYear] = useState(currentDate.getFullYear())
 
-  const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+  // Actualizar el mini calendario cuando cambia la fecha en el calendario principal
+  useEffect(() => {
+    if (currentDate) {
+      setSelectedDate(currentDate)
+      setCurrentMonth(currentDate.getMonth())
+      setCurrentYear(currentDate.getFullYear())
+    }
+  }, [currentDate])
+
+  const daysOfWeek = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa']
 
   const monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
   ]
 
   const getDaysInMonth = (year: number, month: number) => {
@@ -43,29 +53,52 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
     return new Date(year, month, 1).getDay()
   }
 
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11)
-      setCurrentYear(prev => prev - 1)
-    } else {
-      setCurrentMonth(prev => prev - 1)
-    }
-  }
-
-  const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0)
-      setCurrentYear(prev => prev + 1)
-    } else {
-      setCurrentMonth(prev => prev + 1)
-    }
-  }
-
   const handleDateClick = (day: number) => {
     const newDate = new Date(currentYear, currentMonth, day)
 
     setSelectedDate(newDate)
-    onDateSelect?.(newDate)
+    onDateSelect(newDate)
+
+    // Navegar al día seleccionado en el calendario principal
+    if (calendarRef?.current) {
+      const api = calendarRef.current.getApi()
+
+      api.gotoDate(newDate)
+    }
+  }
+
+  const handlePrevMonth = () => {
+    const newMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const newYear = currentMonth === 0 ? currentYear - 1 : currentYear
+    const newDate = new Date(newYear, newMonth, 1)
+
+    setCurrentMonth(newMonth)
+    setCurrentYear(newYear)
+    onDateSelect(newDate)
+
+    // Navegar al mes anterior en el calendario principal
+    if (calendarRef?.current) {
+      const api = calendarRef.current.getApi()
+
+      api.gotoDate(newDate)
+    }
+  }
+
+  const handleNextMonth = () => {
+    const newMonth = currentMonth === 11 ? 0 : currentMonth + 1
+    const newYear = currentMonth === 11 ? currentYear + 1 : currentYear
+    const newDate = new Date(newYear, newMonth, 1)
+
+    setCurrentMonth(newMonth)
+    setCurrentYear(newYear)
+    onDateSelect(newDate)
+
+    // Navegar al mes siguiente en el calendario principal
+    if (calendarRef?.current) {
+      const api = calendarRef.current.getApi()
+
+      api.gotoDate(newDate)
+    }
   }
 
   const renderCalendarDays = () => {
@@ -75,7 +108,16 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
 
     // Agregar días vacíos al inicio
     for (let i = 0; i < firstDay; i++) {
-      days.push(<Box key={`empty-${i}`} sx={{ width: '30px', height: '30px' }} />)
+      days.push(
+        <Box
+          key={`empty-${i}`}
+          sx={{
+            width: 32,
+            height: 32,
+            m: 0.5
+          }}
+        />
+      )
     }
 
     // Agregar los días del mes
@@ -85,22 +127,38 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
         selectedDate.getMonth() === currentMonth &&
         selectedDate.getFullYear() === currentYear
 
+      const isToday =
+        new Date().getDate() === day &&
+        new Date().getMonth() === currentMonth &&
+        new Date().getFullYear() === currentYear
+
       days.push(
         <Box
           key={day}
           onClick={() => handleDateClick(day)}
           sx={{
-            width: '30px',
-            height: '30px',
+            width: 32,
+            height: 32,
+            m: 0.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             borderRadius: '50%',
-            backgroundColor: isSelected ? theme.palette.primary.main : 'transparent',
-            color: isSelected ? 'white' : 'inherit',
+            fontSize: '0.875rem',
+            transition: 'all 0.2s ease',
+            backgroundColor: isSelected
+              ? theme.palette.primary.main
+              : isToday
+                ? theme.palette.primary.light
+                : 'transparent',
+            color: isSelected
+              ? theme.palette.primary.contrastText
+              : isToday
+                ? theme.palette.primary.main
+                : theme.palette.text.primary,
             '&:hover': {
-              backgroundColor: isSelected ? theme.palette.primary.main : theme.palette.action.hover
+              backgroundColor: isSelected ? theme.palette.primary.dark : theme.palette.action.hover
             }
           }}
         >
@@ -113,39 +171,47 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
   }
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        p: 2,
-        '& .MuiBox-root': {
-          minWidth: 'unset'
-        }
-      }}
-    >
+    <Box sx={{ width: '100%', p: 2 }}>
       {/* Cabecera del calendario */}
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: 2,
-          px: 1
+          mb: 2
         }}
       >
-        <IconButton size='small' onClick={handlePrevMonth}>
+        <IconButton
+          onClick={handlePrevMonth}
+          sx={{
+            p: 1,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.action.hover
+            }
+          }}
+        >
           <ChevronLeftIcon />
         </IconButton>
         <Typography
           variant='subtitle2'
           sx={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            color: theme.palette.text.primary,
+            fontWeight: 500
           }}
         >
           {`${monthNames[currentMonth]} ${currentYear}`}
         </Typography>
-        <IconButton size='small' onClick={handleNextMonth}>
+        <IconButton
+          onClick={handleNextMonth}
+          sx={{
+            p: 1,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.action.hover
+            }
+          }}
+        >
           <ChevronRightIcon />
         </IconButton>
       </Box>
@@ -155,8 +221,8 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 0.5,
-          mb: 0.5
+          gap: 1,
+          mb: 1
         }}
       >
         {daysOfWeek.map(day => (
@@ -180,12 +246,8 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date() }: Sidebar
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 0.5,
-          '& > div': {
-            width: '25px',
-            height: '25px',
-            fontSize: '0.75rem'
-          }
+          justifyItems: 'center',
+          alignItems: 'center'
         }}
       >
         {renderCalendarDays()}

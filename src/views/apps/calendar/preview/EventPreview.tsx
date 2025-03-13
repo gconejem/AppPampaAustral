@@ -112,7 +112,12 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                 Obra
               </Typography>
-              <Typography variant='body1'>{event.extendedProps?.obra || 'No especificada'}</Typography>
+              <Typography variant='body1'>
+                {event.extendedProps?.obra?.nombreObra ||
+                  event.extendedProps?.obra?.nombreCliente ||
+                  event.extendedProps?.obra?.direccion ||
+                  'No especificada'}
+              </Typography>
             </Box>
           </Grid>
 
@@ -122,7 +127,9 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Solicitud
               </Typography>
               <Typography variant='body1'>
-                {event.extendedProps?.solicitud ? `Solicitud ${event.extendedProps.solicitud}` : 'No especificada'}
+                {event.extendedProps?.solicitud?.numeroSolicitud
+                  ? `Solicitud ${event.extendedProps.solicitud.numeroSolicitud}`
+                  : 'No especificada'}
               </Typography>
             </Box>
           </Grid>
@@ -133,7 +140,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                 Sector Comercial
               </Typography>
-              <Typography variant='body1'>{event.extendedProps?.sector || 'No especificado'}</Typography>
+              <Typography variant='body1'>{event.extendedProps?.sectorComercial || 'No especificado'}</Typography>
             </Box>
           </Grid>
 
@@ -240,22 +247,22 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                       <Typography variant='subtitle2' sx={{ mb: 1 }}>
                         Nombre
                       </Typography>
-                      <Typography>{asignado.user.name}</Typography>
+                      <Typography>{asignado?.name || asignado?.user?.name || 'No especificado'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <Typography variant='subtitle2' sx={{ mb: 1 }}>
                         Email
                       </Typography>
-                      <Typography>{asignado.user.email}</Typography>
+                      <Typography>{asignado?.email || asignado?.user?.email || 'No especificado'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <Typography variant='subtitle2' sx={{ mb: 1 }}>
                         Roles
                       </Typography>
                       <Box>
-                        {asignado.user.roles.map((userRol: any, rolIndex: number) => (
+                        {(asignado?.roles || asignado?.user?.roles || []).map((userRol: any, rolIndex: number) => (
                           <Typography key={rolIndex} component='div'>
-                            {userRol.rol.nombre}
+                            {userRol?.rol?.nombre || userRol?.nombre || 'Rol no especificado'}
                           </Typography>
                         ))}
                       </Box>

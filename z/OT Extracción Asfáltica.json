@@ -1,0 +1,147 @@
+{
+   "data":[
+      {
+         "CLAVE":"2025012259480PC-04001",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2025012259480PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "item":"Binder",
+            "metodo":"Ignición (MOP)",
+            "bitumen":"true",
+            "controles":[
+               {
+                  "item":"",
+                  "numero":"1",
+                  "km_final":"0.018",
+                  "n_tarjeta":"23081",
+                  "km_inicial":"0",
+                  "faja_o_lugar":"Faja A",
+                  "tipo_ligante":"CA.",
+                  "observaciones":"",
+                  "agregado_usado":"CA-24",
+                  "n_muestra_cliente":"1",
+                  "proposito_muestra":"",
+                  "punto_kilometrico":"0.01",
+                  "cantidad_representada":"80 cm3"
+               }
+            ],
+            "cubicidad":"true",
+            "granulometria":"true",
+            "nTarjetaArray":[
+               "23081"
+            ],
+            "fecha_muestreo":"24/01/2025",
+            "muestreado_por":"Laboratorio",
+            "fecha_confeccion":"24/01/2025",
+            "procedencia_asfalto":"ServiTerra"
+         },
+         "CORRELATIV":"001",
+         "FKLBDOCVER":"R-12-31004",
+         "FKLBRUTSER":"ASF003"
+      },
+      {
+         "CLAVE":"2025012259480PC-04002",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2025012259480PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "ensayos":[
+               {
+                  "area":"Asfalto",
+                  "norma":"(5.408, Dic. 2003, MC-V5)",
+                  "numero":"1",
+                  "descripcion":"Control Temperatura",
+                  "obs_muestra":"Se efectuan controles en faja A y B."
+               }
+            ],
+            "muestreado_por":"Laboratorio"
+         },
+         "CORRELATIV":"002",
+         "FKLBDOCVER":"R-12-34001",
+         "FKLBRUTSER":"VAR001"
+      },
+      {
+         "CLAVE":"2025012259480PC-04003",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2025012259480PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "ensayos":[
+               {
+                  "area":"Asfalto",
+                  "norma":"(8.502.9, Diciembre 2003, MC - V8)",
+                  "numero":"1",
+                  "descripcion":"Densidad Nuclear",
+                  "obs_muestra":"Se efectuan 2 controles de densidad para faja A y B."
+               }
+            ],
+            "muestreado_por":"Laboratorio"
+         },
+         "CORRELATIV":"003",
+         "FKLBDOCVER":"R-12-34001",
+         "FKLBRUTSER":"VAR001"
+      }
+   ],
+   "usuario":{
+      "id":"20",
+      "rut":"12376550-8",
+      "fullName":"Roberto Vargas",
+      "permisos":"",
+      "createdAt":"1621373353704",
+      "updatedAt":"1621373353867",
+      "lastSeenAt":"1621373353867",
+      "emailStatus":"confirmed",
+      "emailAddress":"rvargas@pampaustral.cl",
+      "isSuperAdmin":"false",
+      "hasBillingCard":"false",
+      "emailProofToken":"",
+      "tosAcceptedByIp":"::ffff:201.239.36.113",
+      "billingCardBrand":"",
+      "billingCardLast4":"",
+      "stripeCustomerId":"",
+      "billingCardExpYear":"",
+      "passwordResetToken":"",
+      "billingCardExpMonth":"",
+      "emailChangeCandidate":"",
+      "emailProofTokenExpiresAt":"0",
+      "passwordResetTokenExpiresAt":"0"
+   },
+   "funcionario":{
+      "RUT":"12376550-8",
+      "CARGO":"Laboratorista",
+      "CODIGO":"032",
+      "COMUOC":"",
+      "NOMBRE":"Roberto Vargas Rodriguez",
+      "COMUCOT":"",
+      "TIPODOC":"",
+      "LISTAPRE":{
+         "ESTADO":"A",
+         "NOMBRE":"General",
+         "DESCRIPC":"Lista de precios general",
+         "INTERNET":"N",
+         "LISTAPRE":"TA"
+      },
+      "WEB_BODE":"",
+      "WEB_CAJA":"",
+      "WEB_SUCU":"A",
+      "CRAYNOAUT":"",
+      "FUNCIONES":"LJSPM0TIH",
+      "NOMBRECOM":"Roberto V.",
+      "NOMBREUSO":"Roberto Vargas",
+      "WEBVERPRE":"",
+      "STKBODVEF2":""
+   }
+}

@@ -109,7 +109,7 @@ const VerticalMenu = () => {
                 <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
                   Agenda
                 </MenuItem>
-                <MenuItem href={`/${locale}/apps/user/agenda`} icon={<i className='ri-pantone-line' />}>
+                <MenuItem href={`/${locale}/apps/otmanagement`} icon={<i className='ri-pantone-line' />}>
                   Gestión de Agenda
                 </MenuItem>
               </SubMenu>

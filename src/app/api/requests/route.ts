@@ -25,6 +25,9 @@ export async function GET() {
             direccion: true
           }
         }
+      },
+      orderBy: {
+        numeroSolicitud: 'desc'
       }
     })
 

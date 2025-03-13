@@ -1,0 +1,145 @@
+{
+   "data":[
+      {
+         "CLAVE":"2024122747805PC-04005",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2024122747805PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "observaciones":"",
+            "motivo_cancelacion":"Terreno no preparado (Cliente)"
+         },
+         "CORRELATIV":"005",
+         "FKLBDOCVER":"X-1001",
+         "FKLBRUTSER":"SUS1"
+      },
+      {
+         "CLAVE":"2025010256932PC-04001",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2025010256932PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "item":"Caseta de control y bodega",
+            "clima":"Soleado",
+            "regla":"L-0-12",
+            "probetas":[
+               {
+                  "dias":"7",
+                  "cantidad":"1",
+                  "$$hashKey":"object:191"
+               },
+               {
+                  "dias":"28",
+                  "cantidad":"2",
+                  "$$hashKey":"object:193"
+               }
+            ],
+            "t_ambiente":"32.8",
+            "t_hormigon":"33.9",
+            "termometro":"T-0-32",
+            "vibradores":"X-0-275",
+            "cono_abrams":"L-0-55",
+            "num_tarjeta":"23857",
+            "numero_guia":"82469",
+            "tipo_muestra":"Simple",
+            "tipo_probeta":"3MATHORPCI",
+            "codigo_moldes":"74.128 31",
+            "fecha_ingreso":"03/01/2025",
+            "hora_muestreo":"14:55",
+            "nTarjetaArray":[
+               "23857"
+            ],
+            "numero_camion":"",
+            "observaciones":"A petición del cliente muestras qdan en piscina de curado (de la empresa pampaustral)",
+            "tipo_hormigon":"GN25(10)20-08",
+            "curado_inicial":[
+               "Piscina"
+            ],
+            "fecha_muestreo":"03/01/2025",
+            "muestreado_por":"Laboratorio",
+            "patente_camion":"CZTI19",
+            "t_inicio_curado":"22.9",
+            "tipo_colocacion":"Indirecto",
+            "tipo_transporte":"Camión Mixer",
+            "lugar_extraccion":"Sector Oeste PFV",
+            "numero_camion_na":"true",
+            "volumen_hormigon":"6.5",
+            "cantidad_probetas":"3",
+            "cono_asentamiento":"8",
+            "ensayo_solicitado":"PH001",
+            "hora_llegada_obra":"14:30",
+            "hora_salida_planta":"13:50",
+            "compactacion_probeta":"Vibrado",
+            "elemento_hormigonado":"Caseta de control y bodega",
+            "hora_inicio_descarga":"14:44",
+            "procedencia_hormigon":"SURMIX",
+            "hora_termino_descarga":".",
+            "ubicacion_hormigonado":"Sector Oeste PFV",
+            "caracteristicas_mezcla":"Plástica",
+            "hora_inicio_descarga_na":"false",
+            "n_correlativo_muestra_obra":"",
+            "n_correlativo_muestra_obra_na":"true"
+         },
+         "CORRELATIV":"001",
+         "FKLBDOCVER":"R-12-39010",
+         "FKLBRUTSER":"HOR009"
+      }
+   ],
+   "usuario":{
+      "id":"19",
+      "rut":"12969303-7",
+      "fullName":"Jose Martinez",
+      "permisos":"",
+      "createdAt":"1621373219092",
+      "updatedAt":"1621373328084",
+      "lastSeenAt":"1621373328084",
+      "emailStatus":"confirmed",
+      "emailAddress":"jmartinez@pampaustral.cl",
+      "isSuperAdmin":"false",
+      "hasBillingCard":"false",
+      "emailProofToken":"",
+      "tosAcceptedByIp":"::ffff:201.239.36.113",
+      "billingCardBrand":"",
+      "billingCardLast4":"",
+      "stripeCustomerId":"",
+      "billingCardExpYear":"",
+      "passwordResetToken":"",
+      "billingCardExpMonth":"",
+      "emailChangeCandidate":"",
+      "emailProofTokenExpiresAt":"0",
+      "passwordResetTokenExpiresAt":"0"
+   },
+   "funcionario":{
+      "RUT":"12969303-7",
+      "CARGO":"Laboratorista",
+      "CODIGO":"021",
+      "COMUOC":"",
+      "NOMBRE":"José Martinez Placencia",
+      "COMUCOT":"",
+      "TIPODOC":"",
+      "LISTAPRE":{
+         "ESTADO":"A",
+         "NOMBRE":"General",
+         "DESCRIPC":"Lista de precios general",
+         "INTERNET":"N",
+         "LISTAPRE":"TA"
+      },
+      "WEB_BODE":"A",
+      "WEB_CAJA":"1",
+      "WEB_SUCU":"A",
+      "CRAYNOAUT":"",
+      "FUNCIONES":"LJSPM0TIH",
+      "NOMBRECOM":"José Martinez",
+      "NOMBREUSO":"José Martinez",
+      "WEBVERPRE":"TA",
+      "STKBODVEF2":""
+   }
+}

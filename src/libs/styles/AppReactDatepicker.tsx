@@ -1,8 +1,11 @@
 'use client'
 
 import { styled } from '@mui/material/styles'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
+import es from 'date-fns/locale/es'
 
-const AppReactDatepicker = styled('div')(({ theme }) => ({
+const AppReactDatepicker = styled(DatePicker)(({ theme }) => ({
   '& .react-datepicker': {
     fontFamily: theme.typography.fontFamily,
     backgroundColor: theme.palette.background.paper,
@@ -86,7 +89,7 @@ const AppReactDatepicker = styled('div')(({ theme }) => ({
       },
 
       '&.react-datepicker__day--in-selecting-range': {
-        backgroundColor: theme.palette.primary.lighter,
+        backgroundColor: theme.palette.primary.light,
         color: theme.palette.primary.main
       },
 
@@ -97,6 +100,45 @@ const AppReactDatepicker = styled('div')(({ theme }) => ({
 
     '& .react-datepicker__month-container': {
       float: 'left'
+    },
+
+    // Estilos para el selector de tiempo
+    '& .react-datepicker__time-container': {
+      borderLeft: `1px solid ${theme.palette.divider}`,
+      width: '85px',
+
+      '& .react-datepicker__time': {
+        backgroundColor: 'transparent',
+
+        '& .react-datepicker__time-box': {
+          width: '100%',
+
+          '& ul.react-datepicker__time-list': {
+            height: '210px !important',
+            padding: 0,
+
+            '& .react-datepicker__time-list-item': {
+              height: 'auto',
+              padding: '8px',
+              color: theme.palette.text.primary,
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover
+              },
+
+              '&--selected': {
+                backgroundColor: `${theme.palette.primary.main} !important`,
+                color: `${theme.palette.common.white} !important`,
+                fontWeight: 500
+              }
+            }
+          }
+        }
+      }
     }
   },
 
@@ -107,5 +149,10 @@ const AppReactDatepicker = styled('div')(({ theme }) => ({
     }
   }
 }))
+
+// Configurar el locale por defecto
+AppReactDatepicker.defaultProps = {
+  locale: es
+}
 
 export default AppReactDatepicker

@@ -1,0 +1,88 @@
+{
+   "data":[
+      {
+         "CLAVE":"2024123059609PC-04",
+         "ESTADO":"T",
+         "ESTFEC":"2024-12-31",
+         "ESTHOR":"16:12",
+         "GPSFIN":"-36.6161288,-72.1169742",
+         "HORAFIN":"2024-12-31 16:12:47",
+         "GPSINICIO":"-36.6161458,-72.1171905",
+         "ACEPVISITA":{
+            "hora_salida":"13:40",
+            "hora_llegada":"13:30",
+            "movilizacion":"no",
+            "email_notificacion":"",
+            "nombre_persona_recibe":"Diego Torres Placencia"
+         },
+         "HORAINICIO":"2024-12-31 16:12:12"
+      },
+      {
+         "CLAVE":"2024123058470PC-04",
+         "ESTADO":"T",
+         "ESTFEC":"2024-12-31",
+         "ESTHOR":"12:21",
+         "GPSFIN":"-36.6166309,-72.0706631",
+         "HORAFIN":"2024-12-31 12:21:04",
+         "GPSINICIO":"-36.6174242,-72.0704733",
+         "ACEPVISITA":{
+            "hora_salida":"12:30",
+            "hora_llegada":"12:00",
+            "movilizacion":"si",
+            "email_notificacion":"rcastillo@constructoragarcia.cl, fquintana@constructoragarcia.cl",
+            "rut_persona_recibe":"17727853k",
+            "nombre_persona_recibe":"Franz Quintana 973202728 / Rodrigo Castillo 961090169"
+         },
+         "HORAINICIO":"2024-12-31 12:14:17"
+      }
+   ],
+   "usuario":{
+      "id":"7",
+      "rut":"14025121-6",
+      "fullName":"Marvin Sepulveda",
+      "permisos":"",
+      "createdAt":"1614113236502",
+      "updatedAt":"1614113236687",
+      "lastSeenAt":"1614113236687",
+      "emailStatus":"confirmed",
+      "emailAddress":"msepulveda@pampa.cl",
+      "isSuperAdmin":"false",
+      "hasBillingCard":"false",
+      "emailProofToken":"",
+      "tosAcceptedByIp":"::ffff:201.239.36.113",
+      "billingCardBrand":"",
+      "billingCardLast4":"",
+      "stripeCustomerId":"",
+      "billingCardExpYear":"",
+      "passwordResetToken":"",
+      "billingCardExpMonth":"",
+      "emailChangeCandidate":"",
+      "emailProofTokenExpiresAt":"0",
+      "passwordResetTokenExpiresAt":"0"
+   },
+   "funcionario":{
+      "RUT":"14025121-6",
+      "CARGO":"Laborotorista",
+      "CODIGO":"147",
+      "COMUOC":"",
+      "NOMBRE":"Marvin Sepulveda",
+      "COMUCOT":"",
+      "TIPODOC":"",
+      "LISTAPRE":{
+         "ESTADO":"A",
+         "NOMBRE":"General",
+         "DESCRIPC":"Lista de precios general",
+         "INTERNET":"N",
+         "LISTAPRE":"TA"
+      },
+      "WEB_BODE":"",
+      "WEB_CAJA":"",
+      "WEB_SUCU":"A",
+      "CRAYNOAUT":"",
+      "FUNCIONES":"LJSPM0TIH",
+      "NOMBRECOM":"",
+      "NOMBREUSO":"Marvin Sepulveda",
+      "WEBVERPRE":"",
+      "STKBODVEF2":""
+   }
+}

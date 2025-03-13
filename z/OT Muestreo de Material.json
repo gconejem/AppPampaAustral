@@ -1,0 +1,103 @@
+{
+   "data":[
+      {
+         "CLAVE":"2024123045749PC-04001",
+         "DATOS":"",
+         "ESTADO":"C",
+         "ORIGEN":"A",
+         "COLORVER":"",
+         "OTNUMERO":"",
+         "FKLBRUTAS":"2024123045749PC-04",
+         "OBSESTADO":"",
+         "RESPUESTA":{
+            "controles":[
+               {
+                  "area":"Suelo",
+                  "item":"Base estabilizada",
+                  "numero":"1",
+                  "sector":"Acopio obra",
+                  "services":[
+                     {
+                        "$$hashKey":"object:138",
+                        "codigoERP":"ERP1",
+                        "descripcion":"Granulometría (8.102.1, Junio 2022, MC-V8)"
+                     },
+                     {
+                        "$$hashKey":"object:139",
+                        "codigoERP":"ERP2",
+                        "descripcion":"Proctor Modificado (NCh 1534/2.Of79)"
+                     },
+                     {
+                        "$$hashKey":"object:140",
+                        "codigoERP":"ERP4",
+                        "descripcion":"C.B.R. (NCh 1852.Of81)"
+                     }
+                  ],
+                  "n_tarjeta":"23963",
+                  "obs_control":"Base para aceras de hormigón de área verde.",
+                  "procedencia":"Áridos Andalien.",
+                  "tipo_material":"Graba bien graduada",
+                  "fechaConfeccion":""
+               }
+            ],
+            "obs_servicio":"",
+            "nTarjetaArray":[
+               "23963"
+            ],
+            "muestreado_por":"Laboratorio"
+         },
+         "CORRELATIV":"001",
+         "FKLBDOCVER":"R-12-27001",
+         "FKLBRUTSER":"OTSLO"
+      }
+   ],
+   "usuario":{
+      "id":"20",
+      "rut":"12376550-8",
+      "fullName":"Roberto Vargas",
+      "permisos":"",
+      "createdAt":"1621373353704",
+      "updatedAt":"1621373353867",
+      "lastSeenAt":"1621373353867",
+      "emailStatus":"confirmed",
+      "emailAddress":"rvargas@pampaustral.cl",
+      "isSuperAdmin":"false",
+      "hasBillingCard":"false",
+      "emailProofToken":"",
+      "tosAcceptedByIp":"::ffff:201.239.36.113",
+      "billingCardBrand":"",
+      "billingCardLast4":"",
+      "stripeCustomerId":"",
+      "billingCardExpYear":"",
+      "passwordResetToken":"",
+      "billingCardExpMonth":"",
+      "emailChangeCandidate":"",
+      "emailProofTokenExpiresAt":"0",
+      "passwordResetTokenExpiresAt":"0"
+   },
+   "funcionario":{
+      "RUT":"12376550-8",
+      "CARGO":"Laboratorista",
+      "CODIGO":"032",
+      "COMUOC":"",
+      "NOMBRE":"Roberto Vargas Rodriguez",
+      "COMUCOT":"",
+      "TIPODOC":"",
+      "LISTAPRE":{
+         "ESTADO":"A",
+         "NOMBRE":"General",
+         "DESCRIPC":"Lista de precios general",
+         "INTERNET":"N",
+         "LISTAPRE":"TA"
+      },
+      "WEB_BODE":"",
+      "WEB_CAJA":"",
+      "WEB_SUCU":"A",
+      "CRAYNOAUT":"",
+      "FUNCIONES":"LJSPM0TIH",
+      "NOMBRECOM":"Roberto V.",
+      "NOMBREUSO":"Roberto Vargas",
+      "WEBVERPRE":"",
+      "STKBODVEF2":""
+   }
+}
