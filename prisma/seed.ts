@@ -1,21 +1,21 @@
-const { PrismaClient, TipoOrdenTrabajo } = require('@prisma/client')
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
 async function main() {
   try {
-    // Buscar una agenda existente
-    const agenda = await prisma.agenda.findFirst({
+    // Buscar la agenda específica
+    const agenda = await prisma.agenda.findUnique({
       where: {
-        tipoVisita: 'VISITA'
+        id: 11
       }
     })
 
     if (!agenda) {
-      throw new Error('No se encontró ninguna agenda')
+      throw new Error('No se encontró la agenda con ID 11')
     }
 
-    // Buscar un usuario existente (laboratorista)
+    // Buscar un usuario laboratorista
     const user = await prisma.user.findFirst({
       where: {
         roles: {
@@ -32,59 +32,68 @@ async function main() {
       throw new Error('No se encontró ningún laboratorista')
     }
 
-    // Actualizar las OTs existentes o crear nuevas si no existen
-    const ordenesTrabajo = await Promise.all([
-      prisma.ordenTrabajo
-        .update({
-          where: { clave: '2024123059609PC-040010' },
-          data: {
-            agenda: { connect: { id: agenda.id } }
-          }
-        })
-        .catch(() => {
-          // Si la OT no existe, la creamos
-          return prisma.ordenTrabajo.create({
-            data: {
-              clave: '2024123059609PC-040010',
-              estado: 'PENDIENTE',
-              origen: 'VISITA',
-              fklbrutas: '',
-              correlativ: '',
-              fklbdocver: '',
-              fklbrutser: '',
-              tipoOT: TipoOrdenTrabajo.ACEPTACION_VISITA,
-              user: { connect: { id: user.id } },
-              agenda: { connect: { id: agenda.id } }
-            }
-          })
-        }),
-      prisma.ordenTrabajo
-        .update({
-          where: { clave: '2024123058470PC-040010' },
-          data: {
-            agenda: { connect: { id: agenda.id } }
-          }
-        })
-        .catch(() => {
-          // Si la OT no existe, la creamos
-          return prisma.ordenTrabajo.create({
-            data: {
-              clave: '2024123058470PC-040010',
-              estado: 'PENDIENTE',
-              origen: 'VISITA',
-              fklbrutas: '',
-              correlativ: '',
-              fklbdocver: '',
-              fklbrutser: '',
-              tipoOT: TipoOrdenTrabajo.DENSIDADES,
-              user: { connect: { id: user.id } },
-              agenda: { connect: { id: agenda.id } }
-            }
-          })
-        })
-    ])
+    // Usar executeRaw para evitar problemas con el enum
+    // OT para Control de Compactación usando DENSIDADES
+    await prisma.$executeRaw`
+      INSERT INTO "OrdenTrabajo" ("id", "clave", "estado", "origen", "fklbrutas", "correlativ", "fklbdocver", "fklbrutser", "userId", "agendaId", "tipoOT", "createdAt", "updatedAt")
+      VALUES (
+        ${`ot-${Date.now()}-1`},
+        ${`R-12-03-${agenda.id.toString().padStart(6, '0')}-001`},
+        'PENDIENTE',
+        'VISITA',
+        '',
+        '001',
+        'R-12-03',
+        'DEN001',
+        ${user.id},
+        ${agenda.id},
+        'DENSIDADES',
+        NOW(),
+        NOW()
+      )
+    `
 
-    console.log('OTs actualizadas/creadas:', ordenesTrabajo)
+    // OT para Muestreo de Hormigón usando HORMIGON_FRESCO
+    await prisma.$executeRaw`
+      INSERT INTO "OrdenTrabajo" ("id", "clave", "estado", "origen", "fklbrutas", "correlativ", "fklbdocver", "fklbrutser", "userId", "agendaId", "tipoOT", "createdAt", "updatedAt")
+      VALUES (
+        ${`ot-${Date.now()}-2`},
+        ${`R-12-39-${agenda.id.toString().padStart(6, '0')}-001`},
+        'PENDIENTE',
+        'VISITA',
+        '',
+        '001',
+        'R-12-39',
+        'HOR001',
+        ${user.id},
+        ${agenda.id},
+        'HORMIGON_FRESCO',
+        NOW(),
+        NOW()
+      )
+    `
+
+    // OT para Retiro de Probeta
+    await prisma.$executeRaw`
+      INSERT INTO "OrdenTrabajo" ("id", "clave", "estado", "origen", "fklbrutas", "correlativ", "fklbdocver", "fklbrutser", "userId", "agendaId", "tipoOT", "createdAt", "updatedAt")
+      VALUES (
+        ${`ot-${Date.now()}-3`},
+        ${`R-12-99-${agenda.id.toString().padStart(6, '0')}-001`},
+        'PENDIENTE',
+        'VISITA',
+        '',
+        '001',
+        'R-12-99',
+        'HOR002',
+        ${user.id},
+        ${agenda.id},
+        'RETIRO_PROBETA',
+        NOW(),
+        NOW()
+      )
+    `
+
+    console.log('OTs creadas via raw SQL')
   } catch (error) {
     console.error('Error:', error)
     throw error

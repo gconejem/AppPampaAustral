@@ -14,6 +14,13 @@ const getAgendaData = async () => {
         include: {
           user: true
         }
+      },
+      ordenesTrabajo: {
+        include: {
+          user: true,
+          aceptacionVisita: true,
+          densidad: true
+        }
       }
     }
   })

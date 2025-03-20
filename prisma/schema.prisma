@@ -25,11 +25,11 @@ model Cliente {
   industria              String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
+  agendas                Agenda[]
   clientesContactos      ClienteContacto[]
-  condicionesComerciales CondicionComercial[]
+  condicionesComerciales CondicionComercial?
   cotizaciones           Cotizacion[]
   solicitudes            Solicitud[]
-  agendas                Agenda[]
 }
 
 model Contacto {
@@ -38,14 +38,14 @@ model Contacto {
   email             String
   telefono1         String
   telefono2         String?
-  comuna            String?
-  direccion         String?
-  empresa           String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   contactId         Int               @id @default(autoincrement())
+  comuna            String?
+  direccion         String?
+  empresa           String?
   clientesContactos ClienteContacto[]
-  contactosObra     ContactoObra[]    // Agregar la relación inversa
+  contactosObra     ContactoObra[]
 }
 
 model CondicionComercial {
@@ -58,17 +58,17 @@ model CondicionComercial {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  roles         UserRol[]
-  accounts      Account[]
-  sessions      Session[]
+  id             String           @id @default(cuid())
+  name           String?
+  email          String?          @unique
+  password       String?
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
   agendas        AgendaAsignado[]
   ordenesTrabajo OrdenTrabajo[]
+  sessions       Session[]
+  roles          UserRol[]
 }
 
 model Account {
@@ -122,13 +122,13 @@ model Producto {
   precio                Decimal?              @db.Decimal(10, 2)
   estado                EstadoProducto        @default(ACTIVO)
   norma                 String?
-  listasPrecios         ProductoListaPrecio[]
   aplicaImpuesto        Boolean               @default(true)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+  detallesCotizacion    DetalleCotizacion[]
+  listasPrecios         ProductoListaPrecio[]
   productosEnPaquete    ProductoPaquete[]     @relation("PaqueteProductos")
   paquetesQueLoIncluyen ProductoPaquete[]     @relation("ProductoEnPaquetes")
-  detallesCotizacion    DetalleCotizacion[]
 
   @@index([sku])
   @@index([estado])
@@ -150,68 +150,60 @@ model ProductoPaquete {
 }
 
 model Obra {
-  obraId               Int      @id @default(autoincrement())
-  numeroObra           String
-  fechaIngreso         DateTime
-  estado               String   @default("activo")
-  estadoObra           String
-  rut                  String
-  nombreCliente        String
-  razonSocial          String?
-  nombreObra           String
-  direccion            String
-  region               String
-  comuna               String
-  sector               String?
-  georreferencia       String?
-  referencia           String?
-  mandante             String?
-  informeMandante      Boolean  @default(false)
-  textoMandante        String?
-  giro                 String?
-  direccionComercial   String?
-  comunaFacturacion    String?
-  telefonoFacturacion  String?
-  listaPrecios         String?
-  mailRecepcionFactura String?
-
-  // Requisitos
-  acreditacionPersonal     Boolean @default(false)
-  especificacionesTecnicas Boolean @default(false)
-  acreditacionEquipos      Boolean @default(false)
-  cartaCompromiso          Boolean @default(false)
-  mandatoServiu            Boolean @default(false)
+  obraId                   Int            @id @default(autoincrement())
+  numeroObra               String
+  fechaIngreso             DateTime
+  estado                   String         @default("activo")
+  estadoObra               String
+  rut                      String
+  nombreCliente            String
+  razonSocial              String?
+  nombreObra               String
+  direccion                String
+  region                   String
+  comuna                   String
+  sector                   String?
+  georreferencia           String?
+  referencia               String?
+  mandante                 String?
+  informeMandante          Boolean        @default(false)
+  textoMandante            String?
+  giro                     String?
+  direccionComercial       String?
+  comunaFacturacion        String?
+  telefonoFacturacion      String?
+  listaPrecios             String?
+  mailRecepcionFactura     String?
+  acreditacionPersonal     Boolean        @default(false)
+  especificacionesTecnicas Boolean        @default(false)
+  acreditacionEquipos      Boolean        @default(false)
+  cartaCompromiso          Boolean        @default(false)
+  mandatoServiu            Boolean        @default(false)
   otrosRequisitos          String?
-
-  // Referencias
-  estadoPago       Boolean @default(false)
-  hes              Boolean @default(false)
-  oc               Boolean @default(false)
-  otrasReferencias String?
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  contactos    ContactoObra[]
-  cotizaciones Cotizacion[]
-  solicitudes  Solicitud[]
-  agendas       Agenda[]
+  estadoPago               Boolean        @default(false)
+  hes                      Boolean        @default(false)
+  oc                       Boolean        @default(false)
+  otrasReferencias         String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  agendas                  Agenda[]
+  contactos                ContactoObra[]
+  cotizaciones             Cotizacion[]
+  solicitudes              Solicitud[]
 }
 
 model ContactoObra {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   nombre      String
   rol         String
   email       String?
   telefono1   String?
   telefono2   String?
-  isPrincipal Boolean  @default(false)
+  isPrincipal Boolean   @default(false)
   obraId      Int
-  contactId   Int?     // Opcional para mantener compatibilidad con registros existentes
-  obra        Obra     @relation(fields: [obraId], references: [obraId])
+  contactId   Int?
   contacto    Contacto? @relation(fields: [contactId], references: [contactId])
+  obra        Obra      @relation(fields: [obraId], references: [obraId])
 }
 
 model Permission {
@@ -251,11 +243,6 @@ model ListaPrecio {
   productos ProductoListaPrecio[]
 }
 
-enum EstadoProducto {
-  ACTIVO
-  INACTIVO
-}
-
 model ProductoListaPrecio {
   id            Int         @id @default(autoincrement())
   productoId    Int
@@ -264,16 +251,10 @@ model ProductoListaPrecio {
   activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  producto      Producto    @relation(fields: [productoId], references: [productoId])
   listaPrecio   ListaPrecio @relation(fields: [listaPrecioId], references: [id])
+  producto      Producto    @relation(fields: [productoId], references: [productoId])
 
   @@unique([productoId, listaPrecioId])
-}
-
-enum TipoCotizacion {
-  A
-  B
-  C
 }
 
 model Cotizacion {
@@ -287,39 +268,301 @@ model Cotizacion {
   nombreProyecto   String?
   empresa          String?
   ubicacion        String?
-  formaPago        String?             // Campo agregado para forma de pago
   clienteId        Int?
-  cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   obraId           Int?
-  obra             Obra?               @relation(fields: [obraId], references: [obraId])
   vendedorId       String?
   observaciones    String?
   subtotal         Decimal             @db.Decimal(10, 2)
   descuento        Decimal             @db.Decimal(10, 2)
   impuesto         Decimal             @db.Decimal(10, 2)
   total            Decimal             @db.Decimal(10, 2)
-  detalles         DetalleCotizacion[]
   contactoId       Int?
-  contacto         ClienteContacto?    @relation(fields: [contactoId], references: [id])
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
+  formaPago        String?
+  cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
+  contacto         ClienteContacto?    @relation(fields: [contactoId], references: [id])
+  obra             Obra?               @relation(fields: [obraId], references: [obraId])
+  detalles         DetalleCotizacion[]
   solicitudes      Solicitud[]
 }
 
 model DetalleCotizacion {
-  id             Int     @id @default(autoincrement())
+  id             Int        @id @default(autoincrement())
   cotizacionId   Int
   productoId     Int
   cantidad       Int
-  precioUnitario Decimal @db.Decimal(10, 2)
-  descuento      Decimal @db.Decimal(10, 2)
-  subtotal       Decimal @db.Decimal(10, 2)
+  precioUnitario Decimal    @db.Decimal(10, 2)
+  descuento      Decimal    @db.Decimal(10, 2)
+  subtotal       Decimal    @db.Decimal(10, 2)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id])
+  producto       Producto   @relation(fields: [productoId], references: [productoId])
+}
 
-  cotizacion Cotizacion @relation(fields: [cotizacionId], references: [id])
-  producto   Producto   @relation(fields: [productoId], references: [productoId])
+model Solicitud {
+  id                   Int                  @id @default(autoincrement())
+  fechaCreacion        DateTime             @default(now())
+  clienteId            Int?
+  obraId               Int?
+  cotizacionId         Int?
+  observaciones        String?
+  numeroSolicitud      Int                  @unique @default(autoincrement())
+  estadoOperativo      EstadoOperacional    @default(PENDIENTE)
+  estadoAdministrativo EstadoAdministrativo @default(PENDIENTE)
+  agendas              Agenda[]
+  cliente              Cliente?             @relation(fields: [clienteId], references: [clienteId])
+  cotizacion           Cotizacion?          @relation(fields: [cotizacionId], references: [id])
+  obra                 Obra?                @relation(fields: [obraId], references: [obraId])
 
+  @@map("solicitudes")
+}
+
+model Servicio {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique
+  nombre      String
+  descripcion String?
+  estado      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Equipo {
+  id          Int            @id @default(autoincrement())
+  codigo      String         @unique
+  nombre      String
+  descripcion String?
+  estado      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  agendas     AgendaEquipo[]
+}
+
+model Agenda {
+  id              Int              @id @default(autoincrement())
+  titulo          String
+  tipoVisita      String
+  esRecurrente    Boolean          @default(false)
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  estado          EstadoAgenda     @default(AGENDADA)
+  clienteId       Int?
+  obraId          Int?
+  solicitudId     Int?
+  observaciones   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  comuna          String?
+  direccion       String?
+  referencia      String?
+  region          String?
+  sectorComercial String?
+  horaLlegada     String?
+  horaSalida      String?
+  kmAdicionales   String?
+  movilizacion    String?
+  cliente         Cliente?         @relation(fields: [clienteId], references: [clienteId])
+  obra            Obra?            @relation(fields: [obraId], references: [obraId])
+  solicitud       Solicitud?       @relation(fields: [solicitudId], references: [id])
+  asignados       AgendaAsignado[]
+  equipos         AgendaEquipo[]
+  servicios       AgendaServicio[]
+  ordenesTrabajo  OrdenTrabajo[]
+}
+
+model AgendaServicio {
+  id              Int     @id @default(autoincrement())
+  agendaId        Int
+  codigo          String
+  servicio        String
+  cantidad        Int
+  observacion     String?
+  esSegundaVisita Boolean @default(false)
+  agenda          Agenda  @relation(fields: [agendaId], references: [id])
+}
+
+model AgendaAsignado {
+  id          Int      @id @default(autoincrement())
+  agendaId    Int
+  userId      String
+  esPrincipal Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  agenda      Agenda   @relation(fields: [agendaId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([agendaId, userId])
+}
+
+model AgendaEquipo {
+  id          Int      @id @default(autoincrement())
+  agendaId    Int
+  equipoId    Int
+  cantidad    Int      @default(1)
+  observacion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  agenda      Agenda   @relation(fields: [agendaId], references: [id])
+  equipo      Equipo   @relation(fields: [equipoId], references: [id])
+
+  @@unique([agendaId, equipoId])
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique
+  descripcion String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  usuarios    UserRol[]
+}
+
+model UserRol {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  rolId     Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  rol       Rol      @relation(fields: [rolId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, rolId])
+}
+
+model OrdenTrabajo {
+  id                  String               @id @default(cuid())
+  clave               String               @unique
+  estado              String
+  origen              String
+  fklbrutas           String
+  correlativ          String
+  fklbdocver          String
+  fklbrutser          String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  userId              String
+  tipoOT              TipoOrdenTrabajo
+  agendaId            Int?
+  aceptacionVisita    AceptacionVisita?
+  densidad            Densidad?
+  extraccionAsfaltica ExtraccionAsfaltica?
+  hormigonFresco      HormigonFresco?
+  muestreoMaterial    MuestreoMaterial?
+  agenda              Agenda?              @relation(fields: [agendaId], references: [id])
+  user                User                 @relation(fields: [userId], references: [id])
+  retiroProbeta       RetiroProbeta?
+  testigos            Testigos?
+}
+
+model AceptacionVisita {
+  id                  String       @id @default(cuid())
+  ordenTrabajoId      String       @unique
+  horaSalida          String?
+  horaLlegada         String?
+  movilizacion        String?
+  emailNotificacion   String?
+  nombrePersonaRecibe String?
+  rutPersonaRecibe    String?
+  gpsInicio           String?
+  gpsFin              String?
+  horainicio          DateTime?
+  horafin             DateTime?
+  ordenTrabajo        OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model Densidad {
+  id             String       @id @default(cuid())
+  ordenTrabajoId String       @unique
+  item           String?
+  marca          String?
+  modelo         String?
+  controles      Json?
+  codigoEquipo   String?
+  descripSuelo   String?
+  listaChequeo   Json?
+  ordenTrabajo   OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model HormigonFresco {
+  id                    String       @id @default(cuid())
+  ordenTrabajoId        String       @unique
+  item                  String?
+  clima                 String?
+  tAmbiente             Float?
+  tHormigon             Float?
+  numTarjeta            String?
+  tipoHormigon          String?
+  volumenHormigon       Float?
+  cantidadProbetas      Int?
+  conoAsentamiento      Float?
+  elementoHormigonado   String?
+  ubicacionHormigonado  String?
+  caracteristicasMezcla String?
+  probetas              Json?
+  ordenTrabajo          OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model Testigos {
+  id             String       @id @default(cuid())
+  ordenTrabajoId String       @unique
+  grado          String?
+  diametro       String?
+  itemTestigo    String?
+  tipoTestigo    String?
+  numeroTarjeta  String?
+  fechaMuestreo  DateTime?
+  tipoPavimento  String?
+  controles      Json?
+  ordenTrabajo   OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model ExtraccionAsfaltica {
+  id                 String       @id @default(cuid())
+  ordenTrabajoId     String       @unique
+  item               String?
+  metodo             String?
+  bitumen            Boolean?
+  cubicidad          Boolean?
+  granulometria      Boolean?
+  fechaMuestreo      DateTime?
+  procedenciaAsfalto String?
+  controles          Json?
+  ordenTrabajo       OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model MuestreoMaterial {
+  id             String       @id @default(cuid())
+  ordenTrabajoId String       @unique
+  controles      Json?
+  obsServicio    String?
+  ordenTrabajo   OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+model RetiroProbeta {
+  id                  String       @id @default(cuid())
+  ordenTrabajoId      String       @unique
+  horaRetiro          String?
+  numTarjeta          String?
+  otMuestreo          String?
+  fechaRetiro         DateTime?
+  tempFinCurado       Float?
+  formaTransporte     String?
+  condicionAlRetirar  String?
+  condicionTransporte String?
+  ordenTrabajo        OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
+}
+
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
+}
+
+enum TipoCotizacion {
+  A
+  B
+  C
 }
 
 enum EstadoCotizacion {
@@ -329,26 +572,6 @@ enum EstadoCotizacion {
   ACEPTADA
   SIN_RESPUESTA
   RECHAZADA
-}
-
-model Solicitud {
-  id                   Int                   @id @default(autoincrement())
-  numeroSolicitud      Int                   @unique @default(autoincrement())
-  fechaCreacion        DateTime              @default(now())
-  estadoOperativo      EstadoOperacional     @default(PENDIENTE)
-  estadoAdministrativo EstadoAdministrativo  @default(PENDIENTE)
-
-  // Campos opcionales
-  clienteId     Int?
-  cliente       Cliente?    @relation(fields: [clienteId], references: [clienteId])
-  obraId        Int?
-  obra          Obra?       @relation(fields: [obraId], references: [obraId])
-  cotizacionId  Int?
-  cotizacion    Cotizacion? @relation(fields: [cotizacionId], references: [id])
-  observaciones String?
-  agendas        Agenda[]
-
-  @@map("solicitudes")
 }
 
 enum EstadoOperacional {
@@ -365,169 +588,12 @@ enum EstadoAdministrativo {
   EN_REVISION
 }
 
-// Modelo para los servicios
-model Servicio {
-  id              Int       @id @default(autoincrement())
-  codigo          String    @unique
-  nombre          String
-  descripcion     String?
-  estado          Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-// Modelo para equipos
-model Equipo {
-  id              Int       @id @default(autoincrement())
-  codigo          String    @unique
-  nombre          String
-  descripcion     String?
-  estado          Boolean   @default(true)
-  agendas         AgendaEquipo[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-// Modelo para las citas/agenda
-model Agenda {
-  id              Int       @id @default(autoincrement())
-  titulo          String
-  tipoVisita      String    // EVENTO, VISITA, etc.
-  esRecurrente    Boolean   @default(false)
-  fechaInicio     DateTime
-  fechaFin        DateTime
-  estado          EstadoAgenda @default(AGENDADA)
-
-  // Ubicación y sector
-  sectorComercial String?
-  region          String?
-  comuna          String?
-  direccion       String?
-  referencia      String?
-
-  // Referencias
-  clienteId       Int?
-  cliente         Cliente?  @relation(fields: [clienteId], references: [clienteId])
-  obraId          Int?
-  obra            Obra?     @relation(fields: [obraId], references: [obraId])
-  solicitudId     Int?
-  solicitud       Solicitud? @relation(fields: [solicitudId], references: [id])
-
-  // Servicios asociados
-  servicios       AgendaServicio[]
-  ordenesTrabajo  OrdenTrabajo[]    // Nueva relación con OrdenTrabajo
-
-  // Participantes
-  asignados       AgendaAsignado[]
-  equipos         AgendaEquipo[]
-
-  observaciones   String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model AgendaServicio {
-  id              Int       @id @default(autoincrement())
-  agendaId        Int
-  agenda          Agenda    @relation(fields: [agendaId], references: [id])
-  codigo          String
-  servicio        String
-  cantidad        Int
-  observacion     String?
-  esSegundaVisita Boolean   @default(false)
-}
-
-model AgendaAsignado {
-  id          Int      @id @default(autoincrement())
-  agendaId    Int
-  agenda      Agenda    @relation(fields: [agendaId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  esPrincipal Boolean  @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@unique([agendaId, userId])
-}
-
-// Relación entre Agenda y Equipo
-model AgendaEquipo {
-  id          Int      @id @default(autoincrement())
-  agendaId    Int
-  agenda      Agenda   @relation(fields: [agendaId], references: [id])
-  equipoId    Int
-  equipo      Equipo   @relation(fields: [equipoId], references: [id])
-  cantidad    Int      @default(1)
-  observacion String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([agendaId, equipoId])
-}
-
 enum EstadoAgenda {
   AGENDADA
   COMPLETADA
   SUSPENDIDA
   CANCELADA
   EN_PROCESO
-}
-
-// Modelo para roles
-model Rol {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @unique // LABORATORISTA, ADMIN, etc.
-  descripcion String?
-  usuarios    UserRol[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-// Relación entre usuarios y roles
-model UserRol {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  rolId     Int
-  user      User     @relation(fields: [userId], references: [id])
-  rol       Rol      @relation(fields: [rolId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, rolId])
-}
-
-// Modelos para Ordenes de Trabajo
-model OrdenTrabajo {
-  id            String   @id @default(cuid())
-  clave         String   @unique
-  estado        String
-  origen        String
-  fklbrutas     String
-  correlativ    String
-  fklbdocver    String
-  fklbrutser    String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relación con el usuario existente
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-
-  // Relación con Agenda
-  agendaId      Int?
-  agenda        Agenda?  @relation(fields: [agendaId], references: [id])
-
-  // Tipo de OT
-  tipoOT        TipoOrdenTrabajo
-
-  // Relaciones con modelos específicos
-  aceptacionVisita AceptacionVisita?
-  densidad      Densidad?
-  hormigonFresco HormigonFresco?
-  testigos      Testigos?
-  extraccionAsfaltica ExtraccionAsfaltica?
-  muestreoMaterial MuestreoMaterial?
-  retiroProbeta RetiroProbeta?
 }
 
 enum TipoOrdenTrabajo {
@@ -538,102 +604,4 @@ enum TipoOrdenTrabajo {
   EXTRACCION_ASFALTICA
   MUESTREO_MATERIAL
   RETIRO_PROBETA
-}
-
-model AceptacionVisita {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  horaSalida    String?
-  horaLlegada   String?
-  movilizacion  String?
-  emailNotificacion String?
-  nombrePersonaRecibe String?
-  rutPersonaRecibe String?
-  gpsInicio     String?
-  gpsFin        String?
-  horainicio    DateTime?
-  horafin       DateTime?
-}
-
-model Densidad {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  item          String?
-  marca         String?
-  modelo        String?
-  controles     Json?    // Almacenar como JSON ya que es complejo
-  codigoEquipo  String?
-  descripSuelo  String?
-  listaChequeo  Json?    // Almacenar como JSON
-}
-
-model HormigonFresco {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  item          String?
-  clima         String?
-  tAmbiente     Float?
-  tHormigon     Float?
-  numTarjeta    String?
-  tipoHormigon  String?
-  volumenHormigon Float?
-  cantidadProbetas Int?
-  conoAsentamiento Float?
-  elementoHormigonado String?
-  ubicacionHormigonado String?
-  caracteristicasMezcla String?
-  probetas      Json?    // Almacenar como JSON
-}
-
-model Testigos {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  grado         String?
-  diametro      String?
-  itemTestigo   String?
-  tipoTestigo   String?
-  numeroTarjeta String?
-  fechaMuestreo DateTime?
-  tipoPavimento String?
-  controles     Json?    // Almacenar como JSON
-}
-
-model ExtraccionAsfaltica {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  item          String?
-  metodo        String?
-  bitumen       Boolean?
-  cubicidad     Boolean?
-  granulometria Boolean?
-  fechaMuestreo DateTime?
-  procedenciaAsfalto String?
-  controles     Json?    // Almacenar como JSON
-}
-
-model MuestreoMaterial {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  controles     Json?    // Almacenar como JSON
-  obsServicio   String?
-}
-
-model RetiroProbeta {
-  id            String   @id @default(cuid())
-  ordenTrabajoId String  @unique
-  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
-  horaRetiro    String?
-  numTarjeta    String?
-  otMuestreo    String?
-  fechaRetiro   DateTime?
-  tempFinCurado Float?
-  formaTransporte String?
-  condicionAlRetirar String?
-  condicionTransporte String?
 }

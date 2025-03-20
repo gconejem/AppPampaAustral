@@ -8,13 +8,22 @@ import { useState } from 'react'
 // MUI Imports
 import Grid from '@mui/material/Grid'
 
-// Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
-
 // Component Imports
-import UserListTable from './UserListTable'
-import UserListTable2 from './UserListTable2'
+import VisitListTable from './VisitListTable'
+import OtListTable from './OtListTable'
 import UserListCards from './UserListCards'
+
+interface OrdenTrabajo {
+  id: string
+  clave: string
+  estado: string
+  tipoOT: string
+  createdAt: string
+  userId: string
+  user?: {
+    name: string
+  }
+}
 
 interface Agenda {
   id: number
@@ -29,6 +38,7 @@ interface Agenda {
   obra?: {
     nombreObra: string
   }
+  ordenesTrabajo: OrdenTrabajo[]
 }
 
 const UserList = ({ data }: { data: Agenda[] }) => {
@@ -44,13 +54,11 @@ const UserList = ({ data }: { data: Agenda[] }) => {
         <UserListCards />
       </Grid>
       <Grid item xs={12}>
-        <UserListTable tableData={data} onVisitSelect={handleVisitSelect} selectedVisit={selectedVisit} />
+        <VisitListTable tableData={data} onVisitSelect={handleVisitSelect} selectedVisit={selectedVisit} />
       </Grid>
-      {selectedVisit && (
-        <Grid item xs={12}>
-          <UserListTable2 tableData={data} selectedVisit={selectedVisit} />
-        </Grid>
-      )}
+      <Grid item xs={12}>
+        <OtListTable selectedVisit={selectedVisit} />
+      </Grid>
     </Grid>
   )
 }
