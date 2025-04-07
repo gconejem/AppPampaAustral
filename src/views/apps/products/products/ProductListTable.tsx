@@ -207,7 +207,7 @@ const ProductListTable = () => {
   const [totalProductos, setTotalProductos] = useState(0)
   const [areas, setAreas] = useState<string[]>([])
   const [familias, setFamilias] = useState([])
-  const [tipos, setTipos] = useState(['Ensayo', 'Paquete'])
+  const [tipos, setTipos] = useState(['Ensayo', 'Paquete', 'Terreno'])
   const [listasPrecios, setListasPrecios] = useState([])
 
   // Estados para el modal de paquetes
@@ -255,7 +255,7 @@ const ProductListTable = () => {
           setFilteredProductos(data.productos || [])
           setAreas(['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros'])
           setFamilias(data.familias || [])
-          setTipos(['Ensayo', 'Paquete'])
+          setTipos(['Ensayo', 'Paquete', 'Terreno'])
         }
       } catch (error) {
         console.error('Error cargando datos:', error)

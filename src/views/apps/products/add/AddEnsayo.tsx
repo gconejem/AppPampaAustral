@@ -44,7 +44,7 @@ const AddEnsayo = () => {
 
   const [familias] = useState(['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia'])
 
-  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Paquete'])
+  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Paquete', 'Terreno'])
 
   const formatNumber = (value: string) => {
     // Eliminar cualquier caracter que no sea número

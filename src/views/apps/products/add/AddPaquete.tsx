@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -46,7 +47,7 @@ interface AutocompleteOption {
 
 const AddPaquete = () => {
   const router = useRouter()
-  
+
   // Estados básicos del paquete
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
@@ -59,6 +60,7 @@ const AddPaquete = () => {
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
   const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOption[]>([])
   const [selectedOptions, setSelectedOptions] = useState<AutocompleteOption[]>([])
+  const [tipo, setTipo] = useState('')
 
   // Estados para el manejo de errores y éxito
   const [loading, setLoading] = useState(false)
@@ -72,17 +74,20 @@ const AddPaquete = () => {
         console.log('Iniciando fetch de productos...')
         const response = await fetch('/api/productos?esPaquete=false')
         const data = await response.json()
+
         console.log('Datos recibidos:', data)
-        
+
         if (data.productos) {
           const options = data.productos.map((p: Producto) => {
             console.log('Procesando producto:', p)
+
             return {
               label: `${p.nombre} (${p.sku})`,
               id: p.productoId,
               producto: p
             }
           })
+
           console.log('Opciones procesadas:', options)
           setAutocompleteOptions(options)
         }
@@ -97,16 +102,18 @@ const AddPaquete = () => {
   const validateForm = () => {
     console.log('Validando formulario...')
     console.log('Valores actuales:', { nombre, sku, area, familia, precio, selectedOptions })
-    
+
     if (!nombre.trim()) return 'El nombre es requerido'
     if (!sku.trim()) return 'El SKU es requerido'
     if (!area.trim()) return 'El área es requerida'
     if (!familia.trim()) return 'La familia es requerida'
-    
+
     const precioNum = parseFloat(precio)
+
     if (!precio || isNaN(precioNum) || precioNum <= 0) {
       return 'El precio debe ser un número válido mayor a 0'
     }
+
     if (precioNum >= 100000000) {
       return 'El precio no puede ser mayor a 99,999,999.99'
     }
@@ -116,6 +123,7 @@ const AddPaquete = () => {
     }
 
     console.log('Validación exitosa')
+
     return ''
   }
 
@@ -123,9 +131,11 @@ const AddPaquete = () => {
     try {
       console.log('Iniciando submit...')
       const validationError = validateForm()
+
       if (validationError) {
         console.log('Error de validación:', validationError)
         setError(validationError)
+
         return
       }
 
@@ -141,7 +151,7 @@ const AddPaquete = () => {
         descripcion,
         area,
         familia,
-        tipo: 'Paquete',
+        tipo,
         precio: precioRedondeado,
         norma,
         listaPrecios,
@@ -163,11 +173,13 @@ const AddPaquete = () => {
 
       if (!response.ok) {
         const data = await response.json()
+
         console.log('Respuesta de error:', data)
         throw new Error(data.error || 'Error al crear el paquete')
       }
 
       const data = await response.json()
+
       console.log('Respuesta exitosa:', data)
 
       setSuccess(true)
@@ -198,12 +210,7 @@ const AddPaquete = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='SKU'
-                value={sku}
-                onChange={e => setSku(e.target.value)}
-              />
+              <TextField fullWidth label='SKU' value={sku} onChange={e => setSku(e.target.value)} />
             </Grid>
 
             <Grid item xs={12}>
@@ -243,12 +250,7 @@ const AddPaquete = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='Norma'
-                value={norma}
-                onChange={e => setNorma(e.target.value)}
-              />
+              <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} />
             </Grid>
 
             <Grid item xs={12} sm={6}>
@@ -279,13 +281,21 @@ const AddPaquete = () => {
               />
             </Grid>
 
+            <Grid item xs={12} sm={6}>
+              <TextField select label='Tipo' value={tipo} onChange={e => setTipo(e.target.value)} fullWidth>
+                <MenuItem value='Ensayo'>Ensayo</MenuItem>
+                <MenuItem value='Paquete'>Paquete</MenuItem>
+                <MenuItem value='Terreno'>Terreno</MenuItem>
+              </TextField>
+            </Grid>
+
             <Grid item xs={12}>
               <Autocomplete
                 multiple
                 options={autocompleteOptions}
                 value={selectedOptions}
                 onChange={(_, newValue) => setSelectedOptions(newValue)}
-                getOptionLabel={(option) => option.label}
+                getOptionLabel={option => option.label}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderOption={(props, option) => (
                   <li {...props} key={option.id}>
@@ -294,29 +304,17 @@ const AddPaquete = () => {
                 )}
                 renderTags={(tagValue, getTagProps) =>
                   tagValue.map((option, index) => (
-                    <Chip
-                      label={option.label}
-                      {...getTagProps({ index })}
-                      key={option.id}
-                    />
+                    <Chip label={option.label} {...getTagProps({ index })} key={option.id} />
                   ))
                 }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Seleccionar Productos"
-                    placeholder="Buscar productos..."
-                  />
+                renderInput={params => (
+                  <TextField {...params} label='Seleccionar Productos' placeholder='Buscar productos...' />
                 )}
               />
             </Grid>
 
             <Grid item xs={12}>
-              <Button 
-                variant='contained' 
-                onClick={handleSubmit}
-                disabled={loading}
-              >
+              <Button variant='contained' onClick={handleSubmit} disabled={loading}>
                 {loading ? 'Guardando...' : 'Crear Paquete'}
               </Button>
             </Grid>
@@ -339,4 +337,4 @@ const AddPaquete = () => {
   )
 }
 
-export default AddPaquete 
+export default AddPaquete

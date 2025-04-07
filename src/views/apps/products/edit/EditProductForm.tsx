@@ -192,6 +192,19 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
           </Grid>
           <Grid item xs={6}>
             <TextField
+              select
+              label='Tipo'
+              value={editingProduct.tipo}
+              onChange={e => setEditingProduct({ ...editingProduct, tipo: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value='Ensayo'>Ensayo</MenuItem>
+              <MenuItem value='Paquete'>Paquete</MenuItem>
+              <MenuItem value='Terreno'>Terreno</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
               label='Norma'
               value={editingProduct.norma || ''}
               onChange={e => setEditingProduct({ ...editingProduct, norma: e.target.value })}

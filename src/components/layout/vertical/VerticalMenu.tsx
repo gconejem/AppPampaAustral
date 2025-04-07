@@ -117,7 +117,7 @@ const VerticalMenu = () => {
                 <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
                   Control Interno
                 </MenuItem>
-                <MenuItem href={`/${locale}/apps/user/registro1`} icon={<i className='ri-home-smile-line' />}>
+                <MenuItem href={`/${locale}/apps/rcmnavigator`} icon={<i className='ri-home-smile-line' />}>
                   Navegador
                 </MenuItem>
                 <MenuItem href={`/${locale}/apps/user/registro2`} icon={<i className='ri-home-smile-line' />}>
@@ -160,10 +160,6 @@ const VerticalMenu = () => {
                 Permisos
               </MenuItem>
             </MenuSection>
-
-            <MenuItem href={`/${locale}/home`} icon={<i className='ri-home-line' />}>
-              Home
-            </MenuItem>
           </Menu>
         </ScrollWrapper>
       </div>
