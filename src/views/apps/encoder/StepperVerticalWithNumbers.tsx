@@ -1456,7 +1456,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           >
                                             <DeleteIcon fontSize='small' />
                                           </IconButton>
-                                        </TableCell>
+                                    </TableCell>
                                   </TableRow>
                                     ))
                                   ) : (

@@ -117,13 +117,12 @@ const PreviewCard = () => {
         <Table sx={{ mb: 4 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'primary.lighter' }}>
+              <TableCell>SERVICIO/ENSAYO</TableCell>
               <TableCell>ÁREA</TableCell>
-              <TableCell>PRODUCTO</TableCell>
               <TableCell>DESCRIPCIÓN</TableCell>
               <TableCell align='right'>CANTIDAD</TableCell>
-              <TableCell align='right'>PRECIO UNIT.</TableCell>
-              <TableCell align='right'>DESCUENTO</TableCell>
-              <TableCell align='right'>TOTAL</TableCell>
+              <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
+              <TableCell align='right'>TOTAL NETO UF</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -139,19 +138,12 @@ const PreviewCard = () => {
                   }
                 }}
               >
-                <TableCell>{item.area}</TableCell>
-                <TableCell>
-                  {item.nombre}
-                  {item.norma && ` - ${item.norma}`}
-                  {item.esPaquete && ' (Paquete)'}
-                </TableCell>
-                <TableCell>{item.descripcion}</TableCell>
-                <TableCell align='right'>{item.cantidad}</TableCell>
-                <TableCell align='right'>${Number(item.precio).toLocaleString('es-CL')}</TableCell>
-                <TableCell align='right'>{item.descuento}%</TableCell>
-                <TableCell align='right'>
-                  ${Number(item.precio * item.cantidad * (1 - item.descuento / 100)).toLocaleString('es-CL')}
-                </TableCell>
+                <TableCell>{item.servicio || ''}</TableCell>
+                <TableCell>{item.area || ''}</TableCell>
+                <TableCell>{item.descripcion || ''}</TableCell>
+                <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -160,16 +152,16 @@ const PreviewCard = () => {
         {/* Totales */}
         <Box sx={{ mt: 4, textAlign: 'right' }}>
           <Typography>
-            <strong>Subtotal:</strong> ${Number(previewData.subtotal).toLocaleString('es-CL')}
+            <strong>Subtotal:</strong> UF {Number(previewData.subtotal).toFixed(2)}
           </Typography>
           <Typography>
-            <strong>Descuento:</strong> ${Number(previewData.descuento).toLocaleString('es-CL')}
+            <strong>Descuento:</strong> UF {Number(previewData.descuento).toFixed(2)}
           </Typography>
           <Typography>
-            <strong>IVA (19%):</strong> ${Number(previewData.impuesto).toLocaleString('es-CL')}
+            <strong>IVA (19%):</strong> UF {Number(previewData.impuesto).toFixed(2)}
           </Typography>
           <Typography variant='h6'>
-            <strong>Total:</strong> ${Number(previewData.total).toLocaleString('es-CL')}
+            <strong>Total:</strong> UF {Number(previewData.total).toFixed(2)}
           </Typography>
         </Box>
 

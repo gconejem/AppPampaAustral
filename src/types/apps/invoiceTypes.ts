@@ -19,7 +19,7 @@ export interface InvoiceType {
   fecha: string
   empresa: string
   comuna: string
-  tipo: 'A' | 'B' | 'C'
+  tipo: 'VALORES_UNITARIOS' | 'EMS' | 'MENSUAL' | string
   contacto: string
   estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
 }

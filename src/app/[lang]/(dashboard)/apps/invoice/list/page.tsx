@@ -15,22 +15,75 @@ async function getCotizaciones() {
       include: {
         cliente: {
           select: {
-            nombreCliente: true
+            nombreCliente: true,
+            comuna: true
+          }
+        },
+        contacto: {
+          include: {
+            contacto: true
           }
         }
       }
     })
 
-    return cotizaciones.map(cotizacion => ({
-      id: cotizacion.id,
-      numeroCotizacion: cotizacion.numeroCotizacion,
-      cliente: cotizacion.cliente?.nombreCliente || 'Sin cliente',
-      fecha: cotizacion.fechaCreacion.toLocaleDateString(),
-      estado: cotizacion.estado,
-      total: parseFloat(cotizacion.total.toString())
-    }))
+    // Log para diagnóstico
+    console.log(
+      'Ejemplo de datos de contacto:',
+      cotizaciones.length > 0
+        ? JSON.stringify(
+            {
+              contactoId: cotizaciones[0].contactoId,
+              contactoRelacion: cotizaciones[0].contacto,
+              contactoDatos: cotizaciones[0].contacto?.contacto
+            },
+            null,
+            2
+          )
+        : 'No hay cotizaciones'
+    )
+
+    return cotizaciones.map(cotizacion => {
+      // Mapear valores de tipoCotizacion desde la base de datos a los valores que queremos mostrar
+      let tipoMapeado: string
+
+      switch (cotizacion.tipoCotizacion) {
+        case 'A':
+          tipoMapeado = 'VALORES_UNITARIOS'
+          break
+        case 'B':
+          tipoMapeado = 'EMS'
+          break
+        case 'C':
+          tipoMapeado = 'MENSUAL'
+          break
+        default:
+          tipoMapeado = cotizacion.tipoCotizacion || 'VALORES_UNITARIOS'
+      }
+
+      // Obtener el nombre del contacto
+      const nombreContacto = cotizacion.contacto?.contacto?.nombre || 'Sin contacto'
+
+      // Log para diagnóstico de cada contacto
+      if (cotizacion.contactoId) {
+        console.log(`Cotización ${cotizacion.id} - contactoId: ${cotizacion.contactoId}, nombre: ${nombreContacto}`)
+      }
+
+      return {
+        id: cotizacion.id,
+        numeroCotizacion: cotizacion.numeroCotizacion,
+        fecha: cotizacion.fechaCreacion.toLocaleDateString(),
+        empresa: cotizacion.empresa || 'No especificada',
+        comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
+        tipo: tipoMapeado,
+        contacto: nombreContacto,
+        estado: cotizacion.estado,
+        total: parseFloat(cotizacion.total.toString())
+      }
+    })
   } catch (error) {
     console.error('Error al obtener cotizaciones:', error)
+
     return []
   }
 }

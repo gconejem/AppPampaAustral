@@ -264,7 +264,7 @@ model ProductoListaPrecio {
 model Cotizacion {
   id               Int                 @id @default(autoincrement())
   numeroCotizacion String
-  tipoCotizacion   TipoCotizacion      @default(A)
+  tipoCotizacion   TipoCotizacion      @default(VALORES_UNITARIOS)
   fechaCreacion    DateTime            @default(now())
   fechaInicio      DateTime
   fechaFin         DateTime
@@ -564,9 +564,9 @@ enum EstadoProducto {
 }
 
 enum TipoCotizacion {
-  A
-  B
-  C
+  VALORES_UNITARIOS
+  EMS
+  MENSUAL
 }
 
 enum EstadoCotizacion {

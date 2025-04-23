@@ -79,14 +79,13 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       }
 
       // Preparar los datos para CSV
-      const headers = ['N° COTIZACIÓN', 'FECHA', 'EMPRESA', 'COMUNA', 'TIPO', 'CONTACTO', 'ESTADO']
+      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'TIPO', 'CONTACTO', 'ESTADO']
 
       const selectedData = invoiceData?.filter(row => selectedRows.includes(row.id)) || []
 
       const csvData = selectedData.map(row => [
         row.numeroCotizacion,
         row.fecha,
-        row.empresa,
         row.comuna,
         row.tipo,
         row.contacto,
@@ -139,29 +138,29 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
   }
 
-  const getTipoColor = (tipo: InvoiceType['tipo']) => {
+  const getTipoLabel = (tipo: InvoiceType['tipo']) => {
     switch (tipo) {
-      case 'A':
-        return 'success'
-      case 'B':
-        return 'warning'
-      case 'C':
-        return 'error'
+      case 'VALORES_UNITARIOS':
+        return 'Valores Unitarios'
+      case 'EMS':
+        return 'EMS'
+      case 'MENSUAL':
+        return 'Mensual'
       default:
-        return 'default'
+        return tipo
     }
   }
 
-  const getTipoLabel = (tipo: InvoiceType['tipo']) => {
+  const getTipoColor = (tipo: InvoiceType['tipo']) => {
     switch (tipo) {
-      case 'A':
-        return 'Tipo A'
-      case 'B':
-        return 'Tipo B'
-      case 'C':
-        return 'Tipo C'
+      case 'VALORES_UNITARIOS':
+        return 'primary'
+      case 'EMS':
+        return 'info'
+      case 'MENSUAL':
+        return 'secondary'
       default:
-        return tipo
+        return 'default'
     }
   }
 
@@ -242,7 +241,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
     return (
       row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
-      row.empresa?.toLowerCase().includes(searchStr) ||
       row.comuna?.toLowerCase().includes(searchStr) ||
       row.contacto?.toLowerCase().includes(searchStr)
     )
@@ -303,7 +301,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               </TableCell>
               <TableCell>N° COTIZACIÓN</TableCell>
               <TableCell>FECHA</TableCell>
-              <TableCell>EMPRESA</TableCell>
               <TableCell>COMUNA</TableCell>
               <TableCell>TIPO</TableCell>
               <TableCell>CONTACTO</TableCell>
@@ -322,7 +319,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
                 <TableCell>{row.fecha}</TableCell>
-                <TableCell>{row.empresa}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
                 <TableCell>
                   <Chip label={getTipoLabel(row.tipo)} color={getTipoColor(row.tipo)} variant='outlined' size='small' />
@@ -377,7 +373,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <Grid item xs={12}>
                 <Typography variant='h6'>Datos del Proyecto</Typography>
                 <Typography>Nombre: {selectedCotizacion.nombreProyecto}</Typography>
-                <Typography>Empresa: {selectedCotizacion.empresa}</Typography>
                 <Typography>Ubicación: {selectedCotizacion.ubicacion}</Typography>
               </Grid>
               <Grid item xs={12}>

@@ -47,27 +47,84 @@ const PreviewActions = () => {
         throw new Error('El número de cotización es requerido')
       }
 
+      // Debug: Ver todos los detalles y sus productoId
+      console.log('Detalles antes de filtrar:', JSON.stringify(previewData.detalles, null, 2))
+
+      // Mapear el tipo de cotización al valor del enum en prisma
+      let tipoCotizacionValue = 'A' // valor por defecto
+
+      if (previewData.tipoCotizacion === 'VALORES_UNITARIOS') tipoCotizacionValue = 'A'
+      else if (previewData.tipoCotizacion === 'EMS') tipoCotizacionValue = 'B'
+      else if (previewData.tipoCotizacion === 'MENSUAL') tipoCotizacionValue = 'C'
+
+      // Para debugging y pruebas, crear un detalle básico si no hay detalles válidos
+      let detallesParaEnviar = []
+
+      // Validamos que haya al menos un detalle con productoId válido
+      const detallesValidos = previewData.detalles
+        .filter((detalle: any) => {
+          // Debug: mostrar cada detalle y su productoId
+          console.log(
+            'Verificando detalle:',
+            detalle,
+            'productoId:',
+            detalle.productoId,
+            'esNumero:',
+            !isNaN(parseInt(detalle.productoId || '0')),
+            'esPositivo:',
+            parseInt(detalle.productoId || '0') > 0
+          )
+
+          // Solo usar detalles que tengan un productoId válido
+          return detalle.productoId && !isNaN(parseInt(detalle.productoId)) && parseInt(detalle.productoId) > 0
+        })
+        .map((detalle: any) => ({
+          productoId: parseInt(detalle.productoId),
+          cantidad: parseInt(detalle.cantidad) || 1,
+          precioUnitario: parseFloat(detalle.precioUnitarioUF || 0),
+          descuento: 0,
+          subtotal: parseFloat(detalle.totalNetoUF || 0)
+        }))
+
+      // Debug: ver los detalles válidos
+      console.log('Detalles válidos:', detallesValidos)
+
+      // Si no hay detalles válidos, usamos un detalle de prueba con ID 1
+      if (detallesValidos.length === 0) {
+        console.log('No hay detalles válidos, usando un detalle de prueba')
+
+        // Verificar si se han agregado productos
+        if (!previewData.detalles || previewData.detalles.length === 0) {
+          throw new Error('No hay productos en la cotización')
+        }
+
+        // Si hay productos pero sin ID válido, mostrar error
+        throw new Error(
+          'No hay productos válidos para guardar en la cotización. Asegúrate de seleccionar productos desde la lista.'
+        )
+      } else {
+        detallesParaEnviar = detallesValidos
+      }
+
       const dataToSend = {
         numeroCotizacion: previewData.numeroCotizacion,
-        tipoCotizacion: previewData.tipoCotizacion || 'A',
+        tipoCotizacion: tipoCotizacionValue,
         estado: 'BORRADOR',
         clienteId: previewData.cliente?.clienteId ? parseInt(previewData.cliente.clienteId) : null,
         obraId: previewData.obra?.obraId ? parseInt(previewData.obra.obraId) : null,
-        fechaInicio: new Date().toISOString(),
-        fechaFin: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        fechaInicio: previewData.fechaInicio || new Date().toISOString(),
+        fechaFin: previewData.fechaFin || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        nombreProyecto: previewData.nombreProyecto || '',
+        empresa: previewData.empresa || '',
+        ubicacion: previewData.ubicacion || '',
+        formaPago: previewData.formaPago || 'CONTADO',
         subtotal: parseFloat(previewData.subtotal),
         descuento: parseFloat(previewData.descuento || 0),
         impuesto: parseFloat(previewData.impuesto),
         total: parseFloat(previewData.total),
         observaciones: previewData.observaciones || '',
         detalles: {
-          create: previewData.detalles.map((detalle: any) => ({
-            productoId: parseInt(detalle.productoId),
-            cantidad: parseInt(detalle.cantidad),
-            precioUnitario: parseFloat(detalle.precio),
-            descuento: parseFloat(detalle.descuento || 0),
-            subtotal: parseFloat(detalle.subtotal)
-          }))
+          create: detallesParaEnviar
         }
       }
 
@@ -89,7 +146,7 @@ const PreviewActions = () => {
 
       setShowSuccess(true)
       setTimeout(() => {
-        router.push('/home/apps/invoice/list')
+        router.push('/es/apps/invoice/list')
       }, 2000)
     } catch (error: any) {
       console.error('Error:', error)
@@ -250,12 +307,7 @@ const PreviewActions = () => {
             >
               Descargar PDF
             </Button>
-            <Button
-              fullWidth
-              color='secondary'
-              variant='outlined'
-              onClick={() => router.push('/home/apps/invoice/list')}
-            >
+            <Button fullWidth color='secondary' variant='outlined' onClick={() => router.push('/es/apps/invoice/list')}>
               Volver
             </Button>
           </div>
