@@ -41,7 +41,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { toast } from 'react-hot-toast'
 
 // Type Imports
-import type { InvoiceType } from '@/types'
+import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 
 import type { FormDataType } from './AddCustomerDrawer'
 
@@ -78,32 +78,46 @@ interface ProductRow {
 }
 
 interface ProductoType {
-  id: string
-  servicio: string
-  descripcion?: string
-  cantidad: number
+  id: number
+  productoId: number
+  sku: string
+  nombre: string
   precio: number
-  precioUnitario: number
-  total: number
-  productoId?: string
-  esPaquete?: boolean
-  familia?: string
-  montoDescuento?: number
   area?: string
-  nombre?: string
-  norma?: string
+  familia?: string
   tipo?: string
-  sku?: string
+  descripcion?: string
+  esPaquete?: boolean
+  norma?: string
+  nombreCompleto?: string
+  servicio?: string
+  productosEnPaquete?: ProductoEnPaquete[]
 }
 
 interface InvoiceType extends ProductoType {
   montoDescuento: number
 }
 
+interface ContactoType {
+  nombre: string
+  cargo: string
+  email: string
+  telefono1: string
+}
+
+interface DetalleType {
+  productoId: number
+  cantidad: number
+  precioUnitario: number
+  descuento: number
+  subtotal: number
+  montoDescuento?: number
+}
+
 interface FormData {
   numeroCotizacion: string
-  tipoCotizacion: 'VALORES_UNITARIOS' | 'EMS' | 'MENSUAL' | ''
-  estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
+  tipoCotizacion: TipoCotizacion
+  estado: EstadoCotizacion
   nombreProyecto: string
   ubicacion: string
   empresa: string
@@ -117,44 +131,20 @@ interface FormData {
   impuesto: number
   total: number
   observaciones: string
-  detalles: Array<{
-    productoId: number
-    cantidad: number
-    precioUnitario: number
-    descuento: number
-    subtotal: number
-  }>
+  detalles: DetalleType[]
   formaPago: 'CONTADO' | 'CREDITO_30' | 'CREDITO_60' | 'CREDITO_90'
   infoEMS: string
   infoMensual: string
   precioEMSTotal: number
   precioEMSPorProducto: boolean
-  cliente?: {
-    clienteId: number
-    nombre: string
-  }
-  contacto?: {
-    nombre: string
-    cargo: string
-    email: string
-    telefono1: string
-  }
   productos: ProductoType[]
+  contacto?: ContactoType | null
 }
 
 interface ValidationErrors {
   tipoCotizacion: boolean
   nombreProyecto: boolean
   ubicacion: boolean
-}
-
-interface DetalleType {
-  productoId: string
-  cantidad: number
-  precioUnitario: number
-  descuento: number
-  subtotal: number
-  montoDescuento: number
 }
 
 const AddCard = ({
@@ -168,7 +158,7 @@ const AddCard = ({
 
   // Actualizar el estado inicial
   const initialFormData: FormData = {
-    numeroCotizacion: '',
+    numeroCotizacion: '0001', // Valor inicial por defecto
     tipoCotizacion: 'VALORES_UNITARIOS',
     estado: 'BORRADOR',
     nombreProyecto: '',
@@ -204,6 +194,21 @@ const AddCard = ({
   // Actualizar la declaración del estado
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(initialValidationErrors)
+  const [fechaEmision] = useState<Date>(new Date())
+  const [fechaVencimiento] = useState<Date>(new Date(new Date().setDate(new Date().getDate() + 15)))
+
+  // Función para actualizar el formulario
+  const updateFormData = (data: Partial<FormData>) => {
+    setFormData(prev => ({
+      ...prev,
+      ...data,
+      contacto: data.contacto === undefined ? prev.contacto : data.contacto
+    }))
+
+    if (onFormDataChange) {
+      onFormDataChange(data)
+    }
+  }
 
   // Función de validación
   const validateForm = () => {
@@ -332,11 +337,7 @@ const AddCard = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // Agregar estado para las fechas
-  const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
-
-  const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
-    new Date(new Date().setDate(new Date().getDate() + 15))
-  )
+  const [loadingProductos, setLoadingProductos] = useState(false)
 
   // Hooks
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
@@ -404,6 +405,7 @@ const AddCard = ({
         const data = response.productos || []
 
         const productosFormateados = data.map((p: any) => ({
+          id: p.productoId,
           productoId: p.productoId,
           sku: p.sku,
           nombre: p.nombre,
@@ -415,6 +417,7 @@ const AddCard = ({
           esPaquete: p.esPaquete || false,
           norma: p.norma || '',
           nombreCompleto: `${p.nombre}${p.norma ? ` - ${p.norma}` : ''}`,
+          servicio: p.servicio || '',
           productosEnPaquete: p.productosEnPaquete || []
         }))
 
@@ -450,15 +453,33 @@ const AddCard = ({
 
   // Agregar useEffect para cargar el número de cotización
   useEffect(() => {
-    fetch('/api/cotizaciones/ultimo-numero')
-      .then(res => res.json())
-      .then(data => {
+    const cargarNumeroCotizacion = async () => {
+      try {
+        const response = await fetch('/api/cotizaciones/ultimo-numero')
+
+        if (!response.ok) {
+          throw new Error('Error al obtener el número de cotización')
+        }
+
+        const data = await response.json()
+        const siguienteNumero = data?.siguienteNumero || 1
+
         setFormData(prev => ({
           ...prev,
-          numeroCotizacion: data.siguienteNumero.toString()
+          numeroCotizacion: siguienteNumero.toString().padStart(4, '0')
         }))
-      })
-      .catch(error => console.error('Error al obtener número de cotización:', error))
+      } catch (error) {
+        console.error('Error al obtener número de cotización:', error)
+
+        // En caso de error, usar 0001 como número por defecto
+        setFormData(prev => ({
+          ...prev,
+          numeroCotizacion: '0001'
+        }))
+      }
+    }
+
+    cargarNumeroCotizacion()
   }, [])
 
   // Modificar el useEffect para cargar contactos
@@ -487,39 +508,18 @@ const AddCard = ({
       })
   }, [])
 
-  const updateFormData = (data: any) => {
-    if (data.contacto) {
-      // Si es un contacto, actualizamos solo el campo de contacto
-      setFormData(prev => ({
-        ...prev,
-        contacto: {
-          nombre: data.contacto.nombre,
-          cargo: data.contacto.cargo,
-          email: data.contacto.email,
-          telefono1: data.contacto.telefono1
-        }
-      }))
-    } else {
-      // Para otros datos, actualizamos normalmente
-      setFormData(prev => ({ ...prev, ...data }))
-    }
-
-    // Si hay una función de callback, la llamamos
-    if (onFormDataChange) {
-      onFormDataChange(data)
-    }
-  }
-
   const handleClienteChange = (e: SelectChangeEvent<string>) => {
-    const selectedClientId = Number(e.target.value)
-    const selectedClient = clientes.find((c: any) => c.clienteId === selectedClientId)
+    try {
+      const selectedClientId = Number(e.target.value)
+      const selectedClient = clientes.find((c: { clienteId: number }) => c.clienteId === selectedClientId)
 
-    if (selectedClient) {
-      updateFormData({
-        cliente: selectedClient,
-        clienteId: selectedClient.clienteId,
-        obra: null
-      })
+      if (selectedClient?.clienteId) {
+        updateFormData({
+          clienteId: selectedClient.clienteId
+        })
+      }
+    } catch (error) {
+      handleError(error)
     }
   }
 
@@ -530,37 +530,21 @@ const AddCard = ({
     e.target.closest('.repeater-item').remove()
   }
 
-  // Modificar la función calcularTotales
+  // Actualizar el cálculo de totales para manejar montoDescuento undefined
   const calcularTotales = useCallback(() => {
-    // Calcular subtotal sumando el total de cada fila
-    const subtotal = productRows.reduce((acc, row) => {
-      const cantidad = Number(row.cantidad) || 0
-      const precioUnitario = Number(row.precioUnitarioUF) || 0
+    const subtotalTotal = formData.detalles.reduce((acc, det) => acc + det.subtotal, 0)
+    const descuentoTotal = formData.detalles.reduce((acc, det) => acc + (det.montoDescuento || 0), 0)
+    const baseImponible = subtotalTotal - descuentoTotal
+    const impuesto = baseImponible * 0.19
+    const total = baseImponible + impuesto
 
-      return acc + cantidad * precioUnitario
-    }, 0)
-
-    // Por ahora el descuento es 0
-    const descuento = 0
-
-    // Calcular base imponible
-    const baseImponible = subtotal - descuento
-
-    // Calcular IVA (19%)
-    const iva = baseImponible * 0.19
-
-    // Calcular total
-    const total = baseImponible + iva
-
-    // Actualizar el estado con los nuevos valores
-    setFormData(prev => ({
-      ...prev,
-      subtotal: Number(subtotal.toFixed(2)),
-      descuento: Number(descuento.toFixed(2)),
-      impuesto: Number(iva.toFixed(2)),
-      total: Number(total.toFixed(2))
-    }))
-  }, [productRows])
+    updateFormData({
+      subtotal: subtotalTotal,
+      descuento: descuentoTotal,
+      impuesto: impuesto,
+      total: total
+    })
+  }, [formData.detalles])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
   useEffect(() => {
@@ -789,9 +773,12 @@ const AddCard = ({
     calcularTotales()
   }
 
+  // Manejar error de tipo unknown
   const handleError = (error: unknown) => {
     console.error('Error:', error)
-    toast.error('Ha ocurrido un error al guardar la cotización')
+    const errorMessage = error instanceof Error ? error.message : 'Ha ocurrido un error desconocido'
+
+    toast.error(errorMessage)
   }
 
   const handleChange = (field: keyof FormData, value: any) => {
@@ -847,7 +834,6 @@ const AddCard = ({
 
   const [selectedProduct, setSelectedProduct] = useState<ProductoType | null>(null)
   const [servicio, setServicio] = useState('')
-  const [loadingProductos, setLoadingProductos] = useState(false)
 
   const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)

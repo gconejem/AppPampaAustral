@@ -31,6 +31,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
+import MuiLink from '@mui/material/Link'
 
 // Type Imports
 import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -44,6 +45,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [localData, setLocalData] = useState<InvoiceType[]>([])
+  const [contactsModalOpen, setContactsModalOpen] = useState(false)
+  const [selectedContacts, setSelectedContacts] = useState<any[]>([])
 
   // Inicializar localData con invoiceData
   useEffect(() => {
@@ -139,6 +142,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   }
 
   const getTipoLabel = (tipo: InvoiceType['tipo']) => {
+    if (!tipo) return 'No especificado'
+
     switch (tipo) {
       case 'VALORES_UNITARIOS':
         return 'Valores Unitarios'
@@ -147,11 +152,13 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       case 'MENSUAL':
         return 'Mensual'
       default:
-        return tipo
+        return 'Valores Unitarios' // Valor por defecto si el tipo no es válido
     }
   }
 
   const getTipoColor = (tipo: InvoiceType['tipo']) => {
+    if (!tipo) return 'default'
+
     switch (tipo) {
       case 'VALORES_UNITARIOS':
         return 'primary'
@@ -323,7 +330,34 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                 <TableCell>
                   <Chip label={getTipoLabel(row.tipo)} color={getTipoColor(row.tipo)} variant='outlined' size='small' />
                 </TableCell>
-                <TableCell>{row.contacto}</TableCell>
+                <TableCell>
+                  {row.contacto ? (
+                    <Button
+                      variant='text'
+                      size='small'
+                      onClick={() => {
+                        setSelectedContacts([
+                          {
+                            contacto: {
+                              nombre: row.contacto,
+                              cargo: row.cargo || 'No especificado',
+                              email: row.email || 'No especificado',
+                              telefono1: row.telefono || 'No especificado'
+                            }
+                          }
+                        ])
+                        setContactsModalOpen(true)
+                      }}
+                    >
+                      {row.contacto}
+                    </Button>
+                  ) : (
+                    <div className='flex items-center gap-2'>
+                      <div className='w-2 h-2 rounded-full bg-error' />
+                      <Typography color='error'>Sin contacto</Typography>
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
@@ -410,6 +444,69 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenPreview(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={contactsModalOpen} onClose={() => setContactsModalOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>Contactos de la Cotización</DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Cargo</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Teléfono</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedContacts.map((contacto, index) => (
+                  <TableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableCell>{contacto.contacto.nombre}</TableCell>
+                    <TableCell>{contacto.contacto.cargo}</TableCell>
+                    <TableCell>
+                      {contacto.contacto.email !== 'No especificado' ? (
+                        <MuiLink
+                          href={`mailto:${contacto.contacto.email}`}
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'text.primary',
+                            '&:hover': { color: 'primary.main' }
+                          }}
+                        >
+                          {contacto.contacto.email}
+                        </MuiLink>
+                      ) : (
+                        contacto.contacto.email
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {contacto.contacto.telefono1 !== 'No especificado' ? (
+                        <MuiLink
+                          href={`tel:${contacto.contacto.telefono1}`}
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'text.primary',
+                            '&:hover': { color: 'primary.main' }
+                          }}
+                        >
+                          {contacto.contacto.telefono1}
+                        </MuiLink>
+                      ) : (
+                        contacto.contacto.telefono1
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
+          <Button onClick={() => setContactsModalOpen(false)} variant='contained'>
+            Cerrar
+          </Button>
         </DialogActions>
       </Dialog>
 

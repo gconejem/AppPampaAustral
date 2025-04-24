@@ -29,8 +29,8 @@ model Cliente {
   clientesContactos      ClienteContacto[]
   condicionesComerciales CondicionComercial?
   cotizaciones           Cotizacion[]
-  solicitudes            Solicitud[]
   rcms                   RCM[]
+  solicitudes            Solicitud[]
 }
 
 model Contacto {
@@ -130,8 +130,8 @@ model Producto {
   listasPrecios         ProductoListaPrecio[]
   productosEnPaquete    ProductoPaquete[]     @relation("PaqueteProductos")
   paquetesQueLoIncluyen ProductoPaquete[]     @relation("ProductoEnPaquetes")
-  serviciosRCM          ServicioRCM[]         // Agregar esta línea
-  serviciosMuestra      ServicioMuestra[]     // Agregar esta línea
+  serviciosMuestra      ServicioMuestra[]
+  serviciosRCM          ServicioRCM[]
 
   @@index([sku])
   @@index([estado])
@@ -192,8 +192,8 @@ model Obra {
   agendas                  Agenda[]
   contactos                ContactoObra[]
   cotizaciones             Cotizacion[]
+  rcms                     RCM[]
   solicitudes              Solicitud[]
-  rcms                     RCM[]          // Agregar esta línea
 }
 
 model ContactoObra {
@@ -264,7 +264,7 @@ model ProductoListaPrecio {
 model Cotizacion {
   id               Int                 @id @default(autoincrement())
   numeroCotizacion String
-  tipoCotizacion   TipoCotizacion      @default(VALORES_UNITARIOS)
+  tipoCotizacion   TipoCotizacion      @default(A)
   fechaCreacion    DateTime            @default(now())
   fechaInicio      DateTime
   fechaFin         DateTime
@@ -558,15 +558,95 @@ model RetiroProbeta {
   ordenTrabajo        OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id])
 }
 
+model RCM {
+  id                Int           @id @default(autoincrement())
+  numeroRcm         String        @unique
+  fechaCodificacion DateTime
+  fechaMuestreo     DateTime
+  fechaIngreso      DateTime
+  estado            String        @default("ACTIVO")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  clienteId         Int?
+  obraId            Int?
+  observaciones     String?
+  muestras          Muestra[]
+  cliente           Cliente?      @relation(fields: [clienteId], references: [clienteId])
+  obra              Obra?         @relation(fields: [obraId], references: [obraId])
+  servicios         ServicioRCM[]
+}
+
+model ServicioRCM {
+  id         Int      @id @default(autoincrement())
+  rcmId      Int
+  productoId Int
+  codigo     String
+  nombre     String
+  cantidad   Int
+  estado     String   @default("CODIFICADO")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+  rcm        RCM      @relation(fields: [rcmId], references: [id])
+}
+
+model Muestra {
+  id              Int               @id @default(autoincrement())
+  rcmId           Int
+  numeroMuestra   String            @unique
+  tipoMaterial    String?
+  elemento        String?
+  item            String?
+  grado           String?
+  procedencia     String?
+  cotas           String?
+  ubicacionSector String?
+  vencimiento     Boolean           @default(true)
+  observaciones   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  rcm             RCM               @relation(fields: [rcmId], references: [id])
+  probetas        Probeta[]
+  servicios       ServicioMuestra[]
+}
+
+model ServicioMuestra {
+  id         Int      @id @default(autoincrement())
+  muestraId  Int
+  productoId Int
+  codigo     String
+  nombre     String
+  cantidad   Int
+  estado     String   @default("CODIFICADO")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  muestra    Muestra  @relation(fields: [muestraId], references: [id])
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+}
+
+model Probeta {
+  id               Int      @id @default(autoincrement())
+  muestraId        Int
+  numero           Int
+  fechaConfeccion  DateTime
+  cantidad         Int
+  dias             Int
+  fechaVencimiento DateTime
+  estado           String   @default("CODIFICADO")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  muestra          Muestra  @relation(fields: [muestraId], references: [id])
+}
+
 enum EstadoProducto {
   ACTIVO
   INACTIVO
 }
 
 enum TipoCotizacion {
-  VALORES_UNITARIOS
-  EMS
-  MENSUAL
+  A
+  B
+  C
 }
 
 enum EstadoCotizacion {
@@ -608,94 +688,4 @@ enum TipoOrdenTrabajo {
   EXTRACCION_ASFALTICA
   MUESTREO_MATERIAL
   RETIRO_PROBETA
-}
-
-model RCM {
-  id                Int       @id @default(autoincrement())
-  numeroRcm         String    @unique
-  fechaCodificacion DateTime
-  fechaMuestreo     DateTime
-  fechaIngreso      DateTime
-  estado            String    @default("ACTIVO")
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  clienteId         Int?
-  obraId            Int?
-  observaciones     String?
-
-  // Relaciones
-  cliente           Cliente?  @relation(fields: [clienteId], references: [clienteId])
-  obra              Obra?     @relation(fields: [obraId], references: [obraId])
-  muestras          Muestra[]
-  servicios         ServicioRCM[]
-}
-
-model ServicioRCM {
-  id               Int      @id @default(autoincrement())
-  rcmId            Int
-  productoId       Int
-  codigo           String
-  nombre           String
-  cantidad         Int
-  estado           String   @default("CODIFICADO")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relaciones
-  rcm              RCM      @relation(fields: [rcmId], references: [id])
-  producto         Producto @relation(fields: [productoId], references: [productoId])
-}
-
-model Muestra {
-  id                Int      @id @default(autoincrement())
-  rcmId             Int
-  numeroMuestra     String   @unique
-  tipoMaterial      String?
-  elemento          String?
-  item              String?
-  grado             String?
-  procedencia       String?
-  cotas             String?
-  ubicacionSector   String?
-  vencimiento       Boolean  @default(true)
-  observaciones     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relaciones
-  rcm               RCM      @relation(fields: [rcmId], references: [id])
-  servicios         ServicioMuestra[]
-  probetas          Probeta[]
-}
-
-model ServicioMuestra {
-  id               Int      @id @default(autoincrement())
-  muestraId        Int
-  productoId       Int
-  codigo           String
-  nombre           String
-  cantidad         Int
-  estado           String   @default("CODIFICADO")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relaciones
-  muestra          Muestra  @relation(fields: [muestraId], references: [id])
-  producto         Producto @relation(fields: [productoId], references: [productoId])
-}
-
-model Probeta {
-  id                Int      @id @default(autoincrement())
-  muestraId         Int
-  numero            Int
-  fechaConfeccion   DateTime
-  cantidad          Int
-  dias              Int
-  fechaVencimiento  DateTime
-  estado            String   @default("CODIFICADO")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relaciones
-  muestra           Muestra  @relation(fields: [muestraId], references: [id])
 }

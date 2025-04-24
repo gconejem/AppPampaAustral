@@ -51,11 +51,20 @@ const PreviewActions = () => {
       console.log('Detalles antes de filtrar:', JSON.stringify(previewData.detalles, null, 2))
 
       // Mapear el tipo de cotización al valor del enum en prisma
-      let tipoCotizacionValue = 'A' // valor por defecto
+      let tipoCotizacionValue = 'A'
 
-      if (previewData.tipoCotizacion === 'VALORES_UNITARIOS') tipoCotizacionValue = 'A'
-      else if (previewData.tipoCotizacion === 'EMS') tipoCotizacionValue = 'B'
-      else if (previewData.tipoCotizacion === 'MENSUAL') tipoCotizacionValue = 'C'
+      // Convertir los valores al formato más simple
+      if (previewData.tipoCotizacion === 'A' || previewData.tipoCotizacion === 'VALORES_UNITARIOS') {
+        tipoCotizacionValue = 'A'
+      } else if (previewData.tipoCotizacion === 'B' || previewData.tipoCotizacion === 'EMS') {
+        tipoCotizacionValue = 'B'
+      } else if (previewData.tipoCotizacion === 'C' || previewData.tipoCotizacion === 'MENSUAL') {
+        tipoCotizacionValue = 'C'
+      }
+
+      // Debug: ver el tipo de cotización
+      console.log('Tipo de cotización original:', previewData.tipoCotizacion)
+      console.log('Tipo de cotización a enviar:', tipoCotizacionValue)
 
       // Para debugging y pruebas, crear un detalle básico si no hay detalles válidos
       let detallesParaEnviar = []

@@ -56,7 +56,6 @@ const AddPaquete = () => {
   const [familia, setFamilia] = useState('')
   const [precio, setPrecio] = useState('')
   const [norma, setNorma] = useState('')
-  const [listaPrecios, setListaPrecios] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
   const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOption[]>([])
   const [selectedOptions, setSelectedOptions] = useState<AutocompleteOption[]>([])
@@ -154,7 +153,6 @@ const AddPaquete = () => {
         tipo,
         precio: precioRedondeado,
         norma,
-        listaPrecios,
         aplicaImpuesto,
         esPaquete: true,
         estado: 'ACTIVO',
@@ -251,15 +249,6 @@ const AddPaquete = () => {
 
             <Grid item xs={12} sm={6}>
               <TextField fullWidth label='Norma' value={norma} onChange={e => setNorma(e.target.value)} />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label='Lista de Precios'
-                value={listaPrecios}
-                onChange={e => setListaPrecios(e.target.value)}
-              />
             </Grid>
 
             <Grid item xs={12} sm={6}>

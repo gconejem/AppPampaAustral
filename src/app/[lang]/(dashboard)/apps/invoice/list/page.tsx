@@ -44,22 +44,8 @@ async function getCotizaciones() {
     )
 
     return cotizaciones.map(cotizacion => {
-      // Mapear valores de tipoCotizacion desde la base de datos a los valores que queremos mostrar
-      let tipoMapeado: string
-
-      switch (cotizacion.tipoCotizacion) {
-        case 'A':
-          tipoMapeado = 'VALORES_UNITARIOS'
-          break
-        case 'B':
-          tipoMapeado = 'EMS'
-          break
-        case 'C':
-          tipoMapeado = 'MENSUAL'
-          break
-        default:
-          tipoMapeado = cotizacion.tipoCotizacion || 'VALORES_UNITARIOS'
-      }
+      // Obtenemos directamente el tipo de cotización sin mapear
+      const tipoMapeado = cotizacion.tipoCotizacion
 
       // Obtener el nombre del contacto
       const nombreContacto = cotizacion.contacto?.contacto?.nombre || 'Sin contacto'

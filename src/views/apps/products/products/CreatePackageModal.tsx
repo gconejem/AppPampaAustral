@@ -20,7 +20,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  FormHelperText,
   Grid,
   List,
   ListItem,
@@ -77,7 +76,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [familia, setFamilia] = useState('')
   const [precio, setPrecio] = useState<string>('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
-  const [selectedListaPrecio, setSelectedListaPrecio] = useState<string>('')
 
   // Opciones predefinidas para área y familia
   const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
@@ -90,7 +88,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   // Estados para productos
   const [productos, setProductos] = useState<Producto[]>([])
   const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>([])
-  const [listaPreciosOptions, setListaPreciosOptions] = useState([])
 
   // Estados para manejar las selecciones
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
@@ -114,18 +111,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         .catch(error => {
           console.error('Error al cargar productos:', error)
           toast.error('Error al cargar los productos')
-        })
-
-      // Cargar listas de precios
-      fetch('/api/lista-precios')
-        .then(res => res.json())
-        .then(data => {
-          console.log('Listas de precios cargadas:', data)
-          setListaPreciosOptions(data)
-        })
-        .catch(error => {
-          console.error('Error al cargar listas de precios:', error)
-          toast.error('Error al cargar las listas de precios')
         })
     }
   }, [open])
@@ -167,13 +152,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         return
       }
 
-      // Validar lista de precios
-      if (!selectedListaPrecio) {
-        toast.error('Por favor seleccione una lista de precios')
-
-        return
-      }
-
       // Validar que haya productos seleccionados
       if (productosSeleccionados.length === 0) {
         toast.error('Por favor seleccione al menos un producto para el paquete')
@@ -183,7 +161,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
       // Convertir valores a números
       const precioNumerico = Number(precio)
-      const listaPrecioId = parseInt(selectedListaPrecio)
 
       // Crear el objeto con los datos
       const packageData = {
@@ -197,7 +174,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         norma: norma || '',
         aplicaImpuesto: aplicaImpuesto,
         precio: precioNumerico,
-        listaPrecio: listaPrecioId,
         productos: productosSeleccionados.map(producto => ({
           productoId: producto.productoId,
           cantidad: 1,
@@ -251,9 +227,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           </Grid>
         </Grid>
 
-        {/* Nueva fila para área y familia */}
+        {/* Nueva fila para área, familia y precio */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Área</InputLabel>
               <Select value={area} label='Área' onChange={e => setArea(e.target.value)}>
@@ -268,7 +244,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
               <Select value={familia} label='Familia' onChange={e => setFamilia(e.target.value)}>
@@ -283,27 +259,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               </Select>
             </FormControl>
           </Grid>
-        </Grid>
-
-        {/* Fila para descripción del paquete */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label='Descripción del Paquete'
-              value={descripcionPaquete}
-              onChange={e => setDescripcionPaquete(e.target.value)}
-              size='small'
-              multiline
-              rows={3}
-              placeholder='Describa el contenido y características del paquete'
-            />
-          </Grid>
-        </Grid>
-
-        {/* Segunda fila - Precios */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField
               fullWidth
               label='Precio'
@@ -326,25 +282,27 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               }}
             />
           </Grid>
-          <Grid item xs={6}>
-            <FormControl fullWidth size='small' required error={!selectedListaPrecio}>
-              <InputLabel>Lista de Precios</InputLabel>
-              <Select
-                value={selectedListaPrecio}
-                label='Lista de Precios'
-                onChange={e => setSelectedListaPrecio(e.target.value)}
-              >
-                <MenuItem value=''>Seleccione una lista</MenuItem>
-                {listaPreciosOptions.map((lista: any) => (
-                  <MenuItem key={lista.id} value={lista.id.toString()}>
-                    {lista.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-              {!selectedListaPrecio && <FormHelperText>La lista de precios es requerida</FormHelperText>}
-            </FormControl>
+        </Grid>
+
+        {/* Fila para descripción del paquete */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label='Descripción del Paquete'
+              value={descripcionPaquete}
+              onChange={e => setDescripcionPaquete(e.target.value)}
+              size='small'
+              multiline
+              rows={3}
+              placeholder='Describa el contenido y características del paquete'
+            />
           </Grid>
-          <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center' }}>
+        </Grid>
+
+        {/* Fila para el checkbox de impuesto */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12}>
             <FormControlLabel
               control={
                 <Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} size='small' />
