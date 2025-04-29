@@ -101,9 +101,9 @@ const VerticalMenu = () => {
                 Cotizaciones
               </MenuItem>
 
-              <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />}>
+              {/* <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />} disabled>
                 Solicitudes
-              </MenuItem>
+              </MenuItem> */}
 
               <SubMenu label='Agenda' icon={<i className='ri-home-smile-line' />}>
                 <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
@@ -113,7 +113,7 @@ const VerticalMenu = () => {
                   Gestión de Agenda
                 </MenuItem>
               </SubMenu>
-              <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
+              {/* <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />} disabled>
                 <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
                   Control Interno
                 </MenuItem>
@@ -125,9 +125,9 @@ const VerticalMenu = () => {
                 </MenuItem>
               </SubMenu>
 
-              <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />}>
+              <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />} disabled>
                 Facturación
-              </MenuItem>
+              </MenuItem> */}
             </MenuSection>
 
             <MenuSection label={labels.appsPages}>
