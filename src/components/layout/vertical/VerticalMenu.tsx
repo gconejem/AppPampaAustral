@@ -128,6 +128,11 @@ const VerticalMenu = () => {
               <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />} disabled>
                 Facturación
               </MenuItem> */}
+
+              <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
+              App
+              </MenuItem>
+
             </MenuSection>
 
             <MenuSection label={labels.appsPages}>
