@@ -109,9 +109,15 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   }, [open])
 
   // Filtrar productos basado en la búsqueda y paginación
-  const productosFiltrados = productos.filter(
-    producto => producto && producto.nombre && producto.nombre.toLowerCase().includes(buscarProductos.toLowerCase())
-  )
+  const productosFiltrados = productos.filter(producto => {
+    if (!producto || !producto.nombre) return false
+
+    const matchesSearch = producto.nombre.toLowerCase().includes(buscarProductos.toLowerCase())
+    const matchesArea = !area || producto.area === area
+    const matchesFamilia = !familia || producto.familia === familia
+
+    return matchesSearch && matchesArea && matchesFamilia
+  })
 
   const startIndex = productsPage * ITEMS_PER_PAGE
   const paginatedProducts = productosFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE)
@@ -124,6 +130,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   )
 
   const startIndexPackage = packagePage * ITEMS_PER_PAGE
+
   const paginatedPackageProducts = productosSeleccionadosFiltrados.slice(
     startIndexPackage,
     startIndexPackage + ITEMS_PER_PAGE
@@ -215,7 +222,14 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Área</InputLabel>
-              <Select value={area} label='Área' onChange={e => setArea(e.target.value)}>
+              <Select
+                value={area}
+                label='Área'
+                onChange={e => {
+                  setArea(e.target.value)
+                  setProductsPage(0) // Resetear la página al cambiar el filtro
+                }}
+              >
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
@@ -230,7 +244,14 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
-              <Select value={familia} label='Familia' onChange={e => setFamilia(e.target.value)}>
+              <Select
+                value={familia}
+                label='Familia'
+                onChange={e => {
+                  setFamilia(e.target.value)
+                  setProductsPage(0) // Resetear la página al cambiar el filtro
+                }}
+              >
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
@@ -245,7 +266,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <TextField
               fullWidth
-              label='Cantidad por defecto'
+              label='Cantidad'
               type='number'
               size='small'
               defaultValue={1}
@@ -254,7 +275,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 const selectedIds = productosSeleccionados.map(p => p.productoId)
                 const newCantidades = { ...cantidades }
 
-                // Actualizar la cantidad para todos los productos seleccionados
                 selectedIds.forEach(id => {
                   newCantidades[id] = value
                 })
@@ -264,7 +284,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               InputProps={{
                 inputProps: { min: 1 }
               }}
-              helperText='Cantidad inicial para todos los productos'
             />
           </Grid>
         </Grid>
