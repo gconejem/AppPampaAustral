@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma'
 // Crear un cliente
 export const createCliente = async (data: any) => {
   try {
-    console.log('Datos recibidos:', JSON.stringify(data, null, 2))
+    console.log('Datos recibidos en createCliente:', JSON.stringify(data, null, 2))
 
     // Validar datos requeridos
-    if (!data.rut || !data.razonSocial || !data.nombreCliente) {
-      throw new Error('Faltan campos requeridos')
+    if (!data.rut || !data.razonSocial || !data.nombreCliente || !data.pais) {
+      throw new Error('Faltan campos requeridos (RUT, Razón Social, Nombre Cliente o País)')
     }
 
     // Verificar si ya existe un cliente con ese RUT
@@ -21,29 +21,25 @@ export const createCliente = async (data: any) => {
       throw new Error(`Ya existe un cliente con el RUT ${data.rut}`)
     }
 
+    // Separar los datos del cliente de los datos adicionales
+    const { vendedor, condicionVenta, clientesContactos, condicionesComerciales, ...datosCliente } = data
+
     // Crear el cliente primero
     const cliente = await prisma.cliente.create({
       data: {
-        rut: data.rut,
-        estado: data.estado,
-        razonSocial: data.razonSocial,
-        nombreCliente: data.nombreCliente,
-        pais: data.pais,
-        region: data.region,
-        ciudad: data.ciudad,
-        comuna: data.comuna,
-        direccion: data.direccion,
-        telefono: data.telefono,
-        sitioWeb: data.sitioWeb,
-        segmento: data.segmento,
-        industria: data.industria,
-        fechaCreacion: new Date()
+        ...datosCliente,
+        pais: datosCliente.pais || 'Chile',
+        fechaCreacion: new Date(),
+        giro: datosCliente.giro || '', // Asegurarnos de que sea string vacío en lugar de null
+        emailFacturacion: datosCliente.emailFacturacion || '' // Asegurarnos de que sea string vacío en lugar de null
       }
     })
 
+    console.log('Cliente creado con datos básicos:', cliente)
+
     // Crear los contactos y sus relaciones
-    if (data.clientesContactos?.create) {
-      for (const contactoData of data.clientesContactos.create) {
+    if (clientesContactos?.create) {
+      for (const contactoData of clientesContactos.create) {
         const contacto = await prisma.contacto.create({
           data: contactoData.contacto.create
         })
@@ -63,10 +59,10 @@ export const createCliente = async (data: any) => {
     }
 
     // Crear la condición comercial
-    if (data.condicionesComerciales?.create) {
+    if (condicionesComerciales?.create) {
       await prisma.condicionComercial.create({
         data: {
-          ...data.condicionesComerciales.create,
+          ...condicionesComerciales.create,
           cliente: {
             connect: { clienteId: cliente.clienteId }
           }
@@ -88,6 +84,8 @@ export const createCliente = async (data: any) => {
         condicionesComerciales: true
       }
     })
+
+    console.log('Cliente completo creado:', clienteCompleto)
 
     return clienteCompleto
   } catch (error) {

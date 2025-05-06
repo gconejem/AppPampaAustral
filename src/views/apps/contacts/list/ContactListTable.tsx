@@ -3,42 +3,27 @@
 // React Imports
 import { useEffect, useState, useMemo } from 'react'
 
-// Next Imports
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-
-import { toast } from 'react-hot-toast'
-
 // MUI Imports
-
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import { styled } from '@mui/material/styles'
 import TablePagination from '@mui/material/TablePagination'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
-import type { TextFieldProps } from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import Box from '@mui/material/Box'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-
-// DatePicker Imports
-import 'react-datepicker/dist/react-datepicker.css'
 
 // Third-party Imports
+import { toast } from 'react-hot-toast'
 import classnames from 'classnames'
-import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
   flexRender,
@@ -52,47 +37,22 @@ import {
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import { rankItem } from '@tanstack/match-sorter-utils'
 
 // Type Imports
-import type { ThemeColor } from '@core/types'
 import type { ContactType } from '@/types/apps/contactTypes'
-import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import AddContact from './AddContact'
-import OptionMenu from '@core/components/option-menu'
 import EditContact from '../edit/EditContact'
-
-// Util Imports
-import { getLocalizedUrl } from '@/utils/i18n'
+import ContactPreview from '../preview/ContactPreview'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-declare module '@tanstack/table-core' {
-  interface FilterFns {
-    fuzzy: FilterFn<unknown>
-  }
-  interface FilterMeta {
-    itemRank: RankingInfo
-  }
-}
-
 type ContactTypeWithAction = ContactType & {
   action?: string
 }
-
-type UserRoleType = {
-  [key: string]: { icon: string; color: string }
-}
-
-type UserStatusType = {
-  [key: string]: ThemeColor
-}
-
-// Styled Components
-const Icon = styled('i')({})
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   // Rank the item
@@ -105,50 +65,6 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 
   // Return if the item should be filtered in/out
   return itemRank.passed
-}
-
-const DebouncedInput = ({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number
-  onChange: (value: string | number) => void
-  debounce?: number
-} & Omit<TextFieldProps, 'onChange'>) => {
-  // States
-  const [value, setValue] = useState(initialValue)
-
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value)
-    }, debounce)
-
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-
-  return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
-}
-
-// Vars
-const userRoleObj: UserRoleType = {
-  admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
-}
-
-const userStatusObj: UserStatusType = {
-  active: 'success',
-  pending: 'warning',
-  inactive: 'secondary'
 }
 
 // Column Definitions
@@ -170,18 +86,64 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
   const [selectedContact, setSelectedContact] = useState<ContactType | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [editContactOpen, setEditContactOpen] = useState(false)
-
-  // Hooks
-  const params = useParams()
-  const locale = (params?.lang as string) || 'es'
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [selectedContactPreview, setSelectedContactPreview] = useState<ContactType | null>(null)
+  const [dialogTitle, setDialogTitle] = useState('')
+  const [dialogMessage, setDialogMessage] = useState('')
+  const [dialogAction, setDialogAction] = useState<'activate' | 'deactivate'>('deactivate')
 
   useEffect(() => {
     setData(initialData)
     setFilteredData(initialData)
   }, [initialData])
 
-  const handleClickOpenDialog = (contact: ContactTypeWithAction) => {
+  const handleToggleStatus = async () => {
+    try {
+      if (!selectedContact) return
+      setIsDeleteLoading(true)
+
+      const newStatus = selectedContact.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+
+      const response = await fetch(`/api/contacts/${selectedContact.contactId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ estado: newStatus })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+
+        console.error('Error response:', errorData)
+        throw new Error('Error al actualizar el estado del contacto')
+      }
+
+      // Actualizar el estado en la tabla
+      const newData = data.map(contact =>
+        contact.contactId === selectedContact.contactId ? { ...contact, estado: newStatus } : contact
+      )
+
+      setData(newData)
+      setFilteredData(newData)
+
+      toast.success(`Contacto ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
+      handleCloseDialog()
+    } catch (error: any) {
+      console.error('Error completo:', error)
+      toast.error(error.message || 'Error al actualizar el estado del contacto')
+    } finally {
+      setIsDeleteLoading(false)
+    }
+  }
+
+  const handleClickOpenDialog = (contact: ContactType) => {
     setSelectedContact(contact)
+    const isActive = contact.estado === 'ACTIVO'
+
+    setDialogAction(isActive ? 'deactivate' : 'activate')
+    setDialogTitle(isActive ? 'Desactivar Contacto' : 'Activar Contacto')
+    setDialogMessage(`¿Está seguro que desea ${isActive ? 'desactivar' : 'activar'} este contacto?`)
     setOpenDialog(true)
   }
 
@@ -221,38 +183,6 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
     }
   }
 
-  const handleDeleteContact = async () => {
-    try {
-      if (!selectedContact) return
-      setIsDeleteLoading(true)
-
-      const response = await fetch(`/api/contacts/${selectedContact.contactId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-
-        console.error('Error response:', errorData)
-        throw new Error('Error al eliminar contacto')
-      }
-
-      // Solo actualizamos el estado si la eliminación fue exitosa
-      const newData = data.filter(contact => contact.contactId !== selectedContact.contactId)
-
-      setData(newData)
-      setFilteredData(newData)
-
-      toast.success('Contacto eliminado exitosamente')
-      handleCloseDialog()
-    } catch (error: any) {
-      console.error('Error completo:', error)
-      toast.error(error.message || 'Error al eliminar contacto')
-    } finally {
-      setIsDeleteLoading(false)
-    }
-  }
-
   const handleCloseDialog = () => {
     setOpenDialog(false)
   }
@@ -262,42 +192,22 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
     setEditContactOpen(true)
   }
 
-  const handleExportSingleContact = (contact: ContactType) => {
-    try {
-      const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2']
-
-      const csvData = [[contact.nombre, contact.cargo, contact.email, contact.telefono1, contact.telefono2 || '']]
-
-      const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      const url = URL.createObjectURL(blob)
-
-      link.setAttribute('href', url)
-      link.setAttribute('download', `contacto_${contact.nombre}_${new Date().toISOString().split('T')[0]}.csv`)
-      link.style.visibility = 'hidden'
-
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      toast.success('Contacto exportado correctamente')
-    } catch (error) {
-      console.error('Error al exportar:', error)
-      toast.error('Error al exportar el contacto')
-    }
+  const handlePreviewContact = (contact: ContactType) => {
+    setSelectedContactPreview(contact)
+    setPreviewOpen(true)
   }
 
   const handleExportContacts = (contactsToExport: ContactType[]) => {
     try {
-      const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2']
+      const headers = ['NOMBRE', 'CARGO', 'EMAIL', 'TELÉFONO 1', 'TELÉFONO 2', 'ESTADO']
 
       const csvData = contactsToExport.map(contact => [
         contact.nombre,
         contact.cargo,
         contact.email,
         contact.telefono1,
-        contact.telefono2 || ''
+        contact.telefono2 || '',
+        contact.estado
       ])
 
       const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
@@ -307,6 +217,8 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
 
       link.setAttribute('href', url)
       link.setAttribute('download', `contactos_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -314,7 +226,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       toast.success('Contactos exportados correctamente')
     } catch (error) {
       console.error('Error al exportar:', error)
-      toast.error('Error al exportar contactos')
+      toast.error('Error al exportar los contactos')
     }
   }
 
@@ -344,42 +256,65 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       },
       columnHelper.accessor('contactId', {
         header: 'ID',
-        cell: ({ row }) => <Typography>{row.original.contactId}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.contactId}</Typography>
       }),
       columnHelper.accessor('nombre', {
         header: 'NOMBRE',
-        cell: ({ row }) => <Typography>{row.original.nombre}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.nombre}</Typography>
       }),
       columnHelper.accessor('cargo', {
         header: 'CARGO',
-        cell: ({ row }) => <Typography>{row.original.cargo}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.cargo}</Typography>
       }),
       columnHelper.accessor('email', {
         header: 'EMAIL',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.email}</Typography>
       }),
       columnHelper.accessor('telefono1', {
         header: 'TELÉFONO 1',
-        cell: ({ row }) => <Typography>{row.original.telefono1}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.telefono1}</Typography>
       }),
       columnHelper.accessor('telefono2', {
         header: 'TELÉFONO 2',
-        cell: ({ row }) => <Typography>{row.original.telefono2}</Typography>
+        cell: ({ row }: { row: any }) => <Typography>{row.original.telefono2}</Typography>
+      }),
+      columnHelper.accessor('estado', {
+        header: 'ESTADO',
+        cell: ({ row }) => (
+          <Box
+            sx={{
+              backgroundColor: row.original.estado === 'ACTIVO' ? 'success.main' : 'error.main',
+              color: 'white',
+              px: 2,
+              py: 0.5,
+              borderRadius: 1,
+              display: 'inline-block',
+              fontSize: '0.875rem'
+            }}
+          >
+            {row.original.estado}
+          </Box>
+        )
       }),
       {
         id: 'actions',
         header: 'ACCIONES',
-        cell: ({ row }) => (
+        cell: ({ row }: { row: any }) => (
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <IconButton color='primary' onClick={() => handleEditContact(row.original)}>
-              <EditIcon />
+            <IconButton color='info' onClick={() => handlePreviewContact(row.original)}>
+              <i className='ri-eye-line' />
             </IconButton>
-            <IconButton color='error' onClick={() => handleClickOpenDialog(row.original)}>
-              <DeleteIcon />
+            <IconButton color='primary' onClick={() => handleEditContact(row.original)}>
+              <i className='ri-edit-line' />
+            </IconButton>
+            <IconButton
+              color={row.original.estado === 'ACTIVO' ? 'error' : 'success'}
+              onClick={() => handleClickOpenDialog(row.original)}
+            >
+              <i className={row.original.estado === 'ACTIVO' ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'} />
             </IconButton>
           </Box>
-        ),
-        enableSorting: false
+        )
       }
     ],
     []
@@ -562,25 +497,23 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
         aria-labelledby='alert-dialog-title'
         aria-describedby='alert-dialog-description'
       >
-        <DialogTitle id='alert-dialog-title'>Eliminar Contacto</DialogTitle>
+        <DialogTitle id='alert-dialog-title'>{dialogTitle}</DialogTitle>
         <DialogContent>
-          <DialogContentText id='alert-dialog-description'>
-            ¿Está seguro que desea eliminar este contacto?
-          </DialogContentText>
+          <DialogContentText id='alert-dialog-description'>{dialogMessage}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} variant='outlined' color='secondary'>
-            Cerrar
+            Cancelar
           </Button>
           <Button
-            onClick={handleDeleteContact}
+            onClick={handleToggleStatus}
             variant='contained'
-            color='error'
+            color={dialogAction === 'activate' ? 'success' : 'error'}
             autoFocus
             disabled={isDeleteLoading}
             startIcon={isDeleteLoading && <i className='ri-loader-4-line animate-spin' />}
           >
-            Eliminar
+            {dialogAction === 'activate' ? 'Activar' : 'Desactivar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -593,6 +526,14 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
         }}
         setData={setData}
         setFilteredData={setFilteredData}
+      />
+      <ContactPreview
+        open={previewOpen}
+        contact={selectedContactPreview}
+        handleClose={() => {
+          setPreviewOpen(false)
+          setSelectedContactPreview(null)
+        }}
       />
     </>
   )

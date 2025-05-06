@@ -5,13 +5,9 @@ import { useState, useEffect } from 'react'
 import TextField from '@mui/material/TextField'
 import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
-import List from '@mui/material/List'
+import { toast } from 'react-hot-toast'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
-import IconButton from '@mui/material/IconButton'
-import axios from 'axios'
-import { toast } from 'react-hot-toast'
 
 import type { Contacto } from '@/types/forms/cliente'
 
@@ -25,71 +21,86 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
   const [loading, setLoading] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
-  const fetchContacts = async (search?: string) => {
+  useEffect(() => {
+    if (open && options.length === 0) {
+      loadAllContacts()
+    }
+  }, [open])
+
+  const loadAllContacts = async () => {
     setLoading(true)
 
     try {
-      const url = search ? `/api/contacts?search=${encodeURIComponent(search)}` : '/api/contacts'
-      const response = await fetch(url)
-
-      if (!response.ok) throw new Error('Error al obtener contactos')
+      const response = await fetch('/api/contacts')
       const data = await response.json()
 
-      setOptions(data)
+      console.log('Contactos cargados:', data)
+      setOptions(data || [])
     } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al cargar contactos')
-      setOptions([])
+      console.error('Error cargando contactos:', error)
+      toast.error('Error al cargar los contactos')
     } finally {
       setLoading(false)
     }
   }
 
-  // Cargar contactos iniciales
-  useEffect(() => {
-    fetchContacts()
-  }, [])
+  const handleSearch = async (searchValue: string) => {
+    setInputValue(searchValue)
 
-  // Buscar cuando cambia el input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (inputValue) {
-        fetchContacts(inputValue)
-      } else {
-        // Cuando el input está vacío, cargar todos los contactos
-        fetchContacts()
-      }
-    }, 300)
+    if (!searchValue) {
+      loadAllContacts()
 
-    return () => clearTimeout(timer)
-  }, [inputValue])
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch(`/api/contacts/search?q=${encodeURIComponent(searchValue)}`)
+      const data = await response.json()
+
+      console.log('Resultados de búsqueda:', data)
+      setOptions(data || [])
+    } catch (error) {
+      console.error('Error buscando contactos:', error)
+      toast.error('Error al buscar contactos')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <Autocomplete
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
-      isOptionEqualToValue={(option, value) => option.nombre === value.nombre}
-      getOptionLabel={option => option.nombre || ''}
-      options={options}
-      loading={loading}
-      onInputChange={(_, newInputValue) => {
-        setInputValue(newInputValue)
-      }}
+      value={null}
       onChange={(_, newValue) => {
         if (newValue) {
           onContactSelect(newValue)
-
-          // Resetear el input y recargar todos los contactos
           setInputValue('')
-          fetchContacts()
         }
       }}
+      inputValue={inputValue}
+      onInputChange={(_, newInputValue) => handleSearch(newInputValue)}
+      isOptionEqualToValue={(option, value) => option.email === value.email}
+      getOptionLabel={option => option.nombre}
+      options={options}
+      loading={loading}
+      noOptionsText='No se encontraron contactos'
+      renderOption={(props, option) => (
+        <ListItem {...props}>
+          <ListItemText
+            primary={option.nombre}
+            secondary={`${option.cargo || 'Sin cargo'} - ${option.email || 'Sin email'} - ${option.telefono1 || 'Sin teléfono'}`}
+          />
+        </ListItem>
+      )}
       renderInput={params => (
         <TextField
           {...params}
-          placeholder='Buscar contacto existente...'
-          size='small'
+          label='Buscar contacto'
+          placeholder='Haga clic para ver todos los contactos'
           InputProps={{
             ...params.InputProps,
             endAdornment: (
@@ -100,16 +111,6 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
             )
           }}
         />
-      )}
-      renderOption={(props, option) => (
-        <li {...props}>
-          <div>
-            <div>{option.nombre}</div>
-            <div style={{ fontSize: '0.8rem', color: 'gray' }}>
-              {option.cargo} - {option.email}
-            </div>
-          </div>
-        </li>
       )}
     />
   )

@@ -22,6 +22,9 @@ export interface InvoiceType {
   tipo: 'VALORES_UNITARIOS' | 'EMS' | 'MENSUAL' | string
   contacto: string
   estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
+  cargo?: string
+  email?: string
+  telefono?: string
 }
 
 export type InvoicePaymentType = {

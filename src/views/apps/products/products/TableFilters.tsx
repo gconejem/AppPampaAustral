@@ -53,12 +53,12 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
           esPaquete: product.esPaquete
         })
 
-        if (selectedTipo === 'Paquete') {
-          return product.tipo === 'Paquete' || product.esPaquete === true
+        if (selectedTipo === 'Ensayo') {
+          return product.tipo === 'Ensayo'
         }
 
-        if (selectedTipo === 'Ensayo') {
-          return product.tipo === 'Ensayo' || product.esPaquete === false
+        if (selectedTipo === 'Terreno') {
+          return product.tipo === 'Terreno'
         }
 
         return true

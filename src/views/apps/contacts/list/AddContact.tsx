@@ -108,12 +108,17 @@ const AddContactDrawer = (props: Props) => {
 
   const onSubmit = async (data: FormValidateType) => {
     try {
+      const contactData = {
+        ...data,
+        cargo: data.cargo || 'Sin cargo' // Asegurarnos de que siempre enviemos un valor para cargo
+      }
+
       const response = await fetch('/api/contacts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(contactData)
       })
 
       if (!response.ok) {

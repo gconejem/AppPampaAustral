@@ -5,17 +5,32 @@ import { prisma } from '@/lib/prisma'
 // GET - Obtener todos los contactos
 export async function GET() {
   try {
-    const contactos = await prisma.contacto.findMany({
+    const contacts = await prisma.contacto.findMany({
       include: {
-        clientesContactos: {
-          include: {
-            cliente: true
-          }
-        }
+        clientesContactos: true
+      },
+      orderBy: {
+        nombre: 'asc'
       }
     })
 
-    return NextResponse.json(contactos)
+    // Transformar los datos para mantener la estructura anterior
+    const transformedContacts = contacts.map(contact => {
+      const clienteContacto = contact.clientesContactos[0]
+
+      return {
+        contactId: contact.contactId,
+        nombre: contact.nombre,
+        email: contact.email,
+        telefono1: contact.telefono1,
+        telefono2: contact.telefono2,
+        empresa: contact.empresa
+      }
+    })
+
+    console.log('Total de contactos encontrados:', contacts.length)
+
+    return NextResponse.json(transformedContacts)
   } catch (error) {
     console.error('Error al obtener contactos:', error)
 
@@ -31,10 +46,11 @@ export async function POST(req: Request) {
     const contacto = await prisma.contacto.create({
       data: {
         nombre: body.nombre,
-        cargo: body.cargo,
+        cargo: body.cargo || 'Sin cargo',
         email: body.email,
         telefono1: body.telefono1,
-        telefono2: body.telefono2 || ''
+        telefono2: body.telefono2 || '',
+        empresa: body.empresa || null
       }
     })
 

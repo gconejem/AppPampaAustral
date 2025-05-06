@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -34,7 +34,31 @@ import ListItemText from '@mui/material/ListItemText'
 import MuiLink from '@mui/material/Link'
 
 // Type Imports
-import type { InvoiceType } from '@/types/apps/invoiceTypes'
+// import type { InvoiceType } from '@/types/apps/invoiceTypes'
+
+// Agregar después de las importaciones y antes del componente
+interface Contacto {
+  nombre: string
+  cargo?: string
+  email?: string
+  telefono1?: string
+}
+
+interface InvoiceType {
+  id: number
+  numeroCotizacion: string
+  tipoCotizacion: string
+  estado: string
+  contacto: Contacto | null
+  fecha: string
+  comuna: string
+  tipo: string
+  empresa: string
+  detalles: any[]
+  total: number
+
+  // ... otros campos necesarios
+}
 
 const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([])
@@ -47,6 +71,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [localData, setLocalData] = useState<InvoiceType[]>([])
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
+  const locale = 'es' // Por defecto usaremos español
 
   // Inicializar localData con invoiceData
   useEffect(() => {
@@ -176,6 +201,24 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       const response = await fetch(`/api/cotizaciones/${id}`)
       const data = await response.json()
 
+      // Logs detallados para debug
+      console.log('Datos completos de la cotización:', data)
+      console.log('Detalles recibidos:', data.detalles)
+      console.log('Contacto recibido:', data.contacto)
+
+      // Asegurarnos de que los detalles incluyan la información completa del producto
+      if (data.detalles?.length > 0) {
+        data.detalles.forEach((detalle: any, index: number) => {
+          console.log(`Detalle ${index + 1}:`, {
+            productoId: detalle.productoId,
+            producto: detalle.producto,
+            esPaquete: detalle.esPaquete,
+            esSubProducto: detalle.esSubProducto,
+            paqueteId: detalle.paqueteId
+          })
+        })
+      }
+
       setSelectedCotizacion(data)
       setOpenPreview(true)
     } catch (error) {
@@ -249,9 +292,57 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     return (
       row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
       row.comuna?.toLowerCase().includes(searchStr) ||
-      row.contacto?.toLowerCase().includes(searchStr)
+      row.empresa?.toLowerCase().includes(searchStr) ||
+      row.contacto?.nombre?.toLowerCase().includes(searchStr)
     )
   })
+
+  const ContactsModal = ({ open, handleClose, contact }: { open: boolean; handleClose: () => void; contact: any }) => {
+    if (!contact) return null
+
+    return (
+      <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
+        <DialogTitle>Información del Contacto</DialogTitle>
+        <DialogContent>
+          <div className='mb-4 p-4 border rounded-lg'>
+            <div className='flex items-center gap-2 mb-2'>
+              <i className='ri-user-line text-primary' />
+              <Typography variant='subtitle1'>{contact.nombre}</Typography>
+            </div>
+            <div className='grid grid-cols-2 gap-2'>
+              <div className='flex items-center gap-2'>
+                <i className='ri-briefcase-line text-textSecondary' />
+                <Typography>{contact.cargo || 'No especificado'}</Typography>
+              </div>
+              <div className='flex items-center gap-2'>
+                <i className='ri-mail-line text-textSecondary' />
+                {contact.email ? (
+                  <MuiLink href={`mailto:${contact.email}`} sx={{ textDecoration: 'none' }}>
+                    {contact.email}
+                  </MuiLink>
+                ) : (
+                  <Typography>No especificado</Typography>
+                )}
+              </div>
+              <div className='flex items-center gap-2'>
+                <i className='ri-phone-line text-textSecondary' />
+                {contact.telefono1 ? (
+                  <MuiLink href={`tel:${contact.telefono1}`} sx={{ textDecoration: 'none' }}>
+                    {contact.telefono1}
+                  </MuiLink>
+                ) : (
+                  <Typography>No especificado</Typography>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+    )
+  }
 
   return (
     <Card>
@@ -309,9 +400,11 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <TableCell>N° COTIZACIÓN</TableCell>
               <TableCell>FECHA</TableCell>
               <TableCell>COMUNA</TableCell>
+              <TableCell>EMPRESA</TableCell>
               <TableCell>TIPO</TableCell>
               <TableCell>CONTACTO</TableCell>
               <TableCell>ESTADO</TableCell>
+              <TableCell align='right'>TOTAL UF</TableCell>
               <TableCell align='center'>ACCIONES</TableCell>
             </TableRow>
           </TableHead>
@@ -327,30 +420,28 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                 <TableCell>{row.numeroCotizacion}</TableCell>
                 <TableCell>{row.fecha}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
+                <TableCell>{row.empresa || 'No especificada'}</TableCell>
                 <TableCell>
                   <Chip label={getTipoLabel(row.tipo)} color={getTipoColor(row.tipo)} variant='outlined' size='small' />
                 </TableCell>
                 <TableCell>
                   {row.contacto ? (
-                    <Button
-                      variant='text'
-                      size='small'
+                    <div
+                      className='flex items-center gap-2 cursor-pointer'
                       onClick={() => {
-                        setSelectedContacts([
-                          {
-                            contacto: {
-                              nombre: row.contacto,
-                              cargo: row.cargo || 'No especificado',
-                              email: row.email || 'No especificado',
-                              telefono1: row.telefono || 'No especificado'
-                            }
-                          }
-                        ])
+                        setSelectedContacts([row.contacto])
                         setContactsModalOpen(true)
                       }}
                     >
-                      {row.contacto}
-                    </Button>
+                      <i className='ri-user-line text-primary' style={{ fontSize: '1.25rem' }} />
+                      <Typography title={row.contacto?.nombre || 'Sin nombre'}>
+                        {row.contacto?.nombre
+                          ? row.contacto.nombre.length > 15
+                            ? row.contacto.nombre.substring(0, 15) + '...'
+                            : row.contacto.nombre
+                          : 'Sin nombre'}
+                      </Typography>
+                    </div>
                   ) : (
                     <div className='flex items-center gap-2'>
                       <div className='w-2 h-2 rounded-full bg-error' />
@@ -361,6 +452,9 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                 <TableCell>
                   <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
+                <TableCell align='right'>
+                  <Typography>UF {Number(row.total || 0).toFixed(2)}</Typography>
+                </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                     <Tooltip title='Ver'>
@@ -369,7 +463,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       </IconButton>
                     </Tooltip>
                     <Tooltip title='Editar'>
-                      <IconButton size='small' href={`/apps/invoice/edit/${row.id}`}>
+                      <IconButton size='small' href={`/${locale}/apps/invoice/edit/${row.id}`}>
                         <i className='ri-pencil-line' />
                       </IconButton>
                     </Tooltip>
@@ -390,125 +484,260 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
         </Table>
       </TableContainer>
 
-      <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth='md' fullWidth>
+      <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth='lg' fullWidth>
         <DialogTitle>Vista Previa de Cotización</DialogTitle>
         <DialogContent>
           {selectedCotizacion && (
             <Grid container spacing={3}>
+              {/* Encabezado con logo y datos de empresa */}
               <Grid item xs={12}>
-                <Typography variant='h6'>Datos de la Cotización</Typography>
-                <Typography>N° Cotización: {selectedCotizacion.numeroCotizacion}</Typography>
-                <Typography>Tipo: {selectedCotizacion.tipoCotizacion}</Typography>
-                <Typography>Estado: {selectedCotizacion.estado}</Typography>
-                <Typography>
-                  Fecha Emisión: {new Date(selectedCotizacion.fechaCreacion).toLocaleDateString('es-CL')}
+                <Box sx={{ p: 3, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant='h6'>Laboratorio Pampa Austral</Typography>
+                      <Typography>Calle Santa Blanca 51, Chillán – Chile.</Typography>
+                      <Typography>Email: contacto@pampaustral.cl</Typography>
+                      <Typography>+56 42-223 82 90</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6} sx={{ textAlign: 'right' }}>
+                      <Typography variant='h6'>N° Cotización: #{selectedCotizacion.numeroCotizacion}</Typography>
+                      <Typography>
+                        Fecha Emisión: {new Date(selectedCotizacion.fechaCreacion).toLocaleDateString('es-CL')}
+                      </Typography>
+                      <Typography>
+                        Fecha Vencimiento:{' '}
+                        {new Date(selectedCotizacion.fechaFin || selectedCotizacion.fechaCreacion).toLocaleDateString(
+                          'es-CL'
+                        )}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Grid>
+
+              {/* Información Principal */}
+              <Grid item xs={12} md={6}>
+                <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                  Información General
                 </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography>
+                    <strong>Tipo de Cotización:</strong>{' '}
+                    {selectedCotizacion.tipoCotizacion === 'A'
+                      ? 'Valores Unitarios'
+                      : selectedCotizacion.tipoCotizacion === 'B'
+                        ? 'EMS'
+                        : 'Mensual'}
+                  </Typography>
+                  <Typography>
+                    <strong>Estado:</strong> {selectedCotizacion.estado}
+                  </Typography>
+                  <Typography>
+                    <strong>Forma de Pago:</strong> {selectedCotizacion.formaPago || 'No especificada'}
+                  </Typography>
+                  <Typography>
+                    <strong>Nombre del Proyecto:</strong> {selectedCotizacion.nombreProyecto}
+                  </Typography>
+                  <Typography>
+                    <strong>Empresa:</strong> {selectedCotizacion.empresa || 'No especificada'}
+                  </Typography>
+                  <Typography>
+                    <strong>Ubicación:</strong> {selectedCotizacion.ubicacion}
+                  </Typography>
+                </Box>
               </Grid>
-              <Grid item xs={12}>
-                <Typography variant='h6'>Datos del Proyecto</Typography>
-                <Typography>Nombre: {selectedCotizacion.nombreProyecto}</Typography>
-                <Typography>Ubicación: {selectedCotizacion.ubicacion}</Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant='h6'>Contacto</Typography>
-                {selectedCotizacion.contacto && (
-                  <>
-                    <Typography>Nombre: {selectedCotizacion.contacto.nombre}</Typography>
-                    <Typography>Cargo: {selectedCotizacion.contacto.cargo}</Typography>
-                    <Typography>Email: {selectedCotizacion.contacto.email}</Typography>
-                    <Typography>Teléfono: {selectedCotizacion.contacto.telefono1}</Typography>
-                  </>
+
+              {/* Información de Contacto */}
+              <Grid item xs={12} md={6}>
+                <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                  Información de Contacto
+                </Typography>
+                {selectedCotizacion.contacto ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography>
+                      <strong>Nombre:</strong> {selectedCotizacion.contacto.nombre}
+                    </Typography>
+                    <Typography>
+                      <strong>Cargo:</strong> {selectedCotizacion.contacto.cargo || 'No especificado'}
+                    </Typography>
+                    <Typography>
+                      <strong>Email:</strong>{' '}
+                      {selectedCotizacion.contacto.email ? (
+                        <MuiLink href={`mailto:${selectedCotizacion.contacto.email}`}>
+                          {selectedCotizacion.contacto.email}
+                        </MuiLink>
+                      ) : (
+                        'No especificado'
+                      )}
+                    </Typography>
+                    <Typography>
+                      <strong>Teléfono:</strong>{' '}
+                      {selectedCotizacion.contacto.telefono1 ? (
+                        <MuiLink href={`tel:${selectedCotizacion.contacto.telefono1}`}>
+                          {selectedCotizacion.contacto.telefono1}
+                        </MuiLink>
+                      ) : (
+                        'No especificado'
+                      )}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Typography color='error'>Sin contacto asignado</Typography>
                 )}
               </Grid>
+
+              {/* Información EMS o Mensual si aplica */}
+              {selectedCotizacion.tipoCotizacion === 'B' && (
+                <Grid item xs={12}>
+                  <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                    Información EMS
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={selectedCotizacion.infoEMS || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+              )}
+
+              {selectedCotizacion.tipoCotizacion === 'C' && (
+                <Grid item xs={12}>
+                  <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                    Información Mensual
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={selectedCotizacion.infoMensual || ''}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+              )}
+
+              {/* Detalles de Productos/Servicios */}
               <Grid item xs={12}>
-                <Typography variant='h6'>Detalles</Typography>
-                {selectedCotizacion.detalles?.map((detalle: any, index: number) => (
-                  <div key={index}>
-                    <Typography>Producto: {detalle.producto?.nombre}</Typography>
-                    <Typography>Cantidad: {detalle.cantidad}</Typography>
-                    <Typography>Precio: ${detalle.precioUnitario?.toLocaleString('es-CL')}</Typography>
-                    <Typography>Subtotal: ${detalle.subtotal?.toLocaleString('es-CL')}</Typography>
-                    <Divider sx={{ my: 1 }} />
-                  </div>
-                ))}
+                <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                  Detalle de Servicios
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Servicio/Producto</TableCell>
+                        <TableCell>Área</TableCell>
+                        <TableCell>Descripción</TableCell>
+                        <TableCell align='right'>Cantidad</TableCell>
+                        <TableCell align='right'>Precio Unit. (UF)</TableCell>
+                        <TableCell align='right'>Total (UF)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedCotizacion.detalles?.map((detalle: any, index: number) => (
+                        <Fragment key={`detalle-${index}`}>
+                          <TableRow
+                            sx={{
+                              backgroundColor: detalle.esPaquete ? 'primary.lighter' : 'inherit'
+                            }}
+                          >
+                            <TableCell>
+                              {detalle.esPaquete && (
+                                <Chip size='small' label='Paquete' color='primary' sx={{ mr: 1 }} />
+                              )}
+                              {detalle.producto?.nombre || 'Sin nombre'}
+                              {detalle.producto?.norma && ` - ${detalle.producto.norma}`}
+                            </TableCell>
+                            <TableCell>{detalle.producto?.area || '-'}</TableCell>
+                            <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
+                            <TableCell align='right'>{detalle.cantidad}</TableCell>
+                            <TableCell align='right'>UF {Number(detalle.precioUnitario || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(detalle.subtotal || 0).toFixed(2)}</TableCell>
+                          </TableRow>
+                          {detalle.esPaquete &&
+                            detalle.subDetalles?.map((subDetalle: any, subIndex: number) => (
+                              <TableRow
+                                key={`subproducto-${index}-${subIndex}`}
+                                sx={{ backgroundColor: 'action.hover' }}
+                              >
+                                <TableCell sx={{ pl: 6 }}>
+                                  <Typography variant='body2'>{subDetalle.producto?.nombre}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant='body2'>{subDetalle.producto?.area || '-'}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant='body2'>{subDetalle.producto?.descripcion || '-'}</Typography>
+                                </TableCell>
+                                <TableCell align='right'>
+                                  <Typography variant='body2'>{subDetalle.cantidad}</Typography>
+                                </TableCell>
+                                <TableCell align='right'>
+                                  <Typography variant='body2'>
+                                    UF {Number(subDetalle.precioUnitario || 0).toFixed(2)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align='right'>
+                                  <Typography variant='body2'>
+                                    UF {Number(subDetalle.subtotal || 0).toFixed(2)}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Grid>
+
+              {/* Totales */}
               <Grid item xs={12}>
-                <Typography variant='h6'>Totales</Typography>
-                <Typography>Subtotal: ${selectedCotizacion.subtotal?.toLocaleString('es-CL')}</Typography>
-                <Typography>Descuento: ${selectedCotizacion.descuento?.toLocaleString('es-CL')}</Typography>
-                <Typography>IVA: ${selectedCotizacion.impuesto?.toLocaleString('es-CL')}</Typography>
-                <Typography variant='h6'>Total: ${selectedCotizacion.total?.toLocaleString('es-CL')}</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, mt: 2 }}>
+                  <Typography>
+                    <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(2)}
+                  </Typography>
+                  <Typography>
+                    <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(2)}
+                  </Typography>
+                  <Typography>
+                    <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(2)}
+                  </Typography>
+                  <Typography variant='h6' sx={{ mt: 1 }}>
+                    <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(2)}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Observaciones */}
+              <Grid item xs={12}>
+                <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                  Observaciones
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={selectedCotizacion.observaciones || 'Sin observaciones'}
+                  InputProps={{ readOnly: true }}
+                />
               </Grid>
             </Grid>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenPreview(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={contactsModalOpen} onClose={() => setContactsModalOpen(false)} maxWidth='md' fullWidth>
-        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>Contactos de la Cotización</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Cargo</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Teléfono</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {selectedContacts.map((contacto, index) => (
-                  <TableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                    <TableCell>{contacto.contacto.nombre}</TableCell>
-                    <TableCell>{contacto.contacto.cargo}</TableCell>
-                    <TableCell>
-                      {contacto.contacto.email !== 'No especificado' ? (
-                        <MuiLink
-                          href={`mailto:${contacto.contacto.email}`}
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'text.primary',
-                            '&:hover': { color: 'primary.main' }
-                          }}
-                        >
-                          {contacto.contacto.email}
-                        </MuiLink>
-                      ) : (
-                        contacto.contacto.email
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {contacto.contacto.telefono1 !== 'No especificado' ? (
-                        <MuiLink
-                          href={`tel:${contacto.contacto.telefono1}`}
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'text.primary',
-                            '&:hover': { color: 'primary.main' }
-                          }}
-                        >
-                          {contacto.contacto.telefono1}
-                        </MuiLink>
-                      ) : (
-                        contacto.contacto.telefono1
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-          <Button onClick={() => setContactsModalOpen(false)} variant='contained'>
+          <Button onClick={() => setOpenPreview(false)} variant='contained'>
             Cerrar
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ContactsModal
+        open={contactsModalOpen}
+        handleClose={() => setContactsModalOpen(false)}
+        contact={selectedContacts[0]}
+      />
 
       <Menu
         anchorEl={anchorEl}

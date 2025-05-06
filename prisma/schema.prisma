@@ -23,6 +23,8 @@ model Cliente {
   sitioWeb               String?
   segmento               String?
   industria              String?
+  giro                   String?
+  emailFacturacion       String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   agendas                Agenda[]
@@ -35,7 +37,6 @@ model Cliente {
 
 model Contacto {
   nombre            String
-  cargo             String
   email             String
   telefono1         String
   telefono2         String?
@@ -45,8 +46,11 @@ model Contacto {
   comuna            String?
   direccion         String?
   empresa           String?
+  cargo             String            @default("Sin cargo")
+  estado            String            @default("ACTIVO")
   clientesContactos ClienteContacto[]
   contactosObra     ContactoObra[]
+  cotizaciones      Cotizacion[]
 }
 
 model CondicionComercial {
@@ -101,12 +105,12 @@ model Session {
 model ClienteContacto {
   id           Int          @id @default(autoincrement())
   clienteId    Int
+  contactId    Int
+  cargo        String
   isPrincipal  Boolean      @default(false)
   createdAt    DateTime     @default(now())
-  contactId    Int
   cliente      Cliente      @relation(fields: [clienteId], references: [clienteId])
   contacto     Contacto     @relation(fields: [contactId], references: [contactId])
-  cotizaciones Cotizacion[]
 
   @@unique([clienteId, contactId])
 }
@@ -140,16 +144,20 @@ model Producto {
 }
 
 model ProductoPaquete {
-  id          Int      @id @default(autoincrement())
-  paqueteId   Int
-  productoId  Int
-  cantidad    Int      @default(1)
-  descripcion String?
-  createdAt   DateTime @default(now())
-  paquete     Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
-  producto    Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
+  id              Int      @id @default(autoincrement())
+  paqueteId       Int
+  productoId      Int
+  cantidad        Int      @default(1)
+  descripcion     String?
+  precioUnitario  Decimal? @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  paquete         Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
+  producto        Producto @relation("ProductoEnPaquetes", fields: [productoId], references: [productoId])
 
   @@unique([paqueteId, productoId])
+  @@index([paqueteId])
+  @@index([productoId])
 }
 
 model Obra {
@@ -177,6 +185,7 @@ model Obra {
   telefonoFacturacion      String?
   listaPrecios             String?
   mailRecepcionFactura     String?
+  correos                  String[]
   acreditacionPersonal     Boolean        @default(false)
   especificacionesTecnicas Boolean        @default(false)
   acreditacionEquipos      Boolean        @default(false)
@@ -264,11 +273,11 @@ model ProductoListaPrecio {
 model Cotizacion {
   id               Int                 @id @default(autoincrement())
   numeroCotizacion String
-  tipoCotizacion   TipoCotizacion      @default(A)
-  fechaCreacion    DateTime            @default(now())
+  tipoCotizacion   TipoCotizacion     @default(A)
+  fechaCreacion    DateTime           @default(now())
   fechaInicio      DateTime
   fechaFin         DateTime
-  estado           EstadoCotizacion    @default(BORRADOR)
+  estado           EstadoCotizacion   @default(BORRADOR)
   nombreProyecto   String?
   empresa          String?
   ubicacion        String?
@@ -276,33 +285,44 @@ model Cotizacion {
   obraId           Int?
   vendedorId       String?
   observaciones    String?
-  subtotal         Decimal             @db.Decimal(10, 2)
-  descuento        Decimal             @db.Decimal(10, 2)
-  impuesto         Decimal             @db.Decimal(10, 2)
-  total            Decimal             @db.Decimal(10, 2)
+  subtotal         Decimal            @db.Decimal(10, 2)
+  descuento        Decimal            @db.Decimal(10, 2)
+  impuesto         Decimal            @db.Decimal(10, 2)
+  total            Decimal            @db.Decimal(10, 2)
   contactoId       Int?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   formaPago        String?
-  cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
-  contacto         ClienteContacto?    @relation(fields: [contactoId], references: [id])
-  obra             Obra?               @relation(fields: [obraId], references: [obraId])
+  cliente          Cliente?           @relation(fields: [clienteId], references: [clienteId])
+  contacto         Contacto?          @relation(fields: [contactoId], references: [contactId])
+  obra             Obra?              @relation(fields: [obraId], references: [obraId])
   detalles         DetalleCotizacion[]
   solicitudes      Solicitud[]
+
+  @@index([contactoId])
 }
 
 model DetalleCotizacion {
-  id             Int        @id @default(autoincrement())
-  cotizacionId   Int
-  productoId     Int
-  cantidad       Int
-  precioUnitario Decimal    @db.Decimal(10, 2)
-  descuento      Decimal    @db.Decimal(10, 2)
-  subtotal       Decimal    @db.Decimal(10, 2)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id])
-  producto       Producto   @relation(fields: [productoId], references: [productoId])
+  id                Int        @id @default(autoincrement())
+  cotizacionId      Int
+  productoId        Int
+  cantidad          Int
+  precioUnitario    Decimal    @db.Decimal(10, 2)
+  descuento         Decimal    @db.Decimal(10, 2)
+  subtotal          Decimal    @db.Decimal(10, 2)
+  esPaquete         Boolean    @default(false)
+  esSubProducto     Boolean    @default(false)
+  paqueteId         Int?       // ID del detalle padre si es un subproducto
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  cotizacion        Cotizacion @relation(fields: [cotizacionId], references: [id])
+  producto          Producto   @relation(fields: [productoId], references: [productoId])
+  detallePaquete    DetalleCotizacion?  @relation("DetallesPaquete", fields: [paqueteId], references: [id])
+  subDetalles       DetalleCotizacion[] @relation("DetallesPaquete")
+
+  @@index([cotizacionId])
+  @@index([productoId])
+  @@index([paqueteId])
 }
 
 model Solicitud {

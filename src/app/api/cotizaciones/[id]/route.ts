@@ -13,14 +13,34 @@ export async function GET(request: Request, { params }: { params: { id: string }
       include: {
         cliente: true,
         obra: true,
-        contacto: {
-          include: {
-            contacto: true
-          }
-        },
+        contacto: true,
         detalles: {
           include: {
-            producto: true
+            producto: {
+              select: {
+                productoId: true,
+                nombre: true,
+                descripcion: true,
+                area: true,
+                norma: true,
+                precio: true,
+                esPaquete: true,
+                productosEnPaquete: {
+                  include: {
+                    producto: {
+                      select: {
+                        productoId: true,
+                        nombre: true,
+                        descripcion: true,
+                        area: true,
+                        norma: true,
+                        precio: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -28,6 +48,20 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     if (!cotizacion) {
       return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
+    }
+
+    // Agregar logs detallados
+    console.log('Cotización completa:', JSON.stringify(cotizacion, null, 2))
+    console.log('Detalles de la cotización:', JSON.stringify(cotizacion.detalles, null, 2))
+
+    if (cotizacion.detalles?.length > 0) {
+      cotizacion.detalles.forEach((detalle, index) => {
+        console.log(`Detalle ${index + 1}:`, {
+          productoId: detalle.productoId,
+          producto: detalle.producto,
+          productosEnPaquete: detalle.producto?.productosEnPaquete
+        })
+      })
     }
 
     return NextResponse.json(cotizacion)

@@ -19,11 +19,7 @@ async function getCotizaciones() {
             comuna: true
           }
         },
-        contacto: {
-          include: {
-            contacto: true
-          }
-        }
+        contacto: true
       }
     })
 
@@ -44,7 +40,6 @@ async function getCotizaciones() {
     )
 
     return cotizaciones.map(cotizacion => {
-      // Obtenemos directamente el tipo de cotización sin mapear
       const tipoMapeado = cotizacion.tipoCotizacion
 
       // Obtener el nombre del contacto

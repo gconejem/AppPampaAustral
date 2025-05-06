@@ -15,36 +15,61 @@ export interface FormValidateType {
   condicionVenta: string
   observaciones: string
   fechaCreacion?: string
+  giro?: string
+  emailFacturacion?: string
+  contacto?: {
+    nombre: string
+    telefono: string
+    email: string
+    cargo: string
+    isPrincipal: boolean
+  }
 }
 
 export interface FormNonValidateType {
   region: string
-  city: string
-  commune: string
-  address: string
-  phone: string
-  website: string
-  segment: string
-  industry: string
+  ciudad: string
+  comuna: string
+  direccion: string
+  telefono: string
+  sitioWeb: string
+  segmento: string
+  industria: string
   pais: string
   vendedor: string
   condicionVenta: string
   observaciones: string
+  giro?: string
+  emailFacturacion?: string
+  contacto?: {
+    nombre: string
+    telefono: string
+    email: string
+    cargo: string
+    isPrincipal: boolean
+  }
 }
 
 export const initialFormData: FormNonValidateType = {
   region: '',
-  city: '',
-  commune: '',
-  address: '',
-  phone: '',
-  website: '',
-  segment: '',
-  industry: '',
+  ciudad: '',
+  comuna: '',
+  direccion: '',
+  telefono: '',
+  sitioWeb: '',
+  segmento: '',
+  industria: '',
   pais: '',
   vendedor: '',
   condicionVenta: '',
-  observaciones: ''
+  observaciones: '',
+  contacto: {
+    nombre: '',
+    telefono: '',
+    email: '',
+    cargo: '',
+    isPrincipal: false
+  }
 }
 
 export interface Cliente {
@@ -63,6 +88,8 @@ export interface Cliente {
   industria?: string
   fechaCreacion: Date
   estado: string
+  giro?: string
+  emailFacturacion?: string
   clientesContactos?: ClienteContacto[]
   condicionesComerciales?: CondicionComercial
   createdAt?: Date

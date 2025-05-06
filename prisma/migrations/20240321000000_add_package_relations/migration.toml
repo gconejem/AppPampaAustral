@@ -1,0 +1,7 @@
+# This is an empty migration that adds the new schema version to the database
+# without modifying the database schema.
+#
+# This is needed because the database schema already exists.
+
+migration_name = "20240321000000_add_package_relations"
+provider = "postgresql"

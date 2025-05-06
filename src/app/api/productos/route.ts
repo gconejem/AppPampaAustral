@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         estado: 'ACTIVO',
         norma: body.norma || '',
         aplicaImpuesto: body.aplicaImpuesto || false,
-        precio: new Prisma.Decimal(body.precio),
+        precio: body.precio ? new Prisma.Decimal(body.precio) : new Prisma.Decimal(0),
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
           producto: {
             connect: { productoId: producto.productoId }
           },
-          precio: new Prisma.Decimal(body.precio),
+          precio: body.precio ? new Prisma.Decimal(body.precio) : new Prisma.Decimal(0),
           activo: true,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -121,80 +121,31 @@ export async function POST(req: Request) {
 }
 
 // GET - Obtener todos los productos
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const skip = (page - 1) * limit
-
-    // Obtener el total de productos
-    const total = await prisma.producto.count({
-      where: {
-        estado: 'ACTIVO'
-      }
-    })
-
-    // Obtener los productos paginados
     const productos = await prisma.producto.findMany({
       where: {
         estado: 'ACTIVO'
       },
-      skip,
-      take: limit,
-      select: {
-        productoId: true,
-        sku: true,
-        nombre: true,
-        descripcion: true,
-        area: true,
-        familia: true,
-        tipo: true,
-        norma: true,
-        precio: true,
-        esPaquete: true,
-        estado: true,
-        aplicaImpuesto: true,
+      include: {
         productosEnPaquete: {
+          include: {
+            producto: true
+          }
+        },
+        listasPrecios: {
           select: {
-            cantidad: true,
-            producto: {
-              select: {
-                productoId: true,
-                nombre: true,
-                descripcion: true,
-                area: true,
-                norma: true,
-                precio: true
-              }
-            }
+            listaPrecioId: true,
+            precio: true
           }
         }
       }
     })
 
-    // Transformar los precios Decimal a números
-    const productosFormateados = productos.map(producto => ({
-      ...producto,
-      precio: Number(producto.precio),
-      productosEnPaquete: producto.productosEnPaquete.map(pp => ({
-        ...pp,
-        producto: {
-          ...pp.producto,
-          precio: Number(pp.producto.precio)
-        }
-      }))
-    }))
-
-    return NextResponse.json({
-      productos: productosFormateados,
-      total,
-      page,
-      limit
-    })
+    return NextResponse.json({ productos })
   } catch (error) {
     console.error('Error al obtener productos:', error)
 
-    return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener los productos' }, { status: 500 })
   }
 }

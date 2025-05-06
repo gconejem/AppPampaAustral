@@ -34,7 +34,6 @@ const AddEnsayo = () => {
     familia: '',
     tipo: 'Ensayos',
     norma: '',
-    precio: '',
     aplicaImpuesto: false,
     listaPrecio: '1'
   })
@@ -44,27 +43,7 @@ const AddEnsayo = () => {
 
   const [familias] = useState(['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia'])
 
-  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Paquete', 'Terreno'])
-
-  const formatNumber = (value: string) => {
-    // Eliminar cualquier caracter que no sea número
-    const numbers = value.replace(/[^\d]/g, '')
-
-    // Convertir a número y formatear con puntos
-    return numbers ? Number(numbers).toLocaleString('es-CL') : ''
-  }
-
-  const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value
-
-    // Guardar el valor sin formato en el estado
-    const numericValue = value.replace(/[^\d]/g, '')
-
-    setFormData(prev => ({
-      ...prev,
-      precio: numericValue
-    }))
-  }
+  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +57,6 @@ const AddEnsayo = () => {
         },
         body: JSON.stringify({
           ...formData,
-          precio: parseFloat(formData.precio),
           listaPrecio: parseInt(formData.listaPrecio)
         })
       })
@@ -91,7 +69,7 @@ const AddEnsayo = () => {
 
       toast.success('Ensayo creado exitosamente')
       router.push('/home/apps/products')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error)
       toast.error(error.message || 'Error al crear el ensayo')
     } finally {
@@ -189,18 +167,6 @@ const AddEnsayo = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth label='Norma' value={formData.norma} onChange={handleChange('norma')} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label='Precio'
-                    value={formatNumber(formData.precio)}
-                    onChange={handlePriceChange}
-                    required
-                    InputProps={{
-                      startAdornment: <InputAdornment position='start'>$</InputAdornment>
-                    }}
-                  />
                 </Grid>
                 <Grid item xs={12}>
                   <FormControlLabel

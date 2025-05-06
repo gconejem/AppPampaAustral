@@ -35,10 +35,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
+    console.log('Datos recibidos en POST:', body) // Agregar log para ver los datos recibidos
+
     const cliente = await prisma.cliente.create({
       data: {
         ...body,
         fechaCreacion: new Date(),
+        giro: body.giro || null,
+        emailFacturacion: body.emailFacturacion || null,
         clientesContactos: body.clientesContactos,
         condicionesComerciales: body.condicionesComerciales
       },
@@ -53,6 +57,8 @@ export async function POST(request: Request) {
         solicitudes: true
       }
     })
+
+    console.log('Cliente creado:', cliente) // Agregar log para ver el cliente creado
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {

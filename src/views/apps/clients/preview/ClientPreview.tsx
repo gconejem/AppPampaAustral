@@ -1,16 +1,37 @@
+import { useEffect, useState } from 'react'
+
 import { Typography, Grid, Card, CardContent, Table, TableHead, TableBody, TableRow, TableCell } from '@mui/material'
 
 import type { Cliente } from '@/types/forms/cliente'
+import { useUbicacion } from '@/hooks/useUbicacion'
 
 interface ClientPreviewProps {
   client: Cliente | null
 }
 
 const ClientPreview = ({ client }: ClientPreviewProps) => {
+  const { regiones } = useUbicacion()
+  const [nombreRegion, setNombreRegion] = useState<string>('')
+
+  useEffect(() => {
+    if (client?.region && regiones.length > 0) {
+      // Buscar la región por su ID
+      const region = regiones.find(r => r.id.toString() === client.region)
+
+      if (region) {
+        setNombreRegion(region.nombre)
+      }
+    }
+  }, [client?.region, regiones])
+
   if (!client) return null
 
-  // Agregar log para ver qué datos llegan al componente
-  console.log('Datos recibidos en preview:', client)
+  // Agregar log detallado para ver qué datos llegan al componente
+  console.log('Datos completos del cliente:', {
+    giro: client.giro,
+    emailFacturacion: client.emailFacturacion,
+    todosLosDatos: client
+  })
 
   // Función para formatear la fecha
   const formatDate = (date: Date) => {
@@ -77,7 +98,7 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Región
               </Typography>
-              <Typography>{client.region}</Typography>
+              <Typography>{nombreRegion || client.region}</Typography>
             </Grid>
 
             {/* Quinta fila: Comuna y Dirección */}
@@ -120,6 +141,20 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
                 Industria
               </Typography>
               <Typography>{client.industria || '-'}</Typography>
+            </Grid>
+
+            {/* Octava fila: Giro y Email de Facturación */}
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Giro
+              </Typography>
+              <Typography>{client.giro || '-'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Email de Facturación
+              </Typography>
+              <Typography>{client.emailFacturacion || '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>
@@ -175,31 +210,19 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Vendedor
               </Typography>
-              <Typography>
-                {client.condicionesComerciales && client.condicionesComerciales.length > 0
-                  ? client.condicionesComerciales[0].vendedor
-                  : '-'}
-              </Typography>
+              <Typography>{client.condicionesComerciales?.vendedor || '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Condiciones de Venta
               </Typography>
-              <Typography>
-                {client.condicionesComerciales && client.condicionesComerciales.length > 0
-                  ? client.condicionesComerciales[0].condicionVenta
-                  : '-'}
-              </Typography>
+              <Typography>{client.condicionesComerciales?.condicionVenta || '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Observaciones
               </Typography>
-              <Typography>
-                {client.condicionesComerciales && client.condicionesComerciales.length > 0
-                  ? client.condicionesComerciales[0].observaciones
-                  : '-'}
-              </Typography>
+              <Typography>{client.condicionesComerciales?.observaciones || '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>

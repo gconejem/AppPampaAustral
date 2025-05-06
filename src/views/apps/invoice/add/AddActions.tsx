@@ -1,201 +1,140 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import type { FC } from 'react'
 
 // Next Imports
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
-import Grid from '@mui/material/Grid'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import Switch from '@mui/material/Switch'
 
-// Type Imports
-import type { Locale } from '@configs/i18n'
+interface AddActionsProps {
+  currentFormData: any
+}
 
-// Component Imports
-import SendInvoiceDrawer from '@views/apps/invoice/shared/SendInvoiceDrawer'
+interface Detalle {
+  productoId: number | string
+  cantidad: number
+  precioUnitarioUF: number
+  totalNetoUF: number
+  esSubProducto?: boolean
+  servicio?: string
+  area?: string
+  descripcion?: string
+}
 
-// Util Imports
-import { getLocalizedUrl } from '@/utils/i18n'
+interface ContactoPreview {
+  nombre: string
+  cargo: string
+  email: string
+  telefono1: string
+}
 
-const AddActions = () => {
-  // States
-  const [sendDrawerOpen, setSendDrawerOpen] = useState(false)
-  const [currentFormData, setCurrentFormData] = useState<any>(null)
+interface FormDataPreview {
+  numeroCotizacion: string
+  tipoCotizacion: string
+  estado: string
+  fechaInicio: string | Date
+  fechaFin: string | Date
+  nombreProyecto: string
+  empresa: string
+  ubicacion: string
+  formaPago: string
+  contacto: ContactoPreview | null
+  contactoId: number | null
+  observaciones: string
+  subtotal: number
+  descuento: number
+  impuesto: number
+  total: number
+  detalles: Detalle[]
+}
 
+const AddActions: FC<AddActionsProps> = ({ currentFormData }) => {
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
   const router = useRouter()
+  const locale = typeof params?.lang === 'string' ? params.lang : 'es'
 
-  // Función para guardar la cotización
-  const handleGuardar = async () => {
-    try {
-      if (!currentFormData?.cliente?.clienteId) {
-        throw new Error('Debe seleccionar un cliente')
-      }
-
-      const formData = {
-        numeroCotizacion: currentFormData.numeroCotizacion,
-        tipoCotizacion: currentFormData.tipoCotizacion,
-        estado: 'PENDIENTE',
-        clienteId: currentFormData.cliente.clienteId,
-        obraId: currentFormData.obra?.obraId || null,
-        fechaInicio: new Date().toISOString(),
-        fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        // ... resto de los campos usando currentFormData
-      }
-
-      console.log('Datos a enviar:', formData)
-
-      const response = await fetch('/api/cotizaciones', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Error al guardar la cotización')
-      }
-
-      router.push(getLocalizedUrl('/apps/invoice/list', locale as Locale))
-    } catch (error) {
-      console.error('Error completo:', error)
-      alert(error.message || 'Error al guardar la cotización')
-    }
-  }
-
-  // Función para manejar la visualización
   const handlePreview = () => {
     try {
-      // Obtener los elementos select usando los names
-      const clienteSelect = document.querySelector<HTMLSelectElement>('select[name="cliente"]')
-      const obraSelect = document.querySelector<HTMLSelectElement>('select[name="obra"]')
-      const productoSelects = document.querySelectorAll<HTMLSelectElement>('.repeater-item select[name="producto"]')
-
-      // Debug logs
-      console.log('=== DEBUG SELECTS ===')
-      console.log('Cliente select:', clienteSelect?.value)
-      console.log('Cliente select text:', clienteSelect?.selectedOptions[0]?.text)
-      console.log('Obra select:', obraSelect?.value)
-      console.log('Obra select text:', obraSelect?.selectedOptions[0]?.text)
-
-      const formData = {
-        // Datos básicos
-        numeroCotizacion: document.querySelector<HTMLInputElement>('[name="numeroCotizacion"]')?.value || '',
-        tipoCotizacion: document.querySelector<HTMLSelectElement>('[name="tipoCotizacion"]')?.value || '',
-        estado: document.querySelector<HTMLSelectElement>('[name="estado"]')?.value || '',
-
-        // Cliente y obra
-        cliente: {
-          nombreCliente: clienteSelect?.selectedOptions[0]?.text || 'Sin cliente'
-        },
-        obra: {
-          nombreObra: obraSelect?.selectedOptions[0]?.text || 'Sin obra'
-        },
-
-        // Fechas
-        fechaInicio: document.querySelector<HTMLInputElement>('[name="fechaInicio"]')?.value || '',
-        fechaFin: document.querySelector<HTMLInputElement>('[name="fechaFin"]')?.value || '',
-
-        // Detalles y totales
-        detalles: Array.from(document.querySelectorAll('.repeater-item')).map(item => {
-          const productoSelect = item.querySelector<HTMLSelectElement>('select[name="producto"]')
-
-          return {
-            nombre: productoSelect?.selectedOptions[0]?.text || 'Producto sin nombre',
-            cantidad: item.querySelector<HTMLInputElement>('input[name="cantidad"]')?.value || '0',
-            precio: item.querySelector('.precio-valor')?.textContent?.replace(/[^\d]/g, '') || '0',
-            descuento: item.querySelector('input[name="descuento"]')?.value || '0',
-            subtotal: item.querySelector('.subtotal-valor')?.textContent?.replace(/[^\d]/g, '') || '0'
-          }
-        }),
-
-        // Totales
-        subtotal: document.querySelector('.subtotal-valor')?.textContent?.replace(/[^\d]/g, '') || '0',
-        descuentoMonto: document.querySelector('.descuento-valor')?.textContent?.replace(/[^\d]/g, '') || '0',
-        impuesto: document.querySelector('.impuesto-valor')?.textContent?.replace(/[^\d]/g, '') || '0',
-        total: document.querySelector('.total-valor')?.textContent?.replace(/[^\d]/g, '') || '0',
-
-        // Otros
-        observaciones: document.querySelector<HTMLTextAreaElement>('[name="observaciones"]')?.value || ''
+      if (!currentFormData) {
+        throw new Error('No hay datos para previsualizar')
       }
 
-      console.log('=== DATOS FINALES ===')
-      console.log('Datos completos a enviar:', formData)
+      console.log('Datos recibidos en AddActions:', currentFormData)
+
+      // Validar que haya al menos un producto válido
+      const detallesValidos =
+        currentFormData.detalles?.filter((detalle: Detalle) => detalle.productoId && !detalle.esSubProducto) || []
+
+      console.log('Detalles válidos:', detallesValidos)
+
+      if (detallesValidos.length === 0) {
+        throw new Error('Debe agregar al menos un producto a la cotización')
+      }
+
+      const formData: FormDataPreview = {
+        numeroCotizacion: currentFormData.numeroCotizacion || '',
+        tipoCotizacion: currentFormData.tipoCotizacion || 'A',
+        estado: 'BORRADOR',
+        fechaInicio: currentFormData.fechaInicio || new Date().toISOString(),
+        fechaFin: currentFormData.fechaFin || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        nombreProyecto: currentFormData.nombreProyecto || '',
+        empresa: currentFormData.empresa || '',
+        ubicacion: currentFormData.ubicacion || '',
+        formaPago: currentFormData.formaPago || 'CONTADO',
+        contacto: currentFormData.contacto
+          ? {
+              nombre: currentFormData.contacto.nombre || '',
+              cargo: currentFormData.contacto.cargo || 'Sin cargo',
+              email: currentFormData.contacto.email || '',
+              telefono1: currentFormData.contacto.telefono1 || ''
+            }
+          : null,
+        contactoId: currentFormData.contactoId || null,
+        observaciones: currentFormData.observaciones || '',
+        subtotal: parseFloat(currentFormData.subtotal?.toString() || '0'),
+        descuento: parseFloat(currentFormData.descuento?.toString() || '0'),
+        impuesto: parseFloat(currentFormData.impuesto?.toString() || '0'),
+        total: parseFloat(currentFormData.total?.toString() || '0'),
+        detalles: detallesValidos.map((detalle: Detalle) => ({
+          productoId: parseInt(detalle.productoId.toString()),
+          cantidad: detalle.cantidad || 1,
+          precioUnitario: parseFloat(detalle.precioUnitarioUF?.toString() || '0'),
+          descuento: 0,
+          subtotal: parseFloat(detalle.totalNetoUF?.toString() || '0'),
+          servicio: detalle.servicio || '',
+          area: detalle.area || '',
+          descripcion: detalle.descripcion || '',
+          precioUnitarioUF: parseFloat(detalle.precioUnitarioUF?.toString() || '0'),
+          totalNetoUF: parseFloat(detalle.totalNetoUF?.toString() || '0')
+        }))
+      }
+
+      console.log('Datos formateados para preview:', formData)
+      console.log('Contacto a guardar:', formData.contacto)
+      console.log('Detalles a guardar:', formData.detalles)
+
       localStorage.setItem('cotizacionPreview', JSON.stringify(formData))
-
-      router.push(getLocalizedUrl('/apps/invoice/preview', locale as Locale))
+      router.push(`/${locale}/apps/invoice/preview`)
     } catch (error) {
-      console.error('Error al preparar datos para preview:', error)
+      console.error('Error al preparar la vista previa:', error)
+      alert(error instanceof Error ? error.message : 'Error al preparar la vista previa')
     }
-  }
-
-  // Función para cancelar
-  const handleCancel = () => {
-    router.back() // Volver a la página anterior
   }
 
   return (
-    <Grid container spacing={6}>
-      <Grid item xs={12}>
-        <Card>
-          <CardContent className='flex flex-col gap-4'>
-            <Button
-              fullWidth
-              color='primary'
-              variant='contained'
-              className='capitalize'
-              onClick={handleGuardar}
-            >
-              Guardar
-            </Button>
-            <Button
-              fullWidth
-              color='secondary'
-              variant='outlined'
-              className='capitalize'
-              onClick={handlePreview}
-            >
-              Visualizar
-            </Button>
-            <Button
-              fullWidth
-              color='secondary'
-              variant='outlined'
-              className='capitalize'
-              onClick={() => router.back()}
-            >
-              Cancelar
-            </Button>
-          </CardContent>
-        </Card>
-        <SendInvoiceDrawer open={sendDrawerOpen} handleClose={() => setSendDrawerOpen(false)} />
-      </Grid>
-
-      <Grid item xs={12}>
-        <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-payment-terms' className='cursor-pointer'></InputLabel>
-        </div>
-        <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-client-notes' className='cursor-pointer'></InputLabel>
-        </div>
-        <div className='flex items-center justify-between'>
-          <InputLabel htmlFor='invoice-edit-payment-stub' className='cursor-pointer'></InputLabel>
-        </div>
-      </Grid>
-    </Grid>
+    <Card>
+      <CardContent>
+        <Button fullWidth variant='contained' onClick={handlePreview} sx={{ mb: 2, '& svg': { marginRight: 2 } }}>
+          Vista Previa
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 

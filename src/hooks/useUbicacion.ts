@@ -14,58 +14,79 @@ interface Comuna {
 }
 
 // Definir la estructura de REGIONES_CHILE
-type RegionData = {
+interface RegionData {
   comunas: string[]
 }
 
-type RegionesChile = {
+interface RegionesChile {
   [key: string]: RegionData
 }
 
+const REGIONES_CHILE_TYPED = REGIONES_CHILE as RegionesChile
+
 export const useUbicacion = () => {
-  const [regiones, setRegiones] = useState<Array<{ id: number; nombre: string }>>([])
-  const [comunas, setComunas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [regiones, setRegiones] = useState<Region[]>([])
+  const [comunas, setComunas] = useState<Comuna[]>([])
   const [selectedRegion, setSelectedRegion] = useState('')
+  const [selectedComuna, setSelectedComuna] = useState('')
 
   // Cargar regiones al montar el componente
   useEffect(() => {
-    console.log('Cargando regiones...')
-
-    const regionesArray = Object.keys(REGIONES_CHILE).map((nombre, index) => ({
+    const regionesArray = Object.keys(REGIONES_CHILE_TYPED).map((nombre: string, index: number) => ({
       id: index + 1,
       nombre
     }))
 
     setRegiones(regionesArray)
-    console.log('Regiones cargadas:', regionesArray)
   }, [])
 
   // Actualizar comunas cuando cambia la región
   useEffect(() => {
-    console.log('Actualizando comunas para región:', selectedRegion)
+    if (selectedRegion) {
+      const regionData = REGIONES_CHILE_TYPED[selectedRegion]
 
-    if (selectedRegion && REGIONES_CHILE[selectedRegion]) {
-      const comunasArray = REGIONES_CHILE[selectedRegion].comunas.map((nombre, index) => ({
-        id: index + 1,
-        nombre
-      }))
+      if (regionData) {
+        const comunasArray = regionData.comunas.map((nombre: string, index: number) => ({
+          id: index + 1,
+          nombre,
+          regionId: regiones.find(r => r.nombre === selectedRegion)?.id || 0
+        }))
 
-      setComunas(comunasArray)
-      console.log('Comunas actualizadas:', comunasArray)
+        setComunas(comunasArray)
+      } else {
+        setComunas([])
+      }
     } else {
       setComunas([])
     }
-  }, [selectedRegion])
+  }, [selectedRegion, regiones])
 
-  const handleSetSelectedRegion = (value: string) => {
-    console.log('Estableciendo región:', value)
-    setSelectedRegion(value)
+  // Función para obtener las comunas por nombre de región
+  const getComunasByRegionNombre = (regionNombre: string): Comuna[] => {
+    if (!regionNombre || !REGIONES_CHILE_TYPED[regionNombre]) return []
+
+    const regionId = regiones.find(r => r.nombre === regionNombre)?.id || 0
+
+    return REGIONES_CHILE_TYPED[regionNombre].comunas.map((nombre: string, index: number) => ({
+      id: index + 1,
+      nombre,
+      regionId
+    }))
+  }
+
+  // Función para obtener una región por su ID
+  const getRegionById = (id: number): Region | undefined => {
+    return regiones.find(r => r.id === id)
   }
 
   return {
     regiones,
     comunas,
     selectedRegion,
-    setSelectedRegion: handleSetSelectedRegion
+    selectedComuna,
+    setSelectedRegion,
+    setSelectedComuna,
+    getComunasByRegionNombre,
+    getRegionById
   }
 }

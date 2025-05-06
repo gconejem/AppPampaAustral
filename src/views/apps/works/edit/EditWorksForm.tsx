@@ -627,6 +627,37 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               />
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='textoMandante'
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='correos'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Correos'
+                  placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
+                  helperText='Separar múltiples correos con comas'
+                  InputLabelProps={{ shrink: true }}
+                  onChange={e => {
+                    const correos = e.target.value.split(',').map(correo => correo.trim())
+
+                    field.onChange(correos)
+                  }}
+                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                />
+              )}
+            />
+          </Grid>
           <Grid item xs={12}>
             <FormControlLabel
               control={
@@ -637,15 +668,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                 />
               }
               label='Informe a Mandante'
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Controller
-              name='textoMandante'
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />
-              )}
             />
           </Grid>
         </Grid>

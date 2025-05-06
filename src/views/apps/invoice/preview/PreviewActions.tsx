@@ -316,7 +316,7 @@ const PreviewActions = () => {
             >
               Descargar PDF
             </Button>
-            <Button fullWidth color='secondary' variant='outlined' onClick={() => router.push('/es/apps/invoice/list')}>
+            <Button fullWidth color='secondary' variant='outlined' onClick={() => router.push('/es/apps/invoice/add')}>
               Volver
             </Button>
           </div>

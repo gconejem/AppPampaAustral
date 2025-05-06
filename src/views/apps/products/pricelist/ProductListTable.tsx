@@ -321,7 +321,6 @@ const ProductListTable = () => {
               <TableCell>TIPO</TableCell>
               <TableCell>PRECIO</TableCell>
               <TableCell>ACTIVO</TableCell>
-              <TableCell>LISTA PRECIO</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -354,12 +353,11 @@ const ProductListTable = () => {
                       }
                     />
                   </TableCell>
-                  <TableCell>{producto.listasPrecios[0]?.listaPrecio.nombre || 'Sin asignar'}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} align='center'>
+                <TableCell colSpan={8} align='center'>
                   <Typography>No hay productos asignados a esta lista</Typography>
                 </TableCell>
               </TableRow>
