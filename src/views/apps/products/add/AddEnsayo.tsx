@@ -15,9 +15,6 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Checkbox from '@mui/material/Checkbox'
-import InputAdornment from '@mui/material/InputAdornment'
 
 // Third Party Imports
 import { toast } from 'react-hot-toast'
@@ -34,7 +31,6 @@ const AddEnsayo = () => {
     familia: '',
     tipo: 'Ensayos',
     norma: '',
-    aplicaImpuesto: false,
     listaPrecio: '1'
   })
 
@@ -167,17 +163,6 @@ const AddEnsayo = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth label='Norma' value={formData.norma} onChange={handleChange('norma')} />
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.aplicaImpuesto}
-                        onChange={e => setFormData({ ...formData, aplicaImpuesto: e.target.checked })}
-                      />
-                    }
-                    label='Aplica Impuesto'
-                  />
                 </Grid>
                 <Grid item xs={12}>
                   <Button type='submit' variant='contained' disabled={loading}>

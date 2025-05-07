@@ -519,7 +519,16 @@ const AddObraDrawer = (props: Props) => {
 
   const handleConfirmClose = () => {
     setOpenConfirmDialog(false)
-    handleClose()
+
+    // Limpiar el formulario y todos los estados relacionados
+    resetForm()
+    setContactos(contactosPrincipales)
+    setSelectedRegion('')
+    setSelectedComuna('')
+    setValue('numeroObra', lastObraNumber)
+
+    // Llamar a la función handleClose proporcionada por las props
+    props.handleClose()
   }
 
   const handleDrawerClose = () => {
@@ -617,8 +626,34 @@ const AddObraDrawer = (props: Props) => {
                     setValue('nombreCliente', cliente.nombreCliente)
                     setValue('razonSocial', cliente.razonSocial)
 
+                    // Campos de facturación
+                    setValue('giro', cliente.giro || '')
+                    setValue('direccionComercial', cliente.direccionComercial || '')
+                    const comunaCliente = (cliente.comunaFacturacion || '').trim()
+
+                    // Normaliza y busca si existe en la lista de comunas
+                    const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
+
+                    if (!existe && comunaCliente) {
+                      comunas.push({ id: 'custom', nombre: comunaCliente })
+                    }
+
+                    setValue('comunaFacturacion', comunaCliente)
+                    setValue('listaPrecios', cliente.listaPrecios || '')
+                    setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
+                    setValue('telefono', cliente.telefono || '')
+
                     // Disparar validación de todos los campos actualizados
-                    trigger(['rut', 'nombreCliente', 'razonSocial'])
+                    trigger([
+                      'rut',
+                      'nombreCliente',
+                      'razonSocial',
+                      'giro',
+                      'direccionComercial',
+                      'comunaFacturacion',
+                      'listaPrecios',
+                      'mailRecepcionFactura'
+                    ])
                   }}
                 />
               </Grid>
@@ -777,7 +812,7 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Mandante section */}
             <Grid container spacing={5} sx={{ mt: 2 }}>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Mandante</InputLabel>
                   <Select {...control} label='Mandante'>
@@ -789,8 +824,7 @@ const AddObraDrawer = (props: Props) => {
                   </Select>
                 </FormControl>
               </Grid>
-
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='textoMandante'
                   control={control}
@@ -1184,7 +1218,7 @@ const AddObraDrawer = (props: Props) => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='direccionComercial'
                   control={control}
@@ -1200,22 +1234,49 @@ const AddObraDrawer = (props: Props) => {
                   )}
                 />
               </Grid>
-
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
-                  name='comunaFacturacion'
+                  name='mailRecepcionFactura'
                   control={control}
-                  rules={{ required: true }}
+                  rules={{
+                    required: 'El email es requerido',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Ingrese un correo electrónico válido'
+                    }
+                  }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
-                      label='Comuna *'
-                      error={Boolean(errors.comunaFacturacion)}
-                      helperText={errors.comunaFacturacion && 'Este campo es obligatorio'}
+                      label='Mail Recepción Factura *'
+                      error={Boolean(errors.mailRecepcionFactura)}
+                      helperText={errors.mailRecepcionFactura?.message}
+                      placeholder='ejemplo@dominio.com'
                     />
                   )}
                 />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
+                  <InputLabel>Comuna *</InputLabel>
+                  <Controller
+                    name='comunaFacturacion'
+                    control={control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <Select {...field} label='Comuna'>
+                        {comunas.map(comuna => (
+                          <MenuItem key={comuna.id} value={comuna.nombre}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.comunaFacturacion && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={4}>
@@ -1265,30 +1326,6 @@ const AddObraDrawer = (props: Props) => {
                       InputLabelProps={{
                         shrink: true
                       }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='mailRecepcionFactura'
-                  control={control}
-                  rules={{
-                    required: 'El email es requerido',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Ingrese un correo electrónico válido'
-                    }
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Mail Recepción Factura *'
-                      error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message}
-                      placeholder='ejemplo@dominio.com'
                     />
                   )}
                 />

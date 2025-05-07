@@ -114,29 +114,6 @@ const PreviewProductForm = ({ open, onClose, product }: PreviewProductFormProps)
             />
           </Grid>
           <Grid item xs={6}>
-            <TextField
-              label='Precio'
-              value={
-                firstPrice
-                  ? new Intl.NumberFormat('es-CL', {
-                      style: 'currency',
-                      currency: 'CLP'
-                    }).format(firstPrice)
-                  : 'Sin precio'
-              }
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              label='Aplica Impuesto'
-              value={previewProduct.aplicaImpuesto ? 'Sí' : 'No'}
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={6}>
             <TextField label='Estado' value={previewProduct.estado} fullWidth InputProps={{ readOnly: true }} />
           </Grid>
         </Grid>

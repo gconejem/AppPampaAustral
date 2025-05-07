@@ -64,10 +64,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [descripcionPaquete, setDescripcionPaquete] = useState('')
   const [norma, setNorma] = useState('')
   const [area, setArea] = useState('')
-  const [familia, setFamilia] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [familia, setFamilia] = useState('')
 
-  // Opciones predefinidas para área y familia
+  // Opciones predefinidas para área
   const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
   const familiaOptions = ['Clasificación', 'Compactación', 'Densidad', 'Granulometria', 'Límites', 'Resistencia']
 
@@ -75,8 +75,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [buscarPaquete, setBuscarPaquete] = useState('')
   const [buscarProductos, setBuscarProductos] = useState('')
 
-  // Estados para productos
+  // Estados para productos y paginación real
   const [productos, setProductos] = useState<Producto[]>([])
+  const [totalProductos, setTotalProductos] = useState(0)
   const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>([])
 
   // Estados para manejar las selecciones
@@ -91,38 +92,32 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [packagePage, setPackagePage] = useState(0)
   const ITEMS_PER_PAGE = 10
 
-  // Cargar productos y listas de precios cuando se abre el modal
+  // Calcular el total de páginas de productos (debe estar antes de su uso)
+  const totalProductPages = Math.ceil(totalProductos / ITEMS_PER_PAGE)
+
+  // Cargar productos y listas de precios cuando se abre el modal o cambia la página/búsqueda/área
   useEffect(() => {
     if (open) {
-      // Cargar productos
-      fetch('/api/productos?esPaquete=false')
+      const params = new URLSearchParams()
+
+      params.append('esPaquete', 'false')
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (buscarProductos) params.append('search', buscarProductos)
+      if (area) params.append('area', area)
+
+      fetch(`/api/productos?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
-          console.log('Productos cargados:', data)
           setProductos(data.productos || [])
+          setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
         })
         .catch(error => {
           console.error('Error al cargar productos:', error)
           toast.error('Error al cargar los productos')
         })
     }
-  }, [open])
-
-  // Filtrar productos basado en la búsqueda y paginación
-  const productosFiltrados = productos.filter(producto => {
-    if (!producto || !producto.nombre) return false
-
-    const matchesSearch = producto.nombre.toLowerCase().includes(buscarProductos.toLowerCase())
-    const matchesArea = !area || producto.area === area
-    const matchesFamilia = !familia || producto.familia === familia
-
-    return matchesSearch && matchesArea && matchesFamilia
-  })
-
-  const startIndex = productsPage * ITEMS_PER_PAGE
-  const paginatedProducts = productosFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-
-  const totalProductPages = Math.ceil(productosFiltrados.length / ITEMS_PER_PAGE)
+  }, [open, productsPage, buscarProductos, area])
 
   // Filtrar productos seleccionados basado en la búsqueda y paginación
   const productosSeleccionadosFiltrados = productosSeleccionados.filter(
@@ -217,7 +212,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           </Grid>
         </Grid>
 
-        {/* Nueva fila para área, familia y cantidad */}
+        {/* Nueva fila para área y cantidad */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
@@ -244,14 +239,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
-              <Select
-                value={familia}
-                label='Familia'
-                onChange={e => {
-                  setFamilia(e.target.value)
-                  setProductsPage(0) // Resetear la página al cambiar el filtro
-                }}
-              >
+              <Select value={familia} label='Familia' onChange={e => setFamilia(e.target.value)}>
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
@@ -358,11 +346,11 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
             <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
               <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderBottom: '1px solid #e0e0e0' }}>
                 <Typography variant='subtitle2'>
-                  PRODUCTOS ({productosFiltrados.length}) - Página {productsPage + 1} de {totalProductPages}
+                  PRODUCTOS ({totalProductos}) - Página {productsPage + 1} de {totalProductPages}
                 </Typography>
               </Box>
               <List sx={{ height: 250, overflow: 'auto' }}>
-                {paginatedProducts.map(producto => (
+                {productos.map(producto => (
                   <ListItem
                     key={producto.productoId}
                     dense

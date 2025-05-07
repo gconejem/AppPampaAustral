@@ -120,29 +120,35 @@ export async function POST(req: Request) {
   }
 }
 
-// GET - Obtener todos los productos
-export async function GET() {
+// GET - Obtener productos paginados y el total
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '10', 10)
+    const skip = (page - 1) * limit
+
+    // Total de productos activos
+    const total = await prisma.producto.count({
+      where: { estado: 'ACTIVO' }
+    })
+
+    // Productos paginados
     const productos = await prisma.producto.findMany({
-      where: {
-        estado: 'ACTIVO'
-      },
+      where: { estado: 'ACTIVO' },
+      skip,
+      take: limit,
       include: {
         productosEnPaquete: {
-          include: {
-            producto: true
-          }
+          include: { producto: true }
         },
         listasPrecios: {
-          select: {
-            listaPrecioId: true,
-            precio: true
-          }
+          select: { listaPrecioId: true, precio: true }
         }
       }
     })
 
-    return NextResponse.json({ productos })
+    return NextResponse.json({ productos, total })
   } catch (error) {
     console.error('Error al obtener productos:', error)
 

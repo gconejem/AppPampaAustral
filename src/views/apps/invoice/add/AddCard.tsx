@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { SyntheticEvent } from 'react'
 
 import { useRouter } from 'next/navigation'
@@ -82,6 +82,7 @@ interface ProductRow {
   esSubProducto?: boolean
   esPaquete?: boolean
   servicio?: string
+  precioEditado?: boolean
 }
 
 interface ProductoListaPrecio {
@@ -404,9 +405,17 @@ const AddCard = ({
   const [listasPrecios, setListasPrecios] = useState<Array<{ id: number; nombre: string }>>([])
   const [selectedListaPrecio, setSelectedListaPrecio] = useState<number | null>(null)
 
+  // Guardar los últimos totales para evitar bucles infinitos
+  const lastTotals = useRef({ subtotal: 0, descuento: 0, impuesto: 0, total: 0 })
+
   // Hooks
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
   const isBelowSmScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
+
+  // Estados para paginación del buscador de productos
+  const [productsPage, setProductsPage] = useState(0)
+  const [totalProductos, setTotalProductos] = useState(0)
+  const ITEMS_PER_PAGE = 10
 
   // Cargar clientes y obras al montar el componente
   useEffect(() => {
@@ -457,7 +466,16 @@ const AddCard = ({
 
   // Modificar el useEffect de carga de productos
   useEffect(() => {
-    fetch('/api/productos')
+    const params = new URLSearchParams()
+
+    params.append('page', (productsPage + 1).toString())
+    params.append('limit', ITEMS_PER_PAGE.toString())
+    if (searchTerm) params.append('search', searchTerm)
+    if (selectedArea) params.append('area', selectedArea)
+    if (selectedTipo) params.append('tipo', selectedTipo)
+    if (selectedFamilia) params.append('familia', selectedFamilia)
+
+    fetch(`/api/productos?${params.toString()}`)
       .then(res => {
         if (!res.ok) {
           throw new Error('Error al cargar productos')
@@ -466,40 +484,11 @@ const AddCard = ({
         return res.json()
       })
       .then(response => {
-        console.log('Respuesta de productos (raw):', response)
         const data = response.productos || []
 
-        // Log para ver productos que son paquetes
-        const paquetes = data.filter((p: any) => p.esPaquete === true)
-
-        console.log('Productos que son paquetes (datos crudos):', paquetes)
-
-        const productosFormateados = data.map((p: any) => ({
-          id: p.productoId,
-          productoId: p.productoId,
-          sku: p.sku,
-          nombre: p.nombre,
-          precio: p.precio || 0,
-          area: p.area || 'Sin área',
-          familia: p.familia || 'Sin familia',
-          tipo: p.tipo || 'Sin tipo',
-          descripcion: p.descripcion || '',
-          esPaquete: p.esPaquete, // Mantener el valor booleano original sin transformación
-          norma: p.norma || '',
-          nombreCompleto: `${p.nombre}${p.norma ? ` - ${p.norma}` : ''}`,
-          servicio: p.servicio || '',
-          productosEnPaquete: p.productosEnPaquete || [],
-          listasPrecios: p.listasPrecios || []
-        }))
-
-        console.log('Productos formateados completos:', productosFormateados)
-        console.log(
-          'Verificación de paquetes después del formateo:',
-          productosFormateados.filter((p: ProductoType) => p.esPaquete === true)
-        )
-
-        setProductos(productosFormateados)
-        setFilteredProductos(productosFormateados)
+        setProductos(data)
+        setFilteredProductos(data)
+        setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
 
         // Obtener todas las áreas, tipos y familias únicas
         const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area || 'Sin área')))
@@ -523,8 +512,9 @@ const AddCard = ({
         toast.error('Error al cargar los productos')
         setProductos([])
         setFilteredProductos([])
+        setTotalProductos(0)
       })
-  }, [])
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia])
 
   // Agregar useEffect para cargar el número de cotización
   useEffect(() => {
@@ -630,13 +620,19 @@ const AddCard = ({
     // Calcular el total
     const total = Number(baseImponible + impuesto)
 
-    // Solo actualizar si los valores han cambiado
+    // Solo actualizar si los valores han cambiado (usando useRef)
     if (
-      formData.subtotal !== subtotalTotal ||
-      formData.descuento !== descuentoTotal ||
-      formData.impuesto !== impuesto ||
-      formData.total !== total
+      lastTotals.current.subtotal !== subtotalTotal ||
+      lastTotals.current.descuento !== descuentoTotal ||
+      lastTotals.current.impuesto !== impuesto ||
+      lastTotals.current.total !== total
     ) {
+      lastTotals.current = {
+        subtotal: subtotalTotal,
+        descuento: descuentoTotal,
+        impuesto: impuesto,
+        total: total
+      }
       updateFormData({
         subtotal: parseFloat(subtotalTotal.toFixed(2)),
         descuento: parseFloat(descuentoTotal.toFixed(2)),
@@ -644,7 +640,7 @@ const AddCard = ({
         total: parseFloat(total.toFixed(2))
       })
     }
-  }, [productRows, formData, updateFormData])
+  }, [productRows, formData.descuento, updateFormData])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
   useEffect(() => {
@@ -670,6 +666,20 @@ const AddCard = ({
 
         console.log('Productos en paquete:', productosEnPaquete)
 
+        // Agregar los productos del paquete como subfilas, asegurando que los campos estén completos
+        const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
+          id: Date.now() + i + 1,
+          productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
+          servicio: pp.nombre || pp.producto?.nombre || '',
+          descripcion: pp.descripcion || pp.producto?.descripcion || '',
+          cantidad: pp.cantidad || 1,
+          precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
+          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          area: pp.area || pp.producto?.area || '',
+          esSubProducto: true,
+          subproductos: []
+        }))
+
         // Actualizar la fila del paquete
         newRows[index] = {
           ...productRows[index],
@@ -677,22 +687,9 @@ const AddCard = ({
           precio: selectedProduct.precio * productRows[index].cantidad,
           area: selectedProduct.area || '',
           descripcion: selectedProduct.descripcion || '',
-          esPaquete: true
+          esPaquete: true,
+          precioEditado: false // Resetea bandera
         }
-
-        // Agregar los productos del paquete como subfilas
-        const productosRows = productosEnPaquete.map((pp: ProductoEnPaquete, i: number) => ({
-          id: Date.now() + i + 1,
-          productoId: pp.productoId.toString(),
-          servicio: pp.nombre,
-          descripcion: pp.descripcion || '',
-          cantidad: pp.cantidad || 1,
-          precioUnitarioUF: pp.precio || 0,
-          totalNetoUF: (pp.precio || 0) * (pp.cantidad || 1),
-          area: pp.area || '',
-          esSubProducto: true,
-          subproductos: []
-        }))
 
         // Insertar los subproductos después del paquete
         newRows.splice(index + 1, 0, ...productosRows)
@@ -706,7 +703,8 @@ const AddCard = ({
         productoId: selectedProductId,
         precio: selectedProduct.precio * productRows[index].cantidad,
         area: selectedProduct.area || '',
-        descripcion: selectedProduct.descripcion || ''
+        descripcion: selectedProduct.descripcion || '',
+        precioEditado: false // Resetea bandera
       }
       console.log('Producto seleccionado:', selectedProduct)
     }
@@ -806,7 +804,8 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       precioUnitarioUF: precio,
-      totalNetoUF: precio * cantidad
+      totalNetoUF: precio * cantidad,
+      precioEditado: true // Marca como editado manualmente
     }
 
     setProductRows(newRows)
@@ -1218,6 +1217,34 @@ const AddCard = ({
         toast.error('Error al cargar las listas de precios')
       })
   }, [])
+
+  // Actualizar precios de productos en el formulario al cambiar la lista de precios seleccionada
+  useEffect(() => {
+    setProductRows(prevRows =>
+      prevRows.map(row => {
+        const producto = productos.find(p => p.productoId.toString() === row.productoId)
+
+        if (!producto) return row
+
+        const precioEnLista = producto.listasPrecios?.find(
+          (lp: ProductoListaPrecio) => lp.listaPrecioId === selectedListaPrecio
+        )
+
+        const precioFinal = precioEnLista?.precio || producto.precio || 0
+
+        // Solo actualiza si el precio NO ha sido editado manualmente
+        if (!row.precioEditado && row.precioUnitarioUF !== precioFinal) {
+          return {
+            ...row,
+            precioUnitarioUF: precioFinal,
+            totalNetoUF: precioFinal * (row.cantidad || 1)
+          }
+        }
+
+        return row
+      })
+    )
+  }, [selectedListaPrecio, productos])
 
   return (
     <>
@@ -1928,6 +1955,29 @@ Volúmenes de trabajo no proporcionados.'
                           </ListItem>
                         ))}
                       </List>
+                      <Box
+                        sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}
+                      >
+                        <Button
+                          size='small'
+                          onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                          disabled={productsPage === 0}
+                        >
+                          Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                          Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                          size='small'
+                          onClick={() =>
+                            setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                          }
+                          disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                        >
+                          Siguiente
+                        </Button>
+                      </Box>
                     </Popover>
                   </Grid>
 

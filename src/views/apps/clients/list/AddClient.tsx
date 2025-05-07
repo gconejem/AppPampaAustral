@@ -397,7 +397,11 @@ const AddClienteDrawer = (props: Props) => {
 
   const handleReset = () => {
     handleClose()
+    resetForm()
     setFormData(initialFormData)
+    setContactos([])
+    setSelectedRegion('')
+    setSelectedComuna('')
   }
 
   // En el agregarContacto, validar antes de agregar

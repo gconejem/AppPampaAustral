@@ -186,7 +186,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           data: {
             clienteId: clientId,
             contactId: contacto.contactId,
-            isPrincipal: contacto.isPrincipal
+            isPrincipal: contacto.isPrincipal,
+            cargo: contacto.cargo || ''
           }
         })
       }

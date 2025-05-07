@@ -71,6 +71,7 @@ import EditProductForm from '../edit/EditProductForm'
 import CreatePackageModal from './CreatePackageModal'
 import EditPackageModal from '../edit/EditPackageModal'
 import PreviewProductForm from '../preview/PreviewProductForm'
+import PreviewPackageForm from '../preview/PreviewPackageForm'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -247,6 +248,8 @@ const ProductListTable = () => {
   // Agregar estado para el modal de preview
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [previewProduct, setPreviewProduct] = useState<Producto | null>(null)
+  const [previewPackageModalOpen, setPreviewPackageModalOpen] = useState(false)
+  const [previewPackage, setPreviewPackage] = useState<any | null>(null)
 
   const params = useParams()
   const locale = params?.lang || 'es'
@@ -294,7 +297,7 @@ const ProductListTable = () => {
 
         setProductos(productosFormateados)
         setFilteredProductos(productosFormateados)
-        setTotalProductos(data.total || productosFormateados.length)
+        setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
@@ -618,9 +621,24 @@ const ProductListTable = () => {
   }
 
   // Función para abrir el preview
-  const handlePreviewOpen = (producto: Producto) => {
-    setPreviewProduct(producto)
-    setPreviewModalOpen(true)
+  const handlePreviewOpen = async (producto: Producto) => {
+    if (producto.esPaquete) {
+      try {
+        // Obtener los productos completos del paquete
+        const response = await fetch(`/api/productos/${producto.productoId}/productos`)
+        const data = await response.json()
+
+        // data.productos debe ser un array de productos completos
+        setPreviewPackage({ ...producto, productosEnPaquete: data.productos || [] })
+        setPreviewPackageModalOpen(true)
+      } catch (error) {
+        setPreviewPackage(producto)
+        setPreviewPackageModalOpen(true)
+      }
+    } else {
+      setPreviewProduct(producto)
+      setPreviewModalOpen(true)
+    }
   }
 
   const columns = useMemo(
@@ -887,6 +905,11 @@ const ProductListTable = () => {
           open={previewModalOpen}
           onClose={() => setPreviewModalOpen(false)}
           product={previewProduct}
+        />
+        <PreviewPackageForm
+          open={previewPackageModalOpen}
+          onClose={() => setPreviewPackageModalOpen(false)}
+          paquete={previewPackage}
         />
         <EditProductForm
           open={editModalOpen}
