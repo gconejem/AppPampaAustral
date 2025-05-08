@@ -77,7 +77,7 @@ const PreviewProductForm = ({ open, onClose, product }: PreviewProductFormProps)
         <Grid container spacing={4}>
           <Grid item xs={6}>
             <TextField
-              label='Nombre del Ensayo'
+              label='Nombre del Producto'
               value={previewProduct.nombre}
               fullWidth
               InputProps={{ readOnly: true }}
