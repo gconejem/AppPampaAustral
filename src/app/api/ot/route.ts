@@ -123,6 +123,11 @@ export async function POST(request: Request) {
           correlativ: ot.CORRELATIV || '001',
           fklbdocver: ot.FKLBDOCVER || '',
           fklbrutser: ot.FKLBRUTSER || '',
+          agenda: {
+            connect: {
+              id: parseInt(ot.FKLBRUTAS || '-1')
+            }
+          },
           tipoOT: getTipoOTFromDocCode(ot.FKLBDOCVER || ''),
           user: {
             connect: {
