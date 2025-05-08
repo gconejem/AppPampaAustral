@@ -48,8 +48,18 @@ export async function GET(request: Request) {
         estado: true,
         esPaquete: true,
         norma: true,
-        listaPrecioId: true,
-        aplicaImpuesto: true
+        aplicaImpuesto: true,
+        listasPrecios: {
+          select: {
+            precio: true,
+            listaPrecio: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
+        }
       }
     })
 

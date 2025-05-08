@@ -211,32 +211,6 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               fullWidth
             />
           </Grid>
-          <Grid item xs={6}>
-            <TextField
-              label='Precio'
-              value={editingProduct.precio || ''}
-              onChange={e => {
-                const value = e.target.value
-
-                setEditingProduct({
-                  ...editingProduct,
-                  precio: value === '' ? 0 : parseFloat(value)
-                })
-              }}
-              fullWidth
-              type='number'
-              InputProps={{
-                startAdornment: <Typography>$</Typography>
-              }}
-            />
-          </Grid>
-          <Grid item xs={6} display='flex' alignItems='center'>
-            <Checkbox
-              checked={editingProduct.aplicaImpuesto}
-              onChange={e => setEditingProduct({ ...editingProduct, aplicaImpuesto: e.target.checked })}
-            />
-            <Typography>Aplica Impuesto</Typography>
-          </Grid>
         </Grid>
         <Box mt={4} display='flex' justifyContent='flex-end' gap={2}>
           <Button onClick={onClose} color='secondary' variant='outlined'>

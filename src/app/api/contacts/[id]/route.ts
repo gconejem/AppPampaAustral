@@ -86,3 +86,26 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: 'Error al eliminar contacto' }, { status: 500 })
   }
 }
+
+// PATCH - Actualizar estado del contacto
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const contactId = parseInt(params.id)
+    const body = await request.json()
+
+    const updatedContact = await prisma.contacto.update({
+      where: {
+        contactId: contactId
+      },
+      data: {
+        estado: body.estado,
+        updatedAt: new Date()
+      }
+    })
+
+    return NextResponse.json(updatedContact)
+  } catch (error) {
+    console.error('Error al actualizar estado del contacto:', error)
+    return NextResponse.json({ error: 'Error al actualizar estado del contacto' }, { status: 500 })
+  }
+}

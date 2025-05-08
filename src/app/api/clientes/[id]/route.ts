@@ -58,7 +58,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         telefono: data.telefono,
         sitioWeb: data.sitioWeb,
         segmento: data.segmento,
-        industria: data.industria
+        industria: data.industria,
+        giro: data.giro,
+        emailFacturacion: data.emailFacturacion
       },
       include: {
         clientesContactos: {
@@ -118,5 +120,98 @@ export async function GET(request: Request, { params }: { params: { id: string }
     console.error('Error al obtener cliente:', error)
 
     return NextResponse.json({ error: 'Error al obtener cliente' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const clientId = parseInt(params.id)
+    const data = await request.json()
+
+    // Primero actualizamos el cliente
+    await prisma.cliente.update({
+      where: {
+        clienteId: clientId
+      },
+      data: {
+        estado: data.estado,
+        razonSocial: data.razonSocial,
+        nombreCliente: data.nombreCliente,
+        pais: data.pais,
+        region: data.region,
+        ciudad: data.ciudad,
+        comuna: data.comuna,
+        direccion: data.direccion,
+        telefono: data.telefono,
+        sitioWeb: data.sitioWeb,
+        segmento: data.segmento,
+        industria: data.industria,
+        giro: data.giro || '',
+        emailFacturacion: data.emailFacturacion || ''
+      }
+    })
+
+    // Actualizar condiciones comerciales
+    if (data.condicionesComerciales) {
+      await prisma.condicionComercial.upsert({
+        where: {
+          clienteId: clientId
+        },
+        update: {
+          vendedor: data.condicionesComerciales.vendedor,
+          condicionVenta: data.condicionesComerciales.condicionVenta,
+          observaciones: data.condicionesComerciales.observaciones
+        },
+        create: {
+          clienteId: clientId,
+          vendedor: data.condicionesComerciales.vendedor,
+          condicionVenta: data.condicionesComerciales.condicionVenta,
+          observaciones: data.condicionesComerciales.observaciones
+        }
+      })
+    }
+
+    // Actualizar contactos si se proporcionaron
+    if (data.clientesContactos) {
+      // Primero eliminamos todas las relaciones existentes
+      await prisma.clienteContacto.deleteMany({
+        where: {
+          clienteId: clientId
+        }
+      })
+
+      // Luego creamos las nuevas relaciones
+      for (const contacto of data.clientesContactos) {
+        await prisma.clienteContacto.create({
+          data: {
+            clienteId: clientId,
+            contactId: contacto.contactId,
+            isPrincipal: contacto.isPrincipal,
+            cargo: contacto.cargo || ''
+          }
+        })
+      }
+    }
+
+    // Obtener el cliente actualizado con todas sus relaciones
+    const clienteActualizado = await prisma.cliente.findUnique({
+      where: {
+        clienteId: clientId
+      },
+      include: {
+        clientesContactos: {
+          include: {
+            contacto: true
+          }
+        },
+        condicionesComerciales: true
+      }
+    })
+
+    return NextResponse.json(clienteActualizado)
+  } catch (error) {
+    console.error('Error al actualizar cliente:', error)
+
+    return NextResponse.json({ error: 'Error al actualizar cliente' }, { status: 500 })
   }
 }

@@ -616,7 +616,12 @@ const WorkListTable = () => {
       }),
       columnHelper.accessor('nombreCliente', {
         header: 'CLIENTE',
-        cell: ({ row }) => row.original.nombreCliente
+        cell: ({ row }) => {
+          const nombreCliente = row.original.nombreCliente
+          const nombreTruncado = nombreCliente.length > 15 ? `${nombreCliente.substring(0, 15)}...` : nombreCliente
+
+          return <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+        }
       }),
       columnHelper.accessor(
         row => {
@@ -632,9 +637,14 @@ const WorkListTable = () => {
 
             if (!contactos?.length) return '-'
 
+            const nombreEncargado = contactos.find(c => c.isPrincipal)?.nombre || '-'
+
+            const nombreTruncado =
+              nombreEncargado.length > 15 ? `${nombreEncargado.substring(0, 15)}...` : nombreEncargado
+
             return (
               <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
-                {contactos.find(c => c.isPrincipal)?.nombre || '-'}
+                {nombreTruncado}
               </div>
             )
           }

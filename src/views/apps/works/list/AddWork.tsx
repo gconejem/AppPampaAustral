@@ -28,13 +28,19 @@ import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
+import CardContent from '@mui/material/CardContent'
+import Box from '@mui/material/Box'
+import Star from '@mui/icons-material/Star'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
-import { formatRut, validateRut } from '@/utils/rut-utils'
+// Utils Imports
+import { validateRut } from '@/utils/rut-utils'
 
 // Types Imports
 import type { Obra, FormValidateType } from '@/types/forms/obra'
@@ -54,6 +60,7 @@ const CARGOS_OBRA = [
   { value: 'Jefe de Obra / Planta', label: 'Jefe de Obra / Planta' },
   { value: 'Supervisor', label: 'Supervisor' },
   { value: 'Administrador de Obra', label: 'Administrador de Obra' },
+  { value: 'Administración', label: 'Administración' },
   { value: 'Encargado de Calidad', label: 'Encargado de Calidad' },
   { value: 'Autocontrol', label: 'Autocontrol' },
   { value: 'Profesional', label: 'Profesional' },
@@ -107,9 +114,11 @@ interface ContactoObraForm {
   nombre: string
   email: string
   telefono1: string
-  telefono2?: string
-  isPrincipal?: boolean
-  isEditing?: boolean
+  telefono2: string
+  isEditing: boolean
+  contactId?: string
+  isPrincipal: boolean
+  rolEspecifico?: string
 }
 
 const AddObraDrawer = (props: Props) => {
@@ -136,34 +145,20 @@ const AddObraDrawer = (props: Props) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
 
-  const [contactos, setContactos] = useState<ContactoObraForm[]>([
+  const contactosPrincipales: ContactoObraForm[] = [
     {
       rol: 'Encargado de Obra',
       nombre: '',
       email: '',
       telefono1: '',
       telefono2: '',
-      isPrincipal: true,
-      isEditing: true
-    },
-    {
-      rol: 'Envío de Informes',
-      nombre: '',
-      email: '',
-      telefono1: '',
-      telefono2: '',
-      isPrincipal: false,
-      isEditing: true
+      isEditing: false,
+      contactId: undefined,
+      isPrincipal: false
     }
-  ])
+  ]
 
-  const [nuevoContacto, setNuevoContacto] = useState<ContactoObraForm>({
-    rol: '',
-    nombre: '',
-    email: '',
-    telefono1: '',
-    isEditing: true
-  })
+  const [contactos, setContactos] = useState<ContactoObraForm[]>(contactosPrincipales)
 
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
 
@@ -172,7 +167,9 @@ const AddObraDrawer = (props: Props) => {
     nombre: '',
     email: '',
     telefono1: '',
-    telefono2: ''
+    telefono2: '',
+    isEditing: true,
+    isPrincipal: false
   })
 
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } =
@@ -208,9 +205,8 @@ const AddObraDrawer = (props: Props) => {
 
   const onSubmit = async (data: FormValidateType) => {
     try {
-      // Validar que los contactos obligatorios estén completos
-      const encargadoObra = contactos.find(c => c.rol === 'Encargado de Obra')
-      const envioInformes = contactos.find(c => c.rol === 'Envío de Informes')
+      // Validar que el contacto Encargado de Obra esté completo
+      const encargadoObra = contactos[0]
 
       if (!encargadoObra?.nombre || !encargadoObra?.email || !encargadoObra?.telefono1) {
         toast.error('El contacto Encargado de Obra es obligatorio y debe tener nombre, email y teléfono')
@@ -218,10 +214,19 @@ const AddObraDrawer = (props: Props) => {
         return
       }
 
-      if (!envioInformes?.nombre || !envioInformes?.email || !envioInformes?.telefono1) {
-        toast.error('El contacto Envío de Informes es obligatorio y debe tener nombre, email y teléfono')
+      // Validar contactos
+      for (const contacto of contactos) {
+        if (!validateEmail(contacto.email)) {
+          toast.error('Email inválido')
 
-        return
+          return
+        }
+
+        if (!validatePhone(contacto.telefono1)) {
+          toast.error('Teléfono inválido')
+
+          return
+        }
       }
 
       setIsSubmitting(true)
@@ -261,26 +266,7 @@ const AddObraDrawer = (props: Props) => {
 
         // Limpiar formulario y estados
         resetForm()
-        setContactos([
-          {
-            rol: 'Encargado de Obra',
-            nombre: '',
-            email: '',
-            telefono1: '',
-            telefono2: '',
-            isPrincipal: true,
-            isEditing: true
-          },
-          {
-            rol: 'Envío de Informes',
-            nombre: '',
-            email: '',
-            telefono1: '',
-            telefono2: '',
-            isPrincipal: false,
-            isEditing: true
-          }
-        ])
+        setContactos(contactosPrincipales)
         setValue('numeroObra', lastObraNumber)
 
         props.handleClose()
@@ -303,26 +289,7 @@ const AddObraDrawer = (props: Props) => {
   const handleClose = () => {
     // Limpiar el formulario antes de cerrar
     resetForm()
-    setContactos([
-      {
-        rol: 'Encargado de Obra',
-        nombre: '',
-        email: '',
-        telefono1: '',
-        telefono2: '',
-        isPrincipal: true,
-        isEditing: true
-      },
-      {
-        rol: 'Envío de Informes',
-        nombre: '',
-        email: '',
-        telefono1: '',
-        telefono2: '',
-        isPrincipal: false,
-        isEditing: true
-      }
-    ])
+    setContactos(contactosPrincipales)
     setValue('numeroObra', lastObraNumber)
 
     // Llamar a la función handleClose proporcionada por las props
@@ -341,92 +308,77 @@ const AddObraDrawer = (props: Props) => {
   }
 
   const agregarContacto = () => {
-    if (!nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1) {
+    if (!editingContact.nombre || !editingContact.email || !editingContact.telefono1) {
       toast.error('Por favor complete los campos requeridos')
 
       return
     }
 
-    setContactos(prevContactos => [...prevContactos, { ...nuevoContacto, isEditing: false }])
+    setContactos(prevContactos => [...prevContactos, { ...editingContact, isEditing: false }])
 
-    setNuevoContacto({
+    setEditingContact({
       rol: '',
       nombre: '',
       email: '',
       telefono1: '',
-      isEditing: true
+      telefono2: '',
+      isEditing: true,
+      isPrincipal: false
     })
 
     toast.success('Contacto agregado exitosamente')
   }
 
   const eliminarContacto = (index: number) => {
+    if (index === 0) {
+      toast.error('No se puede eliminar el contacto Encargado de Obra')
+
+      return
+    }
+
     setContactos(prevContactos => prevContactos.filter((_, i) => i !== index))
   }
 
   const editarContacto = (index: number) => {
+    if (index === 0) {
+      toast.error('No se puede editar el contacto Encargado de Obra')
+
+      return
+    }
+
     setEditingContactIndex(index)
     const contacto = contactos[index]
 
-    // Asegurarse de que todos los campos necesarios estén presentes
     setEditingContact({
       rol: contacto.rol || '',
       nombre: contacto.nombre || '',
       email: contacto.email || '',
       telefono1: contacto.telefono1 || '',
-      telefono2: contacto.telefono2 || ''
+      telefono2: contacto.telefono2 || '',
+      isEditing: true,
+      isPrincipal: contacto.isPrincipal || false
     })
   }
 
-  const guardarEdicion = () => {
-    if (editingContactIndex === null) return
-
-    // Validar campos requeridos
-    if (!editingContact.rol || !editingContact.nombre) {
-      toast.error('Rol y nombre son requeridos')
+  const guardarEdicion = (index: number) => {
+    if (!contactos[index].nombre || !contactos[index].email || !contactos[index].telefono1) {
+      toast.error('Por favor complete los campos requeridos')
 
       return
     }
 
-    if (!validateEmail(editingContact.email)) {
-      toast.error('Email inválido')
+    const nuevosContactos = contactos.map((c, i) => (i === index ? { ...c, isEditing: false } : c))
 
-      return
-    }
-
-    if (!validatePhone(editingContact.telefono1)) {
-      toast.error('Teléfono inválido')
-
-      return
-    }
-
-    const updatedContactos = [...contactos]
-
-    updatedContactos[editingContactIndex] = {
-      ...editingContact,
-      isPrincipal: contactos[editingContactIndex].isPrincipal // Mantener el estado isPrincipal
-    }
-
-    setContactos(updatedContactos)
-    setEditingContactIndex(null)
-    setEditingContact({
-      rol: '',
-      nombre: '',
-      email: '',
-      telefono1: '',
-      telefono2: ''
-    })
-
-    toast.success('Contacto actualizado exitosamente')
+    setContactos(nuevosContactos)
   }
 
   const marcarComoPrincipal = (index: number) => {
-    setContactos(prev =>
-      prev.map((contacto, i) => ({
-        ...contacto,
-        isPrincipal: i === index
-      }))
-    )
+    const nuevosContactos = contactos.map((c, i) => ({
+      ...c,
+      isPrincipal: i === index
+    }))
+
+    setContactos(nuevosContactos)
   }
 
   const dummyObraData: FormValidateType = {
@@ -482,17 +434,12 @@ const AddObraDrawer = (props: Props) => {
   const dummyContactos: ContactoObraForm[] = [
     {
       nombre: 'Juan Pérez',
-      rol: 'encargado_obra',
+      rol: 'Encargado de Obra',
       email: 'juan.perez@ejemplo.cl',
       telefono1: '+56 9 8765 4321',
+      telefono2: '',
+      isEditing: false,
       isPrincipal: true
-    },
-    {
-      nombre: 'María González',
-      rol: 'envio_informes',
-      email: 'maria.gonzalez@ejemplo.cl',
-      telefono1: '+56 9 9876 5432',
-      isPrincipal: false
     }
   ]
 
@@ -538,7 +485,7 @@ const AddObraDrawer = (props: Props) => {
 
   // Manejador para el número de obra
   const handleNumeroObraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '') // Elimina cualquier caracter que no sea número
+    const value = e.target.value
 
     setValue('numeroObra', value)
   }
@@ -548,6 +495,8 @@ const AddObraDrawer = (props: Props) => {
 
     setSelectedRegion(regionValue)
     setSelectedComuna('') // Resetear comuna cuando cambia la región
+    setValue('region', regionValue)
+    setValue('comuna', '')
   }
 
   // Función para cancelar la edición
@@ -558,7 +507,9 @@ const AddObraDrawer = (props: Props) => {
       nombre: '',
       email: '',
       telefono1: '',
-      telefono2: ''
+      telefono2: '',
+      isEditing: true,
+      isPrincipal: false
     })
   }
 
@@ -568,7 +519,16 @@ const AddObraDrawer = (props: Props) => {
 
   const handleConfirmClose = () => {
     setOpenConfirmDialog(false)
-    handleClose()
+
+    // Limpiar el formulario y todos los estados relacionados
+    resetForm()
+    setContactos(contactosPrincipales)
+    setSelectedRegion('')
+    setSelectedComuna('')
+    setValue('numeroObra', lastObraNumber)
+
+    // Llamar a la función handleClose proporcionada por las props
+    props.handleClose()
   }
 
   const handleDrawerClose = () => {
@@ -603,7 +563,7 @@ const AddObraDrawer = (props: Props) => {
         <Divider />
         <div className='p-5'>
           <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
-            {/* Primera sección: 4-3-2-3 */}
+            {/* Primera sección: 4-4-4 */}
             <Grid container spacing={5}>
               <Grid item xs={12} sm={4}>
                 <Controller
@@ -615,7 +575,7 @@ const AddObraDrawer = (props: Props) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <Controller
                   name='fechaIngreso'
                   control={control}
@@ -634,17 +594,7 @@ const AddObraDrawer = (props: Props) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={2}>
-                <Controller
-                  name='estado'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label='Estado' disabled value={field.value || 'activo'} />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <FormControl fullWidth error={Boolean(errors.estadoObra)}>
                   <InputLabel>Estado Obra *</InputLabel>
                   <Controller
@@ -671,12 +621,39 @@ const AddObraDrawer = (props: Props) => {
               <Grid item xs={12}>
                 <ClientSearch
                   onClientSelect={cliente => {
+                    // Campos básicos del cliente
                     setValue('rut', cliente.rut)
                     setValue('nombreCliente', cliente.nombreCliente)
                     setValue('razonSocial', cliente.razonSocial)
 
-                    // Disparar validación
-                    trigger(['rut', 'nombreCliente', 'razonSocial'])
+                    // Campos de facturación
+                    setValue('giro', cliente.giro || '')
+                    setValue('direccionComercial', cliente.direccionComercial || '')
+                    const comunaCliente = (cliente.comunaFacturacion || '').trim()
+
+                    // Normaliza y busca si existe en la lista de comunas
+                    const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
+
+                    if (!existe && comunaCliente) {
+                      comunas.push({ id: 'custom', nombre: comunaCliente })
+                    }
+
+                    setValue('comunaFacturacion', comunaCliente)
+                    setValue('listaPrecios', cliente.listaPrecios || '')
+                    setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
+                    setValue('telefono', cliente.telefono || '')
+
+                    // Disparar validación de todos los campos actualizados
+                    trigger([
+                      'rut',
+                      'nombreCliente',
+                      'razonSocial',
+                      'giro',
+                      'direccionComercial',
+                      'comunaFacturacion',
+                      'listaPrecios',
+                      'mailRecepcionFactura'
+                    ])
                   }}
                 />
               </Grid>
@@ -835,43 +812,23 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Mandante section */}
             <Grid container spacing={5} sx={{ mt: 2 }}>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Mandante</InputLabel>
-                  <Controller
-                    name='mandante'
-                    control={control}
-                    render={({ field }) => (
-                      <Select {...field} label='Mandante'>
-                        {MANDANTES.map(mandante => (
-                          <MenuItem key={mandante.value} value={mandante.value}>
-                            {mandante.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
+                  <Select {...control} label='Mandante'>
+                    {MANDANTES.map(mandante => (
+                      <MenuItem key={mandante.value} value={mandante.value}>
+                        {mandante.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
                 </FormControl>
               </Grid>
-
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='textoMandante'
                   control={control}
                   render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' />}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                  control={
-                    <Controller
-                      name='informeMandante'
-                      control={control}
-                      render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                    />
-                  }
-                  label='Informe a Mandante'
                 />
               </Grid>
             </Grid>
@@ -885,16 +842,47 @@ const AddObraDrawer = (props: Props) => {
               <Grid item xs={6}>
                 <ContactSearch
                   onContactSelect={contact => {
-                    const newContact: ContactoObraForm = {
-                      nombre: contact.nombre,
-                      rol: contact.cargo || '',
-                      email: contact.email,
-                      telefono1: contact.telefono1,
-                      telefono2: contact.telefono2 || '',
-                      isPrincipal: contactos.length === 0
+                    // Verificar si el contacto ya existe
+                    const exists = contactos.some(c => c.contactId === contact.contactId)
+
+                    if (exists) {
+                      toast.error('Este contacto ya está en la lista')
+
+                      return
                     }
 
-                    setContactos([...contactos, newContact])
+                    // Si es el primer contacto (Encargado de Obra)
+                    if (contactos[0].nombre === '') {
+                      const updatedContactos = [...contactos]
+
+                      updatedContactos[0] = {
+                        contactId: contact.contactId?.toString(),
+                        rol: 'Encargado de Obra',
+                        nombre: contact.nombre,
+                        email: contact.email,
+                        telefono1: contact.telefono1,
+                        telefono2: contact.telefono2 || '',
+                        isPrincipal: true,
+                        isEditing: false
+                      }
+                      setContactos(updatedContactos)
+                      toast.success('Encargado de Obra asignado exitosamente')
+                    } else {
+                      // Para contactos adicionales
+                      const newContact: ContactoObraForm = {
+                        contactId: contact.contactId?.toString(),
+                        rol: contact.cargo || '',
+                        nombre: contact.nombre,
+                        email: contact.email,
+                        telefono1: contact.telefono1,
+                        telefono2: contact.telefono2 || '',
+                        isPrincipal: false,
+                        isEditing: false
+                      }
+
+                      setContactos([...contactos, newContact])
+                      toast.success('Contacto agregado exitosamente')
+                    }
                   }}
                 />
               </Grid>
@@ -935,15 +923,48 @@ const AddObraDrawer = (props: Props) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {/* Contactos obligatorios y adicionales */}
                   {contactos.map((contacto, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <FormControl fullWidth size='small'>
-                          <Select value={contacto.rol} disabled>
-                            <MenuItem value={contacto.rol}>{contacto.rol}</MenuItem>
+                          <Select
+                            value={contacto.rol}
+                            onChange={e => {
+                              const updatedContactos = [...contactos]
+
+                              updatedContactos[index] = {
+                                ...contacto,
+                                rol: e.target.value
+                              }
+                              setContactos(updatedContactos)
+                            }}
+                            disabled={index === 0}
+                          >
+                            {CARGOS_OBRA.map(cargo => (
+                              <MenuItem key={cargo.value} value={cargo.value}>
+                                {cargo.label}
+                              </MenuItem>
+                            ))}
                           </Select>
                         </FormControl>
+                        {contacto.rol === 'Otro' && (
+                          <TextField
+                            size='small'
+                            fullWidth
+                            placeholder='Especifique el cargo'
+                            value={contacto.rolEspecifico || ''}
+                            onChange={e => {
+                              const updatedContactos = [...contactos]
+
+                              updatedContactos[index] = {
+                                ...contacto,
+                                rolEspecifico: e.target.value
+                              }
+                              setContactos(updatedContactos)
+                            }}
+                            sx={{ mt: 1 }}
+                          />
+                        )}
                       </TableCell>
                       <TableCell>
                         <TextField
@@ -951,12 +972,18 @@ const AddObraDrawer = (props: Props) => {
                           onChange={e => {
                             const updatedContactos = [...contactos]
 
-                            updatedContactos[index].nombre = e.target.value
+                            updatedContactos[index] = {
+                              ...contacto,
+                              nombre: e.target.value
+                            }
                             setContactos(updatedContactos)
                           }}
-                          placeholder='Nombre'
+                          placeholder='Seleccionar contacto'
                           fullWidth
                           size='small'
+                          InputProps={{
+                            readOnly: index === 0
+                          }}
                         />
                       </TableCell>
                       <TableCell>
@@ -965,12 +992,18 @@ const AddObraDrawer = (props: Props) => {
                           onChange={e => {
                             const updatedContactos = [...contactos]
 
-                            updatedContactos[index].email = e.target.value
+                            updatedContactos[index] = {
+                              ...contacto,
+                              email: e.target.value
+                            }
                             setContactos(updatedContactos)
                           }}
                           placeholder='Email'
                           fullWidth
                           size='small'
+                          InputProps={{
+                            readOnly: index === 0
+                          }}
                         />
                       </TableCell>
                       <TableCell>
@@ -980,12 +1013,18 @@ const AddObraDrawer = (props: Props) => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
 
-                            updatedContactos[index].telefono1 = formatted
+                            updatedContactos[index] = {
+                              ...contacto,
+                              telefono1: formatted
+                            }
                             setContactos(updatedContactos)
                           }}
                           placeholder='Teléfono 1'
                           fullWidth
                           size='small'
+                          InputProps={{
+                            readOnly: index === 0
+                          }}
                         />
                       </TableCell>
                       <TableCell>
@@ -995,114 +1034,62 @@ const AddObraDrawer = (props: Props) => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
 
-                            updatedContactos[index].telefono2 = formatted
+                            updatedContactos[index] = {
+                              ...contacto,
+                              telefono2: formatted
+                            }
                             setContactos(updatedContactos)
                           }}
                           placeholder='Teléfono 2'
                           fullWidth
                           size='small'
+                          InputProps={{
+                            readOnly: index === 0
+                          }}
                         />
                       </TableCell>
                       <TableCell>
-                        <IconButton
-                          onClick={() => marcarComoPrincipal(index)}
-                          color={contacto.isPrincipal ? 'warning' : 'default'}
-                          sx={{ mr: 1 }}
-                        >
-                          <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                        </IconButton>
-                        {index >= 2 && (
-                          <>
-                            <IconButton color='info' onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
-                              <i className='ri-edit-line' />
+                        <div className='flex items-center'>
+                          <IconButton
+                            onClick={() => {
+                              const updatedContactos = contactos.map((c, i) => ({
+                                ...c,
+                                isPrincipal: i === index ? !c.isPrincipal : false
+                              }))
+
+                              setContactos(updatedContactos)
+                            }}
+                            color={contacto.isPrincipal ? 'primary' : 'default'}
+                            sx={{ mr: 1 }}
+                          >
+                            <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                          </IconButton>
+                          {index === 0 ? (
+                            // Para el Encargado de Obra, mostrar solo el botón de cambiar
+                            <IconButton
+                              color='primary'
+                              onClick={() => {
+                                setContactos([contactosPrincipales[0], ...contactos.slice(1)])
+                                toast.success('Puede seleccionar un nuevo Encargado de Obra')
+                              }}
+                            >
+                              <i className='ri-refresh-line' />
                             </IconButton>
-                            <IconButton color='error' onClick={() => eliminarContacto(index)}>
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                          </>
-                        )}
+                          ) : (
+                            // Para los demás contactos, mostrar los botones de edición y eliminación
+                            <>
+                              <IconButton color='info' onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
+                                <i className='ri-edit-line' />
+                              </IconButton>
+                              <IconButton color='error' onClick={() => eliminarContacto(index)}>
+                                <i className='ri-delete-bin-line' />
+                              </IconButton>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
-
-                  {/* Fila para nuevo contacto */}
-                  <TableRow>
-                    <TableCell>
-                      <FormControl fullWidth size='small'>
-                        <Select
-                          value={nuevoContacto.rol}
-                          onChange={e => setNuevoContacto({ ...nuevoContacto, rol: e.target.value })}
-                          displayEmpty
-                        >
-                          <MenuItem value='' disabled>
-                            Seleccionar Cargo
-                          </MenuItem>
-                          {CARGOS_OBRA.map(cargo => (
-                            <MenuItem key={cargo.value} value={cargo.value}>
-                              {cargo.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        value={nuevoContacto.nombre}
-                        onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
-                        placeholder='Nombre'
-                        fullWidth
-                        size='small'
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        value={nuevoContacto.email}
-                        onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
-                        placeholder='Email'
-                        fullWidth
-                        size='small'
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        value={nuevoContacto.telefono1}
-                        onChange={e => {
-                          const formatted = formatPhone(e.target.value)
-
-                          setNuevoContacto({ ...nuevoContacto, telefono1: formatted })
-                        }}
-                        placeholder='Teléfono 1'
-                        fullWidth
-                        size='small'
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        value={nuevoContacto.telefono2}
-                        onChange={e => {
-                          const formatted = formatPhone(e.target.value)
-
-                          setNuevoContacto({ ...nuevoContacto, telefono2: formatted })
-                        }}
-                        placeholder='Teléfono 2'
-                        fullWidth
-                        size='small'
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        onClick={agregarContacto}
-                        disabled={
-                          !nuevoContacto.rol ||
-                          !nuevoContacto.nombre ||
-                          !nuevoContacto.email ||
-                          !nuevoContacto.telefono1
-                        }
-                      >
-                        <i className='ri-add-line' />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1191,14 +1178,11 @@ const AddObraDrawer = (props: Props) => {
             {/* Facturación */}
             <Divider sx={{ my: 4 }} />
             <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Typography variant='h5'>Facturación</Typography>
               </Grid>
-              <Grid item xs={12} sm={6} display='flex' justifyContent='flex-end'>
-                <FormControlLabel control={<Checkbox />} label='Copiar Cliente' />
-              </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='razonSocial'
                   control={control}
@@ -1215,16 +1199,12 @@ const AddObraDrawer = (props: Props) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='giro'
                   control={control}
                   rules={{
-                    required: 'El giro es requerido',
-                    pattern: {
-                      value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
-                      message: 'Solo se permiten letras'
-                    }
+                    required: 'El giro es requerido'
                   }}
                   render={({ field }) => (
                     <TextField
@@ -1238,7 +1218,7 @@ const AddObraDrawer = (props: Props) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={8}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='direccionComercial'
                   control={control}
@@ -1254,50 +1234,49 @@ const AddObraDrawer = (props: Props) => {
                   )}
                 />
               </Grid>
-
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
-                  name='comunaFacturacion'
+                  name='mailRecepcionFactura'
                   control={control}
-                  rules={{ required: true }}
+                  rules={{
+                    required: 'El email es requerido',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Ingrese un correo electrónico válido'
+                    }
+                  }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
-                      label='Comuna *'
-                      error={Boolean(errors.comunaFacturacion)}
-                      helperText={errors.comunaFacturacion && 'Este campo es obligatorio'}
+                      label='Mail Recepción Factura *'
+                      error={Boolean(errors.mailRecepcionFactura)}
+                      helperText={errors.mailRecepcionFactura?.message}
+                      placeholder='ejemplo@dominio.com'
                     />
                   )}
                 />
               </Grid>
 
               <Grid item xs={12} sm={4}>
-                <Controller
-                  name='telefono'
-                  control={control}
-                  rules={{
-                    required: 'El teléfono es requerido'
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Teléfono *'
-                      placeholder='+56 9 XXXX XXXX'
-                      error={Boolean(errors.telefono)}
-                      helperText={errors.telefono?.message}
-                      onChange={e => {
-                        const formatted = formatPhone(e.target.value)
-
-                        field.onChange(formatted)
-                      }}
-                      inputProps={{
-                        inputMode: 'text'
-                      }}
-                    />
-                  )}
-                />
+                <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
+                  <InputLabel>Comuna *</InputLabel>
+                  <Controller
+                    name='comunaFacturacion'
+                    control={control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <Select {...field} label='Comuna'>
+                        {comunas.map(comuna => (
+                          <MenuItem key={comuna.id} value={comuna.nombre}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.comunaFacturacion && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={4}>
@@ -1323,23 +1302,30 @@ const AddObraDrawer = (props: Props) => {
 
               <Grid item xs={12} sm={4}>
                 <Controller
-                  name='mailRecepcionFactura'
+                  name='telefono'
                   control={control}
                   rules={{
-                    required: 'El email es requerido',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Ingrese un correo electrónico válido'
-                    }
+                    required: 'El teléfono es requerido'
                   }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
-                      label='Mail Recepción Factura *'
-                      error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message}
-                      placeholder='ejemplo@dominio.com'
+                      label='Teléfono *'
+                      placeholder='+56 9 XXXX XXXX'
+                      error={Boolean(errors.telefono)}
+                      helperText={errors.telefono?.message}
+                      onChange={e => {
+                        const formatted = formatPhone(e.target.value)
+
+                        field.onChange(formatted)
+                      }}
+                      inputProps={{
+                        inputMode: 'text'
+                      }}
+                      InputLabelProps={{
+                        shrink: true
+                      }}
                     />
                   )}
                 />

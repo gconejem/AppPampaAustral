@@ -189,9 +189,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       const productoActualizado = await prisma.producto.findUnique({
         where: { productoId },
         include: {
-          ProductoListaPrecio: {
+          listasPrecios: {
             include: {
-              ListaPrecio: true
+              listaPrecio: true
             }
           }
         }

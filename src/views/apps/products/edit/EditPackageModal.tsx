@@ -51,9 +51,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [descripcion, setDescripcion] = useState('')
   const [area, setArea] = useState('')
   const [familia, setFamilia] = useState('')
-  const [listaPrecios, setListaPrecios] = useState('')
-  const [precio, setPrecio] = useState('')
-  const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [cantidad, setCantidad] = useState(1)
+
+  // Eliminar precio, lista de precios y aplicar impuesto
+  const [cantidades, setCantidades] = useState<{ [key: number]: number }>({})
 
   // Estados para productos
   const [productos, setProductos] = useState<any[]>([])
@@ -82,11 +83,16 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setDescripcion(paquete.descripcion || '')
       setArea(paquete.area || '')
       setFamilia(paquete.familia || '')
-      setPrecio(paquete.precio?.toString() || '')
-      setAplicaImpuesto(paquete.aplicaImpuesto)
+      setCantidad(paquete.cantidad || 1)
 
-      if (paquete.listasPrecios?.[0]) {
-        setListaPrecios(paquete.listasPrecios[0].listaPrecio.id.toString())
+      // Cargar cantidades si existen
+      if (Array.isArray(paquete.productosEnPaquete)) {
+        const cantidadesIniciales: { [key: number]: number } = {}
+
+        paquete.productosEnPaquete.forEach((p: any) => {
+          cantidadesIniciales[p.productoId] = p.cantidad || 1
+        })
+        setCantidades(cantidadesIniciales)
       }
 
       // Cargar productos y listas de precios
@@ -148,9 +154,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           descripcion,
           area,
           familia,
-          precio: precio ? parseFloat(precio) : null,
-          aplicaImpuesto,
-          listaPrecioId: listaPrecios ? parseInt(listaPrecios) : undefined,
+          cantidad,
           productosEnPaquete: productosSeleccionados.map(p => ({ productoId: p.productoId }))
         })
       })
@@ -177,11 +181,21 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 
         <Grid container spacing={4}>
           {/* Primera fila */}
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField label='Nombre' value={nombre} onChange={e => setNombre(e.target.value)} fullWidth />
           </Grid>
-          <Grid item xs={6}>
+          <Grid item xs={4}>
             <TextField label='SKU' value={sku} onChange={e => setSku(e.target.value)} fullWidth />
+          </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label='Cantidad'
+              type='number'
+              value={cantidad}
+              onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+              fullWidth
+              inputProps={{ min: 1 }}
+            />
           </Grid>
 
           {/* Nueva fila para descripción */}
@@ -231,36 +245,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={6}>
-            <FormControl fullWidth>
-              <InputLabel>Lista de Precios</InputLabel>
-              <Select value={listaPrecios} label='Lista de Precios' onChange={e => setListaPrecios(e.target.value)}>
-                {listaPreciosOptions.map((lista: any) => (
-                  <MenuItem key={lista.id} value={lista.id}>
-                    {lista.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Tercera fila */}
-          <Grid item xs={6}>
-            <TextField
-              label='Precio'
-              value={precio}
-              onChange={e => setPrecio(e.target.value)}
-              type='number'
-              fullWidth
-              InputProps={{
-                startAdornment: <Typography>$</Typography>
-              }}
-            />
-          </Grid>
-          <Grid item xs={6} display='flex' alignItems='center'>
-            <Checkbox checked={aplicaImpuesto} onChange={e => setAplicaImpuesto(e.target.checked)} />
-            <Typography>Aplica Impuesto</Typography>
           </Grid>
 
           {/* Sección de productos */}

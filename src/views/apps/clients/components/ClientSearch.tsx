@@ -10,6 +10,13 @@ interface Cliente {
   rut: string
   nombreCliente: string
   razonSocial: string
+  giro?: string | null
+  direccionComercial?: string | null
+  comunaFacturacion?: string | null
+  telefono: string
+  telefonoFacturacion?: string | null
+  mailRecepcionFactura?: string | null
+  listaPrecios?: string | null
 }
 
 interface Props {
@@ -31,7 +38,22 @@ const ClientSearch = ({ onClientSelect }: Props) => {
         const response = await axios.get(`/api/clientes/search?query=${inputValue}`)
 
         if (active) {
-          setOptions(response.data)
+          // Mapear los clientes para asegurar que todos los campos estén presentes
+          const clientes = (response.data || []).map((c: any) => ({
+            clienteId: c.clienteId,
+            rut: c.rut,
+            nombreCliente: c.nombreCliente,
+            razonSocial: c.razonSocial,
+            giro: c.giro || '',
+            direccionComercial: c.direccion || '',
+            comunaFacturacion: c.comuna || '',
+            telefono: c.telefono || '',
+            telefonoFacturacion: c.telefono || '',
+            mailRecepcionFactura: c.emailFacturacion || '',
+            listaPrecios: c.listaPrecios || ''
+          }))
+
+          setOptions(clientes)
         }
       } catch (error) {
         console.error('Error al buscar clientes:', error)

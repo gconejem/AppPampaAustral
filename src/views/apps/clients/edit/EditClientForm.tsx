@@ -1,5 +1,5 @@
 // React Imports
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -8,12 +8,9 @@ import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
-import type { SelectChangeEvent } from '@mui/material/Select'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
-import FormHelperText from '@mui/material/FormHelperText'
 import Typography from '@mui/material/Typography'
-import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -21,15 +18,8 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Checkbox from '@mui/material/Checkbox'
-import InputAdornment from '@mui/material/InputAdornment'
-import SearchIcon from '@mui/icons-material/Search'
-import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 import CloseIcon from '@mui/icons-material/Close'
-import { styled } from '@mui/material/styles'
-import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 
@@ -39,32 +29,32 @@ import { toast } from 'react-hot-toast'
 import axios from 'axios'
 
 // Types Imports
-import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
-import { initialFormData } from '@/types/forms/cliente'
-
-// Data Imports
-import { PAISES, REGIONES_CHILE, SEGMENTOS, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
+import type { Cliente, Contacto } from '@/types/forms/cliente'
 
 // Components Imports
 import ContactSearch from '../components/ContactSearch'
-import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
+import { useUbicacion } from '@/hooks/useUbicacion'
 
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: Cliente[]
   setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
   currentUser: Cliente
 }
 
-const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: Props): JSX.Element => {
+const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX.Element => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
   const [editingContact, setEditingContact] = useState<Contacto | null>(null)
+  const [selectedRegion, setSelectedRegion] = useState<string>('')
+  const [selectedComuna, setSelectedComuna] = useState<string>('')
+
+  const { regiones, getComunasByRegionNombre } = useUbicacion()
 
   const [contacts, setContacts] = useState<Contacto[]>(() => {
     if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
       return currentUser.clientesContactos.map(cc => ({
+        contactId: cc.contacto?.contactId,
         nombre: cc.contacto?.nombre || '',
         cargo: cc.contacto?.cargo || '',
         email: cc.contacto?.email || '',
@@ -76,11 +66,6 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
     return []
   })
-
-  const [searchValue, setSearchValue] = useState<string>('')
-
-  const { regiones, comunas, selectedRegion, setSelectedRegion, selectedComuna, setSelectedComuna } =
-    useRegionesYComunas()
 
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
@@ -99,7 +84,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
       industria: '',
       vendedor: '',
       condicionVenta: '',
-      observaciones: ''
+      observaciones: '',
+      giro: '',
+      emailFacturacion: ''
     }
   })
 
@@ -107,13 +94,26 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
   useEffect(() => {
     if (currentUser && open) {
       console.log('Current user data:', currentUser)
+      console.log('Region actual:', currentUser.region)
+      console.log('Comuna actual:', currentUser.comuna)
 
-      // Obtener la primera condición comercial si existe
-      const condicionComercial = Array.isArray(currentUser.condicionesComerciales)
-        ? currentUser.condicionesComerciales[0]
-        : currentUser.condicionesComerciales
+      // Obtener la condición comercial
+      const condicionComercial = currentUser.condicionesComerciales
 
-      console.log('Condición comercial:', condicionComercial) // Debug
+      // Asegurarse de que los valores existan antes de asignarlos
+      const vendedorValue = condicionComercial?.vendedor || ''
+      const condicionVentaValue = condicionComercial?.condicionVenta || ''
+      const observacionesValue = condicionComercial?.observaciones || ''
+
+      // Establecer región y comuna
+      const regionActual = currentUser.region || ''
+      const comunaActual = currentUser.comuna || ''
+
+      console.log('Estableciendo región:', regionActual)
+      console.log('Estableciendo comuna:', comunaActual)
+
+      setSelectedRegion(regionActual)
+      setSelectedComuna(comunaActual)
 
       reset({
         fechaCreacion: new Date(currentUser.fechaCreacion).toISOString().split('T')[0],
@@ -122,24 +122,23 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
         razonSocial: currentUser.razonSocial,
         nombreCliente: currentUser.nombreCliente || '',
         pais: currentUser.pais || 'Chile',
-        region: currentUser.region,
-        comuna: currentUser.comuna?.toString() || '',
+        region: regionActual,
+        comuna: comunaActual,
         direccion: currentUser.direccion || '',
         telefono: currentUser.telefono || '',
         sitioWeb: currentUser.sitioWeb || '',
         segmento: currentUser.segmento || '',
         industria: currentUser.industria || '',
-        vendedor: condicionComercial?.vendedor || '',
-        condicionVenta: condicionComercial?.condicionVenta || '',
-        observaciones: condicionComercial?.observaciones || ''
+        vendedor: vendedorValue,
+        condicionVenta: condicionVentaValue,
+        observaciones: observacionesValue,
+        giro: currentUser.giro || '',
+        emailFacturacion: currentUser.emailFacturacion || ''
       })
-      setSelectedRegion(currentUser.region)
-      setSelectedComuna(currentUser.comuna?.toString() || '')
-
-      console.log('Current user contacts:', currentUser.clientesContactos) // Debug
 
       if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
         const mappedContacts = currentUser.clientesContactos.map(cc => ({
+          contactId: cc.contacto?.contactId,
           nombre: cc.contacto?.nombre || '',
           cargo: cc.contacto?.cargo || '',
           email: cc.contacto?.email || '',
@@ -150,8 +149,6 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
 
         setContacts(mappedContacts)
       }
-
-      console.log('Condiciones comerciales:', currentUser.condicionesComerciales) // Debug
     }
   }, [currentUser, open, reset, setSelectedRegion, setSelectedComuna])
 
@@ -162,30 +159,29 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
       // Preparar los datos para la actualización
       const updateData = {
         ...data,
-        condicionesComerciales: Array.isArray(currentUser.condicionesComerciales)
-          ? [
-              {
-                id: currentUser.condicionesComerciales[0]?.id,
-                vendedor: data.vendedor,
-                condicionVenta: data.condicionVenta,
-                observaciones: data.observaciones,
-                clienteId: currentUser.clienteId
-              }
-            ]
-          : {
-              vendedor: data.vendedor,
-              condicionVenta: data.condicionVenta,
-              observaciones: data.observaciones,
-              clienteId: currentUser.clienteId
-            }
+        giro: data.giro || '',
+        emailFacturacion: data.emailFacturacion || '',
+        condicionesComerciales: {
+          vendedor: data.vendedor,
+          condicionVenta: data.condicionVenta,
+          observaciones: data.observaciones
+        },
+
+        // Agregar la información de contactos
+        clientesContactos: contacts.map(contact => ({
+          contactId: contact.contactId,
+          isPrincipal: contact.isPrincipal
+        }))
       }
+
+      console.log('Datos a actualizar:', updateData)
 
       const response = await axios.patch(`/api/clientes/${currentUser.clienteId}`, updateData)
 
       if (response.status === 200) {
         setData((prevData: Cliente[]) =>
           prevData.map(cliente =>
-            cliente.clienteId === currentUser.clienteId ? { ...cliente, ...updateData } : cliente
+            cliente.clienteId === currentUser.clienteId ? { ...cliente, ...response.data } : cliente
           )
         )
 
@@ -316,11 +312,16 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                     <Select
                       {...field}
                       label='Región'
+                      value={selectedRegion}
                       onChange={e => {
-                        field.onChange(e)
-                        setSelectedRegion(e.target.value)
+                        const newRegion = e.target.value
+
+                        field.onChange(newRegion)
+                        setSelectedRegion(newRegion)
+                        setSelectedComuna('')
                       }}
                     >
+                      <MenuItem value=''>Seleccione una región</MenuItem>
                       {regiones.map(region => (
                         <MenuItem key={region.id} value={region.nombre}>
                           {region.nombre}
@@ -342,17 +343,22 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                     <Select
                       {...field}
                       label='Comuna'
+                      value={selectedComuna}
                       disabled={!selectedRegion}
                       onChange={e => {
-                        field.onChange(e)
-                        setSelectedComuna(e.target.value)
+                        const newComuna = e.target.value
+
+                        field.onChange(newComuna)
+                        setSelectedComuna(newComuna)
                       }}
                     >
-                      {comunas.map(comuna => (
-                        <MenuItem key={comuna.id} value={comuna.nombre}>
-                          {comuna.nombre}
-                        </MenuItem>
-                      ))}
+                      <MenuItem value=''>Seleccione una comuna</MenuItem>
+                      {selectedRegion &&
+                        getComunasByRegionNombre(selectedRegion).map(comuna => (
+                          <MenuItem key={comuna.id} value={comuna.nombre}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))}
                     </Select>
                   </FormControl>
                 )}
@@ -438,6 +444,32 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
               />
             </Grid>
 
+            {/* Campos de Giro y Email Facturación */}
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='giro'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Giro' placeholder='Ingrese el giro del cliente' />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='emailFacturacion'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Email de Facturación'
+                    placeholder='ejemplo@empresa.com'
+                    type='email'
+                  />
+                )}
+              />
+            </Grid>
+
             {/* Sección de Contactos */}
             <Grid item xs={12}>
               <Grid container spacing={2} alignItems='center' sx={{ mb: 4 }}>
@@ -446,10 +478,25 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <ContactSearch
-                    value={searchValue}
-                    setValue={setSearchValue}
-                    contacts={contacts}
-                    setContacts={setContacts}
+                    onContactSelect={contact => {
+                      // Solo verificar duplicados por contactId
+                      const exists = contacts.some(c => c.contactId === contact.contactId)
+
+                      if (exists) {
+                        toast.error('Este contacto ya está en la lista')
+
+                        return
+                      }
+
+                      // Agregar el nuevo contacto
+                      const newContact = {
+                        ...contact,
+                        isPrincipal: contacts.length === 0 // Si es el primer contacto, será el principal
+                      }
+
+                      setContacts([...contacts, newContact])
+                      toast.success('Contacto agregado exitosamente')
+                    }}
                   />
                 </Grid>
               </Grid>
@@ -458,8 +505,8 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 <Table sx={{ minWidth: 650 }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>NOMBRE</TableCell>
                       <TableCell>CARGO</TableCell>
+                      <TableCell>NOMBRE</TableCell>
                       <TableCell>EMAIL</TableCell>
                       <TableCell>TELÉFONO 1</TableCell>
                       <TableCell>TELÉFONO 2</TableCell>
@@ -470,20 +517,19 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                     {contacts.map((contact, index) => (
                       <TableRow key={index}>
                         {editingContactIndex === index ? (
-                          // Modo edición
                           <>
                             <TableCell>
                               <TextField
-                                value={editingContact?.nombre}
-                                onChange={e => setEditingContact(prev => ({ ...prev!, nombre: e.target.value }))}
+                                value={editingContact?.cargo}
+                                onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
                                 fullWidth
                                 size='small'
                               />
                             </TableCell>
                             <TableCell>
                               <TextField
-                                value={editingContact?.cargo}
-                                onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
+                                value={editingContact?.nombre}
+                                onChange={e => setEditingContact(prev => ({ ...prev!, nombre: e.target.value }))}
                                 fullWidth
                                 size='small'
                               />
@@ -538,10 +584,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                             </TableCell>
                           </>
                         ) : (
-                          // Modo visualización
                           <>
-                            <TableCell>{contact.nombre}</TableCell>
                             <TableCell>{contact.cargo}</TableCell>
+                            <TableCell>{contact.nombre}</TableCell>
                             <TableCell>{contact.email}</TableCell>
                             <TableCell>{contact.telefono1}</TableCell>
                             <TableCell>{contact.telefono2}</TableCell>
@@ -603,8 +648,9 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                 render={({ field }) => (
                   <FormControl fullWidth>
                     <InputLabel id='vendedor-label'>Vendedor</InputLabel>
-                    <Select {...field} labelId='vendedor-label' label='Vendedor' value={field.value || ''}>
+                    <Select {...field} labelId='vendedor-label' label='Vendedor' value={field.value || ''} displayEmpty>
                       <MenuItem value=''>Seleccione un vendedor</MenuItem>
+                      <MenuItem value='Carlos Vega'>Carlos Vega</MenuItem>
                       <MenuItem value='Juan Pérez'>Juan Pérez</MenuItem>
                       <MenuItem value='María González'>María González</MenuItem>
                       <MenuItem value='Pedro Soto'>Pedro Soto</MenuItem>
@@ -626,8 +672,10 @@ const EditClientForm = ({ open, handleClose, userData, setData, currentUser }: P
                       labelId='condicion-venta-label'
                       label='Condición de Venta'
                       value={field.value || ''}
+                      displayEmpty
                     >
                       <MenuItem value=''>Seleccione una condición</MenuItem>
+                      <MenuItem value='30 días'>30 días</MenuItem>
                       <MenuItem value='Contado'>Contado</MenuItem>
                       <MenuItem value='Crédito 30 días'>Crédito 30 días</MenuItem>
                       <MenuItem value='Crédito 60 días'>Crédito 60 días</MenuItem>

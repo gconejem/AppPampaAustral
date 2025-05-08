@@ -1,49 +1,50 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { SyntheticEvent } from 'react'
 
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
+import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
-import InputAdornment from '@mui/material/InputAdornment'
-import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
+import Divider from '@mui/material/Divider'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
+import CardContent from '@mui/material/CardContent'
+import InputLabel from '@mui/material/InputLabel'
+import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import FormControl from '@mui/material/FormControl'
+import InputAdornment from '@mui/material/InputAdornment'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import InputLabel from '@mui/material/InputLabel'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import type { Theme } from '@mui/material/styles'
-import FormControl from '@mui/material/FormControl'
-import DeleteIcon from '@mui/icons-material/Delete'
-import Autocomplete from '@mui/material/Autocomplete'
-import Box from '@mui/material/Box'
-import SearchIcon from '@mui/icons-material/Search'
-import FormHelperText from '@mui/material/FormHelperText'
-import RadioGroup from '@mui/material/RadioGroup'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Radio from '@mui/material/Radio'
-import Popover from '@mui/material/Popover'
+import RadioGroup from '@mui/material/RadioGroup'
+import type { Theme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import Autocomplete from '@mui/material/Autocomplete'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
+import Popover from '@mui/material/Popover'
+import SearchIcon from '@mui/icons-material/Search'
+import DeleteIcon from '@mui/icons-material/Delete'
 import CircularProgress from '@mui/material/CircularProgress'
+import FormHelperText from '@mui/material/FormHelperText'
+import Switch from '@mui/material/Switch'
 
-// Third-party Imports
+// Third Party Imports
 import { toast } from 'react-hot-toast'
 
 // Type Imports
 import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 
-import type { FormDataType } from './AddCustomerDrawer'
+import type { ContactoType } from '@/types/apps/contactTypes'
 
 // Component Imports
 import AddCustomerDrawer from './AddCustomerDrawer'
@@ -59,6 +60,12 @@ interface ProductoEnPaquete {
   precio: number
   cantidad: number
   descripcion?: string
+  producto?: {
+    nombre: string
+    descripcion?: string
+    area?: string
+    precio?: number
+  }
 }
 
 interface ProductRow {
@@ -75,6 +82,12 @@ interface ProductRow {
   esSubProducto?: boolean
   esPaquete?: boolean
   servicio?: string
+  precioEditado?: boolean
+}
+
+interface ProductoListaPrecio {
+  listaPrecioId: number
+  precio: number
 }
 
 interface ProductoType {
@@ -92,17 +105,11 @@ interface ProductoType {
   nombreCompleto?: string
   servicio?: string
   productosEnPaquete?: ProductoEnPaquete[]
+  listasPrecios?: ProductoListaPrecio[]
 }
 
 interface InvoiceType extends ProductoType {
   montoDescuento: number
-}
-
-interface ContactoType {
-  nombre: string
-  cargo: string
-  email: string
-  telefono1: string
 }
 
 interface DetalleType {
@@ -111,7 +118,7 @@ interface DetalleType {
   precioUnitario: number
   descuento: number
   subtotal: number
-  montoDescuento?: number
+  montoDescuento: number
 }
 
 interface FormData {
@@ -135,16 +142,26 @@ interface FormData {
   formaPago: 'CONTADO' | 'CREDITO_30' | 'CREDITO_60' | 'CREDITO_90'
   infoEMS: string
   infoMensual: string
-  precioEMSTotal: number
   precioEMSPorProducto: boolean
+  precioEMSTotal: number
+  precioMensualPorProducto: boolean
+  precioMensualTotal: number
   productos: ProductoType[]
   contacto?: ContactoType | null
+  plazoEntrega?: string
 }
 
 interface ValidationErrors {
   tipoCotizacion: boolean
   nombreProyecto: boolean
   ubicacion: boolean
+}
+
+interface ClienteType {
+  clienteId: number
+  nombre: string
+
+  // ... otros campos necesarios
 }
 
 const AddCard = ({
@@ -158,14 +175,14 @@ const AddCard = ({
 
   // Actualizar el estado inicial
   const initialFormData: FormData = {
-    numeroCotizacion: '0001', // Valor inicial por defecto
-    tipoCotizacion: 'VALORES_UNITARIOS',
+    numeroCotizacion: '0001',
+    tipoCotizacion: 'A',
     estado: 'BORRADOR',
     nombreProyecto: '',
     ubicacion: '',
     empresa: '',
     fechaInicio: new Date(),
-    fechaFin: new Date(new Date().setDate(new Date().getDate() + 15)), // 15 días desde hoy
+    fechaFin: new Date(new Date().setDate(new Date().getDate() + 15)),
     clienteId: null,
     obraId: null,
     contactoId: null,
@@ -180,8 +197,10 @@ const AddCard = ({
       'Superficie: Construcción 1.800 mt2\n\nAntecedentes:\n- Instalaciones de la empresa PONSSE.\n- Galpon Industrial\n- Puente grúa con capacidad de 10 toneladas.\n- Taller de mantención de maquinarias, oficinas',
     infoMensual:
       'Duración: 12 meses\n\nJornada Laboral y Horaria:\n- Lunes a viernes de 8:00 a 18:00\n- Media jornada tarde el día viernes (evaluación, mantención de equipos/vehículo, y trazabilidad de los controles, ensayos y emisión de informes en casa matriz)\n- Sábado de 8:00 a 14:00 (Se considerará pago de jornada extraordinaria)\n\nAntecedentes:\nVolúmenes de trabajo no proporcionados.',
-    precioEMSTotal: 0,
     precioEMSPorProducto: true,
+    precioEMSTotal: 0,
+    precioMensualPorProducto: true,
+    precioMensualTotal: 0,
     productos: []
   }
 
@@ -198,16 +217,36 @@ const AddCard = ({
   const [fechaVencimiento] = useState<Date>(new Date(new Date().setDate(new Date().getDate() + 15)))
 
   // Función para actualizar el formulario
-  const updateFormData = (data: Partial<FormData>) => {
-    setFormData(prev => ({
-      ...prev,
-      ...data,
-      contacto: data.contacto === undefined ? prev.contacto : data.contacto
-    }))
+  const updateFormData = (newData: any) => {
+    setFormData(prevData => {
+      const updatedData = {
+        ...prevData,
+        ...newData,
+        detalles: productRows.map(row => ({
+          productoId: row.productoId,
+          servicio: row.servicio || '',
+          area: row.area || '',
+          descripcion: row.descripcion || '',
+          cantidad: row.cantidad || 1,
+          precioUnitarioUF: parseFloat(row.precioUnitarioUF?.toString() || '0'),
+          totalNetoUF: parseFloat(row.totalNetoUF?.toString() || '0'),
+          esPaquete: row.esPaquete || false,
+          esSubProducto: row.esSubProducto || false
+        }))
+      }
 
-    if (onFormDataChange) {
-      onFormDataChange(data)
-    }
+      // Debug para ver qué datos se están pasando a AddActions
+      console.log('Datos actualizados en AddCard:', updatedData)
+      console.log('Contacto en AddCard:', updatedData.contacto)
+      console.log('Detalles en AddCard:', updatedData.detalles)
+
+      // Actualizar el estado en AddActions
+      if (typeof onFormDataChange === 'function') {
+        onFormDataChange(updatedData)
+      }
+
+      return updatedData
+    })
   }
 
   // Función de validación
@@ -232,6 +271,25 @@ const AddCard = ({
         return
       }
 
+      // Filtrar solo las filas que tienen un producto seleccionado y no son subproductos
+      const detallesValidos = productRows
+        .filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto)
+        .map(row => ({
+          productoId: parseInt(row.productoId),
+          cantidad: row.cantidad,
+          precioUnitario: row.precioUnitarioUF,
+          descuento: row.descuento || 0,
+          subtotal: row.totalNetoUF
+        }))
+
+      if (detallesValidos.length === 0) {
+        toast.error('Debe agregar al menos un producto a la cotización')
+
+        return
+      }
+
+      console.log('Detalles a enviar:', detallesValidos)
+
       const dataToSend = {
         numeroCotizacion: formData.numeroCotizacion,
         tipoCotizacion: formData.tipoCotizacion,
@@ -250,16 +308,13 @@ const AddCard = ({
         observaciones: formData.observaciones,
         clienteId: formData.clienteId,
         obraId: formData.obraId,
+        contacto: formData.contacto,
         contactoId: formData.contactoId,
-        detalles: formData.detalles.map(detalle => ({
-          productoId: detalle.productoId,
-          cantidad: detalle.cantidad,
-          precioUnitario: detalle.precioUnitario,
-          descuento: detalle.descuento || 0,
-          subtotal: detalle.subtotal
-        })),
+        detalles: detallesValidos,
         formaPago: formData.formaPago
       }
+
+      console.log('Datos completos a enviar:', dataToSend)
 
       const response = await fetch('/api/cotizaciones', {
         method: 'POST',
@@ -275,6 +330,10 @@ const AddCard = ({
         throw new Error(error.message || 'Error al guardar la cotización')
       }
 
+      const result = await response.json()
+
+      console.log('Respuesta del servidor:', result)
+
       toast.success('Cotización guardada exitosamente')
       router.push('/apps/invoice/list')
     } catch (error) {
@@ -287,7 +346,7 @@ const AddCard = ({
   const [open, setOpen] = useState(false)
   const [count, setCount] = useState(1)
   const [selectData, setSelectData] = useState<InvoiceType | null>(null)
-  const [clientes, setClientes] = useState([])
+  const [clientes, setClientes] = useState<ClienteType[]>([])
   const [obras, setObras] = useState([])
 
   const [productos, setProductos] = useState<ProductoType[]>([])
@@ -339,9 +398,24 @@ const AddCard = ({
   // Agregar estado para las fechas
   const [loadingProductos, setLoadingProductos] = useState(false)
 
+  // Agregar estado para filtro de paquetes
+  const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+
+  // Agregar después de los otros estados
+  const [listasPrecios, setListasPrecios] = useState<Array<{ id: number; nombre: string }>>([])
+  const [selectedListaPrecio, setSelectedListaPrecio] = useState<number | null>(null)
+
+  // Guardar los últimos totales para evitar bucles infinitos
+  const lastTotals = useRef({ subtotal: 0, descuento: 0, impuesto: 0, total: 0 })
+
   // Hooks
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
   const isBelowSmScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
+
+  // Estados para paginación del buscador de productos
+  const [productsPage, setProductsPage] = useState(0)
+  const [totalProductos, setTotalProductos] = useState(0)
+  const ITEMS_PER_PAGE = 10
 
   // Cargar clientes y obras al montar el componente
   useEffect(() => {
@@ -392,7 +466,16 @@ const AddCard = ({
 
   // Modificar el useEffect de carga de productos
   useEffect(() => {
-    fetch('/api/productos')
+    const params = new URLSearchParams()
+
+    params.append('page', (productsPage + 1).toString())
+    params.append('limit', ITEMS_PER_PAGE.toString())
+    if (searchTerm) params.append('search', searchTerm)
+    if (selectedArea) params.append('area', selectedArea)
+    if (selectedTipo) params.append('tipo', selectedTipo)
+    if (selectedFamilia) params.append('familia', selectedFamilia)
+
+    fetch(`/api/productos?${params.toString()}`)
       .then(res => {
         if (!res.ok) {
           throw new Error('Error al cargar productos')
@@ -401,30 +484,11 @@ const AddCard = ({
         return res.json()
       })
       .then(response => {
-        console.log('Respuesta de productos (raw):', response)
         const data = response.productos || []
 
-        const productosFormateados = data.map((p: any) => ({
-          id: p.productoId,
-          productoId: p.productoId,
-          sku: p.sku,
-          nombre: p.nombre,
-          precio: p.precio || 0,
-          area: p.area || 'Sin área',
-          familia: p.familia || 'Sin familia',
-          tipo: p.tipo || 'Sin tipo',
-          descripcion: p.descripcion || '',
-          esPaquete: p.esPaquete || false,
-          norma: p.norma || '',
-          nombreCompleto: `${p.nombre}${p.norma ? ` - ${p.norma}` : ''}`,
-          servicio: p.servicio || '',
-          productosEnPaquete: p.productosEnPaquete || []
-        }))
-
-        console.log('Productos formateados:', productosFormateados.slice(0, 5))
-        console.log('Ejemplo de producto:', productosFormateados[0])
-        setProductos(productosFormateados)
-        setFilteredProductos(productosFormateados)
+        setProductos(data)
+        setFilteredProductos(data)
+        setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
 
         // Obtener todas las áreas, tipos y familias únicas
         const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area || 'Sin área')))
@@ -448,8 +512,9 @@ const AddCard = ({
         toast.error('Error al cargar los productos')
         setProductos([])
         setFilteredProductos([])
+        setTotalProductos(0)
       })
-  }, [])
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia])
 
   // Agregar useEffect para cargar el número de cotización
   useEffect(() => {
@@ -511,7 +576,7 @@ const AddCard = ({
   const handleClienteChange = (e: SelectChangeEvent<string>) => {
     try {
       const selectedClientId = Number(e.target.value)
-      const selectedClient = clientes.find((c: { clienteId: number }) => c.clienteId === selectedClientId)
+      const selectedClient = clientes.find(c => c.clienteId === selectedClientId)
 
       if (selectedClient?.clienteId) {
         updateFormData({
@@ -519,7 +584,11 @@ const AddCard = ({
         })
       }
     } catch (error) {
-      handleError(error)
+      if (error instanceof Error) {
+        console.error('Error al cambiar cliente:', error.message)
+      } else {
+        console.error('Error desconocido al cambiar cliente')
+      }
     }
   }
 
@@ -530,21 +599,48 @@ const AddCard = ({
     e.target.closest('.repeater-item').remove()
   }
 
-  // Actualizar el cálculo de totales para manejar montoDescuento undefined
+  // Modificar la función calcularTotales para evitar el bucle infinito
   const calcularTotales = useCallback(() => {
-    const subtotalTotal = formData.detalles.reduce((acc, det) => acc + det.subtotal, 0)
-    const descuentoTotal = formData.detalles.reduce((acc, det) => acc + (det.montoDescuento || 0), 0)
-    const baseImponible = subtotalTotal - descuentoTotal
-    const impuesto = baseImponible * 0.19
-    const total = baseImponible + impuesto
+    // Calcular el subtotal sumando todos los totales netos
+    const subtotalTotal = productRows.reduce((acc, row) => {
+      const totalNetoUF = Number(row.totalNetoUF || 0)
 
-    updateFormData({
-      subtotal: subtotalTotal,
-      descuento: descuentoTotal,
-      impuesto: impuesto,
-      total: total
-    })
-  }, [formData.detalles])
+      return acc + totalNetoUF
+    }, 0)
+
+    // Calcular el descuento
+    const descuentoTotal = Number(formData.descuento || 0)
+
+    // Calcular la base imponible
+    const baseImponible = Number(subtotalTotal - descuentoTotal)
+
+    // Calcular el IVA (19%)
+    const impuesto = Number(baseImponible * 0.19)
+
+    // Calcular el total
+    const total = Number(baseImponible + impuesto)
+
+    // Solo actualizar si los valores han cambiado (usando useRef)
+    if (
+      lastTotals.current.subtotal !== subtotalTotal ||
+      lastTotals.current.descuento !== descuentoTotal ||
+      lastTotals.current.impuesto !== impuesto ||
+      lastTotals.current.total !== total
+    ) {
+      lastTotals.current = {
+        subtotal: subtotalTotal,
+        descuento: descuentoTotal,
+        impuesto: impuesto,
+        total: total
+      }
+      updateFormData({
+        subtotal: parseFloat(subtotalTotal.toFixed(2)),
+        descuento: parseFloat(descuentoTotal.toFixed(2)),
+        impuesto: parseFloat(impuesto.toFixed(2)),
+        total: parseFloat(total.toFixed(2))
+      })
+    }
+  }, [productRows, formData.descuento, updateFormData])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
   useEffect(() => {
@@ -570,6 +666,20 @@ const AddCard = ({
 
         console.log('Productos en paquete:', productosEnPaquete)
 
+        // Agregar los productos del paquete como subfilas, asegurando que los campos estén completos
+        const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
+          id: Date.now() + i + 1,
+          productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
+          servicio: pp.nombre || pp.producto?.nombre || '',
+          descripcion: pp.descripcion || pp.producto?.descripcion || '',
+          cantidad: pp.cantidad || 1,
+          precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
+          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          area: pp.area || pp.producto?.area || '',
+          esSubProducto: true,
+          subproductos: []
+        }))
+
         // Actualizar la fila del paquete
         newRows[index] = {
           ...productRows[index],
@@ -577,23 +687,12 @@ const AddCard = ({
           precio: selectedProduct.precio * productRows[index].cantidad,
           area: selectedProduct.area || '',
           descripcion: selectedProduct.descripcion || '',
-          esPaquete: true
+          esPaquete: true,
+          precioEditado: false // Resetea bandera
         }
 
-        // Agregar los productos del paquete como subfilas
-        const subProductos = productosEnPaquete.map((pp: ProductoEnPaquete) => ({
-          id: `${productRows[index].id}-${pp.productoId}`,
-          productoId: pp.productoId.toString(),
-          cantidad: pp.cantidad,
-          descuento: 0,
-          precio: pp.precio * pp.cantidad,
-          area: pp.area,
-          descripcion: pp.descripcion,
-          esSubProducto: true
-        }))
-
         // Insertar los subproductos después del paquete
-        newRows.splice(index + 1, 0, ...subProductos)
+        newRows.splice(index + 1, 0, ...productosRows)
         console.log('Nuevas filas después de agregar subproductos:', newRows)
       } catch (error) {
         console.error('Error al obtener productos del paquete:', error)
@@ -604,7 +703,8 @@ const AddCard = ({
         productoId: selectedProductId,
         precio: selectedProduct.precio * productRows[index].cantidad,
         area: selectedProduct.area || '',
-        descripcion: selectedProduct.descripcion || ''
+        descripcion: selectedProduct.descripcion || '',
+        precioEditado: false // Resetea bandera
       }
       console.log('Producto seleccionado:', selectedProduct)
     }
@@ -613,78 +713,175 @@ const AddCard = ({
     calcularTotales()
   }
 
-  // Función para manejar la selección de producto
+  // Modificar el handleSelectProduct para incluir el cálculo inicial
   const handleSelectProduct = (producto: ProductoType) => {
+    console.log('Producto seleccionado:', producto)
+    console.log('Lista de precios seleccionada:', selectedListaPrecio)
+
+    // Obtener el precio según la lista de precios seleccionada
+    const precioEnLista = producto.listasPrecios?.find(
+      (lp: ProductoListaPrecio) => lp.listaPrecioId === selectedListaPrecio
+    )
+
+    const precioFinal = precioEnLista?.precio || producto.precio || 0
+
     setSelectedProduct(producto)
 
     // Crear el nombre completo del servicio incluyendo la norma
     const nombreCompleto = producto.norma ? `${producto.nombre || ''} - ${producto.norma}` : producto.nombre || ''
 
-    // Actualizar la fila actual con los datos del producto
+    // Actualizar las filas con los nuevos productos
     const newRows = [...productRows]
+    const lastEmptyRowIndex = newRows.findIndex(row => !row.productoId || row.productoId === '0')
 
-    // Buscar la última fila vacía
-    const emptyRowIndex = newRows.length - 1
-    const emptyRow = newRows[emptyRowIndex]
-
-    if (emptyRow && (emptyRow.productoId === '0' || !emptyRow.productoId)) {
-      newRows[emptyRowIndex] = {
-        ...emptyRow,
-        productoId: producto.productoId?.toString() || '', // Asegurarnos de guardar el productoId
+    if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
+      // Agregar el paquete como fila principal
+      const paqueteRow = {
+        id: Date.now(),
+        productoId: producto.productoId.toString(),
         servicio: nombreCompleto,
         descripcion: producto.descripcion || '',
         cantidad: 1,
-        precioUnitarioUF: producto.precio || 0,
-        totalNetoUF: (producto.precio || 0) * 1,
-        area: producto.area || ''
+        precioUnitarioUF: precioFinal,
+        totalNetoUF: precioFinal,
+        area: producto.area || '',
+        esPaquete: true,
+        subproductos: []
       }
 
-      setProductRows(newRows)
-      calcularTotales()
+      // Agregar los productos del paquete como subfilas
+      const productosRows = producto.productosEnPaquete.map((pp: ProductoEnPaquete, i: number) => ({
+        id: Date.now() + i + 1,
+        productoId: pp.productoId.toString(),
+        servicio: pp.nombre,
+        descripcion: pp.descripcion || '',
+        cantidad: pp.cantidad || 1,
+        precioUnitarioUF: pp.precio || 0,
+        totalNetoUF: (pp.precio || 0) * (pp.cantidad || 1),
+        area: pp.area || '',
+        esSubProducto: true,
+        subproductos: []
+      }))
+
+      // Si hay una fila vacía, reemplazarla con el paquete y sus productos
+      if (lastEmptyRowIndex >= 0) {
+        newRows.splice(lastEmptyRowIndex, 1, paqueteRow, ...productosRows)
+      } else {
+        newRows.push(paqueteRow, ...productosRows)
+      }
+    } else {
+      // Si no es un paquete, agregar como producto normal
+      const newRow = {
+        id: Date.now(),
+        productoId: producto.productoId.toString(),
+        servicio: nombreCompleto,
+        descripcion: producto.descripcion || '',
+        cantidad: 1,
+        precioUnitarioUF: precioFinal,
+        totalNetoUF: precioFinal, // Precio inicial por cantidad 1
+        area: producto.area || '',
+        subproductos: []
+      }
+
+      if (lastEmptyRowIndex >= 0) {
+        newRows[lastEmptyRowIndex] = newRow
+      } else {
+        newRows.push(newRow)
+      }
     }
 
+    setProductRows(newRows)
+    calcularTotales() // Llamar a calcularTotales después de actualizar las filas
     handleClosePopover()
+  }
+
+  // Modificar los manejadores de cambio de precio y cantidad
+  const handlePrecioChange = (index: number, precioUF: number) => {
+    const newRows = [...productRows]
+    const cantidad = Number(newRows[index].cantidad || 1)
+    const precio = Number(precioUF)
+
+    newRows[index] = {
+      ...newRows[index],
+      precioUnitarioUF: precio,
+      totalNetoUF: precio * cantidad,
+      precioEditado: true // Marca como editado manualmente
+    }
+
+    setProductRows(newRows)
+  }
+
+  const handleCantidadChange = (index: number, cantidad: number) => {
+    const newRows = [...productRows]
+    const precioUF = Number(newRows[index].precioUnitarioUF || 0)
+    const cantidadNum = Number(cantidad)
+
+    newRows[index] = {
+      ...newRows[index],
+      cantidad: cantidadNum,
+      totalNetoUF: precioUF * cantidadNum
+    }
+
+    setProductRows(newRows)
   }
 
   // Función para manejar la visualización
   const handlePreview = () => {
+    // Validar que haya al menos un producto
+    const productosValidos = productRows.filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto)
+
+    if (productosValidos.length === 0) {
+      toast.error('Debe agregar al menos un producto a la cotización')
+
+      return
+    }
+
     // Preparar los datos para la previsualización
     const previewData = {
-      ...formData,
       numeroCotizacion: formData.numeroCotizacion,
-      fechaInicio: formData.fechaInicio,
-      fechaFin: formData.fechaFin,
       tipoCotizacion: formData.tipoCotizacion,
-      nombreProyecto: formData.nombreProyecto,
-      empresa: formData.empresa,
-      ubicacion: formData.ubicacion,
-      contacto: formData.contacto,
-      detalles: productRows.map(row => ({
-        productoId: row.productoId, // Asegurarnos de pasar el productoId
-        servicio: row.servicio,
-        area: row.area,
-        descripcion: row.descripcion,
-        cantidad: row.cantidad,
-        precioUnitarioUF: row.precioUnitarioUF,
-        totalNetoUF: row.totalNetoUF,
-        esPaquete: row.esPaquete,
-        esSubProducto: row.esSubProducto
+      estado: 'BORRADOR',
+      fechaInicio: formData.fechaInicio?.toISOString() || new Date().toISOString(),
+      fechaFin: formData.fechaFin?.toISOString() || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+      nombreProyecto: formData.nombreProyecto || '',
+      empresa: formData.empresa || '',
+      ubicacion: formData.ubicacion || '',
+      formaPago: formData.formaPago || 'CONTADO',
+      contacto: formData.contacto
+        ? {
+            nombre: formData.contacto.nombre,
+            cargo: formData.contacto.cargo || 'Sin cargo',
+            email: formData.contacto.email || '',
+            telefono1: formData.contacto.telefono1 || ''
+          }
+        : null,
+      contactoId: formData.contactoId,
+      detalles: productosValidos.map(row => ({
+        productoId: parseInt(row.productoId),
+        servicio: row.servicio || '',
+        area: row.area || '',
+        descripcion: row.descripcion || '',
+        cantidad: row.cantidad || 1,
+        precioUnitarioUF: parseFloat(row.precioUnitarioUF?.toString() || '0'),
+        totalNetoUF: parseFloat(row.totalNetoUF?.toString() || '0'),
+        esPaquete: row.esPaquete || false,
+        esSubProducto: row.esSubProducto || false
       })),
-      subtotal: formData.subtotal,
-      descuento: formData.descuento,
-      impuesto: formData.impuesto,
-      total: formData.total,
-      observaciones: formData.observaciones
+      subtotal: parseFloat(formData.subtotal?.toString() || '0'),
+      descuento: parseFloat(formData.descuento?.toString() || '0'),
+      impuesto: parseFloat(formData.impuesto?.toString() || '0'),
+      total: parseFloat(formData.total?.toString() || '0'),
+      observaciones: formData.observaciones || ''
     }
 
     // Debug para ver qué datos se están enviando
     console.log('Datos de preview:', previewData)
-    console.log('Detalles enviados:', previewData.detalles)
+    console.log('Detalles a enviar:', previewData.detalles)
 
     // Guardar en localStorage
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
 
-    // Abrir en nueva pestaña con la ruta correcta de App Router
+    // Abrir en nueva pestaña
     window.open('/es/apps/invoice/preview', '_blank')
   }
 
@@ -775,10 +972,13 @@ const AddCard = ({
 
   // Manejar error de tipo unknown
   const handleError = (error: unknown) => {
-    console.error('Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Ha ocurrido un error desconocido'
-
-    toast.error(errorMessage)
+    if (error instanceof Error) {
+      console.error('Error:', error.message)
+      toast.error(error.message)
+    } else {
+      console.error('Error desconocido:', error)
+      toast.error('Error desconocido')
+    }
   }
 
   const handleChange = (field: keyof FormData, value: any) => {
@@ -804,7 +1004,42 @@ const AddCard = ({
   }
 
   const filterProducts = (search: string, area: string, tipo: string, familia: string) => {
+    console.log('Iniciando filtrado de productos')
+    console.log('Estado actual de showOnlyPaquetes:', showOnlyPaquetes)
+    console.log('Total de productos antes de filtrar:', productos.length)
+
+    // Log detallado de cada producto
+    console.log(
+      'Detalle de productos antes de filtrar:',
+      productos.map(p => ({
+        id: p.productoId,
+        nombre: p.nombre,
+        esPaquete: p.esPaquete,
+        tipo: p.tipo
+      }))
+    )
+
     let filtered = [...productos]
+
+    // Filtrar por paquetes si está activado
+    if (showOnlyPaquetes) {
+      console.log('Aplicando filtro de solo paquetes')
+      filtered = filtered.filter(product => {
+        const isPaquete = product.esPaquete === true
+
+        console.log(`Producto "${product.nombre}" (ID: ${product.productoId}) - esPaquete:`, isPaquete)
+
+        return isPaquete
+      })
+      console.log(
+        'Productos después de filtrar por paquetes:',
+        filtered.map(p => ({
+          id: p.productoId,
+          nombre: p.nombre,
+          esPaquete: p.esPaquete
+        }))
+      )
+    }
 
     if (search) {
       const searchLower = search.toLowerCase()
@@ -813,21 +1048,24 @@ const AddCard = ({
         product =>
           (product.nombre || '').toLowerCase().includes(searchLower) ||
           (product.sku || '').toLowerCase().includes(searchLower) ||
-          (product.descripcion || '').toLowerCase().includes(searchLower)
+          (product.descripcion || '').toLowerCase().includes(searchLower) ||
+          (product.norma || '').toLowerCase().includes(searchLower)
       )
     }
 
-    if (area) {
-      filtered = filtered.filter(product => product.area === area)
-    }
+    if (area) filtered = filtered.filter(product => product.area === area)
+    if (tipo) filtered = filtered.filter(product => product.tipo === tipo)
+    if (familia) filtered = filtered.filter(product => product.familia === familia)
 
-    if (tipo) {
-      filtered = filtered.filter(product => product.tipo === tipo)
-    }
-
-    if (familia) {
-      filtered = filtered.filter(product => product.familia === familia)
-    }
+    console.log(
+      'Productos filtrados finales:',
+      filtered.map(p => ({
+        id: p.productoId,
+        nombre: p.nombre,
+        esPaquete: p.esPaquete,
+        tipo: p.tipo
+      }))
+    )
 
     setFilteredProductos(filtered)
   }
@@ -866,11 +1104,165 @@ const AddCard = ({
 
   const [showResults, setShowResults] = useState(false)
 
+  // Agregar un useEffect para manejar el cambio de showOnlyPaquetes
+  useEffect(() => {
+    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
+  }, [showOnlyPaquetes]) // Agregar showOnlyPaquetes como dependencia
+
+  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(event.target.checked)
+
+    // No necesitamos llamar a filterProducts aquí porque el useEffect lo hará
+  }
+
+  const handleMoveUp = (index: number) => {
+    const newRows = [...productRows]
+    const currentRow = newRows[index]
+
+    // Si es un subproducto, usar la lógica de paquetes
+    if (currentRow.esSubProducto) {
+      // Encontrar el índice del paquete padre
+      let paqueteIndex = index - 1
+
+      while (paqueteIndex >= 0 && !newRows[paqueteIndex].esPaquete) {
+        paqueteIndex--
+      }
+
+      // Solo permitir mover si no es el primer subproducto del paquete
+      if (index > paqueteIndex + 1) {
+        ;[newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
+        setProductRows(newRows)
+      }
+    } else if (!currentRow.esPaquete) {
+      // Si es un producto individual (no paquete)
+      // Permitir mover hacia arriba si no es el primer elemento
+      if (index > 0) {
+        ;[newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
+        setProductRows(newRows)
+      }
+    }
+  }
+
+  const handleMoveDown = (index: number) => {
+    const newRows = [...productRows]
+    const currentRow = newRows[index]
+
+    // Si es un subproducto, usar la lógica de paquetes
+    if (currentRow.esSubProducto) {
+      // Encontrar el último índice del paquete actual
+      let lastPackageIndex = index + 1
+
+      while (lastPackageIndex < newRows.length && newRows[lastPackageIndex].esSubProducto) {
+        lastPackageIndex++
+      }
+
+      // Solo permitir mover si no es el último subproducto del paquete
+      if (index < lastPackageIndex - 1) {
+        ;[newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
+        setProductRows(newRows)
+      }
+    } else if (!currentRow.esPaquete) {
+      // Si es un producto individual (no paquete)
+      // Permitir mover hacia abajo si no es el último elemento
+      if (index < newRows.length - 1) {
+        ;[newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
+        setProductRows(newRows)
+      }
+    }
+  }
+
+  const canMoveUp = (index: number): boolean => {
+    const currentRow = productRows[index]
+
+    if (currentRow.esSubProducto) {
+      return !isFirstSubProductInPackage(index)
+    }
+
+    return !currentRow.esPaquete && index > 0
+  }
+
+  const canMoveDown = (index: number): boolean => {
+    const currentRow = productRows[index]
+
+    if (currentRow.esSubProducto) {
+      return !isLastSubProductInPackage(index)
+    }
+
+    return !currentRow.esPaquete && index < productRows.length - 1
+  }
+
+  const isFirstSubProductInPackage = (index: number): boolean => {
+    return Boolean(index > 0 && productRows[index - 1].esPaquete)
+  }
+
+  const isLastSubProductInPackage = (index: number): boolean => {
+    return Boolean(index < productRows.length - 1 && !productRows[index + 1].esSubProducto)
+  }
+
+  // Agregar después de los otros useEffect
+  useEffect(() => {
+    // Cargar listas de precios
+    fetch('/api/listas-precios')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Listas de precios cargadas:', data)
+        setListasPrecios(data)
+
+        if (data.length > 0) {
+          setSelectedListaPrecio(data[0].id)
+        }
+      })
+      .catch(error => {
+        console.error('Error al cargar listas de precios:', error)
+        toast.error('Error al cargar las listas de precios')
+      })
+  }, [])
+
+  // Actualizar precios de productos en el formulario al cambiar la lista de precios seleccionada
+  useEffect(() => {
+    setProductRows(prevRows =>
+      prevRows.map(row => {
+        const producto = productos.find(p => p.productoId.toString() === row.productoId)
+
+        if (!producto) return row
+
+        const precioEnLista = producto.listasPrecios?.find(
+          (lp: ProductoListaPrecio) => lp.listaPrecioId === selectedListaPrecio
+        )
+
+        const precioFinal = precioEnLista?.precio || producto.precio || 0
+
+        // Solo actualiza si el precio NO ha sido editado manualmente
+        if (!row.precioEditado && row.precioUnitarioUF !== precioFinal) {
+          return {
+            ...row,
+            precioUnitarioUF: precioFinal,
+            totalNetoUF: precioFinal * (row.cantidad || 1)
+          }
+        }
+
+        return row
+      })
+    )
+  }, [selectedListaPrecio, productos])
+
   return (
     <>
-      <Card>
-        <CardContent>
-          <Grid container spacing={3}>
+      <Card
+        sx={{
+          height: 'auto',
+          maxHeight: '100%',
+          overflow: 'visible'
+        }}
+      >
+        <CardContent
+          sx={{
+            height: 'auto',
+            overflow: 'visible',
+            '&:last-child': { pb: 6 }
+          }}
+        >
+          <Grid container spacing={3} sx={{ overflow: 'visible' }}>
             {/* Header con logo y datos de empresa */}
             <Grid item xs={12}>
               <div className='p-6 bg-actionHover rounded'>
@@ -958,36 +1350,45 @@ const AddCard = ({
                       </Box>
                     )}
                     filterOptions={(options, { inputValue }) => {
-                      return options.filter(
-                        option =>
-                          option.nombre.toLowerCase().includes(inputValue.toLowerCase()) ||
-                          option.cargo.toLowerCase().includes(inputValue.toLowerCase())
-                      )
+                      const searchTerms = inputValue.toLowerCase().split(' ')
+
+                      return options.filter(option => {
+                        const searchableText =
+                          `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1}`.toLowerCase()
+
+                        return searchTerms.every(term => searchableText.includes(term))
+                      })
                     }}
                     onChange={(_, newValue) => {
                       if (newValue) {
+                        const contactoData = {
+                          contactoId: newValue.contactoId,
+                          nombre: newValue.nombre,
+                          cargo: newValue.cargo || 'Sin cargo',
+                          email: newValue.email || '',
+                          telefono1: newValue.telefono1 || ''
+                        }
+
                         updateFormData({
-                          contacto: {
-                            nombre: newValue.nombre,
-                            cargo: newValue.cargo,
-                            email: newValue.email,
-                            telefono1: newValue.telefono1
-                          }
+                          contacto: contactoData,
+                          contactoId: contactoData.contactoId
                         })
                       } else {
                         updateFormData({
-                          contacto: null
+                          contacto: null,
+                          contactoId: null
                         })
                       }
                     }}
+                    isOptionEqualToValue={(option, value) => option.contactoId === value.contactoId}
                     value={
-                      formData.contacto
+                      formData.contacto && formData.contactoId
                         ? {
+                            contactoId: formData.contactoId,
                             nombre: formData.contacto.nombre,
-                            cargo: formData.contacto.cargo,
-                            email: formData.contacto.email,
-                            telefono1: formData.contacto.telefono1,
-                            contactoId: 0
+                            cargo: formData.contacto.cargo || 'Sin cargo',
+                            email: formData.contacto.email || '',
+                            telefono1: formData.contacto.telefono1 || ''
                           }
                         : null
                     }
@@ -1033,10 +1434,10 @@ const AddCard = ({
               </Grid>
             </Grid>
 
-            {/* Segunda fila: Tipo de Cotización y Forma de Pago */}
+            {/* Segunda fila: Tipo de Cotización, Lista de Precios y Forma de Pago */}
             <Grid item xs={12}>
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <FormControl fullWidth error={validationErrors.tipoCotizacion}>
                     <InputLabel id='tipo-cotizacion-label' required>
                       Tipo de Cotización
@@ -1045,19 +1446,41 @@ const AddCard = ({
                       label='Tipo de Cotización'
                       value={formData.tipoCotizacion}
                       onChange={e => {
-                        handleChange('tipoCotizacion', e.target.value as 'VALORES_UNITARIOS' | 'EMS' | 'MENSUAL' | '')
+                        handleChange('tipoCotizacion', e.target.value as TipoCotizacion)
                         setValidationErrors({ ...validationErrors, tipoCotizacion: false })
                       }}
                     >
-                      <MenuItem value='VALORES_UNITARIOS'>Valores Unitarios</MenuItem>
-                      <MenuItem value='EMS'>EMS</MenuItem>
-                      <MenuItem value='MENSUAL'>Mensual</MenuItem>
+                      <MenuItem value='A'>Valores Unitarios</MenuItem>
+                      <MenuItem value='B'>EMS</MenuItem>
+                      <MenuItem value='C'>Mensual</MenuItem>
                     </Select>
                     {validationErrors.tipoCotizacion && <FormHelperText>Este campo es requerido</FormHelperText>}
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel id='lista-precios-label'>Lista de Precios</InputLabel>
+                    <Select
+                      labelId='lista-precios-label'
+                      label='Lista de Precios'
+                      value={selectedListaPrecio || ''}
+                      onChange={e => {
+                        const value = e.target.value
+
+                        setSelectedListaPrecio(value ? Number(value) : null)
+                      }}
+                    >
+                      {listasPrecios.map(lista => (
+                        <MenuItem key={lista.id} value={lista.id}>
+                          {lista.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
                   <FormControl fullWidth>
                     <InputLabel id='forma-pago-label'>Forma de Pago</InputLabel>
                     <Select
@@ -1131,7 +1554,7 @@ const AddCard = ({
             </Grid>
 
             {/* Información adicional para EMS */}
-            {formData.tipoCotizacion === 'EMS' && (
+            {formData.tipoCotizacion === 'B' && (
               <Grid item xs={12}>
                 <Card sx={{ bgcolor: 'action.hover', p: 2 }}>
                   <CardContent>
@@ -1164,7 +1587,7 @@ Antecedentes:
             )}
 
             {/* Información adicional para MENSUAL */}
-            {formData.tipoCotizacion === 'MENSUAL' && (
+            {formData.tipoCotizacion === 'C' && (
               <Grid item xs={12}>
                 <Card sx={{ bgcolor: 'action.hover', p: 2 }}>
                   <CardContent>
@@ -1215,32 +1638,38 @@ Volúmenes de trabajo no proporcionados.'
                 Detalle Servicios Solicitados:
               </Typography>
 
-              {formData.tipoCotizacion === 'EMS' && (
+              {(formData.tipoCotizacion === 'B' || formData.tipoCotizacion === 'C') && (
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                   <FormControl>
                     <RadioGroup
                       row
-                      value={formData.precioEMSPorProducto}
-                      onChange={e => handleChange('precioEMSPorProducto', e.target.value === 'true')}
+                      value={
+                        formData.tipoCotizacion === 'B'
+                          ? formData.precioEMSPorProducto
+                          : formData.precioMensualPorProducto
+                      }
+                      onChange={e => {
+                        const porProducto = e.target.value === 'true'
+                        const isEMS = formData.tipoCotizacion === 'B'
+
+                        updateFormData({
+                          ...(isEMS
+                            ? {
+                                precioEMSPorProducto: porProducto,
+                                precioEMSTotal: !porProducto ? formData.subtotal : 0
+                              }
+                            : {
+                                precioMensualPorProducto: porProducto,
+                                precioMensualTotal: !porProducto ? formData.subtotal : 0
+                              })
+                        })
+                      }}
                     >
                       <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
                       <FormControlLabel value={false} control={<Radio size='small' />} label='Precio total' />
                     </RadioGroup>
                   </FormControl>
                 </Box>
-              )}
-              {!formData.precioEMSPorProducto && formData.tipoCotizacion === 'EMS' && (
-                <TextField
-                  fullWidth
-                  type='number'
-                  label='Precio Total EMS'
-                  value={formData.precioEMSTotal}
-                  onChange={e => handleChange('precioEMSTotal', Number(e.target.value))}
-                  InputProps={{
-                    startAdornment: <InputAdornment position='start'>$</InputAdornment>
-                  }}
-                  sx={{ mb: 2 }}
-                />
               )}
 
               {productRows.map((row, index) => (
@@ -1254,7 +1683,34 @@ Volúmenes de trabajo no proporcionados.'
                     backgroundColor: 'background.paper',
                     borderRadius: '4px',
                     border: '1px solid',
-                    borderColor: 'divider'
+                    borderColor: 'divider',
+                    position: 'relative',
+                    ...(row.esSubProducto && {
+                      ml: 4,
+                      width: 'calc(100% - 32px)',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: -16,
+                        top: '50%',
+                        width: 16,
+                        height: 1,
+                        backgroundColor: '#000',
+                        opacity: 0
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        left: -16,
+                        top: -24,
+                        width: 1,
+                        height: 'calc(100% + 48px)',
+                        backgroundColor: '#000',
+                        opacity: 0,
+                        display:
+                          index < productRows.length - 1 && productRows[index + 1]?.esSubProducto ? 'block' : 'none'
+                      }
+                    })
                   }}
                 >
                   <Grid item xs={12} md={3}>
@@ -1395,14 +1851,24 @@ Volúmenes de trabajo no proporcionados.'
                             </Select>
                           </FormControl>
                         </Box>
-                        <Button
-                          size='small'
-                          sx={{ mt: 1 }}
-                          onClick={handleClearFilters}
-                          startIcon={<i className='ri-filter-off-line' />}
-                        >
-                          Limpiar filtros
-                        </Button>
+                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <FormControlLabel
+                            control={
+                              <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                            }
+                            label='Solo Paquetes'
+                          />
+                          <Button
+                            size='small'
+                            onClick={() => {
+                              handleClearFilters()
+                              setShowOnlyPaquetes(false)
+                            }}
+                            startIcon={<i className='ri-filter-off-line' />}
+                          >
+                            Limpiar filtros
+                          </Button>
+                        </Box>
                       </Box>
                       <List sx={{ pt: 0 }}>
                         {filteredProductos.map(producto => (
@@ -1413,30 +1879,105 @@ Volúmenes de trabajo no proporcionados.'
                               cursor: 'pointer',
                               '&:hover': {
                                 backgroundColor: 'action.hover'
-                              }
+                              },
+                              flexDirection: 'column',
+                              alignItems: 'flex-start'
                             }}
                           >
                             <ListItemText
                               primary={
-                                <Typography variant='body1'>
-                                  {producto.nombre}
-                                  {producto.norma && (
-                                    <Typography component='span' color='text.secondary'>
-                                      {' '}
-                                      - {producto.norma}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant='body1'>
+                                    {producto.nombre}
+                                    {producto.norma && (
+                                      <Typography component='span' color='text.secondary'>
+                                        {' '}
+                                        - {producto.norma}
+                                      </Typography>
+                                    )}
+                                  </Typography>
+                                  {producto.esPaquete && (
+                                    <Typography
+                                      variant='caption'
+                                      sx={{
+                                        backgroundColor: 'primary.main',
+                                        color: 'white',
+                                        px: 1,
+                                        py: 0.5,
+                                        borderRadius: 1,
+                                        ml: 1
+                                      }}
+                                    >
+                                      Paquete
                                     </Typography>
                                   )}
-                                </Typography>
+                                </Box>
                               }
                               secondary={
-                                <Typography variant='caption' color='text.secondary'>
-                                  {producto.area} - {producto.tipo} - {producto.familia}
-                                </Typography>
+                                <Box>
+                                  <Typography variant='caption' color='text.secondary'>
+                                    {producto.area} - {producto.tipo} - {producto.familia}
+                                  </Typography>
+                                  {producto.esPaquete &&
+                                    producto.productosEnPaquete &&
+                                    producto.productosEnPaquete.length > 0 && (
+                                      <Box sx={{ mt: 0.5 }}>
+                                        <Typography
+                                          variant='caption'
+                                          color='text.secondary'
+                                          sx={{ fontStyle: 'italic' }}
+                                        >
+                                          Incluye:
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1 }}>
+                                          {producto.productosEnPaquete.map((pp: ProductoEnPaquete, i: number) => (
+                                            <Typography
+                                              key={i}
+                                              variant='caption'
+                                              color='text.secondary'
+                                              sx={{
+                                                display: 'inline-block',
+                                                '&:not(:last-child):after': {
+                                                  content: '","',
+                                                  marginRight: '4px'
+                                                }
+                                              }}
+                                            >
+                                              {pp.nombre}
+                                            </Typography>
+                                          ))}
+                                        </Box>
+                                      </Box>
+                                    )}
+                                </Box>
                               }
                             />
                           </ListItem>
                         ))}
                       </List>
+                      <Box
+                        sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}
+                      >
+                        <Button
+                          size='small'
+                          onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                          disabled={productsPage === 0}
+                        >
+                          Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                          Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                          size='small'
+                          onClick={() =>
+                            setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                          }
+                          disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                        >
+                          Siguiente
+                        </Button>
+                      </Box>
                     </Popover>
                   </Grid>
 
@@ -1459,10 +2000,18 @@ Volúmenes de trabajo no proporcionados.'
                       size='small'
                       label='Descripción'
                       value={row.descripcion || ''}
-                      disabled
-                      InputProps={{
-                        readOnly: true
+                      onChange={e => {
+                        const newRows = [...productRows]
+
+                        newRows[index] = {
+                          ...row,
+                          descripcion: e.target.value
+                        }
+                        setProductRows(newRows)
                       }}
+                      multiline
+                      maxRows={4}
+                      placeholder='Ingrese una descripción...'
                     />
                   </Grid>
 
@@ -1473,18 +2022,7 @@ Volúmenes de trabajo no proporcionados.'
                       type='number'
                       label='Cantidad'
                       value={row.cantidad}
-                      onChange={e => {
-                        const cantidad = Number(e.target.value)
-                        const newRows = [...productRows]
-
-                        newRows[index] = {
-                          ...row,
-                          cantidad: cantidad,
-                          totalNetoUF: row.precioUnitarioUF * cantidad
-                        }
-                        setProductRows(newRows)
-                        calcularTotales()
-                      }}
+                      onChange={e => handleCantidadChange(index, Number(e.target.value))}
                       inputProps={{ min: 1 }}
                     />
                   </Grid>
@@ -1496,18 +2034,7 @@ Volúmenes de trabajo no proporcionados.'
                       type='number'
                       label='Precio Unitario UF'
                       value={row.precioUnitarioUF}
-                      onChange={e => {
-                        const precioUF = Number(e.target.value)
-                        const newRows = [...productRows]
-
-                        newRows[index] = {
-                          ...row,
-                          precioUnitarioUF: precioUF,
-                          totalNetoUF: precioUF * row.cantidad
-                        }
-                        setProductRows(newRows)
-                        calcularTotales()
-                      }}
+                      onChange={e => handlePrecioChange(index, Number(e.target.value))}
                       InputProps={{
                         startAdornment: <InputAdornment position='start'>UF</InputAdornment>
                       }}
@@ -1520,12 +2047,25 @@ Volúmenes de trabajo no proporcionados.'
                       size='small'
                       disabled
                       label='Total Neto UF'
-                      value={row.totalNetoUF}
+                      value={row.totalNetoUF || 0}
                       InputProps={{
                         startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                         readOnly: true
                       }}
                     />
+                  </Grid>
+
+                  {/* Botones de acción */}
+                  <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <IconButton size='small' onClick={() => handleMoveUp(index)} disabled={!canMoveUp(index)}>
+                      <i className='ri-arrow-up-s-line' />
+                    </IconButton>
+                    <IconButton size='small' onClick={() => handleMoveDown(index)} disabled={!canMoveDown(index)}>
+                      <i className='ri-arrow-down-s-line' />
+                    </IconButton>
+                    <IconButton size='small' onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main' }}>
+                      <i className='ri-delete-bin-line' />
+                    </IconButton>
                   </Grid>
                 </Grid>
               ))}
@@ -1544,25 +2084,133 @@ Volúmenes de trabajo no proporcionados.'
             <Grid item xs={12}>
               <div className='flex justify-end'>
                 <div className='min-w-[300px]'>
-                  <div className='flex justify-between mb-2'>
-                    <Typography>Subtotal:</Typography>
-                    <Typography>UF {formData.subtotal?.toFixed(2) || '0.00'}</Typography>
-                  </div>
-                  <div className='flex justify-between mb-2'>
-                    <Typography>Descuento:</Typography>
-                    <Typography>UF {formData.descuento?.toFixed(2) || '0.00'}</Typography>
-                  </div>
-                  <div className='flex justify-between mb-2'>
-                    <Typography>IVA (19%):</Typography>
-                    <Typography>UF {formData.impuesto?.toFixed(2) || '0.00'}</Typography>
-                  </div>
-                  <Divider className='my-2' />
-                  <div className='flex justify-between'>
-                    <Typography variant='h6'>Total:</Typography>
-                    <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
-                  </div>
+                  {(formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+                  (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto) ? (
+                    <>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Total Neto:</Typography>
+                        <TextField
+                          size='small'
+                          type='number'
+                          value={
+                            formData.tipoCotizacion === 'B' ? formData.precioEMSTotal : formData.precioMensualTotal
+                          }
+                          onChange={e => {
+                            const total = parseFloat(e.target.value) || 0
+                            const impuesto = total * 0.19
+
+                            updateFormData({
+                              ...(formData.tipoCotizacion === 'B'
+                                ? { precioEMSTotal: total }
+                                : { precioMensualTotal: total }),
+                              subtotal: total,
+                              impuesto: impuesto,
+                              total: total + impuesto
+                            })
+                          }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                          }}
+                          sx={{ width: '150px' }}
+                        />
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>IVA (19%):</Typography>
+                        <Typography>UF {formData.impuesto?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                      <Divider className='my-2' />
+                      <div className='flex justify-between'>
+                        <Typography variant='h6'>Total:</Typography>
+                        <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Subtotal:</Typography>
+                        <Typography>UF {formData.subtotal?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Descuento:</Typography>
+                        <Typography>UF {formData.descuento?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>IVA (19%):</Typography>
+                        <Typography>UF {formData.impuesto?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                      <Divider className='my-2' />
+                      <div className='flex justify-between'>
+                        <Typography variant='h6'>Total:</Typography>
+                        <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+            </Grid>
+
+            {/* Campo de Plazo de Entrega solo para EMS */}
+            {formData.tipoCotizacion === 'B' && (
+              <Grid item xs={12} sx={{ mt: 4 }}>
+                <Typography
+                  variant='h6'
+                  sx={{
+                    mb: 1,
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    textTransform: 'none',
+                    borderBottom: '1px solid',
+                    borderColor: 'primary.main',
+                    pb: 1
+                  }}
+                >
+                  Plazo de Entrega:
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  placeholder='Ingrese el plazo de entrega...'
+                  value={formData.plazoEntrega || ''}
+                  onChange={e => handleChange('plazoEntrega', e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'background.paper'
+                    }
+                  }}
+                />
+              </Grid>
+            )}
+
+            {/* Campo de Observaciones */}
+            <Grid item xs={12} sx={{ mt: 6 }}>
+              <Typography
+                variant='h6'
+                sx={{
+                  mb: 2,
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                  textTransform: 'none',
+                  borderBottom: '1px solid',
+                  borderColor: 'primary.main',
+                  pb: 1
+                }}
+              >
+                Observaciones:
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                placeholder='Ingrese aquí cualquier observación o nota adicional para la cotización...'
+                value={formData.observaciones}
+                onChange={e => handleChange('observaciones', e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'background.paper'
+                  }
+                }}
+              />
             </Grid>
           </Grid>
           <Grid

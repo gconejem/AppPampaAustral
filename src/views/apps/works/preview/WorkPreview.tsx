@@ -121,6 +121,12 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
                 <Typography>{obra.textoMandante || '-'}</Typography>
               </Grid>
             )}
+            <Grid item xs={12}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Correos
+              </Typography>
+              <Typography>{Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}</Typography>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -22,25 +22,19 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
-import InputAdornment from '@mui/material/InputAdornment'
-import SearchIcon from '@mui/icons-material/Search'
 import CircularProgress from '@mui/material/CircularProgress'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemText from '@mui/material/ListItemText'
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction'
 import Box from '@mui/material/Box'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
-import { toast } from 'react-hot-toast' // Para notificaciones
+import { toast } from 'react-hot-toast'
 
 // Types Imports
 import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
 
 // Import data
-import { PAISES, REGIONES_CHILE, SEGMENTOS, INDUSTRIAS, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
+import { PAISES, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
 
 // Import components
 import ContactSearch from '../components/ContactSearch'
@@ -49,24 +43,30 @@ import { useUbicacion } from '@/hooks/useUbicacion'
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: Cliente[]
   setData: (data: Cliente[] | ((prevData: Cliente[]) => Cliente[])) => void
 }
 
 // Modificar el initialFormData
 export const initialFormData: FormNonValidateType = {
   region: '',
-  city: '',
-  commune: '',
-  address: '',
-  phone: '',
-  website: '',
-  segment: '',
-  industry: '',
-  pais: 'Chile', // Establecer Chile como valor por defecto
+  ciudad: '',
+  comuna: '',
+  direccion: '',
+  telefono: '',
+  sitioWeb: '',
+  segmento: '',
+  industria: '',
+  pais: 'Chile',
   vendedor: '',
   condicionVenta: '',
-  observaciones: ''
+  observaciones: '',
+  contacto: {
+    nombre: '',
+    telefono: '',
+    email: '',
+    cargo: '',
+    isPrincipal: false
+  }
 }
 
 // Agregar el enum de condiciones de venta junto a los otros enums
@@ -94,13 +94,13 @@ const ROLES_CONTACTO = [
 
 const AddClienteDrawer = (props: Props) => {
   // Props
-  const { open, handleClose, userData, setData } = props
+  const { open, handleClose, setData } = props
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>({
     ...initialFormData,
-    pais: 'Chile', // Asegurar que Chile sea el valor por defecto
-    condicionesVenta: 'Contado' // Valor por defecto
+    pais: 'Chile',
+    condicionVenta: 'Contado'
   })
 
   const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean }>>([])
@@ -113,7 +113,7 @@ const AddClienteDrawer = (props: Props) => {
     telefono2: ''
   })
 
-  const { regiones, comunas, selectedRegion, setSelectedRegion } = useUbicacion()
+  const { regiones, comunas, selectedRegion, setSelectedRegion, selectedComuna, setSelectedComuna } = useUbicacion()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchContactValue, setSearchContactValue] = useState('')
@@ -135,9 +135,10 @@ const AddClienteDrawer = (props: Props) => {
   // Al inicio del componente, definir defaultValues
   const defaultValues: FormValidateType = {
     rut: '',
-    estado: 'active', // Valor por defecto
+    estado: 'active',
     razonSocial: '',
     nombreCliente: '',
+    region: '',
     ciudad: '',
     comuna: '',
     direccion: '',
@@ -310,47 +311,61 @@ const AddClienteDrawer = (props: Props) => {
     try {
       setIsSubmitting(true)
 
+      // Verificar que haya al menos un contacto
+      if (contactos.length === 0) {
+        toast.error('Debe agregar al menos un contacto')
+        setIsSubmitting(false)
+
+        return
+      }
+
+      // Log para ver los datos antes de enviar
+      console.log('Datos del formulario:', data)
+
+      // Estructurar los datos correctamente
       const clienteData = {
         rut: data.rut,
         estado: data.estado,
         razonSocial: data.razonSocial,
         nombreCliente: data.nombreCliente,
-        pais: formData.pais,
-        region: formData.region,
+        pais: formData.pais || 'Chile',
+        region: selectedRegion,
         ciudad: data.ciudad,
-        comuna: data.comuna,
+        comuna: selectedComuna,
         direccion: data.direccion,
         telefono: data.telefono,
         sitioWeb: data.sitioWeb,
         segmento: data.segmento,
         industria: data.industria,
+        giro: data.giro || '',
+        emailFacturacion: data.emailFacturacion || '',
+        fechaCreacion: new Date(),
         clientesContactos: {
-          create: contactos.map(contacto => ({
+          create: contactos.map(c => ({
+            cargo: c.contacto.cargo || 'Sin especificar',
+            isPrincipal: c.isPrincipal,
             contacto: {
               create: {
-                nombre: contacto.contacto.nombre,
-                cargo: contacto.contacto.cargo,
-                email: contacto.contacto.email,
-                telefono1: contacto.contacto.telefono1,
-                telefono2: contacto.contacto.telefono2
+                nombre: c.contacto.nombre,
+                email: c.contacto.email,
+                telefono1: c.contacto.telefono1,
+                telefono2: c.contacto.telefono2 || ''
               }
-            },
-            isPrincipal: false
+            }
           }))
         },
         condicionesComerciales: {
           create: {
             vendedor: data.vendedor,
-            condicionVenta: data.condicionVenta,
-            observaciones: data.observaciones
+            condicionVenta: formData.condicionVenta,
+            observaciones: data.observaciones || ''
           }
         }
       }
 
-      console.log('Datos a crear:', clienteData)
-      const response = await axios.post('/api/clientes', clienteData)
+      console.log('Datos a enviar al servidor:', clienteData)
 
-      console.log('Respuesta:', response.data)
+      const response = await axios.post('/api/clientes', clienteData)
 
       if (response.status === 201) {
         toast.success('Cliente creado exitosamente')
@@ -358,18 +373,17 @@ const AddClienteDrawer = (props: Props) => {
         resetForm()
         setContactos([])
 
-        if (props.setData) {
-          props.setData((prevData: Cliente[]): Cliente[] => [...prevData, response.data])
+        if (typeof setData === 'function') {
+          setData(prevData => [...prevData, response.data])
         }
       }
     } catch (error: any) {
-      console.error('Error:', error)
+      console.error('Error completo:', error)
 
-      // Mostrar mensaje específico para RUT duplicado
       if (error.response?.data?.message?.includes('Ya existe un cliente con el RUT')) {
         toast.error('Ya existe un cliente registrado con este RUT')
       } else {
-        toast.error('Error al crear el cliente')
+        toast.error('Error al crear el cliente: ' + (error.response?.data?.error || error.message))
       }
     } finally {
       setIsSubmitting(false)
@@ -383,7 +397,11 @@ const AddClienteDrawer = (props: Props) => {
 
   const handleReset = () => {
     handleClose()
+    resetForm()
     setFormData(initialFormData)
+    setContactos([])
+    setSelectedRegion('')
+    setSelectedComuna('')
   }
 
   // En el agregarContacto, validar antes de agregar
@@ -391,30 +409,38 @@ const AddClienteDrawer = (props: Props) => {
     console.log('Validando contacto antes de agregar:', nuevoContacto)
 
     if (!nuevoContacto.nombre) {
-      toast.error('El nombre es requerido')
+      toast.error('El nombre del contacto es requerido')
 
       return
     }
 
-    if (!validateEmail(nuevoContacto.email)) {
-      toast.error('Email inválido')
+    if (!nuevoContacto.email || !validateEmail(nuevoContacto.email)) {
+      toast.error('El email del contacto es inválido')
 
       return
     }
 
-    if (nuevoContacto.telefono1 && !validatePhone(nuevoContacto.telefono1)) {
-      toast.error('Formato de teléfono 1 inválido')
+    if (!nuevoContacto.telefono1) {
+      toast.error('El teléfono del contacto es requerido')
 
       return
     }
 
-    if (nuevoContacto.telefono2 && !validatePhone(nuevoContacto.telefono2)) {
-      toast.error('Formato de teléfono 2 inválido')
+    if (!nuevoContacto.cargo) {
+      toast.error('El cargo del contacto es requerido')
 
       return
     }
 
-    setContactos([...contactos, { contacto: nuevoContacto, isPrincipal: contactos.length === 0 }])
+    const newContact = {
+      contacto: {
+        ...nuevoContacto,
+        cargo: nuevoContacto.cargo
+      },
+      isPrincipal: contactos.length === 0
+    }
+
+    setContactos([...contactos, newContact])
     setNuevoContacto({
       nombre: '',
       cargo: '',
@@ -483,12 +509,13 @@ const AddClienteDrawer = (props: Props) => {
     setSearchResults([])
   }
 
-  // Datos de prueba
+  // Modificar el datosEjemplo
   const datosEjemplo: FormValidateType = {
     rut: '76.543.210-9',
     estado: 'active',
     razonSocial: 'Empresa de Prueba S.A.',
     nombreCliente: 'Empresa de Prueba',
+    region: 'Metropolitana',
     ciudad: 'Santiago',
     comuna: 'Las Condes',
     direccion: 'Av. Apoquindo 4800, Of. 1501',
@@ -501,16 +528,17 @@ const AddClienteDrawer = (props: Props) => {
     observaciones: 'Cliente de prueba para testing'
   }
 
+  // Modificar cargarDatosPrueba
   const cargarDatosPrueba = () => {
     // Cargar datos principales
-    Object.keys(datosEjemplo).forEach(key => {
-      setValue(key as keyof FormValidateType, datosEjemplo[key])
+    Object.entries(datosEjemplo).forEach(([key, value]) => {
+      setValue(key as keyof FormValidateType, value)
     })
 
     // Cargar datos no controlados por react-hook-form
     setFormData({
       ...formData,
-      pais: 'CL',
+      pais: 'Chile',
       region: 'Metropolitana'
     })
     setSelectedRegion('Metropolitana')
@@ -548,8 +576,6 @@ const AddClienteDrawer = (props: Props) => {
   // Modificar handleRegionChange
   const handleRegionChange = (value: string) => {
     console.log('Cambiando región a:', value)
-    console.log('REGIONES_CHILE[value]:', REGIONES_CHILE[value])
-
     setSelectedRegion(value) // Esto actualizará el estado en useUbicacion
     setValue('region', value)
     setValue('comuna', '')
@@ -793,57 +819,66 @@ const AddClienteDrawer = (props: Props) => {
               />
             </Grid>
           </Grid>
-          <Grid container spacing={5}>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel id='country'>País *</InputLabel>
-                <Select
-                  fullWidth
-                  id='country'
-                  value={formData.pais}
-                  onChange={e => setFormData({ ...formData, pais: e.target.value })}
-                  label='País *'
-                  labelId='country'
-                  defaultValue='Chile'
-                >
-                  {PAISES.map(pais => (
-                    <MenuItem key={pais.value} value={pais.value}>
-                      {pais.label}
-                    </MenuItem>
-                  ))}
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>País</InputLabel>
+                <Select label='País' value={formData.pais} onChange={e => handleChange('pais', e.target.value)}>
+                  <MenuItem value='Chile'>Chile</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel>Región *</InputLabel>
-                <Select value={selectedRegion} onChange={e => handleRegionChange(e.target.value)} label='Región *'>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Región</InputLabel>
+                <Select
+                  label='Región'
+                  value={selectedRegion}
+                  onChange={e => {
+                    const value = e.target.value
+
+                    setSelectedRegion(value)
+                    setSelectedComuna('')
+                    setValue('region', value)
+                  }}
+                  error={!!errors.region}
+                >
+                  <MenuItem value=''>Seleccione una región</MenuItem>
                   {regiones.map(region => (
                     <MenuItem key={region.id} value={region.nombre}>
                       {region.nombre}
                     </MenuItem>
                   ))}
                 </Select>
+                {errors.region && <FormHelperText sx={{ color: 'error.main' }}>{errors.region.message}</FormHelperText>}
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Comuna *</InputLabel>
-                <Controller
-                  name='comuna'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <Select {...field} label='Comuna *' disabled={!selectedRegion}>
-                      <MenuItem value=''>Seleccione una comuna</MenuItem>
-                      {comunas.map(comuna => (
-                        <MenuItem key={comuna.id} value={comuna.nombre}>
-                          {comuna.nombre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  )}
-                />
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Comuna</InputLabel>
+                <Select
+                  label='Comuna'
+                  value={selectedComuna}
+                  onChange={e => {
+                    const value = e.target.value
+
+                    setSelectedComuna(value)
+                    setValue('comuna', value)
+                  }}
+                  error={!!errors.comuna}
+                  disabled={!selectedRegion}
+                >
+                  <MenuItem value=''>Seleccione una comuna</MenuItem>
+                  {selectedRegion &&
+                    comunas.map(comuna => (
+                      <MenuItem key={comuna.id} value={comuna.nombre}>
+                        {comuna.nombre}
+                      </MenuItem>
+                    ))}
+                </Select>
+                {errors.comuna && <FormHelperText sx={{ color: 'error.main' }}>{errors.comuna.message}</FormHelperText>}
               </FormControl>
             </Grid>
           </Grid>
@@ -952,24 +987,64 @@ const AddClienteDrawer = (props: Props) => {
               </FormControl>
             </Grid>
           </Grid>
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='giro'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Giro' placeholder='Ingrese el giro del cliente' />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='emailFacturacion'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Email de Facturación'
+                    placeholder='ejemplo@empresa.com'
+                    type='email'
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
 
           {/* Sección de Contactos */}
           <Divider sx={{ my: 4 }} />
           <Grid container alignItems='center' spacing={2}>
-            <Grid item xs={6}>
-              <Typography variant='h5'>Contactos</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <ContactSearch
-                onContactSelect={contact => {
-                  const newContact = {
-                    contacto: contact,
-                    isPrincipal: contactos.length === 0
-                  }
-
-                  setContactos([...contactos, newContact])
+            <Grid item xs={12}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 4,
+                  gap: 4 // Agregar espacio entre elementos
                 }}
-              />
+              >
+                <Typography variant='h5' sx={{ minWidth: 'fit-content' }}>
+                  Contactos
+                </Typography>
+                <Box sx={{ flexGrow: 1, maxWidth: '600px' }}>
+                  {' '}
+                  {/* Contenedor para la búsqueda */}
+                  <ContactSearch
+                    onContactSelect={contact => {
+                      const newContact = {
+                        contacto: contact,
+                        isPrincipal: contactos.length === 0
+                      }
+
+                      setContactos([...contactos, newContact])
+                    }}
+                  />
+                </Box>
+              </Box>
             </Grid>
           </Grid>
 
@@ -978,222 +1053,95 @@ const AddClienteDrawer = (props: Props) => {
               <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
                 <TableRow>
                   <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
+                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                   >
                     CARGO
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
+                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                   >
                     NOMBRE
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
+                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                   >
                     EMAIL
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
+                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                   >
                     TELÉFONO 1
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0', width: '200px' }}
+                    sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
                   >
                     TELÉFONO 2
                   </TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid  #E0E0E0' }}>
+                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0' }}>
                     ACCIÓN
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Fila para nuevo contacto */}
-                <TableRow>
-                  <TableCell>
-                    <FormControl fullWidth size='small'>
-                      <Select
-                        value={nuevoContacto.cargo}
-                        onChange={e => setNuevoContacto({ ...nuevoContacto, cargo: e.target.value })}
-                      >
-                        {ROLES_CONTACTO.map(rol => (
-                          <MenuItem key={rol.value} value={rol.value}>
-                            {rol.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.nombre}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
-                      placeholder='Nombre'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.email}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
-                      placeholder='Email'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.telefono1}
-                      onChange={e => {
-                        const formatted = formatPhone(e.target.value)
-
-                        setNuevoContacto({ ...nuevoContacto, telefono1: formatted })
-                      }}
-                      placeholder='Teléfono 1'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      value={nuevoContacto.telefono2}
-                      onChange={e => {
-                        const formatted = formatPhone(e.target.value)
-
-                        setNuevoContacto({ ...nuevoContacto, telefono2: formatted })
-                      }}
-                      placeholder='Teléfono 2'
-                      fullWidth
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton onClick={agregarContacto}>
-                      <i className='ri-add-line' />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-
-                {/* Lista de contactos agregados */}
+                {/* Lista de contactos asignados */}
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
-                    {editingContactIndex === index ? (
-                      // Modo edición
-                      <>
-                        <TableCell>
-                          <FormControl fullWidth size='small'>
-                            <Select
-                              value={editingContact.cargo}
-                              onChange={e => setEditingContact({ ...editingContact, cargo: e.target.value })}
-                            >
-                              {ROLES_CONTACTO.map(rol => (
-                                <MenuItem key={rol.value} value={rol.value}>
-                                  {rol.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.nombre}
-                            onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
-                            placeholder='Nombre'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.email}
-                            onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
-                            placeholder='Email'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.telefono1}
-                            onChange={e => {
-                              const formatted = formatPhone(e.target.value)
+                    <TableCell>
+                      <FormControl fullWidth size='small'>
+                        <Select
+                          value={contacto.contacto.cargo || ''}
+                          onChange={e => {
+                            const updatedContactos = [...contactos]
 
-                              setEditingContact({ ...editingContact, telefono1: formatted })
-                            }}
-                            placeholder='Teléfono 1'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.telefono2}
-                            onChange={e => {
-                              const formatted = formatPhone(e.target.value)
-
-                              setEditingContact({ ...editingContact, telefono2: formatted })
-                            }}
-                            placeholder='Teléfono 2'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='success' onClick={handleSaveEdit}>
-                              <i className='ri-check-line' />
-                            </IconButton>
-                            <IconButton color='error' onClick={handleCancelEdit}>
-                              <i className='ri-close-line' />
-                            </IconButton>
-                            <IconButton
-                              color={editingContact.isPrincipal ? 'warning' : 'default'}
-                              onClick={() =>
-                                setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
+                            updatedContactos[index] = {
+                              ...contacto,
+                              contacto: {
+                                ...contacto.contacto,
+                                cargo: e.target.value
                               }
-                            >
-                              <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </>
-                    ) : (
-                      // Modo visualización
-                      <>
-                        <TableCell>
-                          {ROLES_CONTACTO.find(r => r.value === contacto.contacto.cargo)?.label ||
-                            contacto.contacto.cargo}
-                        </TableCell>
-                        <TableCell>{contacto.contacto.nombre}</TableCell>
-                        <TableCell>{contacto.contacto.email}</TableCell>
-                        <TableCell>{contacto.contacto.telefono1}</TableCell>
-                        <TableCell>{contacto.contacto.telefono2}</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='info' onClick={() => handleEditClick(index)}>
-                              <i className='ri-edit-line' />
-                            </IconButton>
-                            <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                            <IconButton
-                              color={contacto.isPrincipal ? 'warning' : 'default'}
-                              onClick={() => {
-                                const updatedContactos = contactos.map((c, i) => ({
-                                  ...c,
-                                  isPrincipal: i === index ? !c.isPrincipal : false
-                                }))
+                            }
+                            setContactos(updatedContactos)
+                          }}
+                        >
+                          {ROLES_CONTACTO.map(rol => (
+                            <MenuItem key={rol.value} value={rol.value}>
+                              {rol.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </TableCell>
+                    <TableCell>{contacto.contacto.nombre}</TableCell>
+                    <TableCell>{contacto.contacto.email}</TableCell>
+                    <TableCell>{contacto.contacto.telefono1}</TableCell>
+                    <TableCell>{contacto.contacto.telefono2}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <IconButton
+                          color='error'
+                          onClick={() => {
+                            const updatedContactos = contactos.filter((_, i) => i !== index)
 
-                                setContactos(updatedContactos)
-                              }}
-                            >
-                              <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </>
-                    )}
+                            setContactos(updatedContactos)
+                          }}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                        <IconButton
+                          color={contacto.isPrincipal ? 'warning' : 'default'}
+                          onClick={() => {
+                            const updatedContactos = contactos.map((c, i) => ({
+                              ...c,
+                              isPrincipal: i === index ? !c.isPrincipal : false
+                            }))
+
+                            setContactos(updatedContactos)
+                          }}
+                        >
+                          <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

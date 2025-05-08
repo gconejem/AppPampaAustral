@@ -16,11 +16,7 @@ import Box from '@mui/material/Box'
 
 import Logo from '@components/layout/shared/Logo'
 
-// Type Imports
-import type { InvoiceType } from '@/types/apps/invoiceTypes'
-
 // Style Imports
-import tableStyles from '@core/styles/table.module.css'
 import './print.css'
 
 // Función auxiliar para formatear fechas
@@ -38,17 +34,39 @@ const PreviewCard = () => {
   const [previewData, setPreviewData] = useState<any>(null)
 
   useEffect(() => {
-    const data = localStorage.getItem('cotizacionPreview')
+    try {
+      const data = localStorage.getItem('cotizacionPreview')
 
-    if (data) {
-      const parsedData = JSON.parse(data)
+      if (data) {
+        const parsedData = JSON.parse(data)
 
-      console.log('Datos recuperados:', parsedData)
-      setPreviewData(parsedData)
+        console.log('Datos recuperados del localStorage:', parsedData)
+        console.log('Contacto recuperado:', parsedData.contacto)
+        console.log('Detalles recuperados:', parsedData.detalles)
+
+        // Validar la estructura de los datos
+        if (!parsedData.detalles || !Array.isArray(parsedData.detalles)) {
+          console.error('Los detalles no tienen el formato esperado:', parsedData.detalles)
+          parsedData.detalles = []
+        }
+
+        if (!parsedData.contacto || typeof parsedData.contacto !== 'object') {
+          console.error('El contacto no tiene el formato esperado:', parsedData.contacto)
+          parsedData.contacto = null
+        }
+
+        setPreviewData(parsedData)
+      } else {
+        console.error('No se encontraron datos en localStorage')
+      }
+    } catch (error) {
+      console.error('Error al recuperar datos del localStorage:', error)
     }
   }, [])
 
-  if (!previewData) return null
+  if (!previewData) {
+    return <Typography>No hay datos para mostrar</Typography>
+  }
 
   return (
     <Card>
@@ -83,13 +101,29 @@ const PreviewCard = () => {
             <Typography variant='subtitle2' sx={{ mb: 2 }}>
               EN ATENCIÓN A:
             </Typography>
-            {previewData.contacto && (
-              <div>
-                <Typography>{previewData.contacto.nombre}</Typography>
-                <Typography>{previewData.contacto.email}</Typography>
-                <Typography>{previewData.contacto.cargo}</Typography>
-                <Typography>{previewData.contacto.telefono1}</Typography>
-              </div>
+            {previewData.contacto ? (
+              <Box sx={{ mb: 3 }}>
+                <Typography>
+                  <strong>Nombre:</strong> {previewData.contacto.nombre || 'Sin nombre'}
+                </Typography>
+                <Typography>
+                  <strong>Cargo:</strong> {previewData.contacto.cargo || 'Sin cargo'}
+                </Typography>
+                {previewData.contacto.email && (
+                  <Typography>
+                    <strong>Email:</strong> {previewData.contacto.email}
+                  </Typography>
+                )}
+                {previewData.contacto.telefono1 && (
+                  <Typography>
+                    <strong>Teléfono:</strong> {previewData.contacto.telefono1}
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Typography color='text.secondary' sx={{ mb: 3 }}>
+                Sin contacto asignado
+              </Typography>
             )}
           </Grid>
           <Grid item xs={6}>
@@ -107,18 +141,43 @@ const PreviewCard = () => {
           <Typography variant='subtitle2' sx={{ mb: 2 }}>
             DATOS DEL PROYECTO
           </Typography>
-          <Typography>Tipo: {previewData.tipoCotizacion}</Typography>
-          <Typography>Proyecto: {previewData.nombreProyecto}</Typography>
-          <Typography>Empresa: {previewData.empresa}</Typography>
-          <Typography>Ubicación: {previewData.ubicacion}</Typography>
+          <Typography>
+            <strong>Tipo:</strong>{' '}
+            {previewData.tipoCotizacion === 'A'
+              ? 'Valores Unitarios'
+              : previewData.tipoCotizacion === 'B'
+                ? 'EMS'
+                : 'Mensual'}
+          </Typography>
+          <Typography>
+            <strong>Proyecto:</strong> {previewData.nombreProyecto || 'No especificado'}
+          </Typography>
+          <Typography>
+            <strong>Empresa:</strong> {previewData.empresa || 'No especificada'}
+          </Typography>
+          <Typography>
+            <strong>Ubicación:</strong> {previewData.ubicacion || 'No especificada'}
+          </Typography>
+          <Typography>
+            <strong>Forma de Pago:</strong>{' '}
+            {previewData.formaPago === 'CONTADO'
+              ? 'Contado'
+              : previewData.formaPago === 'CREDITO_30'
+                ? 'Crédito 30 días'
+                : previewData.formaPago === 'CREDITO_60'
+                  ? 'Crédito 60 días'
+                  : previewData.formaPago === 'CREDITO_90'
+                    ? 'Crédito 90 días'
+                    : 'No especificada'}
+          </Typography>
         </Box>
 
         {/* Tabla de Productos */}
         <Table sx={{ mb: 4 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'primary.lighter' }}>
-              <TableCell>SERVICIO/ENSAYO</TableCell>
               <TableCell>ÁREA</TableCell>
+              <TableCell>SERVICIO/ENSAYO</TableCell>
               <TableCell>DESCRIPCIÓN</TableCell>
               <TableCell align='right'>CANTIDAD</TableCell>
               <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
@@ -138,8 +197,8 @@ const PreviewCard = () => {
                   }
                 }}
               >
-                <TableCell>{item.servicio || ''}</TableCell>
                 <TableCell>{item.area || ''}</TableCell>
+                <TableCell>{item.servicio || ''}</TableCell>
                 <TableCell>{item.descripcion || ''}</TableCell>
                 <TableCell align='right'>{item.cantidad || 0}</TableCell>
                 <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
@@ -168,8 +227,61 @@ const PreviewCard = () => {
         {/* Observaciones */}
         {previewData.observaciones && (
           <Box sx={{ mt: 4 }}>
-            <Typography variant='subtitle2'>OBSERVACIONES:</Typography>
+            <Typography variant='subtitle2' sx={{ mb: 2, color: 'text.secondary' }}>
+              OBSERVACIONES:
+            </Typography>
             <Typography sx={{ mt: 1 }}>{previewData.observaciones}</Typography>
+          </Box>
+        )}
+
+        {/* Notas específicas para tipo A */}
+        {previewData.tipoCotizacion === 'A' && (
+          <Box sx={{ mt: 4, px: 4 }}>
+            <Typography variant='h6' sx={{ mb: 2, color: 'text.secondary' }}>
+              Notas:
+            </Typography>
+            <Typography
+              component='div'
+              variant='body2'
+              sx={{
+                '& > p': { mb: 2 },
+                '& > ul': {
+                  listStyle: 'none',
+                  pl: 0,
+                  '& > li': {
+                    mb: 1,
+                    position: 'relative',
+                    pl: 2,
+                    '&::before': {
+                      content: '"•"',
+                      position: 'absolute',
+                      left: 0
+                    }
+                  }
+                }
+              }}
+            >
+              <p>Valores unitarios Neto (sin IVA incluido)</p>
+              <p>Adicionales contra evento:</p>
+              <ul>
+                <li>Copia digital adicional tiene un costo de 0.15 UF neto.</li>
+                <li>
+                  Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de
+                  responsabilidad de Laboratorio Pampa Austral Ltda.
+                </li>
+                <li>Informe con firma y timbres físicos tiene un costo de 0.58 UF neto</li>
+              </ul>
+              <p>Recargos por jornadas extraordinarias (a todos los ítem de la cotización):</p>
+              <ul>
+                <li>50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+                <li>100% Adicional Sábado, Domingo o Festivo.</li>
+              </ul>
+              <p>
+                Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos
+                o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva
+                cotización si corresponde.
+              </p>
+            </Typography>
           </Box>
         )}
       </CardContent>

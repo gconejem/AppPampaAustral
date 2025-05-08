@@ -70,6 +70,8 @@ import OptionMenu from '@core/components/option-menu'
 import EditProductForm from '../edit/EditProductForm'
 import CreatePackageModal from './CreatePackageModal'
 import EditPackageModal from '../edit/EditPackageModal'
+import PreviewProductForm from '../preview/PreviewProductForm'
+import PreviewPackageForm from '../preview/PreviewPackageForm'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -177,15 +179,20 @@ export interface Producto {
   area: string
   familia: string
   tipo: string
-  precio: number
   estado: string
   esPaquete: boolean
   norma?: string
-  listaPrecios?: string
   aplicaImpuesto: boolean
   category?: string
   status?: string
   stock?: boolean
+  listasPrecios: {
+    precio: number
+    listaPrecio: {
+      id: number
+      nombre: string
+    }
+  }[]
 }
 
 interface ProductoListItem {
@@ -238,6 +245,12 @@ const ProductListTable = () => {
 
   const [editPackageModalOpen, setEditPackageModalOpen] = useState(false)
 
+  // Agregar estado para el modal de preview
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [previewProduct, setPreviewProduct] = useState<Producto | null>(null)
+  const [previewPackageModalOpen, setPreviewPackageModalOpen] = useState(false)
+  const [previewPackage, setPreviewPackage] = useState<any | null>(null)
+
   const params = useParams()
   const locale = params?.lang || 'es'
 
@@ -276,12 +289,15 @@ const ProductListTable = () => {
       if (data.productos) {
         const productosFormateados = data.productos.map(p => ({
           ...p,
-          tipo: p.esPaquete ? 'Paquete' : 'Ensayo'
+          tipo: p.esPaquete ? 'Paquete' : 'Ensayo',
+
+          // Asegurarse de que listasPrecios sea un array
+          listasPrecios: Array.isArray(p.listasPrecios) ? p.listasPrecios : []
         }))
 
         setProductos(productosFormateados)
         setFilteredProductos(productosFormateados)
-        setTotalProductos(data.total || productosFormateados.length)
+        setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
@@ -480,18 +496,26 @@ const ProductListTable = () => {
     }
   }, [open])
 
-  // Asegurarse de que los valores de las celdas sean strings
-  const renderCellContent = (value: any): string => {
+  // Actualizar la función renderCellContent para manejar los precios
+  const renderCellContent = (value: any, producto?: Producto): string => {
     if (value === null || value === undefined) return ''
-    if (typeof value === 'boolean') return value ? 'Sí' : 'No'
 
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) return value.map(v => renderCellContent(v)).join(', ')
+    if (producto && 'listasPrecios' in producto) {
+      const firstPrice = producto.listasPrecios?.[0]
 
-      return JSON.stringify(value)
+      if (firstPrice?.precio !== undefined) {
+        return new Intl.NumberFormat('es-CL', {
+          style: 'currency',
+          currency: 'CLP'
+        }).format(firstPrice.precio)
+      }
     }
 
-    return String(value)
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No'
+    if (typeof value === 'number') return value.toString()
+    if (typeof value === 'string') return value
+
+    return ''
   }
 
   // Función para abrir el modal correcto según el tipo
@@ -596,6 +620,27 @@ const ProductListTable = () => {
     }
   }
 
+  // Función para abrir el preview
+  const handlePreviewOpen = async (producto: Producto) => {
+    if (producto.esPaquete) {
+      try {
+        // Obtener los productos completos del paquete
+        const response = await fetch(`/api/productos/${producto.productoId}/productos`)
+        const data = await response.json()
+
+        // data.productos debe ser un array de productos completos
+        setPreviewPackage({ ...producto, productosEnPaquete: data.productos || [] })
+        setPreviewPackageModalOpen(true)
+      } catch (error) {
+        setPreviewPackage(producto)
+        setPreviewPackageModalOpen(true)
+      }
+    } else {
+      setPreviewProduct(producto)
+      setPreviewModalOpen(true)
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -620,52 +665,48 @@ const ProductListTable = () => {
           />
         )
       },
-      {
-        accessorKey: 'sku',
+      columnHelper.accessor('sku', {
         header: 'SKU',
-        cell: ({ row }: any) => <Typography>{row.original.sku}</Typography>
-      },
-      {
-        accessorKey: 'nombre',
+        cell: ({ row }) => renderCellContent(row.original.sku)
+      }),
+      columnHelper.accessor('nombre', {
         header: 'Ensayos/Servicio',
-        cell: ({ row }: any) => (
+        cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.nombre}
+            {renderCellContent(row.original.nombre)}
           </Typography>
         )
-      },
-      {
-        accessorKey: 'area',
+      }),
+      columnHelper.accessor('area', {
         header: 'ÁREA',
-        cell: ({ row }: any) => <Typography>{row.original.area}</Typography>
-      },
-      {
-        accessorKey: 'familia',
+        cell: ({ row }) => renderCellContent(row.original.area)
+      }),
+      columnHelper.accessor('familia', {
         header: 'FAMILIA',
-        cell: ({ row }: any) => <Typography>{row.original.familia}</Typography>
-      },
-      {
-        accessorKey: 'esPaquete',
+        cell: ({ row }) => renderCellContent(row.original.familia)
+      }),
+      columnHelper.accessor('esPaquete', {
         header: 'PAQUETE',
-        cell: ({ row }: any) => <Switch checked={row.original.esPaquete} readOnly />,
+        cell: ({ row }) => <Switch checked={row.original.esPaquete} readOnly />,
         enableSorting: false
-      },
-      {
-        accessorKey: 'tipo',
+      }),
+      columnHelper.accessor('tipo', {
         header: 'TIPO',
-        cell: ({ row }: any) => <Typography>{row.original.tipo}</Typography>
-      },
-      {
-        accessorKey: 'estado',
+        cell: ({ row }) => renderCellContent(row.original.tipo)
+      }),
+      columnHelper.accessor('estado', {
         header: 'ESTADO',
-        cell: ({ row }: any) => <Switch checked={row.original.estado === 'ACTIVO'} readOnly />,
+        cell: ({ row }) => <Switch checked={row.original.estado === 'ACTIVO'} readOnly />,
         enableSorting: false
-      },
+      }),
       {
         id: 'actions',
         header: 'Acciones',
         cell: ({ row }: any) => (
           <div className='flex items-center'>
+            <IconButton size='small' onClick={() => handlePreviewOpen(row.original)}>
+              <i className='ri-eye-line text-[22px] text-textSecondary' />
+            </IconButton>
             <IconButton size='small' onClick={() => handleEditOpen(row.original)}>
               <i className='ri-edit-box-line text-[22px] text-textSecondary' />
             </IconButton>
@@ -860,6 +901,16 @@ const ProductListTable = () => {
           }}
         />
         <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} />
+        <PreviewProductForm
+          open={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+          product={previewProduct}
+        />
+        <PreviewPackageForm
+          open={previewPackageModalOpen}
+          onClose={() => setPreviewPackageModalOpen(false)}
+          paquete={previewPackage}
+        />
         <EditProductForm
           open={editModalOpen}
           onClose={() => setEditModalOpen(false)}

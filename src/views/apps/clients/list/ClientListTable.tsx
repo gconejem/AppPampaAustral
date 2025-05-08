@@ -623,9 +623,12 @@ const ClientListTable = ({ userData, setData }: Props) => {
       }),
       columnHelper.accessor('razonSocial', {
         header: 'CLIENTE',
-        cell: ({ row }: { row: Row<Cliente> }) => (
-          <Typography>{row.original.nombreCliente || row.original.razonSocial}</Typography>
-        )
+        cell: ({ row }: { row: Row<Cliente> }) => {
+          const text = row.original.nombreCliente || row.original.razonSocial
+          const displayText = text.length > 20 ? `${text.substring(0, 20)}...` : text
+
+          return <Typography title={text}>{displayText}</Typography>
+        }
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
@@ -689,10 +692,11 @@ const ClientListTable = ({ userData, setData }: Props) => {
           )
         }
       }),
-      columnHelper.accessor('contacto', {
+      columnHelper.accessor('clientesContactos', {
         header: 'CONTACTO',
         cell: ({ row }) => {
           const cliente = row.original
+          const contactoPrincipal = cliente.clientesContactos?.find(c => c.isPrincipal)
 
           if (!cliente.clientesContactos || cliente.clientesContactos.length === 0) {
             return (
@@ -703,19 +707,33 @@ const ClientListTable = ({ userData, setData }: Props) => {
             )
           }
 
+          const formatContactName = (name: string) => {
+            return name.length > 15 ? `${name.substring(0, 15)}...` : name
+          }
+
           return (
-            <div className='flex items-center gap-2'>
-              <div className='w-2 h-2 rounded-full bg-success' />
-              <Button
-                variant='text'
-                size='small'
-                onClick={() => {
-                  setSelectedContacts(cliente.clientesContactos)
-                  setContactsModalOpen(true)
-                }}
-              >
-                {cliente.clientesContactos.length} contacto{cliente.clientesContactos.length > 1 ? 's' : ''}
-              </Button>
+            <div
+              className='flex items-center gap-2 cursor-pointer'
+              onClick={() => {
+                setSelectedContacts(cliente.clientesContactos || [])
+                setContactsModalOpen(true)
+              }}
+            >
+              {contactoPrincipal ? (
+                <>
+                  <i className='ri-star-fill text-warning' style={{ fontSize: '1.25rem' }} />
+                  <Typography title={contactoPrincipal.contacto?.nombre}>
+                    {formatContactName(contactoPrincipal.contacto?.nombre || '')}
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <i className='ri-user-line text-primary' style={{ fontSize: '1.25rem' }} />
+                  <Typography title={cliente.clientesContactos[0].contacto?.nombre}>
+                    {formatContactName(cliente.clientesContactos[0].contacto?.nombre || '')}
+                  </Typography>
+                </>
+              )}
             </div>
           )
         }

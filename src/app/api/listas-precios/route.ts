@@ -50,14 +50,20 @@ async function initializeListasPrecios() {
 
 export async function GET() {
   try {
-    // Inicializar listas de precios si no existen
-    await initializeListasPrecios()
+    const listasPrecios = await prisma.listaPrecio.findMany({
+      where: {
+        // Solo listas activas si hay un campo de estado
+      },
+      select: {
+        id: true,
+        nombre: true
+      },
+      orderBy: {
+        nombre: 'asc'
+      }
+    })
 
-    const listasPrecio = await prisma.listaPrecio.findMany()
-
-    console.log('Listas de precios existentes:', listasPrecio)
-
-    return NextResponse.json(listasPrecio)
+    return NextResponse.json(listasPrecios)
   } catch (error) {
     console.error('Error al obtener listas de precios:', error)
 

@@ -48,7 +48,6 @@ interface Producto {
   productoId: number
   sku: string
   nombre: string
-  precio?: number
   cantidad?: number
   area?: string
   familia?: string
@@ -56,14 +55,6 @@ interface Producto {
   estado?: string
   esPaquete?: boolean
   norma?: string
-  listaPrecios?: Array<{
-    listaPrecio: {
-      id: number
-      nombre: string
-    }
-    precio: number
-    activo: boolean
-  }>
 }
 
 const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose }) => {
@@ -73,11 +64,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [descripcionPaquete, setDescripcionPaquete] = useState('')
   const [norma, setNorma] = useState('')
   const [area, setArea] = useState('')
-  const [familia, setFamilia] = useState('')
-  const [precio, setPrecio] = useState<string>('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
+  const [familia, setFamilia] = useState('')
 
-  // Opciones predefinidas para área y familia
+  // Opciones predefinidas para área
   const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
   const familiaOptions = ['Clasificación', 'Compactación', 'Densidad', 'Granulometria', 'Límites', 'Resistencia']
 
@@ -85,56 +75,63 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [buscarPaquete, setBuscarPaquete] = useState('')
   const [buscarProductos, setBuscarProductos] = useState('')
 
-  // Estados para productos
+  // Estados para productos y paginación real
   const [productos, setProductos] = useState<Producto[]>([])
+  const [totalProductos, setTotalProductos] = useState(0)
   const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>([])
 
   // Estados para manejar las selecciones
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [selectedPaquetes, setSelectedPaquetes] = useState<number[]>([])
 
+  // Estado para cantidades
+  const [cantidades, setCantidades] = useState<{ [key: number]: number }>({})
+
   // Estados para paginación
   const [productsPage, setProductsPage] = useState(0)
   const [packagePage, setPackagePage] = useState(0)
-  const itemsPerPage = 10
+  const ITEMS_PER_PAGE = 10
 
-  // Cargar productos y listas de precios cuando se abre el modal
+  // Calcular el total de páginas de productos (debe estar antes de su uso)
+  const totalProductPages = Math.ceil(totalProductos / ITEMS_PER_PAGE)
+
+  // Cargar productos y listas de precios cuando se abre el modal o cambia la página/búsqueda/área
   useEffect(() => {
     if (open) {
-      // Cargar productos
-      fetch('/api/productos?esPaquete=false')
+      const params = new URLSearchParams()
+
+      params.append('esPaquete', 'false')
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (buscarProductos) params.append('search', buscarProductos)
+      if (area) params.append('area', area)
+
+      fetch(`/api/productos?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
-          console.log('Productos cargados:', data)
           setProductos(data.productos || [])
+          setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
         })
         .catch(error => {
           console.error('Error al cargar productos:', error)
           toast.error('Error al cargar los productos')
         })
     }
-  }, [open])
-
-  // Filtrar productos basado en la búsqueda y paginación
-  const productosFiltrados = productos.filter(
-    producto => producto && producto.nombre && producto.nombre.toLowerCase().includes(buscarProductos.toLowerCase())
-  )
-
-  const paginatedProducts = productosFiltrados.slice(productsPage * itemsPerPage, (productsPage + 1) * itemsPerPage)
-
-  const totalProductPages = Math.ceil(productosFiltrados.length / itemsPerPage)
+  }, [open, productsPage, buscarProductos, area])
 
   // Filtrar productos seleccionados basado en la búsqueda y paginación
   const productosSeleccionadosFiltrados = productosSeleccionados.filter(
     producto => producto && producto.nombre && producto.nombre.toLowerCase().includes(buscarPaquete.toLowerCase())
   )
 
+  const startIndexPackage = packagePage * ITEMS_PER_PAGE
+
   const paginatedPackageProducts = productosSeleccionadosFiltrados.slice(
-    packagePage * itemsPerPage,
-    (packagePage + 1) * itemsPerPage
+    startIndexPackage,
+    startIndexPackage + ITEMS_PER_PAGE
   )
 
-  const totalPackagePages = Math.ceil(productosSeleccionadosFiltrados.length / itemsPerPage)
+  const totalPackagePages = Math.ceil(productosSeleccionadosFiltrados.length / ITEMS_PER_PAGE)
 
   const handleCreatePackage = async () => {
     try {
@@ -145,22 +142,12 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         return
       }
 
-      // Validar precio
-      if (!precio || precio === '0') {
-        toast.error('Por favor ingrese un precio válido')
-
-        return
-      }
-
       // Validar que haya productos seleccionados
       if (productosSeleccionados.length === 0) {
         toast.error('Por favor seleccione al menos un producto para el paquete')
 
         return
       }
-
-      // Convertir valores a números
-      const precioNumerico = Number(precio)
 
       // Crear el objeto con los datos
       const packageData = {
@@ -173,15 +160,13 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         familia: familia || '',
         norma: norma || '',
         aplicaImpuesto: aplicaImpuesto,
-        precio: precioNumerico,
         productos: productosSeleccionados.map(producto => ({
           productoId: producto.productoId,
-          cantidad: 1,
+          cantidad: cantidades[producto.productoId] || 1,
           descripcion: `Producto incluido en paquete ${nombre}`
         }))
       }
 
-      // Log para debug
       console.log('Datos del paquete a enviar:', packageData)
 
       const response = await fetch('/api/productos', {
@@ -227,12 +212,19 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           </Grid>
         </Grid>
 
-        {/* Nueva fila para área, familia y precio */}
+        {/* Nueva fila para área y cantidad */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Área</InputLabel>
-              <Select value={area} label='Área' onChange={e => setArea(e.target.value)}>
+              <Select
+                value={area}
+                label='Área'
+                onChange={e => {
+                  setArea(e.target.value)
+                  setProductsPage(0) // Resetear la página al cambiar el filtro
+                }}
+              >
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
@@ -262,23 +254,23 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <TextField
               fullWidth
-              label='Precio'
-              value={precio}
-              onChange={e => {
-                const value = e.target.value
-
-                if (!isNaN(Number(value))) {
-                  setPrecio(value)
-                  console.log('Precio actualizado:', value) // Debug
-                }
-              }}
+              label='Cantidad'
               type='number'
               size='small'
-              required
-              error={!precio}
-              helperText={!precio ? 'El precio es requerido' : ''}
+              defaultValue={1}
+              onChange={e => {
+                const value = parseInt(e.target.value) || 1
+                const selectedIds = productosSeleccionados.map(p => p.productoId)
+                const newCantidades = { ...cantidades }
+
+                selectedIds.forEach(id => {
+                  newCantidades[id] = value
+                })
+
+                setCantidades(newCantidades)
+              }}
               InputProps={{
-                startAdornment: <InputAdornment position='start'>$</InputAdornment>
+                inputProps: { min: 1 }
               }}
             />
           </Grid>
@@ -353,10 +345,12 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={5}>
             <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
               <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderBottom: '1px solid #e0e0e0' }}>
-                <Typography variant='subtitle2'>PRODUCTOS ({productosFiltrados.length})</Typography>
+                <Typography variant='subtitle2'>
+                  PRODUCTOS ({totalProductos}) - Página {productsPage + 1} de {totalProductPages}
+                </Typography>
               </Box>
               <List sx={{ height: 250, overflow: 'auto' }}>
-                {paginatedProducts.map(producto => (
+                {productos.map(producto => (
                   <ListItem
                     key={producto.productoId}
                     dense
@@ -402,7 +396,17 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 variant='contained'
                 size='small'
                 onClick={() => {
-                  const productsToMove = productos.filter(p => selectedProducts.includes(p.productoId))
+                  const productsToMove = productos
+                    .filter(p => selectedProducts.includes(p.productoId))
+
+                    // Filtrar productos que ya están en el paquete
+                    .filter(p => !productosSeleccionados.some(ps => ps.productoId === p.productoId))
+
+                  if (productsToMove.length === 0) {
+                    toast.error('Los productos seleccionados ya están en el paquete')
+
+                    return
+                  }
 
                   setProductosSeleccionados(prev => [...prev, ...productsToMove])
                   setSelectedProducts([])
@@ -428,7 +432,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={5}>
             <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
               <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderBottom: '1px solid #e0e0e0' }}>
-                <Typography variant='subtitle2'>PAQUETE ({productosSeleccionadosFiltrados.length})</Typography>
+                <Typography variant='subtitle2'>
+                  PAQUETE ({productosSeleccionadosFiltrados.length}) - Página {packagePage + 1} de {totalPackagePages}
+                </Typography>
               </Box>
               <List sx={{ height: 250, overflow: 'auto' }}>
                 {paginatedPackageProducts.map(producto => (

@@ -1,27 +1,27 @@
 import { NextResponse } from 'next/server'
 
-import { TipoCotizacion } from '@prisma/client'
+import type { TipoCotizacion } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
 // Función auxiliar para normalizar el tipo de cotización
 const normalizeTipoCotizacion = (tipo: string): TipoCotizacion => {
-  if (!tipo) return TipoCotizacion.VALORES_UNITARIOS
+  if (!tipo) return 'A'
 
   const normalizedTipo = tipo.toUpperCase().trim()
 
   switch (normalizedTipo) {
     case 'A':
     case 'VALORES_UNITARIOS':
-      return TipoCotizacion.VALORES_UNITARIOS
+      return 'A'
     case 'B':
     case 'EMS':
-      return TipoCotizacion.EMS
+      return 'B'
     case 'C':
     case 'MENSUAL':
-      return TipoCotizacion.MENSUAL
+      return 'C'
     default:
-      return TipoCotizacion.VALORES_UNITARIOS
+      return 'A'
   }
 }
 
@@ -38,28 +38,11 @@ export async function GET() {
             comuna: true
           }
         },
-        contacto: {
-          include: {
-            contacto: true
-          }
-        }
+        contacto: true
       }
     })
 
-    // Log para ver los datos crudos
-    console.log('Datos crudos de cotizaciones:', JSON.stringify(cotizaciones, null, 2))
-
     const formattedCotizaciones = cotizaciones.map(cotizacion => {
-      // Log para ver cada cotización individual
-      console.log('Cotización individual:', {
-        id: cotizacion.id,
-        total: cotizacion.total,
-        totalType: typeof cotizacion.total,
-        contactoId: cotizacion.contactoId,
-        contactoDatos: cotizacion.contacto?.contacto?.nombre,
-        tipoCotizacion: cotizacion.tipoCotizacion
-      })
-
       return {
         id: cotizacion.id,
         numeroCotizacion: cotizacion.numeroCotizacion,
@@ -67,13 +50,11 @@ export async function GET() {
         fecha: cotizacion.fechaCreacion.toLocaleDateString(),
         estado: cotizacion.estado,
         tipo: normalizeTipoCotizacion(cotizacion.tipoCotizacion as string),
-        contacto: cotizacion.contacto?.contacto?.nombre || 'Sin contacto',
+        contacto: cotizacion.contacto || null,
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
-        total: parseFloat(cotizacion.total.toString()) // Convertir el Decimal a número
+        total: parseFloat(cotizacion.total.toString())
       }
     })
-
-    console.log('Cotizaciones formateadas:', formattedCotizaciones)
 
     return NextResponse.json(formattedCotizaciones)
   } catch (error) {
@@ -89,95 +70,97 @@ export async function POST(request: Request) {
 
     console.log('Body recibido:', body)
 
-    // Asegurar que fechaInicio y fechaFin sean fechas válidas
     const fechaInicio = body.fechaInicio ? new Date(body.fechaInicio) : new Date()
     const fechaFin = body.fechaFin ? new Date(body.fechaFin) : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
 
-    // Validar que las fechas sean válidas
     if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
       return NextResponse.json({ error: 'Fechas inválidas proporcionadas' }, { status: 400 })
     }
 
-    let contactoId = body.contactoId || null
+    // Manejar el contacto
+    let contactoId = body.contactoId
 
-    // Verifica si hay un nuevo contacto que crear
-    if (body.contacto && !contactoId) {
-      try {
-        // Crear contacto primero
+    // Si no hay contactoId pero hay datos de contacto, buscar o crear el contacto
+    if (!contactoId && body.contacto) {
+      const contactoExistente = await prisma.contacto.findFirst({
+        where: {
+          OR: [
+            {
+              AND: [{ nombre: body.contacto.nombre }, { email: body.contacto.email }]
+            },
+            {
+              AND: [{ nombre: body.contacto.nombre }, { telefono1: body.contacto.telefono1 }]
+            }
+          ]
+        }
+      })
+
+      if (contactoExistente) {
+        contactoId = contactoExistente.contactId
+      } else {
         const nuevoContacto = await prisma.contacto.create({
           data: {
             nombre: body.contacto.nombre,
-            email: body.contacto.email,
-            telefono: body.contacto.telefono,
-            clienteId: body.clienteId
+            cargo: body.contacto.cargo || '',
+            email: body.contacto.email || '',
+            telefono1: body.contacto.telefono1 || ''
           }
         })
 
-        contactoId = nuevoContacto.id
-        console.log('Contacto creado:', nuevoContacto)
-      } catch (error) {
-        console.error('Error al crear contacto:', error)
-
-        return NextResponse.json({ error: 'Error al crear contacto' }, { status: 500 })
+        contactoId = nuevoContacto.contactId
       }
     }
 
-    // Luego crear la cotización
-    const cotizacion = await prisma.cotizacion.create({
-      data: {
-        numeroCotizacion: body.numeroCotizacion,
-        tipoCotizacion: normalizeTipoCotizacion(body.tipoCotizacion),
-        fechaInicio,
-        fechaFin,
-        estado: body.estado || 'BORRADOR',
-        nombreProyecto: body.nombreProyecto || '',
-        empresa: body.empresa || '',
-        ubicacion: body.ubicacion || '',
-        clienteId: body.clienteId,
-        obraId: body.obraId,
-        vendedorId: body.vendedorId,
-        observaciones: body.observaciones || '',
-        subtotal: body.subtotal || 0,
-        descuento: body.descuento || 0,
-        impuesto: body.impuesto || 0,
-        total: body.total || 0,
-        contactoId: contactoId,
-        formaPago: body.formaPago || ''
-      }
-    })
-
-    // Verificar si se reciben detalles
-    if (body.detalles && Array.isArray(body.detalles) && body.detalles.length > 0) {
-      await prisma.detalleCotizacion.createMany({
-        data: body.detalles.map((detalle: any) => ({
-          cotizacionId: cotizacion.id,
-          productoId: detalle.productoId,
-          cantidad: detalle.cantidad,
-          precioUnitario: detalle.precioUnitario,
-          descuento: detalle.descuento || 0,
-          subtotal: detalle.subtotal
-        }))
-      })
-    }
-
-    const cotizacionCreada = await prisma.cotizacion.findUnique({
-      where: { id: cotizacion.id },
-      include: {
-        cliente: true,
-        contacto: {
-          include: {
-            contacto: true
-          }
+    const result = await prisma.$transaction(async prisma => {
+      const cotizacion = await prisma.cotizacion.create({
+        data: {
+          numeroCotizacion: body.numeroCotizacion,
+          tipoCotizacion: normalizeTipoCotizacion(body.tipoCotizacion),
+          fechaInicio,
+          fechaFin,
+          estado: body.estado || 'BORRADOR',
+          nombreProyecto: body.nombreProyecto || '',
+          empresa: body.empresa || '',
+          ubicacion: body.ubicacion || '',
+          clienteId: body.clienteId,
+          obraId: body.obraId,
+          vendedorId: body.vendedorId,
+          observaciones: body.observaciones || '',
+          subtotal: body.subtotal || 0,
+          descuento: body.descuento || 0,
+          impuesto: body.impuesto || 0,
+          total: body.total || 0,
+          contactoId: contactoId,
+          formaPago: body.formaPago || ''
         },
-        detalles: {
-          include: {
-            producto: true
+        include: {
+          cliente: true,
+          contacto: true,
+          detalles: {
+            include: {
+              producto: true
+            }
           }
         }
+      })
+
+      if (body.detalles && Array.isArray(body.detalles) && body.detalles.length > 0) {
+        await prisma.detalleCotizacion.createMany({
+          data: body.detalles.map((detalle: any) => ({
+            cotizacionId: cotizacion.id,
+            productoId: detalle.productoId,
+            cantidad: detalle.cantidad,
+            precioUnitario: detalle.precioUnitario,
+            descuento: detalle.descuento || 0,
+            subtotal: detalle.subtotal
+          }))
+        })
       }
+
+      return cotizacion
     })
 
-    return NextResponse.json({ message: 'Cotización creada correctamente', cotizacion: cotizacionCreada })
+    return NextResponse.json({ message: 'Cotización creada correctamente', cotizacion: result })
   } catch (error) {
     console.error('Error al crear cotización:', error)
 
