@@ -16,7 +16,7 @@ const getTipoOTFromDocCode = (fklbdocver: string): TipoOrdenTrabajo => {
     'R-12-03': TipoOrdenTrabajo.DENSIDADES,
     'R-12-27': TipoOrdenTrabajo.MUESTREO_MATERIAL,
     'R-12-31': TipoOrdenTrabajo.EXTRACCION_ASFALTICA,
-    'R-12-34': TipoOrdenTrabajo.ACEPTACION_VISITA,
+    //'R-12-34': TipoOrdenTrabajo.GENERAL,            Se debe agregar al enum
     'R-12-39': TipoOrdenTrabajo.HORMIGON_FRESCO,
     'R-12-58': TipoOrdenTrabajo.TESTIGOS,
     'R-12-99': TipoOrdenTrabajo.RETIRO_PROBETA
@@ -78,7 +78,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Procesar todas las órdenes de trabajo
+    // Verificar si es un JSON de tipo aceptación de visita
+    const esAceptacionVisita = data.data.some((item: any) => item.ACEPVISITA)
+
+    if (esAceptacionVisita) {
+      console.log('Es aceptación de visita')
+      // Procesar cada item de aceptación de visita
+      for (const item of data.data) {
+        if (item.ACEPVISITA) {
+          // Actualizar directamente la agenda usando la clave como ID
+          await prisma.agenda.update({
+            where: {
+              id: parseInt(item.CLAVE)
+            },
+            data: {
+              horaLlegada: item.ACEPVISITA.hora_llegada,
+              horaSalida: item.ACEPVISITA.hora_salida,
+              movilizacion: item.ACEPVISITA.movilizacion
+            }
+          })
+        }
+      }
+
+      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente' })
+    }
+    console.log('No es aceptación de visita')
+
+    // Procesar todas las órdenes de trabajo normales
     const ordenesTrabajo = await Promise.all(
       data.data.map(async (ot: {
         CLAVE: string
@@ -129,8 +155,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ordenesTrabajo, { status: 201 })
   } catch (error) {
-    console.error('Error al crear OTs:', error)
+    console.error('Error al procesar OTs:', error)
 
-    return NextResponse.json({ error: 'Error al crear las órdenes de trabajo' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al procesar las órdenes de trabajo' }, { status: 500 })
   }
 }
