@@ -34,6 +34,7 @@ interface Paquete {
   area?: string
   familia?: string
   productosEnPaquete: Producto[]
+  tipo?: string
 }
 
 interface PreviewPackageFormProps {
@@ -106,6 +107,14 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
               InputProps={{ readOnly: true }}
             />
           </Grid>
+          <Grid item xs={4}>
+            <TextField
+              label='Tipo'
+              value={previewPaquete.tipo || 'Sin tipo'}
+              fullWidth
+              InputProps={{ readOnly: true }}
+            />
+          </Grid>
           <Grid item xs={12}>
             <TextField
               label='Descripción'
@@ -127,7 +136,7 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
               <ListItem key={producto.productoId}>
                 <ListItemText
                   primary={`${producto.nombre} (SKU: ${producto.sku})`}
-                  secondary={`Cantidad: ${producto.cantidad || 1}`}
+                  secondary={`Cantidad: ${producto.cantidad || 1}${producto.tipo ? ' | Tipo: ' + producto.tipo : ''}`}
                 />
               </ListItem>
             ))

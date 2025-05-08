@@ -149,6 +149,11 @@ interface FormData {
   productos: ProductoType[]
   contacto?: ContactoType | null
   plazoEntrega?: string
+  superficieEMS: string
+  antecedentesEMS: string
+  duracionMensual: string
+  jornadaMensual: string
+  antecedentesMensual: string
 }
 
 interface ValidationErrors {
@@ -201,7 +206,12 @@ const AddCard = ({
     precioEMSTotal: 0,
     precioMensualPorProducto: true,
     precioMensualTotal: 0,
-    productos: []
+    productos: [],
+    superficieEMS: '',
+    antecedentesEMS: '',
+    duracionMensual: '',
+    jornadaMensual: '',
+    antecedentesMensual: ''
   }
 
   const initialValidationErrors: ValidationErrors = {
@@ -213,8 +223,11 @@ const AddCard = ({
   // Actualizar la declaración del estado
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(initialValidationErrors)
-  const [fechaEmision] = useState<Date>(new Date())
-  const [fechaVencimiento] = useState<Date>(new Date(new Date().setDate(new Date().getDate() + 15)))
+  const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
+
+  const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
+    new Date(new Date().setDate(new Date().getDate() + 15))
+  )
 
   // Función para actualizar el formulario
   const updateFormData = (newData: any) => {
@@ -714,7 +727,7 @@ const AddCard = ({
   }
 
   // Modificar el handleSelectProduct para incluir el cálculo inicial
-  const handleSelectProduct = (producto: ProductoType) => {
+  const handleSelectProduct = async (producto: ProductoType) => {
     console.log('Producto seleccionado:', producto)
     console.log('Lista de precios seleccionada:', selectedListaPrecio)
 
@@ -734,7 +747,22 @@ const AddCard = ({
     const newRows = [...productRows]
     const lastEmptyRowIndex = newRows.findIndex(row => !row.productoId || row.productoId === '0')
 
-    if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
+    if (producto.esPaquete) {
+      let productosEnPaquete = producto.productosEnPaquete
+
+      // Si no vienen los productos, los pedimos al backend
+      if (!productosEnPaquete || productosEnPaquete.length === 0) {
+        try {
+          const response = await fetch(`/api/productos/${producto.productoId}/productos`)
+          const data = await response.json()
+
+          productosEnPaquete = data.productos || []
+        } catch (error) {
+          console.error('Error al obtener productos del paquete:', error)
+          productosEnPaquete = []
+        }
+      }
+
       // Agregar el paquete como fila principal
       const paqueteRow = {
         id: Date.now(),
@@ -750,15 +778,15 @@ const AddCard = ({
       }
 
       // Agregar los productos del paquete como subfilas
-      const productosRows = producto.productosEnPaquete.map((pp: ProductoEnPaquete, i: number) => ({
+      const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
         id: Date.now() + i + 1,
-        productoId: pp.productoId.toString(),
-        servicio: pp.nombre,
-        descripcion: pp.descripcion || '',
+        productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
+        servicio: pp.nombre || pp.producto?.nombre || '',
+        descripcion: pp.descripcion || pp.producto?.descripcion || '',
         cantidad: pp.cantidad || 1,
-        precioUnitarioUF: pp.precio || 0,
-        totalNetoUF: (pp.precio || 0) * (pp.cantidad || 1),
-        area: pp.area || '',
+        precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
+        totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+        area: pp.area || pp.producto?.area || '',
         esSubProducto: true,
         subproductos: []
       }))
@@ -1053,9 +1081,19 @@ const AddCard = ({
       )
     }
 
-    if (area) filtered = filtered.filter(product => product.area === area)
-    if (tipo) filtered = filtered.filter(product => product.tipo === tipo)
-    if (familia) filtered = filtered.filter(product => product.familia === familia)
+    if (area) {
+      filtered = filtered.filter(product => (product.area || '').toLowerCase().trim() === area.toLowerCase().trim())
+    }
+
+    if (tipo) {
+      filtered = filtered.filter(product => (product.tipo || '').toLowerCase().trim() === tipo.toLowerCase().trim())
+    }
+
+    if (familia) {
+      filtered = filtered.filter(
+        product => (product.familia || '').toLowerCase().trim() === familia.toLowerCase().trim()
+      )
+    }
 
     console.log(
       'Productos filtrados finales:',
@@ -1246,6 +1284,11 @@ const AddCard = ({
     )
   }, [selectedListaPrecio, productos])
 
+  useEffect(() => {
+    // Forzar refresco de filas para que se apliquen los nuevos disabled/readOnly
+    setProductRows(rows => [...rows])
+  }, [formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
+
   return (
     <>
       <Card
@@ -1297,13 +1340,29 @@ const AddCard = ({
                       <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
                         Fecha Emisión:
                       </Typography>
-                      <Typography color='text.primary'>{fechaEmision.toLocaleDateString('es-CL')}</Typography>
+                      <TextField
+                        label='Fecha Emisión'
+                        type='date'
+                        value={fechaEmision.toISOString().slice(0, 10)}
+                        onChange={e => setFechaEmision(new Date(e.target.value))}
+                        InputLabelProps={{ shrink: true }}
+                        size='small'
+                        sx={{ minWidth: 150 }}
+                      />
                     </div>
                     <div className='flex items-center gap-2'>
                       <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
                         Fecha Vencimiento:
                       </Typography>
-                      <Typography color='text.primary'>{fechaVencimiento.toLocaleDateString('es-CL')}</Typography>
+                      <TextField
+                        label='Fecha Vencimiento'
+                        type='date'
+                        value={fechaVencimiento.toISOString().slice(0, 10)}
+                        onChange={e => setFechaVencimiento(new Date(e.target.value))}
+                        InputLabelProps={{ shrink: true }}
+                        size='small'
+                        sx={{ minWidth: 150 }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1563,23 +1622,21 @@ const AddCard = ({
                     </Typography>
                     <TextField
                       fullWidth
+                      label='Superficie'
+                      value={formData.superficieEMS}
+                      onChange={e => handleChange('superficieEMS', e.target.value)}
+                      inputProps={{ maxLength: 500 }}
+                      sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                    />
+                    <TextField
+                      fullWidth
                       multiline
-                      minRows={8}
-                      value={formData.infoEMS}
-                      onChange={e => handleChange('infoEMS', e.target.value)}
-                      placeholder='Ejemplo:
-Superficie: Construcción 1.800 mt2
-
-Antecedentes:
-- Instalaciones de la empresa PONSSE.
-- Galpon Industrial
-- Puente grúa con capacidad de 10 toneladas.
-- Taller de mantención de maquinarias, oficinas'
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          backgroundColor: 'background.paper'
-                        }
-                      }}
+                      rows={3}
+                      label='Antecedentes'
+                      value={formData.antecedentesEMS}
+                      onChange={e => handleChange('antecedentesEMS', e.target.value)}
+                      inputProps={{ maxLength: 500 }}
+                      sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
                     />
                   </CardContent>
                 </Card>
@@ -1596,25 +1653,29 @@ Antecedentes:
                     </Typography>
                     <TextField
                       fullWidth
+                      label='Duración'
+                      value={formData.duracionMensual}
+                      onChange={e => handleChange('duracionMensual', e.target.value)}
+                      inputProps={{ maxLength: 500 }}
+                      sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                    />
+                    <TextField
+                      fullWidth
+                      label='Jornada Laboral y Horario'
+                      value={formData.jornadaMensual}
+                      onChange={e => handleChange('jornadaMensual', e.target.value)}
+                      inputProps={{ maxLength: 500 }}
+                      sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                    />
+                    <TextField
+                      fullWidth
                       multiline
-                      minRows={10}
-                      value={formData.infoMensual}
-                      onChange={e => handleChange('infoMensual', e.target.value)}
-                      placeholder='Ejemplo:
-Duración: 12 meses
-
-Jornada Laboral y Horaria:
-- Lunes a viernes de 8:00 a 18:00
-- Media jornada tarde el día viernes (evaluación, mantención de equipos/vehículo, y trazabilidad de los controles, ensayos y emisión de informes en casa matriz)
-- Sábado de 8:00 a 14:00 (Se considerará pago de jornada extraordinaria)
-
-Antecedentes:
-Volúmenes de trabajo no proporcionados.'
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          backgroundColor: 'background.paper'
-                        }
-                      }}
+                      rows={3}
+                      label='Antecedentes'
+                      value={formData.antecedentesMensual}
+                      onChange={e => handleChange('antecedentesMensual', e.target.value)}
+                      inputProps={{ maxLength: 500 }}
+                      sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
                     />
                   </CardContent>
                 </Card>
@@ -1798,14 +1859,7 @@ Volúmenes de trabajo no proporcionados.'
                         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                           <FormControl size='small' fullWidth>
                             <InputLabel>Área</InputLabel>
-                            <Select
-                              value={selectedArea}
-                              label='Área'
-                              onChange={e => {
-                                setSelectedArea(e.target.value)
-                                filterProducts(searchTerm, e.target.value, selectedTipo, selectedFamilia)
-                              }}
-                            >
+                            <Select value={selectedArea} label='Área' onChange={e => setSelectedArea(e.target.value)}>
                               <MenuItem value=''>Todas</MenuItem>
                               {areas.map(area => (
                                 <MenuItem key={area} value={area}>
@@ -1816,14 +1870,7 @@ Volúmenes de trabajo no proporcionados.'
                           </FormControl>
                           <FormControl size='small' fullWidth>
                             <InputLabel>Tipo</InputLabel>
-                            <Select
-                              value={selectedTipo}
-                              label='Tipo'
-                              onChange={e => {
-                                setSelectedTipo(e.target.value)
-                                filterProducts(searchTerm, selectedArea, e.target.value, selectedFamilia)
-                              }}
-                            >
+                            <Select value={selectedTipo} label='Tipo' onChange={e => setSelectedTipo(e.target.value)}>
                               <MenuItem value=''>Todos</MenuItem>
                               {tipos.map(tipo => (
                                 <MenuItem key={tipo} value={tipo}>
@@ -1837,10 +1884,7 @@ Volúmenes de trabajo no proporcionados.'
                             <Select
                               value={selectedFamilia}
                               label='Familia'
-                              onChange={e => {
-                                setSelectedFamilia(e.target.value)
-                                filterProducts(searchTerm, selectedArea, selectedTipo, e.target.value)
-                              }}
+                              onChange={e => setSelectedFamilia(e.target.value)}
                             >
                               <MenuItem value=''>Todas</MenuItem>
                               {familias.map(familia => (
@@ -2036,8 +2080,17 @@ Volúmenes de trabajo no proporcionados.'
                       value={row.precioUnitarioUF}
                       onChange={e => handlePrecioChange(index, Number(e.target.value))}
                       InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                        readOnly:
+                          row.esSubProducto === true ||
+                          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+                          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
                       }}
+                      disabled={
+                        row.esSubProducto === true ||
+                        (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+                        (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
+                      }
                     />
                   </Grid>
 

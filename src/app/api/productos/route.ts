@@ -127,15 +127,23 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '10', 10)
     const skip = (page - 1) * limit
+    const area = searchParams.get('area') || undefined
+    const tipo = searchParams.get('tipo') || undefined
+    const familia = searchParams.get('familia') || undefined
 
-    // Total de productos activos
-    const total = await prisma.producto.count({
-      where: { estado: 'ACTIVO' }
-    })
+    // Construir el objeto where para filtrar
+    const where: any = { estado: 'ACTIVO' }
 
-    // Productos paginados
+    if (area) where.area = area
+    if (tipo) where.tipo = tipo
+    if (familia) where.familia = familia
+
+    // Total de productos activos con filtros
+    const total = await prisma.producto.count({ where })
+
+    // Productos paginados con filtros
     const productos = await prisma.producto.findMany({
-      where: { estado: 'ACTIVO' },
+      where,
       skip,
       take: limit,
       include: {
