@@ -72,11 +72,23 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
   const locale = 'es' // Por defecto usaremos español
+  const [gestionText, setGestionText] = useState('')
+  const [gestionDialogOpen, setGestionDialogOpen] = useState(false)
+  const [pendingEstado, setPendingEstado] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
 
   // Inicializar localData con invoiceData
   useEffect(() => {
     if (invoiceData) {
-      setLocalData(invoiceData)
+      // Limpia cualquier string 'Sin contacto' y reemplázalo por null
+      const cleanData = invoiceData.map(row => ({
+        ...row,
+        contacto: typeof row.contacto === 'string' ? null : row.contacto
+      }))
+
+      setLocalData(cleanData)
+      console.log('Datos de cotizaciones recibidos en la tabla:', cleanData)
     }
   }, [invoiceData])
 
@@ -240,6 +252,19 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const handleEstadoChange = async (newEstado: string) => {
     if (!selectedRowId) return
 
+    // Si el nuevo estado es 'GESTIONADA', mostrar el modal para ingresar texto
+    if (newEstado === 'GESTIONADA') {
+      setPendingEstado(newEstado)
+      setGestionDialogOpen(true)
+
+      return
+    }
+
+    await updateEstadoCotizacion(newEstado)
+  }
+
+  // Nueva función para actualizar el estado y enviar texto de gestión
+  const updateEstadoCotizacion = async (newEstado: string, gestionTextValue?: string) => {
     try {
       const response = await fetch(`/api/cotizaciones/${selectedRowId}`, {
         method: 'PUT',
@@ -248,7 +273,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
         },
         body: JSON.stringify({
           estado: newEstado,
-          fechaActualizacion: new Date().toISOString()
+          fechaActualizacion: new Date().toISOString(),
+          gestionText: gestionTextValue || undefined
         })
       })
 
@@ -281,6 +307,28 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
 
     handleEstadoClose()
+  }
+
+  const handleDeleteCotizacion = async () => {
+    if (!cotizacionToDelete) return
+
+    try {
+      const response = await fetch(`/api/cotizaciones/${cotizacionToDelete}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar la cotización')
+      }
+
+      setLocalData(prev => prev.filter(row => row.id !== cotizacionToDelete))
+      toast.success('Cotización eliminada correctamente')
+    } catch (error) {
+      toast.error('No se pudo eliminar la cotización')
+    } finally {
+      setDeleteDialogOpen(false)
+      setCotizacionToDelete(null)
+    }
   }
 
   // Modificar filteredData para usar localData en lugar de invoiceData
@@ -425,7 +473,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   <Chip label={getTipoLabel(row.tipo)} color={getTipoColor(row.tipo)} variant='outlined' size='small' />
                 </TableCell>
                 <TableCell>
-                  {row.contacto ? (
+                  {row.contacto && row.contacto.nombre ? (
                     <div
                       className='flex items-center gap-2 cursor-pointer'
                       onClick={() => {
@@ -434,12 +482,10 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       }}
                     >
                       <i className='ri-user-line text-primary' style={{ fontSize: '1.25rem' }} />
-                      <Typography title={row.contacto?.nombre || 'Sin nombre'}>
-                        {row.contacto?.nombre
-                          ? row.contacto.nombre.length > 15
-                            ? row.contacto.nombre.substring(0, 15) + '...'
-                            : row.contacto.nombre
-                          : 'Sin nombre'}
+                      <Typography title={row.contacto.nombre}>
+                        {row.contacto.nombre.length > 15
+                          ? row.contacto.nombre.substring(0, 15) + '...'
+                          : row.contacto.nombre}
                       </Typography>
                     </div>
                   ) : (
@@ -476,6 +522,20 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         <i className='ri-settings-4-line' />
                       </IconButton>
                     </Tooltip>
+                    {row.estado === 'BORRADOR' && (
+                      <Tooltip title='Eliminar'>
+                        <IconButton
+                          size='small'
+                          color='error'
+                          onClick={() => {
+                            setCotizacionToDelete(row.id)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Box>
                 </TableCell>
               </TableRow>
@@ -789,6 +849,57 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           <ListItemText>Rechazada</ListItemText>
         </MenuItem>
       </Menu>
+
+      <Dialog open={gestionDialogOpen} onClose={() => setGestionDialogOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Observación de Gestión</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin='dense'
+            label='Ingrese una observación o comentario'
+            type='text'
+            fullWidth
+            multiline
+            minRows={2}
+            value={gestionText}
+            onChange={e => setGestionText(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGestionDialogOpen(false)} color='secondary'>
+            Cancelar
+          </Button>
+          <Button
+            onClick={async () => {
+              await updateEstadoCotizacion('GESTIONADA', gestionText)
+              setGestionDialogOpen(false)
+              setGestionText('')
+              setPendingEstado(null)
+            }}
+            color='primary'
+            variant='contained'
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>¿Eliminar cotización?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Estás seguro de que deseas eliminar esta cotización? Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>
+            Cancelar
+          </Button>
+          <Button onClick={handleDeleteCotizacion} color='error' variant='contained'>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

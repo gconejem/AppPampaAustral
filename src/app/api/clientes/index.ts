@@ -40,18 +40,42 @@ export const createCliente = async (data: any) => {
     // Crear los contactos y sus relaciones
     if (clientesContactos?.create) {
       for (const contactoData of clientesContactos.create) {
-        const contacto = await prisma.contacto.create({
-          data: contactoData.contacto.create
-        })
+        let contactoExistente = null
+
+        // Buscar por email o teléfono
+        if (contactoData.contacto.create.email) {
+          contactoExistente = await prisma.contacto.findFirst({
+            where: { email: contactoData.contacto.create.email }
+          })
+        }
+
+        if (!contactoExistente && contactoData.contacto.create.telefono1) {
+          contactoExistente = await prisma.contacto.findFirst({
+            where: { telefono1: contactoData.contacto.create.telefono1 }
+          })
+        }
+
+        let contactoId = null
+
+        if (contactoExistente) {
+          contactoId = contactoExistente.contactId
+        } else {
+          const nuevoContacto = await prisma.contacto.create({
+            data: contactoData.contacto.create
+          })
+
+          contactoId = nuevoContacto.contactId
+        }
 
         await prisma.clienteContacto.create({
           data: {
             isPrincipal: contactoData.isPrincipal,
+            cargo: contactoData.cargo || '',
             cliente: {
               connect: { clienteId: cliente.clienteId }
             },
             contacto: {
-              connect: { contactId: contacto.contactId }
+              connect: { contactId: contactoId }
             }
           }
         })

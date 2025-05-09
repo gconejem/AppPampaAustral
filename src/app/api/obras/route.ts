@@ -54,18 +54,40 @@ export async function POST(req: NextRequest) {
 
       // Crear los contactos uno por uno dentro de la transacción
       for (const contacto of body.contactos || []) {
-        // Primero crear el contacto en la tabla Contacto
-        const nuevoContacto = await tx.contacto.create({
-          data: {
-            nombre: contacto.nombre,
-            cargo: contacto.rol, // Usamos el rol como cargo
-            email: contacto.email,
-            telefono1: contacto.telefono1,
-            telefono2: contacto.telefono2 || ''
-          }
-        })
+        // Buscar si el contacto ya existe por email o teléfono
+        let contactoExistente = null
 
-        // Luego crear el ContactoObra
+        if (contacto.email) {
+          contactoExistente = await tx.contacto.findFirst({
+            where: { email: contacto.email }
+          })
+        }
+
+        if (!contactoExistente && contacto.telefono1) {
+          contactoExistente = await tx.contacto.findFirst({
+            where: { telefono1: contacto.telefono1 }
+          })
+        }
+
+        let contactoId = null
+
+        if (contactoExistente) {
+          contactoId = contactoExistente.contactId
+        } else {
+          const nuevoContacto = await tx.contacto.create({
+            data: {
+              nombre: contacto.nombre,
+              cargo: contacto.rol,
+              email: contacto.email,
+              telefono1: contacto.telefono1,
+              telefono2: contacto.telefono2 || ''
+            }
+          })
+
+          contactoId = nuevoContacto.contactId
+        }
+
+        // Crear la relación ContactoObra
         await tx.contactoObra.create({
           data: {
             nombre: contacto.nombre,
@@ -74,7 +96,8 @@ export async function POST(req: NextRequest) {
             telefono1: contacto.telefono1,
             telefono2: contacto.telefono2,
             isPrincipal: contacto.isPrincipal || false,
-            obraId: nuevaObra.obraId
+            obraId: nuevaObra.obraId,
+            contactId: contactoId
           }
         })
       }
@@ -110,7 +133,7 @@ export async function GET() {
         solicitudes: true
       },
       orderBy: {
-        fechaIngreso: 'desc'
+        numeroObra: 'desc'
       }
     })
 

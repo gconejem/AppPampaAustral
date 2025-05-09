@@ -16,7 +16,10 @@ export async function GET(request: Request) {
     // Búsqueda simple sin filtros inicialmente
     const clientes = await prisma.cliente.findMany({
       where: {
-        OR: [{ rut: { contains: query } }, { nombreCliente: { contains: query } }]
+        OR: [
+          { rut: { contains: query, mode: 'insensitive' } },
+          { nombreCliente: { contains: query, mode: 'insensitive' } }
+        ]
       }
     })
 

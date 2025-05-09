@@ -245,7 +245,8 @@ const AddObraDrawer = (props: Props) => {
           telefono1: contacto.telefono1,
           telefono2: contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
-        }))
+        })),
+        correos: Array.isArray(data.correos) ? data.correos.join(', ') : data.correos || ''
       }
 
       const response = await axios.post('/api/obras', payload)
@@ -806,6 +807,32 @@ const AddObraDrawer = (props: Props) => {
                   name='referencia'
                   control={control}
                   render={({ field }) => <TextField {...field} fullWidth label='Referencia' />}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Correos */}
+            <Grid container spacing={5}>
+              <Grid item xs={12}>
+                <Controller
+                  name='correos'
+                  control={control}
+                  defaultValue={[]}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Correos (separados por coma)'
+                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
+                      helperText='Separar múltiples correos con comas'
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                      onChange={e => {
+                        const correos = e.target.value.split(',').map(correo => correo.trim())
+
+                        field.onChange(correos)
+                      }}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>

@@ -4,8 +4,7 @@
 import { useState } from 'react'
 
 // Next Imports
-import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -21,15 +20,6 @@ import { jsPDF } from 'jspdf'
 
 // Type Imports
 import html2canvas from 'html2canvas'
-
-import type { Locale } from '@configs/i18n'
-
-// Component Imports
-import AddPaymentDrawer from '@views/apps/invoice/shared/AddPaymentDrawer'
-import SendInvoiceDrawer from '@views/apps/invoice/shared/SendInvoiceDrawer'
-
-// Util Imports
-import { getLocalizedUrl } from '@/utils/i18n'
 
 const PreviewActions = () => {
   const router = useRouter()
@@ -121,6 +111,11 @@ const PreviewActions = () => {
         estado: 'BORRADOR',
         clienteId: previewData.cliente?.clienteId ? parseInt(previewData.cliente.clienteId) : null,
         obraId: previewData.obra?.obraId ? parseInt(previewData.obra.obraId) : null,
+        contactId: previewData.contactId
+          ? parseInt(previewData.contactId)
+          : previewData.contactoId
+            ? parseInt(previewData.contactoId)
+            : null,
         fechaInicio: previewData.fechaInicio || new Date().toISOString(),
         fechaFin: previewData.fechaFin || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
         nombreProyecto: previewData.nombreProyecto || '',
@@ -167,6 +162,7 @@ const PreviewActions = () => {
 
   const handleDownloadPDF = async () => {
     try {
+      const previewData = JSON.parse(localStorage.getItem('cotizacionPreview') || '{}')
       const element = document.querySelector('#preview-content')
 
       if (!element) {
@@ -175,7 +171,7 @@ const PreviewActions = () => {
         return
       }
 
-      const canvas = await html2canvas(element, {
+      const canvas = await html2canvas(element as HTMLElement, {
         scale: 2,
         useCORS: true,
         logging: false
@@ -185,22 +181,51 @@ const PreviewActions = () => {
 
       // Primera página - Contenido dinámico
       const imgWidth = 210
-      const pageHeight = 297
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
 
-      // Agregar nueva página para términos y condiciones
+      // Salto de página para las notas y términos
       pdf.addPage()
 
-      // Configurar fuente y tamaños
-      pdf.setFont('helvetica')
+      let yPos = 30
 
-      // Título
+      // Notas específicas para tipo A (arriba del título)
+      if (previewData.tipoCotizacion === 'A') {
+        pdf.setFontSize(8)
+
+        const notasEspecificas = [
+          'Valores unitarios Neto (sin IVA incluido)',
+          'Adicionales contra evento:',
+          '• Copia digital adicional tiene un costo de 0.15 UF neto.',
+          '• Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.',
+          '• Informe con firma y timbres físicos tiene un costo de 0.58 UF neto',
+          'Recargos por jornadas extraordinarias (a todos los ítem de la cotización):',
+          '• 50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.',
+          '• 100% Adicional Sábado, Domingo o Festivo.',
+          'Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.'
+        ]
+
+        notasEspecificas.forEach(line => {
+          if (yPos > 270) {
+            pdf.addPage()
+            yPos = 20
+          }
+
+          pdf.text(line, 20, yPos)
+          yPos += line.startsWith('•') ? 4 : 6
+        })
+        yPos += 10
+      }
+
+      // Salto de página antes de los términos y condiciones
+      pdf.addPage()
+      pdf.setFont('helvetica')
       pdf.setFontSize(14)
       pdf.text('TÉRMINOS Y CONDICIONES DEL SERVICIO', 105, 20, { align: 'center' })
+      yPos = 30
 
-      // Contenido
+      // Términos y condiciones generales
       pdf.setFontSize(10)
 
       const terms = [
@@ -254,8 +279,6 @@ const PreviewActions = () => {
         '    d. El comprobante de pago debe enviarse a facturacion@pampaustral.cl con copia a',
         '       contacto@pampaustral.cl, indicando: número de factura y cotización correspondiente.'
       ]
-
-      let yPos = 30
 
       terms.forEach(line => {
         if (yPos > 280) {

@@ -70,6 +70,21 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 // Column Definitions
 const columnHelper = createColumnHelper<ContactTypeWithAction>()
 
+// Agregar los roles de contacto para mostrar el label legible
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
 interface ContactListTableProps {
   data: ContactType[]
 }
@@ -91,6 +106,8 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
   const [dialogTitle, setDialogTitle] = useState('')
   const [dialogMessage, setDialogMessage] = useState('')
   const [dialogAction, setDialogAction] = useState<'activate' | 'deactivate'>('deactivate')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [contactToDelete, setContactToDelete] = useState<ContactType | null>(null)
 
   useEffect(() => {
     setData(initialData)
@@ -230,6 +247,35 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
     }
   }
 
+  const handleDeleteContact = async () => {
+    if (!contactToDelete) return
+    setIsDeleteLoading(true)
+
+    try {
+      const response = await fetch(`/api/contacts/${contactToDelete.contactId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar el contacto')
+      }
+
+      toast.success('Contacto eliminado correctamente')
+
+      // Actualizar la tabla quitando el contacto eliminado
+      const newData = data.filter(contact => contact.contactId !== contactToDelete.contactId) as ContactType[]
+
+      setData(newData)
+      setFilteredData(newData)
+      setDeleteDialogOpen(false)
+      setContactToDelete(null)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el contacto')
+    } finally {
+      setIsDeleteLoading(false)
+    }
+  }
+
   const columns = useMemo<ColumnDef<ContactType, any>[]>(
     () => [
       {
@@ -264,7 +310,12 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       }),
       columnHelper.accessor('cargo', {
         header: 'CARGO',
-        cell: ({ row }: { row: any }) => <Typography>{row.original.cargo}</Typography>
+        cell: ({ row }: { row: any }) => {
+          const cargoValue = row.original.cargo
+          const cargoLabel = ROLES_CONTACTO.find(r => r.value === cargoValue)?.label || cargoValue || 'Sin cargo'
+
+          return <Typography>{cargoLabel}</Typography>
+        }
       }),
       columnHelper.accessor('email', {
         header: 'EMAIL',
@@ -312,6 +363,15 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
               onClick={() => handleClickOpenDialog(row.original)}
             >
               <i className={row.original.estado === 'ACTIVO' ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'} />
+            </IconButton>
+            <IconButton
+              color='error'
+              onClick={() => {
+                setContactToDelete(row.original)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              <i className='ri-delete-bin-line' />
             </IconButton>
           </Box>
         )
@@ -535,6 +595,34 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
           setSelectedContactPreview(null)
         }}
       />
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby='delete-dialog-title'
+        aria-describedby='delete-dialog-description'
+      >
+        <DialogTitle id='delete-dialog-title'>Eliminar Contacto</DialogTitle>
+        <DialogContent>
+          <DialogContentText id='delete-dialog-description'>
+            ¿Está seguro que desea eliminar este contacto? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} variant='outlined' color='secondary'>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDeleteContact}
+            variant='contained'
+            color='error'
+            autoFocus
+            disabled={isDeleteLoading}
+            startIcon={isDeleteLoading && <i className='ri-loader-4-line animate-spin' />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

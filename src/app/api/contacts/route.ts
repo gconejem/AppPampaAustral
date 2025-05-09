@@ -14,17 +14,22 @@ export async function GET() {
       }
     })
 
-    // Transformar los datos para mantener la estructura anterior
+    // Transformar los datos para incluir los cargos de la relación
     const transformedContacts = contacts.map(contact => {
-      const clienteContacto = contact.clientesContactos[0]
-
       return {
         contactId: contact.contactId,
         nombre: contact.nombre,
+        cargo: contact.cargo,
         email: contact.email,
         telefono1: contact.telefono1,
         telefono2: contact.telefono2,
-        empresa: contact.empresa
+        empresa: contact.empresa,
+        clientesContactos:
+          contact.clientesContactos?.map(cc => ({
+            clienteId: cc.clienteId,
+            cargo: cc.cargo,
+            isPrincipal: cc.isPrincipal
+          })) || []
       }
     })
 
@@ -50,7 +55,9 @@ export async function POST(req: Request) {
         email: body.email,
         telefono1: body.telefono1,
         telefono2: body.telefono2 || '',
-        empresa: body.empresa || null
+        empresa: body.empresa || null,
+        comuna: body.comuna || null,
+        direccion: body.direccion || null
       }
     })
 

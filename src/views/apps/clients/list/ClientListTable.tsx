@@ -131,6 +131,25 @@ const segmentConfig = {
   }
 }
 
+// Definir los roles legibles
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
+const getCargoLabel = (value: string) => {
+  return ROLES_CONTACTO.find(r => r.value === value)?.label || value
+}
+
 // Nuevo componente para el modal de contactos
 const ContactsModal = ({
   open,
@@ -155,7 +174,7 @@ const ContactsModal = ({
             <div className='grid grid-cols-2 gap-2'>
               <div className='flex items-center gap-2'>
                 <i className='ri-briefcase-line text-textSecondary' />
-                <Typography>{contact.contacto.cargo}</Typography>
+                <Typography>{getCargoLabel(contact.cargo)}</Typography>
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-mail-line text-textSecondary' />
@@ -488,7 +507,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           escapeField(cliente.estado),
           escapeField(new Date(cliente.fechaCreacion).toLocaleDateString()),
           escapeField(contactoPrincipal?.nombre),
-          escapeField(contactoPrincipal?.cargo),
+          escapeField(getCargoLabel(contactoPrincipal?.cargo)),
           escapeField(contactoPrincipal?.email),
           escapeField(contactoPrincipal?.telefono1),
           escapeField(contactoPrincipal?.telefono2),
@@ -1083,7 +1102,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
                 {selectedContacts.map((contacto, index) => (
                   <MuiTableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                     <MuiTableCell>{contacto.contacto.nombre}</MuiTableCell>
-                    <MuiTableCell>{contacto.contacto.cargo}</MuiTableCell>
+                    <MuiTableCell>{getCargoLabel(contacto.cargo)}</MuiTableCell>
                     <MuiTableCell>
                       <MuiLink
                         href={`mailto:${contacto.contacto.email}`}

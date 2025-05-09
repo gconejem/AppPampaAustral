@@ -42,6 +42,26 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
     })
   }
 
+  // Definir los roles legibles
+  const ROLES_CONTACTO = [
+    { value: 'encargado_obra', label: 'Encargado de Obra' },
+    { value: 'envio_informes', label: 'Envío de Informes' },
+    { value: 'dueno_representante', label: 'Dueño Representante' },
+    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+    { value: 'supervisor', label: 'Supervisor' },
+    { value: 'administrador_obra', label: 'Administrador de Obra' },
+    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+    { value: 'autocontrol', label: 'Autocontrol' },
+    { value: 'profesional', label: 'Profesional' },
+    { value: 'laboratorista', label: 'Laboratorista' },
+    { value: 'otro', label: 'Otro (Especificar)' }
+  ]
+
+  // Función para obtener el label legible
+  const getCargoLabel = (value: string) => {
+    return ROLES_CONTACTO.find(r => r.value === value)?.label || value
+  }
+
   return (
     <>
       {/* Primera Card - Información del Cliente */}
@@ -178,13 +198,13 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
             </TableHead>
             <TableBody>
               {client.clientesContactos && client.clientesContactos.length > 0 ? (
-                client.clientesContactos.map((contacto, index) => (
+                client.clientesContactos.map((cc, index) => (
                   <TableRow key={index}>
-                    <TableCell>{contacto.contacto?.nombre}</TableCell>
-                    <TableCell>{contacto.contacto?.cargo}</TableCell>
-                    <TableCell>{contacto.contacto?.email}</TableCell>
-                    <TableCell>{contacto.contacto?.telefono1}</TableCell>
-                    <TableCell>{contacto.contacto?.telefono2 || '-'}</TableCell>
+                    <TableCell>{cc.contacto?.nombre}</TableCell>
+                    <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
+                    <TableCell>{cc.contacto?.email}</TableCell>
+                    <TableCell>{cc.contacto?.telefono1}</TableCell>
+                    <TableCell>{cc.contacto?.telefono2 || '-'}</TableCell>
                   </TableRow>
                 ))
               ) : (

@@ -112,6 +112,7 @@ export interface ClienteContacto {
   contactoId: number
   contacto?: Contacto
   isPrincipal: boolean
+  cargo: string
   createdAt?: Date
 }
 

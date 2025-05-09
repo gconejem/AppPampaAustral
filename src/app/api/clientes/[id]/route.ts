@@ -107,7 +107,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ...client,
       clientesContactos: client.clientesContactos.map(cc => ({
         contacto: cc.contacto,
-        isPrincipal: cc.isPrincipal
+        isPrincipal: cc.isPrincipal,
+        cargo: cc.cargo
       })),
       condicionesComerciales: client.condicionesComerciales
     }

@@ -44,7 +44,7 @@ interface FormDataPreview {
   ubicacion: string
   formaPago: string
   contacto: ContactoPreview | null
-  contactoId: number | null
+  contactId: number | null
   observaciones: string
   subtotal: number
   descuento: number
@@ -95,7 +95,7 @@ const AddActions: FC<AddActionsProps> = ({ currentFormData }) => {
               telefono1: currentFormData.contacto.telefono1 || ''
             }
           : null,
-        contactoId: currentFormData.contactoId || null,
+        contactId: currentFormData.contactId || currentFormData.contactoId || null,
         observaciones: currentFormData.observaciones || '',
         subtotal: parseFloat(currentFormData.subtotal?.toString() || '0'),
         descuento: parseFloat(currentFormData.descuento?.toString() || '0'),
