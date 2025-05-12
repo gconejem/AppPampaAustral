@@ -185,26 +185,94 @@ const PreviewCard = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {previewData.detalles.map((item: any, index: number) => (
-              <TableRow
-                key={index}
-                sx={{
-                  backgroundColor: item.esSubProducto ? 'action.hover' : 'inherit',
-                  '& > td': {
-                    pl: item.esSubProducto ? 6 : 2,
-                    fontSize: item.esSubProducto ? '0.875rem' : 'inherit',
-                    color: item.esSubProducto ? 'text.secondary' : 'inherit'
+            {(() => {
+              // Agrupar detalles por área
+              type Detalle = {
+                area?: string
+                esPaquete?: boolean
+                esSubProducto?: boolean
+                [key: string]: any
+              }
+              const detalles: Detalle[] = previewData.detalles || []
+              const areasMap = new Map<string, Detalle[]>()
+
+              detalles.forEach((det: Detalle) => {
+                const area = det.area || 'Sin área'
+
+                if (!areasMap.has(area)) areasMap.set(area, [])
+                areasMap.get(area)?.push(det)
+              })
+              const rows: JSX.Element[] = []
+
+              Array.from(areasMap.entries()).forEach(([area, detallesArea], areaIdx) => {
+                // Opcional: Título de área
+                rows.push(
+                  <TableRow key={`area-title-${areaIdx}`}>
+                    <TableCell colSpan={6} style={{ background: '#f5f5f5', fontWeight: 700 }}>
+                      {area}
+                    </TableCell>
+                  </TableRow>
+                )
+                let i = 0
+
+                while (i < detallesArea.length) {
+                  const item = detallesArea[i]
+
+                  if (item.esPaquete) {
+                    // Renderizar la fila del paquete
+                    rows.push(
+                      <TableRow key={`paquete-${areaIdx}-${i}`} sx={{ backgroundColor: 'primary.lighter' }}>
+                        <TableCell>{item.area || ''}</TableCell>
+                        <TableCell>
+                          <strong>{item.servicio || ''}</strong>
+                          <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
+                        </TableCell>
+                        <TableCell>{item.descripcion || ''}</TableCell>
+                        <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                      </TableRow>
+                    )
+
+                    // Subproductos
+                    let j = i + 1
+
+                    while (j < detallesArea.length && detallesArea[j].esSubProducto) {
+                      const sub = detallesArea[j]
+
+                      rows.push(
+                        <TableRow key={`subproducto-${areaIdx}-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
+                          <TableCell>{sub.area || ''}</TableCell>
+                          <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
+                          <TableCell>{sub.descripcion || ''}</TableCell>
+                          <TableCell align='right'>{sub.cantidad || 0}</TableCell>
+                          <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                          <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                        </TableRow>
+                      )
+                      j++
+                    }
+
+                    i = j
+                  } else {
+                    // Producto normal
+                    rows.push(
+                      <TableRow key={`producto-${areaIdx}-${i}`}>
+                        <TableCell>{item.area || ''}</TableCell>
+                        <TableCell>{item.servicio || ''}</TableCell>
+                        <TableCell>{item.descripcion || ''}</TableCell>
+                        <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                      </TableRow>
+                    )
+                    i++
                   }
-                }}
-              >
-                <TableCell>{item.area || ''}</TableCell>
-                <TableCell>{item.servicio || ''}</TableCell>
-                <TableCell>{item.descripcion || ''}</TableCell>
-                <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
+                }
+              })
+
+              return rows
+            })()}
           </TableBody>
         </Table>
 
@@ -244,6 +312,7 @@ const PreviewCard = () => {
               component='div'
               variant='body2'
               sx={{
+                fontSize: '0.85rem',
                 '& > p': { mb: 2 },
                 '& > ul': {
                   listStyle: 'none',

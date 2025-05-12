@@ -50,8 +50,17 @@ export async function GET() {
         fecha: cotizacion.fechaCreacion.toLocaleDateString(),
         estado: cotizacion.estado,
         tipo: normalizeTipoCotizacion(cotizacion.tipoCotizacion as string),
-        contacto: cotizacion.contacto || null,
+        contacto: cotizacion.contacto
+          ? {
+              contactId: cotizacion.contacto.contactId,
+              nombre: cotizacion.contacto.nombre,
+              cargo: cotizacion.contacto.cargo,
+              email: cotizacion.contacto.email,
+              telefono1: cotizacion.contacto.telefono1
+            }
+          : null,
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
+        empresa: cotizacion.empresa || 'No especificada',
         total: parseFloat(cotizacion.total.toString())
       }
     })
@@ -78,10 +87,10 @@ export async function POST(request: Request) {
     }
 
     // Manejar el contacto
-    let contactoId = body.contactoId
+    let contactId = body.contactId
 
-    // Si no hay contactoId pero hay datos de contacto, buscar o crear el contacto
-    if (!contactoId && body.contacto) {
+    // Si no hay contactId pero hay datos de contacto, buscar o crear el contacto
+    if (!contactId && body.contacto) {
       const contactoExistente = await prisma.contacto.findFirst({
         where: {
           OR: [
@@ -96,7 +105,7 @@ export async function POST(request: Request) {
       })
 
       if (contactoExistente) {
-        contactoId = contactoExistente.contactId
+        contactId = contactoExistente.contactId
       } else {
         const nuevoContacto = await prisma.contacto.create({
           data: {
@@ -107,9 +116,11 @@ export async function POST(request: Request) {
           }
         })
 
-        contactoId = nuevoContacto.contactId
+        contactId = nuevoContacto.contactId
       }
     }
+
+    console.log('Detalles recibidos en el backend:', body.detalles)
 
     const result = await prisma.$transaction(async prisma => {
       const cotizacion = await prisma.cotizacion.create({
@@ -122,42 +133,61 @@ export async function POST(request: Request) {
           nombreProyecto: body.nombreProyecto || '',
           empresa: body.empresa || '',
           ubicacion: body.ubicacion || '',
-          clienteId: body.clienteId,
-          obraId: body.obraId,
+          cliente: body.clienteId ? { connect: { clienteId: body.clienteId } } : undefined,
+          obra: body.obraId ? { connect: { obraId: body.obraId } } : undefined,
           vendedorId: body.vendedorId,
           observaciones: body.observaciones || '',
           subtotal: body.subtotal || 0,
           descuento: body.descuento || 0,
           impuesto: body.impuesto || 0,
           total: body.total || 0,
-          contactoId: contactoId,
+          contacto: contactId ? { connect: { contactId } } : undefined,
           formaPago: body.formaPago || ''
-        },
-        include: {
-          cliente: true,
-          contacto: true,
-          detalles: {
-            include: {
-              producto: true
-            }
-          }
         }
       })
 
-      if (body.detalles && Array.isArray(body.detalles) && body.detalles.length > 0) {
-        await prisma.detalleCotizacion.createMany({
-          data: body.detalles.map((detalle: any) => ({
-            cotizacionId: cotizacion.id,
-            productoId: detalle.productoId,
-            cantidad: detalle.cantidad,
-            precioUnitario: detalle.precioUnitario,
-            descuento: detalle.descuento || 0,
-            subtotal: detalle.subtotal
-          }))
-        })
+      // Extraer el array de detalles, sea plano o anidado en { create: [...] }
+      const detallesArray = Array.isArray(body.detalles)
+        ? body.detalles
+        : body.detalles && Array.isArray(body.detalles.create)
+          ? body.detalles.create
+          : []
+
+      if (detallesArray.length > 0) {
+        console.log('Insertando detalles en la BD:', detallesArray)
+
+        try {
+          await prisma.detalleCotizacion.createMany({
+            data: detallesArray.map((detalle: any) => ({
+              cotizacionId: cotizacion.id,
+              productoId: detalle.productoId,
+              cantidad: detalle.cantidad,
+              precioUnitario: detalle.precioUnitario,
+              descuento: detalle.descuento || 0,
+              subtotal: detalle.subtotal,
+              esPaquete: detalle.esPaquete || false,
+              esSubProducto: detalle.esSubProducto || false,
+              paqueteId: detalle.paqueteId || null
+            }))
+          })
+        } catch (error) {
+          console.error('Error al insertar detalles:', error)
+        }
+      } else {
+        console.log('No se insertaron detalles: condición no cumplida o array vacío')
       }
 
-      return cotizacion
+      // Traer la cotización recién creada con el contacto incluido
+      const cotizacionConContacto = await prisma.cotizacion.findUnique({
+        where: { id: cotizacion.id },
+        include: {
+          cliente: true,
+          contacto: true,
+          detalles: { include: { producto: true } }
+        }
+      })
+
+      return cotizacionConContacto
     })
 
     return NextResponse.json({ message: 'Cotización creada correctamente', cotizacion: result })

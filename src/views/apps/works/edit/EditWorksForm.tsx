@@ -44,9 +44,18 @@ import { formatRut, validateRut } from '@/utils/rut-utils'
 import { LISTAS_PRECIOS } from '@/data/obraData'
 
 // Agregar el enum o constante para los roles
-const ROLES_OBRA = [
+const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
-  { value: 'envio_informes', label: 'Envío de Informes' }
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
 // Agregar la constante para los mandantes
@@ -136,8 +145,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       giro: {
         required: 'El giro es requerido',
         pattern: {
-          value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
-          message: 'Solo se permiten letras'
+          value: /^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚ\s]+$/,
+          message: 'Solo se permiten letras y números'
         }
       },
       telefonoFacturacion: {
@@ -701,7 +710,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ROL</TableCell>
+                <TableCell>CARGO</TableCell>
                 <TableCell>NOMBRE</TableCell>
                 <TableCell>EMAIL</TableCell>
                 <TableCell>TELÉFONO</TableCell>
@@ -715,18 +724,22 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                     // Modo edición
                     <>
                       <TableCell>
-                        <FormControl fullWidth size='small'>
-                          <Select
-                            value={editingContact.rol}
-                            onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
-                          >
-                            {ROLES_OBRA.map(rol => (
-                              <MenuItem key={rol.value} value={rol.value}>
-                                {rol.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
+                        {index === 0 && editingContact.rol === 'encargado_obra' ? (
+                          <TextField value='Encargado de Obra' fullWidth size='small' disabled />
+                        ) : (
+                          <FormControl fullWidth size='small'>
+                            <Select
+                              value={editingContact.rol}
+                              onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                            >
+                              {ROLES_CONTACTO.map(rol => (
+                                <MenuItem key={rol.value} value={rol.value}>
+                                  {rol.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
                       </TableCell>
                       <TableCell>
                         <TextField
@@ -779,7 +792,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   ) : (
                     // Modo visualización
                     <>
-                      <TableCell>{ROLES_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
+                      <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
                       <TableCell>{contacto.nombre}</TableCell>
                       <TableCell>{contacto.email}</TableCell>
                       <TableCell>{contacto.telefono1}</TableCell>
@@ -912,8 +925,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               rules={{
                 required: 'El giro es requerido',
                 pattern: {
-                  value: /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/,
-                  message: 'Solo se permiten letras'
+                  value: /^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚ\s]+$/,
+                  message: 'Solo se permiten letras y números'
                 }
               }}
               render={({ field }) => (
@@ -921,7 +934,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   {...field}
                   fullWidth
                   label='Giro *'
-                  onChange={handleFacturacionRutChange}
                   error={Boolean(errors.giro)}
                   helperText={errors.giro?.message}
                 />
@@ -963,7 +975,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   helperText={errors.telefonoFacturacion?.message}
                   value={field.value || ''}
                   onChange={e => {
-                    const formatted = formatPhone(e.target.value)
+                    const formatted = e.target.value.replace(/[^a-zA-Z0-9+\s]/g, '')
 
                     field.onChange(formatted)
                   }}

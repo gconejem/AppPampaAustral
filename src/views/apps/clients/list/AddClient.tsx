@@ -103,7 +103,7 @@ const AddClienteDrawer = (props: Props) => {
     condicionVenta: 'Contado'
   })
 
-  const [contactos, setContactos] = useState<Array<{ contacto: Contacto; isPrincipal: boolean }>>([])
+  const [contactos, setContactos] = useState<Array<{ contacto: Contacto; cargo: string; isPrincipal: boolean }>>([])
 
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
@@ -341,18 +341,30 @@ const AddClienteDrawer = (props: Props) => {
         emailFacturacion: data.emailFacturacion || '',
         fechaCreacion: new Date(),
         clientesContactos: {
-          create: contactos.map(c => ({
-            cargo: c.contacto.cargo || 'Sin especificar',
-            isPrincipal: c.isPrincipal,
-            contacto: {
-              create: {
-                nombre: c.contacto.nombre,
-                email: c.contacto.email,
-                telefono1: c.contacto.telefono1,
-                telefono2: c.contacto.telefono2 || ''
+          create: contactos.map(c => {
+            if (c.contacto.contactId) {
+              // Contacto existente
+              return {
+                contactId: c.contacto.contactId,
+                cargo: c.cargo || 'Sin especificar',
+                isPrincipal: c.isPrincipal
+              }
+            } else {
+              // Contacto nuevo
+              return {
+                cargo: c.cargo || 'Sin especificar',
+                isPrincipal: c.isPrincipal,
+                contacto: {
+                  create: {
+                    nombre: c.contacto.nombre,
+                    email: c.contacto.email,
+                    telefono1: c.contacto.telefono1,
+                    telefono2: c.contacto.telefono2 || ''
+                  }
+                }
               }
             }
-          }))
+          })
         },
         condicionesComerciales: {
           create: {
@@ -497,14 +509,18 @@ const AddClienteDrawer = (props: Props) => {
     setSearchTimeout(timeout)
   }
 
-  // Agregar contacto desde los resultados de búsqueda
+  // Modificar handleAddContact para permitir editar el cargo al asociar
   const handleAddContact = (contact: Contacto) => {
-    const newContact: { contacto: Contacto; isPrincipal: boolean } = {
-      contacto: contact,
-      isPrincipal: contactos.length === 0
-    }
+    const isPrincipal = contactos.length === 0
 
-    setContactos([...contactos, newContact])
+    setContactos([
+      ...contactos,
+      {
+        contacto: contact,
+        cargo: contact.cargo || '',
+        isPrincipal
+      }
+    ])
     setSearchContactValue('')
     setSearchResults([])
   }
@@ -588,7 +604,7 @@ const AddClienteDrawer = (props: Props) => {
     // Corregir el acceso a las propiedades del contacto
     setEditingContact({
       nombre: contactos[index].contacto.nombre,
-      cargo: contactos[index].contacto.cargo,
+      cargo: contactos[index].cargo,
       email: contactos[index].contacto.email,
       telefono1: contactos[index].contacto.telefono1,
       telefono2: contactos[index].contacto.telefono2
@@ -1035,12 +1051,7 @@ const AddClienteDrawer = (props: Props) => {
                   {/* Contenedor para la búsqueda */}
                   <ContactSearch
                     onContactSelect={contact => {
-                      const newContact = {
-                        contacto: contact,
-                        isPrincipal: contactos.length === 0
-                      }
-
-                      setContactos([...contactos, newContact])
+                      handleAddContact(contact)
                     }}
                   />
                 </Box>
@@ -1089,16 +1100,13 @@ const AddClienteDrawer = (props: Props) => {
                     <TableCell>
                       <FormControl fullWidth size='small'>
                         <Select
-                          value={contacto.contacto.cargo || ''}
+                          value={contacto.cargo || ''}
                           onChange={e => {
                             const updatedContactos = [...contactos]
 
                             updatedContactos[index] = {
                               ...contacto,
-                              contacto: {
-                                ...contacto.contacto,
-                                cargo: e.target.value
-                              }
+                              cargo: e.target.value
                             }
                             setContactos(updatedContactos)
                           }}

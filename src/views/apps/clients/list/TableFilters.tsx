@@ -71,6 +71,8 @@ const TableFilters = ({
 
   const handleClearFilters = () => {
     handleDateRangeChange([null, null])
+    handleEstadoChange('')
+    handleSegmentoChange('')
   }
 
   return (

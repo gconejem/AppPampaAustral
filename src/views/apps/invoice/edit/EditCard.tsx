@@ -410,22 +410,23 @@ const EditCard = ({ id }: { id: string }) => {
     try {
       if (!formData) return
 
-      const detallesValidos = productRows
-        .filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto)
-        .map(row => ({
-          productoId: parseInt(row.productoId),
-          cantidad: row.cantidad,
-          precioUnitario: row.precioUnitarioUF,
-          descuento: row.descuento || 0,
-          subtotal: row.totalNetoUF,
-          esPaquete: row.esPaquete || false,
-          esSubProducto: false
-        }))
+      const detallesValidos = productRows.map(row => ({
+        productoId: parseInt(row.productoId),
+        cantidad: row.cantidad,
+        precioUnitario: row.precioUnitarioUF,
+        descuento: row.descuento || 0,
+        subtotal: row.totalNetoUF,
+        esPaquete: row.esPaquete || false,
+        esSubProducto: row.esSubProducto || false,
+        paqueteId: row.paqueteId || null
+      }))
 
       const dataToSend = {
         ...formData,
         detalles: detallesValidos
       }
+
+      console.log('DATA QUE SE ENVÍA AL PUT:', dataToSend)
 
       const response = await fetch(`/api/cotizaciones/${id}`, {
         method: 'PUT',
@@ -440,7 +441,7 @@ const EditCard = ({ id }: { id: string }) => {
       }
 
       toast.success('Cotización actualizada exitosamente')
-      router.push('/apps/invoice/list')
+      router.push('/es/apps/invoice/list')
     } catch (error) {
       console.error('Error al guardar:', error)
       toast.error('Error al actualizar la cotización')

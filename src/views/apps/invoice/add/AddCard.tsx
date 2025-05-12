@@ -47,8 +47,7 @@ import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 import type { ContactoType } from '@/types/apps/contactTypes'
 
 // Component Imports
-import AddCustomerDrawer from './AddCustomerDrawer'
-import Logo from '@components/layout/shared/Logo'
+// import Logo from '@components/layout/shared/Logo'
 
 // Styled Component Imports
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
@@ -132,7 +131,7 @@ interface FormData {
   fechaFin: Date | null
   clienteId: number | null
   obraId: number | null
-  contactoId: number | null
+  contactId: number | null
   subtotal: number
   descuento: number
   impuesto: number
@@ -190,7 +189,7 @@ const AddCard = ({
     fechaFin: new Date(new Date().setDate(new Date().getDate() + 15)),
     clienteId: null,
     obraId: null,
-    contactoId: null,
+    contactId: null,
     subtotal: 0,
     descuento: 0,
     impuesto: 0,
@@ -322,7 +321,8 @@ const AddCard = ({
         clienteId: formData.clienteId,
         obraId: formData.obraId,
         contacto: formData.contacto,
-        contactoId: formData.contactoId,
+        contactId:
+          typeof formData.contactId === 'number' && !isNaN(formData.contactId) ? formData.contactId : undefined,
         detalles: detallesValidos,
         formaPago: formData.formaPago
       }
@@ -356,7 +356,7 @@ const AddCard = ({
   }
 
   // States
-  const [open, setOpen] = useState(false)
+  // const [open, setOpen] = useState(false)
   const [count, setCount] = useState(1)
   const [selectData, setSelectData] = useState<InvoiceType | null>(null)
   const [clientes, setClientes] = useState<ClienteType[]>([])
@@ -390,7 +390,7 @@ const AddCard = ({
   // Agregar estado para contactos
   const [contactos, setContactos] = useState<
     Array<{
-      contactoId: number
+      contactId: number
       nombre: string
       cargo: string
       email: string
@@ -422,7 +422,7 @@ const AddCard = ({
   const lastTotals = useRef({ subtotal: 0, descuento: 0, impuesto: 0, total: 0 })
 
   // Hooks
-  const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
+  // const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
   const isBelowSmScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
 
   // Estados para paginación del buscador de productos
@@ -570,7 +570,7 @@ const AddCard = ({
 
         // Mapear los datos para asegurar la estructura correcta
         const contactosMapeados = data.map((contacto: any) => ({
-          contactoId: contacto.contactId,
+          contactId: contacto.contactId, // Usar contactId
           nombre: contacto.nombre,
           cargo: contacto.cargo,
           email: contacto.email,
@@ -866,25 +866,8 @@ const AddCard = ({
 
     // Preparar los datos para la previsualización
     const previewData = {
-      numeroCotizacion: formData.numeroCotizacion,
-      tipoCotizacion: formData.tipoCotizacion,
-      estado: 'BORRADOR',
-      fechaInicio: formData.fechaInicio?.toISOString() || new Date().toISOString(),
-      fechaFin: formData.fechaFin?.toISOString() || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-      nombreProyecto: formData.nombreProyecto || '',
-      empresa: formData.empresa || '',
-      ubicacion: formData.ubicacion || '',
-      formaPago: formData.formaPago || 'CONTADO',
-      contacto: formData.contacto
-        ? {
-            nombre: formData.contacto.nombre,
-            cargo: formData.contacto.cargo || 'Sin cargo',
-            email: formData.contacto.email || '',
-            telefono1: formData.contacto.telefono1 || ''
-          }
-        : null,
-      contactoId: formData.contactoId,
-      detalles: productosValidos.map(row => ({
+      ...formData,
+      detalles: productRows.map(row => ({
         productoId: parseInt(row.productoId),
         servicio: row.servicio || '',
         area: row.area || '',
@@ -1310,14 +1293,15 @@ const AddCard = ({
             <Grid item xs={12}>
               <div className='p-6 bg-actionHover rounded'>
                 <div className='flex justify-between gap-4 flex-col sm:flex-row'>
-                  <div className='flex flex-col gap-6'>
-                    <div className='flex items-center'>
-                      <Logo />
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {/* <Logo style={{ height: 48, width: 'auto' }} /> */}
                     <div>
+                      <Typography variant='h6' sx={{ fontWeight: 700, mb: 1 }}>
+                        PAMPAUSTRAL
+                      </Typography>
                       <Typography color='text.primary'>Calle Santa Blanca 51, Chillán – Chile.</Typography>
                       <Typography color='text.primary'>Email: contacto@pampaustral.cl</Typography>
-                      <Typography color='text.primary'>+56 42-223 82 90 </Typography>
+                      <Typography color='text.primary'>+56 42-223 82 90</Typography>
                     </div>
                   </div>
                   <div className='flex flex-col gap-2'>
@@ -1399,7 +1383,7 @@ const AddCard = ({
                           <Typography variant='body1'>
                             {option.nombre}{' '}
                             <Typography component='span' color='text.secondary'>
-                              #{option.contactoId}
+                              #{option.contactId}
                             </Typography>
                           </Typography>
                           <Typography variant='caption' color='text.secondary'>
@@ -1419,9 +1403,9 @@ const AddCard = ({
                       })
                     }}
                     onChange={(_, newValue) => {
-                      if (newValue) {
+                      if (newValue && newValue.contactId) {
                         const contactoData = {
-                          contactoId: newValue.contactoId,
+                          contactId: Number(newValue.contactId),
                           nombre: newValue.nombre,
                           cargo: newValue.cargo || 'Sin cargo',
                           email: newValue.email || '',
@@ -1430,20 +1414,20 @@ const AddCard = ({
 
                         updateFormData({
                           contacto: contactoData,
-                          contactoId: contactoData.contactoId
+                          contactId: contactoData.contactId
                         })
                       } else {
                         updateFormData({
                           contacto: null,
-                          contactoId: null
+                          contactId: null
                         })
                       }
                     }}
-                    isOptionEqualToValue={(option, value) => option.contactoId === value.contactoId}
+                    isOptionEqualToValue={(option, value) => option.contactId === value.contactId}
                     value={
-                      formData.contacto && formData.contactoId
+                      formData.contacto && formData.contactId
                         ? {
-                            contactoId: formData.contactoId,
+                            contactId: formData.contactId,
                             nombre: formData.contacto.nombre,
                             cargo: formData.contacto.cargo || 'Sin cargo',
                             email: formData.contacto.email || '',
@@ -1837,7 +1821,8 @@ const AddCard = ({
                           width: '100%',
                           maxWidth: '500px',
                           maxHeight: '400px',
-                          overflow: 'auto'
+                          overflow: 'auto',
+                          zIndex: 1 // BAJA al mínimo posible para evitar overlays
                         }
                       }}
                     >
@@ -2279,8 +2264,8 @@ const AddCard = ({
             }}
           >
             <Grid item>
-              <Button color='secondary' variant='outlined' onClick={handlePreview}>
-                Visualizar
+              <Button variant='contained' color='primary' onClick={handlePreview} sx={{ mr: 2 }}>
+                Guardar y Visualizar
               </Button>
             </Grid>
             <Grid item>
@@ -2291,13 +2276,6 @@ const AddCard = ({
           </Grid>
         </CardContent>
       </Card>
-      <AddCustomerDrawer
-        open={open}
-        setOpen={setOpen}
-        onFormSubmit={data => {
-          updateFormData({ contacto: data })
-        }}
-      />
     </>
   )
 }

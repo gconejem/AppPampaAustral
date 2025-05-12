@@ -42,6 +42,25 @@ type Props = {
   currentUser: Cliente
 }
 
+// Definir los roles legibles
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'envio_informes', label: 'Envío de Informes' },
+  { value: 'dueno_representante', label: 'Dueño Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
+const getCargoLabel = (value: string) => {
+  return ROLES_CONTACTO.find(r => r.value === value)?.label || value
+}
+
 const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX.Element => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -56,7 +75,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       return currentUser.clientesContactos.map(cc => ({
         contactId: cc.contacto?.contactId,
         nombre: cc.contacto?.nombre || '',
-        cargo: cc.contacto?.cargo || '',
+        cargo: cc.cargo || '',
         email: cc.contacto?.email || '',
         telefono1: cc.contacto?.telefono1 || '',
         telefono2: cc.contacto?.telefono2 || '',
@@ -140,7 +159,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         const mappedContacts = currentUser.clientesContactos.map(cc => ({
           contactId: cc.contacto?.contactId,
           nombre: cc.contacto?.nombre || '',
-          cargo: cc.contacto?.cargo || '',
+          cargo: cc.cargo || '',
           email: cc.contacto?.email || '',
           telefono1: cc.contacto?.telefono1 || '',
           telefono2: cc.contacto?.telefono2 || '',
@@ -170,7 +189,8 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         // Agregar la información de contactos
         clientesContactos: contacts.map(contact => ({
           contactId: contact.contactId,
-          isPrincipal: contact.isPrincipal
+          isPrincipal: contact.isPrincipal,
+          cargo: contact.cargo
         }))
       }
 
@@ -519,12 +539,18 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                         {editingContactIndex === index ? (
                           <>
                             <TableCell>
-                              <TextField
-                                value={editingContact?.cargo}
-                                onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
-                                fullWidth
-                                size='small'
-                              />
+                              <FormControl fullWidth size='small'>
+                                <Select
+                                  value={editingContact?.cargo || ''}
+                                  onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
+                                >
+                                  {ROLES_CONTACTO.map(rol => (
+                                    <MenuItem key={rol.value} value={rol.value}>
+                                      {rol.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </TableCell>
                             <TableCell>
                               <TextField
@@ -585,7 +611,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                           </>
                         ) : (
                           <>
-                            <TableCell>{contact.cargo}</TableCell>
+                            <TableCell>{getCargoLabel(contact.cargo)}</TableCell>
                             <TableCell>{contact.nombre}</TableCell>
                             <TableCell>{contact.email}</TableCell>
                             <TableCell>{contact.telefono1}</TableCell>
