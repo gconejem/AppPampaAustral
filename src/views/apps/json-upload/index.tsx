@@ -56,7 +56,7 @@ interface Agenda {
   }>
 }
 
-const userId = "cmacrdc1s0000c1qoc4uvzthf"
+//const userId = "cmalj98pw0000c1tc3omxsb3x"
 
 interface Props {
   agendas: Agenda[]
@@ -94,8 +94,7 @@ const JsonUpload = ({ agendas }: Props) => {
             const modifiedJsonData = {
               ...jsonData,
               usuario: {
-                ...jsonData.usuario,
-                id: userId
+                ...jsonData.usuario
               },
               data: jsonData.data.map((item: any) => ({
                 ...item,

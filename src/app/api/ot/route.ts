@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que el usuario exista
-    const usuario = await prisma.user.findUnique({
+    /* const usuario = await prisma.user.findUnique({
       where: {
         id: data.usuario.id
       }
@@ -76,7 +76,14 @@ export async function POST(request: Request) {
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    } */
+
+    //temporal para tener un id de usuario existente en la base de datos
+    const user = await prisma.user.findFirst()
+    if (!user) {
+      throw new Error('No se encontró ningún laboratorista')
     }
+    //fin temporal
 
     // Verificar si es un JSON de tipo aceptación de visita
     const esAceptacionVisita = data.data.some((item: any) => item.ACEPVISITA)
@@ -131,7 +138,8 @@ export async function POST(request: Request) {
           tipoOT: getTipoOTFromDocCode(ot.FKLBDOCVER || ''),
           user: {
             connect: {
-              id: data.usuario.id
+              //id: data.usuario.id
+              id: user.id
             }
           }
         }
