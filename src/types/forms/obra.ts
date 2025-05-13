@@ -83,6 +83,8 @@ export interface FormValidateType {
   telefono?: string
   listaPrecios?: string
   mailRecepcionFactura?: string
+  rutRepresentanteLegal?: string
+  representanteLegal?: string
 
   // Referencias
   estadoPago?: boolean
@@ -111,7 +113,9 @@ export const initialFormData = {
   comunaFacturacion: '',
   telefonoFacturacion: '',
   listaPrecios: '',
-  mailRecepcionFactura: ''
+  mailRecepcionFactura: '',
+  rutRepresentanteLegal: '',
+  representanteLegal: ''
 }
 
 export type WorkTypeWithAction = Obra & {

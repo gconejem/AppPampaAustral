@@ -339,6 +339,8 @@ const AddClienteDrawer = (props: Props) => {
         industria: data.industria,
         giro: data.giro || '',
         emailFacturacion: data.emailFacturacion || '',
+        otroRut: data.rutRepresentanteLegal || '',
+        representanteLegal: data.representanteLegal || '',
         fechaCreacion: new Date(),
         clientesContactos: {
           create: contactos.map(c => {
@@ -1024,6 +1026,43 @@ const AddClienteDrawer = (props: Props) => {
                     label='Email de Facturación'
                     placeholder='ejemplo@empresa.com'
                     type='email'
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Nueva fila para rutRepresentanteLegal y representanteLegal */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='rutRepresentanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='RUT Representante Legal'
+                    placeholder='12.345.678-9'
+                    onChange={e => {
+                      const formatted = formatRut(e.target.value)
+
+                      field.onChange(formatted)
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='representanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Representante Legal'
+                    placeholder='Nombre del representante legal'
                   />
                 )}
               />
