@@ -17,6 +17,8 @@ interface Cliente {
   telefonoFacturacion?: string | null
   mailRecepcionFactura?: string | null
   listaPrecios?: string | null
+  otroRut?: string | null
+  representanteLegal?: string | null
 }
 
 interface Props {
@@ -50,7 +52,9 @@ const ClientSearch = ({ onClientSelect }: Props) => {
             telefono: c.telefono || '',
             telefonoFacturacion: c.telefono || '',
             mailRecepcionFactura: c.emailFacturacion || '',
-            listaPrecios: c.listaPrecios || ''
+            listaPrecios: c.listaPrecios || '',
+            otroRut: c.otroRut || '',
+            representanteLegal: c.representanteLegal || ''
           }))
 
           setOptions(clientes)

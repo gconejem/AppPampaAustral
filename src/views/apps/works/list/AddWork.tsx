@@ -428,6 +428,7 @@ const AddObraDrawer = (props: Props) => {
     estadoPago: true,
     hes: true,
     oc: true,
+    envioInformes: true,
     otrasReferencias: 'Referencia adicional'
   } as const
 
@@ -467,6 +468,7 @@ const AddObraDrawer = (props: Props) => {
       setValue('estadoPago', Boolean(dummyObraData.estadoPago))
       setValue('hes', Boolean(dummyObraData.hes))
       setValue('oc', Boolean(dummyObraData.oc))
+      setValue('envioInformes', Boolean(dummyObraData.envioInformes))
 
       // Actualizar los estados locales
       setValue('numeroObra', dummyObraData.numeroObra)
@@ -644,6 +646,10 @@ const AddObraDrawer = (props: Props) => {
                     setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
                     setValue('telefono', cliente.telefono || '')
 
+                    // Nuevos campos: rutRepresentanteLegal y representanteLegal
+                    setValue('rutRepresentanteLegal', cliente.otroRut || '')
+                    setValue('representanteLegal', cliente.representanteLegal || '')
+
                     // Disparar validación de todos los campos actualizados
                     trigger([
                       'rut',
@@ -653,7 +659,9 @@ const AddObraDrawer = (props: Props) => {
                       'direccionComercial',
                       'comunaFacturacion',
                       'listaPrecios',
-                      'mailRecepcionFactura'
+                      'mailRecepcionFactura',
+                      'rutRepresentanteLegal',
+                      'representanteLegal'
                     ])
                   }}
                 />
@@ -813,7 +821,7 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Correos */}
             <Grid container spacing={5}>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name='correos'
                   control={control}
@@ -825,6 +833,27 @@ const AddObraDrawer = (props: Props) => {
                       label='Correos (separados por coma)'
                       placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                       helperText='Separar múltiples correos con comas'
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                      onChange={e => {
+                        const correos = e.target.value.split(',').map(correo => correo.trim())
+
+                        field.onChange(correos)
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='envioInforme'
+                  control={control}
+                  defaultValue={[]}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Envío Informe'
+                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                       value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                       onChange={e => {
                         const correos = e.target.value.split(',').map(correo => correo.trim())
@@ -1359,6 +1388,43 @@ const AddObraDrawer = (props: Props) => {
               </Grid>
             </Grid>
 
+            {/* Nueva fila para otroRut y representanteLegal */}
+            <Grid container spacing={5}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='rutRepresentanteLegal'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='RUT Representante Legal'
+                      placeholder='12.345.678-9'
+                      onChange={e => {
+                        const formatted = formatRut(e.target.value)
+
+                        field.onChange(formatted)
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='representanteLegal'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Representante Legal'
+                      placeholder='Nombre del representante legal'
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+
             {/* Referencias */}
             <Divider sx={{ my: 4 }} />
             <Grid container spacing={5}>
@@ -1387,20 +1453,38 @@ const AddObraDrawer = (props: Props) => {
               </Grid>
 
               <Grid item xs={12} sm={3}>
-                <Controller
-                  name='oc'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='OC' />
-                  )}
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name='oc'
+                      control={control}
+                      render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
+                    />
+                  }
+                  label='OC'
                 />
               </Grid>
 
               <Grid item xs={12} sm={3}>
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name='envioInformes'
+                      control={control}
+                      render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
+                    />
+                  }
+                  label='Envío de Informes'
+                />
+              </Grid>
+
+              <Grid item xs={12}>
                 <Controller
                   name='otrasReferencias'
                   control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Otras Referencias' />}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Otras Referencias' multiline rows={4} />
+                  )}
                 />
               </Grid>
             </Grid>

@@ -17,6 +17,8 @@ export interface FormValidateType {
   fechaCreacion?: string
   giro?: string
   emailFacturacion?: string
+  rutRepresentanteLegal?: string
+  representanteLegal?: string
   contacto?: {
     nombre: string
     telefono: string
@@ -41,6 +43,8 @@ export interface FormNonValidateType {
   observaciones: string
   giro?: string
   emailFacturacion?: string
+  rutRepresentanteLegal?: string
+  representanteLegal?: string
   contacto?: {
     nombre: string
     telefono: string

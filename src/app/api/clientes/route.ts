@@ -40,6 +40,8 @@ export async function POST(request: Request) {
     const cliente = await prisma.cliente.create({
       data: {
         ...body,
+        otroRut: body.otroRut || '',
+        representanteLegal: body.representanteLegal || '',
         fechaCreacion: new Date(),
         giro: body.giro || null,
         emailFacturacion: body.emailFacturacion || null,

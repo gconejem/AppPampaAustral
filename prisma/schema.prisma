@@ -25,6 +25,8 @@ model Cliente {
   industria              String?
   giro                   String?
   emailFacturacion       String?
+  otroRut                String?
+  representanteLegal     String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   agendas                Agenda[]
@@ -196,6 +198,7 @@ model Obra {
   hes                      Boolean        @default(false)
   oc                       Boolean        @default(false)
   otrasReferencias         String?
+  envioInformes            Boolean        @default(false)
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
   agendas                  Agenda[]
