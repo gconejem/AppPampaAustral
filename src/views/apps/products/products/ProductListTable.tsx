@@ -599,30 +599,51 @@ const ProductListTable = () => {
     }
   }
 
+  // Función para cambiar el estado de un producto (ACTIVO/INACTIVO)
   const handleToggleStatus = async (producto: Producto) => {
     try {
-      const newStatus = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
-
+      // Determinar el nuevo estado (opuesto al actual)
+      const nuevoEstado = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+      
+      // Llamar al endpoint para actualizar el estado
       const response = await fetch(`/api/productos/${producto.productoId}/estado`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ estado: newStatus })
+        body: JSON.stringify({ estado: nuevoEstado })
       })
 
       if (!response.ok) {
         throw new Error('Error al cambiar el estado del producto')
       }
 
-      // Actualizar el estado en la interfaz
+      const data = await response.json()
+      
+      // Actualizar el estado local
       setProductos(prevProductos =>
-        prevProductos.map(p => (p.productoId === producto.productoId ? { ...p, estado: newStatus } : p))
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
+      )
+      
+      // Actualizar también en la lista filtrada
+      setFilteredProductos(prevProductos =>
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
+      )
+      
+      // Actualizar en la lista completa
+      setAllProductos(prevProductos =>
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
       )
 
-      toast.success(`Producto ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
+      toast.success(data.message)
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error al cambiar estado:', error)
       toast.error('Error al cambiar el estado del producto')
     }
   }
