@@ -18,9 +18,10 @@ interface TableFiltersProps {
   areas: string[]
   familias: string[]
   tipos: string[]
+  resetPage: () => void
 }
 
-const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: TableFiltersProps) => {
+const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, resetPage }: TableFiltersProps) => {
   // States
   const [selectedArea, setSelectedArea] = useState('')
   const [selectedFamilia, setSelectedFamilia] = useState('')
@@ -30,7 +31,6 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
   useEffect(() => {
     if (!Array.isArray(productData)) {
       setFilteredData([])
-
       return
     }
 
@@ -71,6 +71,24 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
     setFilteredData(filteredData)
   }, [selectedArea, selectedFamilia, selectedTipo, productData, setFilteredData])
 
+  // Función para manejar cambios en los filtros
+  const handleFilterChange = (filterType: string, value: string) => {
+    switch (filterType) {
+      case 'area':
+        setSelectedArea(value)
+        break
+      case 'familia':
+        setSelectedFamilia(value)
+        break
+      case 'tipo':
+        setSelectedTipo(value)
+        break
+      default:
+        break
+    }
+    resetPage()
+  }
+
   return (
     <CardContent>
       <Grid container spacing={6}>
@@ -82,7 +100,7 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               id='select-area'
               label='Área'
               value={selectedArea}
-              onChange={e => setSelectedArea(e.target.value)}
+              onChange={e => handleFilterChange('area', e.target.value)}
               labelId='area-select'
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
@@ -101,7 +119,7 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               fullWidth
               id='select-familia'
               value={selectedFamilia}
-              onChange={e => setSelectedFamilia(e.target.value)}
+              onChange={e => handleFilterChange('familia', e.target.value)}
               label='Familia'
               labelId='familia-select'
             >
@@ -121,7 +139,7 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos }: 
               fullWidth
               id='select-tipo'
               value={selectedTipo}
-              onChange={e => setSelectedTipo(e.target.value)}
+              onChange={e => handleFilterChange('tipo', e.target.value)}
               label='Tipo'
               labelId='tipo-select'
             >
