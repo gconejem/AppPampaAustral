@@ -266,7 +266,7 @@ const ProductListTable = () => {
         if (data) {
           setProductos(data.productos || [])
           setFilteredProductos(data.productos || [])
-          setAreas(['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros'])
+          setAreas(data.areas)
           setFamilias(data.familias || [])
           setTipos(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
         }
