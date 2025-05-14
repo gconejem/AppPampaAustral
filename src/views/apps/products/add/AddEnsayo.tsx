@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -19,9 +19,37 @@ import MenuItem from '@mui/material/MenuItem'
 // Third Party Imports
 import { toast } from 'react-hot-toast'
 
+
 const AddEnsayo = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  
+  const [areas, setAreas] = useState<string[]>([])
+  const [familias, setFamilias] = useState([])
+  const [tipos, setTipos] = useState<string[]>([])
+
+   // Cargar datos iniciales
+   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/debug')
+        const data = await response.json()
+
+        console.log('ADD ENSAYO:', data)
+
+        if (data) {
+          setAreas(data.areas)
+          setFamilias(data.familias || [])
+          setTipos(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
+        }
+      } catch (error) {
+        console.error('Error cargando datos:', error)
+        toast.error('Error al cargar los datos')
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -33,13 +61,6 @@ const AddEnsayo = () => {
     norma: '',
     listaPrecio: '1'
   })
-
-  // Estados para las opciones de los selects
-  const [areas] = useState(['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros'])
-
-  const [familias] = useState(['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia'])
-
-  const [tipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
