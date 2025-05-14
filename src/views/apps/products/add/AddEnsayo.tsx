@@ -40,7 +40,7 @@ const AddEnsayo = () => {
         if (data) {
           setAreas(data.areas)
           setFamilias(data.familias || [])
-          setTipos(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
+          setTipos(data.tipos || [])
         }
       } catch (error) {
         console.error('Error cargando datos:', error)

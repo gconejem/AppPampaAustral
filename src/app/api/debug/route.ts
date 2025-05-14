@@ -4,10 +4,11 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    const [productos, areas, familias, listasPrecio] = await Promise.all([
+    const [productos, areas, familias, tipos, listasPrecio] = await Promise.all([
       prisma.producto.findMany(),
       prisma.producto.findMany({ select: { area: true }, distinct: ['area'] }),
       prisma.producto.findMany({ select: { familia: true }, distinct: ['familia'] }),
+      prisma.producto.findMany({ select: { tipo: true }, distinct: ['tipo'] }),
       prisma.listaPrecio.findMany()
     ])
 
@@ -15,6 +16,7 @@ export async function GET() {
       productos,
       areas: areas.map(a => a.area).filter(Boolean),
       familias: familias.map(f => f.familia).filter(Boolean),
+      tipos: tipos.map(t => t.tipo).filter(Boolean),
       listasPrecio
     }
 
