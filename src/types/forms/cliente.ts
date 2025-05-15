@@ -17,6 +17,7 @@ export interface FormValidateType {
   fechaCreacion?: string
   giro?: string
   emailFacturacion?: string
+  otroRut?: string
   rutRepresentanteLegal?: string
   representanteLegal?: string
   contacto?: {
@@ -94,6 +95,9 @@ export interface Cliente {
   estado: string
   giro?: string
   emailFacturacion?: string
+  otroRut?: string
+  rutRepresentanteLegal?: string
+  representanteLegal?: string
   clientesContactos?: ClienteContacto[]
   condicionesComerciales?: CondicionComercial
   createdAt?: Date
