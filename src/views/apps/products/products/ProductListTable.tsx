@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -216,6 +216,7 @@ const ProductListTable = () => {
   const [familias, setFamilias] = useState([])
   const [tipos, setTipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
   const [listasPrecios, setListasPrecios] = useState([])
+  const [allProductos, setAllProductos] = useState<Producto[]>([]) // Nuevo estado para almacenar todos los productos
 
   // Estados para el modal de paquetes
   const [open, setOpen] = useState(false)
@@ -265,10 +266,11 @@ const ProductListTable = () => {
 
         if (data) {
           setProductos(data.productos || [])
+          setAllProductos(data.productos || []) // Guardar todos los productos
           setFilteredProductos(data.productos || [])
-          setAreas(['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros'])
+          setAreas(data.areas)
           setFamilias(data.familias || [])
-          setTipos(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
+          setTipos(data.tipos || [])
         }
       } catch (error) {
         console.error('Error cargando datos:', error)
@@ -279,24 +281,26 @@ const ProductListTable = () => {
     fetchData()
   }, [])
 
-  // Función para cargar productos
+  // Función para cargar productos (ahora solo se llama al inicio)
   const cargarProductos = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/productos?page=${page + 1}&limit=${rowsPerPage}`)
+      const response = await fetch(`/api/productos`)
       const data = await response.json()
+
+      console.log('DATOS:', data)
 
       if (data.productos) {
         const productosFormateados = data.productos.map(p => ({
           ...p,
-
           // Asegurarse de que listasPrecios sea un array
           listasPrecios: Array.isArray(p.listasPrecios) ? p.listasPrecios : []
         }))
 
         setProductos(productosFormateados)
+        setAllProductos(productosFormateados) // Guardar todos los productos
         setFilteredProductos(productosFormateados)
-        setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
+        setTotalProductos(productosFormateados.length)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
@@ -306,21 +310,25 @@ const ProductListTable = () => {
     }
   }
 
-  // Función para buscar productos
-  const buscarProducto = async (query: string) => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/productos/search?q=${query}`)
-      const data = await response.json()
-
-      if (Array.isArray(data)) {
-        setProductos(data)
-      }
-    } catch (error) {
-      console.error('Error al buscar productos:', error)
-    } finally {
-      setLoading(false)
+  // Función para buscar productos (ahora busca en los datos locales)
+  const buscarProducto = (query: string) => {
+    if (!query) {
+      setFilteredProductos(allProductos)
+      setPage(0) // Reiniciar la página al limpiar la búsqueda
+      return
     }
+    
+    const lowercaseQuery = query.toLowerCase()
+    const resultados = allProductos.filter(producto => 
+      producto.nombre.toLowerCase().includes(lowercaseQuery) || 
+      producto.sku.toLowerCase().includes(lowercaseQuery) ||
+      producto.area.toLowerCase().includes(lowercaseQuery) ||
+      producto.familia.toLowerCase().includes(lowercaseQuery) ||
+      producto.tipo.toLowerCase().includes(lowercaseQuery)
+    )
+    
+    setFilteredProductos(resultados)
+    setPage(0) // Reiniciar la página al aplicar una búsqueda
   }
 
   // Función para eliminar producto
@@ -478,15 +486,15 @@ const ProductListTable = () => {
 
   useEffect(() => {
     cargarProductos()
-  }, [page, rowsPerPage])
+  }, []) // Ahora solo se cargan los productos al inicio
 
   useEffect(() => {
     if (globalFilter) {
       buscarProducto(globalFilter)
     } else {
-      cargarProductos()
+      setFilteredProductos(allProductos)
     }
-  }, [globalFilter])
+  }, [globalFilter, allProductos])
 
   useEffect(() => {
     if (open) {
@@ -591,30 +599,51 @@ const ProductListTable = () => {
     }
   }
 
+  // Función para cambiar el estado de un producto (ACTIVO/INACTIVO)
   const handleToggleStatus = async (producto: Producto) => {
     try {
-      const newStatus = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
-
+      // Determinar el nuevo estado (opuesto al actual)
+      const nuevoEstado = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+      
+      // Llamar al endpoint para actualizar el estado
       const response = await fetch(`/api/productos/${producto.productoId}/estado`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ estado: newStatus })
+        body: JSON.stringify({ estado: nuevoEstado })
       })
 
       if (!response.ok) {
         throw new Error('Error al cambiar el estado del producto')
       }
 
-      // Actualizar el estado en la interfaz
+      const data = await response.json()
+      
+      // Actualizar el estado local
       setProductos(prevProductos =>
-        prevProductos.map(p => (p.productoId === producto.productoId ? { ...p, estado: newStatus } : p))
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
+      )
+      
+      // Actualizar también en la lista filtrada
+      setFilteredProductos(prevProductos =>
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
+      )
+      
+      // Actualizar en la lista completa
+      setAllProductos(prevProductos =>
+        prevProductos.map(p =>
+          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
+        )
       )
 
-      toast.success(`Producto ${newStatus === 'ACTIVO' ? 'activado' : 'desactivado'} exitosamente`)
+      toast.success(data.message)
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error al cambiar estado:', error)
       toast.error('Error al cambiar el estado del producto')
     }
   }
@@ -747,6 +776,14 @@ const ProductListTable = () => {
     []
   )
 
+  // Actualizar el manejo del cambio en el filtro global
+  const handleGlobalFilterChange = (value: string | number) => {
+    setGlobalFilter(String(value))
+    if (value === '') {
+      setPage(0) // Reiniciar la página cuando se limpia el filtro
+    }
+  }
+
   const table = useReactTable({
     data: filteredProductos,
     columns,
@@ -755,7 +792,11 @@ const ProductListTable = () => {
     },
     state: {
       rowSelection,
-      globalFilter
+      globalFilter,
+      pagination: {
+        pageIndex: page,
+        pageSize: rowsPerPage
+      }
     },
     initialState: {
       pagination: {
@@ -772,8 +813,15 @@ const ProductListTable = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    manualPagination: false // Cambiado a false para usar paginación del lado del cliente
   })
+
+  // Función para reiniciar la página (ahora definida después de la tabla)
+  const resetPage = useCallback(() => {
+    setPage(0)
+    table.setPageIndex(0)
+  }, [table])
 
   // Manejadores para el modal
   const handleOpenPackageModal = () => setOpenPackageModal(true)
@@ -803,17 +851,18 @@ const ProductListTable = () => {
       <Card>
         <CardHeader title='Productos' className='pbe-4' />
         <TableFilters
-          productData={productos}
+          productData={allProductos}
           setFilteredData={setFilteredProductos}
           areas={areas}
           familias={familias}
           tipos={tipos}
+          resetPage={resetPage} // Pasar la función resetPage a TableFilters
         />
         <Divider />
         <div className='flex justify-between flex-col items-start sm:flex-row sm:items-center gap-y-4 p-5'>
           <DebouncedInput
             value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
+            onChange={handleGlobalFilterChange} // Usar la nueva función de manejo
             placeholder='Buscar Ensayo/Servicio'
             className='max-sm:is-full'
           />
@@ -865,7 +914,7 @@ const ProductListTable = () => {
                 </tr>
               ))}
             </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
+            {table.getRowModel().rows.length === 0 ? (
               <tbody>
                 <tr>
                   <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
@@ -890,13 +939,18 @@ const ProductListTable = () => {
           rowsPerPageOptions={[10, 25, 50]}
           component='div'
           className='border-bs'
-          count={totalProductos}
+          count={filteredProductos.length}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
+          onPageChange={(_, newPage) => {
+            setPage(newPage)
+            table.setPageIndex(newPage)
+          }}
           onRowsPerPageChange={e => {
-            setRowsPerPage(Number(e.target.value))
-            setPage(0) // Resetear a la primera página cuando se cambia el número de filas
+            const newRowsPerPage = Number(e.target.value)
+            setRowsPerPage(newRowsPerPage)
+            setPage(0)
+            table.setPageSize(newRowsPerPage)
           }}
         />
         <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} />

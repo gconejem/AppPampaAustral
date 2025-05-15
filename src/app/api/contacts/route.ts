@@ -24,6 +24,7 @@ export async function GET() {
         telefono1: contact.telefono1,
         telefono2: contact.telefono2,
         empresa: contact.empresa,
+        estado: contact.estado,
         clientesContactos:
           contact.clientesContactos?.map(cc => ({
             clienteId: cc.clienteId,

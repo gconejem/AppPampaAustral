@@ -430,7 +430,6 @@ const ClientListTable = ({ userData, setData }: Props) => {
       // Preparar los datos para Excel con formato de tabla
       const headers = [
         ['INFORMACIÓN DEL CLIENTE'],
-        [], // Fila vacía para separación
         [
           'RUT',
           'RAZÓN SOCIAL',
@@ -517,16 +516,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
         ]
       })
 
-      // Agregar una fila vacía entre cada cliente para mejor legibilidad
-      const dataWithSpacing = csvData.reduce((acc: string[][], row: string[], index: number) => {
-        if (index > 0) acc.push([]) // Agregar fila vacía entre clientes
-        acc.push(row)
-
-        return acc
-      }, [])
-
       // Crear el contenido del CSV con formato mejorado
-      const allRows = [...headers, ...dataWithSpacing]
+      const allRows = [...headers, ...csvData]
       const csvContent = allRows.map(row => row.join(',')).join('\n')
 
       const BOM = '\uFEFF'
@@ -855,7 +846,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
                     }
                   }
                 },
-                {
+                /* {
                   text: 'Eliminar',
                   icon: 'ri-delete-bin-line',
                   menuItemProps: {
@@ -865,7 +856,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
                       }
                     }
                   }
-                }
+                } */
               ]}
             />
           </Box>

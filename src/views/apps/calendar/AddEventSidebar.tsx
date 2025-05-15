@@ -866,7 +866,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   <Box>
                     <Typography variant='body1'>{option.nombreObra}</Typography>
                     <Typography variant='caption' color='textSecondary'>
-                      Dirección: {option.direccion}
+                      {option.direccion}
                     </Typography>
                   </Box>
                 </li>

@@ -284,6 +284,22 @@ const AddClienteDrawer = (props: Props) => {
         }
       }
 
+      // Validar región
+      if (!values.region) {
+        errors.region = {
+          type: 'manual',
+          message: 'La región es obligatoria'
+        }
+      }
+
+      // Validar comuna
+      if (!values.comuna) {
+        errors.comuna = {
+          type: 'manual',
+          message: 'La comuna es obligatoria'
+        }
+      }
+
       // Validar teléfono si existe
       if (values.telefono) {
         console.log('Validando teléfono:', values.telefono)
@@ -848,10 +864,10 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <FormControl fullWidth size='small'>
-                <InputLabel>Región</InputLabel>
+              <FormControl fullWidth size='small' error={!!errors.region}>
+                <InputLabel>Región *</InputLabel>
                 <Select
-                  label='Región'
+                  label='Región *'
                   value={selectedRegion}
                   onChange={e => {
                     const value = e.target.value
@@ -874,10 +890,10 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <FormControl fullWidth size='small'>
-                <InputLabel>Comuna</InputLabel>
+              <FormControl fullWidth size='small' error={!!errors.comuna}>
+                <InputLabel>Comuna *</InputLabel>
                 <Select
-                  label='Comuna'
+                  label='Comuna *'
                   value={selectedComuna}
                   onChange={e => {
                     const value = e.target.value

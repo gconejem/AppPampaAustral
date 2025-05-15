@@ -30,10 +30,14 @@ import axios from 'axios'
 
 // Types Imports
 import type { Cliente, Contacto } from '@/types/forms/cliente'
+import type { FormValidateType } from '@/types/forms/cliente'
 
 // Components Imports
 import ContactSearch from '../components/ContactSearch'
 import { useUbicacion } from '@/hooks/useUbicacion'
+
+// Import data
+import { VENDEDORES } from '@/data/clientData'
 
 type Props = {
   open: boolean
@@ -61,6 +65,29 @@ const getCargoLabel = (value: string) => {
   return ROLES_CONTACTO.find(r => r.value === value)?.label || value
 }
 
+// Función para formatear el RUT mientras se escribe (igual que en AddClient)
+const formatRut = (value: string) => {
+  try {
+    let cleaned = value.replace(/[^0-9kK-]/g, '')
+    if (!cleaned) return ''
+    if (cleaned.length <= 8) return cleaned
+    if (cleaned.includes('-')) {
+      const parts = cleaned.split('-')
+      cleaned = parts[0] + (parts[1] ? parts[1].charAt(0) : '')
+    }
+    const body = cleaned.slice(0, -1)
+    const dv = cleaned.slice(-1)
+    const reversedBody = body.split('').reverse().join('')
+    const chunks = reversedBody.match(/.{1,3}/g) || []
+    const formattedBody = chunks.join('.').split('').reverse().join('')
+    const digitoVerificador = dv.toUpperCase() === 'K' ? 'K' : dv
+    return formattedBody + '-' + digitoVerificador
+  } catch (error) {
+    console.error('Error formateando RUT:', error)
+    return value
+  }
+}
+
 const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX.Element => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -86,15 +113,14 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
     return []
   })
 
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValidateType>({
     defaultValues: {
-      fechaCreacion: '',
-      estado: 'active',
       rut: '',
+      estado: 'active',
       razonSocial: '',
       nombreCliente: '',
-      pais: 'Chile',
       region: '',
+      ciudad: '',
       comuna: '',
       direccion: '',
       telefono: '',
@@ -105,7 +131,9 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       condicionVenta: '',
       observaciones: '',
       giro: '',
-      emailFacturacion: ''
+      emailFacturacion: '',
+      rutRepresentanteLegal: '',
+      representanteLegal: ''
     }
   })
 
@@ -135,12 +163,10 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       setSelectedComuna(comunaActual)
 
       reset({
-        fechaCreacion: new Date(currentUser.fechaCreacion).toISOString().split('T')[0],
-        estado: currentUser.estado,
         rut: currentUser.rut,
+        estado: currentUser.estado,
         razonSocial: currentUser.razonSocial,
         nombreCliente: currentUser.nombreCliente || '',
-        pais: currentUser.pais || 'Chile',
         region: regionActual,
         comuna: comunaActual,
         direccion: currentUser.direccion || '',
@@ -152,7 +178,9 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         condicionVenta: condicionVentaValue,
         observaciones: observacionesValue,
         giro: currentUser.giro || '',
-        emailFacturacion: currentUser.emailFacturacion || ''
+        emailFacturacion: currentUser.emailFacturacion || '',
+        rutRepresentanteLegal: currentUser.rutRepresentanteLegal || '',
+        representanteLegal: currentUser.representanteLegal || ''
       })
 
       if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
@@ -180,6 +208,8 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         ...data,
         giro: data.giro || '',
         emailFacturacion: data.emailFacturacion || '',
+        rutRepresentanteLegal: data.rutRepresentanteLegal || '',
+        representanteLegal: data.representanteLegal || '',
         condicionesComerciales: {
           vendedor: data.vendedor,
           condicionVenta: data.condicionVenta,
@@ -303,21 +333,6 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                 control={control}
                 render={({ field }) => (
                   <TextField {...field} fullWidth label='Cliente' placeholder='Nombre del Cliente' />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='pais'
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>País</InputLabel>
-                    <Select {...field} label='País'>
-                      <MenuItem value='Chile'>Chile</MenuItem>
-                    </Select>
-                  </FormControl>
                 )}
               />
             </Grid>
@@ -485,6 +500,40 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                     label='Email de Facturación'
                     placeholder='ejemplo@empresa.com'
                     type='email'
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Nueva fila para rutRepresentanteLegal y representanteLegal */}
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='rutRepresentanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='RUT Representante Legal'
+                    placeholder='12.345.678-9'
+                    onChange={e => {
+                      const formatted = formatRut(e.target.value)
+                      field.onChange(formatted)
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='representanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Representante Legal'
+                    placeholder='Nombre del representante legal'
                   />
                 )}
               />
@@ -671,15 +720,22 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
               <Controller
                 name='vendedor'
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
-                  <FormControl fullWidth>
+                  <FormControl fullWidth sx={{ backgroundColor: 'white' }}>
                     <InputLabel id='vendedor-label'>Vendedor</InputLabel>
-                    <Select {...field} labelId='vendedor-label' label='Vendedor' value={field.value || ''} displayEmpty>
-                      <MenuItem value=''>Seleccione un vendedor</MenuItem>
-                      <MenuItem value='Carlos Vega'>Carlos Vega</MenuItem>
-                      <MenuItem value='Juan Pérez'>Juan Pérez</MenuItem>
-                      <MenuItem value='María González'>María González</MenuItem>
-                      <MenuItem value='Pedro Soto'>Pedro Soto</MenuItem>
+                    <Select
+                      {...field}
+                      labelId='vendedor-label'
+                      label='Vendedor'
+                      error={Boolean(errors.vendedor)}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(58, 53, 65, 0.22)' } }}
+                    >
+                      {VENDEDORES.map(vendedor => (
+                        <MenuItem key={vendedor.value} value={vendedor.value}>
+                          {vendedor.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 )}

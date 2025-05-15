@@ -33,6 +33,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import Popover from '@mui/material/Popover'
+import Tooltip from '@mui/material/Tooltip'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PreviewIcon from '@mui/icons-material/Visibility'
 import Alert from '@mui/material/Alert'
@@ -75,6 +76,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import EditWorksForm from '../edit/EditWorksForm'
 import ViewContactsDialog from '../components/ViewContactsDialog'
 import WorkPreview from '../preview/WorkPreview'
+import DuplicateWork from './DuplicateWork'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -201,7 +203,7 @@ const WorkListTable = () => {
   const [addObraOpen, setAddObraOpen] = useState<boolean>(false)
   const [menuState, setMenuState] = useState<{ [key: number]: HTMLElement | null }>({})
   const [selectedObraForMenu, setSelectedObraForMenu] = useState<Obra | null>(null)
-  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [duplicateDrawerOpen, setDuplicateDrawerOpen] = useState(false)
   const [obraToDuplicate, setObraToDuplicate] = useState<Obra | null>(null)
   const [viewContactsOpen, setViewContactsOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<ContactoObra[]>([])
@@ -410,40 +412,9 @@ const WorkListTable = () => {
     setSelectedObraForMenu(null)
   }
 
-  const handleDuplicate = async (obra: Obra) => {
-    try {
-      const response = await axios.post('/api/obras/duplicate', { obraId: obra.obraId })
-
-      if (response.status === 201) {
-        // Actualizar ambos estados inmediatamente
-        const updatedData = [...data, response.data]
-
-        setData(updatedData)
-        setFilteredData(updatedData)
-
-        toast.success('Obra duplicada exitosamente', {
-          duration: 3000,
-          position: 'top-right',
-          style: {
-            background: '#10B981',
-            color: '#fff'
-          }
-        })
-      }
-    } catch (error) {
-      console.error('Error duplicando obra:', error)
-      toast.error('Error al duplicar la obra', {
-        duration: 3000,
-        position: 'top-right',
-        style: {
-          background: '#EF4444',
-          color: '#fff'
-        }
-      })
-    } finally {
-      setDuplicateDialogOpen(false)
-      setObraToDuplicate(null)
-    }
+  const handleDuplicate = (obra: Obra) => {
+    setObraToDuplicate(obra)
+    setDuplicateDrawerOpen(true)
   }
 
   const handleChangeStatusClick = (obra: Obra) => {
@@ -602,17 +573,40 @@ const WorkListTable = () => {
         header: 'NOMBRE OBRA',
         cell: ({ row }) => {
           const nombreCompleto = row.original.nombreObra
+          const nombreTruncado = nombreCompleto.length > 15 ? `${nombreCompleto.substring(0, 15)}...` : nombreCompleto
 
-          return nombreCompleto.length > 15 ? `${nombreCompleto.substring(0, 15)}...` : nombreCompleto
+          return (
+            <Tooltip title={nombreCompleto} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+            </Tooltip>
+          )
         }
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
-        cell: ({ row }) => row.original.comuna
+        cell: ({ row }) => {
+          const comuna = row.original.comuna
+          const comunaTruncada = comuna.length > 15 ? `${comuna.substring(0, 15)}...` : comuna
+
+          return (
+            <Tooltip title={comuna} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{comunaTruncada}</div>
+            </Tooltip>
+          )
+        }
       }),
       columnHelper.accessor('rut', {
         header: 'RUT CLIENTE',
-        cell: ({ row }) => row.original.rut
+        cell: ({ row }) => {
+          const rut = row.original.rut
+          const rutTruncado = rut.length > 15 ? `${rut.substring(0, 15)}...` : rut
+
+          return (
+            <Tooltip title={rut} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{rutTruncado}</div>
+            </Tooltip>
+          )
+        }
       }),
       columnHelper.accessor('nombreCliente', {
         header: 'CLIENTE',
@@ -620,7 +614,11 @@ const WorkListTable = () => {
           const nombreCliente = row.original.nombreCliente
           const nombreTruncado = nombreCliente.length > 15 ? `${nombreCliente.substring(0, 15)}...` : nombreCliente
 
-          return <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+          return (
+            <Tooltip title={nombreCliente} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+            </Tooltip>
+          )
         }
       }),
       columnHelper.accessor(
@@ -638,14 +636,14 @@ const WorkListTable = () => {
             if (!contactos?.length) return '-'
 
             const nombreEncargado = contactos.find(c => c.isPrincipal)?.nombre || '-'
-
-            const nombreTruncado =
-              nombreEncargado.length > 15 ? `${nombreEncargado.substring(0, 15)}...` : nombreEncargado
+            const nombreTruncado = nombreEncargado.length > 15 ? `${nombreEncargado.substring(0, 15)}...` : nombreEncargado
 
             return (
-              <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
-                {nombreTruncado}
-              </div>
+              <Tooltip title={nombreEncargado} placement="top">
+                <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
+                  {nombreTruncado}
+                </div>
+              </Tooltip>
             )
           }
         }
@@ -698,10 +696,7 @@ const WorkListTable = () => {
             <IconButton
               size='small'
               color='warning'
-              onClick={() => {
-                setObraToDuplicate(row.original)
-                setDuplicateDialogOpen(true)
-              }}
+              onClick={() => handleDuplicate(row.original)}
               sx={{ '&:hover': { backgroundColor: 'warning.light' } }}
             >
               <i className='ri-file-copy-line' style={{ fontSize: '1.25rem' }} />
@@ -810,7 +805,7 @@ const WorkListTable = () => {
           title='Lista de Obras'
           action={
             <div className='flex items-center gap-2'>
-              <Button variant='contained' onClick={() => setAddObraOpen(true)}>
+              <Button variant='contained' onClick={() => { setAddObraOpen(true); }}>
                 Agregar Obra
               </Button>
             </div>
@@ -948,18 +943,6 @@ const WorkListTable = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={duplicateDialogOpen} onClose={() => setDuplicateDialogOpen(false)} maxWidth='sm' fullWidth>
-        <DialogTitle>Duplicar Obra</DialogTitle>
-        <DialogContent>¿Está seguro que desea duplicar la obra {obraToDuplicate?.nombreObra}?</DialogContent>
-        <DialogActions>
-          <Button variant='outlined' color='secondary' onClick={() => setDuplicateDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button variant='contained' onClick={() => obraToDuplicate && handleDuplicate(obraToDuplicate)}>
-            Duplicar
-          </Button>
-        </DialogActions>
-      </Dialog>
       <ViewContactsDialog
         open={viewContactsOpen}
         onClose={() => setViewContactsOpen(false)}
@@ -1026,6 +1009,13 @@ const WorkListTable = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <DuplicateWork
+        open={duplicateDrawerOpen}
+        handleClose={() => { setDuplicateDrawerOpen(false); setObraToDuplicate(null); }}
+        setData={setData}
+        setFilteredData={setFilteredData}
+        initialData={obraToDuplicate || {}}
+      />
     </>
   )
 }

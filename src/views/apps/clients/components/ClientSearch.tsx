@@ -23,9 +23,10 @@ interface Cliente {
 
 interface Props {
   onClientSelect: (cliente: Cliente) => void
+  value?: Cliente | null
 }
 
-const ClientSearch = ({ onClientSelect }: Props) => {
+const ClientSearch = ({ onClientSelect, value }: Props) => {
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(false)
@@ -89,6 +90,7 @@ const ClientSearch = ({ onClientSelect }: Props) => {
       getOptionLabel={option => `${option.nombreCliente} (${option.rut})`}
       options={options}
       loading={loading}
+      value={value || null}
       onInputChange={(_, newInputValue) => {
         setInputValue(newInputValue)
       }}
