@@ -108,7 +108,8 @@ const DuplicateWork = (props: Props) => {
     handleSubmit,
     formState: { errors, isDirty },
     setValue,
-    trigger
+    trigger,
+    watch
   } = useForm<FormValidateType>({
     defaultValues: {
       ...initialFormData,
@@ -159,6 +160,25 @@ const DuplicateWork = (props: Props) => {
   })
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } = useRegionesYComunas()
 
+  // Definir el cliente seleccionado a partir de initialData
+  const selectedClient = initialData && initialData.rut && initialData.nombreCliente
+    ? {
+        clienteId: 0, // No tenemos el ID real, pero es necesario para el Autocomplete
+        rut: initialData.rut,
+        nombreCliente: initialData.nombreCliente,
+        razonSocial: initialData.razonSocial || '',
+        giro: initialData.giro || '',
+        direccionComercial: initialData.direccionComercial || '',
+        comunaFacturacion: initialData.comunaFacturacion || '',
+        telefono: initialData.telefono || initialData.telefonoFacturacion || '',
+        telefonoFacturacion: initialData.telefonoFacturacion || '',
+        mailRecepcionFactura: initialData.mailRecepcionFactura || '',
+        listaPrecios: initialData.listaPrecios || '',
+        otroRut: initialData.rutRepresentanteLegal || '',
+        representanteLegal: initialData.representanteLegal || ''
+      }
+    : null;
+
   useEffect(() => {
     const fetchLastObraNumber = async () => {
       try {
@@ -183,41 +203,61 @@ const DuplicateWork = (props: Props) => {
 
   useEffect(() => {
     if (open && initialData) {
-      let fechaIngreso = initialData.fechaIngreso
-      if (fechaIngreso instanceof Date) {
-        fechaIngreso = fechaIngreso.toISOString().split('T')[0]
-      } else if (typeof fechaIngreso === 'string' && fechaIngreso.includes('T')) {
-        fechaIngreso = fechaIngreso.split('T')[0]
-      }
-      const otrasReferencias = typeof initialData.otrasReferencias === 'string' ? initialData.otrasReferencias : ''
-      const telefono = (initialData.telefono || initialData.telefonoFacturacion || '') as string
-      resetForm({
+      console.log('initialData recibido:', initialData)
+      
+      // Preparar los datos del formulario
+      const formData = {
         ...initialFormData,
         ...initialData,
         nombreObra: '',
         direccion: '',
         estado: initialData.estado || 'activa',
         estadoObra: initialData.estadoObra || 'activa',
-        fechaIngreso: fechaIngreso ? String(fechaIngreso) : new Date().toISOString().split('T')[0],
-        otrasReferencias,
-        telefono
+        fechaIngreso: initialData.fechaIngreso instanceof Date 
+          ? initialData.fechaIngreso.toISOString().split('T')[0]
+          : typeof initialData.fechaIngreso === 'string' 
+            ? initialData.fechaIngreso.split('T')[0]
+            : new Date().toISOString().split('T')[0],
+        rut: initialData.rut || '',
+        nombreCliente: initialData.nombreCliente || '',
+        razonSocial: initialData.razonSocial || '',
+        giro: initialData.giro || '',
+        direccionComercial: initialData.direccionComercial || '',
+        comunaFacturacion: initialData.comunaFacturacion || '',
+        listaPrecios: initialData.listaPrecios || '',
+        mailRecepcionFactura: initialData.mailRecepcionFactura || '',
+        rutRepresentanteLegal: initialData.rutRepresentanteLegal || '',
+        representanteLegal: initialData.representanteLegal || '',
+        telefono: initialData.telefono || initialData.telefonoFacturacion || '',
+        otrasReferencias: typeof initialData.otrasReferencias === 'string' ? initialData.otrasReferencias : ''
+      }
+
+      console.log('formData preparado:', formData)
+
+      // Resetear el formulario con los datos preparados
+      resetForm(formData)
+
+      // Establecer los valores individualmente para asegurar que se actualicen
+      Object.entries(formData).forEach(([key, value]) => {
+        setValue(key as keyof FormValidateType, value)
       })
+
+      // Actualizar los estados locales
       if (initialData.region) {
         setSelectedRegion(initialData.region)
-        setValue('region', initialData.region)
       }
       if (initialData.comuna) {
         setSelectedComuna(initialData.comuna)
-        setValue('comuna', initialData.comuna)
       }
       if (initialData.comunaFacturacion) {
         const existe = comunas.some(c => c.nombre.trim().toLowerCase() === initialData.comunaFacturacion!.trim().toLowerCase())
         if (!existe) {
-          comunas.push({ nombre: initialData.comunaFacturacion! })
+          comunas.push({ id: 'custom', nombre: initialData.comunaFacturacion! })
         }
-        setValue('comunaFacturacion', initialData.comunaFacturacion)
       }
-      if (initialData.contactos) {
+
+      // Actualizar los contactos
+      if (initialData.contactos && initialData.contactos.length > 0) {
         setContactos(
           initialData.contactos.map(contacto => ({
             rol: contacto.rol,
@@ -233,8 +273,11 @@ const DuplicateWork = (props: Props) => {
       } else {
         setContactos(contactosPrincipales)
       }
+
+      // Forzar la actualización del formulario
+      trigger()
     }
-  }, [open, initialData])
+  }, [open, initialData, resetForm, setValue, trigger, comunas])
 
   const onSubmit = async (data: FormValidateType) => {
     try {
@@ -399,34 +442,26 @@ const DuplicateWork = (props: Props) => {
             <Grid container spacing={5}>
               <Grid item xs={12}>
                 <ClientSearch
+                  value={selectedClient}
                   onClientSelect={cliente => {
                     // Campos básicos del cliente
                     setValue('rut', cliente.rut)
                     setValue('nombreCliente', cliente.nombreCliente)
                     setValue('razonSocial', cliente.razonSocial)
-
                     // Campos de facturación
                     setValue('giro', cliente.giro || '')
                     setValue('direccionComercial', cliente.direccionComercial || '')
                     const comunaCliente = (cliente.comunaFacturacion || '').trim()
-
-                    // Normaliza y busca si existe en la lista de comunas
                     const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
-
                     if (!existe && comunaCliente) {
                       comunas.push({ id: 'custom', nombre: comunaCliente })
                     }
-
                     setValue('comunaFacturacion', comunaCliente)
                     setValue('listaPrecios', cliente.listaPrecios || '')
                     setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
                     setValue('telefono', cliente.telefono || '')
-
-                    // Nuevos campos: rutRepresentanteLegal y representanteLegal
                     setValue('rutRepresentanteLegal', cliente.otroRut || '')
                     setValue('representanteLegal', cliente.representanteLegal || '')
-
-                    // Disparar validación de todos los campos actualizados
                     trigger([
                       'rut',
                       'nombreCliente',
