@@ -30,10 +30,14 @@ import axios from 'axios'
 
 // Types Imports
 import type { Cliente, Contacto } from '@/types/forms/cliente'
+import type { FormValidateType } from '@/types/forms/cliente'
 
 // Components Imports
 import ContactSearch from '../components/ContactSearch'
 import { useUbicacion } from '@/hooks/useUbicacion'
+
+// Import data
+import { VENDEDORES } from '@/data/clientData'
 
 type Props = {
   open: boolean
@@ -86,15 +90,14 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
     return []
   })
 
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValidateType>({
     defaultValues: {
-      fechaCreacion: '',
-      estado: 'active',
       rut: '',
+      estado: 'active',
       razonSocial: '',
       nombreCliente: '',
-      pais: 'Chile',
       region: '',
+      ciudad: '',
       comuna: '',
       direccion: '',
       telefono: '',
@@ -135,12 +138,10 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       setSelectedComuna(comunaActual)
 
       reset({
-        fechaCreacion: new Date(currentUser.fechaCreacion).toISOString().split('T')[0],
-        estado: currentUser.estado,
         rut: currentUser.rut,
+        estado: currentUser.estado,
         razonSocial: currentUser.razonSocial,
         nombreCliente: currentUser.nombreCliente || '',
-        pais: currentUser.pais || 'Chile',
         region: regionActual,
         comuna: comunaActual,
         direccion: currentUser.direccion || '',
@@ -303,21 +304,6 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                 control={control}
                 render={({ field }) => (
                   <TextField {...field} fullWidth label='Cliente' placeholder='Nombre del Cliente' />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name='pais'
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>País</InputLabel>
-                    <Select {...field} label='País'>
-                      <MenuItem value='Chile'>Chile</MenuItem>
-                    </Select>
-                  </FormControl>
                 )}
               />
             </Grid>
@@ -671,15 +657,22 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
               <Controller
                 name='vendedor'
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
-                  <FormControl fullWidth>
+                  <FormControl fullWidth sx={{ backgroundColor: 'white' }}>
                     <InputLabel id='vendedor-label'>Vendedor</InputLabel>
-                    <Select {...field} labelId='vendedor-label' label='Vendedor' value={field.value || ''} displayEmpty>
-                      <MenuItem value=''>Seleccione un vendedor</MenuItem>
-                      <MenuItem value='Carlos Vega'>Carlos Vega</MenuItem>
-                      <MenuItem value='Juan Pérez'>Juan Pérez</MenuItem>
-                      <MenuItem value='María González'>María González</MenuItem>
-                      <MenuItem value='Pedro Soto'>Pedro Soto</MenuItem>
+                    <Select
+                      {...field}
+                      labelId='vendedor-label'
+                      label='Vendedor'
+                      error={Boolean(errors.vendedor)}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(58, 53, 65, 0.22)' } }}
+                    >
+                      {VENDEDORES.map(vendedor => (
+                        <MenuItem key={vendedor.value} value={vendedor.value}>
+                          {vendedor.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 )}
