@@ -33,6 +33,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import Popover from '@mui/material/Popover'
+import Tooltip from '@mui/material/Tooltip'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PreviewIcon from '@mui/icons-material/Visibility'
 import Alert from '@mui/material/Alert'
@@ -602,17 +603,40 @@ const WorkListTable = () => {
         header: 'NOMBRE OBRA',
         cell: ({ row }) => {
           const nombreCompleto = row.original.nombreObra
+          const nombreTruncado = nombreCompleto.length > 15 ? `${nombreCompleto.substring(0, 15)}...` : nombreCompleto
 
-          return nombreCompleto.length > 15 ? `${nombreCompleto.substring(0, 15)}...` : nombreCompleto
+          return (
+            <Tooltip title={nombreCompleto} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+            </Tooltip>
+          )
         }
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
-        cell: ({ row }) => row.original.comuna
+        cell: ({ row }) => {
+          const comuna = row.original.comuna
+          const comunaTruncada = comuna.length > 15 ? `${comuna.substring(0, 15)}...` : comuna
+
+          return (
+            <Tooltip title={comuna} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{comunaTruncada}</div>
+            </Tooltip>
+          )
+        }
       }),
       columnHelper.accessor('rut', {
         header: 'RUT CLIENTE',
-        cell: ({ row }) => row.original.rut
+        cell: ({ row }) => {
+          const rut = row.original.rut
+          const rutTruncado = rut.length > 15 ? `${rut.substring(0, 15)}...` : rut
+
+          return (
+            <Tooltip title={rut} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{rutTruncado}</div>
+            </Tooltip>
+          )
+        }
       }),
       columnHelper.accessor('nombreCliente', {
         header: 'CLIENTE',
@@ -620,7 +644,11 @@ const WorkListTable = () => {
           const nombreCliente = row.original.nombreCliente
           const nombreTruncado = nombreCliente.length > 15 ? `${nombreCliente.substring(0, 15)}...` : nombreCliente
 
-          return <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+          return (
+            <Tooltip title={nombreCliente} placement="top">
+              <div className='cursor-pointer hover:text-primary'>{nombreTruncado}</div>
+            </Tooltip>
+          )
         }
       }),
       columnHelper.accessor(
@@ -638,14 +666,14 @@ const WorkListTable = () => {
             if (!contactos?.length) return '-'
 
             const nombreEncargado = contactos.find(c => c.isPrincipal)?.nombre || '-'
-
-            const nombreTruncado =
-              nombreEncargado.length > 15 ? `${nombreEncargado.substring(0, 15)}...` : nombreEncargado
+            const nombreTruncado = nombreEncargado.length > 15 ? `${nombreEncargado.substring(0, 15)}...` : nombreEncargado
 
             return (
-              <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
-                {nombreTruncado}
-              </div>
+              <Tooltip title={nombreEncargado} placement="top">
+                <div className='cursor-pointer hover:text-primary' onClick={() => handleContactClick(contactos)}>
+                  {nombreTruncado}
+                </div>
+              </Tooltip>
             )
           }
         }
