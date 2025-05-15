@@ -667,7 +667,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          <Grid item xs={12}>
+          {/* <Grid item xs={12}>
             <FormControlLabel
               control={
                 <Controller
@@ -678,7 +678,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               }
               label='Informe a Mandante'
             />
-          </Grid>
+          </Grid> */}
         </Grid>
 
         {/* Sección de Contactos */}
