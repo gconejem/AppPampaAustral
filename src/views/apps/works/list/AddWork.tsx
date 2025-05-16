@@ -234,11 +234,14 @@ const AddObraDrawer = (props: Props) => {
 
       const payload = {
         ...data,
+        numeroObra: lastObraNumber,
         region: selectedRegion,
         comuna: selectedComuna,
         estado: 'activo',
         estadoObra: data.estadoObra || 'Activo',
         fechaIngreso: new Date(data.fechaIngreso).toISOString(),
+        mandante: data.mandante || 'No definido',
+        telefonoFacturacion: data.telefono || '',
         contactos: contactos.map(contacto => ({
           nombre: contacto.nombre,
           rol: contacto.rol,
@@ -249,6 +252,8 @@ const AddObraDrawer = (props: Props) => {
         })),
         correos: Array.isArray(data.correos) ? data.correos.join(', ') : data.correos || ''
       }
+
+      console.log('Payload enviado:', payload) // Agregar log para debug
 
       const response = await axios.post('/api/obras', payload)
 
@@ -266,16 +271,20 @@ const AddObraDrawer = (props: Props) => {
           }
         })
 
+        // Obtener el nuevo número de obra
+        const newObraNumber = (parseInt(lastObraNumber) + 1).toString()
+        setLastObraNumber(newObraNumber)
+
         // Limpiar formulario y estados
         resetForm()
         setContactos(contactosPrincipales)
-        setValue('numeroObra', lastObraNumber)
+        setValue('numeroObra', newObraNumber)
         setSelectedRegion('')
         setSelectedComuna('')
         setValue('region', '')
         setValue('comuna', '')
         setValue('georreferencia', '')
-        setValue('mandante', '')
+        setValue('mandante', 'No definido')
         setValue('otrasReferencias', '')
         
         // Limpiar campos de facturación
@@ -966,6 +975,7 @@ const AddObraDrawer = (props: Props) => {
                     name='mandante'
                     control={control}
                     rules={{ required: true }}
+                    defaultValue='No definido'
                     render={({ field }) => (
                       <Select {...field} label='Mandante *'>
                         {MANDANTES.map(mandante => (
