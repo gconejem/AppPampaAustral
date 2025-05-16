@@ -211,7 +211,6 @@ const AddObraDrawer = (props: Props) => {
 
       if (!encargadoObra?.nombre || !encargadoObra?.email || !encargadoObra?.telefono1) {
         toast.error('El contacto Encargado de Obra es obligatorio y debe tener nombre, email y teléfono')
-
         return
       }
 
@@ -219,14 +218,22 @@ const AddObraDrawer = (props: Props) => {
       for (const contacto of contactos) {
         if (!validateEmail(contacto.email)) {
           toast.error('Email inválido')
-
           return
         }
 
         if (!validatePhone(contacto.telefono1)) {
           toast.error('Teléfono inválido')
-
           return
+        }
+      }
+
+      // Validar correos si existen
+      if (data.correos && Array.isArray(data.correos)) {
+        for (const correo of data.correos) {
+          if (!validateEmail(correo)) {
+            toast.error(`El correo ${correo} no es válido`)
+            return
+          }
         }
       }
 
@@ -250,7 +257,7 @@ const AddObraDrawer = (props: Props) => {
           telefono2: contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
-        correos: Array.isArray(data.correos) ? data.correos.join(', ') : data.correos || ''
+        correos: Array.isArray(data.correos) ? data.correos : []
       }
 
       console.log('Payload enviado:', payload) // Agregar log para debug
@@ -799,7 +806,7 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Nombre Obra: 12 */}
             <Grid container spacing={5}>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={12}>
                 <Controller
                   name='nombreObra'
                   control={control}
@@ -905,7 +912,7 @@ const AddObraDrawer = (props: Props) => {
             </Grid>
 
             {/* Nueva fila para georreferencia y referencia */}
-            <Grid container spacing={5} sx={{ mt: 0 }}>
+            <Grid container spacing={5} >
               <Grid item xs={12} sm={6}>
                 <Controller
                   name='georreferencia'
@@ -923,55 +930,8 @@ const AddObraDrawer = (props: Props) => {
               </Grid>
             </Grid>
 
-            {/* Correos */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='correos'
-                  control={control}
-                  defaultValue={[]}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Correos (separados por coma)'
-                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                      helperText='Separar múltiples correos con comas'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        const correos = e.target.value.split(',').map(correo => correo.trim())
-
-                        field.onChange(correos)
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='envioInforme'
-                  control={control}
-                  defaultValue={[]}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Envío Informe'
-                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        const correos = e.target.value.split(',').map(correo => correo.trim())
-
-                        field.onChange(correos)
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
             {/* Mandante section */}
-            <Grid container spacing={5} sx={{ mt: 2 }}>
+            <Grid container spacing={5}>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth error={Boolean(errors.mandante)}>
                   <InputLabel>Mandante *</InputLabel>
@@ -998,6 +958,36 @@ const AddObraDrawer = (props: Props) => {
                   name='textoMandante'
                   control={control}
                   render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' />}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Correos */}
+            <Grid container spacing={5}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='correos'
+                  control={control}
+                  defaultValue={[]}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Enviar informes a:'
+                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
+                      helperText='Separar múltiples correos con comas'
+                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                      onChange={e => {
+                        const correos = e.target.value
+                          .split(',')
+                          .map(correo => correo.trim())
+                          .filter(correo => correo !== '')
+                        field.onChange(correos)
+                      }}
+                      error={Boolean(errors.correos)}
+                      helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>
