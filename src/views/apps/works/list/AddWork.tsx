@@ -45,27 +45,29 @@ import { validateRut } from '@/utils/rut-utils'
 // Types Imports
 import type { Obra, FormValidateType } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 // Import data
 import { ESTADOS_OBRA, LISTAS_PRECIOS } from '@/data/obraData'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
+import AddContact from '@/views/apps/contacts/list/AddContact'
 
 // Agregar la constante para los cargos disponibles
 const CARGOS_OBRA = [
-  { value: 'Encargado de Obra', label: 'Encargado de Obra' },
-  { value: 'Envío de Informes', label: 'Envío de Informes' },
-  { value: 'Dueño Representante', label: 'Dueño Representante' },
-  { value: 'Jefe de Obra / Planta', label: 'Jefe de Obra / Planta' },
-  { value: 'Supervisor', label: 'Supervisor' },
-  { value: 'Administrador de Obra', label: 'Administrador de Obra' },
-  { value: 'Administración', label: 'Administración' },
-  { value: 'Encargado de Calidad', label: 'Encargado de Calidad' },
-  { value: 'Autocontrol', label: 'Autocontrol' },
-  { value: 'Profesional', label: 'Profesional' },
-  { value: 'Laboratorista', label: 'Laboratorista' },
-  { value: 'Otro', label: 'Otro (Especificar)' }
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
 // Agregar la constante para los mandantes
@@ -145,6 +147,8 @@ const AddObraDrawer = (props: Props) => {
   const [lastObraNumber, setLastObraNumber] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
+  const [addContactOpen, setAddContactOpen] = useState(false)
+  const [refreshContactSearch, setRefreshContactSearch] = useState(0)
 
   const contactosPrincipales: ContactoObraForm[] = [
     {
@@ -628,6 +632,49 @@ const AddObraDrawer = (props: Props) => {
     }
   }
 
+  // Función para manejar el nuevo contacto creado
+  const handleNewContact = (contact: ContactType) => {
+    // Normaliza el contacto para que tenga cargo a nivel raíz
+    const contactoNormalizado: ContactoObraForm = {
+      nombre: contact.nombre,
+      rol: contact.cargo || CARGOS_OBRA[1].value,
+      email: contact.email,
+      telefono1: contact.telefono1,
+      telefono2: contact.telefono2 || '',
+      isEditing: false,
+      isPrincipal: contactos.length === 0,
+      contactId: contact.contactId?.toString()
+    };
+
+    // Si es el primer contacto (Encargado de Obra)
+    if (contactos[0].nombre === '') {
+      const updatedContactos = [...contactos];
+      updatedContactos[0] = {
+        ...contactoNormalizado,
+        rol: 'encargado_obra',
+        isPrincipal: true
+      };
+      setContactos(updatedContactos);
+      toast.success('Encargado de Obra asignado exitosamente');
+    } else {
+      // Para contactos adicionales, mantener el cargo que ya tienen
+      const newContact: ContactoObraForm = {
+        contactId: contact.contactId?.toString(),
+        rol: contact.cargo || CARGOS_OBRA[1].value,
+        nombre: contact.nombre,
+        email: contact.email,
+        telefono1: contact.telefono1,
+        telefono2: contact.telefono2 || '',
+        isPrincipal: false,
+        isEditing: false
+      }
+      setContactos([...contactos, newContact])
+      toast.success('Contacto agregado exitosamente')
+    }
+    setRefreshContactSearch(prev => prev + 1);
+    setAddContactOpen(false);
+  }
+
   return (
     <>
       <Drawer
@@ -994,56 +1041,62 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Sección de Contactos */}
             <Divider sx={{ my: 4 }} />
-            <Grid container alignItems='center' spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant='h5'>Contactos</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <ContactSearch
-                  onContactSelect={contact => {
-                    // Verificar si el contacto ya existe
-                    const exists = contactos.some(c => c.contactId === contact.contactId)
-
-                    if (exists) {
-                      toast.error('Este contacto ya está en la lista')
-
-                      return
-                    }
-
-                    // Si es el primer contacto (Encargado de Obra)
-                    if (contactos[0].nombre === '') {
-                      const updatedContactos = [...contactos]
-
-                      updatedContactos[0] = {
-                        contactId: contact.contactId?.toString(),
-                        rol: 'Encargado de Obra',
-                        nombre: contact.nombre,
-                        email: contact.email,
-                        telefono1: contact.telefono1,
-                        telefono2: contact.telefono2 || '',
-                        isPrincipal: true,
-                        isEditing: false
-                      }
-                      setContactos(updatedContactos)
-                      toast.success('Encargado de Obra asignado exitosamente')
-                    } else {
-                      // Para contactos adicionales
-                      const newContact: ContactoObraForm = {
-                        contactId: contact.contactId?.toString(),
-                        rol: contact.cargo || '',
-                        nombre: contact.nombre,
-                        email: contact.email,
-                        telefono1: contact.telefono1,
-                        telefono2: contact.telefono2 || '',
-                        isPrincipal: false,
-                        isEditing: false
-                      }
-
-                      setContactos([...contactos, newContact])
-                      toast.success('Contacto agregado exitosamente')
-                    }
-                  }}
-                />
+            <Grid container spacing={2} alignItems='center' sx={{ mb: 4 }}>
+              <Grid item xs={12}>
+                <Typography variant='h5' sx={{ minWidth: 'fit-content', mb: 2 }}>
+                  Contactos
+                </Typography>
+                <Grid container spacing={2} alignItems='center'>
+                  <Grid item xs={12} sm={'auto'}>
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      onClick={() => setAddContactOpen(true)}
+                      startIcon={<i className='ri-add-line' />}
+                    >
+                      Nuevo Contacto
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm>
+                    <Box sx={{ maxWidth: '400px', ml: { sm: 'auto' } }}>
+                      <ContactSearch
+                        onContactSelect={contact => {
+                          // Si es el primer contacto (Encargado de Obra)
+                          if (contactos[0].nombre === '') {
+                            const updatedContactos = [...contactos]
+                            updatedContactos[0] = {
+                              contactId: contact.contactId?.toString(),
+                              rol: 'encargado_obra',
+                              nombre: contact.nombre,
+                              email: contact.email,
+                              telefono1: contact.telefono1,
+                              telefono2: contact.telefono2 || '',
+                              isPrincipal: true,
+                              isEditing: false
+                            }
+                            setContactos(updatedContactos)
+                            toast.success('Encargado de Obra asignado exitosamente')
+                          } else {
+                            // Para contactos adicionales, mantener el cargo que ya tienen
+                            const newContact: ContactoObraForm = {
+                              contactId: contact.contactId?.toString(),
+                              rol: contact.cargo || CARGOS_OBRA[1].value,
+                              nombre: contact.nombre,
+                              email: contact.email,
+                              telefono1: contact.telefono1,
+                              telefono2: contact.telefono2 || '',
+                              isPrincipal: false,
+                              isEditing: false
+                            }
+                            setContactos([...contactos, newContact])
+                            toast.success('Contacto agregado exitosamente')
+                          }
+                        }}
+                        refreshKey={refreshContactSearch}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
               </Grid>
             </Grid>
 
@@ -1604,6 +1657,13 @@ const AddObraDrawer = (props: Props) => {
           </form>
         </div>
       </Drawer>
+
+      {/* Agregar el componente AddContact */}
+      <AddContact
+        open={addContactOpen}
+        handleClose={() => setAddContactOpen(false)}
+        onContactCreated={handleNewContact}
+      />
 
       <Dialog
         open={openConfirmDialog}

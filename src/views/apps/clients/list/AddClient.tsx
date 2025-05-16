@@ -79,21 +79,6 @@ const CONDICIONES_VENTA = [
   { value: 'Otro', label: 'Otro' }
 ] as const
 
-// Agregar el enum o constante para los roles
-const ROLES_CONTACTO = [
-  { value: 'encargado_obra', label: 'Encargado de Obra' },
-  { value: 'envio_informes', label: 'Envío de Informes' },
-  { value: 'dueno_representante', label: 'Dueño Representante' },
-  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'administrador_obra', label: 'Administrador de Obra' },
-  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
-  { value: 'autocontrol', label: 'Autocontrol' },
-  { value: 'profesional', label: 'Profesional' },
-  { value: 'laboratorista', label: 'Laboratorista' },
-  { value: 'otro', label: 'Otro (Especificar)' }
-]
-
 const AddClienteDrawer = (props: Props) => {
   // Props
   const { open, handleClose, setData } = props
@@ -116,6 +101,21 @@ const AddClienteDrawer = (props: Props) => {
     telefono1: '',
     telefono2: ''
   })
+
+  const CARGOS_OBRA = [
+    { value: 'encargado_obra', label: 'Encargado de Obra' },
+    { value: 'dueno', label: 'Dueño' },
+    { value: 'representante', label: 'Representante' },
+    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+    { value: 'supervisor', label: 'Supervisor' },
+    { value: 'administrador_obra', label: 'Administrador de Obra' },
+    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+    { value: 'autocontrol', label: 'Autocontrol' },
+    { value: 'profesional', label: 'Profesional' },
+    { value: 'laboratorista', label: 'Laboratorista' },
+    { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+    { value: 'otro', label: 'Otro (Especificar)' }
+  ]
 
   const { regiones, comunas, selectedRegion, setSelectedRegion, selectedComuna, setSelectedComuna } = useUbicacion()
 
@@ -537,19 +537,11 @@ const AddClienteDrawer = (props: Props) => {
 
   // Modificar handleAddContact para aceptar ContactType o Contacto
   const handleAddContact = (contact: ContactType | Contacto) => {
-    // Verificar si el contacto ya existe en la lista
-    const contactoExistente = contactos.some(c => c.contacto.contactId === (contact as any).contactId);
-    
-    if (contactoExistente) {
-      toast.error('Este contacto ya ha sido agregado');
-      return;
-    }
-
     const isPrincipal = contactos.length === 0;
     // Normaliza el contacto para que siempre tenga la estructura Contacto
     const contactoNormalizado: Contacto = {
       nombre: contact.nombre,
-      cargo: contact.cargo || '',
+      cargo: contact.cargo || CARGOS_OBRA[0].value, // Inicializar con el primer cargo
       email: contact.email,
       telefono1: contact.telefono1,
       telefono2: contact.telefono2 || '',
@@ -1217,7 +1209,25 @@ const AddClienteDrawer = (props: Props) => {
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      {ROLES_CONTACTO.find(rol => rol.value === contacto.cargo)?.label || contacto.cargo}
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={contacto.cargo}
+                          onChange={(e) => {
+                            const updatedContactos = [...contactos];
+                            updatedContactos[index] = {
+                              ...updatedContactos[index],
+                              cargo: e.target.value
+                            };
+                            setContactos(updatedContactos);
+                          }}
+                        >
+                          {CARGOS_OBRA.map((cargo) => (
+                            <MenuItem key={cargo.value} value={cargo.value}>
+                              {cargo.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </TableCell>
                     <TableCell>{contacto.contacto.nombre}</TableCell>
                     <TableCell>{contacto.contacto.email}</TableCell>

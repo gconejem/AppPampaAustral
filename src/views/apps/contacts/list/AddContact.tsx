@@ -75,7 +75,7 @@ const ROLES_CONTACTO = [
   { value: 'autocontrol', label: 'Autocontrol' },
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
-  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administracións' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
   { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
