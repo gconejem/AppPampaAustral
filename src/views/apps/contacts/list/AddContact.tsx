@@ -36,9 +36,7 @@ import type { ContactType } from '@/types/apps/contactTypes'
 type Props = {
   open: boolean
   handleClose: () => void
-  userData?: ContactType[]
-  setData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
-  setFilteredData: (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => void
+  onContactCreated?: (contact: ContactType) => void
 }
 
 type FormValidateType = {
@@ -80,9 +78,8 @@ const ROLES_CONTACTO = [
   { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
-const AddContactDrawer = (props: Props) => {
-  // Props
-  const { open, handleClose, userData, setData, setFilteredData } = props
+const AddContact = (props: Props) => {
+  const { open, handleClose, onContactCreated } = props
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>(initialData)
@@ -110,7 +107,7 @@ const AddContactDrawer = (props: Props) => {
     try {
       const contactData = {
         ...data,
-        cargo: data.cargo || 'Sin cargo' // Asegurarnos de que siempre enviemos un valor para cargo
+        cargo: data.cargo || 'Sin cargo'
       }
 
       const response = await fetch('/api/contacts', {
@@ -123,20 +120,13 @@ const AddContactDrawer = (props: Props) => {
 
       if (!response.ok) {
         const errorData = await response.text()
-
         console.error('Error response:', errorData)
         throw new Error('Error al crear contacto')
       }
 
       const newContact = await response.json()
 
-      setData(prev => {
-        const newData = [...prev, newContact]
-
-        setFilteredData(newData)
-
-        return newData
-      })
+      if (onContactCreated) onContactCreated(newContact)
 
       toast.success('Contacto creado exitosamente')
       resetForm()
@@ -357,4 +347,4 @@ const AddContactDrawer = (props: Props) => {
   )
 }
 
-export default AddContactDrawer
+export default AddContact

@@ -13,9 +13,11 @@ import type { Contacto } from '@/types/forms/cliente'
 
 interface ContactSearchProps {
   onContactSelect: (contact: Contacto) => void
+  refreshKey?: number
+  onContactCreated?: (contact: Contacto) => void
 }
 
-const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
+const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: ContactSearchProps) => {
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState<Contacto[]>([])
   const [loading, setLoading] = useState(false)
@@ -27,6 +29,10 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
     }
   }, [open])
 
+  useEffect(() => {
+    loadAllContacts()
+  }, [refreshKey])
+
   const loadAllContacts = async () => {
     setLoading(true)
 
@@ -36,6 +42,9 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
 
       console.log('Contactos cargados:', data)
       setOptions(data || [])
+      if (onContactCreated && data && data.length > 0) {
+        onContactCreated(data[0])
+      }
     } catch (error) {
       console.error('Error cargando contactos:', error)
       toast.error('Error al cargar los contactos')
@@ -49,7 +58,11 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
 
     if (!searchValue) {
       loadAllContacts()
+      return
+    }
 
+    if (searchValue.length < 2) {
+      setOptions([])
       return
     }
 
@@ -72,7 +85,10 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
   return (
     <Autocomplete
       open={open}
-      onOpen={() => setOpen(true)}
+      onOpen={() => {
+        setOpen(true);
+        loadAllContacts();
+      }}
       onClose={() => setOpen(false)}
       value={null}
       onChange={(_, newValue) => {
@@ -84,10 +100,10 @@ const ContactSearch = ({ onContactSelect }: ContactSearchProps) => {
       inputValue={inputValue}
       onInputChange={(_, newInputValue) => handleSearch(newInputValue)}
       isOptionEqualToValue={(option, value) => option.email === value.email}
-      getOptionLabel={option => option.nombre}
+      getOptionLabel={option => `${option.nombre}${option.cargo ? ` - ${option.cargo}` : ''}${option.email ? ` (${option.email})` : ''}`}
       options={options}
       loading={loading}
-      noOptionsText='No se encontraron contactos'
+      noOptionsText={inputValue.length < 2 ? 'Ingrese al menos 2 caracteres para buscar' : 'No se encontraron contactos'}
       renderOption={(props, option) => (
         <ListItem {...props}>
           <ListItemText

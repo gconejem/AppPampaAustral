@@ -16,7 +16,8 @@ export async function GET(request: Request) {
         OR: [
           { nombre: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
-          { telefono1: { contains: query } }
+          { telefono1: { contains: query } },
+          { cargo: { contains: query, mode: 'insensitive' } }
         ]
       },
       select: {
