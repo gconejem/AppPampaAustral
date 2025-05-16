@@ -135,7 +135,8 @@ const AddObraDrawer = (props: Props) => {
       ...initialFormData,
       estado: 'activa',
       estadoObra: 'activa',
-      fechaIngreso: new Date().toISOString().split('T')[0]
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      mandante: 'No definido'
     },
     mode: 'onChange'
   })
@@ -233,11 +234,14 @@ const AddObraDrawer = (props: Props) => {
 
       const payload = {
         ...data,
+        numeroObra: lastObraNumber,
         region: selectedRegion,
         comuna: selectedComuna,
         estado: 'activo',
         estadoObra: data.estadoObra || 'Activo',
         fechaIngreso: new Date(data.fechaIngreso).toISOString(),
+        mandante: data.mandante || 'No definido',
+        telefonoFacturacion: data.telefono || '',
         contactos: contactos.map(contacto => ({
           nombre: contacto.nombre,
           rol: contacto.rol,
@@ -248,6 +252,8 @@ const AddObraDrawer = (props: Props) => {
         })),
         correos: Array.isArray(data.correos) ? data.correos.join(', ') : data.correos || ''
       }
+
+      console.log('Payload enviado:', payload) // Agregar log para debug
 
       const response = await axios.post('/api/obras', payload)
 
@@ -265,10 +271,44 @@ const AddObraDrawer = (props: Props) => {
           }
         })
 
+        // Obtener el nuevo número de obra
+        const newObraNumber = (parseInt(lastObraNumber) + 1).toString()
+        setLastObraNumber(newObraNumber)
+
         // Limpiar formulario y estados
         resetForm()
         setContactos(contactosPrincipales)
-        setValue('numeroObra', lastObraNumber)
+        setValue('numeroObra', newObraNumber)
+        setSelectedRegion('')
+        setSelectedComuna('')
+        setValue('region', '')
+        setValue('comuna', '')
+        setValue('georreferencia', '')
+        setValue('mandante', 'No definido')
+        setValue('textoMandante', '')
+        setValue('otrasReferencias', '')
+        setValue('otrosRequisitos', '')
+        
+        // Limpiar campos de facturación
+        setValue('telefono', '')
+        setValue('giro', '')
+        setValue('direccionComercial', '')
+        setValue('comunaFacturacion', '')
+        setValue('listaPrecios', '')
+        setValue('mailRecepcionFactura', '')
+        setValue('rutRepresentanteLegal', '')
+        setValue('representanteLegal', '')
+        
+        // Limpiar checkboxes
+        setValue('acreditacionPersonal', false)
+        setValue('especificacionesTecnicas', false)
+        setValue('acreditacionEquipos', false)
+        setValue('cartaCompromiso', false)
+        setValue('mandatoServiu', false)
+        setValue('estadoPago', false)
+        setValue('hes', false)
+        setValue('oc', false)
+        setValue('envioInformes', false)
 
         props.handleClose()
       }
@@ -292,6 +332,36 @@ const AddObraDrawer = (props: Props) => {
     resetForm()
     setContactos(contactosPrincipales)
     setValue('numeroObra', lastObraNumber)
+    setSelectedRegion('')
+    setSelectedComuna('')
+    setValue('region', '')
+    setValue('comuna', '')
+    setValue('georreferencia', '')
+    setValue('mandante', 'No definido')
+    setValue('textoMandante', '')
+    setValue('otrasReferencias', '')
+    setValue('otrosRequisitos', '')
+    
+    // Limpiar campos de facturación
+    setValue('telefono', '')
+    setValue('giro', '')
+    setValue('direccionComercial', '')
+    setValue('comunaFacturacion', '')
+    setValue('listaPrecios', '')
+    setValue('mailRecepcionFactura', '')
+    setValue('rutRepresentanteLegal', '')
+    setValue('representanteLegal', '')
+    
+    // Limpiar checkboxes
+    setValue('acreditacionPersonal', false)
+    setValue('especificacionesTecnicas', false)
+    setValue('acreditacionEquipos', false)
+    setValue('cartaCompromiso', false)
+    setValue('mandatoServiu', false)
+    setValue('estadoPago', false)
+    setValue('hes', false)
+    setValue('oc', false)
+    setValue('envioInformes', false)
 
     // Llamar a la función handleClose proporcionada por las props
     props.handleClose()
@@ -500,6 +570,15 @@ const AddObraDrawer = (props: Props) => {
     setSelectedComuna('') // Resetear comuna cuando cambia la región
     setValue('region', regionValue)
     setValue('comuna', '')
+    trigger('region') // Disparar validación
+  }
+
+  const handleComunaChange = (event: SelectChangeEvent<string>) => {
+    const comunaValue = event.target.value
+
+    setSelectedComuna(comunaValue)
+    setValue('comuna', comunaValue)
+    trigger('comuna') // Disparar validación
   }
 
   // Función para cancelar la edición
@@ -758,15 +837,23 @@ const AddObraDrawer = (props: Props) => {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Región</InputLabel>
-                  <Select value={selectedRegion} label='Región' onChange={handleRegionChange}>
-                    {regiones.map(region => (
-                      <MenuItem key={region.id} value={region.nombre}>
-                        {region.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                <FormControl fullWidth error={Boolean(errors.region)}>
+                  <InputLabel>Región *</InputLabel>
+                  <Controller
+                    name='region'
+                    control={control}
+                    rules={{ required: 'La región es obligatoria' }}
+                    render={({ field }) => (
+                      <Select {...field} label='Región *' onChange={handleRegionChange}>
+                        {regiones.map(region => (
+                          <MenuItem key={region.id} value={region.nombre}>
+                            {region.nombre}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.region && <FormHelperText>{errors.region.message}</FormHelperText>}
                 </FormControl>
               </Grid>
             </Grid>
@@ -774,20 +861,28 @@ const AddObraDrawer = (props: Props) => {
             {/* Comuna, Sector, Georreferencia, Referencia: 3-3-3-3 */}
             <Grid container spacing={5}>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Comuna</InputLabel>
-                  <Select
-                    value={selectedComuna}
-                    label='Comuna'
-                    onChange={e => setSelectedComuna(e.target.value)}
-                    disabled={!selectedRegion}
-                  >
-                    {comunas.map(comuna => (
-                      <MenuItem key={comuna.id} value={comuna.nombre}>
-                        {comuna.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                <FormControl fullWidth error={Boolean(errors.comuna)}>
+                  <InputLabel>Comuna *</InputLabel>
+                  <Controller
+                    name='comuna'
+                    control={control}
+                    rules={{ required: 'La comuna es obligatoria' }}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        label='Comuna *'
+                        onChange={handleComunaChange}
+                        disabled={!selectedRegion}
+                      >
+                        {comunas.map(comuna => (
+                          <MenuItem key={comuna.id} value={comuna.nombre}>
+                            {comuna.nombre}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.comuna && <FormHelperText>{errors.comuna.message}</FormHelperText>}
                 </FormControl>
               </Grid>
 
@@ -795,7 +890,16 @@ const AddObraDrawer = (props: Props) => {
                 <Controller
                   name='sector'
                   control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Sector' />}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Sector *'
+                      error={Boolean(errors.sector)}
+                      helperText={errors.sector && 'Este campo es obligatorio'}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>
@@ -869,15 +973,24 @@ const AddObraDrawer = (props: Props) => {
             {/* Mandante section */}
             <Grid container spacing={5} sx={{ mt: 2 }}>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Mandante</InputLabel>
-                  <Select {...control} label='Mandante'>
-                    {MANDANTES.map(mandante => (
-                      <MenuItem key={mandante.value} value={mandante.value}>
-                        {mandante.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                <FormControl fullWidth error={Boolean(errors.mandante)}>
+                  <InputLabel>Mandante *</InputLabel>
+                  <Controller
+                    name='mandante'
+                    control={control}
+                    rules={{ required: true }}
+                    defaultValue='No definido'
+                    render={({ field }) => (
+                      <Select {...field} label='Mandante *'>
+                        {MANDANTES.map(mandante => (
+                          <MenuItem key={mandante.value} value={mandante.value}>
+                            {mandante.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.mandante && <FormHelperText>Este campo es obligatorio</FormHelperText>}
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>

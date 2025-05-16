@@ -32,6 +32,7 @@ import { toast } from 'react-hot-toast'
 
 // Types Imports
 import type { Cliente, FormValidateType, FormNonValidateType, Contacto } from '@/types/forms/cliente'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 // Import data
 import { PAISES, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
@@ -39,6 +40,7 @@ import { PAISES, ESTADOS_CLIENTE, VENDEDORES } from '@/data/clientData'
 // Import components
 import ContactSearch from '../components/ContactSearch'
 import { useUbicacion } from '@/hooks/useUbicacion'
+import AddContact from '@/views/apps/contacts/list/AddContact'
 
 type Props = {
   open: boolean
@@ -104,6 +106,8 @@ const AddClienteDrawer = (props: Props) => {
   })
 
   const [contactos, setContactos] = useState<Array<{ contacto: Contacto; cargo: string; isPrincipal: boolean }>>([])
+  const [addContactOpen, setAddContactOpen] = useState(false)
+  const [refreshContactSearch, setRefreshContactSearch] = useState(0)
 
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
@@ -120,6 +124,7 @@ const AddClienteDrawer = (props: Props) => {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [copyRazonSocial, setCopyRazonSocial] = useState(false)
 
   // Agregar estado para el modo edición
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -358,32 +363,13 @@ const AddClienteDrawer = (props: Props) => {
         otroRut: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
         fechaCreacion: new Date(),
-        clientesContactos: {
-          create: contactos.map(c => {
-            if (c.contacto.contactId) {
-              // Contacto existente
+        clientesContactos: contactos.map(c => {
               return {
                 contactId: c.contacto.contactId,
                 cargo: c.cargo || 'Sin especificar',
                 isPrincipal: c.isPrincipal
               }
-            } else {
-              // Contacto nuevo
-              return {
-                cargo: c.cargo || 'Sin especificar',
-                isPrincipal: c.isPrincipal,
-                contacto: {
-                  create: {
-                    nombre: c.contacto.nombre,
-                    email: c.contacto.email,
-                    telefono1: c.contacto.telefono1,
-                    telefono2: c.contacto.telefono2 || ''
-                  }
-                }
-              }
-            }
-          })
-        },
+        }),
         condicionesComerciales: {
           create: {
             vendedor: data.vendedor,
@@ -402,6 +388,18 @@ const AddClienteDrawer = (props: Props) => {
         handleClose()
         resetForm()
         setContactos([])
+        setFormData({
+          ...initialFormData,
+          pais: 'Chile',
+          condicionVenta: 'Contado'
+        })
+        setSelectedRegion('')
+        setSelectedComuna('')
+        setValue('giro', '')
+        setValue('emailFacturacion', '')
+        setValue('rutRepresentanteLegal', '')
+        setValue('representanteLegal', '')
+        setCopyRazonSocial(false)
 
         if (typeof setData === 'function') {
           setData(prevData => [...prevData, response.data])
@@ -428,10 +426,19 @@ const AddClienteDrawer = (props: Props) => {
   const handleReset = () => {
     handleClose()
     resetForm()
-    setFormData(initialFormData)
+    setFormData({
+      ...initialFormData,
+      pais: 'Chile',
+      condicionVenta: 'Contado'
+    })
     setContactos([])
     setSelectedRegion('')
     setSelectedComuna('')
+    setValue('giro', '')
+    setValue('emailFacturacion', '')
+    setValue('rutRepresentanteLegal', '')
+    setValue('representanteLegal', '')
+    setCopyRazonSocial(false)
   }
 
   // En el agregarContacto, validar antes de agregar
@@ -467,6 +474,7 @@ const AddClienteDrawer = (props: Props) => {
         ...nuevoContacto,
         cargo: nuevoContacto.cargo
       },
+      cargo: nuevoContacto.cargo,
       isPrincipal: contactos.length === 0
     }
 
@@ -527,21 +535,37 @@ const AddClienteDrawer = (props: Props) => {
     setSearchTimeout(timeout)
   }
 
-  // Modificar handleAddContact para permitir editar el cargo al asociar
-  const handleAddContact = (contact: Contacto) => {
-    const isPrincipal = contactos.length === 0
+  // Modificar handleAddContact para aceptar ContactType o Contacto
+  const handleAddContact = (contact: ContactType | Contacto) => {
+    // Verificar si el contacto ya existe en la lista
+    const contactoExistente = contactos.some(c => c.contacto.contactId === (contact as any).contactId);
+    
+    if (contactoExistente) {
+      toast.error('Este contacto ya ha sido agregado');
+      return;
+    }
 
+    const isPrincipal = contactos.length === 0;
+    // Normaliza el contacto para que siempre tenga la estructura Contacto
+    const contactoNormalizado: Contacto = {
+      nombre: contact.nombre,
+      cargo: contact.cargo || '',
+      email: contact.email,
+      telefono1: contact.telefono1,
+      telefono2: contact.telefono2 || '',
+      contactId: (contact as any).contactId
+    };
     setContactos([
       ...contactos,
       {
-        contacto: contact,
-        cargo: contact.cargo || '',
+        contacto: contactoNormalizado,
+        cargo: contactoNormalizado.cargo,
         isPrincipal
-      }
-    ])
-    setSearchContactValue('')
-    setSearchResults([])
-  }
+      } as { contacto: Contacto; cargo: string; isPrincipal: boolean }
+    ]);
+    setSearchContactValue('');
+    setSearchResults([]);
+  };
 
   // Modificar el datosEjemplo
   const datosEjemplo: FormValidateType = {
@@ -578,7 +602,10 @@ const AddClienteDrawer = (props: Props) => {
     setSelectedRegion('Metropolitana')
 
     // Cargar contactos
-    setContactos(contactosEjemplo)
+    setContactos(contactosEjemplo.map((c: { contacto: Contacto; isPrincipal: boolean }) => ({
+      ...c,
+      cargo: c.contacto.cargo || '',
+    })));
 
     toast.success('Datos de prueba cargados')
   }
@@ -661,6 +688,7 @@ const AddClienteDrawer = (props: Props) => {
         telefono1: editingContact.telefono1,
         telefono2: editingContact.telefono2
       },
+      cargo: editingContact.cargo || '',
       isPrincipal: contactos[editingContactIndex].isPrincipal
     }
 
@@ -684,6 +712,7 @@ const AddClienteDrawer = (props: Props) => {
   // Función para manejar el copiado de razón social
   const handleCopyRazonSocial = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked
+    setCopyRazonSocial(isChecked)
 
     if (isChecked) {
       // Obtener el valor actual de razón social
@@ -701,6 +730,38 @@ const AddClienteDrawer = (props: Props) => {
       [field]: value
     }))
   }
+
+  // Función para manejar el nuevo contacto creado
+  const handleNewContact = (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => {
+    if (Array.isArray(data)) {
+      const newContact = data[0];
+      // Normaliza el contacto para que tenga cargo a nivel raíz
+      handleAddContact({
+        nombre: newContact.nombre,
+        cargo: newContact.cargo || '',
+        email: newContact.email,
+        telefono1: newContact.telefono1,
+        telefono2: newContact.telefono2 || '',
+        contactId: newContact.contactId
+      });
+      toast.success('Contacto agregado exitosamente');
+      setRefreshContactSearch(prev => prev + 1);
+    }
+  }
+
+  // Nueva función para refrescar la lista de contactos desde la API
+  const fetchContactos = async () => {
+    const response = await fetch('/api/contacts');
+    const data = await response.json();
+    console.log('Datos de contactos:', data);
+    setContactos(
+      (data as any[]).map((c: any) => ({
+        contacto: c,
+        cargo: c.cargo || '',
+        isPrincipal: false // Puedes ajustar la lógica para principal si es necesario
+      }))
+    );
+  };
 
   return (
     <Drawer
@@ -848,7 +909,7 @@ const AddClienteDrawer = (props: Props) => {
             </Grid>
             <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'center' }}>
               <FormControlLabel
-                control={<Checkbox name='copySocialReason' onChange={handleCopyRazonSocial} />}
+                control={<Checkbox name='copySocialReason' checked={copyRazonSocial} onChange={handleCopyRazonSocial} />}
                 label='Copiar Razón Social'
               />
             </Grid>
@@ -1087,30 +1148,33 @@ const AddClienteDrawer = (props: Props) => {
 
           {/* Sección de Contactos */}
           <Divider sx={{ my: 4 }} />
-          <Grid container alignItems='center' spacing={2}>
+          <Grid container spacing={2} alignItems='center' sx={{ mb: 4 }}>
             <Grid item xs={12}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 4,
-                  gap: 4 // Agregar espacio entre elementos
-                }}
-              >
-                <Typography variant='h5' sx={{ minWidth: 'fit-content' }}>
-                  Contactos
-                </Typography>
-                <Box sx={{ flexGrow: 1, maxWidth: '600px' }}>
-                  {' '}
-                  {/* Contenedor para la búsqueda */}
-                  <ContactSearch
-                    onContactSelect={contact => {
-                      handleAddContact(contact)
-                    }}
-                  />
-                </Box>
-              </Box>
+              <Typography variant='h5' sx={{ minWidth: 'fit-content', mb: 2 }}>
+                Contactos
+              </Typography>
+              <Grid container spacing={2} alignItems='center'>
+                <Grid item xs={12} sm={'auto'}>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    onClick={() => setAddContactOpen(true)}
+                    startIcon={<i className='ri-add-line' />}
+                  >
+                    Nuevo Contacto
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm>
+                  <Box sx={{ maxWidth: '400px', ml: { sm: 'auto' } }}>
+                    <ContactSearch
+                      onContactSelect={contact => {
+                        handleAddContact(contact)
+                      }}
+                      refreshKey={refreshContactSearch}
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
 
@@ -1153,26 +1217,7 @@ const AddClienteDrawer = (props: Props) => {
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      <FormControl fullWidth size='small'>
-                        <Select
-                          value={contacto.cargo || ''}
-                          onChange={e => {
-                            const updatedContactos = [...contactos]
-
-                            updatedContactos[index] = {
-                              ...contacto,
-                              cargo: e.target.value
-                            }
-                            setContactos(updatedContactos)
-                          }}
-                        >
-                          {ROLES_CONTACTO.map(rol => (
-                            <MenuItem key={rol.value} value={rol.value}>
-                              {rol.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                      {ROLES_CONTACTO.find(rol => rol.value === contacto.cargo)?.label || contacto.cargo}
                     </TableCell>
                     <TableCell>{contacto.contacto.nombre}</TableCell>
                     <TableCell>{contacto.contacto.email}</TableCell>
@@ -1282,6 +1327,13 @@ const AddClienteDrawer = (props: Props) => {
           </div>
         </form>
       </div>
+
+      {/* Agregar el componente AddContact */}
+      <AddContact
+        open={addContactOpen}
+        handleClose={() => setAddContactOpen(false)}
+        onContactCreated={handleAddContact}
+      />
     </Drawer>
   )
 }

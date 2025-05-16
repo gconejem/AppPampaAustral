@@ -35,18 +35,42 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    console.log('Datos recibidos en POST:', body) // Agregar log para ver los datos recibidos
+    console.log('Datos recibidos en POST:', body)
 
     const cliente = await prisma.cliente.create({
       data: {
-        ...body,
+        rut: body.rut,
+        estado: body.estado,
+        razonSocial: body.razonSocial,
+        nombreCliente: body.nombreCliente,
+        pais: body.pais,
+        region: body.region,
+        ciudad: body.ciudad || '',
+        comuna: body.comuna || '',
+        direccion: body.direccion || '',
+        telefono: body.telefono || '',
+        sitioWeb: body.sitioWeb || '',
+        segmento: body.segmento || '',
+        industria: body.industria || '',
+        giro: body.giro || '',
+        emailFacturacion: body.emailFacturacion || '',
         otroRut: body.otroRut || '',
         representanteLegal: body.representanteLegal || '',
-        fechaCreacion: new Date(),
-        giro: body.giro || null,
-        emailFacturacion: body.emailFacturacion || null,
-        clientesContactos: body.clientesContactos,
-        condicionesComerciales: body.condicionesComerciales
+        fechaCreacion: new Date(body.fechaCreacion),
+        clientesContactos: {
+          create: body.clientesContactos.map((contacto: any) => ({
+            contacto: {
+              connect: {
+                contactId: contacto.contactId
+              }
+            },
+            cargo: contacto.cargo,
+            isPrincipal: contacto.isPrincipal
+          }))
+        },
+        condicionesComerciales: {
+          create: body.condicionesComerciales.create
+        }
       },
       include: {
         clientesContactos: {
@@ -60,7 +84,7 @@ export async function POST(request: Request) {
       }
     })
 
-    console.log('Cliente creado:', cliente) // Agregar log para ver el cliente creado
+    console.log('Cliente creado:', cliente)
 
     return NextResponse.json(cliente, { status: 201 })
   } catch (error) {
