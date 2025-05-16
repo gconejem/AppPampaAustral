@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import { toast } from 'react-hot-toast'
+import classnames from 'classnames'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -26,6 +27,15 @@ import TextField from '@mui/material/TextField'
 import Switch from '@mui/material/Switch'
 import Box from '@mui/material/Box'
 import InputAdornment from '@mui/material/InputAdornment'
+
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getSortedRowModel,
+  SortingState
+} from '@tanstack/react-table'
 
 interface ListaPrecio {
   id: number
@@ -56,6 +66,7 @@ const ProductListTable = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [editingPrice, setEditingPrice] = useState<{ id: number; price: string } | null>(null)
   const [successMessage, setSuccessMessage] = useState<string>('')
+  const [sorting, setSorting] = useState<SortingState>([])
 
   // Cargar listas de precios
   useEffect(() => {
@@ -269,6 +280,100 @@ const ProductListTable = () => {
     )
   }
 
+  // Definir el columnHelper
+  const columnHelper = createColumnHelper<Producto>()
+
+  // Definir las columnas
+  const columns = useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            onChange={e => {
+              if (e.target.checked) {
+                setSelectedProducts(productos.map(p => p.sku))
+              } else {
+                setSelectedProducts([])
+              }
+            }}
+            checked={selectedProducts.length === productos.length && productos.length > 0}
+            indeterminate={selectedProducts.length > 0 && selectedProducts.length < productos.length}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={selectedProducts.includes(row.original.sku)}
+            onChange={e => {
+              if (e.target.checked) {
+                setSelectedProducts([...selectedProducts, row.original.sku])
+              } else {
+                setSelectedProducts(selectedProducts.filter(sku => sku !== row.original.sku))
+              }
+            }}
+          />
+        )
+      },
+      columnHelper.accessor('sku', {
+        header: 'SKU',
+        cell: info => info.getValue(),
+        enableSorting: true
+      }),
+      columnHelper.accessor('nombre', {
+        header: 'NOMBRE',
+        cell: info => info.getValue(),
+        enableSorting: true
+      }),
+      columnHelper.accessor('area', {
+        header: 'ÁREA',
+        cell: info => info.getValue(),
+        enableSorting: true
+      }),
+      columnHelper.accessor('familia', {
+        header: 'FAMILIA',
+        cell: info => info.getValue(),
+        enableSorting: true
+      }),
+      columnHelper.accessor('tipo', {
+        header: 'TIPO',
+        cell: info => info.getValue(),
+        enableSorting: true
+      }),
+      {
+        id: 'precio',
+        header: 'PRECIO',
+        cell: ({ row }) => renderPrecio(row.original),
+        enableSorting: true
+      },
+      {
+        id: 'activo',
+        header: 'ACTIVO',
+        cell: ({ row }) => (
+          <Switch
+            checked={row.original.listasPrecios[0]?.activo ?? false}
+            onChange={() =>
+              handleActiveToggle(row.original.productoId, row.original.listasPrecios[0]?.activo ?? false)
+            }
+          />
+        ),
+        enableSorting: true
+      }
+    ],
+    [selectedProducts, productos, editingPrice]
+  )
+
+  // Configurar la tabla
+  const table = useReactTable({
+    data: productos,
+    columns,
+    state: {
+      sorting
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel()
+  })
+
   return (
     <Card>
       <Snackbar
@@ -300,59 +405,37 @@ const ProductListTable = () => {
       <TableContainer>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell padding='checkbox'>
-                <Checkbox
-                  onChange={e => {
-                    if (e.target.checked) {
-                      setSelectedProducts(productos.map(p => p.sku))
-                    } else {
-                      setSelectedProducts([])
-                    }
-                  }}
-                  checked={selectedProducts.length === productos.length && productos.length > 0}
-                  indeterminate={selectedProducts.length > 0 && selectedProducts.length < productos.length}
-                />
-              </TableCell>
-              <TableCell>SKU</TableCell>
-              <TableCell>NOMBRE</TableCell>
-              <TableCell>ÁREA</TableCell>
-              <TableCell>FAMILIA</TableCell>
-              <TableCell>TIPO</TableCell>
-              <TableCell>PRECIO</TableCell>
-              <TableCell>ACTIVO</TableCell>
-            </TableRow>
+            {table.getHeaderGroups().map(headerGroup => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <TableCell key={header.id}>
+                    {header.isPlaceholder ? null : (
+                      <div
+                        className={classnames({
+                          'flex items-center': header.column.getIsSorted(),
+                          'cursor-pointer select-none': header.column.getCanSort()
+                        })}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: <i className='ri-arrow-up-s-line text-xl' />,
+                          desc: <i className='ri-arrow-down-s-line text-xl' />
+                        }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                      </div>
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
           </TableHead>
           <TableBody>
             {productos.length > 0 ? (
-              productos.map(producto => (
-                <TableRow key={producto.sku}>
-                  <TableCell padding='checkbox'>
-                    <Checkbox
-                      checked={selectedProducts.includes(producto.sku)}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedProducts([...selectedProducts, producto.sku])
-                        } else {
-                          setSelectedProducts(selectedProducts.filter(sku => sku !== producto.sku))
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{producto.sku}</TableCell>
-                  <TableCell>{producto.nombre}</TableCell>
-                  <TableCell>{producto.area}</TableCell>
-                  <TableCell>{producto.familia}</TableCell>
-                  <TableCell>{producto.tipo}</TableCell>
-                  <TableCell>{renderPrecio(producto)}</TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={producto.listasPrecios[0]?.activo ?? false}
-                      onChange={() =>
-                        handleActiveToggle(producto.productoId, producto.listasPrecios[0]?.activo ?? false)
-                      }
-                    />
-                  </TableCell>
+              table.getRowModel().rows.map(row => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                  ))}
                 </TableRow>
               ))
             ) : (
