@@ -269,6 +269,34 @@ const AddObraDrawer = (props: Props) => {
         resetForm()
         setContactos(contactosPrincipales)
         setValue('numeroObra', lastObraNumber)
+        setSelectedRegion('')
+        setSelectedComuna('')
+        setValue('region', '')
+        setValue('comuna', '')
+        setValue('georreferencia', '')
+        setValue('mandante', '')
+        setValue('otrasReferencias', '')
+        
+        // Limpiar campos de facturación
+        setValue('telefono', '')
+        setValue('giro', '')
+        setValue('direccionComercial', '')
+        setValue('comunaFacturacion', '')
+        setValue('listaPrecios', '')
+        setValue('mailRecepcionFactura', '')
+        setValue('rutRepresentanteLegal', '')
+        setValue('representanteLegal', '')
+        
+        // Limpiar checkboxes
+        setValue('acreditacionPersonal', false)
+        setValue('especificacionesTecnicas', false)
+        setValue('acreditacionEquipos', false)
+        setValue('cartaCompromiso', false)
+        setValue('mandatoServiu', false)
+        setValue('estadoPago', false)
+        setValue('hes', false)
+        setValue('oc', false)
+        setValue('envioInformes', false)
 
         props.handleClose()
       }
@@ -292,6 +320,34 @@ const AddObraDrawer = (props: Props) => {
     resetForm()
     setContactos(contactosPrincipales)
     setValue('numeroObra', lastObraNumber)
+    setSelectedRegion('')
+    setSelectedComuna('')
+    setValue('region', '')
+    setValue('comuna', '')
+    setValue('georreferencia', '')
+    setValue('mandante', '')
+    setValue('otrasReferencias', '')
+    
+    // Limpiar campos de facturación
+    setValue('telefono', '')
+    setValue('giro', '')
+    setValue('direccionComercial', '')
+    setValue('comunaFacturacion', '')
+    setValue('listaPrecios', '')
+    setValue('mailRecepcionFactura', '')
+    setValue('rutRepresentanteLegal', '')
+    setValue('representanteLegal', '')
+    
+    // Limpiar checkboxes
+    setValue('acreditacionPersonal', false)
+    setValue('especificacionesTecnicas', false)
+    setValue('acreditacionEquipos', false)
+    setValue('cartaCompromiso', false)
+    setValue('mandatoServiu', false)
+    setValue('estadoPago', false)
+    setValue('hes', false)
+    setValue('oc', false)
+    setValue('envioInformes', false)
 
     // Llamar a la función handleClose proporcionada por las props
     props.handleClose()
