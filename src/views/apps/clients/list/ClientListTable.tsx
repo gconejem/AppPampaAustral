@@ -64,7 +64,8 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   getPaginationRowModel,
-  getSortedRowModel
+  getSortedRowModel,
+  SortingState
 } from '@tanstack/react-table'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -223,6 +224,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
   const [tableData, setTableData] = useState<Cliente[]>(safeUserData)
+  const [sorting, setSorting] = useState<SortingState>([])
 
   const [openDialog, setOpenDialog] = useState(false)
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
@@ -617,7 +619,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
       },
       columnHelper.accessor('rut', {
         header: 'RUT',
-        cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>
+        cell: ({ row }: { row: Row<Cliente> }) => <Typography>{row.original.rut}</Typography>,
+        enableSorting: true
       }),
       columnHelper.accessor('fechaCreacion', {
         header: 'FECHA INGRESO',
@@ -629,7 +632,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
               day: '2-digit'
             })}
           </Typography>
-        )
+        ),
+        enableSorting: true
       }),
       columnHelper.accessor('razonSocial', {
         header: 'CLIENTE',
@@ -638,31 +642,29 @@ const ClientListTable = ({ userData, setData }: Props) => {
           const displayText = text.length > 20 ? `${text.substring(0, 20)}...` : text
 
           return <Typography title={text}>{displayText}</Typography>
-        }
+        },
+        enableSorting: true
       }),
       columnHelper.accessor('comuna', {
         header: 'COMUNA',
         cell: ({ row }: { row: Row<Cliente> }) => {
-          // Si tenemos el nombre de la comuna en el mapa, lo mostramos
           if (comunasMap[row.original.comuna]) {
             return <Typography variant='body2'>{comunasMap[row.original.comuna]}</Typography>
           }
 
-          // Si no tenemos el nombre pero tenemos el ID, mostramos el ID
           if (row.original.comuna) {
             return <Typography variant='body2'>{row.original.comuna}</Typography>
           }
 
-          // Si no tenemos nada, mostramos un guión
           return <Typography variant='body2'>-</Typography>
-        }
+        },
+        enableSorting: true
       }),
       columnHelper.accessor('segmento', {
         header: 'SEGMENTO',
         cell: ({ row }) => {
           const segmento = row.original.segmento
 
-          // Configuración de iconos y colores para cada segmento
           const segmentConfig = {
             'Corporativo Estratégico': {
               icon: 'ri-building-4-line',
@@ -700,7 +702,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
               <Typography>{segmento}</Typography>
             </Box>
           )
-        }
+        },
+        enableSorting: true
       }),
       columnHelper.accessor('clientesContactos', {
         header: 'CONTACTO',
@@ -752,7 +755,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         header: 'ESTADO',
         cell: ({ row }: { row: Row<Cliente> }) => {
           const estado = row.original.estado.toLowerCase()
-          let color = 'default'
+          let color: 'success' | 'warning' | 'error' | 'default' = 'default'
           let label = 'Desconocido'
 
           switch (estado) {
@@ -771,18 +774,19 @@ const ClientListTable = ({ userData, setData }: Props) => {
           }
 
           return <Chip label={label} color={color} size='small' />
-        }
+        },
+        enableSorting: true
       }),
-      columnHelper.accessor('actions', {
+      {
+        id: 'actions',
         header: 'ACCIONES',
-        cell: ({ row }) => (
+        cell: ({ row }: { row: Row<Cliente> }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <IconButton
               size='small'
               color='info'
               onClick={async () => {
                 try {
-                  // Obtener los datos completos del cliente
                   const response = await axios.get(`/api/clientes/${row.original.clienteId}`)
                   const clienteCompleto = response.data
 
@@ -809,7 +813,6 @@ const ClientListTable = ({ userData, setData }: Props) => {
               onClick={async () => {
                 try {
                   if (row.original.clienteId) {
-                    // Obtener los datos completos del cliente
                     const response = await axios.get(`/api/clientes/${row.original.clienteId}`)
                     const clienteCompleto = response.data
 
@@ -845,23 +848,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
                       }
                     }
                   }
-                },
-                /* {
-                  text: 'Eliminar',
-                  icon: 'ri-delete-bin-line',
-                  menuItemProps: {
-                    onClick: () => {
-                      if (row.original.clienteId) {
-                        handleDeleteClick(row.original.clienteId)
-                      }
-                    }
-                  }
-                } */
+                }
               ]}
             />
           </Box>
-        )
-      })
+        ),
+        enableSorting: false
+      }
     ],
     [comunasMap]
   )
@@ -874,7 +867,8 @@ const ClientListTable = ({ userData, setData }: Props) => {
     },
     state: {
       rowSelection,
-      globalFilter
+      globalFilter,
+      sorting
     },
     enableRowSelection: true,
     manualPagination: false,
@@ -885,6 +879,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
     },
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
@@ -1012,7 +1007,25 @@ const ClientListTable = ({ userData, setData }: Props) => {
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
-                    <th key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</th>
+                    <th key={header.id}>
+                      {header.isPlaceholder ? null : (
+                        <>
+                          <div
+                            className={classnames({
+                              'flex items-center': header.column.getIsSorted(),
+                              'cursor-pointer select-none': header.column.getCanSort()
+                            })}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: <i className='ri-arrow-up-s-line text-xl' />,
+                              desc: <i className='ri-arrow-down-s-line text-xl' />
+                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                          </div>
+                        </>
+                      )}
+                    </th>
                   ))}
                 </tr>
               ))}
