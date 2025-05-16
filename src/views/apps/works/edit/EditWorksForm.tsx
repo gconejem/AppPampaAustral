@@ -533,7 +533,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           </Grid>
 
           {/* Nombre Obra y Dirección */}
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={12}>
             <Controller
               name='nombreObra'
               control={control}
@@ -653,16 +653,18 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                 <TextField
                   {...field}
                   fullWidth
-                  label='Correos'
+                  label='Enviar informes a:'
                   placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                   helperText='Separar múltiples correos con comas'
                   InputLabelProps={{ shrink: true }}
                   onChange={e => {
-                    const correos = e.target.value.split(',').map(correo => correo.trim())
-
+                    const correos = e.target.value
+                      .split(',')
+                      .map(correo => correo.trim())
+                      .filter(correo => correo !== '')
                     field.onChange(correos)
                   }}
-                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                  value={Array.isArray(field.value) && field.value.length > 0 ? field.value.join(', ') : ''}
                 />
               )}
             />

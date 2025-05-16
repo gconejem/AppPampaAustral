@@ -229,7 +229,12 @@ const DuplicateWork = (props: Props) => {
         rutRepresentanteLegal: initialData.rutRepresentanteLegal || '',
         representanteLegal: initialData.representanteLegal || '',
         telefono: initialData.telefono || initialData.telefonoFacturacion || '',
-        otrasReferencias: typeof initialData.otrasReferencias === 'string' ? initialData.otrasReferencias : ''
+        otrasReferencias: typeof initialData.otrasReferencias === 'string' ? initialData.otrasReferencias : '',
+        correos: typeof initialData.correos === 'string' 
+          ? initialData.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+          : Array.isArray(initialData.correos) 
+            ? initialData.correos 
+            : []
       }
 
       console.log('formData preparado:', formData)
@@ -296,6 +301,17 @@ const DuplicateWork = (props: Props) => {
           return;
         }
       }
+
+      // Validar correos si existen
+      if (data.correos && Array.isArray(data.correos)) {
+        for (const correo of data.correos) {
+          if (!validateEmail(correo)) {
+            toast.error(`El correo ${correo} no es válido`);
+            return;
+          }
+        }
+      }
+
       if (!data.numeroObra) {
         data.numeroObra = lastObraNumber;
       }
@@ -317,7 +333,7 @@ const DuplicateWork = (props: Props) => {
           telefono2: contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
-        correos: Array.isArray(data.correos) ? data.correos.join(', ') : data.correos || ''
+        correos: Array.isArray(data.correos) ? data.correos : []
       };
       const response = await axios.post('/api/obras', payload);
       if (response.data) {
@@ -630,53 +646,6 @@ const DuplicateWork = (props: Props) => {
               </Grid>
             </Grid>
 
-            {/* Correos */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='correos'
-                  control={control}
-                  defaultValue={[]}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Correos (separados por coma)'
-                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                      helperText='Separar múltiples correos con comas'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        const correos = e.target.value.split(',').map(correo => correo.trim())
-
-                        field.onChange(correos)
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='envioInforme'
-                  control={control}
-                  defaultValue={[]}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Envío Informe'
-                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        const correos = e.target.value.split(',').map(correo => correo.trim())
-
-                        field.onChange(correos)
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
             {/* Mandante section */}
             <Grid container spacing={5} sx={{ mt: 2 }}>
               <Grid item xs={12} sm={6}>
@@ -702,6 +671,36 @@ const DuplicateWork = (props: Props) => {
                   name='textoMandante'
                   control={control}
                   render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' />}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Correos */}
+            <Grid container spacing={5}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='correos'
+                  control={control}
+                  defaultValue={[]}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Enviar informes a:'
+                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
+                      helperText='Separar múltiples correos con comas'
+                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                      onChange={e => {
+                        const correos = e.target.value
+                          .split(',')
+                          .map(correo => correo.trim())
+                          .filter(correo => correo !== '')
+                        field.onChange(correos)
+                      }}
+                      error={Boolean(errors.correos)}
+                      helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>
