@@ -285,7 +285,9 @@ const AddObraDrawer = (props: Props) => {
         setValue('comuna', '')
         setValue('georreferencia', '')
         setValue('mandante', 'No definido')
+        setValue('textoMandante', '')
         setValue('otrasReferencias', '')
+        setValue('otrosRequisitos', '')
         
         // Limpiar campos de facturación
         setValue('telefono', '')
@@ -335,8 +337,10 @@ const AddObraDrawer = (props: Props) => {
     setValue('region', '')
     setValue('comuna', '')
     setValue('georreferencia', '')
-    setValue('mandante', '')
+    setValue('mandante', 'No definido')
+    setValue('textoMandante', '')
     setValue('otrasReferencias', '')
+    setValue('otrosRequisitos', '')
     
     // Limpiar campos de facturación
     setValue('telefono', '')
