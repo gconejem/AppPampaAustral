@@ -790,6 +790,32 @@ const WorkListTable = () => {
     )
   }
 
+  const refreshData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/obras')
+
+      if (!response.ok) throw new Error('Error al cargar las obras')
+
+      const responseData = await response.json()
+
+      if (Array.isArray(responseData)) {
+        setData(responseData)
+        setFilteredData(responseData)
+      } else {
+        console.error('Respuesta inesperada:', responseData)
+        setError('Error al cargar los datos')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setError('Error al cargar las obras')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (error) {
     return (
       <Alert severity='error' sx={{ mb: 4 }}>
@@ -918,7 +944,10 @@ const WorkListTable = () => {
       </Card>
       <AddWork
         open={addObraOpen}
-        handleClose={() => setAddObraOpen(false)}
+        handleClose={() => {
+          setAddObraOpen(false)
+          refreshData()
+        }}
         setData={setData}
         setFilteredData={setFilteredData}
       />
@@ -926,7 +955,7 @@ const WorkListTable = () => {
         open={editObraOpen}
         handleClose={() => {
           setEditObraOpen(false)
-          setSelectedObra(null)
+          refreshData()
         }}
         obraData={selectedObra}
         setData={setData}
@@ -1011,7 +1040,11 @@ const WorkListTable = () => {
       </Dialog>
       <DuplicateWork
         open={duplicateDrawerOpen}
-        handleClose={() => { setDuplicateDrawerOpen(false); setObraToDuplicate(null); }}
+        handleClose={() => {
+          setDuplicateDrawerOpen(false)
+          setObraToDuplicate(null)
+          refreshData()
+        }}
         setData={setData}
         setFilteredData={setFilteredData}
         initialData={obraToDuplicate || {}}
