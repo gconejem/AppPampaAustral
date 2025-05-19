@@ -441,7 +441,6 @@ export const ESTADOS_CLIENTE = [
 ]
 
 export const VENDEDORES = [
-  { value: 'Carlos Vega', label: 'Carlos Vega' },
-  { value: 'Vendedor 1', label: 'Vendedor 1' },
-  { value: 'Vendedor 2', label: 'Vendedor 2' }
+  { value: 'olga_chandia', label: 'Olga Chandía' },
+  { value: 'mercedes_lillo', label: 'Mercedes Lillo' }
 ]
