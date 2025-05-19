@@ -155,6 +155,18 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       mailRecepcionFactura: {
         required: 'El email es requerido',
         validate: value => validateEmail(value) || 'Email inválido'
+      },
+      rutRepresentanteLegal: {
+        validate: value => {
+          if (!value) return true // Campo opcional
+          return validateRut(value) || 'RUT inválido'
+        }
+      },
+      representanteLegal: {
+        validate: value => {
+          if (!value) return true // Campo opcional
+          return /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/.test(value) || 'Solo se permiten letras y espacios'
+        }
       }
     }
   })
@@ -171,6 +183,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         ...obraData,
         fechaIngreso: formattedDate,
         rut: formattedRut,
+        representanteLegal: obraData.representanteLegal || '',
+        rutRepresentanteLegal: obraData.rutRepresentanteLegal || '',
 
         // Convertir explícitamente a booleanos
         informeMandante: Boolean(obraData.informeMandante ?? false),
@@ -191,6 +205,16 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       setContactos(obraData.contactos || [])
       setSelectedRegion(obraData.region || '')
       setSelectedComuna(obraData.comuna || '')
+    } else {
+      // Si no hay obraData, resetear el formulario a los valores iniciales
+      reset({
+        ...initialFormData,
+        estado: 'activa',
+        estadoObra: 'activa',
+        fechaIngreso: new Date().toISOString().split('T')[0],
+        representanteLegal: '',
+        rutRepresentanteLegal: ''
+      })
     }
   }, [obraData, reset])
 
@@ -953,6 +977,25 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           </Grid>
           <Grid item xs={12} sm={6}>
             <Controller
+              name='mailRecepcionFactura'
+              control={control}
+              rules={{
+                required: 'El email es requerido',
+                validate: value => validateEmail(value) || 'Email inválido'
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Mail Recepción Factura *'
+                  error={Boolean(errors.mailRecepcionFactura)}
+                  helperText={errors.mailRecepcionFactura?.message}
+                />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Controller
               name='comunaFacturacion'
               control={control}
               render={({ field }) => (
@@ -960,7 +1003,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth error={Boolean(errors.listaPrecios)}>
+              <InputLabel>Lista de Precios</InputLabel>
+              <Controller
+                name='listaPrecios'
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label='Lista de Precios'>
+                    {LISTAS_PRECIOS.map(lista => (
+                      <MenuItem key={lista.value} value={lista.value}>
+                        {lista.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+              {errors.listaPrecios && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
             <Controller
               name='telefonoFacturacion'
               control={control}
@@ -989,44 +1051,54 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
+          
+          
+
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={Boolean(errors.listaPrecios)}>
-              <InputLabel>Lista de Precios</InputLabel>
-              <Controller
-                name='listaPrecios'
-                control={control}
-                render={({ field }) => (
-                  <Select {...field} label='Lista de Precios'>
-                    {LISTAS_PRECIOS.map(lista => (
-                      <MenuItem key={lista.value} value={lista.value}>
-                        {lista.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.listaPrecios && <FormHelperText>Este campo es obligatorio</FormHelperText>}
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name='mailRecepcionFactura'
-              control={control}
-              rules={{
-                required: 'El email es requerido',
-                validate: value => validateEmail(value) || 'Email inválido'
-              }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label='Mail Recepción Factura *'
-                  error={Boolean(errors.mailRecepcionFactura)}
-                  helperText={errors.mailRecepcionFactura?.message}
+                <Controller
+                  name='rutRepresentanteLegal'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='RUT Representante Legal'
+                      placeholder='12.345.678-9'
+                      error={Boolean(errors.rutRepresentanteLegal)}
+                      helperText={errors.rutRepresentanteLegal?.message}
+                      onChange={e => {
+                        // Permitir solo números, k, K y el guión
+                        const value = e.target.value.replace(/[^0-9kK-]/g, '')
+                        // Formatear solo si hay suficientes caracteres
+                        const formatted = value.length > 1 ? formatRut(value) : value
+                        field.onChange(formatted)
+                      }}
+                      value={field.value || ''}
+                    />
+                  )}
                 />
-              )}
-            />
-          </Grid>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='representanteLegal'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Representante Legal'
+                      placeholder='Nombre del representante legal'
+                      error={Boolean(errors.representanteLegal)}
+                      helperText={errors.representanteLegal?.message}
+                      onChange={e => {
+                        field.onChange(e.target.value)
+                        setValue('representanteLegal', e.target.value)
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+
         </Grid>
 
         {/* Sección de Referencias */}

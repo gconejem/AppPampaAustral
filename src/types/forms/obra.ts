@@ -37,6 +37,8 @@ export interface Obra {
   otrasReferencias?: string
   createdAt?: Date
   updatedAt?: Date
+  representanteLegal?: string
+  rutRepresentanteLegal?: string
 }
 
 export interface ContactoObra {

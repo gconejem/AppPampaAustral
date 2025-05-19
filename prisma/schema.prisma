@@ -199,6 +199,8 @@ model Obra {
   oc                       Boolean        @default(false)
   otrasReferencias         String?
   envioInformes            Boolean        @default(false)
+  representanteLegal       String?
+  rutRepresentanteLegal    String?
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
   agendas                  Agenda[]

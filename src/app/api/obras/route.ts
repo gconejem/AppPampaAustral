@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
           hes: body.hes || false,
           oc: body.oc || false,
           otrasReferencias: body.otrasReferencias,
+          rutRepresentanteLegal: body.rutRepresentanteLegal || '',
+          representanteLegal: body.representanteLegal || '',
           createdAt: new Date(),
           updatedAt: new Date()
         }

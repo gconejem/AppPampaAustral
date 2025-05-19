@@ -34,8 +34,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     console.log('Datos recibidos para actualizar:', body)
 
-    // Extraer los contactos del body
-    const { contactos, ...obraData } = body
+    // Extraer los contactos y obraId del body
+    const { contactos, obraId: _, ...obraData } = body
 
     // Actualizar la obra
     const updatedObra = await prisma.obra.update({

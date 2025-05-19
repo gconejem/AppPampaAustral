@@ -40,7 +40,7 @@ import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
 // Utils Imports
-import { validateRut } from '@/utils/rut-utils'
+import { validateRut, formatRut } from '@/utils/rut-utils'
 
 // Types Imports
 import type { Obra, FormValidateType } from '@/types/forms/obra'
@@ -253,6 +253,8 @@ const AddObraDrawer = (props: Props) => {
         fechaIngreso: new Date(data.fechaIngreso).toISOString(),
         mandante: data.mandante || 'No definido',
         telefonoFacturacion: data.telefono || '',
+        rutRepresentanteLegal: data.rutRepresentanteLegal || '',
+        representanteLegal: data.representanteLegal || '',
         contactos: contactos.map(contacto => ({
           nombre: contacto.nombre,
           rol: contacto.rol,
@@ -1557,10 +1559,13 @@ const AddObraDrawer = (props: Props) => {
                       label='RUT Representante Legal'
                       placeholder='12.345.678-9'
                       onChange={e => {
-                        const formatted = formatRut(e.target.value)
-
+                        // Permitir solo números, k, K y el guión
+                        const value = e.target.value.replace(/[^0-9kK-]/g, '')
+                        // Formatear solo si hay suficientes caracteres
+                        const formatted = value.length > 1 ? formatRut(value) : value
                         field.onChange(formatted)
                       }}
+                      value={field.value || ''}
                     />
                   )}
                 />

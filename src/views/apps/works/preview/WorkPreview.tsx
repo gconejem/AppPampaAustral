@@ -233,6 +233,18 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               </Typography>
               <Typography>{obra.mailRecepcionFactura || '-'}</Typography>
             </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                RUT Representante Legal
+              </Typography>
+              <Typography>{obra.rutRepresentanteLegal || '-'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Representante Legal
+              </Typography>
+              <Typography>{obra.representanteLegal || '-'}</Typography>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>
