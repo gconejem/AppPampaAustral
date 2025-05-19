@@ -1480,13 +1480,16 @@ const AddObraDrawer = (props: Props) => {
                     control={control}
                     rules={{ required: true }}
                     render={({ field }) => (
-                      <Select {...field} label='Comuna'>
-                        {comunas.map(comuna => (
-                          <MenuItem key={comuna.id} value={comuna.nombre}>
-                            {comuna.nombre}
-                          </MenuItem>
-                        ))}
-                      </Select>
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label='Comuna *'
+                        error={Boolean(errors.comunaFacturacion)}
+                        helperText={errors.comunaFacturacion && 'Este campo es obligatorio'}
+                        InputProps={{
+                          readOnly: true
+                        }}
+                      />
                     )}
                   />
                   {errors.comunaFacturacion && <FormHelperText>Este campo es obligatorio</FormHelperText>}

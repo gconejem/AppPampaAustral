@@ -508,7 +508,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                 setValue('rut', cliente.rut)
                 setValue('nombreCliente', cliente.nombreCliente)
                 setValue('razonSocial', cliente.razonSocial)
-                trigger(['rut', 'nombreCliente', 'razonSocial'])
+                setValue('comunaFacturacion', cliente.comunaFacturacion || '')
+                trigger(['rut', 'nombreCliente', 'razonSocial', 'comunaFacturacion'])
               }}
             />
           </Grid>
@@ -999,7 +1000,15 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               name='comunaFacturacion'
               control={control}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Comuna Facturación' InputLabelProps={{ shrink: true }} />
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Comuna Facturación'
+                  InputProps={{
+                    readOnly: true
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
               )}
             />
           </Grid>
