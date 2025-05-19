@@ -194,7 +194,7 @@ const AddContact = (props: Props) => {
                     <InputLabel id='cargo-label'>Cargo</InputLabel>
                     <Select {...field} labelId='cargo-label' label='Cargo' error={Boolean(errors.cargo)}>
                       {ROLES_CONTACTO.map(rol => (
-                        <MenuItem key={rol.value} value={rol.value}>
+                        <MenuItem key={rol.value} value={rol.label}>
                           {rol.label}
                         </MenuItem>
                       ))}

@@ -49,16 +49,17 @@ type Props = {
 // Definir los roles legibles
 const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
-  { value: 'envio_informes', label: 'Envío de Informes' },
-  { value: 'dueno_representante', label: 'Dueño Representante' },
-  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'administrador_obra', label: 'Administrador de Obra' },
-  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
-  { value: 'autocontrol', label: 'Autocontrol' },
-  { value: 'profesional', label: 'Profesional' },
-  { value: 'laboratorista', label: 'Laboratorista' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+    { value: 'dueno', label: 'Dueño' },
+    { value: 'representante', label: 'Representante' },
+    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+    { value: 'supervisor', label: 'Supervisor' },
+    { value: 'administrador_obra', label: 'Administrador de Obra' },
+    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+    { value: 'autocontrol', label: 'Autocontrol' },
+    { value: 'profesional', label: 'Profesional' },
+    { value: 'laboratorista', label: 'Laboratorista' },
+    { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+    { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
 const getCargoLabel = (value: string) => {
@@ -594,7 +595,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                                   onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
                                 >
                                   {ROLES_CONTACTO.map(rol => (
-                                    <MenuItem key={rol.value} value={rol.value}>
+                                    <MenuItem key={rol.value} value={rol.label}>
                                       {rol.label}
                                     </MenuItem>
                                   ))}
