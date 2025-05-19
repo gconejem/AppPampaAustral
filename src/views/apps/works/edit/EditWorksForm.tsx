@@ -721,7 +721,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                 const newContact: ContactoObra = {
                   obraId: obraData?.obraId || 0,
                   nombre: contact.nombre,
-                  rol: contact.cargo || '',
+                  rol: contact.cargo || ROLES_CONTACTO[0].label,
                   email: contact.email,
                   telefono1: contact.telefono1,
                   telefono2: contact.telefono2 || '',

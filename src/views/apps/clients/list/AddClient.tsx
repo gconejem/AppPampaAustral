@@ -538,10 +538,16 @@ const AddClienteDrawer = (props: Props) => {
   // Modificar handleAddContact para aceptar ContactType o Contacto
   const handleAddContact = (contact: ContactType | Contacto) => {
     const isPrincipal = contactos.length === 0;
-    // Normaliza el contacto para que siempre tenga la estructura Contacto
+    // Buscar el value correspondiente si el cargo es un label
+    let cargoValue = contact.cargo;
+    // Si el cargo no es un value válido, buscar por label
+    if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
+      const found = CARGOS_OBRA.find(c => c.label === cargoValue);
+      cargoValue = found ? found.value : CARGOS_OBRA[0].value;
+    }
     const contactoNormalizado: Contacto = {
       nombre: contact.nombre,
-      cargo: contact.cargo || CARGOS_OBRA[0].value, // Inicializar con el primer cargo
+      cargo: cargoValue,
       email: contact.email,
       telefono1: contact.telefono1,
       telefono2: contact.telefono2 || '',

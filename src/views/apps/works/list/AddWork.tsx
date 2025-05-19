@@ -112,15 +112,16 @@ const validatePhone = (phone: string) => {
 
 // Tipo para contactos de obra
 interface ContactoObraForm {
-  rol: string
-  nombre: string
-  email: string
-  telefono1: string
-  telefono2: string
-  isEditing: boolean
-  contactId?: string
+  contacto: {
+    nombre: string
+    cargo: string
+    email: string
+    telefono1: string
+    telefono2: string
+    contactId?: string
+  }
+  cargo: string
   isPrincipal: boolean
-  rolEspecifico?: string
 }
 
 const AddObraDrawer = (props: Props) => {
@@ -152,29 +153,28 @@ const AddObraDrawer = (props: Props) => {
 
   const contactosPrincipales: ContactoObraForm[] = [
     {
-      rol: 'Encargado de Obra',
-      nombre: '',
-      email: '',
-      telefono1: '',
-      telefono2: '',
-      isEditing: false,
-      contactId: undefined,
+      contacto: {
+        nombre: '',
+        cargo: 'encargado_obra',
+        email: '',
+        telefono1: '',
+        telefono2: '',
+        contactId: undefined
+      },
+      cargo: 'encargado_obra',
       isPrincipal: false
     }
   ]
 
   const [contactos, setContactos] = useState<ContactoObraForm[]>(contactosPrincipales)
 
-  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
-
-  const [editingContact, setEditingContact] = useState<ContactoObraForm>({
-    rol: '',
+  const [editingContact, setEditingContact] = useState<ContactoObraForm['contacto']>({
     nombre: '',
+    cargo: '',
     email: '',
     telefono1: '',
     telefono2: '',
-    isEditing: true,
-    isPrincipal: false
+    contactId: undefined
   })
 
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } =
@@ -213,19 +213,19 @@ const AddObraDrawer = (props: Props) => {
       // Validar que el contacto Encargado de Obra esté completo
       const encargadoObra = contactos[0]
 
-      if (!encargadoObra?.nombre || !encargadoObra?.email || !encargadoObra?.telefono1) {
+      if (!encargadoObra?.contacto.nombre || !encargadoObra?.contacto.email || !encargadoObra?.contacto.telefono1) {
         toast.error('El contacto Encargado de Obra es obligatorio y debe tener nombre, email y teléfono')
         return
       }
 
       // Validar contactos
       for (const contacto of contactos) {
-        if (!validateEmail(contacto.email)) {
+        if (!validateEmail(contacto.contacto.email)) {
           toast.error('Email inválido')
           return
         }
 
-        if (!validatePhone(contacto.telefono1)) {
+        if (!validatePhone(contacto.contacto.telefono1)) {
           toast.error('Teléfono inválido')
           return
         }
@@ -256,11 +256,11 @@ const AddObraDrawer = (props: Props) => {
         rutRepresentanteLegal: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
         contactos: contactos.map(contacto => ({
-          nombre: contacto.nombre,
-          rol: contacto.rol,
-          email: contacto.email,
-          telefono1: contacto.telefono1,
-          telefono2: contacto.telefono2,
+          nombre: contacto.contacto.nombre,
+          rol: contacto.cargo,
+          email: contacto.contacto.email,
+          telefono1: contacto.contacto.telefono1,
+          telefono2: contacto.contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
         correos: Array.isArray(data.correos) ? data.correos : []
@@ -398,16 +398,15 @@ const AddObraDrawer = (props: Props) => {
       return
     }
 
-    setContactos(prevContactos => [...prevContactos, { ...editingContact, isEditing: false }])
+    setContactos(prevContactos => [...prevContactos, { ...editingContact, isPrincipal: false }])
 
     setEditingContact({
-      rol: '',
       nombre: '',
+      cargo: '',
       email: '',
       telefono1: '',
       telefono2: '',
-      isEditing: true,
-      isPrincipal: false
+      contactId: undefined
     })
 
     toast.success('Contacto agregado exitosamente')
@@ -430,28 +429,24 @@ const AddObraDrawer = (props: Props) => {
       return
     }
 
-    setEditingContactIndex(index)
-    const contacto = contactos[index]
-
     setEditingContact({
-      rol: contacto.rol || '',
-      nombre: contacto.nombre || '',
-      email: contacto.email || '',
-      telefono1: contacto.telefono1 || '',
-      telefono2: contacto.telefono2 || '',
-      isEditing: true,
-      isPrincipal: contacto.isPrincipal || false
+      nombre: contactos[index].contacto.nombre || '',
+      cargo: contactos[index].cargo || '',
+      email: contactos[index].contacto.email || '',
+      telefono1: contactos[index].contacto.telefono1 || '',
+      telefono2: contactos[index].contacto.telefono2 || '',
+      contactId: contactos[index].contacto.contactId
     })
   }
 
   const guardarEdicion = (index: number) => {
-    if (!contactos[index].nombre || !contactos[index].email || !contactos[index].telefono1) {
+    if (!contactos[index].contacto.nombre || !contactos[index].contacto.email || !contactos[index].contacto.telefono1) {
       toast.error('Por favor complete los campos requeridos')
 
       return
     }
 
-    const nuevosContactos = contactos.map((c, i) => (i === index ? { ...c, isEditing: false } : c))
+    const nuevosContactos = contactos.map((c, i) => (i === index ? { ...c, isPrincipal: false } : c))
 
     setContactos(nuevosContactos)
   }
@@ -518,12 +513,15 @@ const AddObraDrawer = (props: Props) => {
   // Los contactos se manejan por separado
   const dummyContactos: ContactoObraForm[] = [
     {
-      nombre: 'Juan Pérez',
-      rol: 'Encargado de Obra',
-      email: 'juan.perez@ejemplo.cl',
-      telefono1: '+56 9 8765 4321',
-      telefono2: '',
-      isEditing: false,
+      contacto: {
+        nombre: 'Juan Pérez',
+        cargo: 'encargado_obra',
+        email: 'juan.perez@ejemplo.cl',
+        telefono1: '+56 9 8765 4321',
+        telefono2: '',
+        contactId: undefined
+      },
+      cargo: 'encargado_obra',
       isPrincipal: true
     }
   ]
@@ -596,15 +594,13 @@ const AddObraDrawer = (props: Props) => {
 
   // Función para cancelar la edición
   const handleCancelEdit = () => {
-    setEditingContactIndex(null)
     setEditingContact({
-      rol: '',
       nombre: '',
+      cargo: '',
       email: '',
       telefono1: '',
       telefono2: '',
-      isEditing: true,
-      isPrincipal: false
+      contactId: undefined
     })
   }
 
@@ -627,7 +623,7 @@ const AddObraDrawer = (props: Props) => {
   }
 
   const handleDrawerClose = () => {
-    if (isDirty || contactos.some(c => c.nombre || c.email || c.telefono1)) {
+    if (isDirty || contactos.some(c => c.contacto.nombre || c.contacto.email || c.contacto.telefono1)) {
       setOpenConfirmDialog(true)
     } else {
       handleClose()
@@ -637,41 +633,43 @@ const AddObraDrawer = (props: Props) => {
   // Función para manejar el nuevo contacto creado
   const handleNewContact = (contact: ContactType) => {
     // Normaliza el contacto para que tenga cargo a nivel raíz
+    let cargoValue = contact.cargo || CARGOS_OBRA[0].value;
+    // Si el cargo no es un value válido, buscar por label
+    if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
+      const found = CARGOS_OBRA.find(c => c.label === cargoValue);
+      cargoValue = found ? found.value : CARGOS_OBRA[0].value;
+    }
     const contactoNormalizado: ContactoObraForm = {
-      nombre: contact.nombre,
-      rol: contact.cargo || CARGOS_OBRA[1].value,
-      email: contact.email,
-      telefono1: contact.telefono1,
-      telefono2: contact.telefono2 || '',
-      isEditing: false,
-      isPrincipal: contactos.length === 0,
-      contactId: contact.contactId?.toString()
+      contacto: {
+        nombre: contact.nombre,
+        cargo: cargoValue,
+        email: contact.email,
+        telefono1: contact.telefono1,
+        telefono2: contact.telefono2 || '',
+        contactId: contact.contactId?.toString()
+      },
+      cargo: cargoValue,
+      isPrincipal: contactos.length === 0
     };
 
     // Si es el primer contacto (Encargado de Obra)
-    if (contactos[0].nombre === '') {
+    if (contactos[0].contacto.nombre === '') {
       const updatedContactos = [...contactos];
       updatedContactos[0] = {
         ...contactoNormalizado,
-        rol: 'encargado_obra',
+        contacto: {
+          ...contactoNormalizado.contacto,
+          cargo: 'encargado_obra'
+        },
+        cargo: 'encargado_obra',
         isPrincipal: true
       };
       setContactos(updatedContactos);
       toast.success('Encargado de Obra asignado exitosamente');
     } else {
       // Para contactos adicionales, mantener el cargo que ya tienen
-      const newContact: ContactoObraForm = {
-        contactId: contact.contactId?.toString(),
-        rol: contact.cargo || CARGOS_OBRA[1].value,
-        nombre: contact.nombre,
-        email: contact.email,
-        telefono1: contact.telefono1,
-        telefono2: contact.telefono2 || '',
-        isPrincipal: false,
-        isEditing: false
-      }
-      setContactos([...contactos, newContact])
-      toast.success('Contacto agregado exitosamente')
+      setContactos([...contactos, contactoNormalizado]);
+      toast.success('Contacto agregado exitosamente');
     }
     setRefreshContactSearch(prev => prev + 1);
     setAddContactOpen(false);
@@ -1064,32 +1062,38 @@ const AddObraDrawer = (props: Props) => {
                       <ContactSearch
                         onContactSelect={contact => {
                           // Si es el primer contacto (Encargado de Obra)
-                          if (contactos[0].nombre === '') {
+                          if (contactos[0].contacto.nombre === '') {
                             const updatedContactos = [...contactos]
                             updatedContactos[0] = {
-                              contactId: contact.contactId?.toString(),
-                              rol: 'encargado_obra',
-                              nombre: contact.nombre,
-                              email: contact.email,
-                              telefono1: contact.telefono1,
-                              telefono2: contact.telefono2 || '',
-                              isPrincipal: true,
-                              isEditing: false
+                              ...contactos[0],
+                              contacto: {
+                                ...contactos[0].contacto,
+                                nombre: contact.nombre,
+                                email: contact.email,
+                                telefono1: contact.telefono1,
+                                telefono2: contact.telefono2 || '',
+                                contactId: contact.contactId?.toString()
+                              },
+                              cargo: 'encargado_obra',
+                              isPrincipal: true
                             }
                             setContactos(updatedContactos)
                             toast.success('Encargado de Obra asignado exitosamente')
                           } else {
                             // Para contactos adicionales, mantener el cargo que ya tienen
                             const newContact: ContactoObraForm = {
-                              contactId: contact.contactId?.toString(),
-                              rol: contact.cargo || CARGOS_OBRA[1].value,
-                              nombre: contact.nombre,
-                              email: contact.email,
-                              telefono1: contact.telefono1,
-                              telefono2: contact.telefono2 || '',
-                              isPrincipal: false,
-                              isEditing: false
+                              contacto: {
+                                nombre: contact.nombre,
+                                cargo: contact.cargo || CARGOS_OBRA[1].value,
+                                email: contact.email,
+                                telefono1: contact.telefono1,
+                                telefono2: contact.telefono2 || '',
+                                contactId: contact.contactId?.toString()
+                              },
+                              cargo: contact.cargo || CARGOS_OBRA[1].value,
+                              isPrincipal: false
                             }
+                            console.log('NEW CONTACT', newContact)
                             setContactos([...contactos, newContact])
                             toast.success('Contacto agregado exitosamente')
                           }
@@ -1142,13 +1146,12 @@ const AddObraDrawer = (props: Props) => {
                       <TableCell>
                         <FormControl fullWidth size='small'>
                           <Select
-                            value={contacto.rol}
+                            value={CARGOS_OBRA.find(cargo => cargo.label === contacto.cargo)?.value || contacto.cargo}
                             onChange={e => {
                               const updatedContactos = [...contactos]
-
                               updatedContactos[index] = {
                                 ...contacto,
-                                rol: e.target.value
+                                cargo: e.target.value
                               }
                               setContactos(updatedContactos)
                             }}
@@ -1161,34 +1164,18 @@ const AddObraDrawer = (props: Props) => {
                             ))}
                           </Select>
                         </FormControl>
-                        {contacto.rol === 'Otro' && (
-                          <TextField
-                            size='small'
-                            fullWidth
-                            placeholder='Especifique el cargo'
-                            value={contacto.rolEspecifico || ''}
-                            onChange={e => {
-                              const updatedContactos = [...contactos]
-
-                              updatedContactos[index] = {
-                                ...contacto,
-                                rolEspecifico: e.target.value
-                              }
-                              setContactos(updatedContactos)
-                            }}
-                            sx={{ mt: 1 }}
-                          />
-                        )}
                       </TableCell>
                       <TableCell>
                         <TextField
-                          value={contacto.nombre}
+                          value={contacto.contacto.nombre}
                           onChange={e => {
                             const updatedContactos = [...contactos]
-
                             updatedContactos[index] = {
                               ...contacto,
-                              nombre: e.target.value
+                              contacto: {
+                                ...contacto.contacto,
+                                nombre: e.target.value
+                              }
                             }
                             setContactos(updatedContactos)
                           }}
@@ -1202,13 +1189,15 @@ const AddObraDrawer = (props: Props) => {
                       </TableCell>
                       <TableCell>
                         <TextField
-                          value={contacto.email}
+                          value={contacto.contacto.email}
                           onChange={e => {
                             const updatedContactos = [...contactos]
-
                             updatedContactos[index] = {
                               ...contacto,
-                              email: e.target.value
+                              contacto: {
+                                ...contacto.contacto,
+                                email: e.target.value
+                              }
                             }
                             setContactos(updatedContactos)
                           }}
@@ -1222,14 +1211,16 @@ const AddObraDrawer = (props: Props) => {
                       </TableCell>
                       <TableCell>
                         <TextField
-                          value={contacto.telefono1}
+                          value={contacto.contacto.telefono1}
                           onChange={e => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
-
                             updatedContactos[index] = {
                               ...contacto,
-                              telefono1: formatted
+                              contacto: {
+                                ...contacto.contacto,
+                                telefono1: formatted
+                              }
                             }
                             setContactos(updatedContactos)
                           }}
@@ -1243,14 +1234,16 @@ const AddObraDrawer = (props: Props) => {
                       </TableCell>
                       <TableCell>
                         <TextField
-                          value={contacto.telefono2 || ''}
+                          value={contacto.contacto.telefono2 || ''}
                           onChange={e => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
-
                             updatedContactos[index] = {
                               ...contacto,
-                              telefono2: formatted
+                              contacto: {
+                                ...contacto.contacto,
+                                telefono2: formatted
+                              }
                             }
                             setContactos(updatedContactos)
                           }}
@@ -1270,7 +1263,6 @@ const AddObraDrawer = (props: Props) => {
                                 ...c,
                                 isPrincipal: i === index ? !c.isPrincipal : false
                               }))
-
                               setContactos(updatedContactos)
                             }}
                             color={contacto.isPrincipal ? 'primary' : 'default'}
@@ -1279,7 +1271,6 @@ const AddObraDrawer = (props: Props) => {
                             <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
                           </IconButton>
                           {index === 0 ? (
-                            // Para el Encargado de Obra, mostrar solo el botón de cambiar
                             <IconButton
                               color='primary'
                               onClick={() => {
@@ -1290,7 +1281,6 @@ const AddObraDrawer = (props: Props) => {
                               <i className='ri-refresh-line' />
                             </IconButton>
                           ) : (
-                            // Para los demás contactos, mostrar los botones de edición y eliminación
                             <>
                               <IconButton color='info' onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
                                 <i className='ri-edit-line' />

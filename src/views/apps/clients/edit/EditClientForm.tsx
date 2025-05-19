@@ -558,9 +558,14 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                         return
                       }
 
-                      // Agregar el nuevo contacto
+                      // Agregar el nuevo contacto con el cargo correcto
                       const newContact = {
-                        ...contact,
+                        contactId: contact.contactId,
+                        nombre: contact.nombre,
+                        cargo: contact.cargo || ROLES_CONTACTO[0].label, // Usar el cargo del contacto o el primer cargo por defecto
+                        email: contact.email,
+                        telefono1: contact.telefono1,
+                        telefono2: contact.telefono2 || '',
                         isPrincipal: contacts.length === 0 // Si es el primer contacto, será el principal
                       }
 
