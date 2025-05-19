@@ -89,6 +89,7 @@ import AddClient from './AddClient'
 import EditClientForm from '../edit/EditClientForm'
 import OptionMenu from '@core/components/option-menu'
 import ClientPreview from '../preview/ClientPreview'
+import ImportClientsExcel from '../components/ImportClientsExcel'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -243,6 +244,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState('')
   const [motivoBloqueo, setMotivoBloqueo] = useState('')
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   // Mantener una copia local de los datos
   const [localData, setLocalData] = useState<Cliente[]>(safeUserData)
@@ -944,9 +946,22 @@ const ClientListTable = ({ userData, setData }: Props) => {
         <CardHeader
           title={<Typography variant='h5'>Clientes</Typography>}
           action={
-            <Button variant='contained' onClick={() => setAddUserOpen(true)} startIcon={<i className='ri-add-line' />}>
-              Nuevo Cliente
-            </Button>
+            <div className='flex gap-2'>
+              <Button 
+                variant='outlined' 
+                onClick={() => setImportDialogOpen(true)} 
+                startIcon={<i className='ri-upload-2-line' />}
+              >
+                Importar
+              </Button>
+              <Button 
+                variant='contained' 
+                onClick={() => setAddUserOpen(true)} 
+                startIcon={<i className='ri-add-line' />}
+              >
+                Nuevo Cliente
+              </Button>
+            </div>
           }
         />
 
@@ -1235,6 +1250,24 @@ const ClientListTable = ({ userData, setData }: Props) => {
             Cerrar
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de importación */}
+      <Dialog 
+        open={importDialogOpen} 
+        onClose={() => setImportDialogOpen(false)}
+        maxWidth='md'
+        fullWidth
+      >
+        <DialogTitle>Importar Clientes desde Excel</DialogTitle>
+        <DialogContent>
+          <ImportClientsExcel 
+            onSuccess={() => {
+              setImportDialogOpen(false)
+              fetchClients()
+            }} 
+          />
+        </DialogContent>
       </Dialog>
     </>
   )
