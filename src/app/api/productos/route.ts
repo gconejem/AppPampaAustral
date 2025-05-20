@@ -124,12 +124,13 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get('page') || '1', 10)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const limit = parseInt(searchParams.get('limit') || '10', 10)
     const skip = (page - 1) * limit
     const area = searchParams.get('area') || undefined
     const tipo = searchParams.get('tipo') || undefined
     const familia = searchParams.get('familia') || undefined
+    const search = searchParams.get('search') || undefined
 
     // Construir el objeto where para filtrar
     const where: any = { estado: 'ACTIVO' }
@@ -137,6 +138,15 @@ export async function GET(req: Request) {
     if (area) where.area = area
     if (tipo) where.tipo = tipo
     if (familia) where.familia = familia
+
+    // Agregar búsqueda por nombre, descripción o norma
+    if (search) {
+      where.OR = [
+        { nombre: { contains: search, mode: 'insensitive' } },
+        { descripcion: { contains: search, mode: 'insensitive' } },
+        { norma: { contains: search, mode: 'insensitive' } }
+      ]
+    }
 
     // Total de productos activos con filtros
     const total = await prisma.producto.count({ where })

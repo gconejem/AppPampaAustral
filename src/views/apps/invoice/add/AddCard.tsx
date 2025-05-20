@@ -479,31 +479,18 @@ const AddCard = ({
 
   // Modificar el useEffect de carga de productos
   useEffect(() => {
-    const params = new URLSearchParams()
-
-    params.append('page', (productsPage + 1).toString())
-    params.append('limit', ITEMS_PER_PAGE.toString())
-    if (searchTerm) params.append('search', searchTerm)
-    if (selectedArea) params.append('area', selectedArea)
-    if (selectedTipo) params.append('tipo', selectedTipo)
-    if (selectedFamilia) params.append('familia', selectedFamilia)
-
-    fetch(`/api/productos?${params.toString()}`)
+    // Primero cargar todos los productos sin paginación para obtener las áreas, tipos y familias
+    fetch('/api/productos?limit=1000') // Usar un límite alto para obtener todos los productos
       .then(res => {
         if (!res.ok) {
           throw new Error('Error al cargar productos')
         }
-
         return res.json()
       })
       .then(response => {
         const data = response.productos || []
 
-        setProductos(data)
-        setFilteredProductos(data)
-        setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
-
-        // Obtener todas las áreas, tipos y familias únicas
+        // Obtener todas las áreas, tipos y familias únicas de todos los productos
         const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area || 'Sin área')))
           .filter(area => area)
           .sort()
@@ -519,15 +506,62 @@ const AddCard = ({
         setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
         setFamilias(uniqueFamilias as string[])
+        setProductos(data)
       })
       .catch(error => {
         console.error('Error al cargar productos:', error)
         toast.error('Error al cargar los productos')
         setProductos([])
-        setFilteredProductos([])
-        setTotalProductos(0)
       })
-  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia])
+  }, []) // Solo se ejecuta al montar el componente
+
+  // Modificar el useEffect de paginación
+  useEffect(() => {
+    if (anchorEl) { // Solo ejecutar cuando el popover está abierto
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar productos')
+          }
+          return res.json()
+        })
+        .then(response => {
+          const data = response.productos || []
+          // Filtrar los productos por nombre, descripción o norma
+          const filteredData = searchTerm
+            ? data.filter(
+                (producto: any) =>
+                  producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  producto.norma?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+            : data
+          setFilteredProductos(filteredData)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+        })
+        .catch(error => {
+          console.error('Error al cargar productos paginados:', error)
+          toast.error('Error al cargar los productos')
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
+    }
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+
+  // Agregar useEffect para resetear la página cuando cambien los filtros
+  useEffect(() => {
+    if (anchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   // Agregar useEffect para cargar el número de cotización
   useEffect(() => {
@@ -1000,10 +1034,7 @@ const AddCard = ({
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = event.target.value
-
-    setSearchTerm(value)
-    filterProducts(value, selectedArea, selectedTipo, selectedFamilia)
+    setSearchTerm(event.target.value)
   }
 
   const handleClearFilters = () => {
@@ -1011,7 +1042,8 @@ const AddCard = ({
     setSelectedTipo('')
     setSelectedFamilia('')
     setSearchTerm('')
-    setFilteredProductos(productos)
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
   }
 
   const filterProducts = (search: string, area: string, tipo: string, familia: string) => {
@@ -1097,7 +1129,14 @@ const AddCard = ({
   const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
     setLoadingProductos(true)
-    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
+    setProductsPage(0) // Resetear a la primera página
+    // Limpiar todos los filtros
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setShowOnlyPaquetes(false)
+    filterProducts('', '', '', '')
     setLoadingProductos(false)
   }
 
@@ -1271,6 +1310,45 @@ const AddCard = ({
     // Forzar refresco de filas para que se apliquen los nuevos disabled/readOnly
     setProductRows(rows => [...rows])
   }, [formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
+
+  const handleAreaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedArea(e.target.value)
+  }
+
+  const handleTipoChange = (e: SelectChangeEvent<string>) => {
+    setSelectedTipo(e.target.value)
+  }
+
+  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedFamilia(e.target.value)
+  }
+
+  useEffect(() => {
+    const fetchFilteredProducts = async () => {
+      try {
+        const url = new URL('/api/productos', window.location.origin)
+        url.searchParams.append('page', (productsPage + 1).toString()) // Aseguramos que page sea al menos 1
+        url.searchParams.append('limit', '10')
+        if (selectedArea) url.searchParams.append('area', selectedArea)
+        if (selectedTipo) url.searchParams.append('tipo', selectedTipo)
+        if (selectedFamilia) url.searchParams.append('familia', selectedFamilia)
+        if (searchTerm) url.searchParams.append('search', searchTerm)
+
+        const response = await fetch(url.toString())
+        const data = await response.json()
+
+        setFilteredProductos(data.productos)
+        setTotalProductos(data.total)
+      } catch (error) {
+        console.error('Error al cargar productos filtrados:', error)
+        toast.error('Error al cargar los productos')
+      }
+    }
+
+    if (anchorEl) {
+      fetchFilteredProducts()
+    }
+  }, [anchorEl, productsPage, selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   return (
     <>
@@ -1830,7 +1908,7 @@ const AddCard = ({
                         <TextField
                           fullWidth
                           size='small'
-                          placeholder='Buscar por nombre, código o descripción...'
+                          placeholder='Buscar por nombre, descripción o norma...'
                           value={searchTerm}
                           onChange={handleSearchChange}
                           InputProps={{
@@ -1844,7 +1922,7 @@ const AddCard = ({
                         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                           <FormControl size='small' fullWidth>
                             <InputLabel>Área</InputLabel>
-                            <Select value={selectedArea} label='Área' onChange={e => setSelectedArea(e.target.value)}>
+                            <Select value={selectedArea} label='Área' onChange={handleAreaChange}>
                               <MenuItem value=''>Todas</MenuItem>
                               {areas.map(area => (
                                 <MenuItem key={area} value={area}>
@@ -1855,7 +1933,7 @@ const AddCard = ({
                           </FormControl>
                           <FormControl size='small' fullWidth>
                             <InputLabel>Tipo</InputLabel>
-                            <Select value={selectedTipo} label='Tipo' onChange={e => setSelectedTipo(e.target.value)}>
+                            <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange}>
                               <MenuItem value=''>Todos</MenuItem>
                               {tipos.map(tipo => (
                                 <MenuItem key={tipo} value={tipo}>
@@ -1869,7 +1947,7 @@ const AddCard = ({
                             <Select
                               value={selectedFamilia}
                               label='Familia'
-                              onChange={e => setSelectedFamilia(e.target.value)}
+                              onChange={handleFamiliaChange}
                             >
                               <MenuItem value=''>Todas</MenuItem>
                               {familias.map(familia => (
