@@ -158,12 +158,12 @@ const VerticalMenu = () => {
                   Lista de Precios
                 </MenuItem>
               </SubMenu>
-              <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>
+              {/* <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>
                 Roles
               </MenuItem>
               <MenuItem href={`/${locale}/apps/permissions`} icon={<i className='ri-lock-2-line' />}>
                 Permisos
-              </MenuItem>
+              </MenuItem> */}
             </MenuSection>
           </Menu>
         </ScrollWrapper>
