@@ -121,6 +121,10 @@ export interface ClienteContacto {
   contacto?: Contacto
   isPrincipal: boolean
   cargo: string
+  nombre?: string
+  email?: string
+  telefono1?: string
+  telefono2?: string
   createdAt?: Date
 }
 

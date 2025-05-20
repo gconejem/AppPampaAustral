@@ -76,6 +76,7 @@ export interface FormValidateType {
   mandatoServiu?: boolean
   otrosRequisitos?: string
   correos?: string[]
+  contactos?: ContactoObra[]
 
   // Campos de facturación
   razonSocial?: string

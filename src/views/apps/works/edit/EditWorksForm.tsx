@@ -289,6 +289,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     try {
       setIsSubmitting(true)
 
+      console.log('formData', formData)
+
       // Asegurarnos de que los booleanos se envíen correctamente
       const dataToSubmit = {
         ...formData,
@@ -303,7 +305,8 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         mandatoServiu: Boolean(formData.mandatoServiu),
         estadoPago: Boolean(formData.estadoPago),
         hes: Boolean(formData.hes),
-        oc: Boolean(formData.oc)
+        oc: Boolean(formData.oc),
+        contactos
       }
 
       const response = await axios.put(`/api/obras/${obraData?.obraId}`, dataToSubmit)
@@ -344,11 +347,38 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   }
 
   const handleAddContact = (contact: ContactoObra) => {
-    setContactos(prev => [...prev, contact])
+
+    console.log('contact', contact)
+
+    // Asegurarnos de que el contacto tenga el obraId
+    const contactWithObraId = {
+      ...contact,
+      obraId: obraData.id
+    }
+
+    // Agregar el contacto al estado local
+    const updatedContactos = [...contactos, contactWithObraId]
+    console.log('updatedContactos', updatedContactos)
+    setContactos(updatedContactos)
+
+    // Actualizar el formulario con todos los contactos
+    setValue('contactos', updatedContactos, { shouldDirty: true })
   }
 
   const handleDeleteContact = (contactId: number) => {
-    setContactos(prev => prev.filter(c => c.id !== contactId))
+    // Filtrar el contacto eliminado del estado local
+    const updatedContactos = contactos.filter(c => c.id !== contactId)
+    setContactos(updatedContactos)
+
+    // Actualizar el formulario con los contactos actualizados
+    setValue('contactos', updatedContactos.map(contacto => ({
+      nombre: contacto.nombre,
+      rol: contacto.rol,
+      email: contacto.email,
+      telefono1: contacto.telefono1,
+      telefono2: contacto.telefono2,
+      isPrincipal: contacto.isPrincipal
+    })))
   }
 
   const editarContacto = (index: number) => {
@@ -384,6 +414,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     }
 
     setContactos(updatedContactos)
+    setValue('contactos', updatedContactos, { shouldDirty: true })
     setEditingContactIndex(null)
     setEditingContact({
       obraId: 0,
@@ -410,6 +441,10 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       isPrincipal: false
     })
   }
+
+  useEffect(() => {
+    setValue('contactos', contactos, { shouldDirty: true })
+  }, [contactos, setValue])
 
   return (
     <Drawer
@@ -719,6 +754,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <ContactSearch
               onContactSelect={contact => {
                 const newContact: ContactoObra = {
+                  id: contact.contactId,
                   obraId: obraData?.obraId || 0,
                   nombre: contact.nombre,
                   rol: contact.cargo || ROLES_CONTACTO[0].label,

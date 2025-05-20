@@ -108,7 +108,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
       clientesContactos: client.clientesContactos.map(cc => ({
         contacto: cc.contacto,
         isPrincipal: cc.isPrincipal,
-        cargo: cc.cargo
+        cargo: cc.cargo,
+        nombre: cc.nombre,
+        email: cc.email,
+        telefono1: cc.telefono1,
+        telefono2: cc.telefono2
       })),
       condicionesComerciales: client.condicionesComerciales
     }
@@ -174,6 +178,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // Actualizar contactos si se proporcionaron
     if (data.clientesContactos) {
+      console.log('Actualizando contactos:', data.clientesContactos)
+      
       // Primero eliminamos todas las relaciones existentes
       await prisma.clienteContacto.deleteMany({
         where: {
@@ -183,12 +189,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
       // Luego creamos las nuevas relaciones
       for (const contacto of data.clientesContactos) {
+        console.log('Creando relación para contacto:', contacto)
         await prisma.clienteContacto.create({
           data: {
             clienteId: clientId,
             contactId: contacto.contactId,
             isPrincipal: contacto.isPrincipal,
-            cargo: contacto.cargo || ''
+            cargo: contacto.cargo || '',
+            nombre: contacto.nombre || '',
+            email: contacto.email || '',
+            telefono1: contacto.telefono1 || '',
+            telefono2: contacto.telefono2 || ''
           }
         })
       }

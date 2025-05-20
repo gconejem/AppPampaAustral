@@ -102,11 +102,11 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
     if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
       return currentUser.clientesContactos.map(cc => ({
         contactId: cc.contacto?.contactId,
-        nombre: cc.contacto?.nombre || '',
+        nombre: cc.nombre || cc.contacto?.nombre || '',
         cargo: cc.cargo || '',
-        email: cc.contacto?.email || '',
-        telefono1: cc.contacto?.telefono1 || '',
-        telefono2: cc.contacto?.telefono2 || '',
+        email: cc.email || cc.contacto?.email || '',
+        telefono1: cc.telefono1 || cc.contacto?.telefono1 || '',
+        telefono2: cc.telefono2 || cc.contacto?.telefono2 || '',
         isPrincipal: cc.isPrincipal || false
       }))
     }
@@ -187,11 +187,11 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       if (currentUser.clientesContactos && currentUser.clientesContactos.length > 0) {
         const mappedContacts = currentUser.clientesContactos.map(cc => ({
           contactId: cc.contacto?.contactId,
-          nombre: cc.contacto?.nombre || '',
+          nombre: cc.nombre || cc.contacto?.nombre || '',
           cargo: cc.cargo || '',
-          email: cc.contacto?.email || '',
-          telefono1: cc.contacto?.telefono1 || '',
-          telefono2: cc.contacto?.telefono2 || '',
+          email: cc.email || cc.contacto?.email || '',
+          telefono1: cc.telefono1 || cc.contacto?.telefono1 || '',
+          telefono2: cc.telefono2 || cc.contacto?.telefono2 || '',
           isPrincipal: cc.isPrincipal || false
         }))
 
@@ -216,12 +216,14 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
           condicionVenta: data.condicionVenta,
           observaciones: data.observaciones
         },
-
-        // Agregar la información de contactos
         clientesContactos: contacts.map(contact => ({
           contactId: contact.contactId,
           isPrincipal: contact.isPrincipal,
-          cargo: contact.cargo
+          cargo: contact.cargo,
+          nombre: contact.nombre,
+          email: contact.email,
+          telefono1: contact.telefono1,
+          telefono2: contact.telefono2
         }))
       }
 
@@ -230,9 +232,10 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       const response = await axios.patch(`/api/clientes/${currentUser.clienteId}`, updateData)
 
       if (response.status === 200) {
+        // Actualizar el estado local con los datos devueltos por el servidor
         setData((prevData: Cliente[]) =>
           prevData.map(cliente =>
-            cliente.clienteId === currentUser.clienteId ? { ...cliente, ...response.data } : cliente
+            cliente.clienteId === currentUser.clienteId ? response.data : cliente
           )
         )
 
@@ -255,8 +258,14 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   const handleSaveEdit = (index: number) => {
     if (editingContact) {
       const newContacts = [...contacts]
-
-      newContacts[index] = editingContact
+      newContacts[index] = {
+        ...editingContact,
+        nombre: editingContact.nombre || '',
+        email: editingContact.email || '',
+        telefono1: editingContact.telefono1 || '',
+        telefono2: editingContact.telefono2 || '',
+        cargo: editingContact.cargo || ''
+      }
       setContacts(newContacts)
       setEditingContactIndex(null)
       setEditingContact(null)
@@ -554,17 +563,16 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
 
                       if (exists) {
                         toast.error('Este contacto ya está en la lista')
-
                         return
                       }
 
-                      // Agregar el nuevo contacto con el cargo correcto
+                      // Agregar el nuevo contacto con todos los campos necesarios
                       const newContact = {
                         contactId: contact.contactId,
-                        nombre: contact.nombre,
-                        cargo: contact.cargo || ROLES_CONTACTO[0].label, // Usar el cargo del contacto o el primer cargo por defecto
-                        email: contact.email,
-                        telefono1: contact.telefono1,
+                        nombre: contact.nombre || '',
+                        cargo: contact.cargo || ROLES_CONTACTO[0].label,
+                        email: contact.email || '',
+                        telefono1: contact.telefono1 || '',
                         telefono2: contact.telefono2 || '',
                         isPrincipal: contacts.length === 0 // Si es el primer contacto, será el principal
                       }

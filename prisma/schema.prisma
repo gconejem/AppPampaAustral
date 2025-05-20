@@ -109,6 +109,10 @@ model ClienteContacto {
   clienteId   Int
   contactId   Int
   cargo       String
+  nombre      String   @default("")
+  email       String   @default("")
+  telefono1   String   @default("")
+  telefono2   String?
   isPrincipal Boolean  @default(false)
   createdAt   DateTime @default(now())
   cliente     Cliente  @relation(fields: [clienteId], references: [clienteId])

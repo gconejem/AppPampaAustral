@@ -201,11 +201,11 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               {client.clientesContactos && client.clientesContactos.length > 0 ? (
                 client.clientesContactos.map((cc, index) => (
                   <TableRow key={index}>
-                    <TableCell>{cc.contacto?.nombre}</TableCell>
+                    <TableCell>{cc.nombre || cc.contacto?.nombre}</TableCell>
                     <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
-                    <TableCell>{cc.contacto?.email}</TableCell>
-                    <TableCell>{cc.contacto?.telefono1}</TableCell>
-                    <TableCell>{cc.contacto?.telefono2 || '-'}</TableCell>
+                    <TableCell>{cc.email || cc.contacto?.email}</TableCell>
+                    <TableCell>{cc.telefono1 || cc.contacto?.telefono1}</TableCell>
+                    <TableCell>{cc.telefono2 || cc.contacto?.telefono2 || '-'}</TableCell>
                   </TableRow>
                 ))
               ) : (

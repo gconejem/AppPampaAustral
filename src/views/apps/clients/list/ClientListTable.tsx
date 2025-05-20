@@ -171,7 +171,7 @@ const ContactsModal = ({
           <div key={index} className='mb-4 p-4 border rounded-lg'>
             <div className='flex items-center gap-2 mb-2'>
               <i className='ri-user-line text-primary' />
-              <Typography variant='subtitle1'>{contact.contacto.nombre}</Typography>
+              <Typography variant='subtitle1'>{contact.nombre || contact.contacto?.nombre}</Typography>
               {contact.isPrincipal && <Chip label='Principal' size='small' color='primary' />}
             </div>
             <div className='grid grid-cols-2 gap-2'>
@@ -181,18 +181,18 @@ const ContactsModal = ({
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-mail-line text-textSecondary' />
-                <MuiLink href={`mailto:${contact.contacto.email}`} sx={{ textDecoration: 'none' }}>
-                  {contact.contacto.email}
+                <MuiLink href={`mailto:${contact.email || contact.contacto?.email}`} sx={{ textDecoration: 'none' }}>
+                  {contact.email || contact.contacto?.email}
                 </MuiLink>
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-phone-line text-textSecondary' />
-                <Typography>{contact.contacto.telefono1}</Typography>
+                <Typography>{contact.telefono1 || contact.contacto?.telefono1}</Typography>
               </div>
-              {contact.contacto.telefono2 && (
+              {(contact.telefono2 || contact.contacto?.telefono2) && (
                 <div className='flex items-center gap-2'>
                   <i className='ri-phone-line text-textSecondary' />
-                  <Typography>{contact.contacto.telefono2}</Typography>
+                  <Typography>{contact.telefono2 || contact.contacto?.telefono2}</Typography>
                 </div>
               )}
             </div>
@@ -738,15 +738,15 @@ const ClientListTable = ({ userData, setData }: Props) => {
               {contactoPrincipal ? (
                 <>
                   <i className='ri-star-fill text-warning' style={{ fontSize: '1.25rem' }} />
-                  <Typography title={contactoPrincipal.contacto?.nombre}>
-                    {formatContactName(contactoPrincipal.contacto?.nombre || '')}
+                  <Typography title={contactoPrincipal.nombre || contactoPrincipal.contacto?.nombre}>
+                    {formatContactName(contactoPrincipal.nombre || contactoPrincipal.contacto?.nombre || '')}
                   </Typography>
                 </>
               ) : (
                 <>
                   <i className='ri-user-line text-primary' style={{ fontSize: '1.25rem' }} />
-                  <Typography title={cliente.clientesContactos[0].contacto?.nombre}>
-                    {formatContactName(cliente.clientesContactos[0].contacto?.nombre || '')}
+                  <Typography title={cliente.clientesContactos[0].nombre || cliente.clientesContactos[0].contacto?.nombre}>
+                    {formatContactName(cliente.clientesContactos[0].nombre || cliente.clientesContactos[0].contacto?.nombre || '')}
                   </Typography>
                 </>
               )}
