@@ -84,7 +84,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       // Limpia cualquier string 'Sin contacto' y reemplázalo por null
       const cleanData = invoiceData.map(row => ({
         ...row,
-        contacto: typeof row.contacto === 'string' ? null : row.contacto
+        //contacto: typeof row.contacto !== 'string' ? null : row.contacto
       }))
 
       setLocalData(cleanData)

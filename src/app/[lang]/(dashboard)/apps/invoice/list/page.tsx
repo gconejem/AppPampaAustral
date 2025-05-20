@@ -43,11 +43,11 @@ async function getCotizaciones() {
       const tipoMapeado = cotizacion.tipoCotizacion
 
       // Obtener el nombre del contacto
-      const nombreContacto = cotizacion.contacto?.contacto?.nombre || 'Sin contacto'
+      const nombreContacto = cotizacion.contacto?.nombre || 'Sin contacto'
 
       // Log para diagnóstico de cada contacto
-      if (cotizacion.contactoId) {
-        console.log(`Cotización ${cotizacion.id} - contactoId: ${cotizacion.contactoId}, nombre: ${nombreContacto}`)
+      if (cotizacion.contacto?.contactId) {
+        console.log(`Cotización ${cotizacion.id} - contactoId: ${cotizacion.contacto?.contactId}, nombre: ${nombreContacto}`)
       }
 
       return {
@@ -57,7 +57,7 @@ async function getCotizaciones() {
         empresa: cotizacion.empresa || 'No especificada',
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
         tipo: tipoMapeado,
-        contacto: nombreContacto,
+        contacto: cotizacion.contacto,
         estado: cotizacion.estado,
         total: parseFloat(cotizacion.total.toString())
       }
