@@ -93,7 +93,7 @@ const PreviewCard = () => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 4 }} />
+        <Divider sx={{ my: 4, borderColor: '#FF0096' }} />
 
         {/* Información del Cliente y Datos Bancarios */}
         <Grid container spacing={6} sx={{ mb: 4 }}>
