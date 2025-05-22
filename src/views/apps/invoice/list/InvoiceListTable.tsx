@@ -524,7 +524,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   <Typography>UF {Number(row.total || 0).toFixed(2)}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
                     <Tooltip title='Ver'>
                       <IconButton size='small' onClick={() => handlePreviewClick(row.id)}>
                         <i className='ri-eye-line' />
