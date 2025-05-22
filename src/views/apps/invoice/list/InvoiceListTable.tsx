@@ -392,6 +392,28 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     )
   }
 
+  const handleDownloadPDF = async (id: number) => {
+    try {
+      const response = await fetch(`/api/cotizaciones/${id}/pdf`)
+      if (!response.ok) {
+        throw new Error('Error al descargar el PDF')
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `cotizacion-${id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error al descargar el PDF:', error)
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
+  }
+
   return (
     <Card>
       <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
@@ -520,6 +542,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         color={getEstadoColor(row.estado) === 'error' ? 'error' : 'default'}
                       >
                         <i className='ri-settings-4-line' />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title='Descargar PDF'>
+                      <IconButton
+                        size='small'
+                        onClick={() => handleDownloadPDF(row.id)}
+                        color='primary'
+                      >
+                        <i className='ri-file-download-line' />
                       </IconButton>
                     </Tooltip>
                     {row.estado === 'BORRADOR' && (
