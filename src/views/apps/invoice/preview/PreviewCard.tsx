@@ -303,7 +303,7 @@ const PreviewCard = () => {
         )}
 
         {/* Notas específicas para tipo A */}
-        {previewData.tipoCotizacion === 'A' && (
+        {/* {previewData.tipoCotizacion === 'A' && (
           <Box sx={{ mt: 4, px: 4 }}>
             <Typography variant='h6' sx={{ mb: 2, color: 'text.secondary' }}>
               Notas:
@@ -352,7 +352,7 @@ const PreviewCard = () => {
               </p>
             </Typography>
           </Box>
-        )}
+        )} */}
       </CardContent>
     </Card>
   )
