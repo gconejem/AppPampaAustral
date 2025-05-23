@@ -77,6 +77,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const id = parseInt(params.id)
     const body = await request.json()
 
+    console.log('Datos recibidos en PUT:', body)
+
     // Validar que el estado sea uno válido
     if (body.estado && !Object.values(EstadoCotizacion).includes(body.estado)) {
       return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
@@ -98,24 +100,28 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         observaciones: body.observaciones,
         formaPago: body.formaPago,
         contacto: body.contactoId ? { connect: { contactId: body.contactoId } } : undefined,
+        listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
         updatedAt: new Date()
       }
     })
 
+    console.log('Cotización actualizada:', cotizacionActualizada)
+
     // Procesar detalles: eliminar los anteriores y crear los nuevos
-    // Extraer el array de detalles, sea plano o anidado en { create: [...] }
     const detallesArray = Array.isArray(body.detalles)
       ? body.detalles
       : body.detalles && Array.isArray(body.detalles.create)
         ? body.detalles.create
         : []
 
+    console.log('Detalles a insertar:', detallesArray)
+
     // Eliminar detalles anteriores
     await prisma.detalleCotizacion.deleteMany({ where: { cotizacionId: id } })
 
     // Insertar nuevos detalles si existen
     if (detallesArray.length > 0) {
-      await prisma.detalleCotizacion.createMany({
+      const detallesCreados = await prisma.detalleCotizacion.createMany({
         data: detallesArray.map((detalle: any) => ({
           cotizacionId: id,
           productoId: detalle.productoId,
@@ -128,6 +134,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           paqueteId: detalle.paqueteId || null
         }))
       })
+
+      console.log('Detalles creados:', detallesCreados)
     }
 
     // Traer la cotización actualizada con detalles y relaciones
@@ -137,6 +145,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         cliente: true,
         obra: true,
         contacto: true,
+        listaPrecio: true,
         detalles: {
           include: {
             producto: {
@@ -168,6 +177,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
       }
     })
+
+    console.log('Cotización final con detalles:', cotizacionConDetalles)
 
     return NextResponse.json(cotizacionConDetalles)
   } catch (error) {

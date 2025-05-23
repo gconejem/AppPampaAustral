@@ -92,7 +92,7 @@ interface FormDataType {
   fechaFin: string
   contacto?: ContactoType
   contactoId?: number
-  listaPrecioId?: string
+  listaPrecioId?: number | null
   formaPago?: string
   empresa?: string
 }
@@ -119,6 +119,7 @@ const EditCard = ({ id }: { id: string }) => {
   const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [filteredProductos, setFilteredProductos] = useState<ProductoType[]>([])
+  const [listasPrecios, setListasPrecios] = useState<Array<{ id: number; nombre: string }>>([])
 
   // Función para calcular totales
   const calcularTotales = useCallback(() => {
@@ -172,6 +173,12 @@ const EditCard = ({ id }: { id: string }) => {
         if (!contactosResponse.ok) throw new Error('Error al cargar contactos')
         const contactosData = await contactosResponse.json()
 
+        // Cargar listas de precios
+        const listasPreciosResponse = await fetch('/api/listas-precios')
+
+        if (!listasPreciosResponse.ok) throw new Error('Error al cargar listas de precios')
+        const listasPreciosData = await listasPreciosResponse.json()
+
         // Formatear productos
         const productosFormateados = productosData.productos.map((p: any) => ({
           id: p.productoId,
@@ -212,6 +219,7 @@ const EditCard = ({ id }: { id: string }) => {
         setProductos(productosFormateados)
         setFilteredProductos(productosFormateados)
         setContactos(contactosData)
+        setListasPrecios(listasPreciosData)
 
         // Extraer áreas, tipos y familias únicas
         const uniqueAreas = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.area))).filter(Boolean)
@@ -423,7 +431,8 @@ const EditCard = ({ id }: { id: string }) => {
 
       const dataToSend = {
         ...formData,
-        detalles: detallesValidos
+        detalles: detallesValidos,
+        listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null
       }
 
       console.log('DATA QUE SE ENVÍA AL PUT:', dataToSend)
@@ -575,10 +584,13 @@ const EditCard = ({ id }: { id: string }) => {
                   <Select
                     value={formData.listaPrecioId || ''}
                     label='Lista de Precios'
-                    onChange={e => setFormData({ ...formData, listaPrecioId: e.target.value })}
+                    onChange={e => setFormData({ ...formData, listaPrecioId: e.target.value ? Number(e.target.value) : null })}
                   >
-                    <MenuItem value='1'>Lista Precio 1</MenuItem>
-                    {/* Agregar más opciones según sea necesario */}
+                    {listasPrecios.map(lista => (
+                      <MenuItem key={lista.id} value={lista.id}>
+                        {lista.nombre}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
