@@ -142,7 +142,8 @@ export async function POST(request: Request) {
           impuesto: body.impuesto || 0,
           total: body.total || 0,
           contacto: contactId ? { connect: { contactId } } : undefined,
-          formaPago: body.formaPago || ''
+          formaPago: body.formaPago || '',
+          listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined
         }
       })
 

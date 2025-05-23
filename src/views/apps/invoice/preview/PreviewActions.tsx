@@ -116,6 +116,7 @@ const PreviewActions = () => {
           : previewData.contactoId
             ? parseInt(previewData.contactoId)
             : null,
+        listaPrecioId: previewData.listaPrecioId ? parseInt(previewData.listaPrecioId) : null,
         fechaInicio: previewData.fechaInicio || new Date().toISOString(),
         fechaFin: previewData.fechaFin || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
         nombreProyecto: previewData.nombreProyecto || '',

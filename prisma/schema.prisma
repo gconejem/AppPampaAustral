@@ -263,6 +263,7 @@ model ListaPrecio {
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
   productos ProductoListaPrecio[]
+  cotizaciones Cotizacion[]
 }
 
 model ProductoListaPrecio {
@@ -299,16 +300,19 @@ model Cotizacion {
   impuesto         Decimal             @db.Decimal(10, 2)
   total            Decimal             @db.Decimal(10, 2)
   contactId        Int?
+  listaPrecioId    Int?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   formaPago        String?
   cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   contacto         Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
   obra             Obra?               @relation(fields: [obraId], references: [obraId])
+  listaPrecio      ListaPrecio?        @relation(fields: [listaPrecioId], references: [id])
   detalles         DetalleCotizacion[]
   solicitudes      Solicitud[]
 
   @@index([contactId], map: "Cotizacion_contactoId_idx")
+  @@index([listaPrecioId])
 }
 
 model DetalleCotizacion {

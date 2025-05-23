@@ -153,6 +153,7 @@ interface FormData {
   duracionMensual: string
   jornadaMensual: string
   antecedentesMensual: string
+  listaPrecioId?: number | null
 }
 
 interface ValidationErrors {
@@ -321,6 +322,7 @@ const AddCard = ({
         clienteId: formData.clienteId,
         obraId: formData.obraId,
         contacto: formData.contacto,
+        listaPrecioId: formData.listaPrecioId,
         contactId:
           typeof formData.contactId === 'number' && !isNaN(formData.contactId) ? formData.contactId : undefined,
         detalles: detallesValidos,
@@ -916,7 +918,8 @@ const AddCard = ({
       descuento: parseFloat(formData.descuento?.toString() || '0'),
       impuesto: parseFloat(formData.impuesto?.toString() || '0'),
       total: parseFloat(formData.total?.toString() || '0'),
-      observaciones: formData.observaciones || ''
+      observaciones: formData.observaciones || '',
+      listaPrecioId: selectedListaPrecio
     }
 
     // Debug para ver qué datos se están enviando
