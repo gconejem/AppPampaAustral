@@ -10,7 +10,7 @@ export async function GET() {
         roles: {
           some: {
             rol: {
-              nombre: 'LABORATORISTA'
+              nombre: 'Laboratorista'
             }
           }
         }
@@ -18,7 +18,16 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        email: true
+        email: true,
+        roles: {
+          select: {
+            rol: {
+              select: {
+                nombre: true
+              }
+            }
+          }
+        }
       }
     })
 

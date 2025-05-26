@@ -12,6 +12,21 @@ const prisma = new PrismaClient()
 
 async function main() {
   try {
+    // Eliminar usuarios si ya existen
+    await prisma.userRol.deleteMany({
+      where: {
+        user: {
+          email: { in: ["maria.gonzalez@pampaustral.cl", "juan.perez@pampaustral.cl"] }
+        }
+      }
+    })
+    await prisma.user.deleteMany({
+      where: {
+        email: { in: ["maria.gonzalez@pampaustral.cl", "juan.perez@pampaustral.cl"] }
+      }
+    })
+    console.log('Usuarios anteriores eliminados')
+
     // Crear primer usuario
     const user1 = await prisma.user.create({
       data: {
@@ -36,8 +51,23 @@ async function main() {
     })
     console.log('Usuario 2 creado:', user2)
 
+    // Buscar el rol Laboratorista
+    const rolLaboratorista = await prisma.rol.findUnique({
+      where: { nombre: "Laboratorista" }
+    })
+    if (!rolLaboratorista) throw new Error('No existe el rol Laboratorista')
+
+    // Asignar el rol Laboratorista a Juan Pérez
+    const userRol = await prisma.userRol.create({
+      data: {
+        userId: user2.id,
+        rolId: rolLaboratorista.id
+      }
+    })
+    console.log('Rol Laboratorista asignado a Juan Pérez:', userRol)
+
   } catch (error) {
-    console.error('Error al crear usuarios:', error)
+    console.error('Error al crear usuarios o asignar roles:', error)
     throw error
   }
 }
