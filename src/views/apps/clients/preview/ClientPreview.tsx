@@ -4,6 +4,7 @@ import { Typography, Grid, Card, CardContent, Table, TableHead, TableBody, Table
 
 import type { Cliente } from '@/types/forms/cliente'
 import { useUbicacion } from '@/hooks/useUbicacion'
+import { VENDEDORES } from '@/data/clientData'
 
 interface ClientPreviewProps {
   client: Cliente | null
@@ -61,6 +62,11 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
   // Función para obtener el label legible
   const getCargoLabel = (value: string) => {
     return ROLES_CONTACTO.find(r => r.value === value)?.label || value
+  }
+
+  // Función para obtener el label del vendedor
+  const getVendedorLabel = (value: string) => {
+    return VENDEDORES.find(v => v.value === value)?.label || value
   }
 
   return (
@@ -233,7 +239,7 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Vendedor
               </Typography>
-              <Typography>{client.condicionesComerciales?.vendedor || '-'}</Typography>
+              <Typography>{getVendedorLabel(client.condicionesComerciales?.vendedor || '') || '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
