@@ -296,21 +296,50 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
       if (globalFilter) {
         results = results.filter(cliente => {
-          const searchStr = globalFilter.toLowerCase()
+          const searchStr = globalFilter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          const fechaIngreso = new Date(cliente.fechaCreacion)
+          const fechaFormateada = fechaIngreso.toLocaleDateString('es-CL', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).toLowerCase()
+
+          // Buscar en los contactos del cliente
+          const contactoPrincipal = cliente.clientesContactos?.find(c => c.isPrincipal)
+          const nombreContactoPrincipal = (
+            contactoPrincipal?.contacto?.nombre ||
+            contactoPrincipal?.nombre ||
+            ''
+          ).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          const tieneContactoCoincidente = !!searchStr && !!nombreContactoPrincipal && nombreContactoPrincipal.includes(searchStr)
+
 
           return (
             cliente.rut?.toLowerCase().includes(searchStr) ||
             cliente.nombreCliente?.toLowerCase().includes(searchStr) ||
-            cliente.razonSocial?.toLowerCase().includes(searchStr)
+            cliente.razonSocial?.toLowerCase().includes(searchStr) ||
+            cliente.ciudad?.toLowerCase().includes(searchStr) ||
+            cliente.segmento?.toLowerCase().includes(searchStr) ||
+            cliente.estado?.toLowerCase().includes(searchStr) ||
+            comunasMap[cliente.comuna]?.toLowerCase().includes(searchStr) ||
+            cliente.comuna?.toLowerCase().includes(searchStr) ||
+            fechaFormateada.includes(searchStr) ||
+            fechaIngreso.toISOString().toLowerCase().includes(searchStr) ||
+            tieneContactoCoincidente
           )
         })
+        // Agregar la propiedad 'contacto' al objeto cliente para el modelo de la tabla
+        results = results.map(cliente => ({
+          ...cliente,
+          contacto: getNombreContactoPrincipal(cliente.clientesContactos?.find((c: any) => c.isPrincipal))
+        }))
       }
 
       setTableData(results)
     }
 
     applyFilters()
-  }, [safeUserData, filterStatus, selectedSegmento, dateRange, globalFilter])
+  }, [safeUserData, filterStatus, selectedSegmento, dateRange, globalFilter, comunasMap])
 
   useEffect(() => {
     setIsLoading(false)
@@ -496,6 +525,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           return needsQuotes ? `"${field.replace(/"/g, '""')}"` : field
         }
 
+
         return [
           escapeField(cliente.rut),
           escapeField(cliente.razonSocial),
@@ -510,7 +540,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           escapeField(cliente.industria),
           escapeField(cliente.estado),
           escapeField(new Date(cliente.fechaCreacion).toLocaleDateString()),
-          escapeField(contactoPrincipal?.nombre),
+          escapeField(getNombreContactoPrincipal(contactoPrincipal)),
           escapeField(getCargoLabel(contactoPrincipal?.cargo)),
           escapeField(contactoPrincipal?.email),
           escapeField(contactoPrincipal?.telefono1),
@@ -708,11 +738,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
         },
         enableSorting: true
       }),
-      columnHelper.accessor('clientesContactos', {
+      {
+        id: 'contacto',
+        accessorKey: 'contacto',
         header: 'CONTACTO',
-        cell: ({ row }) => {
+        cell: ({ row }: { row: any }) => {
           const cliente = row.original
-          const contactoPrincipal = cliente.clientesContactos?.find(c => c.isPrincipal)
+          const contactoPrincipal = cliente.clientesContactos?.find((c: any) => c.isPrincipal)
 
           if (!cliente.clientesContactos || cliente.clientesContactos.length === 0) {
             return (
@@ -738,22 +770,22 @@ const ClientListTable = ({ userData, setData }: Props) => {
               {contactoPrincipal ? (
                 <>
                   <i className='ri-star-fill text-warning' style={{ fontSize: '1.25rem' }} />
-                  <Typography title={contactoPrincipal.nombre || contactoPrincipal.contacto?.nombre}>
-                    {formatContactName(contactoPrincipal.nombre || contactoPrincipal.contacto?.nombre || '')}
+                  <Typography title={getNombreContactoPrincipal(contactoPrincipal)}>
+                    {formatContactName(getNombreContactoPrincipal(contactoPrincipal))}
                   </Typography>
                 </>
               ) : (
                 <>
                   <i className='ri-user-line text-primary' style={{ fontSize: '1.25rem' }} />
-                  <Typography title={cliente.clientesContactos[0].nombre || cliente.clientesContactos[0].contacto?.nombre}>
-                    {formatContactName(cliente.clientesContactos[0].nombre || cliente.clientesContactos[0].contacto?.nombre || '')}
+                  <Typography title={getNombreContactoPrincipal(cliente.clientesContactos[0])}>
+                    {formatContactName(getNombreContactoPrincipal(cliente.clientesContactos[0]))}
                   </Typography>
                 </>
               )}
             </div>
           )
         }
-      }),
+      },
       columnHelper.accessor('estado', {
         header: 'ESTADO',
         cell: ({ row }: { row: Row<Cliente> }) => {
@@ -880,7 +912,6 @@ const ClientListTable = ({ userData, setData }: Props) => {
         pageSize: 10
       }
     },
-    globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
@@ -940,6 +971,12 @@ const ClientListTable = ({ userData, setData }: Props) => {
       setSelectedClientId(null)
     }
   }
+
+  // Función auxiliar para obtener el nombre del contacto principal de forma segura
+  const getNombreContactoPrincipal = (contactoPrincipal: any) =>
+    contactoPrincipal?.contacto?.nombre || contactoPrincipal?.nombre || '';
+
+  console.log('Filas a renderizar:', table.getRowModel().rows);
 
   return (
     <>
