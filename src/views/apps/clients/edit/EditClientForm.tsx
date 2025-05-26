@@ -149,7 +149,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       const condicionComercial = currentUser.condicionesComerciales
 
       // Asegurarse de que los valores existan antes de asignarlos
-      const vendedorValue = condicionComercial?.vendedor || ''
+      const vendedorValue = VENDEDORES.find(v => v.label === condicionComercial?.vendedor)?.value || condicionComercial?.vendedor || ''
       const condicionVentaValue = condicionComercial?.condicionVenta || ''
       const observacionesValue = condicionComercial?.observaciones || ''
 
