@@ -67,9 +67,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
   const [familia, setFamilia] = useState('')
 
-  // Opciones predefinidas para área
-  const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
-  const familiaOptions = ['Clasificación', 'Compactación', 'Densidad', 'Granulometria', 'Límites', 'Resistencia']
+  // Estado para las áreas y familias
+  const [areas, setAreas] = useState<string[]>([])
+  const [familias, setFamilias] = useState<string[]>([])
 
   // Estados para búsqueda
   const [buscarPaquete, setBuscarPaquete] = useState('')
@@ -94,6 +94,35 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
   // Calcular el total de páginas de productos (debe estar antes de su uso)
   const totalProductPages = Math.ceil(totalProductos / ITEMS_PER_PAGE)
+
+  // Cargar áreas y familias cuando se abre el modal
+  useEffect(() => {
+    if (open) {
+      // Cargar áreas
+      fetch('/api/areas')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Áreas recibidas:', data)
+          setAreas(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar áreas:', error)
+          toast.error('Error al cargar las áreas')
+        })
+
+      // Cargar familias
+      fetch('/api/familias')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Familias recibidas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          toast.error('Error al cargar las familias')
+        })
+    }
+  }, [open])
 
   // Cargar productos y listas de precios cuando se abre el modal o cambia la página/búsqueda/área
   useEffect(() => {
@@ -221,6 +250,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 value={area}
                 label='Área'
                 onChange={e => {
+                  console.log('Área seleccionada:', e.target.value)
                   setArea(e.target.value)
                   setProductsPage(0) // Resetear la página al cambiar el filtro
                 }}
@@ -228,11 +258,15 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
-                {areaOptions.map(areaOption => (
-                  <MenuItem key={areaOption} value={areaOption}>
-                    {areaOption}
-                  </MenuItem>
-                ))}
+                {areas && areas.length > 0 ? (
+                  areas.map((areaOption, index) => (
+                    <MenuItem key={index} value={areaOption}>
+                      {areaOption}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>No hay áreas disponibles</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Grid>
@@ -243,11 +277,15 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
-                {familiaOptions.map(familiaOption => (
-                  <MenuItem key={familiaOption} value={familiaOption}>
-                    {familiaOption}
-                  </MenuItem>
-                ))}
+                {familias && familias.length > 0 ? (
+                  familias.map((familiaOption, index) => (
+                    <MenuItem key={index} value={familiaOption}>
+                      {familiaOption}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>No hay familias disponibles</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Grid>
