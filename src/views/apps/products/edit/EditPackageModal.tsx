@@ -52,6 +52,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [area, setArea] = useState('')
   const [familia, setFamilia] = useState('')
   const [cantidad, setCantidad] = useState(1)
+  const [precio, setPrecio] = useState<number>(0)
 
   // Eliminar precio, lista de precios y aplicar impuesto
   const [cantidades, setCantidades] = useState<{ [key: number]: number }>({})
@@ -69,9 +70,9 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [selectedInPackage, setSelectedInPackage] = useState<number[]>([])
 
-  // Opciones predefinidas
-  const areaOptions = ['Suelos', 'Asfaltos', 'Hormigones', 'Áridos', 'Química', 'Otros']
-  const familiaOptions = ['Clasificación', 'Compactación', 'Densidad', 'Granulometría', 'Límites', 'Resistencia']
+  // Estados para áreas y familias
+  const [areaOptions, setAreaOptions] = useState<string[]>([])
+  const [familiaOptions, setFamiliaOptions] = useState<string[]>([])
 
   // Cargar datos iniciales cuando se abre el modal
   useEffect(() => {
@@ -84,6 +85,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setArea(paquete.area || '')
       setFamilia(paquete.familia || '')
       setCantidad(paquete.cantidad || 1)
+      setPrecio(paquete.precio || 0)
 
       // Cargar cantidades si existen
       if (Array.isArray(paquete.productosEnPaquete)) {
@@ -98,6 +100,8 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       // Cargar productos y listas de precios
       fetchProductos()
       fetchListasPrecios()
+      fetchAreas()
+      fetchFamilias()
 
       // Cargar los productos del paquete
       fetchProductosDelPaquete()
@@ -124,6 +128,28 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setListaPreciosOptions(data)
     } catch (error) {
       console.error('Error al cargar listas de precios:', error)
+    }
+  }
+
+  const fetchAreas = async () => {
+    try {
+      const response = await fetch('/api/areas')
+      const data = await response.json()
+      setAreaOptions(data)
+    } catch (error) {
+      console.error('Error al cargar áreas:', error)
+      toast.error('Error al cargar las áreas')
+    }
+  }
+
+  const fetchFamilias = async () => {
+    try {
+      const response = await fetch('/api/familias')
+      const data = await response.json()
+      setFamiliaOptions(data)
+    } catch (error) {
+      console.error('Error al cargar familias:', error)
+      toast.error('Error al cargar las familias')
     }
   }
 
@@ -155,6 +181,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           area,
           familia,
           cantidad,
+          precio,
           productosEnPaquete: productosSeleccionados.map(p => ({ productoId: p.productoId }))
         })
       })
