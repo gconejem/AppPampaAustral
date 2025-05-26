@@ -1,5 +1,5 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -81,6 +81,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
   const [loadingSectores, setLoadingSectores] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
+
+  // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
+  const memoizedCurrentDate = useMemo(() => {
+    return calendarApi?.getDate() ?? null
+  }, [calendarApi])
 
   // Cargar clientes al montar el componente
   useEffect(() => {
@@ -283,7 +288,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               calendarApi.gotoDate(date)
             }
           }}
-          currentDate={calendarApi?.getDate()}
+          currentDate={memoizedCurrentDate}
           calendarRef={{ current: calendarApi }}
         />
       </Box>

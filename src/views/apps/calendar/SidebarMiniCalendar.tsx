@@ -15,16 +15,19 @@ interface SidebarMiniCalendarProps {
 
 const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarRef }: SidebarMiniCalendarProps) => {
   const theme = useTheme()
-  const [selectedDate, setSelectedDate] = useState(currentDate)
-  const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth())
-  const [currentYear, setCurrentYear] = useState(currentDate.getFullYear())
+  // Usar la fecha actual si currentDate es null o undefined
+  const safeDate = currentDate ? new Date(currentDate) : new Date()
+  const [selectedDate, setSelectedDate] = useState(safeDate)
+  const [currentMonth, setCurrentMonth] = useState(safeDate.getMonth())
+  const [currentYear, setCurrentYear] = useState(safeDate.getFullYear())
 
   // Actualizar el mini calendario cuando cambia la fecha en el calendario principal
   useEffect(() => {
     if (currentDate) {
-      setSelectedDate(currentDate)
-      setCurrentMonth(currentDate.getMonth())
-      setCurrentYear(currentDate.getFullYear())
+      const safeDate = new Date(currentDate)
+      setSelectedDate(safeDate)
+      setCurrentMonth(safeDate.getMonth())
+      setCurrentYear(safeDate.getFullYear())
     }
   }, [currentDate])
 
