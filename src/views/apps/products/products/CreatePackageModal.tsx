@@ -167,14 +167,12 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
       // Validaciones básicas
       if (!nombre || !sku) {
         toast.error('Por favor complete los campos nombre y SKU')
-
         return
       }
 
       // Validar que haya productos seleccionados
       if (productosSeleccionados.length === 0) {
         toast.error('Por favor seleccione al menos un producto para el paquete')
-
         return
       }
 
@@ -189,6 +187,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         familia: familia || '',
         norma: norma || '',
         aplicaImpuesto: aplicaImpuesto,
+        cantidad: 1, // Agregamos la cantidad por defecto
         productos: productosSeleccionados.map(producto => ({
           productoId: producto.productoId,
           cantidad: cantidades[producto.productoId] || 1,
@@ -208,7 +207,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
       if (!response.ok) {
         const errorData = await response.json()
-
         throw new Error(errorData.error || 'Error al crear el paquete')
       }
 
