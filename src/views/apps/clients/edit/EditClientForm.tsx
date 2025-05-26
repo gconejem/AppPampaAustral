@@ -22,6 +22,7 @@ import Box from '@mui/material/Box'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import Divider from '@mui/material/Divider'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -31,10 +32,12 @@ import axios from 'axios'
 // Types Imports
 import type { Cliente, Contacto } from '@/types/forms/cliente'
 import type { FormValidateType } from '@/types/forms/cliente'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 // Components Imports
 import ContactSearch from '../components/ContactSearch'
 import { useUbicacion } from '@/hooks/useUbicacion'
+import AddContact from '@/views/apps/contacts/list/AddContact'
 
 // Import data
 import { VENDEDORES } from '@/data/clientData'
@@ -95,6 +98,8 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   const [editingContact, setEditingContact] = useState<Contacto | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [selectedComuna, setSelectedComuna] = useState<string>('')
+  const [addContactOpen, setAddContactOpen] = useState(false)
+  const [refreshContactSearch, setRefreshContactSearch] = useState(0)
 
   const { regiones, getComunasByRegionNombre } = useUbicacion()
 
@@ -276,6 +281,32 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       setEditingContactIndex(null)
       setEditingContact(null)
     }
+  }
+
+  // Función para manejar el nuevo contacto creado
+  const handleNewContact = (newContact: ContactType) => {
+    const contactoNormalizado: Contacto = {
+      nombre: newContact.nombre || '',
+      cargo: newContact.cargo || '',
+      email: newContact.email || '',
+      telefono1: newContact.telefono1 || '',
+      telefono2: newContact.telefono2 || '',
+      contactId: newContact.contactId
+    };
+    setContacts([
+      ...contacts,
+      {
+        contactId: contactoNormalizado.contactId,
+        nombre: contactoNormalizado.nombre,
+        cargo: contactoNormalizado.cargo,
+        email: contactoNormalizado.email,
+        telefono1: contactoNormalizado.telefono1,
+        telefono2: contactoNormalizado.telefono2,
+        isPrincipal: contacts.length === 0
+      }
+    ]);
+    toast.success('Contacto agregado exitosamente');
+    setRefreshContactSearch(prev => prev + 1);
   }
 
   return (
@@ -558,35 +589,47 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
             {/* Sección de Contactos */}
             <Grid item xs={12}>
               <Grid container spacing={2} alignItems='center' sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant='h6'>Contactos</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <ContactSearch
-                    onContactSelect={contact => {
-                      // Solo verificar duplicados por contactId
-                      const exists = contacts.some(c => c.contactId === contact.contactId)
-
-                      if (exists) {
-                        toast.error('Este contacto ya está en la lista')
-                        return
-                      }
-
-                      // Agregar el nuevo contacto con todos los campos necesarios
-                      const newContact = {
-                        contactId: contact.contactId,
-                        nombre: contact.nombre || '',
-                        cargo: contact.cargo || ROLES_CONTACTO[0].label,
-                        email: contact.email || '',
-                        telefono1: contact.telefono1 || '',
-                        telefono2: contact.telefono2 || '',
-                        isPrincipal: contacts.length === 0 // Si es el primer contacto, será el principal
-                      }
-
-                      setContacts([...contacts, newContact])
-                      toast.success('Contacto agregado exitosamente')
-                    }}
-                  />
+                <Grid item xs={12}>
+                  <Typography variant='h5' sx={{ minWidth: 'fit-content', mb: 2 }}>
+                    Contactos
+                  </Typography>
+                  <Grid container spacing={2} alignItems='center'>
+                    <Grid item xs={12} sm={'auto'}>
+                      <Button
+                        variant='contained'
+                        color='primary'
+                        onClick={() => setAddContactOpen(true)}
+                        startIcon={<i className='ri-add-line' />}
+                      >
+                        Nuevo Contacto
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm>
+                      <Box sx={{ maxWidth: '400px', ml: { sm: 'auto' } }}>
+                        <ContactSearch
+                          onContactSelect={contact => {
+                            const exists = contacts.some(c => c.contactId === contact.contactId)
+                            if (exists) {
+                              toast.error('Este contacto ya está en la lista')
+                              return
+                            }
+                            const newContact = {
+                              contactId: contact.contactId,
+                              nombre: contact.nombre || '',
+                              cargo: contact.cargo || ROLES_CONTACTO[0].label,
+                              email: contact.email || '',
+                              telefono1: contact.telefono1 || '',
+                              telefono2: contact.telefono2 || '',
+                              isPrincipal: contacts.length === 0
+                            }
+                            setContacts([...contacts, newContact])
+                            toast.success('Contacto agregado exitosamente')
+                          }}
+                          refreshKey={refreshContactSearch}
+                        />
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </Grid>
               </Grid>
 
@@ -817,6 +860,11 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
           </Grid>
         </form>
       </Box>
+      <AddContact
+        open={addContactOpen}
+        handleClose={() => setAddContactOpen(false)}
+        onContactCreated={handleNewContact}
+      />
     </Drawer>
   )
 }
