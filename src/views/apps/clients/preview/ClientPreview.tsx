@@ -199,7 +199,9 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
             </TableHead>
             <TableBody>
               {client.clientesContactos && client.clientesContactos.length > 0 ? (
-                client.clientesContactos.map((cc, index) => (
+                [...client.clientesContactos]
+                  .sort((a, b) => (b.isPrincipal ? 1 : -1))
+                  .map((cc, index) => (
                   <TableRow key={index}>
                     <TableCell>{cc.nombre || cc.contacto?.nombre}</TableCell>
                     <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
