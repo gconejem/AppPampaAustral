@@ -116,6 +116,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValidateType>({
     defaultValues: {
+      fechaCreacion: '',
       rut: '',
       estado: 'active',
       razonSocial: '',
@@ -164,6 +165,11 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       setSelectedComuna(comunaActual)
 
       reset({
+        fechaCreacion: new Date(currentUser.fechaCreacion).toLocaleDateString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        }).replace(/\//g, '-'),
         rut: currentUser.rut,
         estado: currentUser.estado,
         razonSocial: currentUser.razonSocial,
