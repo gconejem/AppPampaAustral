@@ -21,7 +21,7 @@ const FooterContent = () => {
       className={classnames(verticalLayoutClasses.footerContent, 'flex items-center justify-between flex-wrap gap-4')}
     >
       <p>
-        <span>{`© ${new Date().getFullYear()}, Creado por `}</span>
+        <span>{`© ${new Date().getFullYear()}, Laboratorio Pampa Austral - 77.390.460-K`}</span>
       </p>
     </div>
   )
