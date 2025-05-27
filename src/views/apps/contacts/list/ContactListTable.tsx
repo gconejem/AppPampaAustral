@@ -365,7 +365,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
             >
               <i className={row.original.estado === 'ACTIVO' ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'} />
             </IconButton>
-            <IconButton
+            {/* <IconButton
               color='error'
               onClick={() => {
                 setContactToDelete(row.original)
@@ -373,7 +373,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
               }}
             >
               <i className='ri-delete-bin-line' />
-            </IconButton>
+            </IconButton> */}
           </Box>
         )
       }
@@ -596,7 +596,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
           setSelectedContactPreview(null)
         }}
       />
-      <Dialog
+      {/* <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         aria-labelledby='delete-dialog-title'
@@ -623,7 +623,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
             Eliminar
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </>
   )
 }
