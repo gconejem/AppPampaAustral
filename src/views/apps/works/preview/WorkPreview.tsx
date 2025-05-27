@@ -265,14 +265,26 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               </tr>
             </thead>
             <tbody className='divide-y divide-gray-200'>
-              {obra.contactos?.map(contact => (
-                <tr key={contact.id}>
-                  <td className='py-3 px-4'>{contact.nombre}</td>
-                  <td className='py-3 px-4'>{contact.rol}</td>
-                  <td className='py-3 px-4'>{contact.email}</td>
-                  <td className='py-3 px-4'>{contact.telefono1}</td>
-                </tr>
-              ))}
+              {obra.contactos
+                ?.sort((a, b) => {
+                  // Primero el contacto principal
+                  if (a.isPrincipal && !b.isPrincipal) return -1
+                  if (!a.isPrincipal && b.isPrincipal) return 1
+                  return 0
+                })
+                .map(contact => (
+                  <tr key={contact.id}>
+                    <td className='py-3 px-4'>
+                      {contact.nombre}
+                      {contact.isPrincipal && (
+                        <span className='ml-2 text-xs text-primary'>Principal</span>
+                      )}
+                    </td>
+                    <td className='py-3 px-4'>{contact.rol}</td>
+                    <td className='py-3 px-4'>{contact.email}</td>
+                    <td className='py-3 px-4'>{contact.telefono1}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </CardContent>
