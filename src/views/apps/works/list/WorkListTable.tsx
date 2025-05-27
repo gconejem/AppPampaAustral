@@ -533,6 +533,30 @@ const WorkListTable = () => {
     }
   }
 
+  const handleExportPDF = async (obra: Obra) => {
+    try {
+      const response = await fetch(`/api/obras/${obra.obraId}/pdf`)
+      if (!response.ok) {
+        throw new Error('Error al descargar el PDF')
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `obra_${obra.numeroObra}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success('PDF generado correctamente')
+    } catch (error) {
+      console.error('Error al generar PDF:', error)
+      toast.error('Error al generar el PDF')
+    }
+  }
+
   const columns = useMemo<ColumnDef<Obra>[]>(
     () => [
       {
@@ -712,6 +736,13 @@ const WorkListTable = () => {
               sx={{ '&:hover': { backgroundColor: 'primary.light' } }}
             >
               <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <IconButton
+              size='small'
+              color='primary'
+              onClick={() => handleExportPDF(row.original)}
+            >
+              <i className='ri-file-download-line' />
             </IconButton>
             <OptionMenu
               iconButtonProps={{ className: 'cursor-pointer' }}
