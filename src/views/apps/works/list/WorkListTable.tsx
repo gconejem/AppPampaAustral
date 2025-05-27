@@ -378,8 +378,12 @@ const WorkListTable = () => {
       // Convertir a formato CSV
       const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
 
+      // Agregar BOM UTF-8
+      const BOM = '\uFEFF'
+      const csvContentWithBOM = BOM + csvContent
+
       // Crear el blob y descargar
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
 
