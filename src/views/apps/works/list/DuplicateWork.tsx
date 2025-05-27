@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast'
 import { validateRut } from '@/utils/rut-utils'
 import type { Obra, FormValidateType } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
-import { ESTADOS_OBRA, LISTAS_PRECIOS } from '@/data/obraData'
+import { ESTADOS_OBRA } from '@/data/obraData'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
@@ -124,6 +124,7 @@ const DuplicateWork = (props: Props) => {
   const [lastObraNumber, setLastObraNumber] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
+  const [listasPrecios, setListasPrecios] = useState<Array<{ id: string; nombre: string }>>([])
 
   const contactosPrincipales: ContactoObraForm[] = initialData?.contactos?.map(contacto => ({
     rol: contacto.rol,
@@ -200,6 +201,22 @@ const DuplicateWork = (props: Props) => {
     }
     fetchLastObraNumber()
   }, [setValue])
+
+  useEffect(() => {
+    const fetchListasPrecios = async () => {
+      try {
+        const response = await axios.get('/api/listas-precios')
+        setListasPrecios(response.data)
+      } catch (error) {
+        console.error('Error al cargar las listas de precios:', error)
+        toast.error('Error al cargar las listas de precios')
+      }
+    }
+
+    if (open) {
+      fetchListasPrecios()
+    }
+  }, [open])
 
   useEffect(() => {
     if (open && initialData) {
@@ -1160,9 +1177,9 @@ const DuplicateWork = (props: Props) => {
                     rules={{ required: true }}
                     render={({ field }) => (
                       <Select {...field} label='Lista de Precios'>
-                        {LISTAS_PRECIOS.map(lista => (
-                          <MenuItem key={lista.value} value={lista.value}>
-                            {lista.label}
+                        {listasPrecios.map(lista => (
+                          <MenuItem key={lista.id} value={lista.id}>
+                            {lista.nombre}
                           </MenuItem>
                         ))}
                       </Select>

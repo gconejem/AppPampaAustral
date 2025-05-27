@@ -54,7 +54,7 @@ export interface ContactoObra {
 
 export interface FormValidateType {
   numeroObra: string
-  fechaIngreso: string
+  fechaIngreso: Date | string
   estado: string
   estadoObra: string
   nombreObra: string
@@ -63,20 +63,12 @@ export interface FormValidateType {
   comuna: string
   nombreCliente: string
   rut: string
-  mandante?: string
-  sector?: string
-  referencia?: string
-  georreferencia?: string
-  informeMandante?: boolean
-  textoMandante?: string
-  acreditacionPersonal?: boolean
-  especificacionesTecnicas?: boolean
-  acreditacionEquipos?: boolean
-  cartaCompromiso?: boolean
-  mandatoServiu?: boolean
-  otrosRequisitos?: string
-  correos?: string[]
-  contactos?: ContactoObra[]
+  mandante: string
+  sector: string
+  referencia: string
+  listaPrecio: string
+  envioInformes: boolean
+  contactos: ContactoObra[]
 
   // Campos de facturación
   razonSocial?: string

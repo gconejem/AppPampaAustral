@@ -48,7 +48,7 @@ import { initialFormData } from '@/types/forms/obra'
 import type { ContactType } from '@/types/apps/contactTypes'
 
 // Import data
-import { ESTADOS_OBRA, LISTAS_PRECIOS } from '@/data/obraData'
+import { ESTADOS_OBRA } from '@/data/obraData'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
@@ -125,6 +125,8 @@ interface ContactoObraForm {
 }
 
 const AddObraDrawer = (props: Props) => {
+  const { open, handleClose: onClose, setData, setFilteredData } = props
+
   // Hooks - ahora useForm tiene acceso al schema
   const {
     control,
@@ -145,9 +147,11 @@ const AddObraDrawer = (props: Props) => {
   })
 
   // States
-  const [lastObraNumber, setLastObraNumber] = useState<string>('')
+  const [contactos, setContactos] = useState<ContactoObraForm[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
+  const [lastObraNumber, setLastObraNumber] = useState<string>('')
+  const [listasPrecios, setListasPrecios] = useState<Array<{ value: string; label: string }>>([])
   const [addContactOpen, setAddContactOpen] = useState(false)
   const [refreshContactSearch, setRefreshContactSearch] = useState(0)
 
@@ -165,8 +169,6 @@ const AddObraDrawer = (props: Props) => {
       isPrincipal: false
     }
   ]
-
-  const [contactos, setContactos] = useState<ContactoObraForm[]>(contactosPrincipales)
 
   const [editingContact, setEditingContact] = useState<ContactoObraForm['contacto']>({
     nombre: '',
@@ -207,6 +209,26 @@ const AddObraDrawer = (props: Props) => {
 
     fetchLastObraNumber()
   }, [setValue])
+
+  // Cargar listas de precios
+  useEffect(() => {
+    const fetchListasPrecios = async () => {
+      try {
+        const response = await fetch('/api/listas-precios')
+        if (!response.ok) throw new Error('Error al cargar las listas de precios')
+        const data = await response.json()
+        setListasPrecios(data.map((lista: any) => ({
+          value: lista.id.toString(),
+          label: lista.nombre
+        })))
+      } catch (error) {
+        console.error('Error:', error)
+        toast.error('Error al cargar las listas de precios')
+      }
+    }
+
+    fetchListasPrecios()
+  }, [])
 
   const onSubmit = async (data: FormValidateType) => {
     try {
@@ -678,7 +700,7 @@ const AddObraDrawer = (props: Props) => {
   return (
     <>
       <Drawer
-        open={props.open}
+        open={open}
         anchor='right'
         variant='temporary'
         onClose={handleDrawerClose}
@@ -1495,7 +1517,7 @@ const AddObraDrawer = (props: Props) => {
                     rules={{ required: true }}
                     render={({ field }) => (
                       <Select {...field} label='Lista de Precios'>
-                        {LISTAS_PRECIOS.map(lista => (
+                        {listasPrecios.map(lista => (
                           <MenuItem key={lista.value} value={lista.value}>
                             {lista.label}
                           </MenuItem>

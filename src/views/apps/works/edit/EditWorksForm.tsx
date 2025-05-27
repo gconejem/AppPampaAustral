@@ -82,6 +82,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   // States
   const [contactos, setContactos] = useState<ContactoObra[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [listasPrecios, setListasPrecios] = useState<Array<{ value: string; label: string }>>([])
 
   const [nuevoContacto, setNuevoContacto] = useState<Omit<ContactoObra, 'isPrincipal'>>({
     obraId: 0,
@@ -218,6 +219,26 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       })
     }
   }, [obraData, reset])
+
+  // Cargar listas de precios
+  useEffect(() => {
+    const fetchListasPrecios = async () => {
+      try {
+        const response = await fetch('/api/listas-precios')
+        if (!response.ok) throw new Error('Error al cargar las listas de precios')
+        const data = await response.json()
+        setListasPrecios(data.map((lista: any) => ({
+          value: lista.id.toString(),
+          label: lista.nombre
+        })))
+      } catch (error) {
+        console.error('Error:', error)
+        toast.error('Error al cargar las listas de precios')
+      }
+    }
+
+    fetchListasPrecios()
+  }, [])
 
   // Manejador para el cambio de región
   const handleRegionChange = (event: SelectChangeEvent<string>) => {
@@ -1057,7 +1078,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                 control={control}
                 render={({ field }) => (
                   <Select {...field} label='Lista de Precios'>
-                    {LISTAS_PRECIOS.map(lista => (
+                    {listasPrecios.map(lista => (
                       <MenuItem key={lista.value} value={lista.value}>
                         {lista.label}
                       </MenuItem>
