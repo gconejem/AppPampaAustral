@@ -423,7 +423,7 @@ const WorkListTable = () => {
 
   const handleChangeStatusClick = (obra: Obra) => {
     setSelectedObra(obra)
-    setSelectedStatus(obra.estado)
+    setSelectedStatus(obra.estadoObra)
     setChangeStatusOpen(true)
   }
 
