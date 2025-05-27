@@ -354,7 +354,12 @@ const WorkListTable = () => {
         'Giro',
         'Teléfono Facturación',
         'Email Facturación',
-        'Lista Precios'
+        'Lista Precios',
+        'Acreditación Personal',
+        'Especificaciones Técnicas',
+        'Acreditación Equipos',
+        'Carta Compromiso',
+        'Mandato y Envío de Informes a SERVIU'
       ]
 
       // Preparar los datos
@@ -372,7 +377,12 @@ const WorkListTable = () => {
         obra.giro || '',
         obra.telefonoFacturacion || '',
         obra.mailRecepcionFactura || '',
-        obra.listaPrecios || ''
+        obra.listaPrecios || '',
+        obra.acreditacionPersonal ? 'SI' : 'NO',
+        obra.especificacionesTecnicas ? 'SI' : 'NO',
+        obra.acreditacionEquipos ? 'SI' : 'NO',
+        obra.cartaCompromiso ? 'SI' : 'NO',
+        obra.mandatoServiu ? 'SI' : 'NO'
       ])
 
       // Convertir a formato CSV
