@@ -1,13 +1,35 @@
+import { useState, useEffect } from 'react'
 import { Typography, Grid, Card, CardContent, Divider } from '@mui/material'
+import axios from 'axios'
 
-import type { Obra } from '@/types/apps/workTypes'
+import type { Obra, ContactoObra } from '@/types/forms/obra'
 
 interface WorkPreviewProps {
   obra: Obra | null
 }
 
 const WorkPreview = ({ obra }: WorkPreviewProps) => {
+  const [listasPrecios, setListasPrecios] = useState<Array<{ id: string; nombre: string }>>([])
+
+  useEffect(() => {
+    const fetchListasPrecios = async () => {
+      try {
+        const response = await axios.get('/api/listas-precios')
+        setListasPrecios(response.data)
+      } catch (error) {
+        console.error('Error al cargar las listas de precios:', error)
+      }
+    }
+
+    fetchListasPrecios()
+  }, [])
+
   if (!obra) return null
+
+  const getListaPrecioNombre = (id: string | number) => {
+    const lista = listasPrecios.find(l => String(l.id) === String(id))
+    return lista ? lista.nombre : id
+  }
 
   return (
     <div className='space-y-6'>
@@ -125,7 +147,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Correos
               </Typography>
-              <Typography>{Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}</Typography>
+              <Typography>{Array.isArray((obra as any).correos) ? (obra as any).correos.join(', ') : '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>
@@ -225,7 +247,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Lista de Precios
               </Typography>
-              <Typography>{obra.listaPrecio?.nombre || '-'}</Typography>
+              <Typography>{obra.listaPrecios ? getListaPrecioNombre(obra.listaPrecios) : '-'}</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
@@ -266,13 +288,13 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
             </thead>
             <tbody className='divide-y divide-gray-200'>
               {obra.contactos
-                ?.sort((a, b) => {
+                ?.sort((a: ContactoObra, b: ContactoObra) => {
                   // Primero el contacto principal
                   if (a.isPrincipal && !b.isPrincipal) return -1
                   if (!a.isPrincipal && b.isPrincipal) return 1
                   return 0
                 })
-                .map(contact => (
+                .map((contact: ContactoObra) => (
                   <tr key={contact.id}>
                     <td className='py-3 px-4'>
                       {contact.nombre}
