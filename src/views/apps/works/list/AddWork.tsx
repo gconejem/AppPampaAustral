@@ -654,45 +654,56 @@ const AddObraDrawer = (props: Props) => {
 
   // Función para manejar el nuevo contacto creado
   const handleNewContact = (contact: ContactType) => {
-    // Normaliza el contacto para que tenga cargo a nivel raíz
-    let cargoValue = contact.cargo || CARGOS_OBRA[0].value;
-    // Si el cargo no es un value válido, buscar por label
-    if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
-      const found = CARGOS_OBRA.find(c => c.label === cargoValue);
-      cargoValue = found ? found.value : CARGOS_OBRA[0].value;
+    if (!contact) {
+      toast.error('Error al crear el contacto');
+      return;
     }
-    const contactoNormalizado: ContactoObraForm = {
-      contacto: {
-        nombre: contact.nombre,
-        cargo: cargoValue,
-        email: contact.email,
-        telefono1: contact.telefono1,
-        telefono2: contact.telefono2 || '',
-        contactId: contact.contactId?.toString()
-      },
-      cargo: cargoValue,
-      isPrincipal: contactos.length === 0
-    };
 
     // Si es el primer contacto (Encargado de Obra)
-    if (contactos[0].contacto.nombre === '') {
-      const updatedContactos = [...contactos];
-      updatedContactos[0] = {
-        ...contactoNormalizado,
+    if (contactos[0]?.contacto?.nombre === '') {
+      const contactoEncargado: ContactoObraForm = {
         contacto: {
-          ...contactoNormalizado.contacto,
-          cargo: 'encargado_obra'
+          nombre: contact.nombre || '',
+          cargo: 'encargado_obra',
+          email: contact.email || '',
+          telefono1: contact.telefono1 || '',
+          telefono2: contact.telefono2 || '',
+          contactId: contact.contactId?.toString()
         },
         cargo: 'encargado_obra',
         isPrincipal: true
       };
+
+      const updatedContactos = [...contactos];
+      updatedContactos[0] = contactoEncargado;
       setContactos(updatedContactos);
       toast.success('Encargado de Obra asignado exitosamente');
     } else {
-      // Para contactos adicionales, mantener el cargo que ya tienen
-      setContactos([...contactos, contactoNormalizado]);
+      // Para contactos adicionales, usar el cargo que viene del contacto
+      let cargoValue = contact.cargo || CARGOS_OBRA[0].value;
+      // Si el cargo no es un value válido, buscar por label
+      if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
+        const found = CARGOS_OBRA.find(c => c.label === cargoValue);
+        cargoValue = found ? found.value : CARGOS_OBRA[0].value;
+      }
+
+      const contactoNormalizado: ContactoObraForm = {
+        contacto: {
+          nombre: contact.nombre || '',
+          cargo: cargoValue,
+          email: contact.email || '',
+          telefono1: contact.telefono1 || '',
+          telefono2: contact.telefono2 || '',
+          contactId: contact.contactId?.toString()
+        },
+        cargo: cargoValue,
+        isPrincipal: false
+      };
+
+      setContactos(prevContactos => [...prevContactos, contactoNormalizado]);
       toast.success('Contacto agregado exitosamente');
     }
+
     setRefreshContactSearch(prev => prev + 1);
     setAddContactOpen(false);
   }
