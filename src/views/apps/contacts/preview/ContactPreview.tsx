@@ -84,14 +84,12 @@ const ContactPreview = ({ open, contact, handleClose }: Props) => {
                     </Typography>
                     <Typography variant='body1'>{contact.telefono1}</Typography>
                   </Grid>
-                  {contact.telefono2 && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='text.secondary'>
-                        Teléfono Secundario
-                      </Typography>
-                      <Typography variant='body1'>{contact.telefono2}</Typography>
-                    </Grid>
-                  )}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant='body2' color='text.secondary'>
+                      Teléfono Secundario
+                    </Typography>
+                    <Typography variant='body1'>{contact.telefono2 || 'No especificado'}</Typography>
+                  </Grid>
                 </Grid>
               </Grid>
 
@@ -105,30 +103,24 @@ const ContactPreview = ({ open, contact, handleClose }: Props) => {
                   Ubicación
                 </Typography>
                 <Grid container spacing={2}>
-                  {contact.comuna && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='text.secondary'>
-                        Comuna
-                      </Typography>
-                      <Typography variant='body1'>{contact.comuna}</Typography>
-                    </Grid>
-                  )}
-                  {contact.direccion && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='text.secondary'>
-                        Dirección
-                      </Typography>
-                      <Typography variant='body1'>{contact.direccion}</Typography>
-                    </Grid>
-                  )}
-                  {contact.empresa && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant='body2' color='text.secondary'>
-                        Empresa
-                      </Typography>
-                      <Typography variant='body1'>{contact.empresa}</Typography>
-                    </Grid>
-                  )}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant='body2' color='text.secondary'>
+                      Comuna
+                    </Typography>
+                    <Typography variant='body1'>{contact.comuna || 'No especificada'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant='body2' color='text.secondary'>
+                      Dirección
+                    </Typography>
+                    <Typography variant='body1'>{contact.direccion || 'No especificada'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant='body2' color='text.secondary'>
+                      Empresa
+                    </Typography>
+                    <Typography variant='body1'>{contact.empresa || 'No especificada'}</Typography>
+                  </Grid>
                 </Grid>
               </Grid>
             </Grid>
