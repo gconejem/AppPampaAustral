@@ -24,7 +24,7 @@ model Cliente {
   segmento               String?
   industria              String?
   giro                   String?
-  emailFacturacion       String?
+  emailFacturacion       String[]
   otroRut                String?
   representanteLegal     String?
   createdAt              DateTime            @default(now())

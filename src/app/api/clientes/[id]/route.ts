@@ -60,7 +60,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         segmento: data.segmento,
         industria: data.industria,
         giro: data.giro,
-        emailFacturacion: data.emailFacturacion
+        emailFacturacion: Array.isArray(data.emailFacturacion) ? data.emailFacturacion : []
       },
       include: {
         clientesContactos: {
@@ -152,7 +152,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         segmento: data.segmento,
         industria: data.industria,
         giro: data.giro || '',
-        emailFacturacion: data.emailFacturacion || ''
+        emailFacturacion: Array.isArray(data.emailFacturacion) ? data.emailFacturacion : []
       }
     })
 

@@ -181,7 +181,11 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Email de Facturación
               </Typography>
-              <Typography>{client.emailFacturacion || '-'}</Typography>
+              <Typography>
+                {Array.isArray(client.emailFacturacion)
+                  ? client.emailFacturacion.join(', ')
+                  : (client.emailFacturacion || '-')}
+              </Typography>
             </Grid>
           </Grid>
         </CardContent>

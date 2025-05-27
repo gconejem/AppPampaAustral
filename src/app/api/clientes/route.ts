@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         segmento: body.segmento || '',
         industria: body.industria || '',
         giro: body.giro || '',
-        emailFacturacion: body.emailFacturacion || '',
+        emailFacturacion: Array.isArray(body.emailFacturacion) ? body.emailFacturacion : [],
         otroRut: body.otroRut || '',
         representanteLegal: body.representanteLegal || '',
         fechaCreacion: new Date(body.fechaCreacion),

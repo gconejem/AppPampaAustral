@@ -92,6 +92,14 @@ const formatRut = (value: string) => {
   }
 }
 
+// Agregar función de validación para múltiples emails
+const validateMultipleEmails = (value?: string) => {
+  if (!value) return true
+  const emails = value.split(',').map(email => email.trim()).filter(email => email.length > 0)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emails.every(email => emailRegex.test(email))
+}
+
 const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX.Element => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -190,7 +198,9 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         condicionVenta: condicionVentaValue,
         observaciones: observacionesValue,
         giro: currentUser.giro || '',
-        emailFacturacion: currentUser.emailFacturacion || '',
+        emailFacturacion: Array.isArray(currentUser.emailFacturacion)
+          ? currentUser.emailFacturacion.join(', ')
+          : (currentUser.emailFacturacion || ''),
         rutRepresentanteLegal: currentUser.rutRepresentanteLegal || '',
         representanteLegal: currentUser.representanteLegal || ''
       })
@@ -219,7 +229,12 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       const updateData = {
         ...data,
         giro: data.giro || '',
-        emailFacturacion: data.emailFacturacion || '',
+        emailFacturacion: data.emailFacturacion
+          ? data.emailFacturacion
+              .split(',')
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
         rutRepresentanteLegal: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
         condicionesComerciales: {
@@ -540,13 +555,19 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
               <Controller
                 name='emailFacturacion'
                 control={control}
+                rules={{
+                  validate: value => validateMultipleEmails(value) || 'Uno o más correos no son válidos'
+                }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Email de Facturación'
-                    placeholder='ejemplo@empresa.com'
-                    type='email'
+                    placeholder='ejemplo1@empresa.com, ejemplo2@empresa.com'
+                    type='text'
+                    helperText={errors.emailFacturacion ? errors.emailFacturacion.message : 'Separar múltiples correos con comas'}
+                    error={!!errors.emailFacturacion}
+                    value={typeof field.value === 'string' ? field.value : ''}
                   />
                 )}
               />

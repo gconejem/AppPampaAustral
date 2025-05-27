@@ -153,7 +153,10 @@ const AddClienteDrawer = (props: Props) => {
     industria: '',
     vendedor: '',
     condicionVenta: '',
-    observaciones: ''
+    observaciones: '',
+    emailFacturacion: '',
+    rutRepresentanteLegal: '',
+    representanteLegal: ''
   }
 
   // Función para formatear el RUT mientras se escribe
@@ -268,6 +271,14 @@ const AddClienteDrawer = (props: Props) => {
     return value.replace(/[^\d+]/g, '')
   }
 
+  // Agregar función de validación para múltiples emails
+  const validateMultipleEmails = (value?: string) => {
+    if (!value) return true
+    const emails = value.split(',').map(email => email.trim()).filter(email => email.length > 0)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emails.every(email => emailRegex.test(email))
+  }
+
   // Hooks
   const {
     control,
@@ -317,6 +328,16 @@ const AddClienteDrawer = (props: Props) => {
         }
       }
 
+      // Validar emails múltiples
+      if (values.emailFacturacion) {
+        if (!validateMultipleEmails(values.emailFacturacion)) {
+          errors.emailFacturacion = {
+            type: 'manual',
+            message: 'Uno o más correos no son válidos'
+          }
+        }
+      }
+
       return {
         values,
         errors
@@ -359,7 +380,12 @@ const AddClienteDrawer = (props: Props) => {
         segmento: data.segmento,
         industria: data.industria,
         giro: data.giro || '',
-        emailFacturacion: data.emailFacturacion || '',
+        emailFacturacion: data.emailFacturacion
+          ? data.emailFacturacion
+              .split(',')
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
         otroRut: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
         fechaCreacion: new Date(),
@@ -546,9 +572,9 @@ const AddClienteDrawer = (props: Props) => {
       cargoValue = found ? found.value : CARGOS_OBRA[0].value;
     }
     const contactoNormalizado: Contacto = {
-      nombre: contact.nombre,
-      cargo: cargoValue,
-      email: contact.email,
+      nombre: contact.nombre || '',
+      cargo: cargoValue || '',
+      email: contact.email || '',
       telefono1: contact.telefono1,
       telefono2: contact.telefono2 || '',
       contactId: (contact as any).contactId
@@ -1094,13 +1120,17 @@ const AddClienteDrawer = (props: Props) => {
               <Controller
                 name='emailFacturacion'
                 control={control}
+                rules={{ validate: validateMultipleEmails }}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     fullWidth
                     label='Email de Facturación'
-                    placeholder='ejemplo@empresa.com'
-                    type='email'
+                    placeholder='ejemplo1@empresa.com, ejemplo2@empresa.com'
+                    type='text'
+                    helperText={errors.emailFacturacion ? errors.emailFacturacion.message : 'Separar múltiples correos con comas'}
+                    error={!!errors.emailFacturacion}
+                    value={typeof field.value === 'string' ? field.value : ''}
                   />
                 )}
               />
