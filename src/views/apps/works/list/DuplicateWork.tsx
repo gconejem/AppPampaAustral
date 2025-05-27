@@ -670,7 +670,7 @@ const DuplicateWork = (props: Props) => {
                 <Controller
                   name='textoMandante'
                   control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' />}
+                  render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />}
                 />
               </Grid>
             </Grid>
