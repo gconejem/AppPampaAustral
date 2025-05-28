@@ -34,7 +34,9 @@ import {
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  SortingState
+  SortingState,
+  getFilteredRowModel,
+  ColumnFiltersState
 } from '@tanstack/react-table'
 
 interface ListaPrecio {
@@ -67,6 +69,8 @@ const ProductListTable = () => {
   const [editingPrice, setEditingPrice] = useState<{ id: number; price: string } | null>(null)
   const [successMessage, setSuccessMessage] = useState<string>('')
   const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   // Cargar listas de precios
   useEffect(() => {
@@ -367,11 +371,16 @@ const ProductListTable = () => {
     data: productos,
     columns,
     state: {
-      sorting
+      sorting,
+      globalFilter,
+      columnFilters
     },
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel()
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel()
   })
 
   return (
@@ -390,16 +399,40 @@ const ProductListTable = () => {
       <CardHeader
         title='Lista de Precios'
         action={
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Lista de Precios</InputLabel>
-            <Select value={selectedList} label='Lista de Precios' onChange={e => setSelectedList(e.target.value)}>
-              {listaPrecios.map(lista => (
-                <MenuItem key={lista.id} value={lista.id}>
-                  {lista.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              placeholder="Buscar..."
+              value={globalFilter ?? ''}
+              onChange={e => setGlobalFilter(e.target.value)}
+              variant="standard"
+              InputProps={{
+                disableUnderline: true,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <i className="ri-search-line" />
+                  </InputAdornment>
+                )
+              }}
+              style={{ width: '500px' }}
+              className='max-sm:is-full min-is-[200px]'
+              sx={{
+                padding: '11px',
+                borderRadius: '8px',
+                border: '1px solid #E0E0E0'
+              }}
+            />
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Lista de Precios</InputLabel>
+              <Select value={selectedList} label='Lista de Precios' onChange={e => setSelectedList(e.target.value)}>
+                {listaPrecios.map(lista => (
+                  <MenuItem key={lista.id} value={lista.id}>
+                    {lista.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         }
       />
       <TableContainer>
