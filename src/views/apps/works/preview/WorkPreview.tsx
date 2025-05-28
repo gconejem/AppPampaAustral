@@ -268,7 +268,13 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Mail Recepción Factura
               </Typography>
-              <Typography>{obra.mailRecepcionFactura || '-'}</Typography>
+              <Typography>{
+                Array.isArray(obra.mailRecepcionFactura)
+                  ? obra.mailRecepcionFactura.join(', ')
+                  : obra.mailRecepcionFactura
+                    ? obra.mailRecepcionFactura
+                    : '-'
+              }</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant='subtitle2' color='text.secondary'>
