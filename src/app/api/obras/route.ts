@@ -8,6 +8,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    // Asegurar que mailRecepcionFactura sea un array
+    const mailRecepcionFactura = Array.isArray(body.mailRecepcionFactura) 
+      ? body.mailRecepcionFactura 
+      : typeof body.mailRecepcionFactura === 'string'
+        ? body.mailRecepcionFactura.split(',').map((email: string) => email.trim()).filter((email: string) => email !== '')
+        : []
+
     // Usar una transacción para asegurar que todo se guarde correctamente
     const obra = await prisma.$transaction(async tx => {
       // Crear la obra principal con los campos requeridos
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
           comunaFacturacion: body.comunaFacturacion,
           telefonoFacturacion: body.telefonoFacturacion,
           listaPrecios: body.listaPrecios,
-          mailRecepcionFactura: body.mailRecepcionFactura,
+          mailRecepcionFactura: mailRecepcionFactura,
           estadoPago: body.estadoPago || false,
           hes: body.hes || false,
           oc: body.oc || false,

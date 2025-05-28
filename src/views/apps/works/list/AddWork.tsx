@@ -220,39 +220,14 @@ const AddObraDrawer = (props: Props) => {
   }, [])
 
   const onSubmit = async (data: FormValidateType) => {
+    setIsSubmitting(true)
     try {
-      // Validar que el contacto Encargado de Obra esté completo
-      const encargadoObra = contactos[0]
-
-      if (!encargadoObra?.contacto.nombre || !encargadoObra?.contacto.email || !encargadoObra?.contacto.telefono1) {
-        toast.error('El contacto Encargado de Obra es obligatorio y debe tener nombre, email y teléfono')
-        return
-      }
-
-      // Validar contactos
-      for (const contacto of contactos) {
-        if (!validateEmail(contacto.contacto.email)) {
-          toast.error('Email inválido')
-          return
-        }
-
-        if (!validatePhone(contacto.contacto.telefono1)) {
-          toast.error('Teléfono inválido')
-          return
-        }
-      }
-
-      // Validar correos si existen
-      if (data.correos && Array.isArray(data.correos)) {
-        for (const correo of data.correos) {
-          if (!validateEmail(correo)) {
-            toast.error(`El correo ${correo} no es válido`)
-            return
-          }
-        }
-      }
-
-      setIsSubmitting(true)
+      // Convertir el string de emails a array
+      const emails = data.mailRecepcionFactura ? 
+        (typeof data.mailRecepcionFactura === 'string' ? 
+          data.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '') : 
+          data.mailRecepcionFactura) : 
+        []
 
       const payload = {
         ...data,
@@ -274,7 +249,7 @@ const AddObraDrawer = (props: Props) => {
           telefono2: contacto.contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
-        correos: Array.isArray(data.correos) ? data.correos : []
+        mailRecepcionFactura: emails
       }
 
       console.log('Payload enviado:', payload) // Agregar log para debug
@@ -684,6 +659,22 @@ const AddObraDrawer = (props: Props) => {
     setRefreshContactSearch(prev => prev + 1);
     setAddContactOpen(false);
   }
+
+  // Agregar la función de validación para múltiples emails
+  const validateMultipleEmails = (value: string | string[]) => {
+    if (!value) return false;
+    let emails: string[] = [];
+
+    if (Array.isArray(value)) {
+      emails = value.map(email => email.trim()).filter(email => email !== '');
+    } else if (typeof value === 'string') {
+      emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
+    }
+
+    if (emails.length === 0) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emails.every(email => emailRegex.test(email));
+  };
 
   return (
     <>
@@ -1453,19 +1444,16 @@ const AddObraDrawer = (props: Props) => {
                   control={control}
                   rules={{
                     required: 'El email es requerido',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Ingrese un correo electrónico válido'
-                    }
+                    validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
                   }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
-                      label='Mail Recepción Factura *'
+                      label="Email de Recepción de Factura"
                       error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message}
-                      placeholder='ejemplo@dominio.com'
+                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
+                      placeholder="ejemplo@email.com, otro@email.com"
                     />
                   )}
                 />

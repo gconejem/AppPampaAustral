@@ -30,7 +30,7 @@ export interface Obra {
   comunaFacturacion?: string
   telefonoFacturacion?: string
   listaPrecios?: string
-  mailRecepcionFactura?: string
+  mailRecepcionFactura?: string[] | string
   estadoPago?: boolean
   hes?: boolean
   oc?: boolean
@@ -78,7 +78,7 @@ export interface FormValidateType {
   telefonoFacturacion?: string
   telefono?: string
   listaPrecios?: string
-  mailRecepcionFactura?: string
+  mailRecepcionFactura?: string[] | string
   rutRepresentanteLegal?: string
   representanteLegal?: string
 
@@ -87,6 +87,15 @@ export interface FormValidateType {
   hes?: boolean
   oc?: boolean
   otrasReferencias?: string
+
+  // Campos adicionales
+  georreferencia?: string
+  textoMandante?: string
+  otrosRequisitos?: string
+  acreditacionPersonal?: boolean
+  especificacionesTecnicas?: boolean
+  acreditacionEquipos?: boolean
+  cartaCompromiso?: boolean
 }
 
 export const initialFormData = {
@@ -109,7 +118,7 @@ export const initialFormData = {
   comunaFacturacion: '',
   telefonoFacturacion: '',
   listaPrecios: '',
-  mailRecepcionFactura: '',
+  mailRecepcionFactura: [],
   rutRepresentanteLegal: '',
   representanteLegal: ''
 }

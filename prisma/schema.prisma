@@ -190,7 +190,7 @@ model Obra {
   comunaFacturacion        String?
   telefonoFacturacion      String?
   listaPrecios             String?
-  mailRecepcionFactura     String?
+  mailRecepcionFactura     String[]
   correos                  String[]
   acreditacionPersonal     Boolean        @default(false)
   especificacionesTecnicas Boolean        @default(false)
