@@ -277,8 +277,16 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   }
 
   const handleEditContact = (contact: Contacto, index: number) => {
+    console.log('contact', contact)
     setEditingContactIndex(index)
-    setEditingContact(contact)
+    
+    // Encontrar el rol correspondiente en ROLES_CONTACTO
+    const rolEncontrado = ROLES_CONTACTO.find(r => r.label === contact.cargo)
+    
+    setEditingContact({
+      ...contact,
+      cargo: rolEncontrado?.value || contact.cargo
+    })
   }
 
   const handleSaveEdit = (index: number) => {
@@ -678,7 +686,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                                   onChange={e => setEditingContact(prev => ({ ...prev!, cargo: e.target.value }))}
                                 >
                                   {ROLES_CONTACTO.map(rol => (
-                                    <MenuItem key={rol.value} value={rol.label}>
+                                    <MenuItem key={rol.value} value={rol.value}>
                                       {rol.label}
                                     </MenuItem>
                                   ))}
