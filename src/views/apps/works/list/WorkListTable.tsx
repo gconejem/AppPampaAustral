@@ -77,6 +77,7 @@ import EditWorksForm from '../edit/EditWorksForm'
 import ViewContactsDialog from '../components/ViewContactsDialog'
 import WorkPreview from '../preview/WorkPreview'
 import DuplicateWork from './DuplicateWork'
+import PDFPreviewModal from '../components/PDFPreviewModal'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
@@ -213,6 +214,8 @@ const WorkListTable = () => {
   const [selectedContact, setSelectedContact] = useState<any>(null)
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [selectedObraForPDF, setSelectedObraForPDF] = useState<Obra | null>(null)
 
   // Hooks
   const params = useParams()
@@ -567,6 +570,11 @@ const WorkListTable = () => {
     }
   }
 
+  const handlePreviewPDF = (obra: Obra) => {
+    setSelectedObraForPDF(obra)
+    setPdfPreviewOpen(true)
+  }
+
   const columns = useMemo<ColumnDef<Obra>[]>(
     () => [
       {
@@ -747,12 +755,19 @@ const WorkListTable = () => {
             >
               <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
+            {/* <IconButton
+              size='small'
+              color='primary'
+              onClick={() => handlePreviewPDF(row.original)}
+            >
+              <i className='ri-file-preview-line' style={{ fontSize: '1.25rem' }} />
+            </IconButton> */}
             <IconButton
               size='small'
               color='primary'
               onClick={() => handleExportPDF(row.original)}
             >
-              <i className='ri-file-download-line' />
+              <i className='ri-file-download-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
             <OptionMenu
               iconButtonProps={{ className: 'cursor-pointer' }}
@@ -1093,6 +1108,14 @@ const WorkListTable = () => {
         setData={setData}
         setFilteredData={setFilteredData}
         initialData={obraToDuplicate || {}}
+      />
+      <PDFPreviewModal
+        open={pdfPreviewOpen}
+        onClose={() => {
+          setPdfPreviewOpen(false)
+          setSelectedObraForPDF(null)
+        }}
+        obra={selectedObraForPDF}
       />
     </>
   )

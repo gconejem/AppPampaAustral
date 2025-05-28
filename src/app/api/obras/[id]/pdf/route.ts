@@ -4,240 +4,244 @@ import puppeteer from 'puppeteer'
 import fs from 'fs'
 
 function renderObraHTML(obra: any, logoBase64: string) {
+  // Formatear la fecha de emisión como dd.mm.yyyy
+  const fechaEmision = obra.fechaIngreso
+    ? new Date(obra.fechaIngreso).toLocaleDateString('es-CL').replace(/-/g, '.').replace(/\//g, '.')
+    : new Date().toLocaleDateString('es-CL').replace(/-/g, '.').replace(/\//g, '.');
+
   return `
   <html>
     <head>
       <meta charset="utf-8" />
       <link href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,800,900&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Inter', sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; margin: 0; padding: 0; color: #736e7d; font-size: 0.9375rem; }
-        .header, .header-left, .logo-title, .logo, .title, .subtitle, .header-right, .header-right .label { font-size: initial; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; background: #fff; padding: 16px 32px 8px 32px; border-bottom: 2px solid #FF0096; }
-        .header-left { display: flex; flex-direction: column; align-items: flex-start; }
-        .logo-title { display: flex; align-items: center; }
-        .logo { height: 40px; }
-        .title { font-size: 1.25rem; font-weight: bold; margin-left: 16px; color: #736e7d; font-family: 'Inter', sans-serif; }
-        .subtitle { font-size: 12px; color: #736e7d; font-style: italic; margin-top: 2px; font-family: 'Inter', sans-serif; }
-        .header-right { text-align: right; color: #736e7d; font-size: 12px; min-width: 220px; font-family: 'Inter', sans-serif; }
-        .header-right .label { font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif; font-size: 12px; }
-        .pdf-container { width: 100%; }
-        .pink-line { height: 2px; background: #FF0096; border: none; margin: 8px 0 0 0; width: 100%; display: block; position: relative; }
-        .section { margin: 24px 32px; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        .header-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 24px;
+          table-layout: fixed;
+        }
+        .header-table td, .header-table th {
+          border: 1px solid #000;
+          padding: 4px;
+        }
+        .header-logo {
+          text-align: center;
+          vertical-align: middle;
+          width: 15%;
+          min-width: 90px;
+          background: #fff;
+        }
+        .header-title {
+          font-weight: bold;
+          font-size: 1.35em;
+          text-align: center;
+          vertical-align: middle;
+          width: 55%;
+          background: #fff;
+        }
+        .header-meta {
+          font-size: 1.05em;
+          width: 30%;
+          background: #fff;
+        }
+        .header-meta b { font-weight: bold; }
+        .section { margin: 24px 0; font-size: 1em; }
         .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .col { flex: 1; }
-        .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
-        .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: 'Inter', sans-serif; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: 'Inter', sans-serif; }
-        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif; }
-        .table td { font-size: 0.8125rem; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: 'Inter', sans-serif; }
-        .section-title { font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #736e7d; }
+        .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: Arial, sans-serif; }
+        .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: Arial, sans-serif; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: Arial, sans-serif; font-size: 1em; }
+        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: Arial, sans-serif; }
+        .table td { font-size: 1em; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: Arial, sans-serif; }
+        .section-title { font-size: 1.1em; font-weight: bold; margin-bottom: 16px; color: #736e7d; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         .grid-item { margin-bottom: 8px; }
       </style>
     </head>
     <body>
+      <div style="width: 100%; max-width: 900px; margin: 0 auto;">
+      <table class="header-table">
+        <tr>
+          <td class="header-logo" rowspan="4">
+            <img src="${logoBase64}" alt="LOGO" style="max-width:80px; max-height:40px;" />
+          </td>
+          <td class="header-title" rowspan="4" style="vertical-align: middle;">
+            Ficha Cliente - Obra
+          </td>
+          <td class="header-meta">Código: RPG-05-02</td>
+        </tr>
+        <tr>
+          <td class="header-meta">Fecha de emisión: ${fechaEmision}</td>
+        </tr>
+        <tr>
+          <td class="header-meta">Revisión N°: 03</td>
+        </tr>
+        <tr>
+          <td class="header-meta">Página 1 de 1</td>
+        </tr>
+      </table>
       <div class="pdf-container">
-        <div class="header">
-          <div class="header-left">
-            <div class="logo-title">
-              <img src="${logoBase64}" class="logo" />
-              <span class="title">PAMPAUSTRAL</span>
-            </div>
-            <div class="subtitle">Laboratorio acreditado de acuerdo con la Norma NCh-ISO/IEC 17025:2017</div>
-          </div>
-          <div class="header-right">
-            <div><span class="label">N° Obra:</span> ${obra.numeroObra}</div>
-            <div><span class="label">Fecha Ingreso:</span> ${new Date(obra.fechaIngreso).toLocaleDateString('es-CL')}</div>
-            <div><span class="label">Estado:</span> ${obra.estadoObra}</div>
-          </div>
+        <div class="section">
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+            <tr>
+              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+                Datos Principales
+              </th>
+            </tr>
+            <tr>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>N° Obra:</b> ${obra.numeroObra}<br/>
+                <b>RUT Cliente:</b> ${obra.rut}
+              </td>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Fecha Ingreso:</b> ${obra.fechaIngreso ? new Date(obra.fechaIngreso).toLocaleDateString('es-CL') : '-'}<br/>
+                <b>Nombre Cliente:</b> ${obra.nombreCliente}
+              </td>
+              <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Estado Obra:</b> ${obra.estadoObra}
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- Datos Principales -->
         <div class="section">
-          <div class="section-title">Datos Principales</div>
-          <div class="grid-container">
-            <div class="grid-item">
-              <div class="label">Número Obra</div>
-              <div class="value">${obra.numeroObra}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Fecha Ingreso</div>
-              <div class="value">${obra.fechaIngreso ? new Date(obra.fechaIngreso).toLocaleDateString() : '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Estado Obra</div>
-              <div class="value">${obra.estadoObra}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">RUT Cliente</div>
-              <div class="value">${obra.rut}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Nombre Cliente</div>
-              <div class="value">${obra.nombreCliente}</div>
-            </div>
-          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px; border:1px solid #ccc;">
+            <tr>
+              <th colspan="2" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
+                Antecedentes
+              </th>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 6px; border:none;">
+                <b>Nombre Obra:</b> ${obra.nombreObra}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 6px; border:none;">
+                <b>Dirección:</b> ${obra.direccion}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px; border:none;">
+                <b>Región:</b> ${obra.region}
+              </td>
+              <td style="padding: 6px; border:none;">
+                <b>Comuna:</b> ${obra.comuna}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px; border:none;">
+                <b>Sector:</b> ${obra.sector || '-'}
+              </td>
+              <td style="padding: 6px; border:none;">
+                <b>Georreferencia:</b> ${obra.georreferencia || '-'}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px; border:none;">
+                <b>Referencia:</b> ${obra.referencia || '-'}
+              </td>
+              <td style="padding: 6px; border:none;">
+                <b>Mandante:</b> ${obra.mandante || '-'}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px; border:none;">
+                <b>Informe a Mandante:</b> ${obra.informeMandante ? 'Sí' : 'No'}
+              </td>
+              <td style="padding: 6px; border:none;">
+                ${obra.informeMandante ? `<b>Texto Mandante:</b> ${obra.textoMandante || '-'}` : ''}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 6px; border:none;">
+                <b>Correos:</b> ${Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- Antecedentes -->
         <div class="section">
-          <div class="section-title">Antecedentes</div>
-          <div class="grid-container">
-            <div class="grid-item" style="grid-column: span 2;">
-              <div class="label">Nombre Obra</div>
-              <div class="value">${obra.nombreObra}</div>
-            </div>
-            <div class="grid-item" style="grid-column: span 2;">
-              <div class="label">Dirección</div>
-              <div class="value">${obra.direccion}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Región</div>
-              <div class="value">${obra.region}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Comuna</div>
-              <div class="value">${obra.comuna}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Sector</div>
-              <div class="value">${obra.sector || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Georreferencia</div>
-              <div class="value">${obra.georreferencia || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Referencia</div>
-              <div class="value">${obra.referencia || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Mandante</div>
-              <div class="value">${obra.mandante || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Informe a Mandante</div>
-              <div class="value">${obra.informeMandante ? 'Sí' : 'No'}</div>
-            </div>
-            ${obra.informeMandante ? `
-              <div class="grid-item" style="grid-column: span 2;">
-                <div class="label">Texto Mandante</div>
-                <div class="value">${obra.textoMandante || '-'}</div>
-              </div>
-            ` : ''}
-            <div class="grid-item" style="grid-column: span 2;">
-              <div class="label">Correos</div>
-              <div class="value">${Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}</div>
-            </div>
-          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+            <tr>
+              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+                Requisitos
+              </th>
+            </tr>
+            <tr>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Acreditación Personal:</b> ${obra.acreditacionPersonal ? 'Sí' : 'No'}<br/>
+                <b>Especificaciones Técnicas:</b> ${obra.especificacionesTecnicas ? 'Sí' : 'No'}<br/>
+              </td>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Acreditación Equipos:</b> ${obra.acreditacionEquipos ? 'Sí' : 'No'}<br/>
+                <b>Carta Compromiso:</b> ${obra.cartaCompromiso ? 'Sí' : 'No'}<br/>
+              </td>
+              <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Mandato y Envío de Informes a SERVIU:</b> ${obra.mandatoServiu ? 'Sí' : 'No'}<br/>
+                <b>Otros Requisitos:</b> ${obra.otrosRequisitos || '-'}
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- Requisitos -->
         <div class="section">
-          <div class="section-title">Requisitos</div>
-          <div class="grid-container">
-            <div class="grid-item">
-              <div class="label">Acreditación Personal</div>
-              <div class="value">${obra.acreditacionPersonal ? 'Sí' : 'No'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Especificaciones Técnicas</div>
-              <div class="value">${obra.especificacionesTecnicas ? 'Sí' : 'No'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Acreditación Equipos</div>
-              <div class="value">${obra.acreditacionEquipos ? 'Sí' : 'No'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Carta Compromiso</div>
-              <div class="value">${obra.cartaCompromiso ? 'Sí' : 'No'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Mandato y Envío de Informes a SERVIU</div>
-              <div class="value">${obra.mandatoServiu ? 'Sí' : 'No'}</div>
-            </div>
-            <div class="grid-item" style="grid-column: span 2;">
-              <div class="label">Otros Requisitos</div>
-              <div class="value">${obra.otrosRequisitos || '-'}</div>
-            </div>
-          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+            <tr>
+              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+                Facturación
+              </th>
+            </tr>
+            <tr>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Razón Social:</b> ${obra.razonSocial}<br/>
+                <b>RUT:</b> ${obra.rut}<br/>
+                <b>Giro:</b> ${obra.giro || '-'}<br/>
+              </td>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Dirección Comercial:</b> ${obra.direccionComercial}<br/>
+                <b>Comuna:</b> ${obra.comunaFacturacion || '-'}<br/>
+                <b>Teléfono:</b> ${obra.telefonoFacturacion || '-'}<br/>
+              </td>
+              <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Lista de Precios:</b> ${obra.listaPrecio?.nombre || '-'}<br/>
+                <b>Mail Recepción Factura:</b> ${obra.mailRecepcionFactura || '-'}<br/>
+                <b>RUT Representante Legal:</b> ${obra.rutRepresentanteLegal || '-'}<br/>
+                <b>Representante Legal:</b> ${obra.representanteLegal || '-'}
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- Facturación -->
         <div class="section">
-          <div class="section-title">Facturación</div>
-          <div class="grid-container">
-            <div class="grid-item">
-              <div class="label">Razón Social</div>
-              <div class="value">${obra.razonSocial}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">RUT</div>
-              <div class="value">${obra.rut}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Giro</div>
-              <div class="value">${obra.giro || '-'}</div>
-            </div>
-            <div class="grid-item" style="grid-column: span 2;">
-              <div class="label">Dirección Comercial</div>
-              <div class="value">${obra.direccionComercial}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Comuna</div>
-              <div class="value">${obra.comunaFacturacion || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Teléfono</div>
-              <div class="value">${obra.telefonoFacturacion || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Lista de Precios</div>
-              <div class="value">${obra.listaPrecio?.nombre || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Mail Recepción Factura</div>
-              <div class="value">${obra.mailRecepcionFactura || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">RUT Representante Legal</div>
-              <div class="value">${obra.rutRepresentanteLegal || '-'}</div>
-            </div>
-            <div class="grid-item">
-              <div class="label">Representante Legal</div>
-              <div class="value">${obra.representanteLegal || '-'}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Contactos -->
-        <div class="section">
-          <div class="section-title">Contactos</div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Cargo</th>
-                <th>Email</th>
-                <th>Teléfono</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${obra.contactos
-                ?.sort((a, b) => {
-                  if (a.isPrincipal && !b.isPrincipal) return -1
-                  if (!a.isPrincipal && b.isPrincipal) return 1
-                  return 0
-                })
-                .map((contact: any) => `
-                  <tr>
-                    <td>${contact.nombre}${contact.isPrincipal ? ' (Principal)' : ''}</td>
-                    <td>${contact.rol || '-'}</td>
-                    <td>${contact.email || '-'}</td>
-                    <td>${contact.telefono1 || '-'}</td>
-                  </tr>
-                `).join('') || '<tr><td colspan="4">No hay contactos registrados</td></tr>'}
-            </tbody>
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+            <tr>
+              <th colspan="4" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+                Contactos
+              </th>
+            </tr>
+            <tr>
+              <th style="border:1px solid #ccc; padding:6px;">Nombre</th>
+              <th style="border:1px solid #ccc; padding:6px;">Cargo</th>
+              <th style="border:1px solid #ccc; padding:6px;">Email</th>
+              <th style="border:1px solid #ccc; padding:6px;">Teléfono</th>
+            </tr>
+            ${obra.contactos && obra.contactos.length > 0 ? obra.contactos
+              .sort((a: any, b: any) => {
+                if (a.isPrincipal && !b.isPrincipal) return -1;
+                if (!a.isPrincipal && b.isPrincipal) return 1;
+                return 0;
+              })
+              .map((contact: any) => `
+                <tr>
+                  <td style="border:1px solid #ccc; padding:6px;">${contact.nombre}${contact.isPrincipal ? ' (Principal)' : ''}</td>
+                  <td style="border:1px solid #ccc; padding:6px;">${contact.rol || '-'}</td>
+                  <td style="border:1px solid #ccc; padding:6px;">${contact.email || '-'}</td>
+                  <td style="border:1px solid #ccc; padding:6px;">${contact.telefono1 || '-'}</td>
+                </tr>
+              `).join('') : `<tr><td colspan="4" style="border:1px solid #ccc; padding:6px; text-align:center;">No hay contactos registrados</td></tr>`}
           </table>
         </div>
       </div>
@@ -282,7 +286,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     await page.setContent(html, { waitUntil: 'networkidle0' })
     const pdfBuffer = await page.pdf({
       format: 'A4',
-      margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' }
+      margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
+      scale: 0.8
     })
     await browser.close()
 
