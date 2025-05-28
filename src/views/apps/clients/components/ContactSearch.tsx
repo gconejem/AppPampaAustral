@@ -10,6 +10,7 @@ import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 
 import type { Contacto } from '@/types/forms/cliente'
+import { CARGOS_OBRA } from '@/data/obraData'
 
 interface ContactSearchProps {
   onContactSelect: (contact: Contacto) => void
@@ -100,7 +101,10 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
       inputValue={inputValue}
       onInputChange={(_, newInputValue) => handleSearch(newInputValue)}
       isOptionEqualToValue={(option, value) => option.email === value.email}
-      getOptionLabel={option => `${option.nombre}${option.cargo ? ` - ${option.cargo}` : ''}${option.email ? ` (${option.email})` : ''}`}
+      getOptionLabel={option => {
+        const cargoLabel = option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : ''
+        return `${option.nombre}${cargoLabel ? ` - ${cargoLabel}` : ''}${option.email ? ` (${option.email})` : ''}`
+      }}
       options={options}
       loading={loading}
       noOptionsText={inputValue.length < 2 ? 'Ingrese al menos 2 caracteres para buscar' : 'No se encontraron contactos'}
@@ -108,7 +112,7 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
         <ListItem {...props}>
           <ListItemText
             primary={option.nombre}
-            secondary={`${option.cargo || 'Sin cargo'} - ${option.email || 'Sin email'} - ${option.telefono1 || 'Sin teléfono'}`}
+            secondary={`${option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : 'Sin cargo'} - ${option.email || 'Sin email'} - ${option.telefono1 || 'Sin teléfono'}`}
           />
         </ListItem>
       )}
