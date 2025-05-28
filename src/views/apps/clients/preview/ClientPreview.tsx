@@ -213,7 +213,12 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
                   .sort((a, b) => (b.isPrincipal ? 1 : -1))
                   .map((cc, index) => (
                   <TableRow key={index}>
-                    <TableCell>{cc.nombre || cc.contacto?.nombre}</TableCell>
+                    <TableCell>
+                      {cc.nombre || cc.contacto?.nombre}
+                      {cc.isPrincipal && (
+                        <span className='ml-2 text-xs text-primary'>Principal</span>
+                      )}
+                    </TableCell>
                     <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
                     <TableCell>{cc.email || cc.contacto?.email}</TableCell>
                     <TableCell>{cc.telefono1 || cc.contacto?.telefono1}</TableCell>
