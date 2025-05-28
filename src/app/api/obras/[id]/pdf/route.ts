@@ -3,6 +3,21 @@ import { prisma } from '@/lib/prisma'
 import puppeteer from 'puppeteer'
 import fs from 'fs'
 
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
 function renderObraHTML(obra: any, logoBase64: string) {
   // Formatear la fecha de emisión como dd.mm.yyyy
   const fechaEmision = obra.fechaIngreso
@@ -237,7 +252,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
               .map((contact: any) => `
                 <tr>
                   <td style="border:1px solid #ccc; padding:6px;">${contact.nombre}${contact.isPrincipal ? ' (Principal)' : ''}</td>
-                  <td style="border:1px solid #ccc; padding:6px;">${contact.rol || '-'}</td>
+                  <td style="border:1px solid #ccc; padding:6px;">${ROLES_CONTACTO.find(rol => rol.value === contact.rol)?.label || contact.rol || '-'}</td>
                   <td style="border:1px solid #ccc; padding:6px;">${contact.email || '-'}</td>
                   <td style="border:1px solid #ccc; padding:6px;">${contact.telefono1 || '-'}</td>
                 </tr>
