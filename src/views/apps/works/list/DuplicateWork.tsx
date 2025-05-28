@@ -390,6 +390,76 @@ const DuplicateWork = (props: Props) => {
     setSelectedComuna('');
   };
 
+  const editarContacto = (index: number) => {
+    setEditingContactIndex(index)
+    const contacto = contactos[index]
+
+    console.log('contacto', contacto)
+
+    // Encontrar el rol correspondiente en CARGOS_OBRA
+    const rolEncontrado = CARGOS_OBRA.find(r => r.value === contacto.rol)
+
+    setEditingContact({
+      rol: rolEncontrado?.value || contacto.rol || '',
+      nombre: contacto.nombre || '',
+      email: contacto.email || '',
+      telefono1: contacto.telefono1 || '',
+      telefono2: contacto.telefono2 || '',
+      isEditing: true,
+      contactId: contacto.contactId,
+      isPrincipal: contacto.isPrincipal
+    })
+  }
+
+  const guardarEdicion = () => {
+    if (editingContactIndex === null) return
+
+    // Validaciones
+    if (!editingContact.nombre || !editingContact.email || !validateEmail(editingContact.email)) {
+      toast.error('Por favor complete los campos requeridos correctamente')
+      return
+    }
+
+    const updatedContactos = [...contactos]
+    updatedContactos[editingContactIndex] = {
+      ...contactos[editingContactIndex],
+      ...editingContact
+    }
+
+    setContactos(updatedContactos)
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: '',
+      isEditing: true,
+      isPrincipal: false
+    })
+
+    toast.success('Contacto actualizado exitosamente')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      telefono2: '',
+      isEditing: true,
+      isPrincipal: false
+    })
+  }
+
+  const eliminarContacto = (index: number) => {
+    const updatedContactos = contactos.filter((_, i) => i !== index)
+    setContactos(updatedContactos)
+    toast.success('Contacto eliminado exitosamente')
+  }
+
   return (
     <Drawer
       open={open}
@@ -779,204 +849,118 @@ const DuplicateWork = (props: Props) => {
 
             <TableContainer sx={{ mt: 2 }}>
               <Table>
-                <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell
-                      sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
-                    >
-                      CARGO
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
-                    >
-                      NOMBRE
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
-                    >
-                      EMAIL
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
-                    >
-                      TELÉFONO 1
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}
-                    >
-                      TELÉFONO 2
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0' }}>
-                      ACCIÓN
-                    </TableCell>
+                    <TableCell>CARGO</TableCell>
+                    <TableCell>NOMBRE</TableCell>
+                    <TableCell>EMAIL</TableCell>
+                    <TableCell>TELÉFONO</TableCell>
+                    <TableCell>ACCIÓN</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {contactos.map((contacto, index) => (
                     <TableRow key={index}>
-                      <TableCell>
-                        <FormControl fullWidth size='small'>
-                          <Select
-                            value={contacto.rol}
-                            onChange={e => {
-                              const updatedContactos = [...contactos]
-
-                              updatedContactos[index] = {
-                                ...contacto,
-                                rol: e.target.value
-                              }
-                              setContactos(updatedContactos)
-                            }}
-                            disabled={index === 0}
-                          >
-                            {CARGOS_OBRA.map(cargo => (
-                              <MenuItem key={cargo.value} value={cargo.value}>
-                                {cargo.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        {contacto.rol === 'Otro' && (
-                          <TextField
-                            size='small'
-                            fullWidth
-                            placeholder='Especifique el cargo'
-                            value={contacto.rolEspecifico || ''}
-                            onChange={e => {
-                              const updatedContactos = [...contactos]
-
-                              updatedContactos[index] = {
-                                ...contacto,
-                                rolEspecifico: e.target.value
-                              }
-                              setContactos(updatedContactos)
-                            }}
-                            sx={{ mt: 1 }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          value={contacto.nombre}
-                          onChange={e => {
-                            const updatedContactos = [...contactos]
-
-                            updatedContactos[index] = {
-                              ...contacto,
-                              nombre: e.target.value
-                            }
-                            setContactos(updatedContactos)
-                          }}
-                          placeholder='Seleccionar contacto'
-                          fullWidth
-                          size='small'
-                          InputProps={{
-                            readOnly: index === 0
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          value={contacto.email}
-                          onChange={e => {
-                            const updatedContactos = [...contactos]
-
-                            updatedContactos[index] = {
-                              ...contacto,
-                              email: e.target.value
-                            }
-                            setContactos(updatedContactos)
-                          }}
-                          placeholder='Email'
-                          fullWidth
-                          size='small'
-                          InputProps={{
-                            readOnly: index === 0
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          value={contacto.telefono1}
-                          onChange={e => {
-                            const formatted = formatPhone(e.target.value)
-                            const updatedContactos = [...contactos]
-
-                            updatedContactos[index] = {
-                              ...contacto,
-                              telefono1: formatted
-                            }
-                            setContactos(updatedContactos)
-                          }}
-                          placeholder='Teléfono 1'
-                          fullWidth
-                          size='small'
-                          InputProps={{
-                            readOnly: index === 0
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          value={contacto.telefono2 || ''}
-                          onChange={e => {
-                            const formatted = formatPhone(e.target.value)
-                            const updatedContactos = [...contactos]
-
-                            updatedContactos[index] = {
-                              ...contacto,
-                              telefono2: formatted
-                            }
-                            setContactos(updatedContactos)
-                          }}
-                          placeholder='Teléfono 2'
-                          fullWidth
-                          size='small'
-                          InputProps={{
-                            readOnly: index === 0
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex items-center'>
-                          <IconButton
-                            onClick={() => {
-                              const updatedContactos = contactos.map((c, i) => ({
-                                ...c,
-                                isPrincipal: i === index ? !c.isPrincipal : false
-                              }))
-
-                              setContactos(updatedContactos)
-                            }}
-                            color={contacto.isPrincipal ? 'primary' : 'default'}
-                            sx={{ mr: 1 }}
-                          >
-                            <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                          </IconButton>
-                          {index === 0 ? (
-                            // Para el Encargado de Obra, mostrar solo el botón de cambiar
-                            <IconButton
-                              color='primary'
-                              onClick={() => {
-                                setContactos([contactosPrincipales[0], ...contactos.slice(1)])
-                                toast.success('Puede seleccionar un nuevo Encargado de Obra')
+                      {editingContactIndex === index ? (
+                        // Modo edición
+                        <>
+                          <TableCell>
+                            {index === 0 && contacto.rol === 'encargado_obra' ? (
+                              <TextField value='Encargado de Obra' fullWidth size='small' disabled />
+                            ) : (
+                              <FormControl fullWidth size='small'>
+                                <Select
+                                  value={editingContact.rol}
+                                  onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                                >
+                                  {CARGOS_OBRA.map(rol => (
+                                    <MenuItem key={rol.value} value={rol.value}>
+                                      {rol.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              fullWidth
+                              size='small'
+                              value={editingContact.nombre}
+                              onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              fullWidth
+                              size='small'
+                              value={editingContact.email}
+                              onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                              error={!validateEmail(editingContact.email)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              fullWidth
+                              size='small'
+                              value={editingContact.telefono1}
+                              onChange={e => {
+                                const formatted = e.target.value.replace(/[^0-9+]/g, '')
+                                setEditingContact({ ...editingContact, telefono1: formatted })
                               }}
-                            >
-                              <i className='ri-refresh-line' />
-                            </IconButton>
-                          ) : (
-                            // Para los demás contactos, mostrar los botones de edición y eliminación
-                            <>
-                              <IconButton color='info' onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton color='success' onClick={guardarEdicion}>
+                                <i className='ri-check-line' />
+                              </IconButton>
+                              <IconButton color='error' onClick={handleCancelEdit}>
+                                <i className='ri-close-line' />
+                              </IconButton>
+                              <IconButton
+                                color={editingContact.isPrincipal ? 'warning' : 'default'}
+                                onClick={() =>
+                                  setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
+                                }
+                              >
+                                <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </>
+                      ) : (
+                        // Modo visualización
+                        <>
+                          <TableCell>{CARGOS_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
+                          <TableCell>{contacto.nombre}</TableCell>
+                          <TableCell>{contacto.email}</TableCell>
+                          <TableCell>{contacto.telefono1}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton color='info' onClick={() => editarContacto(index)}>
                                 <i className='ri-edit-line' />
                               </IconButton>
                               <IconButton color='error' onClick={() => eliminarContacto(index)}>
                                 <i className='ri-delete-bin-line' />
                               </IconButton>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                              <IconButton
+                                color={contacto.isPrincipal ? 'warning' : 'default'}
+                                onClick={() => {
+                                  const updatedContactos = contactos.map(c => ({
+                                    ...c,
+                                    isPrincipal: c.contactId === contacto.contactId ? !c.isPrincipal : false
+                                  }))
+
+                                  setContactos(updatedContactos)
+                                }}
+                              >
+                                <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

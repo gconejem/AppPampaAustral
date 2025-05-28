@@ -413,7 +413,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
     setEditingContact({
       obraId: contacto.obraId,
-      rol: rolEncontrado?.label || contacto.rol || '',
+      rol: rolEncontrado?.value || contacto.rol || '',
       nombre: contacto.nombre || '',
       email: contacto.email || '',
       telefono1: contacto.telefono1 || '',
@@ -823,7 +823,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                               onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
                             >
                               {ROLES_CONTACTO.map(rol => (
-                                <MenuItem key={rol.value} value={rol.label}>
+                                <MenuItem key={rol.value} value={rol.value}>
                                   {rol.label}
                                 </MenuItem>
                               ))}
