@@ -4,6 +4,21 @@ import axios from 'axios'
 
 import type { Obra, ContactoObra } from '@/types/forms/obra'
 
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
 interface WorkPreviewProps {
   obra: Obra | null
 }
@@ -302,7 +317,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
                         <span className='ml-2 text-xs text-primary'>Principal</span>
                       )}
                     </td>
-                    <td className='py-3 px-4'>{contact.rol}</td>
+                    <td className='py-3 px-4'>{ROLES_CONTACTO.find(r => r.value === contact.rol)?.label || contact.rol}</td>
                     <td className='py-3 px-4'>{contact.email}</td>
                     <td className='py-3 px-4'>{contact.telefono1}</td>
                   </tr>
