@@ -123,54 +123,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       estadoObra: 'activa',
       fechaIngreso: new Date().toISOString().split('T')[0]
     },
-    mode: 'onChange',
-    rules: {
-      numeroObra: {
-        required: 'El número de obra es requerido',
-        pattern: {
-          value: /^\d+$/,
-          message: 'Solo se permiten números'
-        }
-      },
-      fechaIngreso: {
-        required: 'La fecha es requerida',
-        validate: value => {
-          const date = new Date(value)
-
-          return date <= new Date() || 'La fecha no puede ser futura'
-        }
-      },
-      rut: {
-        required: 'El RUT es requerido',
-        validate: value => validateRut(value) || 'RUT inválido'
-      },
-      giro: {
-        required: 'El giro es requerido',
-        pattern: {
-          value: /^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚ\s]+$/,
-          message: 'Solo se permiten letras y números'
-        }
-      },
-      telefonoFacturacion: {
-        required: 'El teléfono es requerido'
-      },
-      mailRecepcionFactura: {
-        required: 'El email es requerido',
-        validate: value => validateEmail(value) || 'Email inválido'
-      },
-      rutRepresentanteLegal: {
-        validate: value => {
-          if (!value) return true // Campo opcional
-          return validateRut(value) || 'RUT inválido'
-        }
-      },
-      representanteLegal: {
-        validate: value => {
-          if (!value) return true // Campo opcional
-          return /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/.test(value) || 'Solo se permiten letras y espacios'
-        }
-      }
-    }
+    mode: 'onChange'
   })
 
   // Efecto para cargar los datos cuando se abre el drawer
@@ -258,13 +211,19 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     setValue('comuna', comunaValue)
   }
 
-  // Validación de email
-  const validateEmail = (email: string | undefined) => {
-    if (!email) return false
-    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
-
-    return emailRegex.test(email)
-  }
+  // Validación de múltiples emails
+  const validateMultipleEmails = (value: string | string[] | undefined) => {
+    if (!value) return false;
+    let emails: string[] = [];
+    if (Array.isArray(value)) {
+      emails = value.map(email => email.trim()).filter(email => email !== '');
+    } else if (typeof value === 'string') {
+      emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
+    }
+    if (emails.length === 0) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emails.every(email => emailRegex.test(email));
+  };
 
   // Validación de teléfono
   const validatePhone = (phone: string | undefined) => {
@@ -312,12 +271,17 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
       console.log('formData', formData)
 
-      // Asegurarnos de que los booleanos se envíen correctamente
+      let mailRecepcionFactura: string[] = []
+      if (Array.isArray(formData.mailRecepcionFactura)) {
+        mailRecepcionFactura = formData.mailRecepcionFactura.map(email => email.trim()).filter(email => email !== '')
+      } else if (typeof formData.mailRecepcionFactura === 'string') {
+        mailRecepcionFactura = formData.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '')
+      }
+
       const dataToSubmit = {
         ...formData,
+        mailRecepcionFactura,
         fechaIngreso: formData.fechaIngreso ? new Date(formData.fechaIngreso).toISOString() : null,
-
-        // Asegurar que los booleanos sean true/false y no undefined
         informeMandante: Boolean(formData.informeMandante),
         acreditacionPersonal: Boolean(formData.acreditacionPersonal),
         especificacionesTecnicas: Boolean(formData.especificacionesTecnicas),
@@ -1045,7 +1009,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               control={control}
               rules={{
                 required: 'El email es requerido',
-                validate: value => validateEmail(value) || 'Email inválido'
+                validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
               }}
               render={({ field }) => (
                 <TextField
@@ -1053,7 +1017,13 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   fullWidth
                   label='Mail Recepción Factura *'
                   error={Boolean(errors.mailRecepcionFactura)}
-                  helperText={errors.mailRecepcionFactura?.message}
+                  helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
+                  placeholder='ejemplo@email.com, otro@email.com'
+                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                  onChange={e => {
+                    const value = e.target.value;
+                    field.onChange(value);
+                  }}
                 />
               )}
             />

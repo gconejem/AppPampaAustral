@@ -99,6 +99,20 @@ const validatePhone = (phone: string) => {
   return /^\+?[0-9]+$/.test(cleanPhone);
 };
 
+// Validación de múltiples emails
+const validateMultipleEmails = (value: string | string[] | undefined) => {
+  if (!value) return false;
+  let emails: string[] = [];
+  if (Array.isArray(value)) {
+    emails = value.map(email => email.trim()).filter(email => email !== '');
+  } else if (typeof value === 'string') {
+    emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
+  }
+  if (emails.length === 0) return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emails.every(email => emailRegex.test(email));
+};
+
 const DuplicateWork = (props: Props) => {
   const { open, handleClose: onClose, setData, setFilteredData, initialData } = props
 
@@ -329,6 +343,14 @@ const DuplicateWork = (props: Props) => {
         }
       }
 
+      // Procesar mailRecepcionFactura
+      let mailRecepcionFactura: string[] = [];
+      if (Array.isArray(data.mailRecepcionFactura)) {
+        mailRecepcionFactura = data.mailRecepcionFactura.map(email => email.trim()).filter(email => email !== '');
+      } else if (typeof data.mailRecepcionFactura === 'string') {
+        mailRecepcionFactura = data.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '');
+      }
+
       if (!data.numeroObra) {
         data.numeroObra = lastObraNumber;
       }
@@ -350,7 +372,8 @@ const DuplicateWork = (props: Props) => {
           telefono2: contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
-        correos: Array.isArray(data.correos) ? data.correos : []
+        correos: Array.isArray(data.correos) ? data.correos : [],
+        mailRecepcionFactura
       };
       const response = await axios.post('/api/obras', payload);
       if (response.data) {
@@ -1113,10 +1136,7 @@ const DuplicateWork = (props: Props) => {
                   control={control}
                   rules={{
                     required: 'El email es requerido',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Ingrese un correo electrónico válido'
-                    }
+                    validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
                   }}
                   render={({ field }) => (
                     <TextField
@@ -1124,8 +1144,13 @@ const DuplicateWork = (props: Props) => {
                       fullWidth
                       label='Mail Recepción Factura *'
                       error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message}
-                      placeholder='ejemplo@dominio.com'
+                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
+                      placeholder='ejemplo@email.com, otro@email.com'
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        field.onChange(value);
+                      }}
                     />
                   )}
                 />
