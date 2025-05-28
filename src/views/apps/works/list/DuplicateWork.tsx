@@ -113,6 +113,26 @@ const validateMultipleEmails = (value: string | string[] | undefined) => {
   return emails.every(email => emailRegex.test(email));
 };
 
+// Función reutilizable para obtener el siguiente número de obra
+const fetchLastObraNumber = async (setLastObraNumber: (n: string) => void, setValue: (name: string, value: any) => void) => {
+  try {
+    const response = await axios.get('/api/obras')
+    const obras: Obra[] = response.data
+    if (obras && obras.length > 0) {
+      const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
+      const nextNumber = (maxNumber + 1).toString()
+      setLastObraNumber(nextNumber)
+      setValue('numeroObra', nextNumber)
+    } else {
+      setLastObraNumber('1')
+      setValue('numeroObra', '1')
+    }
+  } catch (error) {
+    console.error('Error al obtener el último número de obra:', error)
+    toast.error('Error al obtener el número de obra')
+  }
+};
+
 const DuplicateWork = (props: Props) => {
   const { open, handleClose: onClose, setData, setFilteredData, initialData } = props
 
@@ -195,26 +215,10 @@ const DuplicateWork = (props: Props) => {
     : null;
 
   useEffect(() => {
-    const fetchLastObraNumber = async () => {
-      try {
-        const response = await axios.get('/api/obras')
-        const obras: Obra[] = response.data
-        if (obras && obras.length > 0) {
-          const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
-          const nextNumber = (maxNumber + 1).toString()
-          setLastObraNumber(nextNumber)
-          setValue('numeroObra', nextNumber)
-        } else {
-          setLastObraNumber('1')
-          setValue('numeroObra', '1')
-        }
-      } catch (error) {
-        console.error('Error al obtener el último número de obra:', error)
-        toast.error('Error al obtener el número de obra')
-      }
+    if (open) {
+      fetchLastObraNumber(setLastObraNumber, setValue)
     }
-    fetchLastObraNumber()
-  }, [setValue])
+  }, [open, setValue])
 
   useEffect(() => {
     const fetchListasPrecios = async () => {
@@ -387,9 +391,9 @@ const DuplicateWork = (props: Props) => {
             color: '#fff'
           }
         });
+        await fetchLastObraNumber(setLastObraNumber, setValue);
         resetForm();
         setContactos(contactosPrincipales);
-        setValue('numeroObra', lastObraNumber);
         onClose();
       }
     } catch (error: any) {

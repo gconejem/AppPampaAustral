@@ -38,6 +38,7 @@ import Star from '@mui/icons-material/Star'
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
+import { UseFormSetValue } from 'react-hook-form'
 
 // Utils Imports
 import { validateRut, formatRut } from '@/utils/rut-utils'
@@ -171,33 +172,35 @@ const AddObraDrawer = (props: Props) => {
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } =
     useRegionesYComunas()
 
-  // Agregar useEffect para obtener el último número de obra
-  useEffect(() => {
-    const fetchLastObraNumber = async () => {
-      try {
-        const response = await axios.get('/api/obras')
-        const obras: Obra[] = response.data
-
-        if (obras && obras.length > 0) {
-          // Encontrar el número más alto
-          const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
-          const nextNumber = (maxNumber + 1).toString()
-
-          setLastObraNumber(nextNumber)
-          setValue('numeroObra', nextNumber)
-        } else {
-          // Si no hay obras, empezar desde 1
-          setLastObraNumber('1')
-          setValue('numeroObra', '1')
-        }
-      } catch (error) {
-        console.error('Error al obtener el último número de obra:', error)
-        toast.error('Error al obtener el número de obra')
+  // Función reutilizable para obtener el siguiente número de obra
+  const fetchLastObraNumber = async (
+    setLastObraNumber: (n: string) => void,
+    setValue: UseFormSetValue<FormValidateType>
+  ) => {
+    try {
+      const response = await axios.get('/api/obras')
+      const obras: Obra[] = response.data
+      if (obras && obras.length > 0) {
+        const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
+        const nextNumber = (maxNumber + 1).toString()
+        setLastObraNumber(nextNumber)
+        setValue('numeroObra', nextNumber)
+      } else {
+        setLastObraNumber('1')
+        setValue('numeroObra', '1')
       }
+    } catch (error) {
+      console.error('Error al obtener el último número de obra:', error)
+      toast.error('Error al obtener el número de obra')
     }
+  };
 
-    fetchLastObraNumber()
-  }, [setValue])
+  // useEffect inicial: solo cuando se abre el formulario
+  useEffect(() => {
+    if (open) {
+      fetchLastObraNumber(setLastObraNumber, setValue)
+    }
+  }, [open, setValue])
 
   // Cargar listas de precios
   useEffect(() => {
@@ -260,7 +263,6 @@ const AddObraDrawer = (props: Props) => {
         // Actualizar ambos estados inmediatamente
         props.setData(prevData => [...prevData, response.data])
         props.setFilteredData(prevData => [...prevData, response.data])
-
         toast.success('Obra creada exitosamente', {
           duration: 3000,
           position: 'top-right',
@@ -269,15 +271,9 @@ const AddObraDrawer = (props: Props) => {
             color: '#fff'
           }
         })
-
-        // Obtener el nuevo número de obra
-        const newObraNumber = (parseInt(lastObraNumber) + 1).toString()
-        setLastObraNumber(newObraNumber)
-
-        // Limpiar formulario y estados
+        // Limpiar formulario y estados primero
         resetForm()
         setContactos([contactoVacio])
-        setValue('numeroObra', newObraNumber)
         setSelectedRegion('')
         setSelectedComuna('')
         setValue('region', '')
@@ -287,7 +283,6 @@ const AddObraDrawer = (props: Props) => {
         setValue('textoMandante', '')
         setValue('otrasReferencias', '')
         setValue('otrosRequisitos', '')
-        
         // Limpiar campos de facturación
         setValue('telefono', '')
         setValue('giro', '')
@@ -297,7 +292,6 @@ const AddObraDrawer = (props: Props) => {
         setValue('mailRecepcionFactura', '')
         setValue('rutRepresentanteLegal', '')
         setValue('representanteLegal', '')
-        
         // Limpiar checkboxes
         setValue('acreditacionPersonal', false)
         setValue('especificacionesTecnicas', false)
@@ -308,7 +302,8 @@ const AddObraDrawer = (props: Props) => {
         setValue('hes', false)
         setValue('oc', false)
         setValue('envioInformes', false)
-
+        // Ahora sí, actualizar el número de obra consultando a la base de datos
+        await fetchLastObraNumber(setLastObraNumber, setValue)
         props.handleClose()
       }
     } catch (error: any) {
