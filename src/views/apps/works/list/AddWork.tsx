@@ -147,37 +147,26 @@ const AddObraDrawer = (props: Props) => {
   })
 
   // States
-  const [contactos, setContactos] = useState<ContactoObraForm[]>([])
+  const contactoVacio: ContactoObraForm = {
+    contacto: {
+      nombre: '',
+      cargo: 'encargado_obra',
+      email: '',
+      telefono1: '',
+      telefono2: '',
+      contactId: undefined
+    },
+    cargo: 'encargado_obra',
+    isPrincipal: false
+  };
+
+  const [contactos, setContactos] = useState<ContactoObraForm[]>([contactoVacio]);
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
   const [lastObraNumber, setLastObraNumber] = useState<string>('')
   const [listasPrecios, setListasPrecios] = useState<Array<{ value: string; label: string }>>([])
   const [addContactOpen, setAddContactOpen] = useState(false)
   const [refreshContactSearch, setRefreshContactSearch] = useState(0)
-
-  const contactosPrincipales: ContactoObraForm[] = [
-    {
-      contacto: {
-        nombre: '',
-        cargo: 'encargado_obra',
-        email: '',
-        telefono1: '',
-        telefono2: '',
-        contactId: undefined
-      },
-      cargo: 'encargado_obra',
-      isPrincipal: false
-    }
-  ]
-
-  const [editingContact, setEditingContact] = useState<ContactoObraForm['contacto']>({
-    nombre: '',
-    cargo: '',
-    email: '',
-    telefono1: '',
-    telefono2: '',
-    contactId: undefined
-  })
 
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } =
     useRegionesYComunas()
@@ -271,7 +260,7 @@ const AddObraDrawer = (props: Props) => {
         region: selectedRegion,
         comuna: selectedComuna,
         estado: 'activo',
-        estadoObra: data.estadoObra || 'Activo',
+        estadoObra: data.estadoObra || 'Activa',
         fechaIngreso: new Date(data.fechaIngreso).toISOString(),
         mandante: data.mandante || 'No definido',
         telefonoFacturacion: data.telefono || '',
@@ -312,7 +301,7 @@ const AddObraDrawer = (props: Props) => {
 
         // Limpiar formulario y estados
         resetForm()
-        setContactos(contactosPrincipales)
+        setContactos([contactoVacio])
         setValue('numeroObra', newObraNumber)
         setSelectedRegion('')
         setSelectedComuna('')
@@ -365,7 +354,7 @@ const AddObraDrawer = (props: Props) => {
   const handleClose = () => {
     // Limpiar el formulario antes de cerrar
     resetForm()
-    setContactos(contactosPrincipales)
+    setContactos([contactoVacio])
     setValue('numeroObra', lastObraNumber)
     setSelectedRegion('')
     setSelectedComuna('')
@@ -487,7 +476,7 @@ const AddObraDrawer = (props: Props) => {
     numeroObra: '0',
     fechaIngreso: '2024-03-15',
     estado: 'activo',
-    estadoObra: 'activo',
+    estadoObra: 'activa',
 
     // Cliente
     rut: '23033067-0',
@@ -635,7 +624,7 @@ const AddObraDrawer = (props: Props) => {
 
     // Limpiar el formulario y todos los estados relacionados
     resetForm()
-    setContactos(contactosPrincipales)
+    setContactos([contactoVacio])
     setSelectedRegion('')
     setSelectedComuna('')
     setValue('numeroObra', lastObraNumber)
@@ -659,9 +648,9 @@ const AddObraDrawer = (props: Props) => {
       return;
     }
 
-    // Si es el primer contacto (Encargado de Obra)
-    if (contactos[0]?.contacto?.nombre === '') {
-      const contactoEncargado: ContactoObraForm = {
+    if (!contactos[0] || !contactos[0].contacto || contactos[0].contacto.nombre === '') {
+      const updatedContactos = [...contactos];
+      updatedContactos[0] = {
         contacto: {
           nombre: contact.nombre || '',
           cargo: 'encargado_obra',
@@ -673,34 +662,22 @@ const AddObraDrawer = (props: Props) => {
         cargo: 'encargado_obra',
         isPrincipal: true
       };
-
-      const updatedContactos = [...contactos];
-      updatedContactos[0] = contactoEncargado;
       setContactos(updatedContactos);
       toast.success('Encargado de Obra asignado exitosamente');
     } else {
-      // Para contactos adicionales, usar el cargo que viene del contacto
-      let cargoValue = contact.cargo || CARGOS_OBRA[0].value;
-      // Si el cargo no es un value válido, buscar por label
-      if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
-        const found = CARGOS_OBRA.find(c => c.label === cargoValue);
-        cargoValue = found ? found.value : CARGOS_OBRA[0].value;
-      }
-
-      const contactoNormalizado: ContactoObraForm = {
+      const newContact = {
         contacto: {
           nombre: contact.nombre || '',
-          cargo: cargoValue,
+          cargo: contact.cargo || '',
           email: contact.email || '',
           telefono1: contact.telefono1 || '',
           telefono2: contact.telefono2 || '',
           contactId: contact.contactId?.toString()
         },
-        cargo: cargoValue,
+        cargo: contact.cargo || '',
         isPrincipal: false
       };
-
-      setContactos(prevContactos => [...prevContactos, contactoNormalizado]);
+      setContactos(prevContactos => [...prevContactos, newContact]);
       toast.success('Contacto agregado exitosamente');
     }
 
@@ -1094,16 +1071,16 @@ const AddObraDrawer = (props: Props) => {
                     <Box sx={{ maxWidth: '400px', ml: { sm: 'auto' } }}>
                       <ContactSearch
                         onContactSelect={contact => {
+                          if (!contact) return;
                           // Si es el primer contacto (Encargado de Obra)
                           if (contactos[0].contacto.nombre === '') {
                             const updatedContactos = [...contactos]
                             updatedContactos[0] = {
-                              ...contactos[0],
                               contacto: {
-                                ...contactos[0].contacto,
-                                nombre: contact.nombre,
-                                email: contact.email,
-                                telefono1: contact.telefono1,
+                                nombre: contact.nombre || '',
+                                cargo: 'encargado_obra',
+                                email: contact.email || '',
+                                telefono1: contact.telefono1 || '',
                                 telefono2: contact.telefono2 || '',
                                 contactId: contact.contactId?.toString()
                               },
@@ -1113,21 +1090,20 @@ const AddObraDrawer = (props: Props) => {
                             setContactos(updatedContactos)
                             toast.success('Encargado de Obra asignado exitosamente')
                           } else {
-                            // Para contactos adicionales, mantener el cargo que ya tienen
-                            const newContact: ContactoObraForm = {
+                            // Para contactos adicionales
+                            const newContact = {
                               contacto: {
-                                nombre: contact.nombre,
-                                cargo: contact.cargo || CARGOS_OBRA[1].value,
-                                email: contact.email,
-                                telefono1: contact.telefono1,
+                                nombre: contact.nombre || '',
+                                cargo: contact.cargo || '',
+                                email: contact.email || '',
+                                telefono1: contact.telefono1 || '',
                                 telefono2: contact.telefono2 || '',
                                 contactId: contact.contactId?.toString()
                               },
-                              cargo: contact.cargo || CARGOS_OBRA[1].value,
+                              cargo: contact.cargo || '',
                               isPrincipal: false
                             }
-                            console.log('NEW CONTACT', newContact)
-                            setContactos([...contactos, newContact])
+                            setContactos(prevContactos => [...prevContactos, newContact])
                             toast.success('Contacto agregado exitosamente')
                           }
                         }}
@@ -1307,7 +1283,7 @@ const AddObraDrawer = (props: Props) => {
                             <IconButton
                               color='primary'
                               onClick={() => {
-                                setContactos([contactosPrincipales[0], ...contactos.slice(1)])
+                                setContactos([contactoVacio, ...contactos.slice(1)])
                                 toast.success('Puede seleccionar un nuevo Encargado de Obra')
                               }}
                             >

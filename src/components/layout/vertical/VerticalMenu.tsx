@@ -101,9 +101,9 @@ const VerticalMenu = () => {
                 Cotizaciones
               </MenuItem>
 
-              {/* <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />} disabled>
+              <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />}>
                 Solicitudes
-              </MenuItem> */}
+              </MenuItem>
 
               <SubMenu label='Agenda' icon={<i className='ri-home-smile-line' />}>
                 <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
