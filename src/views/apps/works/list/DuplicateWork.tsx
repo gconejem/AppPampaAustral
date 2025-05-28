@@ -42,18 +42,18 @@ import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
 
 const CARGOS_OBRA = [
-  { value: 'Encargado de Obra', label: 'Encargado de Obra' },
-  { value: 'Envío de Informes', label: 'Envío de Informes' },
-  { value: 'Dueño Representante', label: 'Dueño Representante' },
-  { value: 'Jefe de Obra / Planta', label: 'Jefe de Obra / Planta' },
-  { value: 'Supervisor', label: 'Supervisor' },
-  { value: 'Administrador de Obra', label: 'Administrador de Obra' },
-  { value: 'Administración', label: 'Administración' },
-  { value: 'Encargado de Calidad', label: 'Encargado de Calidad' },
-  { value: 'Autocontrol', label: 'Autocontrol' },
-  { value: 'Profesional', label: 'Profesional' },
-  { value: 'Laboratorista', label: 'Laboratorista' },
-  { value: 'Otro', label: 'Otro (Especificar)' }
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
 ]
 
 const MANDANTES = [
