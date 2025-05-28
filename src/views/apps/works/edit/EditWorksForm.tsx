@@ -406,9 +406,14 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     setEditingContactIndex(index)
     const contacto = contactos[index]
 
+    console.log('contacto', contacto)
+
+    // Encontrar el rol correspondiente en ROLES_CONTACTO
+    const rolEncontrado = ROLES_CONTACTO.find(r => r.value === contacto.rol)
+
     setEditingContact({
       obraId: contacto.obraId,
-      rol: contacto.rol || '',
+      rol: rolEncontrado?.label || contacto.rol || '',
       nombre: contacto.nombre || '',
       email: contacto.email || '',
       telefono1: contacto.telefono1 || '',
