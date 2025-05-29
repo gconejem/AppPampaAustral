@@ -784,15 +784,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={4}>
                       <Typography variant='subtitle2' color='text.secondary'>Superficie EMS</Typography>
-                      <Typography>{selectedCotizacion.superficieEMS || 'No especificada'}</Typography>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.superficieEMS || 'No especificada'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <Typography variant='subtitle2' color='text.secondary'>Antecedentes EMS</Typography>
-                      <Typography>{selectedCotizacion.antecedentesEMS || 'No especificados'}</Typography>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.antecedentesEMS || 'No especificados'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <Typography variant='subtitle2' color='text.secondary'>Plazo de Entrega EMS</Typography>
-                      <Typography>{selectedCotizacion.plazoEntregaEMS || 'No especificado'}</Typography>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.plazoEntregaEMS || 'No especificado'}</Typography>
                     </Grid>
                   </Grid>
                 </Grid>

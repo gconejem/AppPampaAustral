@@ -82,6 +82,16 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <!-- Se eliminan los datos de cotización aquí para que solo estén en el header -->
             </div>
           </div>
+          ${cotizacion.tipoCotizacion === 'B' ? `
+          <div class="row" style="margin-top: 16px;">
+            <div class="col">
+              <div class="label">Información EMS</div>
+              <div class="value"><b>Superficie EMS:</b><br>${(cotizacion.superficieEMS || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Antecedentes EMS:</b><br>${(cotizacion.antecedentesEMS || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Plazo de Entrega EMS:</b><br>${(cotizacion.plazoEntregaEMS || '-').replace(/\r?\n/g, '<br>')}</div>
+            </div>
+          </div>
+          ` : ''}
           <table class="table">
             <thead>
               <tr>
