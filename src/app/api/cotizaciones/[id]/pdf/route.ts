@@ -97,6 +97,9 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               ${(() => {
                 // Agrupar detalles por área
                 const detallesPorArea: Record<string, any[]> = {};
+
+                console.log('cotizacion', cotizacion)
+
                 for (const detalle of cotizacion.detalles) {
                   const area = detalle.producto?.area || 'Sin área';
                   if (!detallesPorArea[area]) detallesPorArea[area] = [];
@@ -109,7 +112,10 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                   for (const detalle of detallesPorArea[area]) {
                     html += `<tr>
                       <td>${detalle.producto?.area || '-'}</td>
-                      <td>${detalle.producto?.nombre || '-'}</td>
+                      <td>
+                        ${detalle.producto?.nombre || '-'}
+                        ${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
+                      </td>
                       <td>${detalle.producto?.descripcion || '-'}</td>
                       <td style=\"text-align:center;\">${detalle.cantidad || '-'}</td>
                       <td style=\"text-align:right;\">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
