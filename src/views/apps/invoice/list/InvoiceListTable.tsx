@@ -280,13 +280,10 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
     console.log('newEstado', newEstado)
 
-    // Si el nuevo estado es 'GESTIONADA', mostrar el modal para ingresar texto
-    if (newEstado === 'GESTIONADA') {
+    // Si el nuevo estado es 'GESTIONADA' o 'RECHAZADA', mostrar el modal para ingresar texto
+    if (newEstado === 'GESTIONADA' || newEstado === 'RECHAZADA') {
       // Precargar la observación guardada
       const cotizacion = localData.find(row => row.id === selectedRowId)
-
-      console.log('cotizacion', cotizacion)
-
       setGestionText(cotizacion?.observacionGestion || '')
       setPendingEstado(newEstado)
       setGestionDialogOpen(true)
@@ -983,12 +980,18 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       </Menu>
 
       <Dialog open={gestionDialogOpen} onClose={() => setGestionDialogOpen(false)} maxWidth='xs' fullWidth>
-        <DialogTitle>Observación de Gestión</DialogTitle>
+        <DialogTitle>
+          {pendingEstado === 'GESTIONADA'
+            ? 'Observación de Gestión'
+            : pendingEstado === 'RECHAZADA'
+              ? 'Observación de Rechazo'
+              : 'Observación'}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin='dense'
-            label='Ingrese una observación o comentario'
+            label={pendingEstado === 'RECHAZADA' ? 'Ingrese el motivo del rechazo' : 'Ingrese una observación o comentario'}
             type='text'
             fullWidth
             multiline
@@ -1003,7 +1006,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           </Button>
           <Button
             onClick={async () => {
-              await updateEstadoCotizacion('GESTIONADA', gestionText)
+              await updateEstadoCotizacion(pendingEstado || 'GESTIONADA', gestionText)
               setGestionDialogOpen(false)
               setGestionText('')
               setPendingEstado(null)
