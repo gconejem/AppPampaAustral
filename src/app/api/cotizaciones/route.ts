@@ -144,7 +144,12 @@ export async function POST(request: Request) {
           total: body.total || 0,
           contacto: contactId ? { connect: { contactId } } : undefined,
           formaPago: body.formaPago || '',
-          listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined
+          listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
+          ...(normalizeTipoCotizacion(body.tipoCotizacion) === 'B' && {
+            superficieEMS: body.superficieEMS || '',
+            antecedentesEMS: body.antecedentesEMS || '',
+            plazoEntregaEMS: body.plazoEntregaEMS || ''
+          })
         }
       })
 

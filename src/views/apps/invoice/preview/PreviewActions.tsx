@@ -133,6 +133,13 @@ const PreviewActions = () => {
         impuesto: parseFloat(previewData.impuesto),
         total: parseFloat(previewData.total),
         observaciones: previewData.observaciones || '',
+
+        //EMS
+        superficieEMS: previewData.superficieEMS || '',
+        antecedentesEMS: previewData.antecedentesEMS || '',
+        plazoEntregaEMS: previewData.plazoEntrega || '',
+        //FIN EMS
+
         detalles: {
           create: detallesParaEnviar
         }

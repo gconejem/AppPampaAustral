@@ -305,6 +305,9 @@ model Cotizacion {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   formaPago        String?
+  superficieEMS    String?
+  antecedentesEMS  String?
+  plazoEntregaEMS  String?
   cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   contacto         Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
   obra             Obra?               @relation(fields: [obraId], references: [obraId])
