@@ -61,6 +61,7 @@ export async function GET() {
           : null,
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
         empresa: cotizacion.empresa || 'No especificada',
+        observacionGestion: cotizacion.observacionGestion,
         total: parseFloat(cotizacion.total.toString())
       }
     })

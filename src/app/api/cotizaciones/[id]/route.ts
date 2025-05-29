@@ -99,6 +99,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         total: body.total,
         observaciones: body.observaciones,
         formaPago: body.formaPago,
+        observacionGestion: body.gestionText || undefined,
         contacto: body.contactoId ? { connect: { contactId: body.contactoId } } : undefined,
         listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
         updatedAt: new Date()

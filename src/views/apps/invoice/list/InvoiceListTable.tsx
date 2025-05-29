@@ -63,7 +63,7 @@ interface InvoiceType {
   empresa: string
   detalles: any[]
   total: number
-
+  observacionGestion?: string
   // ... otros campos necesarios
 }
 
@@ -108,6 +108,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // Inicializar localData con invoiceData
   useEffect(() => {
     if (invoiceData) {
+      console.log('invoiceData', invoiceData)
       // Limpia cualquier string 'Sin contacto' y reemplázalo por null
       const cleanData = invoiceData.map(row => ({
         ...row,
@@ -277,11 +278,18 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const handleEstadoChange = async (newEstado: string) => {
     if (!selectedRowId) return
 
+    console.log('newEstado', newEstado)
+
     // Si el nuevo estado es 'GESTIONADA', mostrar el modal para ingresar texto
     if (newEstado === 'GESTIONADA') {
+      // Precargar la observación guardada
+      const cotizacion = localData.find(row => row.id === selectedRowId)
+
+      console.log('cotizacion', cotizacion)
+
+      setGestionText(cotizacion?.observacionGestion || '')
       setPendingEstado(newEstado)
       setGestionDialogOpen(true)
-
       return
     }
 
@@ -359,8 +367,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
 
-    console.log('filtroFecha, filtroTipo, filtroEstado', {filtroFecha, filtroTipo, filtroEstado})
-    console.log('row', row)
+    /* console.log('filtroFecha, filtroTipo, filtroEstado', {filtroFecha, filtroTipo, filtroEstado})
+    console.log('row', row) */
 
     if (filtroFecha) {
       // Convertir row.fecha (dd-MM-yyyy) a yyyy-MM-dd con ceros a la izquierda

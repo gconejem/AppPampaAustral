@@ -25,6 +25,7 @@ export interface InvoiceType {
   cargo?: string
   email?: string
   telefono?: string
+  observacionGestion?: string
 }
 
 export type InvoicePaymentType = {

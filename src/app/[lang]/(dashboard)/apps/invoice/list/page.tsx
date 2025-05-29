@@ -59,7 +59,8 @@ async function getCotizaciones() {
         tipo: tipoMapeado,
         contacto: cotizacion.contacto,
         estado: cotizacion.estado,
-        total: parseFloat(cotizacion.total.toString())
+        total: parseFloat(cotizacion.total.toString()),
+        observacionGestion: cotizacion.observacionGestion
       }
     })
   } catch (error) {
