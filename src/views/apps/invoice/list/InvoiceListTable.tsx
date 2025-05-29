@@ -781,13 +781,20 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
                     Información EMS
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={selectedCotizacion.infoEMS || ''}
-                    InputProps={{ readOnly: true }}
-                  />
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' color='text.secondary'>Superficie EMS</Typography>
+                      <Typography>{selectedCotizacion.superficieEMS || 'No especificada'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' color='text.secondary'>Antecedentes EMS</Typography>
+                      <Typography>{selectedCotizacion.antecedentesEMS || 'No especificados'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant='subtitle2' color='text.secondary'>Plazo de Entrega EMS</Typography>
+                      <Typography>{selectedCotizacion.plazoEntregaEMS || 'No especificado'}</Typography>
+                    </Grid>
+                  </Grid>
                 </Grid>
               )}
 
