@@ -205,18 +205,16 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
   }
 
-  const getTipoLabel = (tipo: InvoiceType['tipo']) => {
-    if (!tipo) return 'No especificado'
-
+  const getTipoLabel = (tipo: string) => {
     switch (tipo) {
-      case 'VALORES_UNITARIOS':
+      case 'A':
         return 'Valores Unitarios'
-      case 'EMS':
+      case 'B':
         return 'EMS'
-      case 'MENSUAL':
+      case 'C':
         return 'Mensual'
       default:
-        return 'Valores Unitarios' // Valor por defecto si el tipo no es válido
+        return 'No especificado'
     }
   }
 
