@@ -256,6 +256,9 @@ const EditCard = ({ id }: { id: string }) => {
     const newRows = [...productRows]
     const precioFinal = producto.precio || 0
 
+    // Eliminar la fila vacía si existe
+    const filteredRows = newRows.filter(row => row.productoId !== '0')
+
     if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
       // Agregar paquete y sus productos
       const paqueteRow = {
@@ -284,7 +287,7 @@ const EditCard = ({ id }: { id: string }) => {
         subproductos: []
       }))
 
-      setProductRows([...newRows, paqueteRow, ...productosRows])
+      setProductRows([...filteredRows, paqueteRow, ...productosRows])
     } else {
       // Agregar producto individual
       const newRow = {
@@ -299,7 +302,7 @@ const EditCard = ({ id }: { id: string }) => {
         subproductos: []
       }
 
-      setProductRows([...newRows, newRow])
+      setProductRows([...filteredRows, newRow])
     }
 
     handleClosePopover()
