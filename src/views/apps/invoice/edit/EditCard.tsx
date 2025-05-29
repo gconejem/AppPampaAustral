@@ -112,6 +112,9 @@ interface FormDataType {
   listaPrecioId?: number | null
   formaPago?: string
   empresa?: string
+  superficieEMS?: string
+  antecedentesEMS?: string
+  plazoEntregaEMS?: string
 }
 
 const EditCard = ({ id }: { id: string }) => {
@@ -509,7 +512,13 @@ const EditCard = ({ id }: { id: string }) => {
         ...formData,
         detalles: detallesValidos,
         listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null,
-        contactoId: contactoId
+        contactoId: contactoId,
+        // Asegurarnos de incluir los campos EMS solo si el tipo es B
+        ...(formData.tipoCotizacion === 'B' && {
+          superficieEMS: formData.superficieEMS || '',
+          antecedentesEMS: formData.antecedentesEMS || '',
+          plazoEntregaEMS: formData.plazoEntregaEMS || ''
+        })
       }
 
       // Eliminar el objeto contacto del payload ya que solo necesitamos el ID
@@ -899,6 +908,50 @@ const EditCard = ({ id }: { id: string }) => {
               </Grid>
             </Grid>
           </Grid>
+
+          {/* Campos EMS cuando el tipo es B */}
+          {formData.tipoCotizacion === 'B' && (
+            <Grid item xs={12}>
+              <Typography variant='h6' sx={{ mb: 2 }}>
+                Información EMS
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Superficie EMS'
+                    multiline
+                    rows={4}
+                    value={formData.superficieEMS || ''}
+                    onChange={e => setFormData({ ...formData, superficieEMS: e.target.value })}
+                    placeholder='Ingrese la superficie EMS...'
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Antecedentes EMS'
+                    multiline
+                    rows={4}
+                    value={formData.antecedentesEMS || ''}
+                    onChange={e => setFormData({ ...formData, antecedentesEMS: e.target.value })}
+                    placeholder='Ingrese los antecedentes EMS...'
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Plazo de Entrega EMS'
+                    multiline
+                    rows={4}
+                    value={formData.plazoEntregaEMS || ''}
+                    onChange={e => setFormData({ ...formData, plazoEntregaEMS: e.target.value })}
+                    placeholder='Ingrese el plazo de entrega EMS...'
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+          )}
 
           {/* Detalles de Servicios */}
           <Grid item xs={12}>

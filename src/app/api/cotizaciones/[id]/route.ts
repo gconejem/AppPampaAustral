@@ -102,6 +102,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         observacionGestion: body.gestionText || undefined,
         contacto: body.contactoId ? { connect: { contactId: body.contactoId } } : undefined,
         listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
+        // Incluir campos EMS solo si el tipo es B
+        ...(body.tipoCotizacion === 'B' && {
+          superficieEMS: body.superficieEMS || '',
+          antecedentesEMS: body.antecedentesEMS || '',
+          plazoEntregaEMS: body.plazoEntregaEMS || ''
+        }),
         updatedAt: new Date()
       }
     })

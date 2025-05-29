@@ -137,7 +137,7 @@ const PreviewActions = () => {
         //EMS
         superficieEMS: previewData.superficieEMS || '',
         antecedentesEMS: previewData.antecedentesEMS || '',
-        plazoEntregaEMS: previewData.plazoEntrega || '',
+        plazoEntregaEMS: previewData.plazoEntregaEMS || '',
         //FIN EMS
 
         detalles: {

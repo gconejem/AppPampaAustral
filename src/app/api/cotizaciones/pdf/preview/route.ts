@@ -90,7 +90,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <div class="label">Información EMS</div>
               <div class="value"><b>Superficie EMS:</b><br>${(cotizacion.superficieEMS || '-').replace(/\r?\n/g, '<br>')}</div>
               <div class="value"><b>Antecedentes EMS:</b><br>${(cotizacion.antecedentesEMS || '-').replace(/\r?\n/g, '<br>')}</div>
-              <div class="value"><b>Plazo de Entrega EMS:</b><br>${(cotizacion.plazoEntrega || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Plazo de Entrega EMS:</b><br>${(cotizacion.plazoEntregaEMS || '-').replace(/\r?\n/g, '<br>')}</div>
             </div>
           </div>
           ` : ''}

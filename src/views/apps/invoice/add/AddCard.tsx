@@ -162,7 +162,7 @@ interface FormData {
   precioMensualTotal: number
   productos: ProductoType[]
   contacto?: ContactoType | null
-  plazoEntrega?: string
+  plazoEntregaEMS?: string
   superficieEMS: string
   antecedentesEMS: string
   duracionMensual: string
@@ -2298,8 +2298,8 @@ const AddCard = ({
                   multiline
                   rows={2}
                   placeholder='Ingrese el plazo de entrega...'
-                  value={formData.plazoEntrega || ''}
-                  onChange={e => handleChange('plazoEntrega', e.target.value)}
+                  value={formData.plazoEntregaEMS || ''}
+                  onChange={e => handleChange('plazoEntregaEMS', e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: 'background.paper'
