@@ -189,7 +189,7 @@ const PreviewCard = () => {
               </Grid>
               <Grid item xs={12} md={4}>
                 <Typography variant='subtitle2' color='text.secondary'>Plazo de Entrega EMS</Typography>
-                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.plazoEntregaEMS || 'No especificado'}</Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.plazoEntrega || 'No especificado'}</Typography>
               </Grid>
             </Grid>
           </Box>
