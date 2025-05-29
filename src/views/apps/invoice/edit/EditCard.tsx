@@ -29,6 +29,7 @@ import Chip from '@mui/material/Chip'
 import Autocomplete from '@mui/material/Autocomplete'
 import IconButton from '@mui/material/IconButton'
 import DeleteIcon from '@mui/icons-material/Delete'
+import type { SelectChangeEvent } from '@mui/material/Select'
 
 // Third-party Imports
 import { toast } from 'react-hot-toast'
@@ -148,7 +149,7 @@ const EditCard = ({ id }: { id: string }) => {
     }
   }, [productRows, formData])
 
-  // Efecto para cargar datos iniciales
+  // Modificar el useEffect de carga de productos
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -157,25 +158,21 @@ const EditCard = ({ id }: { id: string }) => {
 
         // Cargar la cotización
         const cotizacionResponse = await fetch(`/api/cotizaciones/${id}`)
-
         if (!cotizacionResponse.ok) throw new Error('Error al cargar la cotización')
         const cotizacionData = await cotizacionResponse.json()
 
-        // Cargar productos
-        const productosResponse = await fetch('/api/productos')
-
+        // Cargar productos con límite alto para obtener todas las áreas, tipos y familias
+        const productosResponse = await fetch('/api/productos?limit=1000')
         if (!productosResponse.ok) throw new Error('Error al cargar productos')
         const productosData = await productosResponse.json()
 
         // Cargar contactos
         const contactosResponse = await fetch('/api/contacts')
-
         if (!contactosResponse.ok) throw new Error('Error al cargar contactos')
         const contactosData = await contactosResponse.json()
 
         // Cargar listas de precios
         const listasPreciosResponse = await fetch('/api/listas-precios')
-
         if (!listasPreciosResponse.ok) throw new Error('Error al cargar listas de precios')
         const listasPreciosData = await listasPreciosResponse.json()
 
@@ -197,6 +194,19 @@ const EditCard = ({ id }: { id: string }) => {
           productosEnPaquete: p.productosEnPaquete || [],
           listasPrecios: p.listasPrecios || []
         }))
+
+        // Obtener áreas, tipos y familias únicas
+        const uniqueAreas = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.area)))
+          .filter(area => area && area !== 'Sin área')
+          .sort()
+
+        const uniqueTipos = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.tipo)))
+          .filter(tipo => tipo && tipo !== 'Sin tipo')
+          .sort()
+
+        const uniqueFamilias = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.familia)))
+          .filter(familia => familia && familia !== 'Sin familia')
+          .sort()
 
         // Convertir detalles a formato de filas de productos
         const detallesFormateados = cotizacionData.detalles.map((detalle: any) => ({
@@ -220,15 +230,6 @@ const EditCard = ({ id }: { id: string }) => {
         setFilteredProductos(productosFormateados)
         setContactos(contactosData)
         setListasPrecios(listasPreciosData)
-
-        // Extraer áreas, tipos y familias únicas
-        const uniqueAreas = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.area))).filter(Boolean)
-        const uniqueTipos = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.tipo))).filter(Boolean)
-
-        const uniqueFamilias = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.familia))).filter(
-          Boolean
-        )
-
         setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
         setFamilias(uniqueFamilias as string[])
@@ -254,17 +255,27 @@ const EditCard = ({ id }: { id: string }) => {
   // Función para manejar cambios en los productos
   const handleSelectProduct = (producto: ProductoType) => {
     const newRows = [...productRows]
-    const precioFinal = producto.precio || 0
+    // Obtener el precio de la lista de precios seleccionada si existe
+    let precioFinal = producto.precio || 0
+    if (formData?.listaPrecioId && producto.listasPrecios) {
+      const listaPrecio = producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId)
+      if (listaPrecio) {
+        precioFinal = listaPrecio.precio
+      }
+    }
 
     // Eliminar la fila vacía si existe
     const filteredRows = newRows.filter(row => row.productoId !== '0')
+
+    // Armar el nombre del servicio: nombre - norma (si existe)
+    const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || ''
 
     if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
       // Agregar paquete y sus productos
       const paqueteRow = {
         id: Date.now(),
         productoId: producto.productoId.toString(),
-        servicio: producto.nombreCompleto,
+        servicio: nombreServicio,
         descripcion: producto.descripcion || '',
         cantidad: 1,
         precioUnitarioUF: precioFinal,
@@ -274,18 +285,29 @@ const EditCard = ({ id }: { id: string }) => {
         subproductos: []
       }
 
-      const productosRows = (producto.productosEnPaquete || []).map((pp: any) => ({
-        id: Date.now() + Math.random(),
-        productoId: pp.producto?.productoId?.toString() || '',
-        servicio: pp.producto?.nombre || '',
-        descripcion: pp.producto?.descripcion || '',
-        cantidad: pp.cantidad || 1,
-        precioUnitarioUF: pp.producto?.precio || 0,
-        totalNetoUF: (pp.producto?.precio || 0) * (pp.cantidad || 1),
-        area: pp.producto?.area || '',
-        esSubProducto: true,
-        subproductos: []
-      }))
+      const productosRows = (producto.productosEnPaquete || []).map((pp: any) => {
+        let precioProducto = pp.producto?.precio || 0
+        if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
+          const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId)
+          if (listaPrecio) {
+            precioProducto = listaPrecio.precio
+          }
+        }
+        // Armar nombre del subproducto: nombre - norma (si existe)
+        const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || ''
+        return {
+          id: Date.now() + Math.random(),
+          productoId: pp.producto?.productoId?.toString() || '',
+          servicio: nombreSubServicio,
+          descripcion: pp.producto?.descripcion || '',
+          cantidad: pp.cantidad || 1,
+          precioUnitarioUF: precioProducto,
+          totalNetoUF: precioProducto * (pp.cantidad || 1),
+          area: pp.producto?.area || '',
+          esSubProducto: true,
+          subproductos: []
+        }
+      })
 
       setProductRows([...filteredRows, paqueteRow, ...productosRows])
     } else {
@@ -293,7 +315,7 @@ const EditCard = ({ id }: { id: string }) => {
       const newRow = {
         id: Date.now(),
         productoId: producto.productoId.toString(),
-        servicio: producto.nombreCompleto,
+        servicio: nombreServicio,
         descripcion: producto.descripcion || '',
         cantidad: 1,
         precioUnitarioUF: precioFinal,
@@ -383,11 +405,21 @@ const EditCard = ({ id }: { id: string }) => {
   // Funciones para el manejo del popover
   const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
-    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
+    setLoadingProductos(true)
+    setProductsPage(0) // Resetear a la primera página
+    // Limpiar todos los filtros
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setShowOnlyPaquetes(false)
+    filterProducts('', '', '', '')
+    setLoadingProductos(false)
   }
 
   const handleClosePopover = () => {
     setAnchorEl(null)
+    setLoadingProductos(false)
   }
 
   // Función para filtrar productos
@@ -482,6 +514,112 @@ const EditCard = ({ id }: { id: string }) => {
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
     window.open('/es/apps/invoice/preview', '_blank')
   }
+
+  // Agregar estados necesarios
+  const [loadingProductos, setLoadingProductos] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [productsPage, setProductsPage] = useState(0)
+  const [totalProductos, setTotalProductos] = useState(0)
+  const ITEMS_PER_PAGE = 10
+
+  // Modificar el useEffect de paginación
+  useEffect(() => {
+    if (anchorEl) { // Solo ejecutar cuando el popover está abierto
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar productos')
+          }
+          return res.json()
+        })
+        .then(response => {
+          const data = response.productos || []
+          // Filtrar los productos por nombre, descripción o norma
+          const filteredData = searchTerm
+            ? data.filter(
+                (producto: any) =>
+                  producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  producto.norma?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+            : data
+          setFilteredProductos(filteredData)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+        })
+        .catch(error => {
+          console.error('Error al cargar productos paginados:', error)
+          toast.error('Error al cargar los productos')
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
+    }
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+
+  // Agregar un useEffect para manejar el cambio de showOnlyPaquetes
+  useEffect(() => {
+    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
+  }, [showOnlyPaquetes]) // Agregar showOnlyPaquetes como dependencia
+
+  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(event.target.checked)
+  }
+
+  const handleClearFilters = () => {
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setSearchTerm('')
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+  }
+
+  const handleAreaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedArea(e.target.value)
+  }
+
+  const handleTipoChange = (e: SelectChangeEvent<string>) => {
+    setSelectedTipo(e.target.value)
+  }
+
+  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedFamilia(e.target.value)
+  }
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSearchTerm(event.target.value)
+  }
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && searchTerm && searchTerm.length > 0) {
+      const filteredProducts = productos
+        .filter(
+          product =>
+            (product.servicio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              product.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (!selectedArea || product.area === selectedArea) &&
+            (!selectedFamilia || product.familia === selectedFamilia)
+        )
+        .slice(0, 50)
+
+      setFilteredProductos(filteredProducts)
+      setShowResults(true)
+    }
+  }
+
+  // Resetear la página del paginador al cambiar filtros
+  useEffect(() => {
+    if (anchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -735,19 +873,22 @@ const EditCard = ({ id }: { id: string }) => {
               horizontal: 'left'
             }}
             PaperProps={{
-              sx: { width: '500px', maxHeight: '400px' }
+              sx: {
+                width: '100%',
+                maxWidth: '500px',
+                maxHeight: '400px',
+                overflow: 'auto',
+                zIndex: 1
+              }
             }}
           >
             <Box sx={{ p: 2 }}>
               <TextField
                 fullWidth
                 size='small'
-                placeholder='Buscar por nombre, código o descripción...'
+                placeholder='Buscar por nombre, descripción o norma...'
                 value={searchTerm}
-                onChange={e => {
-                  setSearchTerm(e.target.value)
-                  filterProducts(e.target.value, selectedArea, selectedTipo, selectedFamilia)
-                }}
+                onChange={handleSearchChange}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position='start'>
@@ -756,18 +897,10 @@ const EditCard = ({ id }: { id: string }) => {
                   )
                 }}
               />
-
               <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                 <FormControl size='small' fullWidth>
-                  <InputLabel>Área</InputLabel>
-                  <Select
-                    value={selectedArea}
-                    label='Área'
-                    onChange={e => {
-                      setSelectedArea(e.target.value)
-                      filterProducts(searchTerm, e.target.value, selectedTipo, selectedFamilia)
-                    }}
-                  >
+                  <InputLabel shrink>Área</InputLabel>
+                  <Select value={selectedArea} label='Área' onChange={handleAreaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
                     <MenuItem value=''>Todas</MenuItem>
                     {areas.map(area => (
                       <MenuItem key={area} value={area}>
@@ -776,17 +909,9 @@ const EditCard = ({ id }: { id: string }) => {
                     ))}
                   </Select>
                 </FormControl>
-
                 <FormControl size='small' fullWidth>
-                  <InputLabel>Tipo</InputLabel>
-                  <Select
-                    value={selectedTipo}
-                    label='Tipo'
-                    onChange={e => {
-                      setSelectedTipo(e.target.value)
-                      filterProducts(searchTerm, selectedArea, e.target.value, selectedFamilia)
-                    }}
-                  >
+                  <InputLabel shrink>Tipo</InputLabel>
+                  <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange} displayEmpty renderValue={selected => selected === '' ? 'Todos' : selected}>
                     <MenuItem value=''>Todos</MenuItem>
                     {tipos.map(tipo => (
                       <MenuItem key={tipo} value={tipo}>
@@ -795,17 +920,9 @@ const EditCard = ({ id }: { id: string }) => {
                     ))}
                   </Select>
                 </FormControl>
-
                 <FormControl size='small' fullWidth>
-                  <InputLabel>Familia</InputLabel>
-                  <Select
-                    value={selectedFamilia}
-                    label='Familia'
-                    onChange={e => {
-                      setSelectedFamilia(e.target.value)
-                      filterProducts(searchTerm, selectedArea, selectedTipo, e.target.value)
-                    }}
-                  >
+                  <InputLabel shrink>Familia</InputLabel>
+                  <Select value={selectedFamilia} label='Familia' onChange={handleFamiliaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
                     <MenuItem value=''>Todas</MenuItem>
                     {familias.map(familia => (
                       <MenuItem key={familia} value={familia}>
@@ -815,36 +932,43 @@ const EditCard = ({ id }: { id: string }) => {
                   </Select>
                 </FormControl>
               </Box>
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showOnlyPaquetes}
-                    onChange={e => {
-                      setShowOnlyPaquetes(e.target.checked)
-                      filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
-                    }}
-                    size='small'
-                  />
-                }
-                label='Solo Paquetes'
-              />
+              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                  }
+                  label='Solo Paquetes'
+                />
+                <Button
+                  size='small'
+                  onClick={() => {
+                    handleClearFilters()
+                    setShowOnlyPaquetes(false)
+                  }}
+                  startIcon={<i className='ri-filter-off-line' />}
+                >
+                  Limpiar filtros
+                </Button>
+              </Box>
             </Box>
-
-            <List>
+            <List sx={{ pt: 0 }}>
               {filteredProductos.map(producto => (
                 <ListItem
                   key={producto.id}
                   onClick={() => handleSelectProduct(producto)}
                   sx={{
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' }
+                    '&:hover': {
+                      backgroundColor: 'action.hover'
+                    },
+                    flexDirection: 'column',
+                    alignItems: 'flex-start'
                   }}
                 >
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography>
+                        <Typography variant='body1'>
                           {producto.nombre}
                           {producto.norma && (
                             <Typography component='span' color='text.secondary'>
@@ -853,18 +977,82 @@ const EditCard = ({ id }: { id: string }) => {
                             </Typography>
                           )}
                         </Typography>
-                        {producto.esPaquete && <Chip size='small' label='Paquete' color='primary' sx={{ ml: 1 }} />}
+                        {producto.esPaquete && (
+                          <Typography
+                            variant='caption'
+                            sx={{
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1,
+                              ml: 1
+                            }}
+                          >
+                            Paquete
+                          </Typography>
+                        )}
                       </Box>
                     }
                     secondary={
-                      <Typography variant='caption' color='text.secondary'>
-                        {producto.area} - {producto.tipo} - {producto.familia}
-                      </Typography>
+                      <Box>
+                        <Typography variant='caption' color='text.secondary'>
+                          {producto.area} - {producto.tipo} - {producto.familia}
+                        </Typography>
+                        {producto.esPaquete &&
+                          producto.productosEnPaquete &&
+                          producto.productosEnPaquete.length > 0 && (
+                            <Box sx={{ mt: 0.5 }}>
+                              <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>
+                                Incluye:
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1 }}>
+                                {producto.productosEnPaquete.map((pp: any, i: number) => (
+                                  <Typography
+                                    key={i}
+                                    variant='caption'
+                                    color='text.secondary'
+                                    sx={{
+                                      display: 'inline-block',
+                                      '&:not(:last-child):after': {
+                                        content: '","',
+                                        marginRight: '4px'
+                                      }
+                                    }}
+                                  >
+                                    {pp.nombre}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                      </Box>
                     }
                   />
                 </ListItem>
               ))}
             </List>
+            <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+              <Button
+                size='small'
+                onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                disabled={productsPage === 0}
+              >
+                Anterior
+              </Button>
+              <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+              </Typography>
+              <Button
+                size='small'
+                onClick={() =>
+                  setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                }
+                disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+              >
+                Siguiente
+              </Button>
+            </Box>
           </Popover>
 
           {/* Observaciones */}

@@ -1939,8 +1939,8 @@ const AddCard = ({
                         />
                         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                           <FormControl size='small' fullWidth>
-                            <InputLabel>Área</InputLabel>
-                            <Select value={selectedArea} label='Área' onChange={handleAreaChange}>
+                            <InputLabel shrink>Área</InputLabel>
+                            <Select value={selectedArea} label='Área' onChange={handleAreaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
                               <MenuItem value=''>Todas</MenuItem>
                               {areas.map(area => (
                                 <MenuItem key={area} value={area}>
@@ -1950,8 +1950,8 @@ const AddCard = ({
                             </Select>
                           </FormControl>
                           <FormControl size='small' fullWidth>
-                            <InputLabel>Tipo</InputLabel>
-                            <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange}>
+                            <InputLabel shrink>Tipo</InputLabel>
+                            <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange} displayEmpty renderValue={selected => selected === '' ? 'Todos' : selected}>
                               <MenuItem value=''>Todos</MenuItem>
                               {tipos.map(tipo => (
                                 <MenuItem key={tipo} value={tipo}>
@@ -1961,12 +1961,8 @@ const AddCard = ({
                             </Select>
                           </FormControl>
                           <FormControl size='small' fullWidth>
-                            <InputLabel>Familia</InputLabel>
-                            <Select
-                              value={selectedFamilia}
-                              label='Familia'
-                              onChange={handleFamiliaChange}
-                            >
+                            <InputLabel shrink>Familia</InputLabel>
+                            <Select value={selectedFamilia} label='Familia' onChange={handleFamiliaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
                               <MenuItem value=''>Todas</MenuItem>
                               {familias.map(familia => (
                                 <MenuItem key={familia} value={familia}>
