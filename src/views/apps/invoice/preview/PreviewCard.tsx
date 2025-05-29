@@ -298,7 +298,7 @@ const PreviewCard = () => {
             <Typography variant='subtitle2' sx={{ mb: 2, color: 'text.secondary' }}>
               OBSERVACIONES:
             </Typography>
-            <Typography sx={{ mt: 1 }}>{previewData.observaciones}</Typography>
+            <Typography sx={{ mt: 1 }} component="div" dangerouslySetInnerHTML={{ __html: (previewData.observaciones || '').replace(/\r?\n/g, '<br>') }} />
           </Box>
         )}
 

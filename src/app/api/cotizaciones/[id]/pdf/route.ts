@@ -133,7 +133,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             <div><strong>IVA (19%):</strong> UF ${Number(cotizacion.impuesto).toFixed(2)}</div>
             <div><strong>Total: UF ${Number(cotizacion.total).toFixed(2)}</strong></div>
           </div>
-          ${cotizacion.observaciones ? `<div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b> ${cotizacion.observaciones}</div>` : ''}
+          ${cotizacion.observaciones ? `<div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b><br>${(cotizacion.observaciones || '').replace(/\r?\n/g, '<br>')}</div>` : ''}
 
           <!-- Página de Notas -->
           <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
