@@ -619,11 +619,11 @@ const AddCard = ({
       .then(data => {
         console.log('Contactos cargados:', data)
 
-        // Mapear los datos para asegurar la estructura correcta
+        // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
         const contactosMapeados = data.map((contacto: any) => ({
           contactId: contacto.contactId, // Usar contactId
           nombre: contacto.nombre,
-          cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || '',
+          cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
           email: contacto.email,
           telefono1: contacto.telefono1
         }))
@@ -1477,10 +1477,7 @@ const AddCard = ({
                       <Box component='li' {...props}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant='body1'>
-                            {option.nombre}{' '}
-                            <Typography component='span' color='text.secondary'>
-                              #{option.contactId}
-                            </Typography>
+                            {option.nombre}
                           </Typography>
                           <Typography variant='caption' color='text.secondary'>
                             {option.cargo}

@@ -37,6 +37,22 @@ import { toast } from 'react-hot-toast'
 // Component Imports
 import Logo from '@components/layout/shared/Logo'
 
+// Agregar ROLES_CONTACTO para mapeo de cargos
+const ROLES_CONTACTO = [
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
+]
+
 interface ProductRow {
   id: number
   productoId: string
@@ -228,7 +244,17 @@ const EditCard = ({ id }: { id: string }) => {
         setProductRows(detallesFormateados)
         setProductos(productosFormateados)
         setFilteredProductos(productosFormateados)
-        setContactos(contactosData)
+
+        // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
+        const contactosMapeados = contactosData.map((contacto: any) => ({
+          contactoId: contacto.contactoId,
+          nombre: contacto.nombre,
+          cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
+          email: contacto.email,
+          telefono1: contacto.telefono1
+        }))
+        setContactos(contactosMapeados)
+
         setListasPrecios(listasPreciosData)
         setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
@@ -696,9 +722,71 @@ const EditCard = ({ id }: { id: string }) => {
                   }}
                 />
               )}
-              value={formData.contacto || null}
-              onChange={(_, newValue) => handleContactChange(newValue)}
+              renderOption={(props, option) => (
+                <Box component='li' {...props}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant='body1'>
+                      {option.nombre}
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      {option.cargo}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+              filterOptions={(options, { inputValue }) => {
+                const searchTerms = inputValue.toLowerCase().split(' ')
+                return options.filter(option => {
+                  const searchableText = `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1}`.toLowerCase()
+                  return searchTerms.every(term => searchableText.includes(term))
+                })
+              }}
+              onChange={(_, newValue) => {
+                if (newValue && newValue.contactoId) {
+                  const contactoData = {
+                    contactoId: Number(newValue.contactoId),
+                    nombre: newValue.nombre,
+                    cargo: newValue.cargo || 'Sin cargo',
+                    email: newValue.email || '',
+                    telefono1: newValue.telefono1 || ''
+                  }
+                  setFormData(prev => prev ? { ...prev, contacto: contactoData, contactoId: contactoData.contactoId } : prev)
+                } else {
+                  setFormData(prev => prev ? { ...prev, contacto: undefined, contactoId: undefined } : prev)
+                }
+              }}
+              isOptionEqualToValue={(option, value) => option.contactoId === value.contactoId}
+              value={formData.contacto && formData.contactoId ? {
+                contactoId: formData.contactoId,
+                nombre: formData.contacto.nombre,
+                cargo: formData.contacto.cargo || 'Sin cargo',
+                email: formData.contacto.email || '',
+                telefono1: formData.contacto.telefono1 || ''
+              } : null}
             />
+            {/* Detalles del contacto seleccionado */}
+            {formData.contacto && (
+              <Box sx={{ mt: 2, position: 'relative' }}>
+                <IconButton
+                  size='small'
+                  onClick={() => setFormData(prev => prev ? { ...prev, contacto: undefined, contactoId: undefined } : prev)}
+                  sx={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    color: 'text.secondary'
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+                <div className='flex flex-col gap-2'>
+                  <Typography>{formData.contacto.nombre}</Typography>
+                  <Typography>{formData.contacto.cargo}</Typography>
+                  <Typography>{formData.contacto.email}</Typography>
+                  <Typography>{formData.contacto.telefono1}</Typography>
+                </div>
+              </Box>
+            )}
           </Grid>
 
           {/* Primera fila 4-4-4 */}
