@@ -32,6 +32,13 @@ import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import MuiLink from '@mui/material/Link'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
 
 // Type Imports
 // import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -60,6 +67,23 @@ interface InvoiceType {
   // ... otros campos necesarios
 }
 
+const tiposCotizacion = [
+  { value: '', label: 'Tipo Cotización' },
+  { value: 'A', label: 'Valores Unitarios' },
+  { value: 'B', label: 'EMS' },
+  { value: 'C', label: 'Mensual' }
+]
+
+const estadosCotizacion = [
+  { value: '', label: 'Estado' },
+  { value: 'BORRADOR', label: 'Borrador' },
+  { value: 'COTIZADA', label: 'Cotizada' },
+  { value: 'GESTIONADA', label: 'Gestionada' },
+  { value: 'ACEPTADA', label: 'Aceptada' },
+  { value: 'SIN_RESPUESTA', label: 'Sin Respuesta' },
+  { value: 'RECHAZADA', label: 'Rechazada' }
+]
+
 const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -77,6 +101,9 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [pendingEstado, setPendingEstado] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
+  const [filtroFecha, setFiltroFecha] = useState<string>('')
+  const [filtroTipo, setFiltroTipo] = useState<string>('')
+  const [filtroEstado, setFiltroEstado] = useState<string>('')
 
   // Inicializar localData con invoiceData
   useEffect(() => {
@@ -333,10 +360,22 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
+
+    console.log('filtroFecha, filtroTipo, filtroEstado', {filtroFecha, filtroTipo, filtroEstado})
+    console.log('row', row)
+
+    if (filtroFecha) {
+      // Convertir row.fecha (dd-MM-yyyy) a yyyy-MM-dd con ceros a la izquierda
+      const [day, month, year] = row.fecha.split('-')
+      const rowFechaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      if (rowFechaISO !== filtroFecha) return false
+    }
+    if (filtroTipo && row.tipo !== filtroTipo) return false
+    if (filtroEstado && row.estado !== filtroEstado) return false
+
     if (!globalFilter) return true
 
     const searchStr = globalFilter.toLowerCase()
-
     return (
       row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
       row.comuna?.toLowerCase().includes(searchStr) ||
@@ -416,7 +455,64 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
   return (
     <Card>
-      <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
+      {/* Fila de filtros */}
+      <Card sx={{ boxShadow: 'none', mb: 0 }}>
+        <Grid container spacing={2} alignItems="center" sx={{ px: 3, pt: 3 }}>
+          <Grid item xs={12} md={4}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label="Fecha Creación"
+                value={filtroFecha ? new Date(filtroFecha) : null}
+                onChange={date => {
+                  if (!date) {
+                    setFiltroFecha('')
+                    return
+                  }
+                  const year = date.getFullYear()
+                  const month = String(date.getMonth() + 1).padStart(2, '0')
+                  const day = String(date.getDate()).padStart(2, '0')
+                  setFiltroFecha(`${year}-${month}-${day}`)
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Tipo Cotización</InputLabel>
+              <Select
+                value={filtroTipo}
+                label="Tipo Cotización"
+                onChange={e => setFiltroTipo(e.target.value)}
+              >
+                {tiposCotizacion.map(tipo => (
+                  <MenuItem key={tipo.value} value={tipo.value}>{tipo.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={filtroEstado}
+                label="Estado"
+                onChange={e => setFiltroEstado(e.target.value)}
+              >
+                {estadosCotizacion.map(estado => (
+                  <MenuItem key={estado.value} value={estado.value}>{estado.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Card>
+      {/* Fila de exportar y buscar */}
+      <div className='flex justify-between p-5 pt-2 gap-4 flex-col items-start sm:flex-row sm:items-center'>
         <Button
           color='secondary'
           variant='outlined'
@@ -450,7 +546,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           />
         </div>
       </div>
-
       <Divider />
 
       <TableContainer>
