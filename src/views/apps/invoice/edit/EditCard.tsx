@@ -88,7 +88,7 @@ interface ProductoType {
 }
 
 interface ContactoType {
-  contactoId: number
+  contactId: number
   nombre: string
   cargo: string
   email: string
@@ -247,13 +247,21 @@ const EditCard = ({ id }: { id: string }) => {
 
         // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
         const contactosMapeados = contactosData.map((contacto: any) => ({
-          contactoId: contacto.contactoId,
+          contactId: contacto.contactId,
           nombre: contacto.nombre,
           cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
           email: contacto.email,
           telefono1: contacto.telefono1
         }))
         setContactos(contactosMapeados)
+        console.log('Contactos mapeados:', contactosMapeados)
+
+        // Si existe contacto en la cotización, transformar el cargo a label
+        if (cotizacionData.contacto) {
+          const cargoLabel = ROLES_CONTACTO.find(c => c.value === cotizacionData.contacto.cargo)?.label || cotizacionData.contacto.cargo
+          cotizacionData.contacto.cargo = cargoLabel
+        }
+        setFormData(cotizacionData)
 
         setListasPrecios(listasPreciosData)
         setAreas(uniqueAreas as string[])
@@ -364,7 +372,7 @@ const EditCard = ({ id }: { id: string }) => {
         return {
           ...prev,
           contacto: newValue,
-          contactoId: newValue.contactoId
+          contactoId: newValue.contactId
         }
       })
     } else {
@@ -479,6 +487,10 @@ const EditCard = ({ id }: { id: string }) => {
     try {
       if (!formData) return
 
+      console.log('FormData antes de guardar:', formData)
+      console.log('Contacto actual:', formData.contacto)
+      console.log('ContactoId actual:', formData.contactoId)
+
       const detallesValidos = productRows.map(row => ({
         productoId: parseInt(row.productoId),
         cantidad: row.cantidad,
@@ -486,15 +498,22 @@ const EditCard = ({ id }: { id: string }) => {
         descuento: row.descuento || 0,
         subtotal: row.totalNetoUF,
         esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false,
-        paqueteId: row.paqueteId || null
+        esSubProducto: row.esSubProducto || false
       }))
+
+      // Asegurarnos de que el contactoId sea el del contacto seleccionado
+      const contactoId = formData.contacto ? formData.contacto.contactId : null
+      console.log('ContactoId que se enviará:', contactoId)
 
       const dataToSend = {
         ...formData,
         detalles: detallesValidos,
-        listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null
+        listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null,
+        contactoId: contactoId
       }
+
+      // Eliminar el objeto contacto del payload ya que solo necesitamos el ID
+      delete dataToSend.contacto
 
       console.log('DATA QUE SE ENVÍA AL PUT:', dataToSend)
 
@@ -742,27 +761,31 @@ const EditCard = ({ id }: { id: string }) => {
                 })
               }}
               onChange={(_, newValue) => {
-                if (newValue && newValue.contactoId) {
+                if (newValue) {
+                  console.log('Nuevo valor recibido:', newValue)
                   const contactoData = {
-                    contactoId: Number(newValue.contactoId),
+                    contactId: Number(newValue.contactId),
                     nombre: newValue.nombre,
                     cargo: newValue.cargo || 'Sin cargo',
                     email: newValue.email || '',
                     telefono1: newValue.telefono1 || ''
                   }
-                  setFormData(prev => prev ? { ...prev, contacto: contactoData, contactoId: contactoData.contactoId } : prev)
+                  console.log('Nuevo contacto seleccionado:', contactoData)
+                  setFormData(prev => {
+                    const newData = prev ? { ...prev, contacto: contactoData, contactoId: contactoData.contactId } : prev
+                    console.log('Nuevo formData después de actualizar contacto:', newData)
+                    return newData
+                  })
                 } else {
-                  setFormData(prev => prev ? { ...prev, contacto: undefined, contactoId: undefined } : prev)
+                  setFormData(prev => {
+                    const newData = prev ? { ...prev, contacto: undefined, contactoId: undefined } : prev
+                    console.log('FormData después de limpiar contacto:', newData)
+                    return newData
+                  })
                 }
               }}
-              isOptionEqualToValue={(option, value) => option.contactoId === value.contactoId}
-              value={formData.contacto && formData.contactoId ? {
-                contactoId: formData.contactoId,
-                nombre: formData.contacto.nombre,
-                cargo: formData.contacto.cargo || 'Sin cargo',
-                email: formData.contacto.email || '',
-                telefono1: formData.contacto.telefono1 || ''
-              } : null}
+              isOptionEqualToValue={(option, value) => option.contactId === value?.contactId}
+              value={formData.contacto || null}
             />
             {/* Detalles del contacto seleccionado */}
             {formData.contacto && (
