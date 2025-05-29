@@ -172,6 +172,29 @@ const PreviewCard = () => {
           </Typography>
         </Box>
 
+        {/* Información EMS */}
+        {previewData.tipoCotizacion === 'B' && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant='subtitle2' sx={{ mb: 2 }}>
+              INFORMACIÓN EMS
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Typography variant='subtitle2' color='text.secondary'>Superficie EMS</Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.superficieEMS || 'No especificada'}</Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant='subtitle2' color='text.secondary'>Antecedentes EMS</Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.antecedentesEMS || 'No especificados'}</Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant='subtitle2' color='text.secondary'>Plazo de Entrega EMS</Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.plazoEntregaEMS || 'No especificado'}</Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+
         {/* Tabla de Productos */}
         <Table sx={{ mb: 4 }}>
           <TableHead>
