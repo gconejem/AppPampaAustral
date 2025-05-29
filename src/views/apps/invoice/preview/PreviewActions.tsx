@@ -233,7 +233,7 @@ const PreviewActions = () => {
             >
               Descargar PDF
             </Button>
-            <Button
+            {/* <Button
               fullWidth
               color='info'
               variant='outlined'
@@ -256,7 +256,7 @@ const PreviewActions = () => {
               }}
             >
               Ver Preview HTML
-            </Button>
+            </Button> */}
             <Button fullWidth color='secondary' variant='outlined' onClick={() => window.close()}>
               Volver
             </Button>
