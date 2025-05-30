@@ -699,6 +699,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         <i className='ri-file-download-line' />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title='Duplicar'>
+                      <IconButton
+                        size='small'
+                        color='info'
+                        href={`/${locale}/apps/invoice/duplicate/${row.id}`}
+                      >
+                        <i className='ri-file-copy-line' />
+                      </IconButton>
+                    </Tooltip>
                     {row.estado === 'BORRADOR' && (
                       <Tooltip title='Eliminar'>
                         <IconButton
