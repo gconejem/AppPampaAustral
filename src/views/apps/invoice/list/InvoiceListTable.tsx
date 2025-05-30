@@ -102,6 +102,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
   const [filtroFecha, setFiltroFecha] = useState<string>('')
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('')
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
 
@@ -363,16 +364,32 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
-
-    /* console.log('filtroFecha, filtroTipo, filtroEstado', {filtroFecha, filtroTipo, filtroEstado})
-    console.log('row', row) */
-
-    if (filtroFecha) {
-      // Convertir row.fecha (dd-MM-yyyy) a yyyy-MM-dd con ceros a la izquierda
-      const [day, month, year] = row.fecha.split('-')
-      const rowFechaISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-      if (rowFechaISO !== filtroFecha) return false
+    if (filtroFecha || filtroFechaFin) {
+      // Convertir fechas de filtro (yyyy-MM-dd) a formato dd-MM-yyyy
+      let filtroFechaFormateada = ''
+      let filtroFechaFinFormateada = ''
+      
+      if (filtroFecha) {
+        const [year, month, day] = filtroFecha.split('-')
+        filtroFechaFormateada = `${day}-${month}-${year}`
+      }
+      
+      if (filtroFechaFin) {
+        const [year, month, day] = filtroFechaFin.split('-')
+        filtroFechaFinFormateada = `${day}-${month}-${year}`
+      }
+      
+      // Comparar fechas en formato dd-MM-yyyy
+      if (filtroFecha && row.fecha < filtroFechaFormateada) return false
+      if (filtroFechaFin && row.fecha > filtroFechaFinFormateada) return false
+      
+      console.log('Fechas para comparación:', {
+        rowFecha: row.fecha,
+        filtroFecha: filtroFechaFormateada,
+        filtroFechaFin: filtroFechaFinFormateada
+      })
     }
+    
     if (filtroTipo && row.tipo !== filtroTipo) return false
     if (filtroEstado && row.estado !== filtroEstado) return false
 
@@ -461,11 +478,11 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       {/* Fila de filtros */}
       <Card sx={{ boxShadow: 'none', mb: 0 }}>
         <Grid container spacing={2} alignItems="center" sx={{ px: 3, pt: 3 }}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
               <DatePicker
-                label="Fecha Creación"
-                value={filtroFecha ? new Date(filtroFecha) : null}
+                label="Fecha Inicio"
+                value={filtroFecha ? new Date(filtroFecha + 'T00:00:00') : null}
                 onChange={date => {
                   if (!date) {
                     setFiltroFecha('')
@@ -484,7 +501,30 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               />
             </LocalizationProvider>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label="Fecha Fin"
+                value={filtroFechaFin ? new Date(filtroFechaFin + 'T00:00:00') : null}
+                onChange={date => {
+                  if (!date) {
+                    setFiltroFechaFin('')
+                    return
+                  }
+                  const year = date.getFullYear()
+                  const month = String(date.getMonth() + 1).padStart(2, '0')
+                  const day = String(date.getDate()).padStart(2, '0')
+                  setFiltroFechaFin(`${year}-${month}-${day}`)
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Tipo Cotización</InputLabel>
               <Select
@@ -498,7 +538,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel>Estado</InputLabel>
               <Select
