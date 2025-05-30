@@ -251,11 +251,11 @@ const AddCard = ({
         ...prevData,
         ...newData,
         detalles: productRows.map(row => ({
-          productoId: row.productoId,
+          productoId: parseInt(row.productoId),
           servicio: row.servicio || '',
           area: row.area || '',
           descripcion: row.descripcion || '',
-          cantidad: row.cantidad || 1,
+          cantidad: row.cantidad,
           precioUnitarioUF: parseFloat(row.precioUnitarioUF?.toString() || '0'),
           totalNetoUF: parseFloat(row.totalNetoUF?.toString() || '0'),
           esPaquete: row.esPaquete || false,
@@ -430,6 +430,7 @@ const AddCard = ({
 
   // Agregar estado para filtro de paquetes
   const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+  const [sinCantidad, setSinCantidad] = useState(false)
 
   // Agregar después de los otros estados
   const [listasPrecios, setListasPrecios] = useState<Array<{ id: number; nombre: string }>>([])
@@ -446,6 +447,12 @@ const AddCard = ({
   const [productsPage, setProductsPage] = useState(0)
   const [totalProductos, setTotalProductos] = useState(0)
   const ITEMS_PER_PAGE = 10
+
+  // Justo después de los estados principales:
+  const [subtotal, setSubtotal] = useState(0)
+  const [descuentoTotal, setDescuentoTotal] = useState(0)
+  const [impuesto, setImpuesto] = useState(0)
+  const [total, setTotal] = useState(0)
 
   // Cargar clientes y obras al montar el componente
   useEffect(() => {
@@ -663,53 +670,31 @@ const AddCard = ({
     e.target.closest('.repeater-item').remove()
   }
 
-  // Modificar la función calcularTotales para evitar el bucle infinito
-  const calcularTotales = useCallback(() => {
-    // Calcular el subtotal sumando todos los totales netos
-    const subtotalTotal = productRows.reduce((acc, row) => {
-      const totalNetoUF = Number(row.totalNetoUF || 0)
-
-      return acc + totalNetoUF
-    }, 0)
-
-    // Calcular el descuento
-    const descuentoTotal = Number(formData.descuento || 0)
-
-    // Calcular la base imponible
-    const baseImponible = Number(subtotalTotal - descuentoTotal)
-
-    // Calcular el IVA (19%)
-    const impuesto = Number(baseImponible * 0.19)
-
-    // Calcular el total
-    const total = Number(baseImponible + impuesto)
-
-    // Solo actualizar si los valores han cambiado (usando useRef)
-    if (
-      lastTotals.current.subtotal !== subtotalTotal ||
-      lastTotals.current.descuento !== descuentoTotal ||
-      lastTotals.current.impuesto !== impuesto ||
-      lastTotals.current.total !== total
-    ) {
-      lastTotals.current = {
-        subtotal: subtotalTotal,
-        descuento: descuentoTotal,
-        impuesto: impuesto,
-        total: total
-      }
-      updateFormData({
-        subtotal: parseFloat(subtotalTotal.toFixed(2)),
-        descuento: parseFloat(descuentoTotal.toFixed(2)),
-        impuesto: parseFloat(impuesto.toFixed(2)),
-        total: parseFloat(total.toFixed(2))
-      })
+  // Reemplazar calcularTotales por un useEffect puro:
+  useEffect(() => {
+    if (sinCantidad) {
+      if (subtotal !== 0) setSubtotal(0)
+      if (descuentoTotal !== 0) setDescuentoTotal(0)
+      if (impuesto !== 0) setImpuesto(0)
+      if (total !== 0) setTotal(0)
+      return
     }
-  }, [productRows, formData.descuento, updateFormData])
+    // Calcular el subtotal sumando todos los totales netos
+    const subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.totalNetoUF || 0), 0)
+    const descuento = Number(formData.descuento || 0)
+    const baseImponible = subtotalTotal - descuento
+    const iva = baseImponible * 0.19
+    const totalFinal = baseImponible + iva
+    if (subtotal !== subtotalTotal) setSubtotal(parseFloat(subtotalTotal.toFixed(2)))
+    if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(2)))
+    if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(2)))
+    if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(2)))
+  }, [productRows, sinCantidad, formData.descuento])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
-  useEffect(() => {
+  /* useEffect(() => {
     calcularTotales()
-  }, [productRows, calcularTotales])
+  }, [productRows, calcularTotales]) */
 
   // Función para manejar el cambio de producto
   const handleProductoChange = async (e: SelectChangeEvent<string>, index: number) => {
@@ -738,7 +723,7 @@ const AddCard = ({
           descripcion: pp.descripcion || pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
           precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
@@ -774,7 +759,7 @@ const AddCard = ({
     }
 
     setProductRows(newRows)
-    calcularTotales()
+    // calcularTotales()
   }
 
   // Modificar el handleSelectProduct para incluir el cálculo inicial
@@ -836,7 +821,7 @@ const AddCard = ({
         descripcion: pp.descripcion || pp.producto?.descripcion || '',
         cantidad: pp.cantidad || 1,
         precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-        totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+        totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
         area: pp.area || pp.producto?.area || '',
         esSubProducto: true,
         subproductos: []
@@ -857,7 +842,7 @@ const AddCard = ({
         descripcion: producto.descripcion || '',
         cantidad: 1,
         precioUnitarioUF: precioFinal,
-        totalNetoUF: precioFinal, // Precio inicial por cantidad 1
+        totalNetoUF: sinCantidad ? 0 : precioFinal, // Precio inicial por cantidad 1
         area: producto.area || '',
         subproductos: []
       }
@@ -870,7 +855,7 @@ const AddCard = ({
     }
 
     setProductRows(newRows)
-    calcularTotales() // Llamar a calcularTotales después de actualizar las filas
+    // calcularTotales() // Llamar a calcularTotales después de actualizar las filas
     handleClosePopover()
   }
 
@@ -883,7 +868,7 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       precioUnitarioUF: precio,
-      totalNetoUF: precio * cantidad,
+      totalNetoUF: sinCantidad ? 0 : precio * cantidad,
       precioEditado: true // Marca como editado manualmente
     }
 
@@ -893,12 +878,12 @@ const AddCard = ({
   const handleCantidadChange = (index: number, cantidad: number) => {
     const newRows = [...productRows]
     const precioUF = Number(newRows[index].precioUnitarioUF || 0)
-    const cantidadNum = Number(cantidad)
+    const cantidadNum = sinCantidad ? 1 : Number(cantidad)
 
     newRows[index] = {
       ...newRows[index],
       cantidad: cantidadNum,
-      totalNetoUF: precioUF * cantidadNum
+      totalNetoUF: sinCantidad ? 0 : precioUF * cantidadNum
     }
 
     setProductRows(newRows)
@@ -923,16 +908,16 @@ const AddCard = ({
         servicio: row.servicio || '',
         area: row.area || '',
         descripcion: row.descripcion || '',
-        cantidad: row.cantidad || 1,
+        cantidad: row.cantidad,
         precioUnitarioUF: parseFloat(row.precioUnitarioUF?.toString() || '0'),
         totalNetoUF: parseFloat(row.totalNetoUF?.toString() || '0'),
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       })),
-      subtotal: parseFloat(formData.subtotal?.toString() || '0'),
-      descuento: parseFloat(formData.descuento?.toString() || '0'),
-      impuesto: parseFloat(formData.impuesto?.toString() || '0'),
-      total: parseFloat(formData.total?.toString() || '0'),
+      subtotal: subtotal,
+      descuento: descuentoTotal,
+      impuesto: impuesto,
+      total: total,
       observaciones: formData.observaciones || '',
       listaPrecioId: selectedListaPrecio
     }
@@ -1001,7 +986,7 @@ const AddCard = ({
       id: Date.now(), // Usar timestamp para ID único
       productoId: '0',
       servicio: '',
-      cantidad: 1,
+      cantidad: sinCantidad ? 1 : 1,
       precioUnitarioUF: 0,
       totalNetoUF: 0,
       area: '',
@@ -1030,7 +1015,7 @@ const AddCard = ({
     }
 
     setProductRows(newRows)
-    calcularTotales()
+    // calcularTotales()
   }
 
   // Manejar error de tipo unknown
@@ -1367,6 +1352,17 @@ const AddCard = ({
       fetchFilteredProducts()
     }
   }, [anchorEl, productsPage, selectedArea, selectedTipo, selectedFamilia, searchTerm])
+
+  // useEffect para actualizar cantidades cuando cambia sinCantidad
+  useEffect(() => {
+    setProductRows(prevRows =>
+      prevRows.map(row => ({
+        ...row,
+        cantidad: sinCantidad ? 0 : 1,
+        totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : 1)
+      }))
+    )
+  }, [sinCantidad])
 
   return (
     <>
@@ -1761,20 +1757,31 @@ const AddCard = ({
 
             {/* Detalles de la Cotización */}
             <Grid item xs={12} sx={{ mt: 8 }}>
-              <Typography
-                variant='h6'
-                sx={{
-                  mb: 4,
-                  fontWeight: 500,
-                  color: 'text.secondary',
-                  textTransform: 'none',
-                  borderBottom: '1px solid',
-                  borderColor: 'primary.main',
-                  pb: 1
-                }}
-              >
-                Detalle Servicios Solicitados:
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography
+                  variant='h6'
+                  sx={{
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    textTransform: 'none',
+                    borderBottom: '1px solid',
+                    borderColor: 'primary.main',
+                    pb: 1
+                  }}
+                >
+                  Detalle Servicios Solicitados:
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={sinCantidad}
+                      onChange={(e) => setSinCantidad(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Sin cantidad"
+                />
+              </Box>
 
               {(formData.tipoCotizacion === 'B' || formData.tipoCotizacion === 'C') && (
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -2141,7 +2148,8 @@ const AddCard = ({
                       label='Cantidad'
                       value={row.cantidad}
                       onChange={e => handleCantidadChange(index, Number(e.target.value))}
-                      inputProps={{ min: 1 }}
+                      inputProps={{ min: 0 }}
+                      disabled={sinCantidad}
                     />
                   </Grid>
 
@@ -2255,20 +2263,20 @@ const AddCard = ({
                     <>
                       <div className='flex justify-between mb-2'>
                         <Typography>Subtotal:</Typography>
-                        <Typography>UF {formData.subtotal?.toFixed(2) || '0.00'}</Typography>
+                        <Typography>UF {subtotal?.toFixed(2) || '0.00'}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>Descuento:</Typography>
-                        <Typography>UF {formData.descuento?.toFixed(2) || '0.00'}</Typography>
+                        <Typography>UF {descuentoTotal?.toFixed(2) || '0.00'}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>IVA (19%):</Typography>
-                        <Typography>UF {formData.impuesto?.toFixed(2) || '0.00'}</Typography>
+                        <Typography>UF {impuesto?.toFixed(2) || '0.00'}</Typography>
                       </div>
                       <Divider className='my-2' />
                       <div className='flex justify-between'>
                         <Typography variant='h6'>Total:</Typography>
-                        <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
+                        <Typography variant='h6'>UF {total?.toFixed(2) || '0.00'}</Typography>
                       </div>
                     </>
                   )}

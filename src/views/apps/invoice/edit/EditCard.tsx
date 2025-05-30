@@ -141,6 +141,9 @@ const EditCard = ({ id }: { id: string }) => {
   const [filteredProductos, setFilteredProductos] = useState<ProductoType[]>([])
   const [listasPrecios, setListasPrecios] = useState<Array<{ id: number; nombre: string }>>([])
 
+  // 1. Estado sinCantidad
+  const [sinCantidad, setSinCantidad] = useState(false)
+
   // Función para calcular totales
   const calcularTotales = useCallback(() => {
     if (!formData) return
@@ -288,6 +291,28 @@ const EditCard = ({ id }: { id: string }) => {
       calcularTotales()
     }
   }, [productRows]) // Solo depender de productRows, no de calcularTotales ni formData
+
+  // 2. Al cargar la cotización, si todas las cantidades son 0, setear sinCantidad en true
+  useEffect(() => {
+    if (productRows.length > 0) {
+      const todasCero = productRows.every(row => Number(row.cantidad) === 0)
+      setSinCantidad(todasCero)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 4. Cuando sinCantidad cambie, actualizar cantidades y recalcular totales
+  useEffect(() => {
+    setProductRows(prevRows =>
+      prevRows.map(row => ({
+        ...row,
+        cantidad: sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad),
+        totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad))
+      }))
+    )
+    // Recalcular totales
+    if (formData) calcularTotales()
+  }, [sinCantidad])
 
   // Función para manejar cambios en los productos
   const handleSelectProduct = (producto: ProductoType) => {
@@ -955,9 +980,13 @@ const EditCard = ({ id }: { id: string }) => {
 
           {/* Detalles de Servicios */}
           <Grid item xs={12}>
-            <Typography variant='h6' sx={{ mb: 2 }}>
-              Detalle de Servicios
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant='h6'>Detalle de Servicios</Typography>
+              <FormControlLabel
+                control={<Switch checked={sinCantidad} onChange={e => setSinCantidad(e.target.checked)} size='small' />}
+                label='Sin cantidad'
+              />
+            </Box>
 
             {productRows.map((row, index) => (
               <Grid container spacing={2} key={row.id}>
@@ -978,6 +1007,7 @@ const EditCard = ({ id }: { id: string }) => {
                     value={row.cantidad}
                     onChange={e => handleCantidadChange(index, Number(e.target.value))}
                     inputProps={{ min: 1 }}
+                    disabled={sinCantidad}
                   />
                 </Grid>
                 <Grid item xs={12} md={2}>
@@ -990,6 +1020,18 @@ const EditCard = ({ id }: { id: string }) => {
                     InputProps={{
                       startAdornment: <InputAdornment position='start'>UF</InputAdornment>
                     }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={2}>
+                  <TextField
+                    fullWidth
+                    label='Total Neto UF'
+                    value={row.totalNetoUF || 0}
+                    InputProps={{
+                      startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                      readOnly: true
+                    }}
+                    disabled
                   />
                 </Grid>
                 <Grid item xs={12} md={1}>

@@ -84,7 +84,7 @@ const PreviewActions = () => {
         })
         .map((detalle: any) => ({
           productoId: parseInt(detalle.productoId),
-          cantidad: parseInt(detalle.cantidad) || 1,
+          cantidad: Number(detalle.cantidad),
           precioUnitario: parseFloat(detalle.precioUnitarioUF || 0),
           descuento: 0,
           subtotal: parseFloat(detalle.totalNetoUF || 0)
