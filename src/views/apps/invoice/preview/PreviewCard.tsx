@@ -202,9 +202,13 @@ const PreviewCard = () => {
               <TableCell>ÁREA</TableCell>
               <TableCell>SERVICIO/ENSAYO</TableCell>
               <TableCell>DESCRIPCIÓN</TableCell>
-              <TableCell align='right'>CANTIDAD</TableCell>
-              <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
-              <TableCell align='right'>TOTAL NETO UF</TableCell>
+              {previewData.precioEMSPorProducto && (
+                <>
+                  <TableCell align='right'>CANTIDAD</TableCell>
+                  <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
+                  <TableCell align='right'>TOTAL NETO UF</TableCell>
+                </>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -231,7 +235,7 @@ const PreviewCard = () => {
                 // Opcional: Título de área
                 rows.push(
                   <TableRow key={`area-title-${areaIdx}`}>
-                    <TableCell colSpan={6} style={{ background: '#f5f5f5', fontWeight: 700 }}>
+                    <TableCell colSpan={previewData.precioEMSPorProducto ? 6 : 3} style={{ background: '#f5f5f5', fontWeight: 700 }}>
                       {area}
                     </TableCell>
                   </TableRow>
@@ -251,9 +255,13 @@ const PreviewCard = () => {
                           <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
                         </TableCell>
                         <TableCell>{item.descripcion || ''}</TableCell>
-                        <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                        <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                        {previewData.precioEMSPorProducto && (
+                          <>
+                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                          </>
+                        )}
                       </TableRow>
                     )
 
@@ -268,9 +276,13 @@ const PreviewCard = () => {
                           <TableCell>{sub.area || ''}</TableCell>
                           <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
                           <TableCell>{sub.descripcion || ''}</TableCell>
-                          <TableCell align='right'>{sub.cantidad || 0}</TableCell>
-                          <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                          <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                          {previewData.precioEMSPorProducto && (
+                            <>
+                              <TableCell align='right'>{sub.cantidad || 0}</TableCell>
+                              <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                              <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                            </>
+                          )}
                         </TableRow>
                       )
                       j++
@@ -284,9 +296,13 @@ const PreviewCard = () => {
                         <TableCell>{item.area || ''}</TableCell>
                         <TableCell>{item.servicio || ''}</TableCell>
                         <TableCell>{item.descripcion || ''}</TableCell>
-                        <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                        <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                        {previewData.precioEMSPorProducto && (
+                          <>
+                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                          </>
+                        )}
                       </TableRow>
                     )
                     i++
@@ -301,18 +317,30 @@ const PreviewCard = () => {
 
         {/* Totales */}
         <Box sx={{ mt: 4, textAlign: 'right' }}>
-          <Typography>
-            <strong>Subtotal:</strong> UF {Number(previewData.subtotal).toFixed(2)}
-          </Typography>
-          <Typography>
-            <strong>Descuento:</strong> UF {Number(previewData.descuento).toFixed(2)}
-          </Typography>
-          <Typography>
-            <strong>IVA (19%):</strong> UF {Number(previewData.impuesto).toFixed(2)}
-          </Typography>
-          <Typography variant='h6'>
-            <strong>Total:</strong> UF {Number(previewData.total).toFixed(2)}
-          </Typography>
+          {(() => {
+            const subtotal = Number(previewData.precioEMSPorProducto ? previewData.subtotal : previewData.precioEMSTotal)
+            const descuento = Number(previewData.descuento || 0)
+            const subtotalConDescuento = subtotal - descuento
+            const iva = subtotalConDescuento * 0.19
+            const total = subtotalConDescuento + iva
+
+            return (
+              <>
+                <Typography>
+                  <strong>Subtotal:</strong> UF {subtotal.toFixed(2)}
+                </Typography>
+                <Typography>
+                  <strong>Descuento:</strong> UF {descuento.toFixed(2)}
+                </Typography>
+                <Typography>
+                  <strong>IVA (19%):</strong> UF {iva.toFixed(2)}
+                </Typography>
+                <Typography variant='h6'>
+                  <strong>Total:</strong> UF {total.toFixed(2)}
+                </Typography>
+              </>
+            )
+          })()}
         </Box>
 
         {/* Observaciones */}

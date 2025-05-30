@@ -84,10 +84,10 @@ const PreviewActions = () => {
         })
         .map((detalle: any) => ({
           productoId: parseInt(detalle.productoId),
-          cantidad: Number(detalle.cantidad),
-          precioUnitario: parseFloat(detalle.precioUnitarioUF || 0),
+          cantidad: previewData.precioEMSPorProducto ? Number(detalle.cantidad) : 0,
+          precioUnitario: previewData.precioEMSPorProducto ? parseFloat(detalle.precioUnitarioUF || 0) : 0,
           descuento: 0,
-          subtotal: parseFloat(detalle.totalNetoUF || 0)
+          subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0
         }))
 
       // Debug: ver los detalles válidos
@@ -128,16 +128,23 @@ const PreviewActions = () => {
         empresa: previewData.empresa || '',
         ubicacion: previewData.ubicacion || '',
         formaPago: previewData.formaPago || 'CONTADO',
-        subtotal: parseFloat(previewData.subtotal),
+        subtotal: previewData.precioEMSPorProducto ? parseFloat(previewData.subtotal) : parseFloat(previewData.precioEMSTotal),
         descuento: parseFloat(previewData.descuento || 0),
-        impuesto: parseFloat(previewData.impuesto),
-        total: parseFloat(previewData.total),
+        impuesto: previewData.precioEMSPorProducto 
+          ? parseFloat(previewData.impuesto) 
+          : (parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19,
+        total: previewData.precioEMSPorProducto 
+          ? parseFloat(previewData.total) 
+          : parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0) + 
+            ((parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19),
         observaciones: previewData.observaciones || '',
 
         //EMS
         superficieEMS: previewData.superficieEMS || '',
         antecedentesEMS: previewData.antecedentesEMS || '',
         plazoEntregaEMS: previewData.plazoEntregaEMS || '',
+        precioEMSPorProducto: previewData.precioEMSPorProducto || false,
+        precioEMSTotal: parseFloat(previewData.precioEMSTotal || 0),
         //FIN EMS
 
         detalles: {

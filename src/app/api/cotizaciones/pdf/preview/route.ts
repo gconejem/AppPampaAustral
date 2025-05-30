@@ -100,9 +100,11 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO/ENSAYO</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
+                ${cotizacion.precioEMSPorProducto ? `
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">CANTIDAD</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
+                ` : ''}
               </tr>
             </thead>
             <tbody>
@@ -118,7 +120,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                 let html = '';
                 for (const area in detallesPorArea) {
                   html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
-                  html += `<td colspan="6">${area}</td></tr>`;
+                  html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
                   for (const detalle of detallesPorArea[area]) {
                     // Si existe producto, usa los campos anidados. Si no, usa los directos.
                     const prod = detalle.producto || {};
@@ -126,9 +128,11 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                       <td>${prod.area || detalle.area || '-'}</td>
                       <td>${prod.nombre || detalle.servicio || '-'}${prod.norma ? ` - ${prod.norma}` : ''}</td>
                       <td>${prod.descripcion || detalle.descripcion || '-'}</td>
+                      ${cotizacion.precioEMSPorProducto ? `
                       <td style="text-align:center;">${detalle.cantidad || '-'}</td>
                       <td style="text-align:right;">UF ${Number(detalle.precioUnitario ?? detalle.precioUnitarioUF ?? 0).toFixed(2)}</td>
                       <td style="text-align:right;">UF ${Number(detalle.subtotal ?? detalle.totalNetoUF ?? 0).toFixed(2)}</td>
+                      ` : ''}
                     </tr>`;
                   }
                 }
@@ -137,10 +141,20 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             </tbody>
           </table>
           <div class="totales">
-            <div><strong>Subtotal:</strong> UF ${Number(cotizacion.subtotal).toFixed(2)}</div>
-            <div><strong>Descuento:</strong> UF ${Number(cotizacion.descuento).toFixed(2)}</div>
-            <div><strong>IVA (19%):</strong> UF ${Number(cotizacion.impuesto).toFixed(2)}</div>
-            <div><strong>Total: UF ${Number(cotizacion.total).toFixed(2)}</strong></div>
+            ${(() => {
+              const subtotal = Number(cotizacion.precioEMSPorProducto ? cotizacion.subtotal : cotizacion.precioEMSTotal);
+              const descuento = Number(cotizacion.descuento || 0);
+              const subtotalConDescuento = subtotal - descuento;
+              const iva = subtotalConDescuento * 0.19;
+              const total = subtotalConDescuento + iva;
+
+              return `
+                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
+                <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
+                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
+                <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+              `;
+            })()}
           </div>
           ${cotizacion.observaciones ? `<div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b><br>${(cotizacion.observaciones || '').replace(/\r?\n/g, '<br>')}</div>` : ''}
 
