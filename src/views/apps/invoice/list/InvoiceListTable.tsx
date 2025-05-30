@@ -68,14 +68,14 @@ interface InvoiceType {
 }
 
 const tiposCotizacion = [
-  { value: '', label: 'Tipo Cotización' },
+  { value: '', label: 'Todos' },
   { value: 'A', label: 'Valores Unitarios' },
   { value: 'B', label: 'EMS' },
   { value: 'C', label: 'Mensual' }
 ]
 
 const estadosCotizacion = [
-  { value: '', label: 'Estado' },
+  { value: '', label: 'Todos' },
   { value: 'BORRADOR', label: 'Borrador' },
   { value: 'COTIZADA', label: 'Cotizada' },
   { value: 'GESTIONADA', label: 'Gestionada' },
@@ -526,11 +526,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Tipo Cotización</InputLabel>
+              <InputLabel shrink>Tipo Cotización</InputLabel>
               <Select
-                value={filtroTipo}
+                value={filtroTipo || ''}
                 label="Tipo Cotización"
-                onChange={e => setFiltroTipo(e.target.value)}
+                onChange={e => {
+                  const value = e.target.value
+                  setFiltroTipo(value)
+                }}
+                displayEmpty
               >
                 {tiposCotizacion.map(tipo => (
                   <MenuItem key={tipo.value} value={tipo.value}>{tipo.label}</MenuItem>
@@ -540,11 +544,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Estado</InputLabel>
+              <InputLabel shrink>Estado</InputLabel>
               <Select
-                value={filtroEstado}
+                value={filtroEstado || ''}
                 label="Estado"
-                onChange={e => setFiltroEstado(e.target.value)}
+                onChange={e => {
+                  const value = e.target.value
+                  setFiltroEstado(value)
+                }}
+                displayEmpty
               >
                 {estadosCotizacion.map(estado => (
                   <MenuItem key={estado.value} value={estado.value}>{estado.label}</MenuItem>
