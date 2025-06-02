@@ -80,7 +80,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
       <table class="header-table">
         <tr>
           <td class="header-logo" rowspan="4">
-            <img src="${logoBase64}" alt="LOGO" style="max-width:80px; max-height:40px;" />
+            <img src="${logoBase64}" alt="LOGO" style="max-width:184px; max-height:92px;" />
           </td>
           <td class="header-title" rowspan="4" style="vertical-align: middle;">
             Ficha Cliente - Obra
