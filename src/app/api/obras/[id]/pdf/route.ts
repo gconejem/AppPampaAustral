@@ -206,6 +206,31 @@ function renderObraHTML(obra: any, logoBase64: string) {
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
               <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+                Referencias
+              </th>
+            </tr>
+            <tr>
+              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>Estado de Pago:</b> ${obra.estadoPago ? 'Sí' : 'No'}<br/>
+                <b>HES:</b> ${obra.hes ? 'Sí' : 'No'}<br/>
+              </td>
+              <td style="width:67%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+                <b>OC:</b> ${obra.oc ? 'Sí' : 'No'}<br/>
+                <b>Envío de Informes:</b> ${obra.envioInformes ? 'Sí' : 'No'}<br/>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3" style="padding: 6px; border:1px solid #ccc;">
+                <b>Otras Referencias:</b> ${obra.otrasReferencias || '-'}
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+            <tr>
+              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Facturación
               </th>
             </tr>

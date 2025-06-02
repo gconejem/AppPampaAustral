@@ -222,29 +222,31 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
             Referencias
           </Typography>
           <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <Typography variant='subtitle2' color='text.secondary'>
                 Estado de Pago
               </Typography>
               <Typography>{obra.estadoPago ? 'Sí' : 'No'}</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant='subtitle2' color='text.secondary'>
+              <Typography variant='subtitle2' color='text.secondary' className='mt-2'>
                 HES
               </Typography>
               <Typography>{obra.hes ? 'Sí' : 'No'}</Typography>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={8}>
               <Typography variant='subtitle2' color='text.secondary'>
                 OC
               </Typography>
               <Typography>{obra.oc ? 'Sí' : 'No'}</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant='subtitle2' color='text.secondary'>
+              <Typography variant='subtitle2' color='text.secondary' className='mt-2'>
                 Envío de Informes
               </Typography>
               <Typography>{obra.envioInformes ? 'Sí' : 'No'}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Otras Referencias
+              </Typography>
+              <Typography>{obra.otrasReferencias || '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>
