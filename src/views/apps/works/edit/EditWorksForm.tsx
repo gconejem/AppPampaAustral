@@ -1220,11 +1220,24 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
           </Grid>
 
           <Grid item xs={12} sm={3}>
+            <FormControlLabel
+              control={
+                <Controller
+                  name='envioInformes'
+                  control={control}
+                  render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
+                />
+              }
+              label='Envío de Informes'
+            />
+          </Grid>
+
+          <Grid item xs={12}>
             <Controller
               name='otrasReferencias'
               control={control}
               render={({ field }) => (
-                <TextField {...field} fullWidth label='Otras Referencias' InputLabelProps={{ shrink: true }} />
+                <TextField {...field} fullWidth label='Otras Referencias' InputLabelProps={{ shrink: true }} multiline rows={4} />
               )}
             />
           </Grid>
