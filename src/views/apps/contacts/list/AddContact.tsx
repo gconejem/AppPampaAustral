@@ -120,9 +120,9 @@ const AddContact = (props: Props) => {
       })
 
       if (!response.ok) {
-        const errorData = await response.text()
+        const errorData = await response.json()
         console.error('Error response:', errorData)
-        throw new Error('Error al crear contacto')
+        throw new Error(errorData.error || 'Error al crear contacto')
       }
 
       const newContact = await response.json()

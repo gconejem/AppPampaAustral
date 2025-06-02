@@ -51,6 +51,20 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
 
+    // Verificar si ya existe un contacto con el mismo email
+    const existingContact = await prisma.contacto.findFirst({
+      where: {
+        email: body.email
+      }
+    })
+
+    if (existingContact) {
+      return NextResponse.json(
+        { error: 'Ya existe un contacto registrado con este email' },
+        { status: 400 }
+      )
+    }
+
     const contacto = await prisma.contacto.create({
       data: {
         nombre: body.nombre,
