@@ -215,6 +215,41 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
         </CardContent>
       </Card>
 
+      {/* Referencias */}
+      <Card>
+        <CardContent>
+          <Typography variant='h6' className='mb-4'>
+            Referencias
+          </Typography>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Estado de Pago
+              </Typography>
+              <Typography>{obra.estadoPago ? 'Sí' : 'No'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                HES
+              </Typography>
+              <Typography>{obra.hes ? 'Sí' : 'No'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                OC
+              </Typography>
+              <Typography>{obra.oc ? 'Sí' : 'No'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Envío de Informes
+              </Typography>
+              <Typography>{obra.envioInformes ? 'Sí' : 'No'}</Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
       {/* Facturación */}
       <Card>
         <CardContent>

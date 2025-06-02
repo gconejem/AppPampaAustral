@@ -35,6 +35,7 @@ export interface Obra {
   hes?: boolean
   oc?: boolean
   otrasReferencias?: string
+  envioInformes?: boolean
   createdAt?: Date
   updatedAt?: Date
   representanteLegal?: string
