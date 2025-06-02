@@ -17,7 +17,8 @@ export async function GET(request: Request) {
           { nombre: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
           { telefono1: { contains: query } },
-          { cargo: { contains: query, mode: 'insensitive' } }
+          { cargo: { contains: query, mode: 'insensitive' } },
+          { empresa: { contains: query, mode: 'insensitive' } }
         ]
       },
       select: {
@@ -26,7 +27,8 @@ export async function GET(request: Request) {
         cargo: true,
         email: true,
         telefono1: true,
-        telefono2: true
+        telefono2: true,
+        empresa: true
       },
       take: 10
     })

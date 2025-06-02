@@ -103,7 +103,7 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
       isOptionEqualToValue={(option, value) => option.email === value.email}
       getOptionLabel={option => {
         const cargoLabel = option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : ''
-        return `${option.nombre}${cargoLabel ? ` - ${cargoLabel}` : ''}${option.email ? ` (${option.email})` : ''}`
+        return `${option.nombre}${option.empresa ? ` (${option.empresa})` : ''}${cargoLabel ? ` - ${cargoLabel}` : ''}${option.email ? ` (${option.email})` : ''}`
       }}
       options={options}
       loading={loading}
@@ -112,7 +112,7 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
         <ListItem {...props}>
           <ListItemText
             primary={option.nombre}
-            secondary={`${option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : 'Sin cargo'} - ${option.email || 'Sin email'} - ${option.telefono1 || 'Sin teléfono'}`}
+            secondary={`${option.empresa ? `${option.empresa} - ` : ''}${option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : 'Sin cargo'} - ${option.email || 'Sin email'} - ${option.telefono1 || 'Sin teléfono'}`}
           />
         </ListItem>
       )}

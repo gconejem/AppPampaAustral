@@ -112,6 +112,7 @@ export interface Contacto {
   telefono1: string
   telefono2?: string
   isPrincipal?: boolean
+  empresa?: string
 }
 
 export interface ClienteContacto {
