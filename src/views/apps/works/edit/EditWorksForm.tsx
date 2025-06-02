@@ -138,14 +138,21 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       const formattedDate = obraData.fechaIngreso ? format(new Date(obraData.fechaIngreso), 'yyyy-MM-dd') : ''
       const formattedRut = obraData.rut ? formatRut(obraData.rut) : ''
 
-      // Asegurarnos de que los booleanos se inicialicen correctamente
+      // Asegurarnos de que los booleanos y campos de texto/array se inicialicen correctamente
       const formattedData = {
         ...obraData,
         fechaIngreso: formattedDate,
         rut: formattedRut,
-        representanteLegal: obraData.representanteLegal || '',
-        rutRepresentanteLegal: obraData.rutRepresentanteLegal || '',
-
+        representanteLegal: obraData.representanteLegal ?? '',
+        rutRepresentanteLegal: obraData.rutRepresentanteLegal ?? '',
+        mailRecepcionFactura: obraData.mailRecepcionFactura ?? [],
+        correos: (obraData as any).correos ?? [],
+        telefonoFacturacion: obraData.telefonoFacturacion ?? '',
+        razonSocial: obraData.razonSocial ?? '',
+        giro: obraData.giro ?? '',
+        direccionComercial: obraData.direccionComercial ?? '',
+        comunaFacturacion: obraData.comunaFacturacion ?? '',
+        listaPrecios: obraData.listaPrecios ?? '',
         // Convertir explícitamente a booleanos
         informeMandante: Boolean(obraData.informeMandante ?? false),
         acreditacionPersonal: Boolean(obraData.acreditacionPersonal ?? false),
@@ -173,7 +180,16 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         estadoObra: 'activa',
         fechaIngreso: new Date().toISOString().split('T')[0],
         representanteLegal: '',
-        rutRepresentanteLegal: ''
+        rutRepresentanteLegal: '',
+        acreditacionPersonal: false,
+        especificacionesTecnicas: false,
+        acreditacionEquipos: false,
+        cartaCompromiso: false,
+        mandatoServiu: false,
+        estadoPago: false,
+        hes: false,
+        oc: false,
+        envioInformes: false
       })
     }
   }, [obraData, reset])
@@ -727,7 +743,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   label='Enviar informes a:'
                   placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                   helperText='Separar múltiples correos con comas'
-                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                  value={Array.isArray(field.value) ? field.value.join(', ') : (field.value ?? '')}
                   onChange={e => {
                     field.onChange(e.target.value);
                   }}
@@ -1034,7 +1050,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   error={Boolean(errors.mailRecepcionFactura)}
                   helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con coma'}
                   placeholder='ejemplo@email.com, otro@email.com'
-                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                  value={Array.isArray(field.value) ? field.value.join(', ') : (field.value ?? '')}
                   onChange={e => {
                     field.onChange(e.target.value);
                   }}
@@ -1093,7 +1109,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   placeholder='+56 9 XXXX XXXX'
                   error={Boolean(errors.telefonoFacturacion)}
                   helperText={errors.telefonoFacturacion?.message}
-                  value={field.value || ''}
+                  value={field.value ?? ''}
                   onChange={e => {
                     const formatted = e.target.value.replace(/[^a-zA-Z0-9+\s]/g, '')
 
@@ -1129,7 +1145,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                         const formatted = value.length > 1 ? formatRut(value) : value
                         field.onChange(formatted)
                       }}
-                      value={field.value || ''}
+                      value={field.value ?? ''}
                     />
                   )}
                 />

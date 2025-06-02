@@ -70,6 +70,7 @@ export interface FormValidateType {
   listaPrecio: string
   envioInformes: boolean
   contactos: ContactoObra[]
+  correos?: string[] | string
 
   // Campos de facturación
   razonSocial?: string
@@ -97,6 +98,7 @@ export interface FormValidateType {
   especificacionesTecnicas?: boolean
   acreditacionEquipos?: boolean
   cartaCompromiso?: boolean
+  mandatoServiu?: boolean
 }
 
 export const initialFormData = {
@@ -120,8 +122,18 @@ export const initialFormData = {
   telefonoFacturacion: '',
   listaPrecios: '',
   mailRecepcionFactura: [],
+  correos: [],
   rutRepresentanteLegal: '',
-  representanteLegal: ''
+  representanteLegal: '',
+  acreditacionPersonal: false,
+  especificacionesTecnicas: false,
+  acreditacionEquipos: false,
+  cartaCompromiso: false,
+  mandatoServiu: false,
+  estadoPago: false,
+  hes: false,
+  oc: false,
+  envioInformes: false
 }
 
 export type WorkTypeWithAction = Obra & {
