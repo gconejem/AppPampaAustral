@@ -6,34 +6,41 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q')
-
-    if (!query) {
-      return NextResponse.json([])
-    }
+    const esPaquete = searchParams.get('esPaquete')
+    const area = searchParams.get('area')
 
     console.log('Buscando productos con query:', query)
 
     const productos = await prisma.producto.findMany({
       where: {
-        OR: [
-          {
-            nombre: {
-              contains: query,
-              mode: 'insensitive'
-            }
-          },
-          {
-            sku: {
-              contains: query,
-              mode: 'insensitive'
-            }
-          },
-          {
-            descripcion: {
-              contains: query,
-              mode: 'insensitive'
-            }
-          }
+        AND: [
+          // Filtro de esPaquete si está presente
+          esPaquete ? { esPaquete: esPaquete === 'true' } : {},
+          // Filtro de área si está presente
+          area ? { area: area } : {},
+          // Filtro de búsqueda si hay query
+          query ? {
+            OR: [
+              {
+                nombre: {
+                  contains: query,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                sku: {
+                  contains: query,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                descripcion: {
+                  contains: query,
+                  mode: 'insensitive'
+                }
+              }
+            ]
+          } : {}
         ]
       },
       select: {

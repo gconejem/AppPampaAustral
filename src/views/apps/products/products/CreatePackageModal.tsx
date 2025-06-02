@@ -95,6 +95,33 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   // Calcular el total de páginas de productos (debe estar antes de su uso)
   const totalProductPages = Math.ceil(totalProductos / ITEMS_PER_PAGE)
 
+  // Función para limpiar todos los estados
+  const limpiarEstados = () => {
+    setNombre('')
+    setSku('')
+    setDescripcionPaquete('')
+    setNorma('')
+    setArea('')
+    setAplicaImpuesto(false)
+    setFamilia('')
+    setBuscarPaquete('')
+    setBuscarProductos('')
+    setProductos([])
+    setTotalProductos(0)
+    setProductosSeleccionados([])
+    setSelectedProducts([])
+    setSelectedPaquetes([])
+    setCantidades({})
+    setProductsPage(0)
+    setPackagePage(0)
+  }
+
+  // Modificar el handleClose para que limpie los estados
+  const handleCloseModal = () => {
+    limpiarEstados()
+    handleClose()
+  }
+
   // Cargar áreas y familias cuando se abre el modal
   useEffect(() => {
     if (open) {
@@ -132,14 +159,16 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
       params.append('esPaquete', 'false')
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
-      if (buscarProductos) params.append('search', buscarProductos)
+      if (buscarProductos) {
+        params.append('q', buscarProductos)
+      }
       if (area) params.append('area', area)
 
-      fetch(`/api/productos?${params.toString()}`)
+      fetch(`/api/productos/search?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
-          setProductos(data.productos || [])
-          setTotalProductos(Number.isFinite(data.total) ? Number(data.total) : 0)
+          setProductos(data || [])
+          setTotalProductos(data.length || 0)
         })
         .catch(error => {
           console.error('Error al cargar productos:', error)
@@ -150,7 +179,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
   // Filtrar productos seleccionados basado en la búsqueda y paginación
   const productosSeleccionadosFiltrados = productosSeleccionados.filter(
-    producto => producto && producto.nombre && producto.nombre.toLowerCase().includes(buscarPaquete.toLowerCase())
+    producto => producto && (
+      (producto.nombre && producto.nombre.toLowerCase().includes(buscarPaquete.toLowerCase())) ||
+      (producto.sku && producto.sku.toLowerCase().includes(buscarPaquete.toLowerCase()))
+    )
   )
 
   const startIndexPackage = packagePage * ITEMS_PER_PAGE
@@ -211,7 +243,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
       }
 
       toast.success('Paquete creado exitosamente')
-      handleClose()
+      handleCloseModal()
       window.location.reload()
     } catch (error: unknown) {
       console.error('Error:', error)
@@ -220,7 +252,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   }
 
   return (
-    <Modal open={open} onClose={handleClose}>
+    <Modal open={open} onClose={handleCloseModal}>
       <Box sx={style}>
         <Typography variant='h6' gutterBottom>
           Crear Paquete
@@ -530,7 +562,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
         {/* Botones de acción */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-          <Button variant='outlined' onClick={handleClose}>
+          <Button variant='outlined' onClick={handleCloseModal}>
             Cancelar
           </Button>
           <Button
