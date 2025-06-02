@@ -726,7 +726,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   fullWidth
                   label='Enviar informes a:'
                   placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                  helperText='Separar múltiples correos con coma y espacio (, )'
+                  helperText='Separar múltiples correos con comas'
                   value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                   onChange={e => {
                     field.onChange(e.target.value);
@@ -1032,7 +1032,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   fullWidth
                   label='Mail Recepción Factura *'
                   error={Boolean(errors.mailRecepcionFactura)}
-                  helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con coma y espacio (, )'}
+                  helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con coma'}
                   placeholder='ejemplo@email.com, otro@email.com'
                   value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                   onChange={e => {
