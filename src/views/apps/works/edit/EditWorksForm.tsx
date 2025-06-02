@@ -298,7 +298,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         estadoObra: formData.estadoObra || 'Activa',
         fechaIngreso: new Date(formData.fechaIngreso).toISOString(),
         mandante: formData.mandante || 'No definido',
-        telefonoFacturacion: formData.telefono || '',
+        telefonoFacturacion: formData.telefonoFacturacion || '',
         rutRepresentanteLegal: formData.rutRepresentanteLegal || '',
         representanteLegal: formData.representanteLegal || '',
         contactos: contactos.map(contacto => ({
