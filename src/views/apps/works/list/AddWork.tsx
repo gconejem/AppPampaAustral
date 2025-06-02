@@ -1443,8 +1443,7 @@ const AddObraDrawer = (props: Props) => {
                   name='mailRecepcionFactura'
                   control={control}
                   rules={{
-                    required: 'El email es requerido',
-                    validate: value => validateEmail(value) || 'Ingrese un email válido'
+                    required: 'El email es requerido'
                   }}
                   render={({ field }) => (
                     <TextField
@@ -1452,8 +1451,12 @@ const AddObraDrawer = (props: Props) => {
                       fullWidth
                       label="Email de Recepción de Factura"
                       error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese un email válido'}
-                      placeholder="ejemplo@email.com"
+                      helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con comas'}
+                      placeholder="ejemplo@email.com, otro@email.com"
+                      value={field.value || ''}
+                      onChange={e => {
+                        field.onChange(e.target.value);
+                      }}
                     />
                   )}
                 />

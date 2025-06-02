@@ -99,6 +99,15 @@ const validatePhone = (phone: string) => {
   return /^\+?[0-9]+$/.test(cleanPhone);
 };
 
+// Función para formatear teléfonos
+const formatPhone = (value: string) => {
+  let formatted = value.replace(/[^\d+]/g, '');
+  if (formatted.includes('+')) {
+    formatted = '+' + formatted.replace(/\+/g, '');
+  }
+  return formatted;
+};
+
 // Función reutilizable para obtener el siguiente número de obra
 const fetchLastObraNumber = async (setLastObraNumber: (n: string) => void, setValue: (name: string, value: any) => void) => {
   try {
@@ -342,8 +351,8 @@ const DuplicateWork = (props: Props) => {
           : [];
 
       // Validar correos
-      const correosInvalidos = correosArray.filter(correo => !validateEmail(correo));
-      const mailRecepcionInvalidos = mailRecepcionArray.filter(correo => !validateEmail(correo));
+      const correosInvalidos = correosArray.filter((correo: string) => !validateEmail(correo));
+      const mailRecepcionInvalidos = mailRecepcionArray.filter((correo: string) => !validateEmail(correo));
 
       if (correosInvalidos.length > 0) {
         toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
@@ -801,12 +810,10 @@ const DuplicateWork = (props: Props) => {
                       label='Enviar informes a:'
                       placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                       helperText='Separar múltiples correos con comas'
-                      value={field.value || ''}
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                       onChange={e => {
                         field.onChange(e.target.value);
                       }}
-                      error={Boolean(errors.correos)}
-                      helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
                     />
                   )}
                 />
@@ -1133,8 +1140,7 @@ const DuplicateWork = (props: Props) => {
                   name='mailRecepcionFactura'
                   control={control}
                   rules={{
-                    required: 'El email es requerido',
-                    validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
+                    required: 'El email es requerido'
                   }}
                   render={({ field }) => (
                     <TextField
@@ -1142,7 +1148,7 @@ const DuplicateWork = (props: Props) => {
                       fullWidth
                       label='Mail Recepción Factura *'
                       error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
+                      helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con comas'}
                       placeholder='ejemplo@email.com, otro@email.com'
                       value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                       onChange={e => {

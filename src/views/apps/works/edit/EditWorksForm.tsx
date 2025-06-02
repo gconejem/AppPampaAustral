@@ -78,6 +78,11 @@ interface EditWorksFormProps {
   setData: (data: Obra[] | ((prevData: Obra[]) => Obra[])) => void
 }
 
+const validateEmail = (email: string): boolean => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(email)
+}
+
 const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormProps) => {
   // States
   const [contactos, setContactos] = useState<ContactoObra[]>([])
@@ -252,18 +257,18 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   }
 
   const onSubmit = async (formData: FormValidateType) => {
-    try {
-      setIsSubmitting(true)
+    setIsSubmitting(true)
 
+    try {
       // Procesar correos
       const correosArray = typeof formData.correos === 'string' 
-        ? formData.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        ? formData.correos.split(', ').map(correo => correo.trim()).filter(correo => correo !== '')
         : Array.isArray(formData.correos) 
           ? formData.correos 
           : [];
 
       const mailRecepcionArray = typeof formData.mailRecepcionFactura === 'string'
-        ? formData.mailRecepcionFactura.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        ? formData.mailRecepcionFactura.split(', ').map(correo => correo.trim()).filter(correo => correo !== '')
         : Array.isArray(formData.mailRecepcionFactura)
           ? formData.mailRecepcionFactura
           : [];
@@ -286,7 +291,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
       const payload = {
         ...formData,
-        id: obraData?.id,
+        obraId: obraData?.obraId,
         region: selectedRegion,
         comuna: selectedComuna,
         estado: 'activo',
@@ -308,7 +313,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         mailRecepcionFactura: mailRecepcionArray
       }
 
-      const response = await axios.put(`/api/obras/${obraData?.id}`, payload)
+      const response = await axios.put(`/api/obras/${obraData?.obraId}`, payload)
 
       if (response.status === 200) {
         // Actualizar los datos en la tabla asegurando que los booleanos se mantengan
@@ -721,13 +726,12 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   fullWidth
                   label='Enviar informes a:'
                   placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                  helperText='Separar múltiples correos con comas'
-                  value={field.value || ''}
+                  helperText='Separar múltiples correos con coma y espacio (, )'
+                  value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                   onChange={e => {
                     field.onChange(e.target.value);
                   }}
                   error={Boolean(errors.correos)}
-                  helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
                 />
               )}
             />
@@ -1020,8 +1024,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               name='mailRecepcionFactura'
               control={control}
               rules={{
-                required: 'El email es requerido',
-                validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
+                required: 'El email es requerido'
               }}
               render={({ field }) => (
                 <TextField
@@ -1029,12 +1032,11 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   fullWidth
                   label='Mail Recepción Factura *'
                   error={Boolean(errors.mailRecepcionFactura)}
-                  helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
+                  helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con coma y espacio (, )'}
                   placeholder='ejemplo@email.com, otro@email.com'
                   value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                   onChange={e => {
-                    const value = e.target.value;
-                    field.onChange(value);
+                    field.onChange(e.target.value);
                   }}
                 />
               )}
