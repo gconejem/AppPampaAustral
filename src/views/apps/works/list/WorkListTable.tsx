@@ -236,8 +236,15 @@ const WorkListTable = () => {
         console.log('Datos recibidos:', responseData)
 
         if (Array.isArray(responseData)) {
-          setData(responseData)
-          setFilteredData(responseData)
+          // Ordenar las obras por numeroObra de manera descendente
+          const obrasOrdenadas = [...responseData].sort((a, b) => {
+            const numA = parseInt(a.numeroObra)
+            const numB = parseInt(b.numeroObra)
+            return numB - numA
+          })
+
+          setData(obrasOrdenadas)
+          setFilteredData(obrasOrdenadas)
         } else {
           console.error('Respuesta inesperada:', responseData)
           setError('Error al cargar los datos')
@@ -862,8 +869,15 @@ const WorkListTable = () => {
       const responseData = await response.json()
 
       if (Array.isArray(responseData)) {
-        setData(responseData)
-        setFilteredData(responseData)
+        // Ordenar las obras por numeroObra de manera descendente
+        const obrasOrdenadas = [...responseData].sort((a, b) => {
+          const numA = parseInt(a.numeroObra)
+          const numB = parseInt(b.numeroObra)
+          return numB - numA
+        })
+
+        setData(obrasOrdenadas)
+        setFilteredData(obrasOrdenadas)
       } else {
         console.error('Respuesta inesperada:', responseData)
         setError('Error al cargar los datos')
