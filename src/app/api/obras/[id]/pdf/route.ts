@@ -38,7 +38,6 @@ function renderObraHTML(obra: any, logoBase64: string) {
           table-layout: fixed;
         }
         .header-table td, .header-table th {
-          border: 1px solid #000;
           padding: 4px;
         }
         .header-logo {
@@ -50,7 +49,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         }
         .header-title {
           font-weight: bold;
-          font-size: 1.35em;
+          font-size: 2em;
           text-align: center;
           vertical-align: middle;
           width: 55%;
@@ -69,7 +68,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: Arial, sans-serif; }
         .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: Arial, sans-serif; font-size: 1em; }
         .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: Arial, sans-serif; }
-        .table td { font-size: 1em; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: Arial, sans-serif; }
+        .table td { font-size: 9px; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: Arial, sans-serif; }
         .section-title { font-size: 1.1em; font-weight: bold; margin-bottom: 16px; color: #736e7d; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         .grid-item { margin-bottom: 8px; }
@@ -85,7 +84,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
           <td class="header-title" rowspan="4" style="vertical-align: middle;">
             Ficha Cliente - Obra
           </td>
-          <td class="header-meta">Código: RPG-05-02</td>
+          <td class="header-meta"><b>Código: RPG-05-02</b></td>
         </tr>
         <tr>
           <td class="header-meta">Fecha de emisión: ${fechaEmision}</td>
@@ -97,25 +96,24 @@ function renderObraHTML(obra: any, logoBase64: string) {
           <td class="header-meta">Página 1 de 1</td>
         </tr>
       </table>
+      <hr style="border: none; border-top: 2px solid #ff0096; margin: 12px 0; width: 100%;">
       <div class="pdf-container">
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="2" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Datos Principales
               </th>
             </tr>
             <tr>
               <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
                 <b>N° Obra:</b> ${obra.numeroObra}<br/>
-                <b>RUT Cliente:</b> ${obra.rut}
+                <b>RUT Cliente:</b> ${obra.rut}<br/>
+                <b>Estado Obra:</b> ${obra.estadoObra}
               </td>
-              <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
+              <td style="width:67%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
                 <b>Fecha Ingreso:</b> ${obra.fechaIngreso ? new Date(obra.fechaIngreso).toLocaleDateString('es-CL') : '-'}<br/>
                 <b>Nombre Cliente:</b> ${obra.nombreCliente}
-              </td>
-              <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Estado Obra:</b> ${obra.estadoObra}
               </td>
             </tr>
           </table>
@@ -124,7 +122,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px; border:1px solid #ccc;">
             <tr>
-              <th colspan="2" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
+              <th colspan="2" style="font-size:1.1em; text-align:left; padding:8px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
                 Antecedentes
               </th>
             </tr>
@@ -181,21 +179,21 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Requisitos
               </th>
             </tr>
             <tr>
               <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
                 <b>Acreditación Personal:</b> ${obra.acreditacionPersonal ? 'Sí' : 'No'}<br/>
+                <b>Acreditación Equipos:</b> ${obra.acreditacionEquipos ? 'Sí' : 'No'}<br/>
                 <b>Especificaciones Técnicas:</b> ${obra.especificacionesTecnicas ? 'Sí' : 'No'}<br/>
               </td>
               <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Acreditación Equipos:</b> ${obra.acreditacionEquipos ? 'Sí' : 'No'}<br/>
                 <b>Carta Compromiso:</b> ${obra.cartaCompromiso ? 'Sí' : 'No'}<br/>
+                <b>Mandato y Envío de Informes a SERVIU:</b> ${obra.mandatoServiu ? 'Sí' : 'No'}<br/>
               </td>
               <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Mandato y Envío de Informes a SERVIU:</b> ${obra.mandatoServiu ? 'Sí' : 'No'}<br/>
                 <b>Otros Requisitos:</b> ${obra.otrosRequisitos || '-'}
               </td>
             </tr>
@@ -205,7 +203,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Referencias
               </th>
             </tr>
@@ -230,7 +228,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Facturación
               </th>
             </tr>
@@ -239,17 +237,17 @@ function renderObraHTML(obra: any, logoBase64: string) {
                 <b>Razón Social:</b> ${obra.razonSocial}<br/>
                 <b>RUT:</b> ${obra.rut}<br/>
                 <b>Giro:</b> ${obra.giro || '-'}<br/>
+                <b>RUT Representante Legal:</b> ${obra.rutRepresentanteLegal || '-'}<br/>
+                
               </td>
               <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
                 <b>Dirección Comercial:</b> ${obra.direccionComercial}<br/>
                 <b>Comuna:</b> ${obra.comunaFacturacion || '-'}<br/>
                 <b>Teléfono:</b> ${obra.telefonoFacturacion || '-'}<br/>
+                <b>Representante Legal:</b> ${obra.representanteLegal || '-'}
               </td>
               <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Lista de Precios:</b> ${obra.listaPrecio?.nombre || '-'}<br/>
                 <b>Mail Recepción Factura:</b> ${obra.mailRecepcionFactura || '-'}<br/>
-                <b>RUT Representante Legal:</b> ${obra.rutRepresentanteLegal || '-'}<br/>
-                <b>Representante Legal:</b> ${obra.representanteLegal || '-'}
               </td>
             </tr>
           </table>
@@ -258,7 +256,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="4" style="background:#f5f5f5; font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="4" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
                 Contactos
               </th>
             </tr>
@@ -283,6 +281,27 @@ function renderObraHTML(obra: any, logoBase64: string) {
                 </tr>
               `).join('') : `<tr><td colspan="4" style="border:1px solid #ccc; padding:6px; text-align:center;">No hay contactos registrados</td></tr>`}
           </table>
+        </div>
+        <!-- Firma y nota -->
+        <div style="margin-top: 56px;">
+          <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 8px;">
+            <div style="text-align: right;">
+              <span style="font-weight: bold; font-size: 1em;">Firma Cliente</span><br/>
+              <hr style="width: 220px; border: none; border-top: 2px solid #222; margin: 8px 0 0 0;">
+            </div>
+          </div>
+          <div style="font-size: 9px; color: #222; text-align: justify; margin-bottom: 32px;">
+            Nota: Esta ficha ha sido generada a partir de los datos entregados por el cliente. Para la ejecución de los servicios, es obligatorio devolver este documento firmado junto con la Orden de Compra correspondiente. Laboratorio Pampa Austral no podrá iniciar los trabajos sin la recepción de ambos. La facturación se realizará exclusivamente a la razón social indicada en esta ficha. Cualquier modificación deberá ser informada con anticipación. Los informes se entregarán previo pago confirmado.
+          </div>
+          <hr style="border: none; border-top: 2px solid #ff0096; margin: 24px 0 24px 0; width: 100%;">
+          <div style="display: flex; align-items: center; justify-content: flex-start; font-size: 11px;">
+            <img src="${logoBase64}" alt="LOGO" style="max-width: 60px; max-height: 60px; margin-right: 12px;" />
+            <div style="text-align: left; color: #0a1ea8;">
+              <span style="color: #0a1ea8; font-weight: bold;">Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile</span><br/>
+              <span style="color: #0a1ea8;">Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h</span><br/>
+              <span style="color: #0a1ea8; font-weight: bold;">contacto@pampaaustral.cl</span>
+            </div>
+          </div>
         </div>
       </div>
     </body>
