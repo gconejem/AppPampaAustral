@@ -1464,7 +1464,7 @@ const AddObraDrawer = (props: Props) => {
 
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
-                  <InputLabel>Comuna *</InputLabel>
+                  
                   <Controller
                     name='comunaFacturacion'
                     control={control}
@@ -1479,6 +1479,7 @@ const AddObraDrawer = (props: Props) => {
                         InputProps={{
                           readOnly: true
                         }}
+                        InputLabelProps={{ shrink: true }}
                       />
                     )}
                   />
