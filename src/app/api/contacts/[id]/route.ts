@@ -48,6 +48,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         email: body.email,
         telefono1: body.telefono1,
         telefono2: body.telefono2 || null,
+        empresa: body.empresa || null,
+        direccion: body.direccion || null,
+        comuna: body.comuna || null,
         updatedAt: new Date()
       }
     })

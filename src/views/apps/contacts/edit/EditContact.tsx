@@ -32,6 +32,9 @@ type FormValidateType = {
   email: string
   telefono1: string
   telefono2?: string
+  comuna?: string
+  direccion?: string
+  empresa?: string
 }
 
 const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: Props) => {
@@ -46,7 +49,10 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
       cargo: '',
       email: '',
       telefono1: '',
-      telefono2: ''
+      telefono2: '',
+      comuna: '',
+      direccion: '',
+      empresa: ''
     }
   })
 
@@ -57,7 +63,10 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
         cargo: contact.cargo,
         email: contact.email,
         telefono1: contact.telefono1,
-        telefono2: contact.telefono2
+        telefono2: contact.telefono2,
+        comuna: contact.comuna,
+        direccion: contact.direccion,
+        empresa: contact.empresa
       })
     }
   }, [contact, reset])
@@ -186,8 +195,8 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                 rules={{
                   required: 'Este campo es requerido',
                   pattern: {
-                    value: /^\+?56\s?9?\s?\d{8}$/,
-                    message: 'Debe ser un número válido (ej: +56912345678)'
+                    value: /^(\+569\d{8}|\d{9})$/,
+                    message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
                 render={({ field }) => (
@@ -197,18 +206,17 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                     label='Teléfono 1'
                     error={Boolean(errors.telefono1)}
                     helperText={errors.telefono1?.message}
-                    placeholder='+56912345678'
+                    placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
-                      const isPlus = e.key === '+' && field.value === ''
+                      const isPlus = e.key === '+'
 
                       if (!isNumber && !isPlus) {
                         e.preventDefault()
                       }
                     }}
                     onChange={e => {
-                      const value = e.target.value.replace(/[^\d+]/g, '')
-
+                      let value = e.target.value.replace(/[^\d+]/g, '')
                       field.onChange(value)
                     }}
                   />
@@ -221,8 +229,8 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                 control={control}
                 rules={{
                   pattern: {
-                    value: /^\+?56\s?9?\s?\d{8}$/,
-                    message: 'Debe ser un número válido (ej: +56912345678)'
+                    value: /^(\+569\d{8}|\d{9})$/,
+                    message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
                 render={({ field }) => (
@@ -232,21 +240,47 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                     label='Teléfono 2'
                     error={Boolean(errors.telefono2)}
                     helperText={errors.telefono2?.message}
-                    placeholder='+56912345678'
+                    placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
-                      const isPlus = e.key === '+' && field.value === ''
+                      const isPlus = e.key === '+'
 
                       if (!isNumber && !isPlus) {
                         e.preventDefault()
                       }
                     }}
                     onChange={e => {
-                      const value = e.target.value.replace(/[^\d+]/g, '')
-
+                      let value = e.target.value.replace(/[^\d+]/g, '')
                       field.onChange(value)
                     }}
                   />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='empresa'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Empresa' error={Boolean(errors.empresa)} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='direccion'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Dirección' error={Boolean(errors.direccion)} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name='comuna'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Comuna' error={Boolean(errors.comuna)} />
                 )}
               />
             </Grid>

@@ -235,7 +235,7 @@ const AddContact = (props: Props) => {
                 rules={{
                   required: 'Este campo es requerido',
                   pattern: {
-                    value: /^(?:\+?56)?[9]?\d{8}$/,
+                    value: /^(\+569\d{8}|\d{9})$/,
                     message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
@@ -250,7 +250,7 @@ const AddContact = (props: Props) => {
                     placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
-                      const isPlus = e.key === '+' && field.value === ''
+                      const isPlus = e.key === '+'
 
                       if (!isNumber && !isPlus) {
                         e.preventDefault()
@@ -258,11 +258,6 @@ const AddContact = (props: Props) => {
                     }}
                     onChange={e => {
                       let value = e.target.value.replace(/[^\d+]/g, '')
-
-                      if (value.startsWith('+') && !value.startsWith('+56') && value.length > 1) {
-                        value = '+56' + value.substring(1)
-                      }
-
                       field.onChange(value)
                     }}
                   />
@@ -275,7 +270,7 @@ const AddContact = (props: Props) => {
                 control={control}
                 rules={{
                   pattern: {
-                    value: /^(?:\+?56)?[9]?\d{8}$/,
+                    value: /^(\+569\d{8}|\d{9})$/,
                     message: 'Debe ser un número válido (ej: 979990042 o +56979990042)'
                   }
                 }}
@@ -289,7 +284,7 @@ const AddContact = (props: Props) => {
                     placeholder='979990042'
                     onKeyPress={e => {
                       const isNumber = /[0-9]/.test(e.key)
-                      const isPlus = e.key === '+' && field.value === ''
+                      const isPlus = e.key === '+'
 
                       if (!isNumber && !isPlus) {
                         e.preventDefault()
@@ -297,11 +292,6 @@ const AddContact = (props: Props) => {
                     }}
                     onChange={e => {
                       let value = e.target.value.replace(/[^\d+]/g, '')
-
-                      if (value.startsWith('+') && !value.startsWith('+56') && value.length > 1) {
-                        value = '+56' + value.substring(1)
-                      }
-
                       field.onChange(value)
                     }}
                   />
