@@ -142,7 +142,16 @@ const AddObraDrawer = (props: Props) => {
       estado: 'activa',
       estadoObra: 'activa',
       fechaIngreso: new Date().toISOString().split('T')[0],
-      mandante: 'No definido'
+      mandante: 'No definido',
+      acreditacionPersonal: false,
+      especificacionesTecnicas: false,
+      acreditacionEquipos: false,
+      cartaCompromiso: false,
+      mandatoServiu: false,
+      estadoPago: false,
+      hes: false,
+      oc: false,
+      envioInformes: false
     },
     mode: 'onChange'
   })
