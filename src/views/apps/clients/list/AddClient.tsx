@@ -428,7 +428,7 @@ const AddClienteDrawer = (props: Props) => {
         setCopyRazonSocial(false)
 
         if (typeof setData === 'function') {
-          setData(prevData => [...prevData, response.data])
+          setData(prevData => [response.data, ...prevData])
         }
       }
     } catch (error: any) {
