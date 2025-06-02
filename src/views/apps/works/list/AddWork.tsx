@@ -246,6 +246,7 @@ const AddObraDrawer = (props: Props) => {
         telefonoFacturacion: data.telefono || '',
         rutRepresentanteLegal: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
+        envioInformes: data.envioInformes || false,
         contactos: contactos.map(contacto => ({
           nombre: contacto.contacto.nombre,
           rol: contacto.cargo,

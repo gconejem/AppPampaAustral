@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
           estadoPago: body.estadoPago || false,
           hes: body.hes || false,
           oc: body.oc || false,
+          envioInformes: body.envioInformes || false,
           otrasReferencias: body.otrasReferencias,
           rutRepresentanteLegal: body.rutRepresentanteLegal || '',
           representanteLegal: body.representanteLegal || '',
