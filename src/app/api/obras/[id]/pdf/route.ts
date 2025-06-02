@@ -221,7 +221,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
             </tr>
             <tr>
               <td colspan="3" style="padding: 6px; border:1px solid #ccc;">
-                <b>Otras Referencias:</b> ${obra.otrasReferencias || '-'}
+                <b>Otras Referencias:</b> ${(obra.otrasReferencias || '-').replace(/\n/g, '<br/>')}
               </td>
             </tr>
           </table>

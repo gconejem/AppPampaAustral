@@ -246,7 +246,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Otras Referencias
               </Typography>
-              <Typography>{obra.otrasReferencias || '-'}</Typography>
+              <Typography sx={{ whiteSpace: 'pre-line' }}>{obra.otrasReferencias || '-'}</Typography>
             </Grid>
           </Grid>
         </CardContent>
