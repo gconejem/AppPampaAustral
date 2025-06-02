@@ -970,7 +970,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <Controller
               name='otrosRequisitos'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos' />}
+              render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos'  InputLabelProps={{ shrink: true }}  />}
             />
           </Grid>
         </Grid>
