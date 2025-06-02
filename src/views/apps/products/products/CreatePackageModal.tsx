@@ -399,7 +399,14 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                       }
                     }}
                   >
-                    <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                    <ListItemText 
+                      primary={producto.sku}
+                      secondary={
+                        <Typography variant="body2" component="span">
+                          {`${producto.area || 'Sin área'} - ${producto.nombre} - ${producto.norma || 'Sin norma'}`}
+                        </Typography>
+                      }
+                    />
                     <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} size='small' />
                   </ListItem>
                 ))}
