@@ -99,20 +99,6 @@ const validatePhone = (phone: string) => {
   return /^\+?[0-9]+$/.test(cleanPhone);
 };
 
-// Validación de múltiples emails
-const validateMultipleEmails = (value: string | string[] | undefined) => {
-  if (!value) return false;
-  let emails: string[] = [];
-  if (Array.isArray(value)) {
-    emails = value.map(email => email.trim()).filter(email => email !== '');
-  } else if (typeof value === 'string') {
-    emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
-  }
-  if (emails.length === 0) return false;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emails.every(email => emailRegex.test(email));
-};
-
 // Función reutilizable para obtener el siguiente número de obra
 const fetchLastObraNumber = async (setLastObraNumber: (n: string) => void, setValue: (name: string, value: any) => void) => {
   try {
@@ -337,28 +323,40 @@ const DuplicateWork = (props: Props) => {
         }
       }
 
-      // Validar correos si existen
-      if (data.correos && Array.isArray(data.correos)) {
-        for (const correo of data.correos) {
-          if (!validateEmail(correo)) {
-            toast.error(`El correo ${correo} no es válido`);
-            return;
-          }
-        }
-      }
-
-      // Procesar mailRecepcionFactura
-      let mailRecepcionFactura: string[] = [];
-      if (Array.isArray(data.mailRecepcionFactura)) {
-        mailRecepcionFactura = data.mailRecepcionFactura.map(email => email.trim()).filter(email => email !== '');
-      } else if (typeof data.mailRecepcionFactura === 'string') {
-        mailRecepcionFactura = data.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '');
-      }
-
       if (!data.numeroObra) {
         data.numeroObra = lastObraNumber;
       }
       setIsSubmitting(true);
+
+      // Procesar correos
+      const correosArray = typeof data.correos === 'string' 
+        ? data.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(data.correos) 
+          ? data.correos 
+          : [];
+
+      const mailRecepcionArray = typeof data.mailRecepcionFactura === 'string'
+        ? data.mailRecepcionFactura.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(data.mailRecepcionFactura)
+          ? data.mailRecepcionFactura
+          : [];
+
+      // Validar correos
+      const correosInvalidos = correosArray.filter(correo => !validateEmail(correo));
+      const mailRecepcionInvalidos = mailRecepcionArray.filter(correo => !validateEmail(correo));
+
+      if (correosInvalidos.length > 0) {
+        toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (mailRecepcionInvalidos.length > 0) {
+        toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload = {
         ...data,
         obraId: lastObraNumber,
@@ -376,8 +374,8 @@ const DuplicateWork = (props: Props) => {
           telefono2: contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
         })),
-        correos: Array.isArray(data.correos) ? data.correos : [],
-        mailRecepcionFactura
+        correos: correosArray,
+        mailRecepcionFactura: mailRecepcionArray
       };
       const response = await axios.post('/api/obras', payload);
       if (response.data) {
@@ -795,7 +793,7 @@ const DuplicateWork = (props: Props) => {
                 <Controller
                   name='correos'
                   control={control}
-                  defaultValue={[]}
+                  defaultValue=''
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -803,13 +801,9 @@ const DuplicateWork = (props: Props) => {
                       label='Enviar informes a:'
                       placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                       helperText='Separar múltiples correos con comas'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                      value={field.value || ''}
                       onChange={e => {
-                        const correos = e.target.value
-                          .split(',')
-                          .map(correo => correo.trim())
-                          .filter(correo => correo !== '')
-                        field.onChange(correos)
+                        field.onChange(e.target.value);
                       }}
                       error={Boolean(errors.correos)}
                       helperText={errors.correos?.message || 'Separar múltiples correos con comas'}

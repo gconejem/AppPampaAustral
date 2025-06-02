@@ -225,13 +225,6 @@ const AddObraDrawer = (props: Props) => {
   const onSubmit = async (data: FormValidateType) => {
     setIsSubmitting(true)
     try {
-      // Convertir el string de emails a array
-      const emails = data.mailRecepcionFactura ? 
-        (typeof data.mailRecepcionFactura === 'string' ? 
-          data.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '') : 
-          data.mailRecepcionFactura) : 
-        []
-
       const payload = {
         ...data,
         numeroObra: lastObraNumber,
@@ -251,11 +244,43 @@ const AddObraDrawer = (props: Props) => {
           telefono1: contacto.contacto.telefono1,
           telefono2: contacto.contacto.telefono2,
           isPrincipal: contacto.isPrincipal || false
-        })),
-        mailRecepcionFactura: emails
+        }))
       }
 
-      console.log('Payload enviado:', payload) // Agregar log para debug
+      // Procesar correos
+      const correosArray = typeof data.correos === 'string' 
+        ? data.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(data.correos) 
+          ? data.correos 
+          : [];
+
+      const mailRecepcionArray = typeof data.mailRecepcionFactura === 'string'
+        ? data.mailRecepcionFactura.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(data.mailRecepcionFactura)
+          ? data.mailRecepcionFactura
+          : [];
+
+      // Validar correos
+      const correosInvalidos = correosArray.filter(correo => !validateEmail(correo));
+      const mailRecepcionInvalidos = mailRecepcionArray.filter(correo => !validateEmail(correo));
+
+      if (correosInvalidos.length > 0) {
+        toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (mailRecepcionInvalidos.length > 0) {
+        toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Agregar los correos validados al payload
+      payload.correos = correosArray;
+      payload.mailRecepcionFactura = mailRecepcionArray;
+
+      console.log('Payload enviado:', payload)
 
       const response = await axios.post('/api/obras', payload)
 
@@ -655,22 +680,6 @@ const AddObraDrawer = (props: Props) => {
     setAddContactOpen(false);
   }
 
-  // Agregar la función de validación para múltiples emails
-  const validateMultipleEmails = (value: string | string[]) => {
-    if (!value) return false;
-    let emails: string[] = [];
-
-    if (Array.isArray(value)) {
-      emails = value.map(email => email.trim()).filter(email => email !== '');
-    } else if (typeof value === 'string') {
-      emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
-    }
-
-    if (emails.length === 0) return false;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emails.every(email => emailRegex.test(email));
-  };
-
   return (
     <>
       <Drawer
@@ -1011,7 +1020,7 @@ const AddObraDrawer = (props: Props) => {
                 <Controller
                   name='correos'
                   control={control}
-                  defaultValue={[]}
+                  defaultValue=''
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -1019,13 +1028,9 @@ const AddObraDrawer = (props: Props) => {
                       label='Enviar informes a:'
                       placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                       helperText='Separar múltiples correos con comas'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                      value={field.value || ''}
                       onChange={e => {
-                        const correos = e.target.value
-                          .split(',')
-                          .map(correo => correo.trim())
-                          .filter(correo => correo !== '')
-                        field.onChange(correos)
+                        field.onChange(e.target.value);
                       }}
                       error={Boolean(errors.correos)}
                       helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
@@ -1439,7 +1444,7 @@ const AddObraDrawer = (props: Props) => {
                   control={control}
                   rules={{
                     required: 'El email es requerido',
-                    validate: value => validateMultipleEmails(value) || 'Ingrese al menos un email válido'
+                    validate: value => validateEmail(value) || 'Ingrese un email válido'
                   }}
                   render={({ field }) => (
                     <TextField
@@ -1447,8 +1452,8 @@ const AddObraDrawer = (props: Props) => {
                       fullWidth
                       label="Email de Recepción de Factura"
                       error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese uno o más emails separados por comas'}
-                      placeholder="ejemplo@email.com, otro@email.com"
+                      helperText={errors.mailRecepcionFactura?.message || 'Ingrese un email válido'}
+                      placeholder="ejemplo@email.com"
                     />
                   )}
                 />

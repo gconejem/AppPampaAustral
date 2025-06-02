@@ -211,20 +211,6 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     setValue('comuna', comunaValue)
   }
 
-  // Validación de múltiples emails
-  const validateMultipleEmails = (value: string | string[] | undefined) => {
-    if (!value) return false;
-    let emails: string[] = [];
-    if (Array.isArray(value)) {
-      emails = value.map(email => email.trim()).filter(email => email !== '');
-    } else if (typeof value === 'string') {
-      emails = value.split(',').map(email => email.trim()).filter(email => email !== '');
-    }
-    if (emails.length === 0) return false;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emails.every(email => emailRegex.test(email));
-  };
-
   // Validación de teléfono
   const validatePhone = (phone: string | undefined) => {
     if (!phone) return false
@@ -269,32 +255,60 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     try {
       setIsSubmitting(true)
 
-      console.log('formData', formData)
+      // Procesar correos
+      const correosArray = typeof formData.correos === 'string' 
+        ? formData.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(formData.correos) 
+          ? formData.correos 
+          : [];
 
-      let mailRecepcionFactura: string[] = []
-      if (Array.isArray(formData.mailRecepcionFactura)) {
-        mailRecepcionFactura = formData.mailRecepcionFactura.map(email => email.trim()).filter(email => email !== '')
-      } else if (typeof formData.mailRecepcionFactura === 'string') {
-        mailRecepcionFactura = formData.mailRecepcionFactura.split(',').map(email => email.trim()).filter(email => email !== '')
+      const mailRecepcionArray = typeof formData.mailRecepcionFactura === 'string'
+        ? formData.mailRecepcionFactura.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
+        : Array.isArray(formData.mailRecepcionFactura)
+          ? formData.mailRecepcionFactura
+          : [];
+
+      // Validar correos
+      const correosInvalidos = correosArray.filter(correo => !validateEmail(correo));
+      const mailRecepcionInvalidos = mailRecepcionArray.filter(correo => !validateEmail(correo));
+
+      if (correosInvalidos.length > 0) {
+        toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
       }
 
-      const dataToSubmit = {
+      if (mailRecepcionInvalidos.length > 0) {
+        toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
         ...formData,
-        mailRecepcionFactura,
-        fechaIngreso: formData.fechaIngreso ? new Date(formData.fechaIngreso).toISOString() : null,
-        informeMandante: Boolean(formData.informeMandante),
-        acreditacionPersonal: Boolean(formData.acreditacionPersonal),
-        especificacionesTecnicas: Boolean(formData.especificacionesTecnicas),
-        acreditacionEquipos: Boolean(formData.acreditacionEquipos),
-        cartaCompromiso: Boolean(formData.cartaCompromiso),
-        mandatoServiu: Boolean(formData.mandatoServiu),
-        estadoPago: Boolean(formData.estadoPago),
-        hes: Boolean(formData.hes),
-        oc: Boolean(formData.oc),
-        contactos
+        id: obraData?.id,
+        region: selectedRegion,
+        comuna: selectedComuna,
+        estado: 'activo',
+        estadoObra: formData.estadoObra || 'Activa',
+        fechaIngreso: new Date(formData.fechaIngreso).toISOString(),
+        mandante: formData.mandante || 'No definido',
+        telefonoFacturacion: formData.telefono || '',
+        rutRepresentanteLegal: formData.rutRepresentanteLegal || '',
+        representanteLegal: formData.representanteLegal || '',
+        contactos: contactos.map(contacto => ({
+          nombre: contacto.nombre,
+          rol: contacto.rol,
+          email: contacto.email,
+          telefono1: contacto.telefono1,
+          telefono2: contacto.telefono2,
+          isPrincipal: contacto.isPrincipal || false
+        })),
+        correos: correosArray,
+        mailRecepcionFactura: mailRecepcionArray
       }
 
-      const response = await axios.put(`/api/obras/${obraData?.obraId}`, dataToSubmit)
+      const response = await axios.put(`/api/obras/${obraData?.id}`, payload)
 
       if (response.status === 200) {
         // Actualizar los datos en la tabla asegurando que los booleanos se mantengan
@@ -700,6 +714,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <Controller
               name='correos'
               control={control}
+              defaultValue=''
               render={({ field }) => (
                 <TextField
                   {...field}
@@ -707,15 +722,12 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   label='Enviar informes a:'
                   placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
                   helperText='Separar múltiples correos con comas'
-                  InputLabelProps={{ shrink: true }}
+                  value={field.value || ''}
                   onChange={e => {
-                    const correos = e.target.value
-                      .split(',')
-                      .map(correo => correo.trim())
-                      .filter(correo => correo !== '')
-                    field.onChange(correos)
+                    field.onChange(e.target.value);
                   }}
-                  value={Array.isArray(field.value) && field.value.length > 0 ? field.value.join(', ') : ''}
+                  error={Boolean(errors.correos)}
+                  helperText={errors.correos?.message || 'Separar múltiples correos con comas'}
                 />
               )}
             />
