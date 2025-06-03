@@ -93,6 +93,7 @@ interface ContactoType {
   cargo: string
   email: string
   telefono1: string
+  empresa?: string
 }
 
 interface FormDataType {
@@ -285,7 +286,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
           nombre: contacto.nombre,
           cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
           email: contacto.email,
-          telefono1: contacto.telefono1
+          telefono1: contacto.telefono1,
+          empresa: contacto.empresa || ''
         }))
         setContactos(contactosMapeados)
         console.log('Contactos mapeados:', contactosMapeados)
@@ -454,7 +456,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
             nombre: newValue.nombre,
             cargo: newValue.cargo || 'Sin cargo',
             email: newValue.email || '',
-            telefono1: newValue.telefono1 || ''
+            telefono1: newValue.telefono1 || '',
+            empresa: newValue.empresa || ''
           },
           contactoId: Number(newValue.contactId)
         }
@@ -862,36 +865,28 @@ const DuplicateCard = ({ id }: { id: string }) => {
                       {option.nombre}
                     </Typography>
                     <Typography variant='caption' color='text.secondary'>
-                      {option.cargo}
+                      {option.empresa || 'Sin empresa'} - {option.cargo}
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      {option.email}
                     </Typography>
                   </Box>
                 </Box>
               )}
               filterOptions={(options, { inputValue }) => {
                 const searchTerms = inputValue.toLowerCase().split(' ')
+
                 return options.filter(option => {
-                  const searchableText = `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1}`.toLowerCase()
+                  const searchableText =
+                    `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1} ${option.empresa || ''}`.toLowerCase()
+
                   return searchTerms.every(term => searchableText.includes(term))
                 })
               }}
               onChange={(_, newValue) => {
-                if (newValue) {
-                  console.log('Nuevo valor recibido:', newValue)
-                  const contactoData = {
-                    contactId: Number(newValue.contactId),
-                    nombre: newValue.nombre,
-                    cargo: newValue.cargo || 'Sin cargo',
-                    email: newValue.email || '',
-                    telefono1: newValue.telefono1 || ''
-                  }
-                  console.log('Nuevo contacto seleccionado:', contactoData)
-                  handleContactChange(contactoData)
-                } else {
-                  handleContactChange(null)
-                }
+                handleContactChange(newValue)
               }}
-              isOptionEqualToValue={(option, value) => option.contactId === value?.contactId}
-              value={formData.contacto || null}
+              value={formData.contacto}
             />
             {/* Detalles del contacto seleccionado */}
             {formData.contacto && (
@@ -910,7 +905,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
                 </IconButton>
                 <div className='flex flex-col gap-2'>
                   <Typography>{formData.contacto.nombre}</Typography>
-                  <Typography>{formData.contacto.cargo}</Typography>
+                  <Typography>{formData.contacto.cargo} - {formData.contacto.empresa || 'Sin empresa'}</Typography>
                   <Typography>{formData.contacto.email}</Typography>
                 </div>
               </Box>

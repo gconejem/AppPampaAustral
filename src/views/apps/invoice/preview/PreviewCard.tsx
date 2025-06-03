@@ -109,6 +109,9 @@ const PreviewCard = () => {
                 <Typography>
                   <strong>Cargo:</strong> {previewData.contacto.cargo || 'Sin cargo'}
                 </Typography>
+                <Typography>
+                  <strong>Empresa:</strong> {previewData.contacto.empresa || 'Sin empresa'}
+                </Typography>
                 {previewData.contacto.email && (
                   <Typography>
                     <strong>Email:</strong> {previewData.contacto.email}

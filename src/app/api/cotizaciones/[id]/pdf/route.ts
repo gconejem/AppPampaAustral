@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import puppeteer from 'puppeteer'
 import fs from 'fs'
+import { ROLES_CONTACTO } from '@/constants/roles'
 
 function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
   return `
@@ -58,7 +59,8 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             <div class="col">
               <div class="label">En atención a:</div>
               <div class="value"><b>Nombre:</b> ${cotizacion.contacto?.nombre || '-'}</div>
-              <div class="value"><b>Cargo:</b> ${cotizacion.contacto?.cargo || '-'}</div>
+              <div class="value"><b>Cargo:</b> ${ROLES_CONTACTO.find((c: { value: string; label: string }) => c.value === cotizacion.contacto?.cargo)?.label || cotizacion.contacto?.cargo || '-'}</div>
+              <div class="value"><b>Empresa:</b> ${cotizacion.contacto?.empresa || '-'}</div>
               <div class="value"><b>Email:</b> ${cotizacion.contacto?.email || '-'}</div>
             </div>
             <div class="col">

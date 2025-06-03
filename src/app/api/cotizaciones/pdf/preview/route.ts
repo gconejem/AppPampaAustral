@@ -61,6 +61,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <div class="label">En atención a:</div>
               <div class="value"><b>Nombre:</b> ${cotizacion.contacto?.nombre || '-'}</div>
               <div class="value"><b>Cargo:</b> ${cotizacion.contacto?.cargo || '-'}</div>
+              <div class="value"><b>Empresa:</b> ${cotizacion.contacto?.empresa || '-'}</div>
               <div class="value"><b>Email:</b> ${cotizacion.contacto?.email || '-'}</div>
             </div>
             <div class="col">

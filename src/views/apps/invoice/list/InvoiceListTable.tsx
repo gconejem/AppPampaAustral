@@ -39,6 +39,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
+import { ROLES_CONTACTO } from '@/constants/roles'
 
 // Type Imports
 // import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -423,7 +424,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
             <div className='grid grid-cols-2 gap-2'>
               <div className='flex items-center gap-2'>
                 <i className='ri-briefcase-line text-textSecondary' />
-                <Typography>{contact.cargo || 'No especificado'}</Typography>
+                <Typography>{ROLES_CONTACTO.find(c => c.value === contact.cargo)?.label || contact.cargo || 'No especificado'}</Typography>
               </div>
               <div className='flex items-center gap-2'>
                 <i className='ri-mail-line text-textSecondary' />
@@ -808,7 +809,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       <strong>Nombre:</strong> {selectedCotizacion.contacto.nombre}
                     </Typography>
                     <Typography>
-                      <strong>Cargo:</strong> {selectedCotizacion.contacto.cargo || 'No especificado'}
+                      <strong>Cargo:</strong> {ROLES_CONTACTO.find(c => c.value === selectedCotizacion.contacto.cargo)?.label || selectedCotizacion.contacto.cargo || 'No especificado'}
                     </Typography>
                     <Typography>
                       <strong>Email:</strong>{' '}

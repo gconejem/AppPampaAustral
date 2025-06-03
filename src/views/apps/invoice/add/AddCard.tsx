@@ -45,144 +45,7 @@ import { toast } from 'react-hot-toast'
 import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 
 import type { ContactoType } from '@/types/apps/contactTypes'
-
-const ROLES_CONTACTO = [
-  { value: 'encargado_obra', label: 'Encargado de Obra' },
-  { value: 'dueno', label: 'Dueño' },
-  { value: 'representante', label: 'Representante' },
-  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'administrador_obra', label: 'Administrador de Obra' },
-  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
-  { value: 'autocontrol', label: 'Autocontrol' },
-  { value: 'profesional', label: 'Profesional' },
-  { value: 'laboratorista', label: 'Laboratorista' },
-  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
-]
-
-// Component Imports
-// import Logo from '@components/layout/shared/Logo'
-
-// Styled Component Imports
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-
-interface ProductoEnPaquete {
-  productoId: number
-  nombre: string
-  area: string
-  precio: number
-  cantidad: number
-  descripcion?: string
-  producto?: {
-    nombre: string
-    descripcion?: string
-    area?: string
-    precio?: number
-  }
-}
-
-interface ProductRow {
-  id: number
-  productoId: string
-  cantidad: number
-  precioUnitarioUF: number
-  totalNetoUF: number
-  area: string
-  descripcion: string
-  subproductos: never[]
-  precio?: number
-  descuento?: number
-  esSubProducto?: boolean
-  esPaquete?: boolean
-  servicio?: string
-  precioEditado?: boolean
-}
-
-interface ProductoListaPrecio {
-  listaPrecioId: number
-  precio: number
-}
-
-interface ProductoType {
-  id: number
-  productoId: number
-  sku: string
-  nombre: string
-  precio: number
-  area?: string
-  familia?: string
-  tipo?: string
-  descripcion?: string
-  esPaquete?: boolean
-  norma?: string
-  nombreCompleto?: string
-  servicio?: string
-  productosEnPaquete?: ProductoEnPaquete[]
-  listasPrecios?: ProductoListaPrecio[]
-}
-
-interface InvoiceType extends ProductoType {
-  montoDescuento: number
-}
-
-interface DetalleType {
-  productoId: number
-  cantidad: number
-  precioUnitario: number
-  descuento: number
-  subtotal: number
-  montoDescuento: number
-}
-
-interface FormData {
-  numeroCotizacion: string
-  tipoCotizacion: TipoCotizacion
-  estado: EstadoCotizacion
-  nombreProyecto: string
-  ubicacion: string
-  empresa: string
-  fechaInicio: Date | null
-  fechaFin: Date | null
-  clienteId: number | null
-  obraId: number | null
-  contactId: number | null
-  subtotal: number
-  descuento: number
-  impuesto: number
-  total: number
-  observaciones: string
-  detalles: DetalleType[]
-  formaPago: 'CONTADO' | 'CREDITO_30' | 'CREDITO_60' | 'CREDITO_90'
-  infoEMS: string
-  infoMensual: string
-  precioEMSPorProducto: boolean
-  precioEMSTotal: number
-  precioMensualPorProducto: boolean
-  precioMensualTotal: number
-  productos: ProductoType[]
-  contacto?: ContactoType | null
-  plazoEntregaEMS?: string
-  superficieEMS: string
-  antecedentesEMS: string
-  duracionMensual: string
-  jornadaMensual: string
-  antecedentesMensual: string
-  listaPrecioId?: number | null
-}
-
-interface ValidationErrors {
-  tipoCotizacion: boolean
-  nombreProyecto: boolean
-  ubicacion: boolean
-}
-
-interface ClienteType {
-  clienteId: number
-  nombre: string
-
-  // ... otros campos necesarios
-}
+import { ROLES_CONTACTO } from '@/constants/roles'
 
 const AddCard = ({
   invoiceData,
@@ -412,6 +275,7 @@ const AddCard = ({
       cargo: string
       email: string
       telefono1: string
+      empresa?: string
     }>
   >([])
 
@@ -632,7 +496,8 @@ const AddCard = ({
           nombre: contacto.nombre,
           cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
           email: contacto.email,
-          telefono1: contacto.telefono1
+          telefono1: contacto.telefono1,
+          empresa: contacto.empresa || 'Sin empresa'
         }))
 
         console.log('Contactos mapeados:', contactosMapeados)
@@ -1476,7 +1341,10 @@ const AddCard = ({
                             {option.nombre}
                           </Typography>
                           <Typography variant='caption' color='text.secondary'>
-                            {option.cargo}
+                            {option.empresa || 'Sin empresa'} - {option.cargo}
+                          </Typography>
+                          <Typography variant='caption' color='text.secondary'>
+                            {option.email}
                           </Typography>
                         </Box>
                       </Box>
@@ -1486,7 +1354,7 @@ const AddCard = ({
 
                       return options.filter(option => {
                         const searchableText =
-                          `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1}`.toLowerCase()
+                          `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1} ${option.empresa || ''}`.toLowerCase()
 
                         return searchTerms.every(term => searchableText.includes(term))
                       })
@@ -1498,7 +1366,8 @@ const AddCard = ({
                           nombre: newValue.nombre,
                           cargo: newValue.cargo || 'Sin cargo',
                           email: newValue.email || '',
-                          telefono1: newValue.telefono1 || ''
+                          telefono1: newValue.telefono1 || '',
+                          empresa: newValue.empresa || 'Sin empresa'
                         }
 
                         updateFormData({
@@ -1520,7 +1389,8 @@ const AddCard = ({
                             nombre: formData.contacto.nombre,
                             cargo: formData.contacto.cargo || 'Sin cargo',
                             email: formData.contacto.email || '',
-                            telefono1: formData.contacto.telefono1 || ''
+                            telefono1: formData.contacto.telefono1 || '',
+                            empresa: formData.contacto.empresa || 'Sin empresa'
                           }
                         : null
                     }
@@ -1542,9 +1412,15 @@ const AddCard = ({
                         <DeleteIcon />
                       </IconButton>
                       <div className='flex flex-col gap-2'>
-                        <Typography>{formData.contacto.nombre}</Typography>
-                        <Typography>{formData.contacto.cargo}</Typography>
-                        <Typography>{formData.contacto.email}</Typography>
+                        <Typography  sx={{ fontWeight: 500 }}>
+                          {formData.contacto.nombre}
+                        </Typography>
+                        <Typography>
+                        {formData.contacto.cargo} - {formData.contacto.empresa || 'Sin empresa'}
+                        </Typography>
+                        <Typography>
+                          {formData.contacto.email}
+                        </Typography>
                       </div>
                     </Box>
                   )}

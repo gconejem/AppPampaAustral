@@ -93,6 +93,7 @@ interface ContactoType {
   cargo: string
   email: string
   telefono1: string
+  empresa?: string
 }
 
 interface FormDataType {
@@ -245,19 +246,14 @@ const EditCard = ({ id }: { id: string }) => {
           subproductos: []
         }))
 
-        // Actualizar estados
-        setFormData(cotizacionData)
-        setProductRows(detallesFormateados)
-        setProductos(productosFormateados)
-        setFilteredProductos(productosFormateados)
-
         // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
         const contactosMapeados = contactosData.map((contacto: any) => ({
           contactId: contacto.contactId,
           nombre: contacto.nombre,
           cargo: ROLES_CONTACTO.find(c => c.value === contacto.cargo)?.label || contacto.cargo || '',
           email: contacto.email,
-          telefono1: contacto.telefono1
+          telefono1: contacto.telefono1,
+          empresa: contacto.empresa || 'Sin empresa'
         }))
         setContactos(contactosMapeados)
         console.log('Contactos mapeados:', contactosMapeados)
@@ -266,9 +262,14 @@ const EditCard = ({ id }: { id: string }) => {
         if (cotizacionData.contacto) {
           const cargoLabel = ROLES_CONTACTO.find(c => c.value === cotizacionData.contacto.cargo)?.label || cotizacionData.contacto.cargo
           cotizacionData.contacto.cargo = cargoLabel
+          cotizacionData.contacto.empresa = cotizacionData.contacto.empresa || 'Sin empresa'
         }
         setFormData(cotizacionData)
 
+        // Actualizar estados
+        setProductRows(detallesFormateados)
+        setProductos(productosFormateados)
+        setFilteredProductos(productosFormateados)
         setListasPrecios(listasPreciosData)
         setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
@@ -782,7 +783,10 @@ const EditCard = ({ id }: { id: string }) => {
                       {option.nombre}
                     </Typography>
                     <Typography variant='caption' color='text.secondary'>
-                      {option.cargo}
+                      {option.empresa || 'Sin empresa'} - {option.cargo}
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      {option.email}
                     </Typography>
                   </Box>
                 </Box>
@@ -790,7 +794,7 @@ const EditCard = ({ id }: { id: string }) => {
               filterOptions={(options, { inputValue }) => {
                 const searchTerms = inputValue.toLowerCase().split(' ')
                 return options.filter(option => {
-                  const searchableText = `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1}`.toLowerCase()
+                  const searchableText = `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1} ${option.empresa || ''}`.toLowerCase()
                   return searchTerms.every(term => searchableText.includes(term))
                 })
               }}
@@ -802,7 +806,8 @@ const EditCard = ({ id }: { id: string }) => {
                     nombre: newValue.nombre,
                     cargo: newValue.cargo || 'Sin cargo',
                     email: newValue.email || '',
-                    telefono1: newValue.telefono1 || ''
+                    telefono1: newValue.telefono1 || '',
+                    empresa: newValue.empresa || 'Sin empresa'
                   }
                   console.log('Nuevo contacto seleccionado:', contactoData)
                   setFormData(prev => {
@@ -837,10 +842,15 @@ const EditCard = ({ id }: { id: string }) => {
                   <DeleteIcon />
                 </IconButton>
                 <div className='flex flex-col gap-2'>
-                  <Typography>{formData.contacto.nombre}</Typography>
-                  <Typography>{formData.contacto.cargo}</Typography>
-                  <Typography>{formData.contacto.email}</Typography>
-                  <Typography>{formData.contacto.telefono1}</Typography>
+                  <Typography sx={{ fontWeight: 500 }}>
+                    {formData.contacto.nombre}
+                  </Typography>
+                  <Typography>
+                    {formData.contacto.cargo} - {formData.contacto.empresa || 'Sin empresa'}
+                  </Typography>
+                  <Typography>
+                    {formData.contacto.email}
+                  </Typography>
                 </div>
               </Box>
             )}
