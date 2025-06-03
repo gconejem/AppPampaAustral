@@ -912,7 +912,6 @@ const DuplicateCard = ({ id }: { id: string }) => {
                   <Typography>{formData.contacto.nombre}</Typography>
                   <Typography>{formData.contacto.cargo}</Typography>
                   <Typography>{formData.contacto.email}</Typography>
-                  <Typography>{formData.contacto.telefono1}</Typography>
                 </div>
               </Box>
             )}

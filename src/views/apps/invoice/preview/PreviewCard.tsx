@@ -114,11 +114,6 @@ const PreviewCard = () => {
                     <strong>Email:</strong> {previewData.contacto.email}
                   </Typography>
                 )}
-                {previewData.contacto.telefono1 && (
-                  <Typography>
-                    <strong>Teléfono:</strong> {previewData.contacto.telefono1}
-                  </Typography>
-                )}
               </Box>
             ) : (
               <Typography color='text.secondary' sx={{ mb: 3 }}>
