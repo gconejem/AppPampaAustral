@@ -148,17 +148,21 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       }
 
       // Preparar los datos para CSV
-      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'TIPO', 'CONTACTO', 'ESTADO']
+      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'EMPRESA', 'TIPO', 'CONTACTO', 'ESTADO', 'TOTAL UF']
 
       const selectedData = invoiceData?.filter(row => selectedRows.includes(row.id)) || []
+
+      console.log('selectedData', selectedData)
 
       const csvData = selectedData.map(row => [
         row.numeroCotizacion,
         row.fecha,
         row.comuna,
-        row.tipo,
-        row.contacto,
-        row.estado
+        row.empresa,
+        getTipoLabel(row.tipo),
+        row.contacto?.nombre || '',
+        row.estado,
+        row.total
       ])
 
       // Crear el contenido del CSV
