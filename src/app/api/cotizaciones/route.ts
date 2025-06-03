@@ -43,11 +43,15 @@ export async function GET() {
     })
 
     const formattedCotizaciones = cotizaciones.map(cotizacion => {
+      // Formateo manual de la fecha para asegurar dd-MM-yyyy en UTC
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const fechaCreacion = new Date(cotizacion.fechaCreacion);
+      const fecha = `${pad(fechaCreacion.getUTCDate())}-${pad(fechaCreacion.getUTCMonth() + 1)}-${fechaCreacion.getUTCFullYear()}`;
       return {
         id: cotizacion.id,
         numeroCotizacion: cotizacion.numeroCotizacion,
         cliente: cotizacion.cliente?.nombreCliente || 'Sin cliente',
-        fecha: cotizacion.fechaCreacion.toLocaleDateString(),
+        fecha: fecha,
         estado: cotizacion.estado,
         tipo: normalizeTipoCotizacion(cotizacion.tipoCotizacion as string),
         contacto: cotizacion.contacto
