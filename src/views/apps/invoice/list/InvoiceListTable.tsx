@@ -106,22 +106,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
 
-  // Función para formatear la fecha al formato dd-MM-yyyy
-  const formatearFecha = (fecha: string) => {
-    if (!fecha) return ''
-    
-    // Si la fecha ya está en formato dd-MM-yyyy, la retornamos tal cual
-    if (fecha.includes('-')) return fecha
-    
-    // Si la fecha está en formato dd/MM/yyyy, la convertimos
-    if (fecha.includes('/')) {
-      const [day, month, year] = fecha.split('/')
-      return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`
-    }
-    
-    return fecha
-  }
-
   // Inicializar localData con invoiceData
   useEffect(() => {
     if (invoiceData) {
@@ -129,8 +113,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       // Limpia cualquier string 'Sin contacto' y reemplázalo por null
       const cleanData = invoiceData.map(row => ({
         ...row,
-        // Asegurarnos de que la fecha esté en el formato correcto
-        fecha: formatearFecha(row.fecha)
+        //contacto: typeof row.contacto !== 'string' ? null : row.contacto
       }))
 
       setLocalData(cleanData)
@@ -382,44 +365,29 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
     if (filtroFecha || filtroFechaFin) {
-      // Convertir fechas de filtro a objetos Date
-      let fechaInicio: Date | null = null
-      let fechaFin: Date | null = null
-
+      // Convertir fechas de filtro (yyyy-MM-dd) a formato dd-MM-yyyy
+      let filtroFechaFormateada = ''
+      let filtroFechaFinFormateada = ''
+      
       if (filtroFecha) {
         const [year, month, day] = filtroFecha.split('-')
-        fechaInicio = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        filtroFechaFormateada = `${day}-${month}-${year}`
       }
-
+      
       if (filtroFechaFin) {
         const [year, month, day] = filtroFechaFin.split('-')
-        fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-        fechaFin.setHours(23, 59, 59, 999) // Para incluir todo el día
+        filtroFechaFinFormateada = `${day}-${month}-${year}`
       }
-
-      // Convertir la fecha de la fila a objeto Date
-      let fechaRow: Date;
-      if (row.fecha.includes('-')) {
-        // dd-MM-yyyy
-        const [day, month, year] = row.fecha.split('-')
-        fechaRow = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-      } else if (row.fecha.includes('/')) {
-        // dd/MM/yyyy o MM/DD/YYYY
-        const [part1, part2, part3] = row.fecha.split('/')
-        if (parseInt(part1) > 12) {
-          // dd/MM/yyyy
-          fechaRow = new Date(parseInt(part3), parseInt(part2) - 1, parseInt(part1))
-        } else {
-          // MM/DD/YYYY
-          fechaRow = new Date(parseInt(part3), parseInt(part1) - 1, parseInt(part2))
-        }
-      } else {
-        // fallback
-        fechaRow = new Date(row.fecha)
-      }
-
-      if (fechaInicio && fechaRow < fechaInicio) return false
-      if (fechaFin && fechaRow > fechaFin) return false
+      
+      // Comparar fechas en formato dd-MM-yyyy
+      if (filtroFecha && row.fecha < filtroFechaFormateada) return false
+      if (filtroFechaFin && row.fecha > filtroFechaFinFormateada) return false
+      
+      console.log('Fechas para comparación:', {
+        rowFecha: row.fecha,
+        filtroFecha: filtroFechaFormateada,
+        filtroFechaFin: filtroFechaFinFormateada
+      })
     }
     
     if (filtroTipo && row.tipo !== filtroTipo) return false
@@ -666,7 +634,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   />
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
-                <TableCell>{formatearFecha(row.fecha)}</TableCell>
+                <TableCell>{row.fecha}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
                 <TableCell>{row.empresa || 'No especificada'}</TableCell>
                 <TableCell>
