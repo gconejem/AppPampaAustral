@@ -106,6 +106,22 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
 
+  // Función para formatear la fecha al formato dd-MM-yyyy
+  const formatearFecha = (fecha: string) => {
+    if (!fecha) return ''
+    
+    // Si la fecha ya está en formato dd-MM-yyyy, la retornamos tal cual
+    if (fecha.includes('-')) return fecha
+    
+    // Si la fecha está en formato d/M/yyyy, la convertimos
+    if (fecha.includes('/')) {
+      const [day, month, year] = fecha.split('/')
+      return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`
+    }
+    
+    return fecha
+  }
+
   // Inicializar localData con invoiceData
   useEffect(() => {
     if (invoiceData) {
@@ -365,28 +381,41 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
     if (filtroFecha || filtroFechaFin) {
-      // Convertir fechas de filtro (yyyy-MM-dd) a formato dd-MM-yyyy
-      let filtroFechaFormateada = ''
-      let filtroFechaFinFormateada = ''
+      // Convertir fechas de filtro (yyyy-MM-dd) a objetos Date
+      let fechaInicio: Date | null = null
+      let fechaFin: Date | null = null
       
       if (filtroFecha) {
         const [year, month, day] = filtroFecha.split('-')
-        filtroFechaFormateada = `${day}-${month}-${year}`
+        fechaInicio = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
       }
       
       if (filtroFechaFin) {
         const [year, month, day] = filtroFechaFin.split('-')
-        filtroFechaFinFormateada = `${day}-${month}-${year}`
+        fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        // Establecer la hora al final del día para incluir todo el día
+        fechaFin.setHours(23, 59, 59, 999)
       }
       
-      // Comparar fechas en formato dd-MM-yyyy
-      if (filtroFecha && row.fecha < filtroFechaFormateada) return false
-      if (filtroFechaFin && row.fecha > filtroFechaFinFormateada) return false
+      // Convertir la fecha de la fila a objeto Date
+      let fechaRow: Date
+      if (row.fecha.includes('/')) {
+        const [day, month, year] = row.fecha.split('/')
+        fechaRow = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+      } else {
+        const [day, month, year] = row.fecha.split('-')
+        fechaRow = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+      }
+      
+      // Comparar fechas usando objetos Date
+      if (fechaInicio && fechaRow < fechaInicio) return false
+      if (fechaFin && fechaRow > fechaFin) return false
       
       console.log('Fechas para comparación:', {
         rowFecha: row.fecha,
-        filtroFecha: filtroFechaFormateada,
-        filtroFechaFin: filtroFechaFinFormateada
+        fechaRow: fechaRow.toISOString(),
+        filtroFecha: fechaInicio?.toISOString(),
+        filtroFechaFin: fechaFin?.toISOString()
       })
     }
     
@@ -634,7 +663,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   />
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
-                <TableCell>{row.fecha}</TableCell>
+                <TableCell>{formatearFecha(row.fecha)}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
                 <TableCell>{row.empresa || 'No especificada'}</TableCell>
                 <TableCell>
