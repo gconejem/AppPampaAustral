@@ -134,9 +134,10 @@ const DuplicateCard = ({ id }: { id: string }) => {
   const [selectedArea, setSelectedArea] = useState('')
   const [selectedTipo, setSelectedTipo] = useState('')
   const [selectedFamilia, setSelectedFamilia] = useState('')
-  const [areas, setAreas] = useState<string[]>([])
+  const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [tipos, setTipos] = useState<string[]>([])
-  const [familias, setFamilias] = useState<string[]>([])
   const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [filteredProductos, setFilteredProductos] = useState<ProductoType[]>([])
@@ -246,11 +247,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
           listasPrecios: p.listasPrecios || []
         }))
 
-        // Obtener áreas, tipos y familias únicas
-        const uniqueAreas = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.area)))
-          .filter(area => area && area !== 'Sin área')
-          .sort()
-
+        // Obtener tipos y familias únicas
         const uniqueTipos = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.tipo)))
           .filter(tipo => tipo && tipo !== 'Sin tipo')
           .sort()
@@ -293,9 +290,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         console.log('Contactos mapeados:', contactosMapeados)
 
         setListasPrecios(listasPreciosData)
-        setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
-        setFamilias(uniqueFamilias as string[])
+        setFamilias(uniqueFamilias as Array<{ id: number; nombre: string; areaId: number }>)
 
         setLoading(false)
       } catch (error) {
@@ -566,9 +562,15 @@ const DuplicateCard = ({ id }: { id: string }) => {
       )
     }
 
-    if (area) filtered = filtered.filter(product => product.area === area)
+    if (selectedAreaId) {
+      const areaNombre = areas.find(a => a.id === selectedAreaId)?.nombre
+      if (areaNombre) {
+        filtered = filtered.filter(product => product.area === areaNombre)
+      }
+    }
+
     if (tipo) filtered = filtered.filter(product => product.tipo === tipo)
-    if (familia) filtered = filtered.filter(product => product.familia === familia)
+    if (selectedFamilia) filtered = filtered.filter(product => product.familia === selectedFamilia)
 
     setFilteredProductos(filtered)
   }
@@ -691,7 +693,12 @@ const DuplicateCard = ({ id }: { id: string }) => {
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
       if (searchTerm) params.append('search', searchTerm)
-      if (selectedArea) params.append('area', selectedArea)
+      if (selectedAreaId) {
+        const areaNombre = areas.find(a => a.id === selectedAreaId)?.nombre
+        if (areaNombre) {
+          params.append('area', areaNombre)
+        }
+      }
       if (selectedTipo) params.append('tipo', selectedTipo)
       if (selectedFamilia) params.append('familia', selectedFamilia)
 
@@ -723,7 +730,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
           setTotalProductos(0)
         })
     }
-  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+  }, [productsPage, searchTerm, selectedAreaId, selectedTipo, selectedFamilia, anchorEl, areas])
 
   // Agregar un useEffect para manejar el cambio de showOnlyPaquetes
   useEffect(() => {
@@ -744,15 +751,21 @@ const DuplicateCard = ({ id }: { id: string }) => {
   }
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
-    setSelectedArea(e.target.value)
+    const areaId = e.target.value ? Number(e.target.value) : null
+    setSelectedAreaId(areaId)
+    setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
+    setProductsPage(0) // Resetear a la primera página
   }
 
   const handleTipoChange = (e: SelectChangeEvent<string>) => {
     setSelectedTipo(e.target.value)
+    setProductsPage(0) // Resetear a la primera página
   }
 
   const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
     setSelectedFamilia(e.target.value)
+    setProductsPage(0) // Resetear a la primera página
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -782,6 +795,50 @@ const DuplicateCard = ({ id }: { id: string }) => {
       setProductsPage(0)
     }
   }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
+
+  // Agregar useEffect para cargar áreas
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar áreas')
+        }
+        return res.json()
+      })
+      .then(data => {
+        console.log('Áreas cargadas:', data)
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+        toast.error('Error al cargar las áreas')
+        setAreas([])
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
+        .then(data => {
+          console.log('Familias cargadas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          toast.error('Error al cargar las familias')
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -1172,11 +1229,17 @@ const DuplicateCard = ({ id }: { id: string }) => {
               <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Área</InputLabel>
-                  <Select value={selectedArea} label='Área' onChange={handleAreaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                  <Select 
+                    value={selectedAreaId?.toString() || ''} 
+                    label='Área' 
+                    onChange={handleAreaChange} 
+                    displayEmpty 
+                    renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
+                  >
                     <MenuItem value=''>Todas</MenuItem>
                     {areas.map(area => (
-                      <MenuItem key={area} value={area}>
-                        {area}
+                      <MenuItem key={area.id} value={area.id}>
+                        {area.nombre}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1194,11 +1257,18 @@ const DuplicateCard = ({ id }: { id: string }) => {
                 </FormControl>
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Familia</InputLabel>
-                  <Select value={selectedFamilia} label='Familia' onChange={handleFamiliaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                  <Select 
+                    value={selectedFamilia} 
+                    label='Familia' 
+                    onChange={handleFamiliaChange} 
+                    displayEmpty 
+                    renderValue={selected => selected === '' ? 'Todas' : selected}
+                    disabled={!selectedAreaId}
+                  >
                     <MenuItem value=''>Todas</MenuItem>
                     {familias.map(familia => (
-                      <MenuItem key={familia} value={familia}>
-                        {familia}
+                      <MenuItem key={familia.id} value={familia.nombre}>
+                        {familia.nombre}
                       </MenuItem>
                     ))}
                   </Select>

@@ -134,9 +134,10 @@ const EditCard = ({ id }: { id: string }) => {
   const [selectedArea, setSelectedArea] = useState('')
   const [selectedTipo, setSelectedTipo] = useState('')
   const [selectedFamilia, setSelectedFamilia] = useState('')
-  const [areas, setAreas] = useState<string[]>([])
+  const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [tipos, setTipos] = useState<string[]>([])
-  const [familias, setFamilias] = useState<string[]>([])
   const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [filteredProductos, setFilteredProductos] = useState<ProductoType[]>([])
@@ -218,17 +219,9 @@ const EditCard = ({ id }: { id: string }) => {
           listasPrecios: p.listasPrecios || []
         }))
 
-        // Obtener áreas, tipos y familias únicas
-        const uniqueAreas = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.area)))
-          .filter(area => area && area !== 'Sin área')
-          .sort()
-
+        // Obtener tipos únicos
         const uniqueTipos = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.tipo)))
           .filter(tipo => tipo && tipo !== 'Sin tipo')
-          .sort()
-
-        const uniqueFamilias = Array.from(new Set(productosFormateados.map((p: ProductoType) => p.familia)))
-          .filter(familia => familia && familia !== 'Sin familia')
           .sort()
 
         // Convertir detalles a formato de filas de productos
@@ -271,9 +264,7 @@ const EditCard = ({ id }: { id: string }) => {
         setProductos(productosFormateados)
         setFilteredProductos(productosFormateados)
         setListasPrecios(listasPreciosData)
-        setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
-        setFamilias(uniqueFamilias as string[])
 
         setLoading(false)
       } catch (error) {
@@ -285,6 +276,95 @@ const EditCard = ({ id }: { id: string }) => {
 
     fetchData()
   }, [id])
+
+  // Agregar useEffect para cargar áreas
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar áreas')
+        }
+        return res.json()
+      })
+      .then(data => {
+        console.log('Áreas cargadas:', data)
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+        toast.error('Error al cargar las áreas')
+        setAreas([])
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
+        .then(data => {
+          console.log('Familias cargadas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          toast.error('Error al cargar las familias')
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
+
+  // Manejadores de eventos para filtros
+  const handleAreaChange = (e: SelectChangeEvent<string>) => {
+    const areaId = e.target.value ? Number(e.target.value) : null
+    setSelectedAreaId(areaId)
+    setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
+    setSelectedFamilia('')
+    setProductsPage(0) // Resetear a la primera página
+  }
+
+  const handleTipoChange = (e: SelectChangeEvent<string>) => {
+    setSelectedTipo(e.target.value)
+    setProductsPage(0) // Resetear a la primera página
+  }
+
+  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedFamilia(e.target.value)
+    setProductsPage(0) // Resetear a la primera página
+  }
+
+  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(event.target.checked)
+    setProductsPage(0) // Resetear a la primera página
+  }
+
+  const handleClearFilters = () => {
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+  }
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSearchTerm(event.target.value)
+    setProductsPage(0) // Resetear a la primera página
+  }
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+    }
+  }
 
   // Efecto para recalcular totales
   useEffect(() => {
@@ -647,59 +727,6 @@ const EditCard = ({ id }: { id: string }) => {
   useEffect(() => {
     filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
   }, [showOnlyPaquetes]) // Agregar showOnlyPaquetes como dependencia
-
-  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setShowOnlyPaquetes(event.target.checked)
-  }
-
-  const handleClearFilters = () => {
-    setSelectedArea('')
-    setSelectedTipo('')
-    setSelectedFamilia('')
-    setSearchTerm('')
-    setShowOnlyPaquetes(false)
-    setProductsPage(0)
-  }
-
-  const handleAreaChange = (e: SelectChangeEvent<string>) => {
-    setSelectedArea(e.target.value)
-  }
-
-  const handleTipoChange = (e: SelectChangeEvent<string>) => {
-    setSelectedTipo(e.target.value)
-  }
-
-  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
-    setSelectedFamilia(e.target.value)
-  }
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setSearchTerm(event.target.value)
-  }
-
-  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && searchTerm && searchTerm.length > 0) {
-      const filteredProducts = productos
-        .filter(
-          product =>
-            (product.servicio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              product.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (!selectedArea || product.area === selectedArea) &&
-            (!selectedFamilia || product.familia === selectedFamilia)
-        )
-        .slice(0, 50)
-
-      setFilteredProductos(filteredProducts)
-      setShowResults(true)
-    }
-  }
-
-  // Resetear la página del paginador al cambiar filtros
-  useEffect(() => {
-    if (anchorEl) {
-      setProductsPage(0)
-    }
-  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -1116,11 +1143,17 @@ const EditCard = ({ id }: { id: string }) => {
               <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Área</InputLabel>
-                  <Select value={selectedArea} label='Área' onChange={handleAreaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                  <Select 
+                    value={selectedAreaId?.toString() || ''} 
+                    label='Área' 
+                    onChange={handleAreaChange} 
+                    displayEmpty 
+                    renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
+                  >
                     <MenuItem value=''>Todas</MenuItem>
                     {areas.map(area => (
-                      <MenuItem key={area} value={area}>
-                        {area}
+                      <MenuItem key={area.id} value={area.id}>
+                        {area.nombre}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1138,11 +1171,18 @@ const EditCard = ({ id }: { id: string }) => {
                 </FormControl>
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Familia</InputLabel>
-                  <Select value={selectedFamilia} label='Familia' onChange={handleFamiliaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                  <Select 
+                    value={selectedFamilia} 
+                    label='Familia' 
+                    onChange={handleFamiliaChange} 
+                    displayEmpty 
+                    renderValue={selected => selected === '' ? 'Todas' : selected}
+                    disabled={!selectedAreaId}
+                  >
                     <MenuItem value=''>Todas</MenuItem>
                     {familias.map(familia => (
-                      <MenuItem key={familia} value={familia}>
-                        {familia}
+                      <MenuItem key={familia.id} value={familia.nombre}>
+                        {familia.nombre}
                       </MenuItem>
                     ))}
                   </Select>

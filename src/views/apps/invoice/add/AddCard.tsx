@@ -280,12 +280,13 @@ const AddCard = ({
   >([])
 
   // Agregar nuevo estado para áreas únicas
-  const [areas, setAreas] = useState<string[]>([])
-  const [selectedArea, setSelectedArea] = useState<string>('')
+  const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+  const [selectedArea, setSelectedArea] = useState('')
   const [selectedTipo, setSelectedTipo] = useState<string>('')
   const [selectedFamilia, setSelectedFamilia] = useState<string>('')
   const [tipos, setTipos] = useState<string[]>([])
-  const [familias, setFamilias] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
@@ -379,10 +380,6 @@ const AddCard = ({
         const data = response.productos || []
 
         // Obtener todas las áreas, tipos y familias únicas de todos los productos
-        const uniqueAreas = Array.from(new Set(data.map((p: any) => p.area || 'Sin área')))
-          .filter(area => area)
-          .sort()
-
         const uniqueTipos = Array.from(new Set(data.map((p: any) => p.tipo || 'Sin tipo')))
           .filter(tipo => tipo)
           .sort()
@@ -391,7 +388,6 @@ const AddCard = ({
           .filter(familia => familia)
           .sort()
 
-        setAreas(uniqueAreas as string[])
         setTipos(uniqueTipos as string[])
         setFamilias(uniqueFamilias as string[])
         setProductos(data)
@@ -1180,7 +1176,10 @@ const AddCard = ({
   }, [formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
-    setSelectedArea(e.target.value)
+    const areaId = e.target.value ? Number(e.target.value) : null
+    setSelectedAreaId(areaId)
+    setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
   }
 
   const handleTipoChange = (e: SelectChangeEvent<string>) => {
@@ -1228,6 +1227,51 @@ const AddCard = ({
       }))
     )
   }, [sinCantidad])
+
+  // Agregar después de los otros useEffect
+  useEffect(() => {
+    // Cargar áreas
+    fetch('/api/areas')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar áreas')
+        }
+        return res.json()
+      })
+      .then(data => {
+        console.log('Áreas cargadas:', data)
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+        toast.error('Error al cargar las áreas')
+        setAreas([])
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
+        .then(data => {
+          console.log('Familias cargadas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          toast.error('Error al cargar las familias')
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
 
   return (
     <>
@@ -1819,11 +1863,17 @@ const AddCard = ({
                         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                           <FormControl size='small' fullWidth>
                             <InputLabel shrink>Área</InputLabel>
-                            <Select value={selectedArea} label='Área' onChange={handleAreaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                            <Select 
+                              value={selectedAreaId?.toString() || ''} 
+                              label='Área' 
+                              onChange={handleAreaChange} 
+                              displayEmpty 
+                              renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
+                            >
                               <MenuItem value=''>Todas</MenuItem>
                               {areas.map(area => (
-                                <MenuItem key={area} value={area}>
-                                  {area}
+                                <MenuItem key={area.id} value={area.id}>
+                                  {area.nombre}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -1841,11 +1891,18 @@ const AddCard = ({
                           </FormControl>
                           <FormControl size='small' fullWidth>
                             <InputLabel shrink>Familia</InputLabel>
-                            <Select value={selectedFamilia} label='Familia' onChange={handleFamiliaChange} displayEmpty renderValue={selected => selected === '' ? 'Todas' : selected}>
+                            <Select 
+                              value={selectedFamilia} 
+                              label='Familia' 
+                              onChange={handleFamiliaChange} 
+                              displayEmpty 
+                              renderValue={selected => selected === '' ? 'Todas' : selected}
+                              disabled={!selectedAreaId}
+                            >
                               <MenuItem value=''>Todas</MenuItem>
                               {familias.map(familia => (
-                                <MenuItem key={familia} value={familia}>
-                                  {familia}
+                                <MenuItem key={familia.id} value={familia.nombre}>
+                                  {familia.nombre}
                                 </MenuItem>
                               ))}
                             </Select>
