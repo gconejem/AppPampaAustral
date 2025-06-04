@@ -57,6 +57,20 @@ interface Producto {
   norma?: string
 }
 
+interface Area {
+  id: number
+  nombre: string
+}
+
+interface Familia {
+  id: number
+  nombre: string
+  area: {
+    id: number
+    nombre: string
+  }
+}
+
 const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose }) => {
   // Estados para el formulario
   const [nombre, setNombre] = useState('')
@@ -68,8 +82,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [familia, setFamilia] = useState('')
 
   // Estado para las áreas y familias
-  const [areas, setAreas] = useState<string[]>([])
-  const [familias, setFamilias] = useState<string[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
+  const [familias, setFamilias] = useState<Familia[]>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
 
   // Estados para búsqueda
   const [buscarPaquete, setBuscarPaquete] = useState('')
@@ -119,10 +134,11 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   // Modificar el handleClose para que limpie los estados
   const handleCloseModal = () => {
     limpiarEstados()
+    setSelectedAreaId(null)
     handleClose()
   }
 
-  // Cargar áreas y familias cuando se abre el modal
+  // Cargar áreas cuando se abre el modal
   useEffect(() => {
     if (open) {
       // Cargar áreas
@@ -136,9 +152,13 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           console.error('Error al cargar áreas:', error)
           toast.error('Error al cargar las áreas')
         })
+    }
+  }, [open])
 
-      // Cargar familias
-      fetch('/api/familias')
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
         .then(res => res.json())
         .then(data => {
           console.log('Familias recibidas:', data)
@@ -148,8 +168,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           console.error('Error al cargar familias:', error)
           toast.error('Error al cargar las familias')
         })
+    } else {
+      setFamilias([])
     }
-  }, [open])
+  }, [selectedAreaId])
 
   // Cargar productos y listas de precios cuando se abre el modal o cambia la página/búsqueda/área
   useEffect(() => {
@@ -277,45 +299,44 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
             <FormControl fullWidth size='small'>
               <InputLabel>Área</InputLabel>
               <Select
-                value={area}
+                value={selectedAreaId || ''}
                 label='Área'
                 onChange={e => {
-                  console.log('Área seleccionada:', e.target.value)
-                  setArea(e.target.value)
+                  const areaId = e.target.value ? Number(e.target.value) : null
+                  setSelectedAreaId(areaId)
+                  setArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
+                  setFamilia('')
                   setProductsPage(0) // Resetear la página al cambiar el filtro
                 }}
               >
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
-                {areas && areas.length > 0 ? (
-                  areas.map((areaOption, index) => (
-                    <MenuItem key={index} value={areaOption}>
-                      {areaOption}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem disabled>No hay áreas disponibles</MenuItem>
-                )}
+                {areas.map((areaOption) => (
+                  <MenuItem key={areaOption.id} value={areaOption.id}>
+                    {areaOption.nombre}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
-              <Select value={familia} label='Familia' onChange={e => setFamilia(e.target.value)}>
+              <Select 
+                value={familia} 
+                label='Familia' 
+                onChange={e => setFamilia(e.target.value)}
+                disabled={!selectedAreaId}
+              >
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
-                {familias && familias.length > 0 ? (
-                  familias.map((familiaOption, index) => (
-                    <MenuItem key={index} value={familiaOption}>
-                      {familiaOption}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem disabled>No hay familias disponibles</MenuItem>
-                )}
+                {familias.map((familiaOption) => (
+                  <MenuItem key={familiaOption.id} value={familiaOption.nombre}>
+                    {familiaOption.nombre}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>

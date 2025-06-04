@@ -1,28 +1,21 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Obtener áreas únicas de los productos existentes
-    const productos = await prisma.producto.findMany({
+    const areas = await prisma.area.findMany({
       select: {
-        area: true
+        id: true,
+        nombre: true
       },
-      distinct: ['area']
-    })
-
-    const areas = productos.map(p => p.area).filter(area => area) // Filtrar valores nulos
-
-    return Response.json(areas)
-  } catch (error) {
-    console.error('Error al obtener áreas:', error)
-
-    return new Response(JSON.stringify({ error: 'Error al obtener áreas' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
+      orderBy: {
+        nombre: 'asc'
       }
     })
+
+    return NextResponse.json(areas)
+  } catch (error) {
+    console.error('Error al obtener áreas:', error)
+    return NextResponse.json({ error: 'Error al obtener áreas' }, { status: 500 })
   }
 }

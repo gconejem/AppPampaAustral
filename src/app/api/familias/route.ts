@@ -1,28 +1,33 @@
-import { PrismaClient } from '@prisma/client'
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Obtener familias únicas de los productos existentes
-    const productos = await prisma.producto.findMany({
+    const { searchParams } = new URL(request.url)
+    const areaId = searchParams.get('areaId')
+
+    const familias = await prisma.familia.findMany({
+      where: areaId ? {
+        areaId: parseInt(areaId)
+      } : undefined,
       select: {
-        familia: true
+        id: true,
+        nombre: true,
+        area: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        }
       },
-      distinct: ['familia']
-    })
-
-    const familias = productos.map(p => p.familia).filter(familia => familia) // Filtrar valores nulos
-
-    return Response.json(familias)
-  } catch (error) {
-    console.error('Error al obtener familias:', error)
-
-    return new Response(JSON.stringify({ error: 'Error al obtener familias' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
+      orderBy: {
+        nombre: 'asc'
       }
     })
+
+    return NextResponse.json(familias)
+  } catch (error) {
+    console.error('Error al obtener familias:', error)
+    return NextResponse.json({ error: 'Error al obtener familias' }, { status: 500 })
   }
 }
