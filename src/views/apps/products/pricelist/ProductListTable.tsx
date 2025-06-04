@@ -191,20 +191,37 @@ const ProductListTable = () => {
       setProductos(prevProductos =>
         prevProductos.map(producto => {
           if (producto.productoId === productoId) {
+            const listaPrecioExistente = producto.listasPrecios.find(lp => lp.listaPrecio.id === parseInt(selectedList))
+            
+            if (!listaPrecioExistente) {
+              // Si no existe la lista, agregamos una nueva entrada
+              return {
+                ...producto,
+                listasPrecios: [
+                  ...producto.listasPrecios,
+                  {
+                    id: 0,
+                    precio: null,
+                    activo: true,
+                    listaPrecio: { id: parseInt(selectedList), nombre: '' }
+                  }
+                ]
+              }
+            }
+
+            // Si existe, actualizamos el estado activo
             return {
               ...producto,
               listasPrecios: producto.listasPrecios.map(lp => ({
                 ...lp,
-                activo: !currentActive,
-                precio: !currentActive ? null : lp.precio // Si se desactiva, precio es null
+                activo: lp.listaPrecio.id === parseInt(selectedList) ? !currentActive : lp.activo,
+                precio: lp.listaPrecio.id === parseInt(selectedList) && !currentActive ? null : lp.precio
               }))
             }
           }
-
           return producto
         })
       )
-      console.log('productos', productos)
 
       // Hacer la llamada a la API
       const response = await fetch(`/api/productos/${productoId}`, {
@@ -215,7 +232,7 @@ const ProductListTable = () => {
         body: JSON.stringify({
           activoEnLista: !currentActive,
           listaPrecioId: parseInt(selectedList),
-          precio: null // Si se desactiva, enviamos precio null
+          precio: null
         })
       })
 
@@ -233,11 +250,10 @@ const ProductListTable = () => {
               ...producto,
               listasPrecios: producto.listasPrecios.map(lp => ({
                 ...lp,
-                activo: currentActive
+                activo: lp.listaPrecio.id === parseInt(selectedList) ? currentActive : lp.activo
               }))
             }
           }
-
           return producto
         })
       )
@@ -367,14 +383,36 @@ const ProductListTable = () => {
     {
       id: 'activo',
       header: 'ACTIVO',
-      cell: ({ row }) => (
-        <Switch
-          checked={row.original.listasPrecios[0]?.activo ?? false}
-          onChange={() =>
-            handleActiveToggle(row.original.productoId, row.original.listasPrecios[0]?.activo ?? false)
-          }
-        />
-      ),
+      cell: ({ row }) => {
+        const listaPrecio = row.original.listasPrecios.find(lp => lp.listaPrecio.id === parseInt(selectedList))
+        const estaActivo = listaPrecio?.activo ?? false
+        
+        return (
+          <Switch
+            checked={estaActivo}
+            onChange={() => {
+              // Si el producto no tiene entrada en listasPrecios, creamos una nueva
+              if (!listaPrecio) {
+                const nuevoProducto = {
+                  ...row.original,
+                  listasPrecios: [
+                    ...row.original.listasPrecios,
+                    {
+                      id: 0,
+                      precio: null,
+                      activo: true,
+                      listaPrecio: { id: parseInt(selectedList), nombre: '' }
+                    }
+                  ]
+                }
+                handleActiveToggle(nuevoProducto.productoId, false)
+              } else {
+                handleActiveToggle(row.original.productoId, estaActivo)
+              }
+            }}
+          />
+        )
+      },
       enableSorting: true
     }
   ]
