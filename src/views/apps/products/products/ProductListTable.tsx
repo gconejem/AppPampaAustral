@@ -213,7 +213,7 @@ const ProductListTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [totalProductos, setTotalProductos] = useState(0)
   const [areas, setAreas] = useState<string[]>([])
-  const [familias, setFamilias] = useState([])
+  const [familias, setFamilias] = useState<string[]>([])
   const [tipos, setTipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
   const [listasPrecios, setListasPrecios] = useState([])
   const [allProductos, setAllProductos] = useState<Producto[]>([]) // Nuevo estado para almacenar todos los productos
@@ -259,6 +259,7 @@ const ProductListTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Cargar productos
         const response = await fetch('/api/debug')
         const data = await response.json()
 
@@ -268,10 +269,18 @@ const ProductListTable = () => {
           setProductos(data.productos || [])
           setAllProductos(data.productos || []) // Guardar todos los productos
           setFilteredProductos(data.productos || [])
-          setAreas(data.areas)
-          setFamilias(data.familias || [])
           setTipos(data.tipos || [])
         }
+
+        // Cargar áreas
+        const areasResponse = await fetch('/api/areas')
+        const areasData = await areasResponse.json()
+        setAreas(areasData.map((area: any) => area.nombre))
+
+        // Cargar familias
+        const familiasResponse = await fetch('/api/familias')
+        const familiasData = await familiasResponse.json()
+        setFamilias(familiasData.map((familia: any) => familia.nombre))
       } catch (error) {
         console.error('Error cargando datos:', error)
         toast.error('Error al cargar los datos')

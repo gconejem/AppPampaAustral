@@ -12,6 +12,20 @@ import Select from '@mui/material/Select'
 // Type Imports
 import type { Producto } from './ProductListTable'
 
+interface Area {
+  id: number
+  nombre: string
+}
+
+interface Familia {
+  id: number
+  nombre: string
+  area: {
+    id: number
+    nombre: string
+  }
+}
+
 interface TableFiltersProps {
   productData: Producto[]
   setFilteredData: (data: Producto[]) => void
@@ -26,6 +40,39 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
   const [selectedArea, setSelectedArea] = useState('')
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [selectedTipo, setSelectedTipo] = useState('')
+  const [areaOptions, setAreaOptions] = useState<Area[]>([])
+  const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+
+  // Cargar áreas cuando se monta el componente
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Áreas recibidas:', data)
+        setAreaOptions(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('Familias recibidas:', data)
+          setFamiliaOptions(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+        })
+    } else {
+      setFamiliaOptions([])
+    }
+  }, [selectedAreaId])
 
   // Efecto para aplicar filtros
   useEffect(() => {
@@ -47,13 +94,16 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
 
     if (selectedTipo) {
       filteredData = filteredData.filter(product => {
-
         if (selectedTipo === 'Ensayo') {
           return product.tipo === 'Ensayo'
         }
 
         if (selectedTipo === 'Terreno') {
           return product.tipo === 'Terreno'
+        }
+
+        if (selectedTipo === 'Servicio') {
+          return product.tipo === 'Servicio'
         }
 
         if (selectedTipo === 'Paquete') {
@@ -74,7 +124,10 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
   const handleFilterChange = (filterType: string, value: string) => {
     switch (filterType) {
       case 'area':
-        setSelectedArea(value)
+        const areaId = value ? Number(value) : null
+        setSelectedAreaId(areaId)
+        setSelectedArea(areaId ? areaOptions.find(a => a.id === areaId)?.nombre || '' : '')
+        setSelectedFamilia('') // Resetear familia cuando cambia el área
         break
       case 'familia':
         setSelectedFamilia(value)
@@ -98,14 +151,14 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
               fullWidth
               id='select-area'
               label='Área'
-              value={selectedArea}
+              value={selectedAreaId?.toString() || ''}
               onChange={e => handleFilterChange('area', e.target.value)}
               labelId='area-select'
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
-              {areas.map(area => (
-                <MenuItem key={area} value={area}>
-                  {area}
+              {areaOptions.map(area => (
+                <MenuItem key={area.id} value={area.id}>
+                  {area.nombre}
                 </MenuItem>
               ))}
             </Select>
@@ -121,11 +174,12 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
               onChange={e => handleFilterChange('familia', e.target.value)}
               label='Familia'
               labelId='familia-select'
+              disabled={!selectedAreaId}
             >
               <MenuItem value=''>Todas las familias</MenuItem>
-              {familias.map(familia => (
-                <MenuItem key={familia} value={familia}>
-                  {familia}
+              {familiaOptions.map(familia => (
+                <MenuItem key={familia.id} value={familia.nombre}>
+                  {familia.nombre}
                 </MenuItem>
               ))}
             </Select>
