@@ -1215,7 +1215,7 @@ const EditCard = ({ id }: { id: string }) => {
                         <Typography variant='caption' color='text.secondary'>
                           {producto.area} - {producto.tipo} - {producto.familia}
                         </Typography>
-                        {producto.esPaquete &&
+                        {/* {producto.esPaquete &&
                           producto.productosEnPaquete &&
                           producto.productosEnPaquete.length > 0 && (
                             <Box sx={{ mt: 0.5 }}>
@@ -1241,7 +1241,7 @@ const EditCard = ({ id }: { id: string }) => {
                                 ))}
                               </Box>
                             </Box>
-                          )}
+                          )} */}
                       </Box>
                     }
                   />
