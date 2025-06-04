@@ -47,11 +47,6 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
 
     if (selectedTipo) {
       filteredData = filteredData.filter(product => {
-        console.log('Filtrando producto:', {
-          nombre: product.nombre,
-          tipo: product.tipo,
-          esPaquete: product.esPaquete
-        })
 
         if (selectedTipo === 'Ensayo') {
           return product.tipo === 'Ensayo'
@@ -59,6 +54,10 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
 
         if (selectedTipo === 'Terreno') {
           return product.tipo === 'Terreno'
+        }
+
+        if (selectedTipo === 'Paquete') {
+          return product.esPaquete === true
         }
 
         return true
