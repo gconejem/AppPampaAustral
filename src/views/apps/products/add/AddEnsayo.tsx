@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
-
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -19,28 +18,43 @@ import MenuItem from '@mui/material/MenuItem'
 // Third Party Imports
 import { toast } from 'react-hot-toast'
 
+interface Area {
+  id: number
+  nombre: string
+}
+
+interface Familia {
+  id: number
+  nombre: string
+  area: {
+    id: number
+    nombre: string
+  }
+}
 
 const AddEnsayo = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   
-  const [areas, setAreas] = useState<string[]>([])
-  const [familias, setFamilias] = useState([])
+  const [areas, setAreas] = useState<Area[]>([])
+  const [familias, setFamilias] = useState<Familia[]>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [tipos, setTipos] = useState<string[]>([])
 
-   // Cargar datos iniciales
-   useEffect(() => {
+  // Cargar áreas y tipos cuando se monta el componente
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/debug')
-        const data = await response.json()
+        // Cargar áreas
+        const areasResponse = await fetch('/api/areas')
+        const areasData = await areasResponse.json()
+        setAreas(areasData)
 
-        console.log('ADD ENSAYO:', data)
-
-        if (data) {
-          setAreas(data.areas)
-          setFamilias(data.familias || [])
-          setTipos(data.tipos || [])
+        // Cargar tipos
+        const debugResponse = await fetch('/api/debug')
+        const debugData = await debugResponse.json()
+        if (debugData) {
+          setTipos(debugData.tipos || [])
         }
       } catch (error) {
         console.error('Error cargando datos:', error)
@@ -50,6 +64,26 @@ const AddEnsayo = () => {
 
     fetchData()
   }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    const fetchFamilias = async () => {
+      if (selectedAreaId) {
+        try {
+          const response = await fetch(`/api/familias?areaId=${selectedAreaId}`)
+          const data = await response.json()
+          setFamilias(data)
+        } catch (error) {
+          console.error('Error cargando familias:', error)
+          toast.error('Error al cargar las familias')
+        }
+      } else {
+        setFamilias([])
+      }
+    }
+
+    fetchFamilias()
+  }, [selectedAreaId])
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -80,7 +114,6 @@ const AddEnsayo = () => {
 
       if (!response.ok) {
         const error = await response.json()
-
         throw new Error(error.message || 'Error al crear el ensayo')
       }
 
@@ -135,14 +168,25 @@ const AddEnsayo = () => {
                   <FormControl fullWidth>
                     <InputLabel>Área</InputLabel>
                     <Select
-                      value={formData.area}
+                      value={selectedAreaId || ''}
                       label='Área'
-                      onChange={e => setFormData({ ...formData, area: e.target.value })}
+                      onChange={e => {
+                        const areaId = e.target.value ? Number(e.target.value) : null
+                        setSelectedAreaId(areaId)
+                        setFormData(prev => ({
+                          ...prev,
+                          area: areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '',
+                          familia: '' // Limpiar familia al cambiar área
+                        }))
+                      }}
                       required
                     >
+                      <MenuItem value=''>
+                        <em>Ninguna</em>
+                      </MenuItem>
                       {areas.map(area => (
-                        <MenuItem key={area} value={area}>
-                          {area}
+                        <MenuItem key={area.id} value={area.id}>
+                          {area.nombre}
                         </MenuItem>
                       ))}
                     </Select>
@@ -154,12 +198,16 @@ const AddEnsayo = () => {
                     <Select
                       value={formData.familia}
                       label='Familia'
-                      onChange={e => setFormData({ ...formData, familia: e.target.value })}
+                      onChange={e => setFormData(prev => ({ ...prev, familia: e.target.value }))}
                       required
+                      disabled={!selectedAreaId}
                     >
+                      <MenuItem value=''>
+                        <em>Ninguna</em>
+                      </MenuItem>
                       {familias.map(familia => (
-                        <MenuItem key={familia} value={familia}>
-                          {familia}
+                        <MenuItem key={familia.id} value={familia.nombre}>
+                          {familia.nombre}
                         </MenuItem>
                       ))}
                     </Select>
@@ -171,7 +219,7 @@ const AddEnsayo = () => {
                     <Select
                       value={formData.tipo}
                       label='Tipo'
-                      onChange={e => setFormData({ ...formData, tipo: e.target.value })}
+                      onChange={e => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
                       required
                     >
                       {tipos.map(tipo => (
