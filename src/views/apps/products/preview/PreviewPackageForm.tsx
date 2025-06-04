@@ -49,10 +49,12 @@ const style = {
   left: '50%',
   transform: 'translate(-50%, -50%)',
   width: 800,
+  maxHeight: '90vh',
   bgcolor: 'background.paper',
   borderRadius: 1,
   boxShadow: 24,
-  p: 4
+  p: 4,
+  overflow: 'auto'
 }
 
 const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps) => {
@@ -135,22 +137,24 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
         <Typography variant='subtitle1' sx={{ mb: 2 }}>
           Productos incluidos en el paquete:
         </Typography>
-        <List>
-          {previewPaquete.productosEnPaquete && previewPaquete.productosEnPaquete.length > 0 ? (
-            previewPaquete.productosEnPaquete.map(producto => (
-              <ListItem key={producto.productoId}>
-                <ListItemText
-                  primary={`${producto.nombre} (SKU: ${producto.sku})`}
-                  secondary={`Cantidad: ${producto.cantidad || 1}${producto.tipo ? ' | Tipo: ' + producto.tipo : ''}`}
-                />
-              </ListItem>
-            ))
-          ) : (
-            <Typography variant='body2' color='text.secondary'>
-              No hay productos en este paquete.
-            </Typography>
-          )}
-        </List>
+        <Box sx={{ maxHeight: '300px', overflow: 'auto' }}>
+          <List>
+            {previewPaquete.productosEnPaquete && previewPaquete.productosEnPaquete.length > 0 ? (
+              previewPaquete.productosEnPaquete.map(producto => (
+                <ListItem key={producto.productoId}>
+                  <ListItemText
+                    primary={`${producto.nombre} (SKU: ${producto.sku})`}
+                    secondary={`Cantidad: ${producto.cantidad || 1}${producto.tipo ? ' | Tipo: ' + producto.tipo : ''}`}
+                  />
+                </ListItem>
+              ))
+            ) : (
+              <Typography variant='body2' color='text.secondary'>
+                No hay productos en este paquete.
+              </Typography>
+            )}
+          </List>
+        </Box>
         <Box mt={4} display='flex' justifyContent='flex-end'>
           <Button onClick={onClose} color='primary' variant='contained'>
             Cerrar
