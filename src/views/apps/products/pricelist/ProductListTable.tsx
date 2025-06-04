@@ -145,13 +145,15 @@ const ProductListTable = () => {
   // Función para actualizar precio
   const handlePriceUpdate = async (productoId: number, newPrice: string) => {
     try {
+      const precioNumerico = newPrice === '' ? null : Number(newPrice)
+      
       const response = await fetch(`/api/productos/${productoId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          precio: parseFloat(newPrice),
+          precio: precioNumerico,
           listaPrecioId: parseInt(selectedList)
         })
       })
@@ -166,7 +168,7 @@ const ProductListTable = () => {
               ...producto,
               listasPrecios: producto.listasPrecios.map(lp => ({
                 ...lp,
-                precio: lp.listaPrecio.id === parseInt(selectedList) ? parseFloat(newPrice) : lp.precio
+                precio: lp.listaPrecio.id === parseInt(selectedList) ? precioNumerico : lp.precio
               }))
             }
           }
@@ -281,14 +283,14 @@ const ProductListTable = () => {
             }
           }}
           onBlur={() => {
-            if (editingPrice.price) {
+            if (editingPrice.price !== '') {
               handlePriceUpdate(producto.productoId, editingPrice.price)
             } else {
               setEditingPrice(null)
             }
           }}
           onKeyPress={e => {
-            if (e.key === 'Enter' && editingPrice.price) {
+            if (e.key === 'Enter' && editingPrice.price !== '') {
               handlePriceUpdate(producto.productoId, editingPrice.price)
             }
           }}
@@ -311,7 +313,7 @@ const ProductListTable = () => {
         }
         sx={{ cursor: 'pointer' }}
       >
-        {listaPrecio?.precio ? `$${listaPrecio.precio.toLocaleString()}` : 'Sin asignar'}
+        {listaPrecio?.precio !== null && listaPrecio?.precio !== undefined ? `$${listaPrecio.precio.toLocaleString()}` : 'Sin asignar'}
       </Box>
     )
   }

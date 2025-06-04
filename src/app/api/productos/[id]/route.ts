@@ -172,14 +172,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         },
         update: {
           activo: activoEnLista,
-          precio: precio ? parseFloat(precio) : null,
+          precio: precio !== null && precio !== undefined ? parseFloat(precio) : null,
           updatedAt: new Date()
         },
         create: {
           productoId,
           listaPrecioId,
           activo: activoEnLista,
-          precio: precio ? parseFloat(precio) : null,
+          precio: precio !== null && precio !== undefined ? parseFloat(precio) : null,
           createdAt: new Date(),
           updatedAt: new Date()
         }
