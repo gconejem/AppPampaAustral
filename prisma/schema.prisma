@@ -675,6 +675,25 @@ model Probeta {
   muestra          Muestra  @relation(fields: [muestraId], references: [id])
 }
 
+model Area {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  familias    Familia[]
+}
+
+model Familia {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique
+  areaId      Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  area        Area      @relation(fields: [areaId], references: [id])
+
+  @@index([areaId])
+}
+
 enum EstadoProducto {
   ACTIVO
   INACTIVO
