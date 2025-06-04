@@ -6,6 +6,96 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
 
     console.log('cotizacionn', cotizacion)
 
+  // Notas para tipo A (Valores Unitarios)
+  const notasTipoA = `
+    <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
+    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+      <strong>Valores unitarios Neto (sin IVA incluido)</strong>
+      <br><br>
+      <strong>Adicionales contra evento:</strong>
+      <ul style='margin-top: 4px; margin-bottom: 12px;'>
+        <li>Copia digital adicional tiene un costo de <strong>0.15 UF neto.</strong></li>
+        <li>Anexo de Informe, tendrá un costo de <strong>0.42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
+        <li>Informe con firma y timbres físicos tiene un costo de <strong>0.58 UF neto</strong>.</li>
+      </ul>
+      <strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
+      <ul style='margin-top: 4px; margin-bottom: 12px;'>
+        <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+        <li><strong>100% Adicional</strong> Sábado, Domingo o Festivo.</li>
+      </ul>
+      <strong>Cualquier requisito adicional</strong>, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.
+    </div>
+  `;
+
+  // Notas para tipo B (EMS), adaptadas al estilo del PDF
+  const notasTipoB = `
+    <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
+    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+      <ul style="margin-top: 0; margin-bottom: 12px; padding-left: 18px;">
+        <li><strong>Relacionado al valor del servicio cotizado:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>Valor Neto (sin IVA incluido)</li>
+            <li>El valor cotizado considera movilización, traslado de personal, equipos y muestras.</li>
+            <li>El servicio incluye la emisión de informes digitales sin costo adicional.</li>
+          </ul>
+        </li>
+        <li><strong>Costos Adicionales contra evento:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
+              <ul style="margin-top: 2px; margin-bottom: 2px;">
+                <li>Para Estudio con Ingeniería: <strong>3 UF + IVA.</strong></li>
+                <li>Para Estudio sin Ingeniería: <strong>1.5 UF + IVA.</strong></li>
+              </ul>
+            </li>
+            <li>Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío <strong>0.25 UF neto + IVA.</strong></li>
+          </ul>
+        </li>
+        <li><strong>Consideraciones adicionales y requisitos especiales:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente. Cualquier requerimiento adicional deberá ser informado previamente para su evaluación y eventual recotización.</li>
+            <li>Los requerimientos adicionales pueden incluir: Normativas técnicas específicas, Acreditaciones de personal, Exigencias de seguridad, medio ambiente u otras disposiciones del mandante.</li>
+          </ul>
+        </li>
+        <li><strong>Condiciones para terreno y accesos:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>El cliente debe marcar previamente los puntos de prospección (idealmente con georreferencias).</li>
+            <li>Accesos deben estar garantizados por el cliente y el sector a explorar libre de ductos, tuberías, redes subterráneas o cualquier otro elemento que impida la buena ejecución de los trabajos o puedan atentar la seguridad del equipo de trabajo.</li>
+            <li>No se considera rotura de pavimento.</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  `;
+
+  // Notas para tipo C (Mensual), adaptadas al estilo del PDF
+  const notasTipoC = `
+    <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
+    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+      <ul style="margin-top: 0; margin-bottom: 12px; padding-left: 18px;">
+        <li><strong>Valor Neto (<span style='text-decoration: underline;'>sin IVA incluido</span>)</strong></li>
+        <li><strong>Adicionales contra evento:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li><span style='text-decoration: underline;'>Copia</span> digital adicional tiene un costo de <strong>0.15 UF neto.</strong></li>
+            <li>Anexo de Informe, tendrá un costo de <strong>0.42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
+            <li>Informe con firma y timbres físicos tiene un costo de <strong>0.58 UF neto</strong></li>
+            <li><strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
+              <ul style="margin-top: 2px; margin-bottom: 2px;">
+                <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+                <li><strong>100% Adicional</strong> Sábado, Domingo o Festivo.</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><strong>Cualquier requisito adicional</strong>, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.</li>
+      </ul>
+    </div>
+  `;
+
+  // Selección dinámica de notas
+  let notasHTML = notasTipoA;
+  if (cotizacion.tipoCotizacion === 'B') notasHTML = notasTipoB;
+  else if (cotizacion.tipoCotizacion === 'C') notasHTML = notasTipoC;
+
   return `
   <html>
     <head>
@@ -160,23 +250,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
 
           <!-- Página de Notas -->
           <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
-            <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
-            <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
-              <strong>Valores unitarios Neto (sin IVA incluido)</strong>
-              <br><br>
-              <strong>Adicionales contra evento:</strong>
-              <ul style='margin-top: 4px; margin-bottom: 12px;'>
-                <li>Copia digital adicional tiene un costo de <strong>0.15 UF neto.</strong></li>
-                <li>Anexo de Informe, tendrá un costo de <strong>0.42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
-                <li>Informe con firma y timbres físicos tiene un costo de <strong>0.58 UF neto</strong>.</li>
-              </ul>
-              <strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
-              <ul style='margin-top: 4px; margin-bottom: 12px;'>
-                <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
-                <li><strong>100% Adicional</strong> Sábado, Domingo o Festivo.</li>
-              </ul>
-              <strong>Cualquier requisito adicional</strong>, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.
-            </div>
+            ${notasHTML}
           </div>
 
           <!-- Primera página de Términos y Condiciones -->
@@ -281,11 +355,11 @@ export async function POST(request: Request) {
     const html = renderCotizacionHTML(cotizacion, logoBase64);
 
     // TEMPORAL: devolver HTML en vez de PDF
-    /* return new NextResponse(html, {
+    return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8'
       }
-    }) */
+    })
 
     // --- PDF original ---
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
