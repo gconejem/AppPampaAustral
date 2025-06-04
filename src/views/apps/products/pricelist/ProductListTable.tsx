@@ -62,7 +62,7 @@ interface Producto {
 }
 
 const ProductListTable = () => {
-  const [selectedList, setSelectedList] = useState<string>('')
+  const [selectedList, setSelectedList] = useState<string>('1')
   const [listaPrecios, setListaPrecios] = useState<ListaPrecio[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
@@ -72,32 +72,13 @@ const ProductListTable = () => {
   const [globalFilter, setGlobalFilter] = useState('')
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
-  // Cargar listas de precios
-  useEffect(() => {
-    const fetchListaPrecios = async () => {
-      try {
-        const response = await fetch('/api/lista-precios')
-        const data = await response.json()
-
-        setListaPrecios(data)
-
-        // Seleccionar la primera lista por defecto si existe
-        if (data.length > 0) {
-          setSelectedList(data[0].id.toString())
-        }
-      } catch (error) {
-        console.error('Error al cargar listas de precios:', error)
-      }
-    }
-
-    fetchListaPrecios()
-  }, [])
-
   // Cargar productos cuando se selecciona una lista
   useEffect(() => {
     const fetchProductos = async () => {
+      if (!selectedList) return
+
       try {
-        const response = await fetch(`/api/productos/lista/${selectedList || 'all'}`)
+        const response = await fetch(`/api/productos/lista/${selectedList}`)
         const data = await response.json()
 
         // Asegurarnos que todos los productos tengan el estado activo por defecto
@@ -117,6 +98,21 @@ const ProductListTable = () => {
 
     fetchProductos()
   }, [selectedList])
+
+  // Cargar listas de precios
+  useEffect(() => {
+    const fetchListaPrecios = async () => {
+      try {
+        const response = await fetch('/api/lista-precios')
+        const data = await response.json()
+        setListaPrecios(data)
+      } catch (error) {
+        console.error('Error al cargar listas de precios:', error)
+      }
+    }
+
+    fetchListaPrecios()
+  }, [])
 
   // Función para guardar productos en la lista
   const handleSaveToList = async () => {
@@ -163,7 +159,20 @@ const ProductListTable = () => {
       if (!response.ok) throw new Error('Error al actualizar precio')
 
       setSuccessMessage('Precio actualizado correctamente')
-      fetchProductos()
+      setProductos(prevProductos =>
+        prevProductos.map(producto => {
+          if (producto.productoId === productoId) {
+            return {
+              ...producto,
+              listasPrecios: producto.listasPrecios.map(lp => ({
+                ...lp,
+                precio: lp.listaPrecio.id === parseInt(selectedList) ? parseFloat(newPrice) : lp.precio
+              }))
+            }
+          }
+          return producto
+        })
+      )
       setEditingPrice(null)
 
       setTimeout(() => {
@@ -171,6 +180,7 @@ const ProductListTable = () => {
       }, 3000)
     } catch (error) {
       console.error('Error:', error)
+      toast.error('Error al actualizar el precio')
     }
   }
 
@@ -194,6 +204,7 @@ const ProductListTable = () => {
           return producto
         })
       )
+      console.log('productos', productos)
 
       // Hacer la llamada a la API
       const response = await fetch(`/api/productos/${productoId}`, {
@@ -236,7 +247,7 @@ const ProductListTable = () => {
 
   // Modificar la renderización de la celda de precio
   const renderPrecio = (producto: Producto) => {
-    const listaPrecio = producto.listasPrecios[0]
+    const listaPrecio = producto.listasPrecios.find(lp => lp.listaPrecio.id === parseInt(selectedList))
     const estaActivo = listaPrecio?.activo
 
     if (!estaActivo) {
@@ -249,14 +260,19 @@ const ProductListTable = () => {
           value={editingPrice.price}
           onChange={e => {
             const value = e.target.value
-
             if (/^\d*\.?\d*$/.test(value)) {
               setEditingPrice({ id: producto.productoId, price: value })
             }
           }}
-          onBlur={() => handlePriceUpdate(producto.productoId, editingPrice.price)}
+          onBlur={() => {
+            if (editingPrice.price) {
+              handlePriceUpdate(producto.productoId, editingPrice.price)
+            } else {
+              setEditingPrice(null)
+            }
+          }}
           onKeyPress={e => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && editingPrice.price) {
               handlePriceUpdate(producto.productoId, editingPrice.price)
             }
           }}
@@ -288,83 +304,80 @@ const ProductListTable = () => {
   const columnHelper = createColumnHelper<Producto>()
 
   // Definir las columnas
-  const columns = useMemo(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            onChange={e => {
-              if (e.target.checked) {
-                setSelectedProducts(productos.map(p => p.sku))
-              } else {
-                setSelectedProducts([])
-              }
-            }}
-            checked={selectedProducts.length === productos.length && productos.length > 0}
-            indeterminate={selectedProducts.length > 0 && selectedProducts.length < productos.length}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={selectedProducts.includes(row.original.sku)}
-            onChange={e => {
-              if (e.target.checked) {
-                setSelectedProducts([...selectedProducts, row.original.sku])
-              } else {
-                setSelectedProducts(selectedProducts.filter(sku => sku !== row.original.sku))
-              }
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('sku', {
-        header: 'SKU',
-        cell: info => info.getValue(),
-        enableSorting: true
-      }),
-      columnHelper.accessor('nombre', {
-        header: 'NOMBRE',
-        cell: info => info.getValue(),
-        enableSorting: true
-      }),
-      columnHelper.accessor('area', {
-        header: 'ÁREA',
-        cell: info => info.getValue(),
-        enableSorting: true
-      }),
-      columnHelper.accessor('familia', {
-        header: 'FAMILIA',
-        cell: info => info.getValue(),
-        enableSorting: true
-      }),
-      columnHelper.accessor('tipo', {
-        header: 'TIPO',
-        cell: info => info.getValue(),
-        enableSorting: true
-      }),
-      {
-        id: 'precio',
-        header: 'PRECIO',
-        cell: ({ row }) => renderPrecio(row.original),
-        enableSorting: true
-      },
-      {
-        id: 'activo',
-        header: 'ACTIVO',
-        cell: ({ row }) => (
-          <Switch
-            checked={row.original.listasPrecios[0]?.activo ?? false}
-            onChange={() =>
-              handleActiveToggle(row.original.productoId, row.original.listasPrecios[0]?.activo ?? false)
+  const columns = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          onChange={e => {
+            if (e.target.checked) {
+              setSelectedProducts(productos.map(p => p.sku))
+            } else {
+              setSelectedProducts([])
             }
-          />
-        ),
-        enableSorting: true
-      }
-    ],
-    [selectedProducts, productos, editingPrice]
-  )
+          }}
+          checked={selectedProducts.length === productos.length && productos.length > 0}
+          indeterminate={selectedProducts.length > 0 && selectedProducts.length < productos.length}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selectedProducts.includes(row.original.sku)}
+          onChange={e => {
+            if (e.target.checked) {
+              setSelectedProducts([...selectedProducts, row.original.sku])
+            } else {
+              setSelectedProducts(selectedProducts.filter(sku => sku !== row.original.sku))
+            }
+          }}
+        />
+      )
+    },
+    columnHelper.accessor('sku', {
+      header: 'SKU',
+      cell: info => info.getValue(),
+      enableSorting: true
+    }),
+    columnHelper.accessor('nombre', {
+      header: 'NOMBRE',
+      cell: info => info.getValue(),
+      enableSorting: true
+    }),
+    columnHelper.accessor('area', {
+      header: 'ÁREA',
+      cell: info => info.getValue(),
+      enableSorting: true
+    }),
+    columnHelper.accessor('familia', {
+      header: 'FAMILIA',
+      cell: info => info.getValue(),
+      enableSorting: true
+    }),
+    columnHelper.accessor('tipo', {
+      header: 'TIPO',
+      cell: info => info.getValue(),
+      enableSorting: true
+    }),
+    {
+      id: 'precio',
+      header: 'PRECIO',
+      cell: ({ row }) => renderPrecio(row.original),
+      enableSorting: true
+    },
+    {
+      id: 'activo',
+      header: 'ACTIVO',
+      cell: ({ row }) => (
+        <Switch
+          checked={row.original.listasPrecios[0]?.activo ?? false}
+          onChange={() =>
+            handleActiveToggle(row.original.productoId, row.original.listasPrecios[0]?.activo ?? false)
+          }
+        />
+      ),
+      enableSorting: true
+    }
+  ]
 
   // Configurar la tabla
   const table = useReactTable({
