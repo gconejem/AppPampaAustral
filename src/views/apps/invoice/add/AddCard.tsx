@@ -660,6 +660,8 @@ const AddCard = ({
         }
       }
 
+      console.log('productosEnPaquete', productosEnPaquete)
+
       // Agregar el paquete como fila principal
       const paqueteRow = {
         id: Date.now(),
@@ -675,18 +677,22 @@ const AddCard = ({
       }
 
       // Agregar los productos del paquete como subfilas
-      const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
-        id: Date.now() + i + 1,
-        productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
-        servicio: pp.nombre || pp.producto?.nombre || '',
-        descripcion: pp.descripcion || pp.producto?.descripcion || '',
-        cantidad: pp.cantidad || 1,
-        precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-        totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
-        area: pp.area || pp.producto?.area || '',
-        esSubProducto: true,
-        subproductos: []
-      }))
+      const productosRows = productosEnPaquete.map((pp: any, i: number) => {
+        return {
+              id: Date.now() + i + 1,
+              productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
+              servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
+              descripcion: pp.producto?.descripcion || '',
+              cantidad: pp.cantidad || 1,
+              precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
+              totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+              area: pp.area || pp.producto?.area || '',
+              esSubProducto: true,
+              subproductos: []
+              }
+      })
+
+      console.log('productosRows', productosRows)
 
       // Si hay una fila vacía, reemplazarla con el paquete y sus productos
       if (lastEmptyRowIndex >= 0) {
@@ -761,12 +767,15 @@ const AddCard = ({
       return
     }
 
+    console.log('productRows', productRows)
+
     // Preparar los datos para la previsualización
     const previewData = {
       ...formData,
       detalles: productRows.map(row => ({
         productoId: parseInt(row.productoId),
         servicio: row.servicio || '',
+        norma: row.norma || '',
         area: row.area || '',
         descripcion: row.descripcion || '',
         cantidad: row.cantidad,

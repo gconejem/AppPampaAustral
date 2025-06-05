@@ -40,6 +40,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
 import { ROLES_CONTACTO } from '@/constants/roles'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Type Imports
 // import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -106,6 +107,10 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('')
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [selectedCotizacionForPDF, setSelectedCotizacionForPDF] = useState<InvoiceType | null>(null)
+  const [pdfHtmlContent, setPdfHtmlContent] = useState('')
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   // Inicializar localData con invoiceData
   useEffect(() => {
@@ -478,6 +483,25 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
   }
 
+  const handlePreviewPDF = async (id: number) => {
+    try {
+      setPdfLoading(true)
+      const response = await fetch(`/api/cotizaciones/${id}/pdf?preview=1`)
+      if (!response.ok) {
+        throw new Error('Error al cargar la previsualización')
+      }
+      const html = await response.text()
+      setPdfHtmlContent(html)
+      setSelectedCotizacionForPDF(localData.find(row => row.id === id) || null)
+      setPdfPreviewOpen(true)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar la previsualización')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   return (
     <Card>
       {/* Fila de filtros */}
@@ -704,6 +728,15 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                         <i className='ri-file-download-line' />
                       </IconButton>
                     </Tooltip>
+                    {/* <Tooltip title='Previsualizar PDF'>
+                      <IconButton
+                        size='small'
+                        onClick={() => handlePreviewPDF(row.id)}
+                        color='info'
+                      >
+                        <i className='ri-eye-line' />
+                      </IconButton>
+                    </Tooltip> */}
                     <Tooltip title='Duplicar'>
                       <IconButton
                         size='small'
@@ -1103,6 +1136,36 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
             Eliminar
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={pdfPreviewOpen} onClose={() => setPdfPreviewOpen(false)} maxWidth='lg' fullWidth
+        PaperProps={{
+          sx: {
+            minHeight: '80vh',
+            maxHeight: '90vh'
+          }
+        }}
+      >
+        <DialogContent>
+          <div className='flex justify-between items-center mb-4'>
+            <h2 className='text-xl font-semibold'>Vista Previa PDF {selectedCotizacionForPDF ? `- ${selectedCotizacionForPDF.numeroCotizacion}` : ''}</h2>
+            <div className='flex gap-2'>
+              <IconButton onClick={() => window.print()}>
+                <i className='ri-download-line' />
+              </IconButton>
+              <IconButton onClick={() => setPdfPreviewOpen(false)}>
+                <i className='ri-close-line' />
+              </IconButton>
+            </div>
+          </div>
+          {pdfLoading ? (
+            <div className='flex justify-center items-center h-[60vh]'>
+              <CircularProgress />
+            </div>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: pdfHtmlContent }} />
+          )}
+        </DialogContent>
       </Dialog>
     </Card>
   )

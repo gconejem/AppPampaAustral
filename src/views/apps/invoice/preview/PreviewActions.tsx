@@ -87,7 +87,9 @@ const PreviewActions = () => {
           cantidad: previewData.precioEMSPorProducto ? Number(detalle.cantidad) : 0,
           precioUnitario: previewData.precioEMSPorProducto ? parseFloat(detalle.precioUnitarioUF || 0) : 0,
           descuento: 0,
-          subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0
+          subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0,
+          esPaquete: detalle.esPaquete,
+          esSubProducto: detalle.esSubProducto
         }))
 
       // Debug: ver los detalles válidos
@@ -240,7 +242,7 @@ const PreviewActions = () => {
             >
               Descargar PDF
             </Button>
-            {/* <Button
+            <Button
               fullWidth
               color='info'
               variant='outlined'
@@ -263,7 +265,7 @@ const PreviewActions = () => {
               }}
             >
               Ver Preview HTML
-            </Button> */}
+            </Button>
             <Button fullWidth color='secondary' variant='outlined' onClick={() => window.close()}>
               Volver
             </Button>

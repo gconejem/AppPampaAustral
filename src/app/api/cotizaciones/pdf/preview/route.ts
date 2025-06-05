@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server'
 import puppeteer from 'puppeteer'
 import fs from 'fs'
 
+// Mapeo de formas de pago
+const FORMAS_PAGO = {
+  CONTADO: 'Contado',
+  CREDITO_30: 'Crédito 30 días',
+  CREDITO_60: 'Crédito 60 días',
+  CREDITO_90: 'Crédito 90 días'
+} as const
+
+// Función para formatear la forma de pago
+const formatearFormaPago = (formaPago: string): string => {
+  return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
+}
+
 function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
 
     console.log('cotizacionn', cotizacion)
@@ -120,13 +133,23 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
         .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
         .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: 'Inter', sans-serif; }
         .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: 'Inter', sans-serif; }
-        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif; }
-        .table td { font-size: 0.8125rem; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: 'Inter', sans-serif; }
+        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif; }
+        .table td { font-size: 0.8125rem; padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: 'Inter', sans-serif; }
         .area-row { background-color: #f5f5f5; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif; }
         .totales { margin-top: 16px; text-align: right; color: #736e7d; font-family: 'Inter', sans-serif; font-size: 12px; }
         .totales strong { font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; }
         .table tbody { font-size: 0.8125rem; }
         .terminos-condiciones, .terminos-condiciones li { text-align: justify; }
+        @page { 
+          margin: 5mm 5mm 25mm 5mm;
+        }
+        /* Pie de página con correo en negrita usando pseudo-elemento */
+        @page :footer {
+          content: "";
+        }
+        .footer-email {
+          font-weight: bold;
+        }
       </style>
     </head>
     <body>
@@ -135,7 +158,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
           <div class="header-left">
             <div class="logo-title">
               <img src="${logoBase64}" class="logo" />
-              <span class="title">PAMPAUSTRAL</span>
+              <span class="title">Laboratorio Pampa Austral</span>
             </div>
             <div class="subtitle">Laboratorio acreditado de acuerdo con la Norma NCh-ISO/IEC 17025:2017</div>
           </div>
@@ -143,6 +166,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}</div>
             <div><span class="label">Fecha Emisión:</span> ${new Date(cotizacion.fechaInicio || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
             <div><span class="label">Fecha Vencimiento:</span> ${new Date(cotizacion.fechaFin || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
+            <div>RPG-05-02 Rev. N° 2</div>
           </div>
         </div>
         <div class="section">
@@ -154,11 +178,14 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <div class="value"><b>Empresa:</b> ${cotizacion.contacto?.empresa || '-'}</div>
               <div class="value"><b>Email:</b> ${cotizacion.contacto?.email || '-'}</div>
             </div>
-            <div class="col">
+            <div class="col" style="flex: 1; min-width: 0;">
               <div class="label">Datos Bancarios</div>
               <div class="value">Nombre: Sociedad Laboratorio Pampa Austral Ltda.</div>
               <div class="value">Rut: 77.390.460-K</div>
+              <div class="value">Dirección: Calle Santa Blanca N° 51, Chillán. Región de Ñuble, Chile</div>
               <div class="value">Cuenta Corriente: 220-02813-03, Banco de Chile</div>
+              <div class="value">Forma de pago: ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
+              <div class="value"><b>Métodos de pago:</b> Transferencia, Tarjetas vía flow.cl, solicitar link.</div>
             </div>
           </div>
           <div class="row">
@@ -168,10 +195,6 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <div class="value"><b>Proyecto:</b> ${cotizacion.nombreProyecto || '-'}</div>
               <div class="value"><b>Empresa:</b> ${cotizacion.empresa || '-'}</div>
               <div class="value"><b>Ubicación:</b> ${cotizacion.ubicacion || '-'}</div>
-              <div class="value"><b>Forma de Pago:</b> ${cotizacion.formaPago || '-'}</div>
-            </div>
-            <div class="col" style="text-align:right;">
-              <!-- Se eliminan los datos de cotización aquí para que solo estén en el header -->
             </div>
           </div>
           ${cotizacion.tipoCotizacion === 'B' ? `
@@ -180,20 +203,20 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               <div class="label">Información EMS</div>
               <div class="value"><b>Superficie EMS:</b><br>${(cotizacion.superficieEMS || '-').replace(/\r?\n/g, '<br>')}</div>
               <div class="value"><b>Antecedentes EMS:</b><br>${(cotizacion.antecedentesEMS || '-').replace(/\r?\n/g, '<br>')}</div>
-              <div class="value"><b>Plazo de Entrega EMS:</b><br>${(cotizacion.plazoEntregaEMS || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Plazo de Entrega:</b><br>${(cotizacion.plazoEntregaEMS || '-').replace(/\r?\n/g, '<br>')}</div>
             </div>
           </div>
           ` : ''}
           <table class="table">
             <thead>
               <tr>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO/ENSAYO</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
                 ${cotizacion.precioEMSPorProducto ? `
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">CANTIDAD</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">CANTIDAD</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
+                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
                 ` : ''}
               </tr>
             </thead>
@@ -211,17 +234,55 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                 for (const area in detallesPorArea) {
                   html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
                   html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
-                  for (const detalle of detallesPorArea[area]) {
-                    // Si existe producto, usa los campos anidados. Si no, usa los directos.
-                    const prod = detalle.producto || {};
+                  
+                  // Procesar los detalles del área
+                  for (let i = 0; i < detallesPorArea[area].length; i++) {
+                    const detalle = detallesPorArea[area][i];
+                    
+                    // Si es un subproducto, lo saltamos ya que se mostrará con su paquete
+                    if (detalle.esSubProducto) continue;
+                    
+                    // Verificar si es un paquete y recopilar sus subproductos
+                    let subproductos = [];
+                    if (detalle.esPaquete) {
+                      // Buscar los siguientes detalles que son subproductos de este paquete
+                      let j = i + 1;
+                      while (j < detallesPorArea[area].length && detallesPorArea[area][j].esSubProducto) {
+                        const subDetalle = detallesPorArea[area][j];
+                        subproductos.push({
+                          nombre: subDetalle.servicio || '-',
+                          descripcion: subDetalle.descripcion || '-',
+                          cantidad: subDetalle.cantidad || 1,
+                          precioUnitario: subDetalle.precioUnitarioUF || 0,
+                          totalNeto: subDetalle.totalNetoUF || 0,
+                          norma: (subDetalle.producto && subDetalle.producto.norma) || ''
+                        });
+                        j++;
+                      }
+                    }
+
                     html += `<tr>
-                      <td>${prod.area || detalle.area || '-'}</td>
-                      <td>${prod.nombre || detalle.servicio || '-'}${prod.norma ? ` - ${prod.norma}` : ''}</td>
-                      <td>${prod.descripcion || detalle.descripcion || '-'}</td>
+                      <td>${detalle.area || '-'}</td>
+                      <td>
+                        ${detalle.esPaquete ? 
+                          `<div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
+                            ${detalle.servicio || '-'}
+                            <span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 8px;">PAQUETE</span>
+                          </div>` 
+                          : detalle.servicio || '-'}
+                        ${subproductos.length > 0 ? 
+                          '<ul style="margin: 8px 0 0 0; padding-left: 32px;">' +
+                          subproductos.map(sub =>
+                            `<li style=\"margin-bottom:2px;\">${sub.nombre}${sub.norma ? ` - ${sub.norma}` : ''}</li>`
+                          ).join('') +
+                          '</ul>'
+                          : ''}
+                      </td>
+                      <td style="font-size: 0.57rem; white-space: pre-wrap; padding-left: 0;">${detalle.descripcion || '-'}</td>
                       ${cotizacion.precioEMSPorProducto ? `
                       <td style="text-align:center;">${detalle.cantidad || '-'}</td>
-                      <td style="text-align:right;">UF ${Number(detalle.precioUnitario ?? detalle.precioUnitarioUF ?? 0).toFixed(2)}</td>
-                      <td style="text-align:right;">UF ${Number(detalle.subtotal ?? detalle.totalNetoUF ?? 0).toFixed(2)}</td>
+                      <td style="text-align:right;">UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                      <td style="text-align:right;">UF ${Number(detalle.totalNetoUF || 0).toFixed(2)}</td>
                       ` : ''}
                     </tr>`;
                   }
@@ -246,11 +307,13 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
               `;
             })()}
           </div>
-          ${cotizacion.observaciones ? `<div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b><br>${(cotizacion.observaciones || '').replace(/\r?\n/g, '<br>')}</div>` : ''}
+          <div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b><br>${cotizacion.observaciones ? cotizacion.observaciones.replace(/\r?\n/g, '<br>') : 'Sin observaciones'}</div>
 
           <!-- Página de Notas -->
           <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
-            ${notasHTML}
+            <div style="margin: 24px 32px 24px 8px;">
+              ${notasHTML}
+            </div>
           </div>
 
           <!-- Primera página de Términos y Condiciones -->
@@ -362,20 +425,30 @@ export async function POST(request: Request) {
     })
 
     // --- PDF original ---
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    /* const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
     const pdfBuffer = await page.pdf({
-       format: 'A4',
-       margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' }
-     })
-     await browser.close()
-     return new NextResponse(pdfBuffer, {
-       headers: {
-         'Content-Type': 'application/pdf',
-         'Content-Disposition': `attachment; filename="cotizacion-preview.pdf"`
-       }
-     })
+      format: 'A4',
+      margin: { top: '5mm', right: '5mm', bottom: '25mm', left: '5mm' },
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>',
+      footerTemplate: `
+        <div style="width:100%;font-family:'Inter',sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
+          Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
+          Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h<br>
+          <span style="font-weight:bold;">contacto@pampaustral.cl</span>
+          <div style="position:absolute;right:20px;bottom:0;font-size:12px;color:#736e7d;">Página <span class='pageNumber'></span> de <span class='totalPages'></span></div>
+        </div>
+      `
+    })
+    await browser.close()
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="cotizacion-preview.pdf"`
+      }
+    }) */
   } catch (error) {
     console.error('Error al generar PDF:', error)
     return new NextResponse('Error al generar el PDF', { status: 500 })
