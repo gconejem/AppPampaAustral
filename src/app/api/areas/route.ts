@@ -3,17 +3,30 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
+    const ordenPersonalizado = [
+      'Suelo',
+      'Hormigón',
+      'Asfalto',
+      'Elementos y Componentes',
+      'Otros',
+      'Servicios'
+    ]
+
     const areas = await prisma.area.findMany({
       select: {
         id: true,
         nombre: true
-      },
-      orderBy: {
-        nombre: 'asc'
       }
     })
 
-    return NextResponse.json(areas)
+    // Ordenar las áreas según el orden personalizado
+    const areasOrdenadas = areas.sort((a, b) => {
+      const indexA = ordenPersonalizado.indexOf(a.nombre)
+      const indexB = ordenPersonalizado.indexOf(b.nombre)
+      return indexA - indexB
+    })
+
+    return NextResponse.json(areasOrdenadas)
   } catch (error) {
     console.error('Error al obtener áreas:', error)
     return NextResponse.json({ error: 'Error al obtener áreas' }, { status: 500 })
