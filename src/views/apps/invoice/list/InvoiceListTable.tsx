@@ -926,7 +926,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {selectedCotizacion.detalles?.map((detalle: any, index: number) => (
+                      {selectedCotizacion.detalles?.filter((detalle: any) => !detalle.esSubProducto).map((detalle: any, index: number) => (
                         <Fragment key={`detalle-${index}`}>
                           <TableRow
                             sx={{
@@ -934,11 +934,21 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                             }}
                           >
                             <TableCell>
+                              {detalle.producto?.nombre || 'Sin nombre'}
+                              {detalle.producto?.norma && ` - ${detalle.producto.norma}`}
                               {detalle.esPaquete && (
                                 <Chip size='small' label='Paquete' color='primary' sx={{ mr: 1 }} />
                               )}
-                              {detalle.producto?.nombre || 'Sin nombre'}
-                              {detalle.producto?.norma && ` - ${detalle.producto.norma}`}
+                              {detalle.esPaquete && detalle.producto?.productosEnPaquete && (
+                                <Box sx={{ mt: 1, pl: 2 }}>
+                                  {detalle.producto.productosEnPaquete.map((subProducto: any, subIndex: number) => (
+                                    <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
+                                      • {subProducto.producto.nombre}
+                                      {subProducto.producto.norma && ` - ${subProducto.producto.norma}`}
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )}
                             </TableCell>
                             <TableCell>{detalle.producto?.area || '-'}</TableCell>
                             <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
@@ -946,36 +956,6 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                             <TableCell align='right'>UF {Number(detalle.precioUnitario || 0).toFixed(2)}</TableCell>
                             <TableCell align='right'>UF {Number(detalle.subtotal || 0).toFixed(2)}</TableCell>
                           </TableRow>
-                          {detalle.esPaquete &&
-                            detalle.subDetalles?.map((subDetalle: any, subIndex: number) => (
-                              <TableRow
-                                key={`subproducto-${index}-${subIndex}`}
-                                sx={{ backgroundColor: 'action.hover' }}
-                              >
-                                <TableCell sx={{ pl: 6 }}>
-                                  <Typography variant='body2'>{subDetalle.producto?.nombre}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant='body2'>{subDetalle.producto?.area || '-'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant='body2'>{subDetalle.producto?.descripcion || '-'}</Typography>
-                                </TableCell>
-                                <TableCell align='right'>
-                                  <Typography variant='body2'>{subDetalle.cantidad}</Typography>
-                                </TableCell>
-                                <TableCell align='right'>
-                                  <Typography variant='body2'>
-                                    UF {Number(subDetalle.precioUnitario || 0).toFixed(2)}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align='right'>
-                                  <Typography variant='body2'>
-                                    UF {Number(subDetalle.subtotal || 0).toFixed(2)}
-                                  </Typography>
-                                </TableCell>
-                              </TableRow>
-                            ))}
                         </Fragment>
                       ))}
                     </TableBody>
