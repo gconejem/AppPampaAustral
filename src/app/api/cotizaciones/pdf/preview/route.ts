@@ -222,69 +222,71 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             </thead>
             <tbody>
               ${(() => {
-                // Agrupar detalles por área
-                const detallesPorArea: Record<string, any[]> = {};
-                for (const detalle of cotizacion.detalles) {
-                  // Soporta ambos formatos: con o sin producto anidado
-                  const area = detalle.producto?.area || detalle.area || 'Sin área';
-                  if (!detallesPorArea[area]) detallesPorArea[area] = [];
-                  detallesPorArea[area].push(detalle);
-                }
                 let html = '';
-                for (const area in detallesPorArea) {
-                  html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
-                  html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
+                let currentArea = '';
+                
+                // Recorrer los detalles secuencialmente
+                for (let i = 0; i < cotizacion.detalles.length; i++) {
+                  const detalle = cotizacion.detalles[i];
+                  const area = detalle.producto?.area || detalle.area || 'Sin área';
                   
-                  // Procesar los detalles del área
-                  for (let i = 0; i < detallesPorArea[area].length; i++) {
-                    const detalle = detallesPorArea[area][i];
-                    
-                    // Si es un subproducto, lo saltamos ya que se mostrará con su paquete
-                    if (detalle.esSubProducto) continue;
-                    
-                    // Verificar si es un paquete y recopilar sus subproductos
-                    let subproductos = [];
-                    if (detalle.esPaquete) {
-                      // Buscar los siguientes detalles que son subproductos de este paquete
-                      let j = i + 1;
-                      while (j < detallesPorArea[area].length && detallesPorArea[area][j].esSubProducto) {
-                        const subDetalle = detallesPorArea[area][j];
-                        subproductos.push({
-                          nombre: subDetalle.servicio || '-',
-                          descripcion: subDetalle.descripcion || '-',
-                          cantidad: subDetalle.cantidad || 1,
-                          precioUnitario: subDetalle.precioUnitarioUF || 0,
-                          totalNeto: subDetalle.totalNetoUF || 0,
-                          norma: (subDetalle.producto && subDetalle.producto.norma) || ''
-                        });
-                        j++;
+                  // Si es un subproducto, lo saltamos ya que se mostrará con su paquete
+                  if (detalle.esSubProducto) continue;
+                  
+                  // Si cambia el área y no es un subproducto, mostrar el encabezado del área
+                  if (area !== currentArea && !detalle.esSubProducto) {
+                    currentArea = area;
+                    html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
+                    html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
+                  }
+                  
+                  // Mostrar el detalle actual
+                  if (detalle.esPaquete) {
+                    // Construir nombre completo (nombre - norma) en negrita
+                    const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
+                    // Label PAQUETE
+                    const labelPaquete = '<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold;">PAQUETE</span>';
+                    // Buscar subproductos
+                    let subproductosHtml = '';
+                    let j = i + 1;
+                    const subproductos: any[] = [];
+                    while (j < cotizacion.detalles.length && cotizacion.detalles[j].esSubProducto) {
+                      const sub = cotizacion.detalles[j];
+                      // Mostrar nombre y norma si existe
+                      let nombreSub = sub.servicio || '';
+                      if (sub.norma) {
+                        nombreSub += ' - ' + sub.norma;
                       }
+                      subproductos.push(`<li>${nombreSub}</li>`);
+                      j++;
                     }
-
-                    html += `<tr>
-                      <td>${detalle.area || '-'}</td>
-                      <td>
-                        ${detalle.esPaquete ? 
-                          `<div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
-                            ${detalle.servicio || '-'}
-                            <span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 8px;">PAQUETE</span>
-                          </div>` 
-                          : detalle.servicio || '-'}
-                        ${subproductos.length > 0 ? 
-                          '<ul style="margin: 8px 0 0 0; padding-left: 32px;">' +
-                          subproductos.map(sub =>
-                            `<li style=\"margin-bottom:2px;\">${sub.nombre}${sub.norma ? ` - ${sub.norma}` : ''}</li>`
-                          ).join('') +
-                          '</ul>'
-                          : ''}
-                      </td>
-                      <td style="font-size: 0.57rem; white-space: pre-wrap; padding-left: 0;">${detalle.descripcion || '-'}</td>
-                      ${cotizacion.precioEMSPorProducto ? `
-                      <td style="text-align:center;">${detalle.cantidad || '-'}</td>
-                      <td style="text-align:right;">UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
-                      <td style="text-align:right;">UF ${Number(detalle.totalNetoUF || 0).toFixed(2)}</td>
-                      ` : ''}
-                    </tr>`;
+                    if (subproductos.length > 0) {
+                      subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px;'>${subproductos.join('')}</ul>`;
+                    }
+                    html += `<tr>`;
+                    html += `<td>${area}</td>`;
+                    html += `<td>${nombreNorma}${labelPaquete}${subproductosHtml}</td>`;
+                    html += `<td>${detalle.descripcion || '-'}</td>`;
+                    if (cotizacion.precioEMSPorProducto) {
+                      html += `<td>${detalle.cantidad || '-'}</td>`;
+                      html += `<td>${detalle.precioUnitarioUF ? Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
+                      html += `<td>${detalle.totalNetoUF ? Number(detalle.totalNetoUF).toFixed(2) : '-'}</td>`;
+                    }
+                    html += `</tr>`;
+                    // Saltar los subproductos en el bucle principal
+                    i = j - 1;
+                  } else {
+                    // Producto normal
+                    html += `<tr>`;
+                    html += `<td>${area}</td>`;
+                    html += `<td>${detalle.servicio || '-'}</td>`;
+                    html += `<td>${detalle.descripcion || '-'}</td>`;
+                    if (cotizacion.precioEMSPorProducto) {
+                      html += `<td>${detalle.cantidad || '-'}</td>`;
+                      html += `<td>${detalle.precioUnitarioUF ? Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
+                      html += `<td>${detalle.totalNetoUF ? Number(detalle.totalNetoUF).toFixed(2) : '-'}</td>`;
+                    }
+                    html += `</tr>`;
                   }
                 }
                 return html;

@@ -211,7 +211,7 @@ const PreviewCard = () => {
           </TableHead>
           <TableBody>
             {(() => {
-              // Agrupar detalles por área
+              // Agrupar detalles por área SOLO para productos normales
               type Detalle = {
                 area?: string
                 esPaquete?: boolean
@@ -220,17 +220,63 @@ const PreviewCard = () => {
               }
               const detalles: Detalle[] = previewData.detalles || []
               const areasMap = new Map<string, Detalle[]>()
-
-              detalles.forEach((det: Detalle) => {
-                const area = det.area || 'Sin área'
-
-                if (!areasMap.has(area)) areasMap.set(area, [])
-                areasMap.get(area)?.push(det)
-              })
               const rows: JSX.Element[] = []
-
+              let i = 0
+              while (i < detalles.length) {
+                const item = detalles[i]
+                if (item.esPaquete) {
+                  // Renderizar la fila del paquete
+                  rows.push(
+                    <TableRow key={`paquete-${i}`} sx={{ backgroundColor: 'primary.lighter' }}>
+                      <TableCell>{item.area || ''}</TableCell>
+                      <TableCell>
+                        <strong>{item.servicio || ''}</strong>
+                        <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
+                      </TableCell>
+                      <TableCell>{item.descripcion || ''}</TableCell>
+                      {previewData.precioEMSPorProducto && (
+                        <>
+                          <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                          <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                          <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  )
+                  // Mostrar todos los subproductos juntos, sin importar el área
+                  let j = i + 1
+                  while (j < detalles.length && detalles[j].esSubProducto) {
+                    const sub = detalles[j]
+                    rows.push(
+                      <TableRow key={`subproducto-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
+                        <TableCell>{sub.area || ''}</TableCell>
+                        <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
+                        <TableCell>{sub.descripcion || ''}</TableCell>
+                        {previewData.precioEMSPorProducto && (
+                          <>
+                            <TableCell align='right'>{sub.cantidad || 0}</TableCell>
+                            <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    )
+                    j++
+                  }
+                  i = j
+                } else if (!item.esSubProducto) {
+                  // Agrupar productos normales por área
+                  const area = item.area || 'Sin área'
+                  if (!areasMap.has(area)) areasMap.set(area, [])
+                  areasMap.get(area)?.push(item)
+                  i++
+                } else {
+                  // Subproducto sin paquete (caso raro)
+                  i++
+                }
+              }
+              // Renderizar productos normales agrupados por área
               Array.from(areasMap.entries()).forEach(([area, detallesArea], areaIdx) => {
-                // Opcional: Título de área
                 rows.push(
                   <TableRow key={`area-title-${areaIdx}`}>
                     <TableCell colSpan={previewData.precioEMSPorProducto ? 6 : 3} style={{ background: '#f5f5f5', fontWeight: 700 }}>
@@ -238,76 +284,23 @@ const PreviewCard = () => {
                     </TableCell>
                   </TableRow>
                 )
-                let i = 0
-
-                while (i < detallesArea.length) {
-                  const item = detallesArea[i]
-
-                  if (item.esPaquete) {
-                    // Renderizar la fila del paquete
-                    rows.push(
-                      <TableRow key={`paquete-${areaIdx}-${i}`} sx={{ backgroundColor: 'primary.lighter' }}>
-                        <TableCell>{item.area || ''}</TableCell>
-                        <TableCell>
-                          <strong>{item.servicio || ''}</strong>
-                          <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
-                        </TableCell>
-                        <TableCell>{item.descripcion || ''}</TableCell>
-                        {previewData.precioEMSPorProducto && (
-                          <>
-                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                          </>
-                        )}
-                      </TableRow>
-                    )
-
-                    // Subproductos
-                    let j = i + 1
-
-                    while (j < detallesArea.length && detallesArea[j].esSubProducto) {
-                      const sub = detallesArea[j]
-
-                      rows.push(
-                        <TableRow key={`subproducto-${areaIdx}-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
-                          <TableCell>{sub.area || ''}</TableCell>
-                          <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
-                          <TableCell>{sub.descripcion || ''}</TableCell>
-                          {previewData.precioEMSPorProducto && (
-                            <>
-                              <TableCell align='right'>{sub.cantidad || 0}</TableCell>
-                              <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                              <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
-                            </>
-                          )}
-                        </TableRow>
-                      )
-                      j++
-                    }
-
-                    i = j
-                  } else {
-                    // Producto normal
-                    rows.push(
-                      <TableRow key={`producto-${areaIdx}-${i}`}>
-                        <TableCell>{item.area || ''}</TableCell>
-                        <TableCell>{item.servicio || ''}</TableCell>
-                        <TableCell>{item.descripcion || ''}</TableCell>
-                        {previewData.precioEMSPorProducto && (
-                          <>
-                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                          </>
-                        )}
-                      </TableRow>
-                    )
-                    i++
-                  }
-                }
+                detallesArea.forEach((item, idx) => {
+                  rows.push(
+                    <TableRow key={`producto-${areaIdx}-${idx}`}>
+                      <TableCell>{item.area || ''}</TableCell>
+                      <TableCell>{item.servicio || ''}</TableCell>
+                      <TableCell>{item.descripcion || ''}</TableCell>
+                      {previewData.precioEMSPorProducto && (
+                        <>
+                          <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                          <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                          <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  )
+                })
               })
-
               return rows
             })()}
           </TableBody>

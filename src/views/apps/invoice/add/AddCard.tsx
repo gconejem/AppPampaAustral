@@ -319,6 +319,17 @@ const AddCard = ({
   const [impuesto, setImpuesto] = useState(0)
   const [total, setTotal] = useState(0)
 
+  // Estado para abrir automáticamente el popover en una fila nueva
+  const [autoOpenRowId, setAutoOpenRowId] = useState<number | null>(null)
+
+  // Agregar estado para guardar el índice de la fila activa
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null)
+
+  // Crear un array de refs para los inputs de Servicio/Ensayo
+  const servicioRefs = useRef<(HTMLInputElement | null)[]>([])
+  // Crear un array de refs para los divs contenedores
+  const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([])
+
   // Cargar clientes y obras al montar el componente
   useEffect(() => {
     // Cargar clientes
@@ -635,94 +646,77 @@ const AddCard = ({
 
     const precioFinal = precioEnLista?.precio || producto.precio || 0
 
-    setSelectedProduct(producto)
+    if (activeRowIndex !== null) {
+      const newRows = [...productRows]
 
-    // Crear el nombre completo del servicio incluyendo la norma
-    const nombreCompleto = producto.norma ? `${producto.nombre || ''} - ${producto.norma}` : producto.nombre || ''
+      if (producto.esPaquete) {
+        let productosEnPaquete = producto.productosEnPaquete
 
-    // Actualizar las filas con los nuevos productos
-    const newRows = [...productRows]
-    const lastEmptyRowIndex = newRows.findIndex(row => !row.productoId || row.productoId === '0')
+        // Si no vienen los productos, los pedimos al backend
+        if (!productosEnPaquete || productosEnPaquete.length === 0) {
+          try {
+            const response = await fetch(`/api/productos/${producto.productoId}/productos`)
+            const data = await response.json()
+            productosEnPaquete = data.productos || []
+          } catch (error) {
+            console.error('Error al obtener productos del paquete:', error)
+            productosEnPaquete = []
+          }
+        }
 
-    if (producto.esPaquete) {
-      let productosEnPaquete = producto.productosEnPaquete
+        console.log('productosEnPaquete', productosEnPaquete)
 
-      // Si no vienen los productos, los pedimos al backend
-      if (!productosEnPaquete || productosEnPaquete.length === 0) {
-        try {
-          const response = await fetch(`/api/productos/${producto.productoId}/productos`)
-          const data = await response.json()
+        // Crear el nombre completo del servicio incluyendo la norma
+        const nombreCompleto = producto.norma ? `${producto.nombre || ''} - ${producto.norma}` : producto.nombre || ''
 
-          productosEnPaquete = data.productos || []
-        } catch (error) {
-          console.error('Error al obtener productos del paquete:', error)
-          productosEnPaquete = []
+        // Agregar el paquete como fila principal
+        const paqueteRow = {
+          id: Date.now(),
+          productoId: producto.productoId.toString(),
+          servicio: nombreCompleto,
+          descripcion: producto.descripcion || '',
+          cantidad: 1,
+          precioUnitarioUF: precioFinal,
+          totalNetoUF: precioFinal,
+          area: producto.area || '',
+          esPaquete: true,
+          subproductos: []
+        }
+
+        // Agregar los productos del paquete como subfilas
+        const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
+          id: Date.now() + i + 1,
+          productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
+          servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
+          descripcion: pp.producto?.descripcion || '',
+          cantidad: pp.cantidad || 1,
+          precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
+          totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          area: pp.area || pp.producto?.area || '',
+          esSubProducto: true,
+          subproductos: []
+        }))
+
+        // Reemplazar la fila actual con el paquete y sus productos
+        newRows.splice(activeRowIndex, 1, paqueteRow, ...productosRows)
+      } else {
+        // Si no es un paquete, actualizar la fila normal o subproducto
+        const nombreCompleto = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre
+        newRows[activeRowIndex] = {
+          ...newRows[activeRowIndex],
+          productoId: producto.productoId.toString(),
+          servicio: nombreCompleto,
+          descripcion: producto.descripcion || '',
+          area: producto.area || '',
+          precioUnitarioUF: precioFinal,
+          totalNetoUF: precioFinal * (newRows[activeRowIndex].cantidad || 1)
         }
       }
 
-      console.log('productosEnPaquete', productosEnPaquete)
-
-      // Agregar el paquete como fila principal
-      const paqueteRow = {
-        id: Date.now(),
-        productoId: producto.productoId.toString(),
-        servicio: nombreCompleto,
-        descripcion: producto.descripcion || '',
-        cantidad: 1,
-        precioUnitarioUF: precioFinal,
-        totalNetoUF: precioFinal,
-        area: producto.area || '',
-        esPaquete: true,
-        subproductos: []
-      }
-
-      // Agregar los productos del paquete como subfilas
-      const productosRows = productosEnPaquete.map((pp: any, i: number) => {
-        return {
-              id: Date.now() + i + 1,
-              productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
-              servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
-              descripcion: pp.producto?.descripcion || '',
-              cantidad: pp.cantidad || 1,
-              precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-              totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
-              area: pp.area || pp.producto?.area || '',
-              esSubProducto: true,
-              subproductos: []
-              }
-      })
-
-      console.log('productosRows', productosRows)
-
-      // Si hay una fila vacía, reemplazarla con el paquete y sus productos
-      if (lastEmptyRowIndex >= 0) {
-        newRows.splice(lastEmptyRowIndex, 1, paqueteRow, ...productosRows)
-      } else {
-        newRows.push(paqueteRow, ...productosRows)
-      }
-    } else {
-      // Si no es un paquete, agregar como producto normal
-      const newRow = {
-        id: Date.now(),
-        productoId: producto.productoId.toString(),
-        servicio: nombreCompleto,
-        descripcion: producto.descripcion || '',
-        cantidad: 1,
-        precioUnitarioUF: precioFinal,
-        totalNetoUF: sinCantidad ? 0 : precioFinal, // Precio inicial por cantidad 1
-        area: producto.area || '',
-        subproductos: []
-      }
-
-      if (lastEmptyRowIndex >= 0) {
-        newRows[lastEmptyRowIndex] = newRow
-      } else {
-        newRows.push(newRow)
-      }
+      setProductRows(newRows)
+      setActiveRowIndex(null) // Resetear el índice activo
     }
 
-    setProductRows(newRows)
-    // calcularTotales() // Llamar a calcularTotales después de actualizar las filas
     handleClosePopover()
   }
 
@@ -869,23 +863,22 @@ const AddCard = ({
 
   // Función para eliminar una fila y sus subproductos si es un paquete
   const handleDeleteRow = (index: number) => {
-    const rowToDelete = productRows[index]
+    console.log('handleDeleteRow', { index, row: productRows[index] })
     const newRows = [...productRows]
+    const rowToDelete = newRows[index]
 
     if (rowToDelete.esPaquete) {
       let nextIndex = index + 1
-
       while (nextIndex < newRows.length && newRows[nextIndex].esSubProducto) {
         nextIndex++
       }
-
       newRows.splice(index, nextIndex - index)
+      console.log('Paquete y subproductos eliminados', newRows)
     } else {
       newRows.splice(index, 1)
+      console.log('Producto/subproducto eliminado', newRows)
     }
-
     setProductRows(newRows)
-    // calcularTotales()
   }
 
   // Manejar error de tipo unknown
@@ -912,10 +905,10 @@ const AddCard = ({
 
   const handleClearFilters = () => {
     setSelectedArea('')
-    setSelectedTipo('')
+    setSelectedTipo('') // Solo limpiar el select de tipo
     setSelectedFamilia('')
     setSearchTerm('')
-    setShowOnlyPaquetes(false)
+    setShowOnlyPaquetes(false) // Solo limpiar el switch
     setProductsPage(0)
   }
 
@@ -1003,14 +996,20 @@ const AddCard = ({
     setAnchorEl(event.currentTarget)
     setLoadingProductos(true)
     setProductsPage(0) // Resetear a la primera página
-    // Limpiar todos los filtros
+    // Limpiar todos los filtros de forma independiente
     setSearchTerm('')
     setSelectedArea('')
-    setSelectedTipo('')
+    setSelectedAreaId(null)
+    setSelectedTipo('') // El select de tipo debe mostrar 'Todos'
     setSelectedFamilia('')
-    setShowOnlyPaquetes(false)
+    setShowOnlyPaquetes(false) // El switch debe estar apagado
     filterProducts('', '', '', '')
     setLoadingProductos(false)
+    // Forzar el reseteo visual y funcional en el siguiente ciclo de render
+    setTimeout(() => {
+      setSelectedTipo('')
+      setShowOnlyPaquetes(false)
+    }, 0)
   }
 
   const handleClosePopover = () => {
@@ -1044,92 +1043,89 @@ const AddCard = ({
 
   const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setShowOnlyPaquetes(event.target.checked)
-
-    // No necesitamos llamar a filterProducts aquí porque el useEffect lo hará
+    // No modificar selectedTipo aquí
   }
 
   const handleMoveUp = (index: number) => {
+    console.log('handleMoveUp', { index, row: productRows[index] })
+    if (index === 0) return
     const newRows = [...productRows]
     const currentRow = newRows[index]
 
-    // Si es un subproducto, usar la lógica de paquetes
     if (currentRow.esSubProducto) {
-      // Encontrar el índice del paquete padre
-      let paqueteIndex = index - 1
-
-      while (paqueteIndex >= 0 && !newRows[paqueteIndex].esPaquete) {
-        paqueteIndex--
+      let parentIndex = index - 1
+      while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
+        parentIndex--
       }
-
-      // Solo permitir mover si no es el primer subproducto del paquete
-      if (index > paqueteIndex + 1) {
-        ;[newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
+      if (parentIndex >= 0 && index > parentIndex + 1) {
+        [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
         setProductRows(newRows)
+        console.log('Subproducto movido arriba', newRows)
       }
-    } else if (!currentRow.esPaquete) {
-      // Si es un producto individual (no paquete)
-      // Permitir mover hacia arriba si no es el primer elemento
-      if (index > 0) {
-        ;[newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
-        setProductRows(newRows)
-      }
+      return
     }
+    [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
+    setProductRows(newRows)
+    console.log('Producto/paquete movido arriba', newRows)
   }
 
   const handleMoveDown = (index: number) => {
+    console.log('handleMoveDown', { index, row: productRows[index] })
+    if (index === productRows.length - 1) return
     const newRows = [...productRows]
     const currentRow = newRows[index]
 
-    // Si es un subproducto, usar la lógica de paquetes
     if (currentRow.esSubProducto) {
-      // Encontrar el último índice del paquete actual
-      let lastPackageIndex = index + 1
-
-      while (lastPackageIndex < newRows.length && newRows[lastPackageIndex].esSubProducto) {
-        lastPackageIndex++
+      let nextPackageIndex = index + 1
+      while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
+        nextPackageIndex++
       }
-
-      // Solo permitir mover si no es el último subproducto del paquete
-      if (index < lastPackageIndex - 1) {
-        ;[newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
+      if (index < nextPackageIndex - 1) {
+        [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
+        console.log('Subproducto movido abajo', newRows)
       }
-    } else if (!currentRow.esPaquete) {
-      // Si es un producto individual (no paquete)
-      // Permitir mover hacia abajo si no es el último elemento
-      if (index < newRows.length - 1) {
-        ;[newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
-        setProductRows(newRows)
-      }
+      return
     }
+    [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
+    setProductRows(newRows)
+    console.log('Producto/paquete movido abajo', newRows)
   }
 
   const canMoveUp = (index: number): boolean => {
+    if (index === 0) return false
     const currentRow = productRows[index]
-
+    const prevRow = productRows[index - 1]
+    
+    // Si es un subproducto, solo puede moverse dentro de su paquete
     if (currentRow.esSubProducto) {
-      return !isFirstSubProductInPackage(index)
+      // Buscar el índice del paquete padre
+      let parentIndex = index - 1
+      while (parentIndex >= 0 && !productRows[parentIndex].esPaquete) {
+        parentIndex--
+      }
+      return parentIndex >= 0 && index > parentIndex + 1
     }
-
-    return !currentRow.esPaquete && index > 0
+    
+    return true
   }
 
   const canMoveDown = (index: number): boolean => {
+    if (index === productRows.length - 1) return false
     const currentRow = productRows[index]
-
+    const nextRow = productRows[index + 1]
+    
+    // Si es un subproducto, solo puede moverse dentro de su paquete
     if (currentRow.esSubProducto) {
-      return !isLastSubProductInPackage(index)
+      // Buscar el siguiente paquete o el final de la lista
+      let nextPackageIndex = index + 1
+      while (nextPackageIndex < productRows.length && !productRows[nextPackageIndex].esPaquete) {
+        nextPackageIndex++
+      }
+      return index < nextPackageIndex - 1
     }
-
-    return !currentRow.esPaquete && index < productRows.length - 1
-  }
-
-  const isFirstSubProductInPackage = (index: number): boolean => {
-    return Boolean(index > 0 && productRows[index - 1].esPaquete)
-  }
-
-  const isLastSubProductInPackage = (index: number): boolean => {
-    return Boolean(index < productRows.length - 1 && !productRows[index + 1].esSubProducto)
+    
+    return true
   }
 
   // Agregar después de los otros useEffect
@@ -1281,6 +1277,22 @@ const AddCard = ({
       setFamilias([])
     }
   }, [selectedAreaId])
+
+  // useEffect para abrir el popover automáticamente en la fila nueva
+  useEffect(() => {
+    if (autoOpenRowId) {
+      // Esperar a que la fila esté en el DOM
+      setTimeout(() => {
+        const targetElement = document.querySelector(`[data-row-id="${autoOpenRowId}"] input`)
+        if (targetElement) {
+          (targetElement as HTMLElement).focus()
+          // Simular click para abrir el popover
+          (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          setAutoOpenRowId(null)
+        }
+      }, 100)
+    }
+  }, [autoOpenRowId, productRows])
 
   return (
     <>
@@ -1787,264 +1799,51 @@ const AddCard = ({
                   }}
                 >
                   <Grid item xs={12} md={3}>
-                    <FormControl fullWidth size='small'>
+                    <div ref={el => servicioAnchorRefs.current[index] = el} style={{ width: '100%' }}>
                       <TextField
                         label='Servicio / Ensayo'
                         size='small'
                         fullWidth
-                        value={row.servicio || ''}
-                        onClick={handleOpenPopover}
-                        onKeyDown={handleSearchKeyDown}
+                        value={row.servicio}
+                        InputLabelProps={{ shrink: !!row.servicio }}
+                        onClick={() => {
+                          setActiveRowIndex(index)
+                          setAnchorEl(servicioAnchorRefs.current[index])
+                          setLoadingProductos(true)
+                          setProductsPage(0)
+                          setSearchTerm('')
+                          setSelectedArea('')
+                          setSelectedTipo('')
+                          setSelectedFamilia('')
+                          setShowOnlyPaquetes(false)
+                          filterProducts('', '', '', '')
+                          setLoadingProductos(false)
+                        }}
                         InputProps={{
-                          startAdornment: (
-                            <InputAdornment position='start'>
-                              <SearchIcon />
-                            </InputAdornment>
-                          ),
+                          readOnly: true,
                           endAdornment: (
                             <InputAdornment position='end'>
-                              {loadingProductos && <CircularProgress size={20} />}
-                              {row.servicio && (
-                                <IconButton
-                                  size='small'
-                                  onClick={e => {
-                                    e.stopPropagation()
-                                    const newRows = [...productRows]
-
-                                    newRows[index] = {
-                                      ...row,
-                                      productoId: '0',
-                                      servicio: '',
-                                      descripcion: '',
-                                      area: '',
-                                      precioUnitarioUF: 0,
-                                      totalNetoUF: 0
-                                    }
-                                    setProductRows(newRows)
-                                  }}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              )}
+                              <IconButton size='small' onClick={e => {
+                                e.stopPropagation()
+                                setActiveRowIndex(index)
+                                setAnchorEl(servicioAnchorRefs.current[index])
+                                setLoadingProductos(true)
+                                setProductsPage(0)
+                                setSearchTerm('')
+                                setSelectedArea('')
+                                setSelectedTipo('')
+                                setSelectedFamilia('')
+                                setShowOnlyPaquetes(false)
+                                filterProducts('', '', '', '')
+                                setLoadingProductos(false)
+                              }}>
+                                <i className='ri-search-line' />
+                              </IconButton>
                             </InputAdornment>
-                          ),
-                          readOnly: true
+                          )
                         }}
                       />
-                    </FormControl>
-                    <Popover
-                      open={Boolean(anchorEl)}
-                      anchorEl={anchorEl}
-                      onClose={handleClosePopover}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left'
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left'
-                      }}
-                      PaperProps={{
-                        sx: {
-                          width: '100%',
-                          maxWidth: '500px',
-                          maxHeight: '400px',
-                          overflow: 'auto',
-                          zIndex: 1 // BAJA al mínimo posible para evitar overlays
-                        }
-                      }}
-                    >
-                      <Box sx={{ p: 2 }}>
-                        <TextField
-                          fullWidth
-                          size='small'
-                          placeholder='Buscar por nombre, descripción o norma...'
-                          value={searchTerm}
-                          onChange={handleSearchChange}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position='start'>
-                                <SearchIcon />
-                              </InputAdornment>
-                            )
-                          }}
-                        />
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                          <FormControl size='small' fullWidth>
-                            <InputLabel shrink>Área</InputLabel>
-                            <Select 
-                              value={selectedAreaId?.toString() || ''} 
-                              label='Área' 
-                              onChange={handleAreaChange} 
-                              displayEmpty 
-                              renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
-                            >
-                              <MenuItem value=''>Todas</MenuItem>
-                              {areas.map(area => (
-                                <MenuItem key={area.id} value={area.id}>
-                                  {area.nombre}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                          <FormControl size='small' fullWidth>
-                            <InputLabel shrink>Tipo</InputLabel>
-                            <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange} displayEmpty renderValue={selected => selected === '' ? 'Todos' : selected}>
-                              <MenuItem value=''>Todos</MenuItem>
-                              {tipos.map(tipo => (
-                                <MenuItem key={tipo} value={tipo}>
-                                  {tipo}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                          <FormControl size='small' fullWidth>
-                            <InputLabel shrink>Familia</InputLabel>
-                            <Select 
-                              value={selectedFamilia} 
-                              label='Familia' 
-                              onChange={handleFamiliaChange} 
-                              displayEmpty 
-                              renderValue={selected => selected === '' ? 'Todas' : selected}
-                              disabled={!selectedAreaId}
-                            >
-                              <MenuItem value=''>Todas</MenuItem>
-                              {familias.map(familia => (
-                                <MenuItem key={familia.id} value={familia.nombre}>
-                                  {familia.nombre}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Box>
-                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <FormControlLabel
-                            control={
-                              <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
-                            }
-                            label='Solo Paquetes'
-                          />
-                          <Button
-                            size='small'
-                            onClick={() => {
-                              handleClearFilters()
-                              setShowOnlyPaquetes(false)
-                            }}
-                            startIcon={<i className='ri-filter-off-line' />}
-                          >
-                            Limpiar filtros
-                          </Button>
-                        </Box>
-                      </Box>
-                      <List sx={{ pt: 0 }}>
-                        {filteredProductos.map(producto => (
-                          <ListItem
-                            key={producto.id}
-                            onClick={() => handleSelectProduct(producto)}
-                            sx={{
-                              cursor: 'pointer',
-                              '&:hover': {
-                                backgroundColor: 'action.hover'
-                              },
-                              flexDirection: 'column',
-                              alignItems: 'flex-start'
-                            }}
-                          >
-                            <ListItemText
-                              primary={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant='body1'>
-                                    {producto.nombre}
-                                    {producto.norma && (
-                                      <Typography component='span' color='text.secondary'>
-                                        {' '}
-                                        - {producto.norma}
-                                      </Typography>
-                                    )}
-                                  </Typography>
-                                  {producto.esPaquete && (
-                                    <Typography
-                                      variant='caption'
-                                      sx={{
-                                        backgroundColor: 'primary.main',
-                                        color: 'white',
-                                        px: 1,
-                                        py: 0.5,
-                                        borderRadius: 1,
-                                        ml: 1
-                                      }}
-                                    >
-                                      Paquete
-                                    </Typography>
-                                  )}
-                                </Box>
-                              }
-                              secondary={
-                                <Box>
-                                  <Typography variant='caption' color='text.secondary'>
-                                    {producto.area} - {producto.tipo} - {producto.familia}
-                                  </Typography>
-                                  {/* {producto.esPaquete &&
-                                    producto.productosEnPaquete &&
-                                    producto.productosEnPaquete.length > 0 && (
-                                      <Box sx={{ mt: 0.5 }}>
-                                        <Typography
-                                          variant='caption'
-                                          color='text.secondary'
-                                          sx={{ fontStyle: 'italic' }}
-                                        >
-                                          Incluye:
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1 }}>
-                                          {producto.productosEnPaquete.map((pp: ProductoEnPaquete, i: number) => (
-                                            <Typography
-                                              key={i}
-                                              variant='caption'
-                                              color='text.secondary'
-                                              sx={{
-                                                display: 'inline-block',
-                                                '&:not(:last-child):after': {
-                                                  content: '","',
-                                                  marginRight: '4px'
-                                                }
-                                              }}
-                                            >
-                                              {pp.nombre}
-                                            </Typography>
-                                          ))}
-                                        </Box>
-                                      </Box>
-                                    )} */}
-                                </Box>
-                              }
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                      <Box
-                        sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}
-                      >
-                        <Button
-                          size='small'
-                          onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
-                          disabled={productsPage === 0}
-                        >
-                          Anterior
-                        </Button>
-                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
-                          Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
-                        </Typography>
-                        <Button
-                          size='small'
-                          onClick={() =>
-                            setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
-                          }
-                          disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
-                        >
-                          Siguiente
-                        </Button>
-                      </Box>
-                    </Popover>
+                    </div>
                   </Grid>
 
                   <Grid item xs={12} md={2}>
@@ -2132,16 +1931,98 @@ const AddCard = ({
                   </Grid>
 
                   {/* Botones de acción */}
-                  <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <IconButton size='small' onClick={() => handleMoveUp(index)} disabled={!canMoveUp(index)}>
-                      <i className='ri-arrow-up-s-line' />
-                    </IconButton>
-                    <IconButton size='small' onClick={() => handleMoveDown(index)} disabled={!canMoveDown(index)}>
-                      <i className='ri-arrow-down-s-line' />
-                    </IconButton>
-                    <IconButton size='small' onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main' }}>
-                      <i className='ri-delete-bin-line' />
-                    </IconButton>
+                  <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                    {/* Botones de acción para productos normales y subproductos */}
+                    {!row.esPaquete && (
+                      <>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleMoveUp(index)}
+                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-arrow-up-s-line' />
+                        </IconButton>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleMoveDown(index)}
+                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-arrow-down-s-line' />
+                        </IconButton>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleDeleteRow(index)}
+                          sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                      </>
+                    )}
+                    {/* Botón especial solo para paquetes */}
+                    {row.esPaquete && (
+                      <>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleMoveUp(index)}
+                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-arrow-up-s-line' />
+                        </IconButton>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleMoveDown(index)}
+                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-arrow-down-s-line' />
+                        </IconButton>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleDeleteRow(index)}
+                          sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<i className='ri-add-line' />}
+                          sx={{ mr: 1, pointerEvents: 'auto', zIndex: 20 }}
+                          onClick={() => {
+                            // Limpiar todos los filtros antes de abrir el popover
+                            setSelectedTipo('');
+                            setShowOnlyPaquetes(false);
+                            setSearchTerm('');
+                            setSelectedArea('');
+                            setSelectedAreaId(null);
+                            setSelectedFamilia('');
+                            setProductsPage(0); // Resetear el paginador
+                            filterProducts('', '', '', '');
+                            // Agregar una fila vacía como subproducto después del paquete
+                            const newProductRow = {
+                              id: Date.now(),
+                              productoId: '0',
+                              servicio: '',
+                              descripcion: '',
+                              cantidad: 1,
+                              precioUnitarioUF: 0,
+                              totalNetoUF: 0,
+                              area: '',
+                              esSubProducto: true,
+                              subproductos: []
+                            }
+                            const newRows = [...productRows]
+                            newRows.splice(index + 1, 0, newProductRow)
+                            setProductRows(newRows)
+                            setTimeout(() => {
+                              setActiveRowIndex(index + 1)
+                              setAnchorEl(servicioAnchorRefs.current[index + 1])
+                            }, 100)
+                          }}
+                        >
+                          Agregar producto a Paquete
+                        </Button>
+                      </>
+                    )}
                   </Grid>
                 </Grid>
               ))}
@@ -2314,6 +2195,190 @@ const AddCard = ({
           </Grid>
         </CardContent>
       </Card>
+
+      {/* Popover fuera del map */}
+      <Popover
+        open={Boolean(anchorEl) && activeRowIndex !== null}
+        anchorEl={anchorEl}
+        onClose={handleClosePopover}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '400px',
+            overflow: 'auto',
+            zIndex: 1
+          }
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <TextField
+            fullWidth
+            size='small'
+            placeholder='Buscar por nombre, descripción o norma...'
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
+          />
+          <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+            <FormControl size='small' fullWidth>
+              <InputLabel shrink>Área</InputLabel>
+              <Select 
+                value={selectedAreaId?.toString() || ''} 
+                label='Área' 
+                onChange={handleAreaChange} 
+                displayEmpty 
+                renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
+              >
+                <MenuItem value=''>Todas</MenuItem>
+                {areas.map(area => (
+                  <MenuItem key={area.id} value={area.id}>
+                    {area.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size='small' fullWidth>
+              <InputLabel shrink>Tipo</InputLabel>
+              <Select
+                key={anchorEl ? 'open' : 'closed'}
+                value={selectedTipo}
+                label='Tipo'
+                onChange={handleTipoChange}
+                displayEmpty
+                renderValue={selected => selected === '' ? 'Todos' : selected}
+              >
+                <MenuItem value=''>Todos</MenuItem>
+                {tipos.map(tipo => (
+                  <MenuItem key={tipo} value={tipo}>
+                    {tipo}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size='small' fullWidth>
+              <InputLabel shrink>Familia</InputLabel>
+              <Select 
+                value={selectedFamilia} 
+                label='Familia' 
+                onChange={handleFamiliaChange} 
+                displayEmpty 
+                renderValue={selected => selected === '' ? 'Todas' : selected}
+                disabled={!selectedAreaId}
+              >
+                <MenuItem value=''>Todas</MenuItem>
+                {familias.map(familia => (
+                  <MenuItem key={familia.id} value={familia.nombre}>
+                    {familia.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+              }
+              label='Solo Paquetes'
+            />
+            <Button
+              size='small'
+              onClick={() => {
+                handleClearFilters()
+                setShowOnlyPaquetes(false)
+              }}
+              startIcon={<i className='ri-filter-off-line' />}
+            >
+              Limpiar filtros
+            </Button>
+          </Box>
+        </Box>
+        <List sx={{ pt: 0 }}>
+          {filteredProductos.map(producto => (
+            <ListItem
+              key={producto.id}
+              onClick={() => handleSelectProduct(producto)}
+              sx={{
+                cursor: 'pointer',
+                '&:hover': {
+                  backgroundColor: 'action.hover'
+                },
+                flexDirection: 'column',
+                alignItems: 'flex-start'
+              }}
+            >
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant='body1'>
+                      {producto.nombre}
+                      {producto.norma && (
+                        <Typography component='span' color='text.secondary'>
+                          {' '}- {producto.norma}
+                        </Typography>
+                      )}
+                    </Typography>
+                    {producto.esPaquete && (
+                      <Typography
+                        variant='caption'
+                        sx={{
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          ml: 1
+                        }}
+                      >
+                        Paquete
+                      </Typography>
+                    )}
+                  </Box>
+                }
+                secondary={
+                  <Box>
+                    <Typography variant='caption' color='text.secondary'>
+                      {producto.area} - {producto.tipo} - {producto.familia}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+        <Box
+          sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}
+        >
+          <Button
+            size='small'
+            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+            disabled={productsPage === 0}
+          >
+            Anterior
+          </Button>
+          <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+          </Typography>
+          <Button
+            size='small'
+            onClick={() =>
+              setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+            }
+            disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+          >
+            Siguiente
+          </Button>
+        </Box>
+      </Popover>
     </>
   )
 }
