@@ -92,12 +92,25 @@ export async function PUT(request: Request, { params }: { params: { id: string }
               updatedAt: new Date()
             }
           }
+        },
+        productosEnPaquete: {
+          deleteMany: {},
+          create: data.productosEnPaquete?.map((producto: { productoId: number }) => ({
+            productoId: producto.productoId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })) || []
         }
       },
       include: {
         listasPrecios: {
           include: {
             listaPrecio: true
+          }
+        },
+        productosEnPaquete: {
+          include: {
+            producto: true
           }
         }
       }
