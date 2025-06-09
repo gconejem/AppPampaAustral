@@ -381,59 +381,40 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
   }
 
-  // Función robusta para convertir string de fecha a objeto Date
-  const parseDateFromRow = (dateStr: string): Date | null => {
-    if (!dateStr) return null;
-    let parts = dateStr.includes('/') ? dateStr.split('/') : dateStr.split('-');
-    if (parts.length !== 3) return null;
-    let [day, month, year] = parts;
-    // Si el año está primero (yyyy-mm-dd)
-    if (year.length === 4 && day.length <= 2) {
-      [year, month, day] = parts;
-    }
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  };
-
+  // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
     if (filtroFecha || filtroFechaFin) {
-      const rowDate = parseDateFromRow(row.fecha);
-      if (!rowDate) return false;
-      // Convertir fechas de filtro a objetos Date (formato yyyy-MM-dd)
+      // Convertir la fecha de la fila a objeto Date
+      const [day, month, year] = row.fecha.split('-')
+      const rowDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+
+      // Convertir fechas de filtro a objetos Date
       if (filtroFecha) {
-        const [filterYear, filterMonth, filterDay] = filtroFecha.split('-');
-        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay));
-        if (rowDate < filterDate) return false;
+        const [filterYear, filterMonth, filterDay] = filtroFecha.split('-')
+        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
+        if (rowDate < filterDate) return false
       }
+
       if (filtroFechaFin) {
-        const [filterYear, filterMonth, filterDay] = filtroFechaFin.split('-');
-        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay));
-        if (rowDate > filterDate) return false;
+        const [filterYear, filterMonth, filterDay] = filtroFechaFin.split('-')
+        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
+        if (rowDate > filterDate) return false
       }
     }
-    if (filtroTipo && row.tipo !== filtroTipo) return false;
-    if (filtroEstado && row.estado !== filtroEstado) return false;
-    if (!globalFilter) return true;
-    const searchStr = globalFilter.toLowerCase();
+    
+    if (filtroTipo && row.tipo !== filtroTipo) return false
+    if (filtroEstado && row.estado !== filtroEstado) return false
+
+    if (!globalFilter) return true
+
+    const searchStr = globalFilter.toLowerCase()
     return (
       row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
       row.comuna?.toLowerCase().includes(searchStr) ||
       row.empresa?.toLowerCase().includes(searchStr) ||
       row.contacto?.nombre?.toLowerCase().includes(searchStr)
-    );
-  });
-
-  // Función para formatear la fecha al formato deseado
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return ''
-    const parts = dateStr.split('/')
-    if (parts.length !== 3) return dateStr // Si no tiene 3 partes, devolvemos el original
-    let [day, month, year] = parts
-    if (!day || !month || !year) return dateStr
-    // Aseguramos dos dígitos para día y mes
-    day = day.padStart(2, '0')
-    month = month.padStart(2, '0')
-    return `${day}-${month}-${year}`
-  }
+    )
+  })
 
   const ContactsModal = ({ open, handleClose, contact }: { open: boolean; handleClose: () => void; contact: any }) => {
     if (!contact) return null
@@ -684,7 +665,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   />
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
-                <TableCell>{formatDate(row.fecha)}</TableCell>
+                <TableCell>{row.fecha}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
                 <TableCell>{row.empresa || 'No especificada'}</TableCell>
                 <TableCell>
