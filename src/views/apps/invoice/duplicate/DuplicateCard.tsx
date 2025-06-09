@@ -632,7 +632,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
         cantidad: row.cantidad,
         precioUnitario: Number(row.precioUnitarioUF),
         descuento: 0,
-        subtotal: Number(row.totalNetoUF)
+        subtotal: Number(row.totalNetoUF),
+        esPaquete: row.esPaquete || false,
+        esSubProducto: row.esSubProducto || false
       }))
 
       // Crear el objeto con solo los campos necesarios
