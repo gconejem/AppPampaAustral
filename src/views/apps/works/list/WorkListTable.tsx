@@ -762,13 +762,13 @@ const WorkListTable = () => {
             >
               <i className='ri-pencil-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
-            <IconButton
+            {/* <IconButton
               size='small'
               color='primary'
               onClick={() => handlePreviewPDF(row.original)}
             >
               <i className='ri-file-preview-line' style={{ fontSize: '1.25rem' }} />
-            </IconButton>
+            </IconButton> */}
             <IconButton
               size='small'
               color='primary'
