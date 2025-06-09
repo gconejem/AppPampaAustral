@@ -384,29 +384,22 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
   // Modificar filteredData para usar localData en lugar de invoiceData
   const filteredData = localData?.filter(row => {
     if (filtroFecha || filtroFechaFin) {
-      // Convertir fechas de filtro (yyyy-MM-dd) a formato dd-MM-yyyy
-      let filtroFechaFormateada = ''
-      let filtroFechaFinFormateada = ''
-      
+      // Convertir la fecha de la fila a objeto Date
+      const [day, month, year] = row.fecha.split('-')
+      const rowDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+
+      // Convertir fechas de filtro a objetos Date
       if (filtroFecha) {
-        const [year, month, day] = filtroFecha.split('-')
-        filtroFechaFormateada = `${day}-${month}-${year}`
+        const [filterYear, filterMonth, filterDay] = filtroFecha.split('-')
+        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
+        if (rowDate < filterDate) return false
       }
-      
+
       if (filtroFechaFin) {
-        const [year, month, day] = filtroFechaFin.split('-')
-        filtroFechaFinFormateada = `${day}-${month}-${year}`
+        const [filterYear, filterMonth, filterDay] = filtroFechaFin.split('-')
+        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
+        if (rowDate > filterDate) return false
       }
-      
-      // Comparar fechas en formato dd-MM-yyyy
-      if (filtroFecha && row.fecha < filtroFechaFormateada) return false
-      if (filtroFechaFin && row.fecha > filtroFechaFinFormateada) return false
-      
-      console.log('Fechas para comparación:', {
-        rowFecha: row.fecha,
-        filtroFecha: filtroFechaFormateada,
-        filtroFechaFin: filtroFechaFinFormateada
-      })
     }
     
     if (filtroTipo && row.tipo !== filtroTipo) return false
