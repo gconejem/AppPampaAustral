@@ -714,7 +714,14 @@ const DuplicateCard = ({ id }: { id: string }) => {
         totalNetoUF: row.totalNetoUF,
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
-      }))
+      })),
+      // Agregar precioEMSPorProducto basado en el tipo de cotización
+      precioEMSPorProducto: formData.tipoCotizacion === 'A' || formData.tipoCotizacion === 'C',
+      // Asegurarnos de que los totales sean números
+      subtotal: Number(formData.subtotal || 0),
+      descuento: Number(formData.descuento || 0),
+      impuesto: Number(formData.impuesto || 0),
+      total: Number(formData.total || 0)
     }
 
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
