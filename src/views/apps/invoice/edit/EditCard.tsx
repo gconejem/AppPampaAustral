@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -146,6 +146,13 @@ const EditCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
+  // Estado para la fila activa y referencias para inputs (para abrir el popover en la fila nueva)
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+  const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Agregar nuevo estado para controlar el reseteo
+  const [filterResetKey, setFilterResetKey] = useState(0);
+
   // Función para calcular totales
   const calcularTotales = useCallback(() => {
     if (!formData) return
@@ -233,7 +240,9 @@ const EditCard = ({ id }: { id: string }) => {
           totalNetoUF: detalle.subtotal,
           area: detalle.producto?.area || '',
           descripcion: detalle.producto?.descripcion || '',
-          servicio: detalle.producto?.nombre,
+          servicio: detalle.producto?.norma
+            ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
+            : detalle.producto?.nombre,
           esPaquete: detalle.esPaquete || false,
           esSubProducto: detalle.esSubProducto || false,
           subproductos: []
@@ -323,22 +332,25 @@ const EditCard = ({ id }: { id: string }) => {
 
   // Manejadores de eventos para filtros
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
-    const areaId = e.target.value ? Number(e.target.value) : null
-    setSelectedAreaId(areaId)
-    setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
-    setSelectedFamilia('')
-    setProductsPage(0) // Resetear a la primera página
-  }
+    const areaId = e.target.value ? Number(e.target.value) : null;
+    setSelectedAreaId(areaId);
+    setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '');
+    setSelectedFamilia('');
+    setProductsPage(0);
+    filterProducts(searchTerm, areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '', selectedTipo, '');
+  };
 
   const handleTipoChange = (e: SelectChangeEvent<string>) => {
-    setSelectedTipo(e.target.value)
-    setProductsPage(0) // Resetear a la primera página
-  }
+    setSelectedTipo(e.target.value);
+    setProductsPage(0);
+    filterProducts(searchTerm, selectedArea, e.target.value, selectedFamilia);
+  };
 
   const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
-    setSelectedFamilia(e.target.value)
-    setProductsPage(0) // Resetear a la primera página
-  }
+    setSelectedFamilia(e.target.value);
+    setProductsPage(0);
+    filterProducts(searchTerm, selectedArea, selectedTipo, e.target.value);
+  };
 
   const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setShowOnlyPaquetes(event.target.checked)
@@ -396,27 +408,42 @@ const EditCard = ({ id }: { id: string }) => {
   }, [sinCantidad])
 
   // Función para manejar cambios en los productos
-  const handleSelectProduct = (producto: ProductoType) => {
-    const newRows = [...productRows]
+  const handleSelectProduct = async (producto: ProductoType) => {
+    if (activeRowIndex === null) return;
+
+    const newRows = [...productRows];
     // Obtener el precio de la lista de precios seleccionada si existe
-    let precioFinal = producto.precio || 0
+    let precioFinal = producto.precio || 0;
     if (formData?.listaPrecioId && producto.listasPrecios) {
-      const listaPrecio = producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId)
+      const listaPrecio = producto.listasPrecios.find(
+        (lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId
+      );
       if (listaPrecio) {
-        precioFinal = listaPrecio.precio
+        precioFinal = listaPrecio.precio;
       }
     }
 
-    // Eliminar la fila vacía si existe
-    const filteredRows = newRows.filter(row => row.productoId !== '0')
-
     // Armar el nombre del servicio: nombre - norma (si existe)
-    const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || ''
+    const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || '';
 
-    if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
-      // Agregar paquete y sus productos
-      const paqueteRow = {
-        id: Date.now(),
+    if (producto.esPaquete) {
+      let productosEnPaquete = producto.productosEnPaquete;
+
+      // Si no vienen los productos, los pedimos al backend
+      if (!productosEnPaquete || productosEnPaquete.length === 0) {
+        try {
+          const response = await fetch(`/api/productos/${producto.productoId}/productos`);
+          const data = await response.json();
+          productosEnPaquete = data.productos || [];
+        } catch (error) {
+          console.error('Error al obtener productos del paquete:', error);
+          productosEnPaquete = [];
+        }
+      }
+
+      // Actualizar la fila actual con el paquete
+      newRows[activeRowIndex] = {
+        ...newRows[activeRowIndex],
         productoId: producto.productoId.toString(),
         servicio: nombreServicio,
         descripcion: producto.descripcion || '',
@@ -426,18 +453,23 @@ const EditCard = ({ id }: { id: string }) => {
         area: producto.area || '',
         esPaquete: true,
         subproductos: []
-      }
+      };
 
-      const productosRows = (producto.productosEnPaquete || []).map((pp: any) => {
-        let precioProducto = pp.producto?.precio || 0
+      // Agregar los productos del paquete como subfilas
+      const productosRows = (productosEnPaquete || []).map((pp: any) => {
+        let precioProducto = pp.producto?.precio || 0;
         if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
-          const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId)
+          const listaPrecio = pp.producto.listasPrecios.find(
+            (lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId
+          );
           if (listaPrecio) {
-            precioProducto = listaPrecio.precio
+            precioProducto = listaPrecio.precio;
           }
         }
         // Armar nombre del subproducto: nombre - norma (si existe)
-        const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || ''
+        const nombreSubServicio = pp.producto?.norma
+          ? `${pp.producto?.nombre} - ${pp.producto?.norma}`
+          : pp.producto?.nombre || '';
         return {
           id: Date.now() + Math.random(),
           productoId: pp.producto?.productoId?.toString() || '',
@@ -449,14 +481,15 @@ const EditCard = ({ id }: { id: string }) => {
           area: pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
-        }
-      })
+        };
+      });
 
-      setProductRows([...filteredRows, paqueteRow, ...productosRows])
+      // Insertar los subproductos después del paquete
+      newRows.splice(activeRowIndex + 1, 0, ...productosRows);
     } else {
-      // Agregar producto individual
-      const newRow = {
-        id: Date.now(),
+      // Actualizar la fila actual con el producto seleccionado
+      newRows[activeRowIndex] = {
+        ...newRows[activeRowIndex],
         productoId: producto.productoId.toString(),
         servicio: nombreServicio,
         descripcion: producto.descripcion || '',
@@ -464,14 +497,14 @@ const EditCard = ({ id }: { id: string }) => {
         precioUnitarioUF: precioFinal,
         totalNetoUF: precioFinal,
         area: producto.area || '',
-        subproductos: []
-      }
-
-      setProductRows([...filteredRows, newRow])
+        esSubProducto: newRows[activeRowIndex].esSubProducto // Mantener el estado de subproducto
+      };
     }
 
-    handleClosePopover()
-  }
+    setProductRows(newRows);
+    setActiveRowIndex(null);
+    handleClosePopover();
+  };
 
   const handleContactChange = (newValue: ContactoType | null) => {
     if (newValue) {
@@ -547,18 +580,23 @@ const EditCard = ({ id }: { id: string }) => {
 
   // Funciones para el manejo del popover
   const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-    setLoadingProductos(true)
-    setProductsPage(0) // Resetear a la primera página
-    // Limpiar todos los filtros
-    setSearchTerm('')
-    setSelectedArea('')
-    setSelectedTipo('')
-    setSelectedFamilia('')
-    setShowOnlyPaquetes(false)
-    filterProducts('', '', '', '')
-    setLoadingProductos(false)
-  }
+    // Resetear todos los estados
+    setSearchTerm('');
+    setSelectedArea('');
+    setSelectedAreaId(null);
+    setSelectedTipo('');
+    setSelectedFamilia('');
+    setShowOnlyPaquetes(false);
+    setProductsPage(0);
+    
+    // Forzar el reseteo de los filtros
+    filterProducts('', '', '', '');
+    
+    // Abrir el popover
+    setAnchorEl(event.currentTarget);
+    setLoadingProductos(true);
+    setLoadingProductos(false);
+  };
 
   const handleClosePopover = () => {
     setAnchorEl(null)
@@ -590,6 +628,18 @@ const EditCard = ({ id }: { id: string }) => {
 
     setFilteredProductos(filtered)
   }
+
+  // Función para resetear los filtros del popover de productos
+  const resetProductFilters = () => {
+    setSearchTerm('');
+    setSelectedArea('');
+    setSelectedAreaId(null);
+    setSelectedTipo('');
+    setSelectedFamilia('');
+    setShowOnlyPaquetes(false);
+    setProductsPage(0);
+    filterProducts('', '', '', '');
+  };
 
   // Función para guardar cambios
   const handleSave = async () => {
@@ -654,26 +704,29 @@ const EditCard = ({ id }: { id: string }) => {
 
   // Función para manejar la vista previa
   const handlePreview = () => {
-    if (!formData) return
+    if (!formData) return;
+
+    // Generar un array plano de detalles, igual que en AddCard
+    const detallesPlanos = productRows.map(row => ({
+      productoId: parseInt(row.productoId),
+      servicio: row.servicio || '',
+      area: row.area || '',
+      descripcion: row.descripcion || '',
+      cantidad: row.cantidad,
+      precioUnitarioUF: row.precioUnitarioUF,
+      totalNetoUF: row.totalNetoUF,
+      esPaquete: row.esPaquete || false,
+      esSubProducto: row.esSubProducto || false
+    }));
 
     const previewData = {
       ...formData,
-      detalles: productRows.map(row => ({
-        productoId: parseInt(row.productoId),
-        servicio: row.servicio || '',
-        area: row.area || '',
-        descripcion: row.descripcion || '',
-        cantidad: row.cantidad,
-        precioUnitarioUF: row.precioUnitarioUF,
-        totalNetoUF: row.totalNetoUF,
-        esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false
-      }))
-    }
+      detalles: detallesPlanos
+    };
 
-    localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
-    window.open('/es/apps/invoice/preview', '_blank')
-  }
+    localStorage.setItem('cotizacionPreview', JSON.stringify(previewData));
+    window.open('/es/apps/invoice/preview', '_blank');
+  };
 
   // Agregar estados necesarios
   const [loadingProductos, setLoadingProductos] = useState(false)
@@ -727,6 +780,47 @@ const EditCard = ({ id }: { id: string }) => {
   useEffect(() => {
     filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia)
   }, [showOnlyPaquetes]) // Agregar showOnlyPaquetes como dependencia
+
+  // Agregar funciones para mover filas arriba y abajo
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newRows = [...productRows];
+    const currentRow = newRows[index];
+
+    if (currentRow.esSubProducto) {
+      let parentIndex = index - 1;
+      while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
+        parentIndex--;
+      }
+      if (parentIndex >= 0 && index > parentIndex + 1) {
+        [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]];
+        setProductRows(newRows);
+      }
+      return;
+    }
+    [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]];
+    setProductRows(newRows);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === productRows.length - 1) return;
+    const newRows = [...productRows];
+    const currentRow = newRows[index];
+
+    if (currentRow.esSubProducto) {
+      let nextPackageIndex = index + 1;
+      while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
+        nextPackageIndex++;
+      }
+      if (index < nextPackageIndex - 1) {
+        [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]];
+        setProductRows(newRows);
+      }
+      return;
+    }
+    [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]];
+    setProductRows(newRows);
+  };
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -1026,9 +1120,36 @@ const EditCard = ({ id }: { id: string }) => {
             </Box>
 
             {productRows.map((row, index) => (
-              <Grid container spacing={2} key={row.id}>
+              <Grid
+                container
+                spacing={2}
+                key={row.id}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  backgroundColor: 'background.paper',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  ...(row.esSubProducto && {
+                    ml: 4,
+                    width: 'calc(100% - 32px)'
+                  })
+                }}
+              >
                 <Grid item xs={12} md={3}>
-                  <TextField fullWidth label='Servicio' value={row.servicio || ''} onClick={handleOpenPopover} />
+                  <div ref={el => { servicioAnchorRefs.current[index] = el; }} style={{ width: '100%' }}>
+                    <TextField
+                      fullWidth
+                      label='Servicio'
+                      value={row.servicio || ''}
+                      onClick={() => {
+                        resetProductFilters();
+                        setActiveRowIndex(index);
+                        setAnchorEl(servicioAnchorRefs.current[index]);
+                      }}
+                    />
+                  </div>
                 </Grid>
                 <Grid item xs={12} md={2}>
                   <TextField fullWidth label='Área' value={row.area || ''} disabled />
@@ -1071,10 +1192,54 @@ const EditCard = ({ id }: { id: string }) => {
                     disabled
                   />
                 </Grid>
-                <Grid item xs={12} md={1}>
-                  <IconButton onClick={() => handleDeleteRow(index)} color='error'>
-                    <DeleteIcon />
+                <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                  <IconButton size="small" onClick={() => handleMoveUp(index)}>
+                    <i className="ri-arrow-up-s-line" />
                   </IconButton>
+                  <IconButton size="small" onClick={() => handleMoveDown(index)}>
+                    <i className="ri-arrow-down-s-line" />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}>
+                    <i className='ri-delete-bin-line' />
+                  </IconButton>
+                  {row.esPaquete && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<i className='ri-add-line' />}
+                      sx={{ mr: 1, pointerEvents: 'auto', zIndex: 20 }}
+                      onClick={() => {
+                        resetProductFilters();
+                        // Agregar una fila vacía como subproducto como primer subproducto después del paquete
+                        const newProductRow = {
+                          id: Date.now(),
+                          productoId: '0',
+                          servicio: '',
+                          descripcion: '',
+                          cantidad: 1,
+                          precioUnitarioUF: 0,
+                          totalNetoUF: 0,
+                          area: '',
+                          esSubProducto: true,
+                          subproductos: []
+                        };
+                        const newRows = [...productRows];
+                        // Insertar SIEMPRE en index + 1 (justo después del paquete)
+                        newRows.splice(index + 1, 0, newProductRow);
+                        setProductRows(newRows);
+                        setTimeout(() => {
+                          setActiveRowIndex(index + 1);
+                          // Simular click en el input para abrir el popover
+                          const inputElement = servicioAnchorRefs.current[index + 1]?.querySelector('input');
+                          if (inputElement) {
+                            inputElement.click();
+                          }
+                        }, 100);
+                      }}
+                    >
+                      Agregar producto a Paquete
+                    </Button>
+                  )}
                 </Grid>
               </Grid>
             ))}
@@ -1144,6 +1309,7 @@ const EditCard = ({ id }: { id: string }) => {
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Área</InputLabel>
                   <Select 
+                    key={`area-${filterResetKey}`}
                     value={selectedAreaId?.toString() || ''} 
                     label='Área' 
                     onChange={handleAreaChange} 
@@ -1160,7 +1326,14 @@ const EditCard = ({ id }: { id: string }) => {
                 </FormControl>
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Tipo</InputLabel>
-                  <Select value={selectedTipo} label='Tipo' onChange={handleTipoChange} displayEmpty renderValue={selected => selected === '' ? 'Todos' : selected}>
+                  <Select
+                    key={`tipo-${filterResetKey}`}
+                    value={selectedTipo}
+                    label='Tipo'
+                    onChange={handleTipoChange}
+                    displayEmpty
+                    renderValue={selected => selected === '' ? 'Todos' : selected}
+                  >
                     <MenuItem value=''>Todos</MenuItem>
                     {tipos.map(tipo => (
                       <MenuItem key={tipo} value={tipo}>
@@ -1172,6 +1345,7 @@ const EditCard = ({ id }: { id: string }) => {
                 <FormControl size='small' fullWidth>
                   <InputLabel shrink>Familia</InputLabel>
                   <Select 
+                    key={`familia-${filterResetKey}`}
                     value={selectedFamilia} 
                     label='Familia' 
                     onChange={handleFamiliaChange} 
