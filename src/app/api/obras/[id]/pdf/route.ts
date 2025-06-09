@@ -101,18 +101,17 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="2" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="2" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Datos Principales
               </th>
             </tr>
             <tr>
               <td style="width:33%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
                 <b>N° Obra:</b> ${obra.numeroObra}<br/>
-                <b>RUT Cliente:</b> ${obra.rut}<br/>
-                <b>Estado Obra:</b> ${obra.estadoObra}
+                <b>Fecha Ingreso:</b> ${obra.fechaIngreso ? new Date(obra.fechaIngreso).toLocaleDateString('es-CL') : '-'}<br/>
               </td>
               <td style="width:67%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Fecha Ingreso:</b> ${obra.fechaIngreso ? new Date(obra.fechaIngreso).toLocaleDateString('es-CL') : '-'}<br/>
+                <b>RUT Cliente:</b> ${obra.rut}<br/>
                 <b>Nombre Cliente:</b> ${obra.nombreCliente}
               </td>
             </tr>
@@ -122,55 +121,52 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px; border:1px solid #ccc;">
             <tr>
-              <th colspan="2" style="font-size:1.1em; text-align:left; padding:8px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
                 Antecedentes
               </th>
             </tr>
             <tr>
-              <td colspan="2" style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 <b>Nombre Obra:</b> ${obra.nombreObra}
               </td>
-            </tr>
-            <tr>
-              <td colspan="2" style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 <b>Dirección:</b> ${obra.direccion}
               </td>
             </tr>
             <tr>
-              <td style="padding: 6px; border:none;">
+            <tr>
+              <td style="padding: 4px; border:none;">
                 <b>Región:</b> ${obra.region}
               </td>
-              <td style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 <b>Comuna:</b> ${obra.comuna}
               </td>
             </tr>
             <tr>
-              <td style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 <b>Sector:</b> ${obra.sector || '-'}
               </td>
-              <td style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
+                <b>Referencia:</b> ${obra.referencia || '-'}
+              </td>
+              <td style="padding: 4px; border:none;">
                 <b>Georreferencia:</b> ${obra.georreferencia || '-'}
               </td>
             </tr>
             <tr>
-              <td style="padding: 6px; border:none;">
-                <b>Referencia:</b> ${obra.referencia || '-'}
-              </td>
-              <td style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 <b>Mandante:</b> ${obra.mandante || '-'}
               </td>
-            </tr>
-            <tr>
-              <td style="padding: 6px; border:none;">
-                <b>Informe a Mandante:</b> ${obra.informeMandante ? 'Sí' : 'No'}
-              </td>
-              <td style="padding: 6px; border:none;">
+              <td style="padding: 4px; border:none;">
                 ${obra.informeMandante ? `<b>Texto Mandante:</b> ${obra.textoMandante || '-'}` : ''}
               </td>
+              <td style="padding: 4px; border:none;">
+                <b>Informe a Mandante:</b> ${obra.informeMandante ? 'Sí' : 'No'}
+              </td>
             </tr>
             <tr>
-              <td colspan="2" style="padding: 6px; border:none;">
-                <b>Correos:</b> ${Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}
+              <td colspan="3" style="padding: 6px; border:none;">
+                <b>Enviar Informes a:</b> ${Array.isArray(obra.correos) ? obra.correos.join(', ') : '-'}
               </td>
             </tr>
           </table>
@@ -179,7 +175,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Requisitos
               </th>
             </tr>
@@ -203,7 +199,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Referencias
               </th>
             </tr>
@@ -228,7 +224,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="3" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Facturación
               </th>
             </tr>
@@ -247,7 +243,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
                 <b>Representante Legal:</b> ${obra.representanteLegal || '-'}
               </td>
               <td style="width:34%; vertical-align:top; padding: 6px; border:1px solid #ccc;">
-                <b>Mail Recepción Factura:</b> ${obra.mailRecepcionFactura || '-'}<br/>
+                <b>Mail Recepción Factura:</b> ${Array.isArray(obra.mailRecepcionFactura) ? obra.mailRecepcionFactura.join(', ') : '-'}<br/>
               </td>
             </tr>
           </table>
@@ -256,7 +252,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         <div class="section">
           <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
             <tr>
-              <th colspan="4" style="font-size:1.1em; text-align:left; padding:8px; border:1px solid #ccc;">
+              <th colspan="4" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Contactos
               </th>
             </tr>

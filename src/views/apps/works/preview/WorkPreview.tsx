@@ -160,7 +160,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
             )}
             <Grid item xs={12}>
               <Typography variant='subtitle2' color='text.secondary'>
-                Correos
+                Enviar Informes a
               </Typography>
               <Typography>{Array.isArray((obra as any).correos) ? (obra as any).correos.join(', ') : '-'}</Typography>
             </Grid>
