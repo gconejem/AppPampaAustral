@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -30,6 +30,7 @@ import Autocomplete from '@mui/material/Autocomplete'
 import IconButton from '@mui/material/IconButton'
 import DeleteIcon from '@mui/icons-material/Delete'
 import type { SelectChangeEvent } from '@mui/material/Select'
+import Tooltip from '@mui/material/Tooltip'
 
 // Third-party Imports
 import { toast } from 'react-hot-toast'
@@ -145,6 +146,13 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
+
+  // Estado para abrir automáticamente el popover en una fila nueva
+  const [autoOpenRowId, setAutoOpenRowId] = useState<number | null>(null);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+
+  // Refs para inputs de Servicio
+  const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Función para calcular totales
   const calcularTotales = useCallback(() => {
@@ -333,39 +341,51 @@ const DuplicateCard = ({ id }: { id: string }) => {
     if (formData) calcularTotales()
   }, [sinCantidad])
 
+  // useEffect para abrir el popover automáticamente en la fila nueva
+  useEffect(() => {
+    if (autoOpenRowId) {
+      setTimeout(() => {
+        const idx = productRows.findIndex(row => row.id === autoOpenRowId);
+        if (idx !== -1 && servicioAnchorRefs.current[idx]) {
+          setActiveRowIndex(idx);
+          setAnchorEl(servicioAnchorRefs.current[idx]);
+        }
+        setAutoOpenRowId(null);
+      }, 100);
+    }
+  }, [autoOpenRowId, productRows]);
+
   // Función para manejar cambios en los productos
   const handleSelectProduct = (producto: ProductoType) => {
-    console.log('Producto seleccionado:', producto)
-    console.log('Lista de precios seleccionada:', formData?.listaPrecioId)
-    
-    const newRows = [...productRows]
-    // Obtener el precio de la lista de precios seleccionada si existe
-    let precioFinal = Number(producto.precio || 0)
-    console.log('Precio base del producto:', precioFinal)
-
+    if (!producto) return;
+    const newRows = [...productRows];
+    const emptyRowIndex = newRows.findIndex(row => row.productoId === '0');
+    let precioFinal = Number(producto.precio || 0);
     if (formData?.listaPrecioId && producto.listasPrecios) {
-      console.log('Listas de precios del producto:', producto.listasPrecios)
-      const listaPrecio = producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => {
-        console.log('Comparando listaPrecioId:', lp.listaPrecioId, 'con', formData.listaPrecioId)
-        return lp.listaPrecioId === formData.listaPrecioId
-      })
-      
+      const listaPrecio = producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId);
       if (listaPrecio) {
-        console.log('Lista de precios encontrada:', listaPrecio)
-        precioFinal = Number(listaPrecio.precio)
-        console.log('Precio final después de lista de precios:', precioFinal)
+        precioFinal = Number(listaPrecio.precio);
       }
     }
-
-    // Eliminar la fila vacía si existe
-    const filteredRows = newRows.filter(row => row.productoId !== '0')
-
-    // Armar el nombre del servicio: nombre - norma (si existe)
-    const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || ''
-
+    const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || '';
+    if (emptyRowIndex !== -1 && newRows[emptyRowIndex].esSubProducto) {
+      newRows[emptyRowIndex] = {
+        ...newRows[emptyRowIndex],
+        productoId: producto.productoId.toString(),
+        servicio: nombreServicio,
+        descripcion: producto.descripcion || '',
+        cantidad: 1,
+        precioUnitarioUF: precioFinal,
+        totalNetoUF: precioFinal,
+        area: producto.area || '',
+        esSubProducto: true
+      };
+      setProductRows(newRows);
+      handleClosePopover();
+      setActiveRowIndex(null);
+      return;
+    }
     if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
-      console.log('Procesando paquete con productos:', producto.productosEnPaquete)
-      // Agregar paquete y sus productos
       const paqueteRow = {
         id: Date.now(),
         productoId: producto.productoId.toString(),
@@ -377,31 +397,17 @@ const DuplicateCard = ({ id }: { id: string }) => {
         area: producto.area || '',
         esPaquete: true,
         subproductos: []
-      }
-      console.log('Fila de paquete creada:', paqueteRow)
-
+      };
       const productosRows = (producto.productosEnPaquete || []).map((pp: any) => {
-        console.log('Procesando subproducto:', pp)
-        let precioProducto = Number(pp.producto?.precio || 0)
-        console.log('Precio base del subproducto:', precioProducto)
-
+        let precioProducto = Number(pp.producto?.precio || 0);
         if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
-          console.log('Listas de precios del subproducto:', pp.producto.listasPrecios)
-          const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => {
-            console.log('Comparando listaPrecioId del subproducto:', lp.listaPrecioId, 'con', formData.listaPrecioId)
-            return lp.listaPrecioId === formData.listaPrecioId
-          })
-          
+          const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId);
           if (listaPrecio) {
-            console.log('Lista de precios encontrada para subproducto:', listaPrecio)
-            precioProducto = Number(listaPrecio.precio)
-            console.log('Precio final del subproducto:', precioProducto)
+            precioProducto = Number(listaPrecio.precio);
           }
         }
-
-        // Armar nombre del subproducto: nombre - norma (si existe)
-        const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || ''
-        const subRow = {
+        const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || '';
+        return {
           id: Date.now() + Math.random(),
           productoId: pp.producto?.productoId?.toString() || '',
           servicio: nombreSubServicio,
@@ -412,33 +418,30 @@ const DuplicateCard = ({ id }: { id: string }) => {
           area: pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
-        }
-        console.log('Fila de subproducto creada:', subRow)
-        return subRow
-      })
-
-      console.log('Filas finales a agregar:', [...filteredRows, paqueteRow, ...productosRows])
-      setProductRows([...filteredRows, paqueteRow, ...productosRows])
-    } else {
-      // Agregar producto individual
-      const newRow = {
-        id: Date.now(),
-        productoId: producto.productoId.toString(),
-        servicio: nombreServicio,
-        descripcion: producto.descripcion || '',
-        cantidad: 1,
-        precioUnitarioUF: precioFinal,
-        totalNetoUF: precioFinal,
-        area: producto.area || '',
-        subproductos: []
-      }
-      console.log('Fila de producto individual creada:', newRow)
-      console.log('Filas finales a agregar:', [...filteredRows, newRow])
-      setProductRows([...filteredRows, newRow])
+        };
+      });
+      const filteredRows = newRows.filter(row => row.productoId !== '0');
+      setProductRows([...filteredRows, paqueteRow, ...productosRows]);
+      handleClosePopover();
+      setActiveRowIndex(null);
+      return;
     }
-
-    handleClosePopover()
-  }
+    const filteredRows = newRows.filter(row => row.productoId !== '0');
+    const newRow = {
+      id: Date.now(),
+      productoId: producto.productoId.toString(),
+      servicio: nombreServicio,
+      descripcion: producto.descripcion || '',
+      cantidad: 1,
+      precioUnitarioUF: precioFinal,
+      totalNetoUF: precioFinal,
+      area: producto.area || '',
+      subproductos: []
+    };
+    setProductRows([...filteredRows, newRow]);
+    handleClosePopover();
+    setActiveRowIndex(null);
+  };
 
   const handleContactChange = (newValue: ContactoType | null) => {
     if (newValue) {
@@ -523,20 +526,57 @@ const DuplicateCard = ({ id }: { id: string }) => {
     })
   }
 
-  // Funciones para el manejo del popover
-  const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-    setLoadingProductos(true)
-    setProductsPage(0) // Resetear a la primera página
-    // Limpiar todos los filtros
-    setSearchTerm('')
-    setSelectedArea('')
-    setSelectedTipo('')
-    setSelectedFamilia('')
-    setShowOnlyPaquetes(false)
-    filterProducts('', '', '', '')
-    setLoadingProductos(false)
-  }
+  // Funciones para mover filas arriba y abajo
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newRows = [...productRows];
+    const currentRow = newRows[index];
+    if (currentRow.esSubProducto) {
+      let parentIndex = index - 1;
+      while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
+        parentIndex--;
+      }
+      if (parentIndex >= 0 && index > parentIndex + 1) {
+        [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]];
+        setProductRows(newRows);
+      }
+      return;
+    }
+    [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]];
+    setProductRows(newRows);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === productRows.length - 1) return;
+    const newRows = [...productRows];
+    const currentRow = newRows[index];
+    if (currentRow.esSubProducto) {
+      let nextPackageIndex = index + 1;
+      while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
+        nextPackageIndex++;
+      }
+      if (index < nextPackageIndex - 1) {
+        [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]];
+        setProductRows(newRows);
+      }
+      return;
+    }
+    [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]];
+    setProductRows(newRows);
+  };
+
+  // Función para abrir el popover correctamente
+  const handleOpenPopover = (index: number, el: HTMLElement | null) => {
+    setSearchTerm('');
+    setSelectedArea('');
+    setSelectedAreaId(null);
+    setSelectedTipo('');
+    setSelectedFamilia('');
+    setShowOnlyPaquetes(false);
+    setProductsPage(0);
+    filterProducts('', '', '', '');
+    setAnchorEl(el);
+  };
 
   const handleClosePopover = () => {
     setAnchorEl(null)
@@ -1112,9 +1152,43 @@ const DuplicateCard = ({ id }: { id: string }) => {
             </Box>
 
             {productRows.map((row, index) => (
-              <Grid container spacing={2} key={row.id}>
+              <Grid
+                container
+                spacing={2}
+                key={row.id}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  backgroundColor: 'background.paper',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  ...(row.esSubProducto && {
+                    ml: 4,
+                    width: 'calc(100% - 32px)'
+                  })
+                }}
+              >
                 <Grid item xs={12} md={3}>
-                  <TextField fullWidth label='Servicio' value={row.servicio || ''} onClick={handleOpenPopover} />
+                  <div ref={el => { servicioAnchorRefs.current[index] = el; }} data-row-id={row.id}>
+                    <TextField
+                      fullWidth
+                      label='Servicio'
+                      value={row.servicio || ''}
+                      onClick={() => {
+                        setActiveRowIndex(index);
+                        setAnchorEl(servicioAnchorRefs.current[index]);
+                        setSearchTerm('');
+                        setSelectedArea('');
+                        setSelectedAreaId(null);
+                        setSelectedTipo('');
+                        setSelectedFamilia('');
+                        setShowOnlyPaquetes(false);
+                        setProductsPage(0);
+                        filterProducts('', '', '', '');
+                      }}
+                    />
+                  </div>
                 </Grid>
                 <Grid item xs={12} md={2}>
                   <TextField fullWidth label='Área' value={row.area || ''} disabled />
@@ -1157,10 +1231,62 @@ const DuplicateCard = ({ id }: { id: string }) => {
                     disabled
                   />
                 </Grid>
-                <Grid item xs={12} md={1}>
-                  <IconButton onClick={() => handleDeleteRow(index)} color='error'>
-                    <DeleteIcon />
+                <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                  <IconButton size="small" onClick={() => handleMoveUp(index)}>
+                    <i className="ri-arrow-up-s-line" />
                   </IconButton>
+                  <IconButton size="small" onClick={() => handleMoveDown(index)}>
+                    <i className="ri-arrow-down-s-line" />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}>
+                    <i className='ri-delete-bin-line' />
+                  </IconButton>
+                  {row.esPaquete && (
+                    <Tooltip title="Agregar producto a paquete">
+                      <IconButton
+                        sx={{
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: 40,
+                          height: 40,
+                          ml: 1,
+                          '&:hover': { backgroundColor: 'primary.dark' },
+                          pointerEvents: 'auto',
+                          zIndex: 20
+                        }}
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedArea('');
+                          setSelectedAreaId(null);
+                          setSelectedTipo('');
+                          setSelectedFamilia('');
+                          setShowOnlyPaquetes(false);
+                          setProductsPage(0);
+                          filterProducts('', '', '', '');
+                          // Agregar una fila vacía como subproducto como primer subproducto después del paquete
+                          const newProductRow = {
+                            id: Date.now(),
+                            productoId: '0',
+                            servicio: '',
+                            descripcion: '',
+                            cantidad: 1,
+                            precioUnitarioUF: 0,
+                            totalNetoUF: 0,
+                            area: '',
+                            esSubProducto: true,
+                            subproductos: []
+                          };
+                          const newRows = [...productRows];
+                          newRows.splice(index + 1, 0, newProductRow);
+                          setProductRows(newRows);
+                          setAutoOpenRowId(newProductRow.id);
+                        }}
+                      >
+                        <i className='ri-add-line' style={{ fontSize: 20 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Grid>
               </Grid>
             ))}

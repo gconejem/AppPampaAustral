@@ -30,6 +30,7 @@ import Autocomplete from '@mui/material/Autocomplete'
 import IconButton from '@mui/material/IconButton'
 import DeleteIcon from '@mui/icons-material/Delete'
 import type { SelectChangeEvent } from '@mui/material/Select'
+import Tooltip from '@mui/material/Tooltip'
 
 // Third-party Imports
 import { toast } from 'react-hot-toast'
@@ -1203,42 +1204,51 @@ const EditCard = ({ id }: { id: string }) => {
                     <i className='ri-delete-bin-line' />
                   </IconButton>
                   {row.esPaquete && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<i className='ri-add-line' />}
-                      sx={{ mr: 1, pointerEvents: 'auto', zIndex: 20 }}
-                      onClick={() => {
-                        resetProductFilters();
-                        // Agregar una fila vacía como subproducto como primer subproducto después del paquete
-                        const newProductRow = {
-                          id: Date.now(),
-                          productoId: '0',
-                          servicio: '',
-                          descripcion: '',
-                          cantidad: 1,
-                          precioUnitarioUF: 0,
-                          totalNetoUF: 0,
-                          area: '',
-                          esSubProducto: true,
-                          subproductos: []
-                        };
-                        const newRows = [...productRows];
-                        // Insertar SIEMPRE en index + 1 (justo después del paquete)
-                        newRows.splice(index + 1, 0, newProductRow);
-                        setProductRows(newRows);
-                        setTimeout(() => {
-                          setActiveRowIndex(index + 1);
-                          // Simular click en el input para abrir el popover
-                          const inputElement = servicioAnchorRefs.current[index + 1]?.querySelector('input');
-                          if (inputElement) {
-                            inputElement.click();
-                          }
-                        }, 100);
-                      }}
-                    >
-                      Agregar producto a Paquete
-                    </Button>
+                    <Tooltip title="Agregar producto a paquete">
+                      <IconButton
+                        sx={{
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: 40,
+                          height: 40,
+                          ml: 1,
+                          '&:hover': { backgroundColor: 'primary.dark' },
+                          pointerEvents: 'auto',
+                          zIndex: 20
+                        }}
+                        onClick={() => {
+                          resetProductFilters();
+                          // Agregar una fila vacía como subproducto como primer subproducto después del paquete
+                          const newProductRow = {
+                            id: Date.now(),
+                            productoId: '0',
+                            servicio: '',
+                            descripcion: '',
+                            cantidad: 1,
+                            precioUnitarioUF: 0,
+                            totalNetoUF: 0,
+                            area: '',
+                            esSubProducto: true,
+                            subproductos: []
+                          };
+                          const newRows = [...productRows];
+                          // Insertar SIEMPRE en index + 1 (justo después del paquete)
+                          newRows.splice(index + 1, 0, newProductRow);
+                          setProductRows(newRows);
+                          setTimeout(() => {
+                            setActiveRowIndex(index + 1);
+                            // Simular click en el input para abrir el popover
+                            const inputElement = servicioAnchorRefs.current[index + 1]?.querySelector('input');
+                            if (inputElement) {
+                              inputElement.click();
+                            }
+                          }, 100);
+                        }}
+                      >
+                        <i className='ri-add-line' style={{ fontSize: 20 }} />
+                      </IconButton>
+                    </Tooltip>
                   )}
                 </Grid>
               </Grid>

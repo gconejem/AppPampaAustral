@@ -37,6 +37,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CircularProgress from '@mui/material/CircularProgress'
 import FormHelperText from '@mui/material/FormHelperText'
 import Switch from '@mui/material/Switch'
+import Tooltip from '@mui/material/Tooltip'
 
 // Third Party Imports
 import { toast } from 'react-hot-toast'
@@ -1982,45 +1983,54 @@ const AddCard = ({
                         >
                           <i className='ri-delete-bin-line' />
                         </IconButton>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<i className='ri-add-line' />}
-                          sx={{ mr: 1, pointerEvents: 'auto', zIndex: 20 }}
-                          onClick={() => {
-                            // Limpiar todos los filtros antes de abrir el popover
-                            setSelectedTipo('');
-                            setShowOnlyPaquetes(false);
-                            setSearchTerm('');
-                            setSelectedArea('');
-                            setSelectedAreaId(null);
-                            setSelectedFamilia('');
-                            setProductsPage(0); // Resetear el paginador
-                            filterProducts('', '', '', '');
-                            // Agregar una fila vacía como subproducto después del paquete
-                            const newProductRow = {
-                              id: Date.now(),
-                              productoId: '0',
-                              servicio: '',
-                              descripcion: '',
-                              cantidad: 1,
-                              precioUnitarioUF: 0,
-                              totalNetoUF: 0,
-                              area: '',
-                              esSubProducto: true,
-                              subproductos: []
-                            }
-                            const newRows = [...productRows]
-                            newRows.splice(index + 1, 0, newProductRow)
-                            setProductRows(newRows)
-                            setTimeout(() => {
-                              setActiveRowIndex(index + 1)
-                              setAnchorEl(servicioAnchorRefs.current[index + 1])
-                            }, 100)
-                          }}
-                        >
-                          Agregar producto a Paquete
-                        </Button>
+                        <Tooltip title="Agregar producto a paquete">
+                          <IconButton
+                            sx={{
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                              borderRadius: '50%',
+                              width: 40,
+                              height: 40,
+                              ml: 1,
+                              '&:hover': { backgroundColor: 'primary.dark' },
+                              pointerEvents: 'auto',
+                              zIndex: 20
+                            }}
+                            onClick={() => {
+                              // Limpiar todos los filtros antes de abrir el popover
+                              setSelectedTipo('');
+                              setShowOnlyPaquetes(false);
+                              setSearchTerm('');
+                              setSelectedArea('');
+                              setSelectedAreaId(null);
+                              setSelectedFamilia('');
+                              setProductsPage(0); // Resetear el paginador
+                              filterProducts('', '', '', '');
+                              // Agregar una fila vacía como subproducto después del paquete
+                              const newProductRow = {
+                                id: Date.now(),
+                                productoId: '0',
+                                servicio: '',
+                                descripcion: '',
+                                cantidad: 1,
+                                precioUnitarioUF: 0,
+                                totalNetoUF: 0,
+                                area: '',
+                                esSubProducto: true,
+                                subproductos: []
+                              }
+                              const newRows = [...productRows]
+                              newRows.splice(index + 1, 0, newProductRow)
+                              setProductRows(newRows)
+                              setTimeout(() => {
+                                setActiveRowIndex(index + 1)
+                                setAnchorEl(servicioAnchorRefs.current[index + 1])
+                              }, 100)
+                            }}
+                          >
+                            <i className='ri-add-line' style={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Tooltip>
                       </>
                     )}
                   </Grid>
