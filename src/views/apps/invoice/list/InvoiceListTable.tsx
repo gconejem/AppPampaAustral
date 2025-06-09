@@ -247,7 +247,13 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
 
   const handlePreviewClick = async (id: number) => {
     try {
+      setIsLoading(true)
       const response = await fetch(`/api/cotizaciones/${id}`)
+      
+      if (!response.ok) {
+        throw new Error('Error al cargar la cotización')
+      }
+
       const data = await response.json()
 
       // Logs detallados para debug
@@ -269,10 +275,13 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       }
 
       setSelectedCotizacion(data)
+      console.log('selectedCotizacion', data)
       setOpenPreview(true)
     } catch (error) {
       console.error('Error al cargar la cotización:', error)
       toast.error('Error al cargar la cotización')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -771,7 +780,11 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth='lg' fullWidth>
         <DialogTitle>Vista Previa de Cotización</DialogTitle>
         <DialogContent>
-          {selectedCotizacion && (
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+              <CircularProgress />
+            </Box>
+          ) : selectedCotizacion ? (
             <Grid container spacing={3}>
               {/* Encabezado con logo y datos de empresa */}
               <Grid item xs={12}>
@@ -939,14 +952,18 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                               {detalle.esPaquete && (
                                 <Chip size='small' label='Paquete' color='primary' sx={{ mr: 1 }} />
                               )}
-                              {detalle.esPaquete && detalle.producto?.productosEnPaquete && (
+                              {detalle.esPaquete && (
                                 <Box sx={{ mt: 1, pl: 2 }}>
-                                  {detalle.producto.productosEnPaquete.map((subProducto: any, subIndex: number) => (
-                                    <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
-                                      • {subProducto.producto.nombre}
-                                      {subProducto.producto.norma && ` - ${subProducto.producto.norma}`}
-                                    </Typography>
-                                  ))}
+                                  {/* Mostrar subproductos del paquete */}
+                                  {selectedCotizacion.detalles
+                                    .filter((d: any) => d.esSubProducto)
+                                    .map((subProducto: any, subIndex: number) => (
+                                      <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
+                                        • {subProducto.producto.nombre}
+                                        {subProducto.producto.norma && ` - ${subProducto.producto.norma}`}
+                                      </Typography>
+                                    ))
+                                  }
                                 </Box>
                               )}
                             </TableCell>
@@ -995,7 +1012,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                 />
               </Grid>
             </Grid>
-          )}
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenPreview(false)} variant='contained'>

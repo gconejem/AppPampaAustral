@@ -420,14 +420,14 @@ export async function POST(request: Request) {
     const html = renderCotizacionHTML(cotizacion, logoBase64);
 
     // TEMPORAL: devolver HTML en vez de PDF
-    /* return new NextResponse(html, {
+    return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8'
       }
-    }) */
+    })
 
     // --- PDF original ---
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    /* const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
     const pdfBuffer = await page.pdf({
@@ -450,7 +450,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="cotizacion-preview.pdf"`
       }
-    })
+    }) */
   } catch (error) {
     console.error('Error al generar PDF:', error)
     return new NextResponse('Error al generar el PDF', { status: 500 })
