@@ -707,7 +707,6 @@ const EditCard = ({ id }: { id: string }) => {
   const handlePreview = () => {
     if (!formData) return;
 
-    // Generar un array plano de detalles, igual que en AddCard
     const detallesPlanos = productRows.map(row => ({
       productoId: parseInt(row.productoId),
       servicio: row.servicio || '',
@@ -722,7 +721,14 @@ const EditCard = ({ id }: { id: string }) => {
 
     const previewData = {
       ...formData,
-      detalles: detallesPlanos
+      detalles: detallesPlanos,
+      // Agregar precioEMSPorProducto basado en el tipo de cotización
+      precioEMSPorProducto: formData.tipoCotizacion === 'A' || formData.tipoCotizacion === 'C',
+      // Asegurarnos de que los totales sean números
+      subtotal: Number(formData.subtotal || 0),
+      descuento: Number(formData.descuento || 0),
+      impuesto: Number(formData.impuesto || 0),
+      total: Number(formData.total || 0)
     };
 
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData));

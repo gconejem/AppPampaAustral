@@ -309,9 +309,10 @@ const PreviewCard = () => {
         {/* Totales */}
         <Box sx={{ mt: 4, textAlign: 'right' }}>
           {(() => {
-            const subtotal = Number(previewData.precioEMSPorProducto ? previewData.subtotal : previewData.precioEMSTotal)
+            // Asegurarnos de que todos los valores sean números válidos
+            const subtotal = Number(previewData.subtotal || 0)
             const descuento = Number(previewData.descuento || 0)
-            const subtotalConDescuento = subtotal - descuento
+            const subtotalConDescuento = Math.max(0, subtotal - descuento)
             const iva = subtotalConDescuento * 0.19
             const total = subtotalConDescuento + iva
 
