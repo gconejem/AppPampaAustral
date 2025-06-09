@@ -273,7 +273,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
           totalNetoUF: detalle.subtotal,
           area: detalle.producto?.area || '',
           descripcion: detalle.producto?.descripcion || '',
-          servicio: detalle.producto?.nombre,
+          servicio: detalle.producto?.norma ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}` : detalle.producto?.nombre,
           esPaquete: detalle.esPaquete || false,
           esSubProducto: detalle.esSubProducto || false,
           subproductos: []
