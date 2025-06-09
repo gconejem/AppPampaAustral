@@ -86,50 +86,133 @@ const estadosCotizacion = [
   { value: 'RECHAZADA', label: 'Rechazada' }
 ]
 
-const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
+const InvoiceListTable = () => {
+  // Configuración de localización
+  const locale = 'es'
+
+  // Estados de la tabla
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [localData, setLocalData] = useState<InvoiceType[]>([])
+
+  // Estados de los modales y diálogos
   const [openPreview, setOpenPreview] = useState(false)
   const [selectedCotizacion, setSelectedCotizacion] = useState<any>(null)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
-  const [localData, setLocalData] = useState<InvoiceType[]>([])
   const [contactsModalOpen, setContactsModalOpen] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState<any[]>([])
-  const locale = 'es' // Por defecto usaremos español
-  const [gestionText, setGestionText] = useState('')
   const [gestionDialogOpen, setGestionDialogOpen] = useState(false)
-  const [pendingEstado, setPendingEstado] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
-  const [filtroFecha, setFiltroFecha] = useState<string>('')
-  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('')
-  const [filtroTipo, setFiltroTipo] = useState<string>('')
-  const [filtroEstado, setFiltroEstado] = useState<string>('')
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+
+  // Estados de los menús y selecciones
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
+  const [cotizacionToDelete, setCotizacionToDelete] = useState<number | null>(null)
   const [selectedCotizacionForPDF, setSelectedCotizacionForPDF] = useState<InvoiceType | null>(null)
+
+  // Estados de gestión y PDF
+  const [gestionText, setGestionText] = useState('')
+  const [pendingEstado, setPendingEstado] = useState<string | null>(null)
   const [pdfHtmlContent, setPdfHtmlContent] = useState('')
   const [pdfLoading, setPdfLoading] = useState(false)
 
-  // Inicializar localData con invoiceData
-  useEffect(() => {
-    if (invoiceData) {
-      console.log('invoiceData', invoiceData)
-      // Limpia cualquier string 'Sin contacto' y reemplázalo por null
-      const cleanData = invoiceData.map(row => ({
-        ...row,
-        //contacto: typeof row.contacto !== 'string' ? null : row.contacto
-      }))
+  // Obtener el primer y último día del mes actual
+  const getFirstAndLastDayOfMonth = () => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return { firstDay, lastDay }
+  }
 
-      setLocalData(cleanData)
-      console.log('Datos de cotizaciones recibidos en la tabla:', cleanData)
+  const { firstDay, lastDay } = getFirstAndLastDayOfMonth()
+
+  // Estados de filtros
+  const [filtroFecha, setFiltroFecha] = useState<string>(firstDay.toISOString().split('T')[0])
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>(lastDay.toISOString().split('T')[0])
+  const [filtroTipo, setFiltroTipo] = useState<string>('')
+  const [filtroEstado, setFiltroEstado] = useState<string>('')
+
+  // Función auxiliar para formatear fechas
+  const formatDate = (date: Date | string) => {
+    // Si la fecha ya está en formato dd-mm-aaaa, la retornamos directamente
+    if (typeof date === 'string' && date.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      return date
     }
-  }, [invoiceData])
+
+    // Si es un string en otro formato, lo convertimos a Date
+    const d = typeof date === 'string' ? new Date(date) : date
+
+    // Verificamos si la fecha es válida
+    if (isNaN(d.getTime())) {
+      console.error('Fecha inválida:', date)
+      return 'Fecha inválida'
+    }
+
+    // Formateamos la fecha al formato deseado
+    return d.toLocaleDateString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-')
+  }
+
+  // Función para cargar las cotizaciones con filtros
+  const fetchCotizaciones = async (fechaInicio?: string, fechaFin?: string) => {
+    try {
+      setIsLoading(true)
+      const params = new URLSearchParams()
+      if (fechaInicio) params.append('fechaInicio', fechaInicio)
+      if (fechaFin) params.append('fechaFin', fechaFin)
+
+      const response = await fetch(`/api/cotizaciones?${params.toString()}`)
+      if (!response.ok) throw new Error('Error al cargar cotizaciones')
+      
+      const data = await response.json()
+      setLocalData(data)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar cotizaciones')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Cargar cotizaciones al montar el componente
+  useEffect(() => {
+    fetchCotizaciones(filtroFecha, filtroFechaFin)
+  }, [])
+
+  // Modificar los manejadores de cambio de fecha
+  const handleFechaInicioChange = (date: Date | null) => {
+    if (!date) {
+      setFiltroFecha('')
+      return
+    }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const newFecha = `${year}-${month}-${day}`
+    setFiltroFecha(newFecha)
+    fetchCotizaciones(newFecha, filtroFechaFin)
+  }
+
+  const handleFechaFinChange = (date: Date | null) => {
+    if (!date) {
+      setFiltroFechaFin('')
+      return
+    }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const newFecha = `${year}-${month}-${day}`
+    setFiltroFechaFin(newFecha)
+    fetchCotizaciones(filtroFecha, newFecha)
+  }
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && invoiceData) {
-      setSelectedRows(invoiceData.map(row => row.id))
+    if (checked && localData) {
+      setSelectedRows(localData.map(row => row.id))
     } else {
       setSelectedRows([])
     }
@@ -156,7 +239,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
       // Preparar los datos para CSV
       const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'EMPRESA', 'TIPO', 'CONTACTO', 'ESTADO', 'TOTAL UF']
 
-      const selectedData = invoiceData?.filter(row => selectedRows.includes(row.id)) || []
+      const selectedData = localData?.filter(row => selectedRows.includes(row.id)) || []
 
       console.log('selectedData', selectedData)
 
@@ -381,27 +464,8 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
     }
   }
 
-  // Modificar filteredData para usar localData en lugar de invoiceData
+  // Modificar filteredData para solo filtrar por tipo, estado y búsqueda global
   const filteredData = localData?.filter(row => {
-    if (filtroFecha || filtroFechaFin) {
-      // Convertir la fecha de la fila a objeto Date
-      const [day, month, year] = row.fecha.split('-')
-      const rowDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-
-      // Convertir fechas de filtro a objetos Date
-      if (filtroFecha) {
-        const [filterYear, filterMonth, filterDay] = filtroFecha.split('-')
-        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
-        if (rowDate < filterDate) return false
-      }
-
-      if (filtroFechaFin) {
-        const [filterYear, filterMonth, filterDay] = filtroFechaFin.split('-')
-        const filterDate = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, parseInt(filterDay))
-        if (rowDate > filterDate) return false
-      }
-    }
-    
     if (filtroTipo && row.tipo !== filtroTipo) return false
     if (filtroEstado && row.estado !== filtroEstado) return false
 
@@ -514,16 +578,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <DatePicker
                 label="Fecha Inicio"
                 value={filtroFecha ? new Date(filtroFecha + 'T00:00:00') : null}
-                onChange={date => {
-                  if (!date) {
-                    setFiltroFecha('')
-                    return
-                  }
-                  const year = date.getFullYear()
-                  const month = String(date.getMonth() + 1).padStart(2, '0')
-                  const day = String(date.getDate()).padStart(2, '0')
-                  setFiltroFecha(`${year}-${month}-${day}`)
-                }}
+                onChange={handleFechaInicioChange}
                 slotProps={{
                   textField: {
                     fullWidth: true
@@ -537,16 +592,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
               <DatePicker
                 label="Fecha Fin"
                 value={filtroFechaFin ? new Date(filtroFechaFin + 'T00:00:00') : null}
-                onChange={date => {
-                  if (!date) {
-                    setFiltroFechaFin('')
-                    return
-                  }
-                  const year = date.getFullYear()
-                  const month = String(date.getMonth() + 1).padStart(2, '0')
-                  const day = String(date.getDate()).padStart(2, '0')
-                  setFiltroFechaFin(`${year}-${month}-${day}`)
-                }}
+                onChange={handleFechaFinChange}
                 slotProps={{
                   textField: {
                     fullWidth: true
@@ -665,7 +711,7 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                   />
                 </TableCell>
                 <TableCell>{row.numeroCotizacion}</TableCell>
-                <TableCell>{row.fecha}</TableCell>
+                <TableCell>{formatDate(row.fecha)}</TableCell>
                 <TableCell>{row.comuna}</TableCell>
                 <TableCell>{row.empresa || 'No especificada'}</TableCell>
                 <TableCell>
@@ -792,13 +838,10 @@ const InvoiceListTable = ({ invoiceData }: { invoiceData?: InvoiceType[] }) => {
                     <Grid item xs={12} md={6} sx={{ textAlign: 'right' }}>
                       <Typography variant='h6'>N° Cotización: #{selectedCotizacion.numeroCotizacion}</Typography>
                       <Typography>
-                        Fecha Emisión: {new Date(selectedCotizacion.fechaCreacion).toLocaleDateString('es-CL')}
+                        Fecha Emisión: {formatDate(selectedCotizacion.fechaCreacion)}
                       </Typography>
                       <Typography>
-                        Fecha Vencimiento:{' '}
-                        {new Date(selectedCotizacion.fechaFin || selectedCotizacion.fechaCreacion).toLocaleDateString(
-                          'es-CL'
-                        )}
+                        Fecha Vencimiento: {formatDate(selectedCotizacion.fechaFin || selectedCotizacion.fechaCreacion)}
                       </Typography>
                     </Grid>
                   </Grid>

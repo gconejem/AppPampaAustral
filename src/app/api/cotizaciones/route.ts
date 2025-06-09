@@ -25,9 +25,37 @@ const normalizeTipoCotizacion = (tipo: string): TipoCotizacion => {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const fechaInicio = searchParams.get('fechaInicio')
+    const fechaFin = searchParams.get('fechaFin')
+
+    const whereClause: any = {}
+
+    if (fechaInicio || fechaFin) {
+      whereClause.fechaCreacion = {}
+      if (fechaInicio) {
+        // Establecer la hora de inicio al comienzo del día (00:00:00)
+        const inicioDate = new Date(fechaInicio)
+        inicioDate.setHours(0, 0, 0, 0)
+        whereClause.fechaCreacion.gte = inicioDate
+      }
+      if (fechaFin) {
+        // Establecer la hora de fin al final del día (23:59:59)
+        const finDate = new Date(fechaFin)
+        finDate.setHours(23, 59, 59, 999)
+        whereClause.fechaCreacion.lte = finDate
+      }
+    }
+
+    console.log('Filtros de fecha:', {
+      fechaInicio: whereClause.fechaCreacion?.gte,
+      fechaFin: whereClause.fechaCreacion?.lte
+    })
+
     const cotizaciones = await prisma.cotizacion.findMany({
+      where: whereClause,
       orderBy: {
         fechaCreacion: 'desc'
       },
@@ -42,12 +70,18 @@ export async function GET() {
       }
     })
 
+    console.log('Cotizaciones encontradas:', cotizaciones.length)
+
     const formattedCotizaciones = cotizaciones.map(cotizacion => {
       return {
         id: cotizacion.id,
         numeroCotizacion: cotizacion.numeroCotizacion,
         cliente: cotizacion.cliente?.nombreCliente || 'Sin cliente',
-        fecha: cotizacion.fechaCreacion.toLocaleDateString(),
+        fecha: cotizacion.fechaCreacion.toLocaleDateString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        }).replace(/\//g, '-'),
         estado: cotizacion.estado,
         tipo: normalizeTipoCotizacion(cotizacion.tipoCotizacion as string),
         contacto: cotizacion.contacto
