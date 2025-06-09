@@ -171,12 +171,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      /* setTimeout(() => {
+      setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000) */
+      }, 1000)
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')
@@ -242,7 +242,7 @@ const PreviewActions = () => {
             >
               Descargar PDF
             </Button>
-            <Button
+            {/* <Button
               fullWidth
               color='info'
               variant='outlined'
@@ -265,7 +265,7 @@ const PreviewActions = () => {
               }}
             >
               Ver Preview HTML
-            </Button>
+            </Button> */}
             <Button fullWidth color='secondary' variant='outlined' onClick={() => window.close()}>
               Volver
             </Button>
