@@ -116,7 +116,8 @@ interface Obra {
   nombreObra: string
   direccion: string
   clienteId: number,
-  contactos: ContactoObraForm[]
+  contactos: ContactoObraForm[],
+  referencia: string
 }
 
 interface Solicitud {
@@ -227,6 +228,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [observacion, setObservacion] = useState<string>('')
   const [esSegundaVisita, setEsSegundaVisita] = useState<boolean>(false)
   const [selectedSectorComercial, setSelectedSectorComercial] = useState<string>('')
+  const [selectedReferencia, setSelectedReferencia] = useState<string>('')
 
   // Estados para laboratoristas
   const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
@@ -406,6 +408,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   useEffect(() => {
     console.log('formData.obraId', formData.obraId, obras)
     setContactos(obras.find(obra => obra.obraId === formData.obraId)?.contactos || [])
+    setSelectedReferencia(obras.find(obra => obra.obraId === formData.obraId)?.referencia || '')
   }, [formData.obraId])
 
   // Estados para el buscador de servicios
@@ -1229,14 +1232,16 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             <TextField
               fullWidth
               label='Referencia'
-              value={formData.referencia}
-              onChange={e =>
+              // value={formData.referencia}
+              value={selectedReferencia}
+              placeholder='Ej: Cerca del supermercado, Edificio azul, etc.'
+              onChange={e =>{
+                setSelectedReferencia(e.target.value)
                 setFormData(prev => ({
                   ...prev,
                   referencia: e.target.value
                 }))
-              }
-              placeholder='Ej: Cerca del supermercado, Edificio azul, etc.'
+              }}
             />
           </Grid>
         </Grid>
@@ -1500,7 +1505,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               <TextField
                 fullWidth
                 size='small'
-                label='Servicio'
+                label='Servicio Terreno'
                 value={servicioSeleccionado ? `${servicioSeleccionado.nombre}${servicioSeleccionado.norma ? ` - ${servicioSeleccionado.norma}` : ''}` : ''}
                 onClick={() => handleOpenPopover(servicioAnchorRef.current)}
                 InputProps={{
