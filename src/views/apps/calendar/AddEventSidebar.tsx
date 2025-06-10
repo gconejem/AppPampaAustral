@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
@@ -26,6 +26,14 @@ import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
+import { toast } from 'react-hot-toast'
+import Popover from '@mui/material/Popover'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
+import Switch from '@mui/material/Switch'
+import Pagination from '@mui/material/Pagination'
+import { SelectChangeEvent } from '@mui/material/Select'
 
 import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
@@ -131,6 +139,11 @@ interface Servicio {
   codigo: string
   nombre: string
   descripcion?: string
+  area?: string
+  tipo?: string
+  familia?: string
+  esPaquete?: boolean
+  norma?: string
 }
 
 interface ServicioAgendado {
@@ -394,6 +407,234 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     console.log('formData.obraId', formData.obraId, obras)
     setContactos(obras.find(obra => obra.obraId === formData.obraId)?.contactos || [])
   }, [formData.obraId])
+
+  // Estados para el buscador de servicios
+  const [selectedArea, setSelectedArea] = useState('')
+  const [selectedTipo, setSelectedTipo] = useState('')
+  const [selectedFamilia, setSelectedFamilia] = useState('')
+  const [tipos, setTipos] = useState<string[]>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+  const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [loadingProductos, setLoadingProductos] = useState(false)
+  const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+  const [filteredProductos, setFilteredProductos] = useState<Servicio[]>([])
+  const [totalProductos, setTotalProductos] = useState(0)
+  const [productsPage, setProductsPage] = useState(0)
+  const ITEMS_PER_PAGE = 10
+
+  // Refs para el buscador de servicios
+  const servicioAnchorRef = useRef<HTMLDivElement>(null)
+
+  // Cargar tipos y familias al montar el componente
+  useEffect(() => {
+    // Cargar todos los servicios para obtener tipos y familias únicas
+    fetch('/api/productos?limit=1000')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar servicios')
+        }
+        return res.json()
+      })
+      .then(response => {
+        const data = response.productos || []
+
+        // Obtener tipos únicos
+        const uniqueTipos = Array.from(new Set(data.map((s: Servicio) => s.tipo || 'Sin tipo')))
+          .filter(tipo => tipo)
+          .sort()
+
+        // Obtener familias únicas
+        const uniqueFamilias = Array.from(new Set(data.map((s: Servicio) => s.familia || 'Sin familia')))
+          .filter(familia => familia)
+          .sort()
+
+        setTipos(uniqueTipos as string[])
+        setFamilias(uniqueFamilias.map((f, index) => ({ id: index, nombre: String(f), areaId: 0 })))
+        setServicios(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar servicios:', error)
+        toast.error('Error al cargar los servicios')
+        setServicios([])
+      })
+  }, [])
+
+  // Cargar áreas al montar el componente
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar áreas')
+        }
+        return res.json()
+      })
+      .then(data => {
+        console.log('Áreas cargadas:', data)
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+        toast.error('Error al cargar las áreas')
+        setAreas([])
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
+        .then(data => {
+          console.log('Familias cargadas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          toast.error('Error al cargar las familias')
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
+
+  const handleAreaChange = (e: SelectChangeEvent<string>) => {
+    const areaNombre = e.target.value
+    setSelectedArea(areaNombre)
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
+    
+    // Encontrar el ID del área seleccionada
+    const areaSeleccionada = areas.find(a => a.nombre === areaNombre)
+    setSelectedAreaId(areaSeleccionada?.id || null)
+  }
+
+  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedFamilia(e.target.value)
+  }
+
+  const handleTipoChange = (e: SelectChangeEvent<string>) => {
+    setSelectedTipo(e.target.value)
+  }
+
+  const handleClearFilters = () => {
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setSearchTerm('')
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+  }
+
+  // Modificar el useEffect de paginación
+  useEffect(() => {
+    if (anchorEl) { // Solo ejecutar cuando el popover está abierto
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar servicios')
+          }
+          return res.json()
+        })
+        .then(response => {
+          const data = response.productos || []
+          setFilteredProductos(data)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+        })
+        .catch(error => {
+          console.error('Error al cargar servicios paginados:', error)
+          toast.error('Error al cargar los servicios')
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
+    }
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+
+  // Resetear la página cuando cambien los filtros
+  useEffect(() => {
+    if (anchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
+
+  // Función para filtrar productos
+  const filterProducts = (search: string, area: string, tipo: string, familia: string) => {
+    const params = new URLSearchParams()
+    params.append('page', '1')
+    params.append('limit', ITEMS_PER_PAGE.toString())
+    if (search) params.append('search', search)
+    if (area) params.append('area', area)
+    if (tipo) params.append('tipo', tipo)
+    if (familia) params.append('familia', familia)
+    if (showOnlyPaquetes) params.append('esPaquete', 'true')
+
+    fetch(`/api/productos?${params.toString()}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar servicios')
+        }
+        return res.json()
+      })
+      .then(response => {
+        const data = response.productos || []
+        setFilteredProductos(data)
+        setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+      })
+      .catch(error => {
+        console.error('Error al cargar servicios:', error)
+        toast.error('Error al cargar los servicios')
+        setFilteredProductos([])
+        setTotalProductos(0)
+      })
+  }
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSearchTerm(event.target.value)
+    filterProducts(event.target.value, selectedArea, selectedTipo, selectedFamilia)
+  }
+
+  const handleOpenPopover = (element: HTMLElement | null) => {
+    setAnchorEl(element)
+    setLoadingProductos(true)
+    setProductsPage(0)
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setShowOnlyPaquetes(false)
+    filterProducts('', '', '', '')
+    setLoadingProductos(false)
+  }
+
+  const handleClosePopover = () => {
+    setAnchorEl(null)
+  }
+
+  const handleSelectProduct = (producto: Servicio) => {
+    setServicioSeleccionado(producto)
+    handleClosePopover()
+  }
+
+  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(event.target.checked)
+  }
 
   const handleSubmit = async () => {
     try {
@@ -1253,30 +1494,216 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
         </Grid>
         <Grid container spacing={2} mt={2}>
-          {/* Servicio Extra (con Autocomplete) */}
+          {/* Servicio (con Autocomplete) */}
           <Grid item xs={12} sm={3}>
-            <Autocomplete
-              fullWidth
-              options={servicios}
-              getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-              value={servicioSeleccionado}
-              onChange={(_, newValue) => setServicioSeleccionado(newValue)}
-              renderInput={params => (
-                <TextField
-                  {...params}
-                  label='Servicio Extra'
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <InputAdornment position='start'>
-                        <SearchIcon />
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              )}
-            />
+            <div ref={servicioAnchorRef} style={{ width: '100%' }}>
+              <TextField
+                fullWidth
+                size='small'
+                label='Servicio'
+                value={servicioSeleccionado ? `${servicioSeleccionado.nombre}${servicioSeleccionado.norma ? ` - ${servicioSeleccionado.norma}` : ''}` : ''}
+                onClick={() => handleOpenPopover(servicioAnchorRef.current)}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position='end'>
+                      <IconButton 
+                        size='small' 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenPopover(servicioAnchorRef.current)
+                        }}
+                      >
+                        <i className='ri-search-line' />
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </div>
           </Grid>
+
+          <Popover
+            open={Boolean(anchorEl)}
+            anchorEl={anchorEl}
+            onClose={handleClosePopover}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            PaperProps={{
+              sx: {
+                width: '100%',
+                maxWidth: '500px',
+                maxHeight: '400px',
+                overflow: 'auto',
+                zIndex: 1
+              }
+            }}
+          >
+            <Box sx={{ p: 2 }}>
+              <TextField
+                fullWidth
+                size='small'
+                placeholder='Buscar por nombre, descripción o código...'
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Área</InputLabel>
+                    <Select
+                      value={selectedArea}
+                      label='Área'
+                      onChange={handleAreaChange}
+                    >
+                      <MenuItem value=''>Todas</MenuItem>
+                      {areas.map(area => (
+                        <MenuItem key={area.id} value={area.nombre}>
+                          {area.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Tipo</InputLabel>
+                    <Select
+                      value={selectedTipo}
+                      label='Tipo'
+                      onChange={handleTipoChange}
+                    >
+                      <MenuItem value=''>Todos</MenuItem>
+                      {tipos.map(tipo => (
+                        <MenuItem key={tipo} value={tipo}>
+                          {tipo}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <FormControl size='small' fullWidth>
+                    <InputLabel shrink>Familia</InputLabel>
+                    <Select 
+                      value={selectedFamilia} 
+                      label='Familia' 
+                      onChange={handleFamiliaChange} 
+                      displayEmpty 
+                      renderValue={selected => selected === '' ? 'Todas' : selected}
+                      disabled={!selectedAreaId}
+                    >
+                      <MenuItem value=''>Todas</MenuItem>
+                      {familias.map(familia => (
+                        <MenuItem key={familia.id} value={familia.nombre}>
+                          {familia.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showOnlyPaquetes}
+                    onChange={handleShowOnlyPaquetesChange}
+                    size='small'
+                  />
+                }
+                label='Solo paquetes'
+                sx={{ mt: 2 }}
+              />
+
+              <List sx={{ pt: 2 }}>
+                {filteredProductos.map(producto => (
+                  <ListItem
+                    key={producto.id}
+                    onClick={() => handleSelectProduct(producto)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover'
+                      },
+                      flexDirection: 'column',
+                      alignItems: 'flex-start'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant='body1'>
+                            {producto.nombre}
+                            {producto.norma && (
+                              <Typography component='span' color='text.secondary'>
+                                {' '}- {producto.norma}
+                              </Typography>
+                            )}
+                          </Typography>
+                          {producto.esPaquete && (
+                            <Typography
+                              variant='caption'
+                              sx={{
+                                backgroundColor: 'primary.main',
+                                color: 'white',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1,
+                                ml: 1
+                              }}
+                            >
+                              Paquete
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant='caption' color='text.secondary'>
+                            {producto.area} - {producto.tipo} - {producto.familia}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              {totalProductos > ITEMS_PER_PAGE && (
+                <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                  <Button
+                    size='small'
+                    onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                    disabled={productsPage === 0}
+                  >
+                    Anterior
+                  </Button>
+                  <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                    Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                  </Typography>
+                  <Button
+                    size='small'
+                    onClick={() =>
+                      setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                    }
+                    disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                  >
+                    Siguiente
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </Popover>
 
           {/* Cantidad */}
           <Grid item xs={12} sm={2}>
