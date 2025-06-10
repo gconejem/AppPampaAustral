@@ -32,17 +32,29 @@ import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 
 // Constantes
 const ROLES_CONTACTO = [
-  { value: 'Encargado de Obra', label: 'Encargado de Obra' },
-  { value: 'Envío de Informes', label: 'Envío de Informes' },
-  { value: 'Dueño Representante', label: 'Dueño Representante' },
-  { value: 'Jefe de Obra / Planta', label: 'Jefe de Obra / Planta' },
-  { value: 'Supervisor', label: 'Supervisor' },
-  { value: 'Administrador de Obra', label: 'Administrador de Obra' },
-  { value: 'Encargado de Calidad', label: 'Encargado de Calidad' },
-  { value: 'Autocontrol', label: 'Autocontrol' },
-  { value: 'Profesional', label: 'Profesional' },
-  { value: 'Laboratorista', label: 'Laboratorista' },
-  { value: 'Otro', label: 'Otro (Especificar)' }
+  { value: 'encargado_obra', label: 'Encargado de Obra' },
+    { value: 'dueno', label: 'Dueño' },
+    { value: 'representante', label: 'Representante' },
+    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+    { value: 'supervisor', label: 'Supervisor' },
+    { value: 'administrador_obra', label: 'Administrador de Obra' },
+    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+    { value: 'autocontrol', label: 'Autocontrol' },
+    { value: 'profesional', label: 'Profesional' },
+    { value: 'laboratorista', label: 'Laboratorista' },
+    { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+    { value: 'otro', label: 'Otro (Especificar)' }
+] as const
+
+const SECTORES_COMERCIALES = [
+  { value: '1', label: 'Chillán y Alrededores' },
+  { value: '2', label: 'Concepción Metropolitano' },
+  { value: '3', label: 'Arauco y Alrededores' },
+  { value: '4', label: 'Los Ángeles y Alrededores' },
+  { value: '5', label: 'Norte' },
+  { value: '6', label: 'Centro' },
+  { value: '7', label: 'Sur' },
+  { value: '8', label: 'Otro' }
 ] as const
 
 // Funciones de utilidad
@@ -199,6 +211,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [cantidad, setCantidad] = useState<string>('')
   const [observacion, setObservacion] = useState<string>('')
   const [esSegundaVisita, setEsSegundaVisita] = useState<boolean>(false)
+  const [selectedSectorComercial, setSelectedSectorComercial] = useState<string>('')
 
   // Estados para laboratoristas
   const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
@@ -941,17 +954,21 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             <FormControl fullWidth>
               <InputLabel>Sector Comercial *</InputLabel>
               <Select
-                value={formData.sectorComercial}
-                onChange={e =>
+                label='Sector Comercial *'
+                value={selectedSectorComercial}
+                onChange={e => {
+                  setSelectedSectorComercial(e.target.value)
                   setFormData(prev => ({
                     ...prev,
                     sectorComercial: e.target.value
                   }))
-                }
+                }}
               >
-                <MenuItem value='NORTE'>Norte</MenuItem>
-                <MenuItem value='SUR'>Sur</MenuItem>
-                <MenuItem value='CENTRO'>Centro</MenuItem>
+                {SECTORES_COMERCIALES.map(s => 
+                  <MenuItem key={s.value} value={s.label}>
+                    {s.label}
+                  </MenuItem>
+                )}
               </Select>
             </FormControl>
           </Grid>
