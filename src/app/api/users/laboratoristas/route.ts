@@ -4,13 +4,15 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Obtener usuarios que tienen el rol de laboratorista
+    // Obtener usuarios que tienen el rol de laboratorista o laboratorista/encargado de área sala
     const laboratoristas = await prisma.user.findMany({
       where: {
         roles: {
           some: {
             rol: {
-              nombre: 'Laboratorista'
+              nombre: {
+                in: ['Laboratorista', 'Laboratorista / E. de Área Sala']
+              }
             }
           }
         }

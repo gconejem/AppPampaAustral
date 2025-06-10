@@ -146,6 +146,7 @@ interface Laboratorista {
   id: string
   name: string
   email: string
+  rol: string
 }
 
 interface LaboratoristaAgendado {
@@ -350,8 +351,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const formattedLaboratoristas = data.map((lab: any) => ({
           id: lab.id,
           name: lab.name,
-          email: lab.email
+          email: lab.email,
+          rol: lab.roles?.[0]?.rol?.nombre || 'Sin rol asignado'
         }))
+
+        console.log('formattedLaboratoristas', formattedLaboratoristas)
 
         setLaboratoristas(formattedLaboratoristas)
       } catch (error) {
@@ -1364,7 +1368,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <Autocomplete
                   fullWidth
                   options={laboratoristas}
-                  getOptionLabel={option => `${option.name} (${option.email})`}
+                  getOptionLabel={option => `${option.name} (${option.rol})`}
                   value={laboratoristaSeleccionado}
                   onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
                   renderInput={params => (
