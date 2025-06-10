@@ -802,7 +802,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 />
               )}
               renderOption={(props, option) => (
-                <li {...props}>
+                <li {...props} key={option.obraId}>
                   <Box>
                     <Typography variant='body1'>{option.nombreObra}</Typography>
                     <Typography variant='caption' color='textSecondary'>
