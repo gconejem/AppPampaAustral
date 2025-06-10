@@ -28,7 +28,7 @@ async function main() {
       { usuario: "jsepulveda", name: "Jonathan Sepúlveda", rut: "17.196.843-7", rol: "Laboratorista" },
       { usuario: "jgualas", name: "Jorge Gualas", rut: "8.849.590-K", rol: "Laboratorista" },
       { usuario: "jcsepulveda", name: "Juan C. Sepúlveda", rut: "17.696.769-2", rol: "Laboratorista" },
-      { usuario: "jtroncoso", name: "Juan Troncoso", rut: "8.812.393-9", rol: "Laboratorista" },
+      { usuario: "jtroncoso", name: "Juan Troncoso", rut: "8.812.393-9", rol: "Laboratorista / E. de Área Sala" },
       { usuario: "magalyl", name: "Magaly Lillo", rut: "10.824.874-2", rol: "E. de Ruta" },
       { usuario: "mperez", name: "Marcela Perez", rut: "17.755.838-9", rol: "Administrador" },
       { usuario: "msepulveda", name: "Marvin Sepulveda", rut: "14.025.121-6", rol: "Laboratorista" },
