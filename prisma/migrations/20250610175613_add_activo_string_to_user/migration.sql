@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "activo" TEXT NOT NULL DEFAULT 'ACTIVO';
