@@ -33,17 +33,17 @@ import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 // Constantes
 const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
-    { value: 'dueno', label: 'Dueño' },
-    { value: 'representante', label: 'Representante' },
-    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
-    { value: 'supervisor', label: 'Supervisor' },
-    { value: 'administrador_obra', label: 'Administrador de Obra' },
-    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
-    { value: 'autocontrol', label: 'Autocontrol' },
-    { value: 'profesional', label: 'Profesional' },
-    { value: 'laboratorista', label: 'Laboratorista' },
-    { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-    { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro (Especificar)' }
 ] as const
 
 const SECTORES_COMERCIALES = [
@@ -107,7 +107,8 @@ interface Obra {
   obraId: number
   nombreObra: string
   direccion: string
-  clienteId: number
+  clienteId: number,
+  contactos: ContactoObraForm[]
 }
 
 interface Solicitud {
@@ -171,9 +172,9 @@ interface ContactoObraForm {
   rol: string
   nombre: string
   email: string
-  telefono: string
+  telefono1: string
   telefono2?: string
-  esPrincipal: boolean
+  isPrincipal: boolean
 }
 
 const initialData: FormData = {
@@ -230,8 +231,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     rol: '',
     nombre: '',
     email: '',
-    telefono: '',
-    esPrincipal: false
+    telefono1: '',
+    isPrincipal: false
   })
 
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -240,8 +241,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     rol: '',
     nombre: '',
     email: '',
-    telefono: '',
-    esPrincipal: false
+    telefono1: '',
+    isPrincipal: false
   })
 
   // Renombrar comunas del hook para evitar conflictos
@@ -379,90 +380,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     fetchEquipos()
   }, [])
 
-  console.log('Estado actual de equipos:', equipos)
-
-  // Agregar efecto para cargar los contactos cuando se selecciona una obra
+  // efecto para ver los contactos actualizados
   useEffect(() => {
-    const contactosEjemplo = [
-      {
-        id: '1',
-        rol: 'Supervisor',
-        nombre: 'Juan Pérez',
-        email: 'juan.perez@empresa.com',
-        telefono: '+56 9 1234 5678',
-        esPrincipal: false
-      },
-      {
-        id: '2',
-        rol: 'Jefe de Obra',
-        nombre: 'María González',
-        email: 'maria.gonzalez@empresa.com',
-        telefono: '+56 9 8765 4321',
-        esPrincipal: false
-      },
-      {
-        id: '3',
-        rol: 'Encargado de Seguridad',
-        nombre: 'Carlos Rodríguez',
-        email: 'carlos.rodriguez@empresa.com',
-        telefono: '+56 9 5555 5555',
-        esPrincipal: false
-      }
-    ] as ContactoObraForm[]
-
-    const fetchContactosObra = async () => {
-      if (!formData.obraId) {
-        setContactos([])
-
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/obras/${formData.obraId}/contactos`)
-
-        if (!response.ok) {
-          console.log('No se pudieron cargar los contactos de la API, usando datos de ejemplo')
-          setContactos(
-            contactosEjemplo.map(c => ({
-              ...c,
-              esPrincipal: false
-            }))
-          )
-
-          return
-        }
-
-        const data = await response.json()
-
-        if (data && data.length > 0) {
-          setContactos(
-            data.map(c => ({
-              ...c,
-              esPrincipal: false
-            }))
-          )
-        } else {
-          console.log('No hay contactos en la API, usando datos de ejemplo')
-          setContactos(
-            contactosEjemplo.map(c => ({
-              ...c,
-              esPrincipal: false
-            }))
-          )
-        }
-      } catch (error) {
-        console.error('Error al cargar contactos:', error)
-        console.log('Error al cargar contactos, usando datos de ejemplo')
-        setContactos(
-          contactosEjemplo.map(c => ({
-            ...c,
-            esPrincipal: false
-          }))
-        )
-      }
-    }
-
-    fetchContactosObra()
+    console.log('contactos actualizados:', contactos)
+  }, [contactos])
+  
+  // efecto para cargar los contactos cuando se selecciona una obra
+  useEffect(() => {
+    console.log('formData.obraId', formData.obraId, obras)
+    setContactos(obras.find(obra => obra.obraId === formData.obraId)?.contactos || [])
   }, [formData.obraId])
 
   const handleSubmit = async () => {
@@ -591,6 +517,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setEditingContact({
       ...contactos[index]
     })
+    console.log('contactos[index]', contactos[index])
   }
 
   const handleSaveEdit = () => {
@@ -615,11 +542,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   }
 
   const agregarContacto = () => {
-    if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono) return
+    if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1) return
 
     const newContact: ContactoObraForm = {
       ...nuevoContacto,
-      esPrincipal: contactos.length === 0
+      isPrincipal: contactos.length === 0
     }
 
     setContactos([...contactos, newContact])
@@ -627,8 +554,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       rol: '',
       nombre: '',
       email: '',
-      telefono: '',
-      esPrincipal: false
+      telefono1: '',
+      isPrincipal: false
     })
   }
 
@@ -1080,8 +1007,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   nombre: contact.nombre,
                   rol: contact.cargo || '',
                   email: contact.email,
-                  telefono: contact.telefono1,
-                  esPrincipal: contactos.length === 0
+                  telefono1: contact.telefono1,
+                  isPrincipal: contactos.length === 0
                 }
 
                 setContactos([...contactos, newContact])
@@ -1165,11 +1092,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                       </TableCell>
                       <TableCell>
                         <TextField
-                          value={editingContact.telefono}
+                          value={editingContact.telefono1}
                           onChange={e => {
                             const formatted = formatPhone(e.target.value)
 
-                            setEditingContact({ ...editingContact, telefono: formatted })
+                            setEditingContact({ ...editingContact, telefono1: formatted })
                           }}
                           placeholder='Teléfono 1'
                           fullWidth
@@ -1203,10 +1130,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   ) : (
                     // Modo visualización
                     <>
-                      <TableCell>{contacto.rol}</TableCell>
+                      <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label}</TableCell>
                       <TableCell>{contacto.nombre}</TableCell>
                       <TableCell>{contacto.email}</TableCell>
-                      <TableCell>{contacto.telefono}</TableCell>
+                      <TableCell>{contacto.telefono1}</TableCell>
                       <TableCell>{contacto.telefono2}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -1217,17 +1144,17 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                             <i className='ri-delete-bin-line' />
                           </IconButton>
                           <IconButton
-                            color={contacto.esPrincipal ? 'warning' : 'default'}
+                            color={contacto.isPrincipal ? 'warning' : 'default'}
                             onClick={() => {
                               const updatedContactos = contactos.map((c, i) => ({
                                 ...c,
-                                esPrincipal: i === index ? !c.esPrincipal : false
+                                isPrincipal: i === index ? !c.isPrincipal : false
                               }))
 
                               setContactos(updatedContactos)
                             }}
                           >
-                            <i className={`ri-star-${contacto.esPrincipal ? 'fill' : 'line'}`} />
+                            <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
                           </IconButton>
                         </Box>
                       </TableCell>
@@ -1276,11 +1203,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 </TableCell>
                 <TableCell>
                   <TextField
-                    value={nuevoContacto.telefono}
+                    value={nuevoContacto.telefono1}
                     onChange={e => {
                       const formatted = formatPhone(e.target.value)
 
-                      setNuevoContacto({ ...nuevoContacto, telefono: formatted })
+                      setNuevoContacto({ ...nuevoContacto, telefono1: formatted })
                     }}
                     placeholder='Teléfono 1'
                     fullWidth
@@ -1304,7 +1231,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   <IconButton
                     onClick={agregarContacto}
                     disabled={
-                      !nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono
+                      !nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1
                     }
                   >
                     <i className='ri-add-line' />
