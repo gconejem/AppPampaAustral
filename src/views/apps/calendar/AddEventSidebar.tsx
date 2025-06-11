@@ -270,11 +270,17 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const { regiones, comunas: comunasRegion, selectedRegion, setSelectedRegion } = useUbicacion()
 
   // Convertir las fechas string a objetos Date para los datepickers
-  const [fechaInicio, setFechaInicio] = useState<Date | null>(
-    formData.fechaInicio ? new Date(formData.fechaInicio) : new Date()
-  )
+  const [fechaInicio, setFechaInicio] = useState<Date | null>(() => {
+    const d = formData.fechaInicio ? new Date(formData.fechaInicio) : new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
-  const [fechaFin, setFechaFin] = useState<Date | null>(formData.fechaFin ? new Date(formData.fechaFin) : new Date())
+  const [fechaFin, setFechaFin] = useState<Date | null>(() => {
+    const d = formData.fechaFin ? new Date(formData.fechaFin) : new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
   // Actualizar formData cuando cambien las fechas
   useEffect(() => {
