@@ -34,6 +34,10 @@ import ListItemText from '@mui/material/ListItemText'
 import Switch from '@mui/material/Switch'
 import Pagination from '@mui/material/Pagination'
 import { SelectChangeEvent } from '@mui/material/Select'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
 
 import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
@@ -117,7 +121,8 @@ interface Obra {
   direccion: string
   clienteId: number,
   contactos: ContactoObraForm[],
-  referencia: string
+  referencia: string,
+  numeroObra: string
 }
 
 interface Solicitud {
@@ -273,6 +278,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   // Actualizar formData cuando cambien las fechas
   useEffect(() => {
+    console.log('fechaInicio', fechaInicio)
     if (fechaInicio) {
       setFormData(prev => ({
         ...prev,
@@ -877,9 +883,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         {/* Primera fila con tipo de visita y fechas */}
         <Grid container spacing={2} mt={4}>
           {/* Tipo de visita with checkboxes */}
-          <Grid item xs={3}>
+          <Grid item xs={2}>
             <Box display='flex' alignItems='center'>
-              <Typography sx={{ mr: 2 }}>Tipo de:</Typography>
+              <Typography sx={{ mr: 3 }}>Tipo visita</Typography>
               <Box>
                 <FormControlLabel
                   control={
@@ -917,38 +923,62 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             </Box>
           </Grid>
 
-          {/* Fecha */}
+          {/* Fecha Inicio */}
           <Grid item xs={3}>
-            <TextField
-              fullWidth
-              label='Fecha *'
-              type='date'
-              value={fechaInicio ? fechaInicio.toISOString().split('T')[0] : ''}
-              onChange={e => {
-                const newDate = new Date(e.target.value)
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha Inicio *'
+                value={fechaInicio}
+                onChange={newDate => {
+                  if (newDate) {
+                    setFechaInicio(newDate)
+                    // Si la fecha de término está vacía, usamos la misma fecha
+                    if (!fechaFin) {
+                      const endDate = new Date(newDate)
+                      endDate.setHours(newDate.getHours() + 1)
+                      setFechaFin(endDate)
+                    }
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
 
-                if (fechaInicio) {
-                  newDate.setHours(fechaInicio.getHours(), fechaInicio.getMinutes())
-                }
-
-                setFechaInicio(newDate)
-
-                // Si la fecha de término está vacía, usamos la misma fecha
-                if (!fechaFin) {
-                  const endDate = new Date(newDate)
-
-                  endDate.setHours(newDate.getHours() + 1)
-                  setFechaFin(endDate)
-                }
-              }}
-              InputLabelProps={{
-                shrink: true
-              }}
-            />
+          {/* Fecha Fin */}
+          <Grid item xs={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha Fin'
+                value={fechaFin}
+                onChange={newDate => {
+                  if (newDate) {
+                    setFechaFin(newDate)
+                  }
+                }}
+                minDate={fechaInicio || undefined}
+                disabled={!formData.esRecurrente}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    error: !!(formData.esRecurrente && fechaFin && fechaInicio && fechaFin < fechaInicio),
+                    helperText: !formData.esRecurrente
+                      ? 'Activar "Recurrente" para seleccionar fecha de fin'
+                      : fechaFin && fechaInicio && fechaFin < fechaInicio
+                        ? 'La fecha de fin no puede ser anterior a la de inicio'
+                        : ''
+                  }
+                }}
+              />
+            </LocalizationProvider>
           </Grid>
 
           {/* Hora inicio */}
-          <Grid item xs={3}>
+          <Grid item xs={2}>
             <TextField
               fullWidth
               label='Hora inicio *'
@@ -961,14 +991,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onChange={e => {
                 const [hours, minutes] = e.target.value.split(':').map(Number)
                 const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
-
                 newDate.setHours(hours, minutes)
                 setFechaInicio(newDate)
 
                 // Actualizar fecha fin si es necesario
                 if (!fechaFin || fechaFin <= newDate) {
                   const endDate = new Date(newDate)
-
                   endDate.setHours(newDate.getHours() + 1)
                   setFechaFin(endDate)
                 }
@@ -980,7 +1008,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
 
           {/* Hora término */}
-          <Grid item xs={3}>
+          <Grid item xs={2}>
             <TextField
               fullWidth
               label='Hora término *'
@@ -993,7 +1021,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onChange={e => {
                 const [hours, minutes] = e.target.value.split(':').map(Number)
                 const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
-
                 newDate.setHours(hours, minutes)
                 setFechaFin(newDate)
               }}
@@ -1066,7 +1093,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               renderOption={(props, option) => (
                 <li {...props} key={option.obraId}>
                   <Box>
-                    <Typography variant='body1'>{option.nombreObra}</Typography>
+                    <Typography variant='body1'>{option.numeroObra} - {option.nombreObra.slice(0, 50)}</Typography>
                     <Typography variant='caption' color='textSecondary'>
                       {option.direccion}
                     </Typography>
