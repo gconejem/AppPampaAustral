@@ -137,7 +137,7 @@ interface Solicitud {
 
 interface Servicio {
   id: number
-  codigo: string
+  sku: string
   nombre: string
   descripcion?: string
   area?: string
@@ -718,9 +718,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const handleAgregarServicio = () => {
     if (!servicioSeleccionado || !cantidad) return
+    
+    console.log('servicioSeleccionado', servicioSeleccionado)
 
     const nuevoServicio: ServicioAgendado = {
-      codigo: servicioSeleccionado.codigo,
+      codigo: servicioSeleccionado.sku.slice(0, 3),
       servicio: servicioSeleccionado.nombre,
       cantidad: parseInt(cantidad),
       observacion: observacion,
