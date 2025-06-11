@@ -885,7 +885,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   control={
                     <Checkbox
                       checked={formData.tipoVisita === 'EVENTO'}
-                      onChange={e => setFormData({ ...formData, tipoVisita: e.target.checked ? 'EVENTO' : '' })}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          tipoVisita: e.target.checked ? 'EVENTO' : '',
+                          esRecurrente: e.target.checked ? false : prev.esRecurrente
+                        }))
+                      }}
                       size='small'
                     />
                   }
@@ -895,7 +901,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   control={
                     <Checkbox
                       checked={formData.esRecurrente}
-                      onChange={e => setFormData({ ...formData, esRecurrente: e.target.checked })}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          esRecurrente: e.target.checked,
+                          tipoVisita: e.target.checked ? '' : prev.tipoVisita
+                        }))
+                      }}
                       size='small'
                     />
                   }
