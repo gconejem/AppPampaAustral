@@ -53,6 +53,7 @@ model Contacto {
   clientesContactos ClienteContacto[]
   contactosObra     ContactoObra[]
   Cotizacion        Cotizacion[]
+  contactosAgenda   ContactoAgenda[]
 }
 
 model CondicionComercial {
@@ -414,6 +415,21 @@ model Agenda {
   equipos         AgendaEquipo[]
   servicios       AgendaServicio[]
   ordenesTrabajo  OrdenTrabajo[]
+  contactos       ContactoAgenda[]
+}
+
+model ContactoAgenda {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  rol         String
+  email       String?
+  telefono1   String?
+  telefono2   String?
+  isPrincipal Boolean   @default(false)
+  agendaId    Int
+  contactId   Int?
+  contacto    Contacto? @relation(fields: [contactId], references: [contactId])
+  agenda      Agenda    @relation(fields: [agendaId], references: [id])
 }
 
 model AgendaServicio {

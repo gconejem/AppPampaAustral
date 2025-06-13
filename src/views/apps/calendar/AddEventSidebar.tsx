@@ -197,6 +197,16 @@ interface ContactoObraForm {
   isPrincipal: boolean
 }
 
+interface ContactoAgendaForm {
+  id?: string
+  rol: string
+  nombre: string
+  email: string
+  telefono1: string
+  telefono2?: string
+  isPrincipal: boolean
+}
+
 const initialData: FormData = {
   titulo: '',
   tipoVisita: '',
@@ -246,9 +256,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [equiposAgendados, setEquiposAgendados] = useState<EquipoAgendado[]>([])
 
   // Nuevo estado para los contactos de la obra
-  const [contactos, setContactos] = useState<ContactoObraForm[]>([])
+  const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
 
-  const [nuevoContacto, setNuevoContacto] = useState<ContactoObraForm>({
+  const [nuevoContacto, setNuevoContacto] = useState<ContactoAgendaForm>({
     rol: '',
     nombre: '',
     email: '',
@@ -258,7 +268,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
 
-  const [editingContact, setEditingContact] = useState<ContactoObraForm>({
+  const [editingContact, setEditingContact] = useState<ContactoAgendaForm>({
     rol: '',
     nombre: '',
     email: '',
@@ -685,14 +695,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       const visitaData = {
         ...formData,
-        titulo: tituloGenerado, // Usar el título generado
+        titulo: tituloGenerado,
         estado: 'AGENDADA',
         servicios: serviciosAgendados.map(servicio => ({
           ...servicio,
           id: parseInt(servicio.codigo)
         })),
         laboratoristas: laboratoristasAgendados,
-        equipos: equiposAgendados
+        equipos: equiposAgendados,
+        contactos: contactos
       }
 
       console.log('Datos completos a enviar:', visitaData)
@@ -717,6 +728,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       setServiciosAgendados([])
       setLaboratoristasAgendados([])
       setEquiposAgendados([])
+      setContactos([])
 
       // Mostrar mensaje de éxito (puedes usar un toast o snackbar)
       console.log('Visita creada exitosamente')
@@ -806,7 +818,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const agregarContacto = () => {
     if (!nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1) return
 
-    const newContact: ContactoObraForm = {
+    const newContact: ContactoAgendaForm = {
       ...nuevoContacto,
       isPrincipal: contactos.length === 0
     }
@@ -1300,7 +1312,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={6}>
             <ContactSearch
               onContactSelect={contact => {
-                const newContact: ContactoObraForm = {
+                const newContact: ContactoAgendaForm = {
                   nombre: contact.nombre,
                   rol: contact.cargo || '',
                   email: contact.email,

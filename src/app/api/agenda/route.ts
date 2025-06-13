@@ -49,6 +49,18 @@ export async function POST(request: Request) {
             equipoId: equipo.id,
             cantidad: 1
           }))
+        },
+
+        // Crear contactos relacionados
+        contactos: {
+          create: data.contactos.map((contacto: any) => ({
+            nombre: contacto.nombre,
+            rol: contacto.rol,
+            email: contacto.email,
+            telefono1: contacto.telefono1,
+            telefono2: contacto.telefono2,
+            isPrincipal: contacto.isPrincipal
+          }))
         }
       }
     })
@@ -85,7 +97,12 @@ export async function GET() {
             equipo: true
           }
         },
-        obra: true
+        obra: true,
+        contactos: {
+          include: {
+            contacto: true
+          }
+        }
       }
     })
 
