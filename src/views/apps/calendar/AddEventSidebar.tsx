@@ -742,15 +742,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const handleAgregarServicio = () => {
     if (!servicioSeleccionado || !cantidad) return
-    
-    console.log('servicioSeleccionado', servicioSeleccionado)
 
     const nuevoServicio: ServicioAgendado = {
-      codigo: servicioSeleccionado.sku.slice(0, 3),
-      servicio: servicioSeleccionado.nombre,
+      codigo: servicioSeleccionado.sku,
+      servicio: servicioSeleccionado.norma ? `${servicioSeleccionado.nombre} - ${servicioSeleccionado.norma}` : servicioSeleccionado.nombre,
       cantidad: parseInt(cantidad),
-      observacion: observacion,
-      esSegundaVisita: esSegundaVisita
+      observacion: observacion || undefined,
+      esSegundaVisita
     }
 
     setServiciosAgendados(prev => [...prev, nuevoServicio])
