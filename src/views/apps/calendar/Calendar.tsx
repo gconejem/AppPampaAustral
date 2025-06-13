@@ -127,7 +127,8 @@ const Calendar = (props: CalenderProps) => {
           servicios: eventToView.extendedProps?.servicios || [],
           asignados: eventToView.extendedProps?.asignados || [],
           equipos: eventToView.extendedProps?.equipos || [],
-          observaciones: eventToView.extendedProps?.observaciones
+          observaciones: eventToView.extendedProps?.observaciones,
+          contactos: eventToView.extendedProps?.contactos || []
         }
       }
 
@@ -1049,7 +1050,8 @@ const Calendar = (props: CalenderProps) => {
           comuna: event.comuna,
           region: event.region,
           sectorComercial: event.sectorComercial,
-          observaciones: event.observaciones
+          observaciones: event.observaciones,
+          contactos: event.contactos
         }
       }))
 

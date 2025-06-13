@@ -1,5 +1,6 @@
 import { Dialog, Typography, Box, IconButton, Button, Checkbox, FormControlLabel, Grid } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import { ROLES_CONTACTO } from '@/constants/roles'
 
 interface EventPreviewProps {
   open: boolean
@@ -28,16 +29,18 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth='md'
+      maxWidth='xl'
       fullWidth
       PaperProps={{
         sx: {
           borderRadius: 1,
-          padding: 2
+          padding: 2,
+          maxHeight: '90vh',
+          overflow: 'auto'
         }
       }}
     >
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2, maxHeight: 'calc(90vh - 32px)', overflow: 'auto' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant='h6'>Detalles de la Cita</Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -183,6 +186,71 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 </Typography>
               </Box>
             </Box>
+          </Grid>
+
+          {/* Contactos */}
+          <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Contactos
+            </Typography>
+            {Array.isArray(event.extendedProps?.contactos) && event.extendedProps.contactos.length > 0 ? (
+              event.extendedProps.contactos.map((contacto: any, index: number) => (
+                <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Nombre
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {contacto.nombre}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Rol
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Email
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {contacto.email}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Teléfono 1
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {contacto.telefono1}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Teléfono 2
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {contacto.telefono2 || 'No especificado'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Principal
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {contacto.isPrincipal ? 'Sí' : 'No'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))
+            ) : (
+              <Typography color='text.secondary'>No hay contactos asignados</Typography>
+            )}
           </Grid>
 
           {/* Servicios */}
