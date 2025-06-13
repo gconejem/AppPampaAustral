@@ -43,6 +43,8 @@ import RadioGroup from '@mui/material/RadioGroup'
 
 import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
+import AddContact from '@/views/apps/contacts/list/AddContact'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 // Constantes
 const ROLES_CONTACTO = [
@@ -430,8 +432,23 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   
   // efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
-    console.log('formData.obraId', formData.obraId, obras)
-    setContactos(obras.find(obra => obra.obraId === formData.obraId)?.contactos || [])
+    const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
+    // Combinar contactos actuales y de la obra, evitando duplicados por email
+    const emails = new Set(contactos.map(c => c.email))
+    const nuevosContactos = [...contactos]
+    obraContactos.forEach((c: any) => {
+      if (!emails.has(c.email)) {
+        nuevosContactos.push({
+          nombre: c.nombre,
+          rol: c.rol || c.cargo || '',
+          email: c.email,
+          telefono1: c.telefono1,
+          telefono2: c.telefono2,
+          isPrincipal: false
+        })
+      }
+    })
+    setContactos(nuevosContactos)
     setSelectedReferencia(obras.find(obra => obra.obraId === formData.obraId)?.referencia || '')
   }, [formData.obraId])
 
@@ -831,6 +848,23 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       telefono1: '',
       isPrincipal: false
     })
+  }
+
+  // Estado para el drawer de nuevo contacto
+  const [addContactOpen, setAddContactOpen] = useState(false)
+
+  // Función para agregar el contacto creado
+  const handleAddContact = (contact: ContactType) => {
+    if (!contact) return
+    const newContact: ContactoAgendaForm = {
+      nombre: contact.nombre,
+      rol: (contact.rol || contact.cargo || ''),
+      email: contact.email,
+      telefono1: contact.telefono1,
+      telefono2: contact.telefono2,
+      isPrincipal: contactos.length === 0
+    }
+    setContactos([...contactos, newContact])
   }
 
   return (
@@ -1293,19 +1327,25 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         <Divider sx={{ my: 4 }} />
         <Grid container alignItems='center' spacing={2}>
           <Grid item xs={6}>
-            <Typography variant='h5'>Contactos</Typography>
+            <Button
+              variant='contained'
+              color='primary'
+              onClick={() => setAddContactOpen(true)}
+              startIcon={<i className='ri-add-line' />}
+            >
+              Nuevo Contacto
+            </Button>
           </Grid>
           <Grid item xs={6}>
             <ContactSearch
               onContactSelect={contact => {
-                const newContact: ContactoAgendaForm = {
+                const newContact = {
                   nombre: contact.nombre,
-                  rol: contact.cargo || '',
+                  rol: contact.rol || contact.cargo || '',
                   email: contact.email,
                   telefono1: contact.telefono1,
                   isPrincipal: contactos.length === 0
                 }
-
                 setContactos([...contactos, newContact])
               }}
             />
@@ -1459,7 +1499,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               ))}
 
               {/* Fila para nuevo contacto */}
-              <TableRow>
+              {/* <TableRow>
                 <TableCell>
                   <FormControl fullWidth size='small'>
                     <Select
@@ -1532,7 +1572,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     <i className='ri-add-line' />
                   </IconButton>
                 </TableCell>
-              </TableRow>
+              </TableRow> */}
             </TableBody>
           </Table>
         </TableContainer>
@@ -1996,6 +2036,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
         </Grid>
       </Box>
+
+      {/* Drawer para crear contacto */}
+      <AddContact
+        open={addContactOpen}
+        handleClose={() => setAddContactOpen(false)}
+        onContactCreated={handleAddContact}
+      />
     </Drawer>
   )
 }
