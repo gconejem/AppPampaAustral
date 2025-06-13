@@ -454,7 +454,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   // Estados para el buscador de servicios
   const [selectedArea, setSelectedArea] = useState('')
-  const [selectedTipo, setSelectedTipo] = useState('')
+  const [selectedTipo, setSelectedTipo] = useState('Terreno')
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [tipos, setTipos] = useState<string[]>([])
   const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
@@ -660,10 +660,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setSearchTerm('')
     setSelectedArea('')
     setSelectedAreaId(null)
-    setSelectedTipo('')
+    setSelectedTipo('Terreno')
     setSelectedFamilia('')
     setShowOnlyPaquetes(false)
-    filterProducts('', '', '', '')
+    filterProducts('', '', 'Terreno', '')
     setLoadingProductos(false)
   }
 
