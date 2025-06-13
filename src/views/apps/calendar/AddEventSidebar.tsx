@@ -618,7 +618,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   // Función para filtrar productos
-  const filterProducts = (search: string, area: string, tipo: string, familia: string) => {
+  const filterProducts = (search: string, area: string, tipo: string, familia: string, onlyPaquetes = showOnlyPaquetes) => {
     const params = new URLSearchParams()
     params.append('page', '1')
     params.append('limit', ITEMS_PER_PAGE.toString())
@@ -626,7 +626,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     if (area) params.append('area', area)
     if (tipo) params.append('tipo', tipo)
     if (familia) params.append('familia', familia)
-    if (showOnlyPaquetes) params.append('esPaquete', 'true')
+    if (onlyPaquetes) params.append('esPaquete', 'true')
 
     fetch(`/api/productos?${params.toString()}`)
       .then(res => {
@@ -663,7 +663,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setSelectedTipo('Terreno')
     setSelectedFamilia('')
     setShowOnlyPaquetes(false)
-    filterProducts('', '', 'Terreno', '')
+    filterProducts('', '', 'Terreno', '', false)
     setLoadingProductos(false)
   }
 
@@ -678,6 +678,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setShowOnlyPaquetes(event.target.checked)
+    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia, event.target.checked)
   }
 
   const handleSubmit = async () => {

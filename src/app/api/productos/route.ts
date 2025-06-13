@@ -131,6 +131,7 @@ export async function GET(req: Request) {
     const tipo = searchParams.get('tipo') || undefined
     const familia = searchParams.get('familia') || undefined
     const search = searchParams.get('search') || undefined
+    const esPaquete = searchParams.get('esPaquete')
 
     // Construir el objeto where para filtrar
     const where: any = { estado: 'ACTIVO' }
@@ -138,6 +139,7 @@ export async function GET(req: Request) {
     if (area) where.area = area
     if (tipo) where.tipo = tipo
     if (familia) where.familia = familia
+    if (esPaquete !== undefined) where.esPaquete = esPaquete === 'true'
 
     // Agregar búsqueda por nombre, descripción o norma
     if (search) {
