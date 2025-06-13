@@ -38,6 +38,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
 
 import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
@@ -897,46 +899,32 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         </Grid>
 
         {/* Primera fila con tipo de visita y fechas */}
-        <Grid container spacing={2} mt={4}>
-          {/* Tipo de visita with checkboxes */}
+        <Grid container spacing={2} mt={4} alignItems='center'>
+          {/* Tipo de visita con radio buttons */}
           <Grid item xs={2}>
-            <Box display='flex' alignItems='center'>
-              <Typography sx={{ mr: 3 }}>Tipo visita</Typography>
-              <Box>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.tipoVisita === 'EVENTO'}
-                      onChange={e => {
-                        setFormData(prev => ({
-                          ...prev,
-                          tipoVisita: e.target.checked ? 'EVENTO' : '',
-                          esRecurrente: e.target.checked ? false : prev.esRecurrente
-                        }))
-                      }}
-                      size='small'
-                    />
-                  }
-                  label='Evento'
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.esRecurrente}
-                      onChange={e => {
-                        setFormData(prev => ({
-                          ...prev,
-                          esRecurrente: e.target.checked,
-                          tipoVisita: e.target.checked ? '' : prev.tipoVisita
-                        }))
-                      }}
-                      size='small'
-                    />
-                  }
-                  label='Recurrente'
-                />
-              </Box>
-            </Box>
+            <Typography variant='subtitle1' sx={{ color: 'error.main', mb: 0.5 }}>
+              Tipo de Visita *
+            </Typography>
+            <RadioGroup
+              row
+              value={formData.tipoVisita}
+              onChange={e => {
+                const value = e.target.value
+                setFormData(prev => ({
+                  ...prev,
+                  tipoVisita: value,
+                  esRecurrente: value === 'RECURRENTE'
+                }))
+              }}
+            >
+              <FormControlLabel value='EVENTO' control={<Radio />} label='Evento' />
+              <FormControlLabel value='RECURRENTE' control={<Radio />} label='Recurrente' />
+            </RadioGroup>
+            {!formData.tipoVisita && (
+              <Typography variant='caption' color='error' sx={{ mt: 1, display: 'block' }}>
+                Debe seleccionar un tipo de visita
+              </Typography>
+            )}
           </Grid>
 
           {/* Fecha Inicio */}
@@ -977,12 +965,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   }
                 }}
                 minDate={fechaInicio || undefined}
-                disabled={!formData.esRecurrente}
+                disabled={formData.tipoVisita !== 'RECURRENTE'}
                 slotProps={{
                   textField: {
                     fullWidth: true,
-                    error: !!(formData.esRecurrente && fechaFin && fechaInicio && fechaFin < fechaInicio),
-                    helperText: !formData.esRecurrente
+                    error: !!(formData.tipoVisita === 'RECURRENTE' && fechaFin && fechaInicio && fechaFin < fechaInicio),
+                    helperText: formData.tipoVisita !== 'RECURRENTE'
                       ? 'Activar "Recurrente" para seleccionar fecha de fin'
                       : fechaFin && fechaInicio && fechaFin < fechaInicio
                         ? 'La fecha de fin no puede ser anterior a la de inicio'
