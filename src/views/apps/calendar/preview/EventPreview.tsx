@@ -260,38 +260,48 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
             </Typography>
             {Array.isArray(event.extendedProps?.servicios) && event.extendedProps.servicios.length > 0 ? (
               event.extendedProps.servicios.map((servicio: any, index: number) => (
-                <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                        Código
-                      </Typography>
-                      <Typography>{servicio.codigo}</Typography>
-                    </Grid>
-                    <Grid item xs={6} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Servicio
                       </Typography>
-                      <Typography>{servicio.nombre}</Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {servicio.servicio} {servicio.norma ? `- ${servicio.norma}` : ''}
+                      </Typography>
                     </Grid>
-                    <Grid item xs={6} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Código
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {servicio.codigo}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Cantidad
                       </Typography>
-                      <Typography>{servicio.cantidad}</Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {servicio.cantidad}
+                      </Typography>
                     </Grid>
-                    <Grid item xs={6} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Segunda Visita
                       </Typography>
-                      <Typography>{servicio.esSegundaVisita ? 'Sí' : 'No'}</Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {servicio.esSegundaVisita ? 'Sí' : 'No'}
+                      </Typography>
                     </Grid>
                     {servicio.observacion && (
                       <Grid item xs={12}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                           Observación
                         </Typography>
-                        <Typography>{servicio.observacion}</Typography>
+                        <Typography sx={{ fontSize: '0.875rem' }}>
+                          {servicio.observacion}
+                        </Typography>
                       </Grid>
                     )}
                   </Grid>
@@ -351,31 +361,39 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
             {Array.isArray(event.extendedProps?.equipos) && event.extendedProps.equipos.length > 0 ? (
               event.extendedProps.equipos.map((equipo: any, index: number) => (
                 <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                        Código
-                      </Typography>
-                      <Typography>{equipo.codigo}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Equipo
                       </Typography>
-                      <Typography>{equipo.nombre}</Typography>
+                      <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {equipo.equipo?.nombre}
+                      </Typography>
                     </Grid>
                     <Grid item xs={12} md={3}>
-                      <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                        Código
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {equipo.equipo?.codigo}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Cantidad
                       </Typography>
-                      <Typography>{equipo.cantidad}</Typography>
+                      <Typography sx={{ fontSize: '0.875rem' }}>
+                        {equipo.cantidad}
+                      </Typography>
                     </Grid>
                     {equipo.observacion && (
                       <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                           Observación
                         </Typography>
-                        <Typography>{equipo.observacion}</Typography>
+                        <Typography sx={{ fontSize: '0.875rem' }}>
+                          {equipo.observacion}
+                        </Typography>
                       </Grid>
                     )}
                   </Grid>
