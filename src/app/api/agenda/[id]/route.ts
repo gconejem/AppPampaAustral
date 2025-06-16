@@ -25,7 +25,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     await prisma.$transaction([
       prisma.agendaServicio.deleteMany({ where: { agendaId: id } }),
       prisma.agendaAsignado.deleteMany({ where: { agendaId: id } }),
-      prisma.agendaEquipo.deleteMany({ where: { agendaId: id } })
+      prisma.agendaEquipo.deleteMany({ where: { agendaId: id } }),
+      prisma.contactoAgenda.deleteMany({ where: { agendaId: id } })
     ])
 
     // Actualizar el evento con los nuevos datos
@@ -74,6 +75,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             cantidad: equipo.cantidad || 1,
             observacion: equipo.observacion
           }))
+        },
+
+        // Crear contactos relacionados
+        contactos: {
+          create: data.contactos?.map((contacto: any) => ({
+            nombre: contacto.nombre,
+            rol: contacto.rol,
+            email: contacto.email,
+            telefono1: contacto.telefono1,
+            telefono2: contacto.telefono2,
+            isPrincipal: contacto.isPrincipal
+          })) || []
         }
       },
       include: {
@@ -89,7 +102,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             equipo: true
           }
         },
-        obra: true
+        obra: true,
+        contactos: true
       }
     })
 

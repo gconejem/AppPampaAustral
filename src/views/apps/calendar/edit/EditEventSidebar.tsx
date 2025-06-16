@@ -463,7 +463,8 @@ const EditEventSidebar = ({
           id: parseInt(servicio.codigo)
         })),
         laboratoristas: laboratoristasAgendados,
-        equipos: equiposAgendados
+        equipos: equiposAgendados,
+        contactos: contactos // Asegurar que se envían los contactos
       }
 
       console.log('Datos completos a enviar para actualización:', visitaData)
@@ -479,19 +480,21 @@ const EditEventSidebar = ({
 
       if (!response.ok) {
         const error = await response.json()
-
         throw new Error(error.message || 'Error al actualizar la agenda')
       }
 
       // Cerrar sidebar y mostrar mensaje de éxito
       handleEditEventSidebarToggle()
 
+      // Recargar la lista de visitas tras guardar
+      if (typeof window !== 'undefined') {
+        fetch('/api/agenda')
+      }
+
       // Mostrar mensaje de éxito (se podría implementar un toast o snackbar)
       console.log('Visita actualizada exitosamente')
     } catch (error: any) {
       console.error('Error:', error)
-
-      // Mostrar mensaje de error al usuario
       alert(error?.message || 'Error al actualizar la visita')
     }
   }
