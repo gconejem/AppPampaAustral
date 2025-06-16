@@ -19,6 +19,10 @@ import EditIcon from '@mui/icons-material/Edit'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import SaveIcon from '@mui/icons-material/Save'
 import CloseIcon from '@mui/icons-material/Close'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
 
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
@@ -139,6 +143,38 @@ const EditEventSidebar = ({
   // Estados para edición en línea de servicios
   const [editingIndex, setEditingIndex] = useState<number>(-1)
   const [editingService, setEditingService] = useState<ServicioAgendado | null>(null)
+
+  // Convertir las fechas string a objetos Date para los datepickers
+  const [fechaInicio, setFechaInicio] = useState<Date | null>(() => {
+    const d = formData.fechaInicio ? new Date(formData.fechaInicio) : new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const [fechaFin, setFechaFin] = useState<Date | null>(() => {
+    const d = formData.fechaFin ? new Date(formData.fechaFin) : new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  // Actualizar formData cuando cambien las fechas
+  useEffect(() => {
+    if (fechaInicio) {
+      setFormData(prev => ({
+        ...prev,
+        fechaInicio: fechaInicio.toISOString()
+      }))
+    }
+  }, [fechaInicio])
+
+  useEffect(() => {
+    if (fechaFin) {
+      setFormData(prev => ({
+        ...prev,
+        fechaFin: fechaFin.toISOString()
+      }))
+    }
+  }, [fechaFin])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -465,26 +501,28 @@ const EditEventSidebar = ({
 
               {/* Fecha */}
               <Grid item xs={3}>
-                <TextField
-                  fullWidth
-                  label='Fecha'
-                  type='date'
-                  value={formData.fechaInicio.split('T')[0]}
-                  onChange={e => {
-                    const time = formData.fechaInicio.split('T')[1] || '00:00'
-
-                    handleInputChange('fechaInicio', `${e.target.value}T${time}`)
-
-                    // Si la fecha de término está vacía, usamos la misma fecha
-                    if (!formData.fechaFin) {
-                      handleInputChange('fechaFin', `${e.target.value}T00:00`)
-                    }
-                  }}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                  required
-                />
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                  <DatePicker
+                    label='Fecha Inicio *'
+                    value={fechaInicio}
+                    onChange={newDate => {
+                      if (newDate) {
+                        setFechaInicio(newDate)
+                        // Si la fecha de término está vacía, usamos la misma fecha
+                        if (!fechaFin) {
+                          const endDate = new Date(newDate)
+                          endDate.setHours(newDate.getHours() + 1)
+                          setFechaFin(endDate)
+                        }
+                      }
+                    }}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
               </Grid>
 
               {/* Hora inicio */}
@@ -496,7 +534,6 @@ const EditEventSidebar = ({
                   value={formData.fechaInicio.split('T')[1] || ''}
                   onChange={e => {
                     const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
-
                     handleInputChange('fechaInicio', `${date}T${e.target.value}`)
                   }}
                   InputLabelProps={{
@@ -514,11 +551,7 @@ const EditEventSidebar = ({
                   type='time'
                   value={formData.fechaFin.split('T')[1] || ''}
                   onChange={e => {
-                    const date =
-                      formData.fechaFin.split('T')[0] ||
-                      formData.fechaInicio.split('T')[0] ||
-                      new Date().toISOString().split('T')[0]
-
+                    const date = formData.fechaFin.split('T')[0] || formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
                     handleInputChange('fechaFin', `${date}T${e.target.value}`)
                   }}
                   InputLabelProps={{
