@@ -17,22 +17,27 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     // Usar una transacción para eliminar todo en el orden correcto
     await prisma.$transaction(async tx => {
-      // 1. Eliminar servicios asociados
+      // 1. Eliminar contactos asociados
+      await tx.contactoAgenda.deleteMany({
+        where: { agendaId }
+      })
+
+      // 2. Eliminar servicios asociados
       await tx.agendaServicio.deleteMany({
         where: { agendaId }
       })
 
-      // 2. Eliminar asignados
+      // 3. Eliminar asignados
       await tx.agendaAsignado.deleteMany({
         where: { agendaId }
       })
 
-      // 3. Eliminar equipos
+      // 4. Eliminar equipos
       await tx.agendaEquipo.deleteMany({
         where: { agendaId }
       })
 
-      // 4. Finalmente eliminar la agenda
+      // 5. Finalmente eliminar la agenda
       await tx.agenda.delete({
         where: { id: agendaId }
       })
