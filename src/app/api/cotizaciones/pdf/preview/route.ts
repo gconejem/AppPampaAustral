@@ -23,20 +23,29 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
   const notasTipoA = `
     <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
     <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
-      <strong>Valores unitarios Neto (sin IVA incluido)</strong>
-      <br><br>
-      <strong>Adicionales contra evento:</strong>
-      <ul style='margin-top: 4px; margin-bottom: 12px;'>
-        <li>Copia digital adicional tiene un costo de <strong>0.15 UF neto.</strong></li>
-        <li>Anexo de Informe, tendrá un costo de <strong>0.42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
-        <li>Informe con firma y timbres físicos tiene un costo de <strong>0.58 UF neto</strong>.</li>
-      </ul>
-      <strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
-      <ul style='margin-top: 4px; margin-bottom: 12px;'>
-        <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
-        <li><strong>100% Adicional</strong> Sábado, Domingo o Festivo.</li>
-      </ul>
-      <strong>Cualquier requisito adicional</strong>, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.
+      <ol style="margin-top: 0; margin-bottom: 12px; padding-left: 18px;">
+        <li><b>Valores unitarios Neto (<span style='text-decoration: underline;'>sin IVA incluido</span>)</b></li>
+        <li><b>Adicionales en Terreno (contra evento):</b>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>Costo adicional del Laboratorista por hora: 1,7 UF – (Se considera una permanencia máxima de 1 hora en obra)</li>
+            <li>Jornada completa de Laboratorista (8 horas): 8,4 UF.</li>
+            <li>Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados).
+              <ul style="margin-top: 2px; margin-bottom: 2px;">
+                <li>50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+                <li>100% Adicional: Sábado, Domingo o Festivo.</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><b>Adicionales relacionados a los Informes de Laboratorio.</b>
+          <ul style="margin-top: 4px; margin-bottom: 8px;">
+            <li>Copia digital adicional: 0.15 UF neto.</li>
+            <li>Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.</li>
+            <li>Informe con firma y timbres físicos: 0.58 UF neto</li>
+          </ul>
+        </li>
+        <li><b>Requisitos adicionales:</b> Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.</li>
+      </ol>
     </div>
   `;
 
@@ -140,6 +149,10 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
         .totales strong { font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; }
         .table tbody { font-size: 0.8125rem; }
         .terminos-condiciones, .terminos-condiciones li { text-align: justify; }
+        /* Evitar cortes en saltos de página */
+        .table tr { page-break-inside: avoid; }
+        .table ul { page-break-inside: avoid; }
+        .table li { page-break-inside: avoid; }
         @page { 
           margin: 5mm 5mm 25mm 5mm;
         }
