@@ -1155,7 +1155,7 @@ const Calendar = (props: CalenderProps) => {
     <>
       <Card>
         <CardContent>
-          <Box sx={{ height: 'calc(100vh - 16rem)' }}>
+          <Box sx={{ height: 'calc(100vh - 16rem)', overflow: 'auto' }}>
             {/* Contenedor principal de los filtros */}
             <Box sx={{ borderBottom: theme => `1px solid ${theme.palette.divider}` }}>
               {/* Fila de selección y edición */}
