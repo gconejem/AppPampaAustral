@@ -444,7 +444,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           email: c.email,
           telefono1: c.telefono1,
           telefono2: c.telefono2,
-          isPrincipal: false
+          isPrincipal: c.isPrincipal === true
         })
       }
     })
