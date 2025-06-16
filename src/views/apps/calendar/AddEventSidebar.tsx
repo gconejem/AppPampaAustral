@@ -713,10 +713,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       const tituloGenerado = `Visita ${cliente?.razonSocial} - ${serviciosPrincipales} (${fechaFormateada})`
 
+      // Preparar datos para enviar
       const visitaData = {
         ...formData,
         titulo: tituloGenerado,
-        estado: 'AGENDADA',
+        estado: estado,
+        referencia: selectedReferencia,
         servicios: serviciosAgendados.map(servicio => ({
           ...servicio,
           id: parseInt(servicio.codigo)
@@ -728,6 +730,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       console.log('Datos completos a enviar:', visitaData)
 
+      // Enviar la solicitud POST para crear el evento
       const response = await fetch('/api/agenda', {
         method: 'POST',
         headers: {
@@ -738,25 +741,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       if (!response.ok) {
         const error = await response.json()
-
         throw new Error(error.message || 'Error al crear la agenda')
       }
 
-      // Limpiar formulario
+      // Cerrar sidebar y mostrar mensaje de éxito
       handleAddEventSidebarToggle()
-      setFormData(initialData)
-      setServiciosAgendados([])
-      setLaboratoristasAgendados([])
-      setEquiposAgendados([])
-      setContactos([])
-
-      // Mostrar mensaje de éxito (puedes usar un toast o snackbar)
-      console.log('Visita creada exitosamente')
+      toast.success('Visita agendada exitosamente')
     } catch (error: any) {
       console.error('Error:', error)
-
-      // Mostrar mensaje de error al usuario
-      alert(error?.message || 'Error al crear la visita')
+      toast.error(error?.message || 'Error al agendar la visita')
     }
   }
 
@@ -1312,7 +1305,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             <TextField
               fullWidth
               label='Referencia'
-              // value={formData.referencia}
               value={selectedReferencia}
               placeholder='Ej: Cerca del supermercado, Edificio azul, etc.'
               onChange={e =>{
@@ -1388,11 +1380,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               </TableRow>
             </TableHead>
             <TableBody>
-              {/* Lista de contactos agregados */}
               {contactos.map((contacto, index) => (
                 <TableRow key={index}>
                   {editingContactIndex === index ? (
-                    // Modo edición
                     <>
                       <TableCell>
                         <FormControl fullWidth size='small'>
@@ -1464,7 +1454,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                       </TableCell>
                     </>
                   ) : (
-                    // Modo visualización
                     <>
                       <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label}</TableCell>
                       <TableCell>{contacto.nombre}</TableCell>
@@ -1498,82 +1487,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   )}
                 </TableRow>
               ))}
-
-              {/* Fila para nuevo contacto */}
-              {/* <TableRow>
-                <TableCell>
-                  <FormControl fullWidth size='small'>
-                    <Select
-                      value={nuevoContacto.rol}
-                      onChange={e => setNuevoContacto({ ...nuevoContacto, rol: e.target.value })}
-                      displayEmpty
-                    >
-                      <MenuItem value='' disabled>
-                        Seleccionar Cargo
-                      </MenuItem>
-                      {ROLES_CONTACTO.map(cargo => (
-                        <MenuItem key={cargo.value} value={cargo.value}>
-                          {cargo.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    value={nuevoContacto.nombre}
-                    onChange={e => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
-                    placeholder='Nombre'
-                    fullWidth
-                    size='small'
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    value={nuevoContacto.email}
-                    onChange={e => setNuevoContacto({ ...nuevoContacto, email: e.target.value })}
-                    placeholder='Email'
-                    fullWidth
-                    size='small'
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    value={nuevoContacto.telefono1}
-                    onChange={e => {
-                      const formatted = formatPhone(e.target.value)
-
-                      setNuevoContacto({ ...nuevoContacto, telefono1: formatted })
-                    }}
-                    placeholder='Teléfono 1'
-                    fullWidth
-                    size='small'
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    value={nuevoContacto.telefono2}
-                    onChange={e => {
-                      const formatted = formatPhone(e.target.value)
-
-                      setNuevoContacto({ ...nuevoContacto, telefono2: formatted })
-                    }}
-                    placeholder='Teléfono 2'
-                    fullWidth
-                    size='small'
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    onClick={agregarContacto}
-                    disabled={
-                      !nuevoContacto.rol || !nuevoContacto.nombre || !nuevoContacto.email || !nuevoContacto.telefono1
-                    }
-                  >
-                    <i className='ri-add-line' />
-                  </IconButton>
-                </TableCell>
-              </TableRow> */}
             </TableBody>
           </Table>
         </TableContainer>

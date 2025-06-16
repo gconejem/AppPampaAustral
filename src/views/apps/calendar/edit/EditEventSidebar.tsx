@@ -122,6 +122,7 @@ const EditEventSidebar = ({
   const [formData, setFormData] = useState<FormData>(initialData)
   const [estado, setEstado] = useState('AGENDADA')
   const [editandoEstado, setEditandoEstado] = useState(false)
+  const [selectedReferencia, setSelectedReferencia] = useState('')
 
   // Estados para los datos de las listas desplegables
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -241,16 +242,30 @@ const EditEventSidebar = ({
     if (selectedEvent && editEventSidebarOpen) {
       console.log('Cargando datos del evento seleccionado:', selectedEvent)
 
+      // Helper para obtener el valor desde el nivel principal o extendedProps
+      const getValue = (field: string) =>
+        selectedEvent[field] ?? selectedEvent.extendedProps?.[field] ?? ''
+
       // Formatear fecha y hora a formato ISO para los inputs de tipo datetime-local
-      const formatDate = (date: Date) => {
-        return new Date(date).toISOString().slice(0, 16)
+      const formatDate = (date: any) => {
+        if (!date) return ''
+        const d = new Date(date)
+        if (isNaN(d.getTime())) return ''
+        return d.toISOString().slice(0, 16)
+      }
+
+      // Buscar referencia de la obra si no viene en el evento
+      let referenciaFinal = getValue('referencia')
+      if (!referenciaFinal && (selectedEvent.obra || selectedEvent.extendedProps?.obra)) {
+        const obra = selectedEvent.obra || selectedEvent.extendedProps?.obra
+        referenciaFinal = obra.referencia || ''
       }
 
       // Convertir servicios del formato del evento al formato del formulario
       const formattedServicios =
-        selectedEvent.extendedProps?.servicios?.map((s: any) => ({
+        (selectedEvent.servicios || selectedEvent.extendedProps?.servicios)?.map((s: any) => ({
           codigo: s.codigo,
-          servicio: s.nombre,
+          servicio: s.servicio || s.nombre,
           cantidad: s.cantidad,
           observacion: s.observacion || '',
           esSegundaVisita: s.esSegundaVisita || false
@@ -258,17 +273,17 @@ const EditEventSidebar = ({
 
       // Convertir laboratoristas del formato del evento al formato del formulario
       const formattedLaboratoristas =
-        selectedEvent.extendedProps?.asignados?.map((a: any) => ({
-          id: a?.id || a?.user?.id,
-          nombre: a?.name || a?.user?.name || 'No especificado',
-          email: a?.email || a?.user?.email || '',
+        (selectedEvent.asignados || selectedEvent.extendedProps?.asignados)?.map((a: any) => ({
+          id: a?.userId || a?.id || a?.user?.id,
+          nombre: a?.user?.name || a?.name || 'No especificado',
+          email: a?.user?.email || a?.email || '',
           esPrincipal: a?.esPrincipal || false
         })) || []
 
       // Convertir equipos del formato del evento al formato del formulario
       const formattedEquipos =
-        selectedEvent.extendedProps?.equipos?.map((e: any) => ({
-          id: e.equipo?.id || e.id,
+        (selectedEvent.equipos || selectedEvent.extendedProps?.equipos)?.map((e: any) => ({
+          id: e.equipo?.id || e.equipoId || e.id,
           codigo: e.equipo?.codigo || e.codigo || '',
           nombre: e.equipo?.nombre || e.nombre || '',
           cantidad: e.cantidad || 1,
@@ -276,41 +291,41 @@ const EditEventSidebar = ({
         })) || []
 
       // Establecer estado inicial
-      setEstado(selectedEvent.extendedProps?.estado || 'AGENDADA')
+      setEstado(getValue('estado') || 'AGENDADA')
 
-      // Establecer datos del formulario
+      // Establecer la referencia seleccionada y en formData
+      setSelectedReferencia(referenciaFinal)
+
       setFormData({
-        titulo: selectedEvent.title,
-        tipoVisita: selectedEvent.extendedProps?.tipoVisita || 'VISITA',
-        esRecurrente: selectedEvent.extendedProps?.esRecurrente || false,
-        fechaInicio: formatDate(selectedEvent.start),
-        fechaFin: formatDate(selectedEvent.end),
-        clienteId: selectedEvent.extendedProps?.cliente?.id || selectedEvent.extendedProps?.clienteId,
-        obraId: selectedEvent.extendedProps?.obra?.id || selectedEvent.extendedProps?.obraId,
-        solicitudId: selectedEvent.extendedProps?.solicitud?.id || selectedEvent.extendedProps?.solicitudId,
-        sectorComercial: selectedEvent.extendedProps?.sectorComercial || '',
-        region: selectedEvent.extendedProps?.region || '',
-        comuna: selectedEvent.extendedProps?.comuna || '',
-        direccion: selectedEvent.extendedProps?.direccion || '',
-        referencia: selectedEvent.extendedProps?.referencia || '',
-        observaciones: selectedEvent.extendedProps?.observaciones || '',
+        titulo: getValue('titulo') || getValue('title'),
+        tipoVisita: getValue('tipoVisita') || 'VISITA',
+        esRecurrente: getValue('esRecurrente') || false,
+        fechaInicio: formatDate(getValue('fechaInicio') || getValue('start')),
+        fechaFin: formatDate(getValue('fechaFin') || getValue('end')),
+        clienteId: getValue('clienteId') || getValue('cliente')?.id,
+        obraId: getValue('obraId') || getValue('obra')?.id,
+        solicitudId: getValue('solicitudId') || getValue('solicitud')?.id,
+        sectorComercial: getValue('sectorComercial'),
+        region: getValue('region'),
+        comuna: getValue('comuna'),
+        direccion: getValue('direccion'),
+        referencia: referenciaFinal,
+        observaciones: getValue('observaciones'),
         servicios: [],
         laboratoristas: [],
         equipos: []
       })
 
       // Establecer la región seleccionada para cargar las comunas
-      if (selectedEvent.extendedProps?.region) {
-        setSelectedRegion(selectedEvent.extendedProps.region)
+      if (getValue('region')) {
+        setSelectedRegion(getValue('region'))
       }
 
       // Para debugging
-      console.log('Cliente ID:', selectedEvent.extendedProps?.cliente?.id || selectedEvent.extendedProps?.clienteId)
-      console.log('Obra ID:', selectedEvent.extendedProps?.obra?.id || selectedEvent.extendedProps?.obraId)
-      console.log(
-        'Solicitud ID:',
-        selectedEvent.extendedProps?.solicitud?.id || selectedEvent.extendedProps?.solicitudId
-      )
+      console.log('Cliente ID:', getValue('clienteId') || getValue('cliente')?.id)
+      console.log('Obra ID:', getValue('obraId') || getValue('obra')?.id)
+      console.log('Solicitud ID:', getValue('solicitudId') || getValue('solicitud')?.id)
+      console.log('Referencia precargada:', referenciaFinal)
 
       // Establecer servicios, laboratoristas y equipos agendados
       setServiciosAgendados(formattedServicios)
@@ -715,8 +730,12 @@ const EditEventSidebar = ({
                 <TextField
                   fullWidth
                   label='Referencia'
-                  value={formData.referencia}
-                  onChange={e => handleInputChange('referencia', e.target.value)}
+                  value={selectedReferencia}
+                  placeholder='Ej: Cerca del supermercado, Edificio azul, etc.'
+                  onChange={e => {
+                    setSelectedReferencia(e.target.value)
+                    handleInputChange('referencia', e.target.value)
+                  }}
                 />
               </Grid>
 
