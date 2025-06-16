@@ -299,6 +299,11 @@ const EditEventSidebar = ({
         equipos: []
       })
 
+      // Establecer la región seleccionada para cargar las comunas
+      if (selectedEvent.extendedProps?.region) {
+        setSelectedRegion(selectedEvent.extendedProps.region)
+      }
+
       // Para debugging
       console.log('Cliente ID:', selectedEvent.extendedProps?.cliente?.id || selectedEvent.extendedProps?.clienteId)
       console.log('Obra ID:', selectedEvent.extendedProps?.obra?.id || selectedEvent.extendedProps?.obraId)
