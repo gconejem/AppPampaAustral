@@ -32,6 +32,8 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import TableBody from '@mui/material/TableBody'
+import InputAdornment from '@mui/material/InputAdornment'
+import SearchIcon from '@mui/icons-material/Search'
 
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
@@ -386,6 +388,42 @@ const EditEventSidebar = ({
     }
   }, [selectedEvent, editEventSidebarOpen])
 
+  // Estados para laboratoristas y equipos disponibles y seleccionados
+  const [laboratoristas, setLaboratoristas] = useState<any[]>([])
+  const [laboratoristaSeleccionado, setLaboratoristaSeleccionado] = useState<any | null>(null)
+  const [equipos, setEquipos] = useState<any[]>([])
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState<any | null>(null)
+
+  // Cargar laboratoristas y equipos disponibles al montar
+  useEffect(() => {
+    const fetchLaboratoristas = async () => {
+      try {
+        const response = await fetch('/api/users/laboratoristas')
+        const data = await response.json()
+        const formattedLaboratoristas = data.map((lab: any) => ({
+          id: lab.id,
+          name: lab.name,
+          email: lab.email,
+          rol: lab.roles?.[0]?.rol?.nombre || 'Sin rol asignado'
+        }))
+        setLaboratoristas(formattedLaboratoristas)
+      } catch (error) {
+        console.error('Error cargando laboratoristas:', error)
+      }
+    }
+    const fetchEquipos = async () => {
+      try {
+        const response = await fetch('/api/agenda/equipos')
+        const data = await response.json()
+        setEquipos(data)
+      } catch (error) {
+        console.error('Error cargando equipos:', error)
+      }
+    }
+    fetchLaboratoristas()
+    fetchEquipos()
+  }, [])
+
   const handleSubmit = async () => {
     try {
       // Validación detallada de campos requeridos
@@ -504,6 +542,28 @@ const EditEventSidebar = ({
       isPrincipal: contactos.length === 0
     }
     setContactos([...contactos, newContact])
+  }
+
+  // Métodos para agregar laboratorista y equipo
+  const handleAgregarLaboratorista = () => {
+    if (!laboratoristaSeleccionado) return
+    const nuevoLaboratorista = {
+      id: laboratoristaSeleccionado.id,
+      nombre: laboratoristaSeleccionado.name,
+      email: laboratoristaSeleccionado.email
+    }
+    setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
+    setLaboratoristaSeleccionado(null)
+  }
+  const handleAgregarEquipo = () => {
+    if (!equipoSeleccionado) return
+    const nuevoEquipo = {
+      id: equipoSeleccionado.id,
+      codigo: equipoSeleccionado.codigo,
+      nombre: equipoSeleccionado.nombre
+    }
+    setEquiposAgendados(prev => [...prev, nuevoEquipo])
+    setEquipoSeleccionado(null)
   }
 
   return (
@@ -1134,148 +1194,128 @@ const EditEventSidebar = ({
               <Grid container item spacing={2} xs={12}>
                 {/* Laboratoristas */}
                 <Grid item xs={6}>
-                  <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
-                    Laboratorista
+                  <Typography variant='h5' sx={{ mb: 2 }}>
+                    Laboratoristas
                   </Typography>
-
-                  {/* Tabla de laboratoristas */}
-                  <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
-                    <Grid container>
-                      <Grid item xs={5}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          NOMBRE
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={5}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          EMAIL
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={2}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                          ACCIÓN
-                        </Typography>
-                      </Grid>
+                  <Grid container spacing={2}>
+                    <Grid item xs={10}>
+                      <Autocomplete
+                        fullWidth
+                        options={laboratoristas}
+                        getOptionLabel={option => `${option.name} (${option.rol || ''})`}
+                        value={laboratoristaSeleccionado}
+                        onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
+                        renderInput={params => (
+                          <TextField
+                            {...params}
+                            label='Laboratorista'
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position='start'>
+                                  <SearchIcon />
+                                </InputAdornment>
+                              )
+                            }}
+                          />
+                        )}
+                      />
                     </Grid>
-                  </Box>
-
-                  {laboratoristasAgendados.length > 0 ? (
-                    laboratoristasAgendados.map((laboratorista, index) => (
-                      <Grid
-                        container
-                        key={index}
-                        sx={{
-                          borderBottom: '1px solid #e0e0e0',
-                          padding: '8px 4px',
-                          alignItems: 'center',
-                          '&:hover': {
-                            backgroundColor: theme => theme.palette.action.hover
-                          }
-                        }}
-                      >
-                        <Grid item xs={5}>
-                          <Typography variant='body2'>{laboratorista.nombre}</Typography>
-                        </Grid>
-                        <Grid item xs={5}>
-                          <Typography variant='body2'>{laboratorista.email}</Typography>
-                        </Grid>
-                        <Grid item xs={2}>
-                          <Box display='flex' gap={1} justifyContent='center'>
+                    <Grid item xs={2}>
+                      <Button variant='contained' color='primary' fullWidth onClick={handleAgregarLaboratorista}>
+                        Agregar
+                      </Button>
+                    </Grid>
+                  </Grid>
+                  {/* Lista de laboratoristas agendados */}
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Nombre</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {laboratoristasAgendados.map((laboratorista, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{laboratorista.nombre}</TableCell>
+                          <TableCell>{laboratorista.email}</TableCell>
+                          <TableCell>
                             <IconButton
-                              size='small'
                               color='error'
-                              onClick={() => handleRemoverLaboratorista(index)}
-                              sx={{
-                                padding: '4px',
-                                '&:hover': {
-                                  backgroundColor: theme => theme.palette.error.light
-                                }
-                              }}
+                              onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
                             >
-                              <DeleteIcon fontSize='small' />
+                              <i className='ri-delete-bin-line' />
                             </IconButton>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    ))
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                      <Typography variant='body2'>No hay laboratoristas asignados</Typography>
-                    </Box>
-                  )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </Grid>
 
                 {/* Equipos */}
                 <Grid item xs={6}>
-                  <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
-                    Equipo
+                  <Typography variant='h5' sx={{ mb: 2 }}>
+                    Equipos
                   </Typography>
-
-                  {/* Tabla de equipos */}
-                  <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
-                    <Grid container>
-                      <Grid item xs={5}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          CÓDIGO
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={5}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                          EQUIPO
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={2}>
-                        <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                          ACCIÓN
-                        </Typography>
-                      </Grid>
+                  <Grid container spacing={2}>
+                    <Grid item xs={10}>
+                      <Autocomplete
+                        fullWidth
+                        options={equipos}
+                        getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+                        value={equipoSeleccionado}
+                        onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
+                        renderInput={params => (
+                          <TextField
+                            {...params}
+                            label='Equipo'
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position='start'>
+                                  <SearchIcon />
+                                </InputAdornment>
+                              )
+                            }}
+                          />
+                        )}
+                      />
                     </Grid>
-                  </Box>
-
-                  {equiposAgendados.length > 0 ? (
-                    equiposAgendados.map((equipo, index) => (
-                      <Grid
-                        container
-                        key={index}
-                        sx={{
-                          borderBottom: '1px solid #e0e0e0',
-                          padding: '8px 4px',
-                          alignItems: 'center',
-                          '&:hover': {
-                            backgroundColor: theme => theme.palette.action.hover
-                          }
-                        }}
-                      >
-                        <Grid item xs={5}>
-                          <Typography variant='body2'>{equipo.codigo}</Typography>
-                        </Grid>
-                        <Grid item xs={5}>
-                          <Typography variant='body2'>{equipo.nombre}</Typography>
-                        </Grid>
-                        <Grid item xs={2}>
-                          <Box display='flex' gap={1} justifyContent='center'>
+                    <Grid item xs={2}>
+                      <Button variant='contained' color='primary' fullWidth onClick={handleAgregarEquipo}>
+                        Agregar
+                      </Button>
+                    </Grid>
+                  </Grid>
+                  {/* Lista de equipos agendados */}
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Código</TableCell>
+                        <TableCell>Nombre</TableCell>
+                        <TableCell>Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {equiposAgendados.map((equipo, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{equipo.codigo}</TableCell>
+                          <TableCell>{equipo.nombre}</TableCell>
+                          <TableCell>
                             <IconButton
-                              size='small'
                               color='error'
-                              onClick={() => handleRemoverEquipo(index)}
-                              sx={{
-                                padding: '4px',
-                                '&:hover': {
-                                  backgroundColor: theme => theme.palette.error.light
-                                }
-                              }}
+                              onClick={() => setEquiposAgendados(prev => prev.filter((_, i) => i !== index))}
                             >
-                              <DeleteIcon fontSize='small' />
+                              <i className='ri-delete-bin-line' />
                             </IconButton>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    ))
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                      <Typography variant='body2'>No hay equipos asignados</Typography>
-                    </Box>
-                  )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </Grid>
               </Grid>
 
@@ -1283,6 +1323,7 @@ const EditEventSidebar = ({
               <Grid item xs={12}>
                 <TextField
                   fullWidth
+                  multiline
                   label='Observaciones'
                   value={formData.observaciones}
                   onChange={e => handleInputChange('observaciones', e.target.value)}
