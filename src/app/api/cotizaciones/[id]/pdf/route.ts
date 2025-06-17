@@ -112,7 +112,7 @@ Condiciones para terreno y accesos
             <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}</div>
             <div><span class="label">Fecha Emisión:</span> ${new Date(cotizacion.fechaInicio || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
             <div><span class="label">Fecha Vencimiento:</span> ${new Date(cotizacion.fechaFin || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
-            <div>RPG-05-02 Rev. N° 2</div>
+            <div>RPG-05-02 Rev. N° 4</div>
           </div>
         </div>
         <div class="section">
