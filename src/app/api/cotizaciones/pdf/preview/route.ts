@@ -100,6 +100,13 @@ Condiciones para terreno y accesos
     ? `<div><h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre></div>`
     : '';
 
+  const observacionesYNotasHTML = (cotizacion.observaciones || cotizacion.notas) ? `
+    <div style="page-break-before: always;">
+      ${cotizacion.observaciones ? `<h3>Observaciones:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.observaciones}</pre>` : ''}
+      ${cotizacion.notas ? `<h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre>` : ''}
+    </div>
+  ` : '';
+
   return `
   <html>
     <head>
@@ -304,14 +311,7 @@ Condiciones para terreno y accesos
               `;
             })()}
           </div>
-          <div style="margin-top:16px; font-size: 12px;"><b>Observaciones:</b><br>${cotizacion.observaciones ? cotizacion.observaciones.replace(/\r?\n/g, '<br>') : 'Sin observaciones'}</div>
-
-          <!-- Página de Notas -->
-          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
-            <div style="margin: 24px 32px 24px 8px;">
-              ${notasHTML}
-            </div>
-          </div>
+          ${observacionesYNotasHTML}
 
           <!-- Primera página de Términos y Condiciones -->
           <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;">
