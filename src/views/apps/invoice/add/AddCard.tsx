@@ -81,11 +81,13 @@ interface FormData {
   jornadaMensual: string
   antecedentesMensual: string
   notas: string
+  textoGeneral?: string
+  totalNetoGeneral?: number
 }
 
 // Coloca la función aquí antes de initialFormData
 const getNotasDefault = (tipoCotizacion: string) => {
-  if (tipoCotizacion === 'B') {
+  if (tipoCotizacion === 'B' || tipoCotizacion === 'D') {
     return `Relacionado al valor del servicio cotizado:
 • Valor Neto (sin IVA incluido)
 • El valor cotizado considera movilización, traslado de personal, equipos y muestras.
@@ -832,21 +834,21 @@ const AddCard = ({
 
   // Función para manejar la visualización
   const handlePreview = () => {
-    // Validar que haya al menos un producto
-    const productosValidos = productRows.filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto)
-
-    if (productosValidos.length === 0) {
-      toast.error('Debe agregar al menos un producto a la cotización')
-
-      return
+    // Validar que haya al menos un producto solo si el tipo de cotización no es D
+    if (formData.tipoCotizacion !== 'D') {
+      const productosValidos = productRows.filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto);
+      if (productosValidos.length === 0) {
+        toast.error('Debe agregar al menos un producto a la cotización');
+        return;
+      }
     }
 
-    console.log('productRows', productRows)
+    console.log('productRows', productRows);
 
     // Preparar los datos para la previsualización
     const previewData = {
       ...formData,
-      detalles: productRows.map(row => ({
+      detalles: formData.tipoCotizacion === 'D' ? [] : productRows.map(row => ({
         productoId: parseInt(row.productoId),
         servicio: row.servicio || '',
         norma: row.norma || '',
@@ -863,19 +865,20 @@ const AddCard = ({
       impuesto: impuesto,
       total: total,
       observaciones: formData.observaciones || '',
-      listaPrecioId: selectedListaPrecio
-    }
+      listaPrecioId: selectedListaPrecio,
+      textoGeneral: formData.textoGeneral || '' // Asegurarse de incluir textoGeneral
+    };
 
     // Debug para ver qué datos se están enviando
-    console.log('Datos de preview:', previewData)
-    console.log('Detalles a enviar:', previewData.detalles)
+    console.log('Datos de preview:', previewData);
+    console.log('Detalles a enviar:', previewData.detalles);
 
     // Guardar en localStorage
-    localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
+    localStorage.setItem('cotizacionPreview', JSON.stringify(previewData));
 
     // Abrir en nueva pestaña
-    window.open('/es/apps/invoice/preview', '_blank')
-  }
+    window.open('/es/apps/invoice/preview', '_blank');
+  };
 
   const handleAddDetalle = () => {
     if (!selectData || !count) return
@@ -1176,7 +1179,7 @@ const AddCard = ({
     if (index === 0) return false
     const currentRow = productRows[index]
     const prevRow = productRows[index - 1]
-    
+
     // Si es un subproducto, solo puede moverse dentro de su paquete
     if (currentRow.esSubProducto) {
       // Buscar el índice del paquete padre
@@ -1186,7 +1189,7 @@ const AddCard = ({
       }
       return parentIndex >= 0 && index > parentIndex + 1
     }
-    
+
     return true
   }
 
@@ -1194,7 +1197,7 @@ const AddCard = ({
     if (index === productRows.length - 1) return false
     const currentRow = productRows[index]
     const nextRow = productRows[index + 1]
-    
+
     // Si es un subproducto, solo puede moverse dentro de su paquete
     if (currentRow.esSubProducto) {
       // Buscar el siguiente paquete o el final de la lista
@@ -1204,7 +1207,7 @@ const AddCard = ({
       }
       return index < nextPackageIndex - 1
     }
-    
+
     return true
   }
 
@@ -1366,8 +1369,8 @@ const AddCard = ({
         const targetElement = document.querySelector(`[data-row-id="${autoOpenRowId}"] input`)
         if (targetElement) {
           (targetElement as HTMLElement).focus()
-          // Simular click para abrir el popover
-          (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+            // Simular click para abrir el popover
+            (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
           setAutoOpenRowId(null)
         }
       }, 100)
@@ -1385,7 +1388,7 @@ const AddCard = ({
       setFormData(prev => ({ ...prev, notas: autoNotas }))
       setLastAutoNotas(autoNotas)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.tipoCotizacion])
 
   // Al editar el campo notas manualmente, actualizar lastAutoNotas si el valor es diferente
@@ -1563,13 +1566,13 @@ const AddCard = ({
                     value={
                       formData.contacto && formData.contactId
                         ? {
-                            contactId: formData.contactId,
-                            nombre: formData.contacto.nombre,
-                            cargo: formData.contacto.cargo || 'Sin cargo',
-                            email: formData.contacto.email || '',
-                            telefono1: formData.contacto.telefono1 || '',
-                            empresa: formData.contacto.empresa || 'Sin empresa'
-                          }
+                          contactId: formData.contactId,
+                          nombre: formData.contacto.nombre,
+                          cargo: formData.contacto.cargo || 'Sin cargo',
+                          email: formData.contacto.email || '',
+                          telefono1: formData.contacto.telefono1 || '',
+                          empresa: formData.contacto.empresa || 'Sin empresa'
+                        }
                         : null
                     }
                   />
@@ -1590,11 +1593,11 @@ const AddCard = ({
                         <DeleteIcon />
                       </IconButton>
                       <div className='flex flex-col gap-2'>
-                        <Typography  sx={{ fontWeight: 500 }}>
+                        <Typography sx={{ fontWeight: 500 }}>
                           {formData.contacto.nombre}
                         </Typography>
                         <Typography>
-                        {formData.contacto.cargo} - {formData.contacto.empresa || 'Sin empresa'}
+                          {formData.contacto.cargo} - {formData.contacto.empresa || 'Sin empresa'}
                         </Typography>
                         <Typography>
                           {formData.contacto.email}
@@ -1638,6 +1641,7 @@ const AddCard = ({
                       <MenuItem value='A'>Valores Unitarios</MenuItem>
                       <MenuItem value='B'>EMS</MenuItem>
                       <MenuItem value='C'>Mensual</MenuItem>
+                      <MenuItem value='D'>Genérica</MenuItem>
                     </Select>
                     {validationErrors.tipoCotizacion && <FormHelperText>Este campo es requerido</FormHelperText>}
                   </FormControl>
@@ -1808,9 +1812,10 @@ const AddCard = ({
               </Grid>
             )}
 
-            {/* Detalles de la Cotización */}
-            <Grid item xs={12} sx={{ mt: 8 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+
+            {/* Detalles de la Cotización o Texto General */}
+            {formData.tipoCotizacion === 'D' ? (
+              <Grid item xs={12} sx={{ mt: 8 }}>
                 <Typography
                   variant='h6'
                   sx={{
@@ -1819,369 +1824,398 @@ const AddCard = ({
                     textTransform: 'none',
                     borderBottom: '1px solid',
                     borderColor: 'primary.main',
-                    pb: 1
+                    pb: 1,
+                    mb: 2
                   }}
                 >
-                  Detalle Servicios Solicitados:
+                  Texto General de la Cotización:
                 </Typography>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={sinCantidad}
-                      onChange={(e) => setSinCantidad(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Sin cantidad"
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={12}
+                  value={formData.textoGeneral || ''}
+                  onChange={e => handleChange('textoGeneral', e.target.value)}
+                  placeholder='Ingrese el texto general de la cotización'
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'background.paper'
+                    }
+                  }}
                 />
-              </Box>
+              </Grid>
+            ) : (
+              // Aquí va TODO el bloque original de Detalle Servicios Solicitados (incluyendo título, switch, tabla, botón, etc.)
+              <Grid item xs={12} sx={{ mt: 8 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                  <Typography
+                    variant='h6'
+                    sx={{
+                      fontWeight: 500,
+                      color: 'text.secondary',
+                      textTransform: 'none',
+                      borderBottom: '1px solid',
+                      borderColor: 'primary.main',
+                      pb: 1
+                    }}
+                  >
+                    Detalle Servicios Solicitados:
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={sinCantidad}
+                        onChange={(e) => setSinCantidad(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label="Sin cantidad"
+                  />
+                </Box>
 
-              {(formData.tipoCotizacion === 'B' || formData.tipoCotizacion === 'C') && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                  <FormControl>
-                    <RadioGroup
-                      row
-                      value={
-                        formData.tipoCotizacion === 'B'
-                          ? formData.precioEMSPorProducto
-                          : formData.precioMensualPorProducto
-                      }
-                      onChange={e => {
-                        const porProducto = e.target.value === 'true'
-                        const isEMS = formData.tipoCotizacion === 'B'
+                {(formData.tipoCotizacion === 'B' || formData.tipoCotizacion === 'C') && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                    <FormControl>
+                      <RadioGroup
+                        row
+                        value={
+                          formData.tipoCotizacion === 'B'
+                            ? formData.precioEMSPorProducto
+                            : formData.precioMensualPorProducto
+                        }
+                        onChange={e => {
+                          const porProducto = e.target.value === 'true'
+                          const isEMS = formData.tipoCotizacion === 'B'
 
-                        updateFormData({
-                          ...(isEMS
-                            ? {
+                          updateFormData({
+                            ...(isEMS
+                              ? {
                                 precioEMSPorProducto: porProducto,
                                 precioEMSTotal: !porProducto ? formData.subtotal : 0
                               }
-                            : {
+                              : {
                                 precioMensualPorProducto: porProducto,
                                 precioMensualTotal: !porProducto ? formData.subtotal : 0
                               })
-                        })
-                      }}
-                    >
-                      <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
-                      <FormControlLabel value={false} control={<Radio size='small' />} label='Precio total' />
-                    </RadioGroup>
-                  </FormControl>
-                </Box>
-              )}
-
-              {productRows.map((row, index) => (
-                <Grid
-                  container
-                  spacing={2}
-                  key={row.id}
-                  sx={{
-                    mb: 2,
-                    p: 2,
-                    backgroundColor: 'background.paper',
-                    borderRadius: '4px',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    position: 'relative',
-                    ...(row.esSubProducto && {
-                      ml: 4,
-                      width: 'calc(100% - 32px)',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        left: -16,
-                        top: '50%',
-                        width: 16,
-                        height: 1,
-                        backgroundColor: '#000',
-                        opacity: 0
-                      },
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        left: -16,
-                        top: -24,
-                        width: 1,
-                        height: 'calc(100% + 48px)',
-                        backgroundColor: '#000',
-                        opacity: 0,
-                        display:
-                          index < productRows.length - 1 && productRows[index + 1]?.esSubProducto ? 'block' : 'none'
-                      }
-                    })
-                  }}
-                >
-                  <Grid item xs={12} md={3}>
-                    <div ref={el => servicioAnchorRefs.current[index] = el} style={{ width: '100%' }}>
-                      <TextField
-                        label='Servicio / Ensayo'
-                        size='small'
-                        fullWidth
-                        value={row.servicio}
-                        InputLabelProps={{ shrink: !!row.servicio }}
-                        onClick={() => {
-                          setActiveRowIndex(index)
-                          setAnchorEl(servicioAnchorRefs.current[index])
-                          setLoadingProductos(true)
-                          setProductsPage(0)
-                          setSearchTerm('')
-                          setSelectedArea('')
-                          setSelectedTipo('')
-                          setSelectedFamilia('')
-                          setShowOnlyPaquetes(false)
-                          filterProducts('', '', '', '')
-                          setLoadingProductos(false)
+                          })
                         }}
+                      >
+                        <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
+                        <FormControlLabel value={false} control={<Radio size='small' />} label='Precio total' />
+                      </RadioGroup>
+                    </FormControl>
+                  </Box>
+                )}
+
+                {productRows.map((row, index) => (
+                  <Grid
+                    container
+                    spacing={2}
+                    key={row.id}
+                    sx={{
+                      mb: 2,
+                      p: 2,
+                      backgroundColor: 'background.paper',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      position: 'relative',
+                      ...(row.esSubProducto && {
+                        ml: 4,
+                        width: 'calc(100% - 32px)',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          left: -16,
+                          top: '50%',
+                          width: 16,
+                          height: 1,
+                          backgroundColor: '#000',
+                          opacity: 0
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          left: -16,
+                          top: -24,
+                          width: 1,
+                          height: 'calc(100% + 48px)',
+                          backgroundColor: '#000',
+                          opacity: 0,
+                          display:
+                            index < productRows.length - 1 && productRows[index + 1]?.esSubProducto ? 'block' : 'none'
+                        }
+                      })
+                    }}
+                  >
+                    <Grid item xs={12} md={3}>
+                      <div ref={el => servicioAnchorRefs.current[index] = el} style={{ width: '100%' }}>
+                        <TextField
+                          label='Servicio / Ensayo'
+                          size='small'
+                          fullWidth
+                          value={row.servicio}
+                          InputLabelProps={{ shrink: !!row.servicio }}
+                          onClick={() => {
+                            setActiveRowIndex(index)
+                            setAnchorEl(servicioAnchorRefs.current[index])
+                            setLoadingProductos(true)
+                            setProductsPage(0)
+                            setSearchTerm('')
+                            setSelectedArea('')
+                            setSelectedTipo('')
+                            setSelectedFamilia('')
+                            setShowOnlyPaquetes(false)
+                            filterProducts('', '', '', '')
+                            setLoadingProductos(false)
+                          }}
+                          InputProps={{
+                            readOnly: true,
+                            endAdornment: (
+                              <InputAdornment position='end'>
+                                <IconButton size='small' onClick={e => {
+                                  e.stopPropagation()
+                                  setActiveRowIndex(index)
+                                  setAnchorEl(servicioAnchorRefs.current[index])
+                                  setLoadingProductos(true)
+                                  setProductsPage(0)
+                                  setSearchTerm('')
+                                  setSelectedArea('')
+                                  setSelectedTipo('')
+                                  setSelectedFamilia('')
+                                  setShowOnlyPaquetes(false)
+                                  filterProducts('', '', '', '')
+                                  setLoadingProductos(false)
+                                }}>
+                                  <i className='ri-search-line' />
+                                </IconButton>
+                              </InputAdornment>
+                            )
+                          }}
+                        />
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label='Área'
+                        value={row.area || ''}
+                        disabled
                         InputProps={{
-                          readOnly: true,
-                          endAdornment: (
-                            <InputAdornment position='end'>
-                              <IconButton size='small' onClick={e => {
-                                e.stopPropagation()
-                                setActiveRowIndex(index)
-                                setAnchorEl(servicioAnchorRefs.current[index])
-                                setLoadingProductos(true)
-                                setProductsPage(0)
-                                setSearchTerm('')
-                                setSelectedArea('')
-                                setSelectedTipo('')
-                                setSelectedFamilia('')
-                                setShowOnlyPaquetes(false)
-                                filterProducts('', '', '', '')
-                                setLoadingProductos(false)
-                              }}>
-                                <i className='ri-search-line' />
-                              </IconButton>
-                            </InputAdornment>
-                          )
+                          readOnly: true
                         }}
                       />
-                    </div>
-                  </Grid>
+                    </Grid>
 
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Área'
-                      value={row.area || ''}
-                      disabled
-                      InputProps={{
-                        readOnly: true
-                      }}
-                    />
-                  </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label='Descripción'
+                        value={row.descripcion || ''}
+                        onChange={e => {
+                          const newRows = [...productRows]
 
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Descripción'
-                      value={row.descripcion || ''}
-                      onChange={e => {
-                        const newRows = [...productRows]
+                          newRows[index] = {
+                            ...row,
+                            descripcion: e.target.value
+                          }
+                          setProductRows(newRows)
+                        }}
+                        multiline
+                        maxRows={4}
+                        placeholder='Ingrese una descripción...'
+                      />
+                    </Grid>
 
-                        newRows[index] = {
-                          ...row,
-                          descripcion: e.target.value
-                        }
-                        setProductRows(newRows)
-                      }}
-                      multiline
-                      maxRows={4}
-                      placeholder='Ingrese una descripción...'
-                    />
-                  </Grid>
+                    <Grid item xs={12} md={1}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        type='number'
+                        label='Cantidad'
+                        value={row.cantidad}
+                        onChange={e => handleCantidadChange(index, Number(e.target.value))}
+                        inputProps={{ min: 0 }}
+                        disabled={sinCantidad}
+                      />
+                    </Grid>
 
-                  <Grid item xs={12} md={1}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      type='number'
-                      label='Cantidad'
-                      value={row.cantidad}
-                      onChange={e => handleCantidadChange(index, Number(e.target.value))}
-                      inputProps={{ min: 0 }}
-                      disabled={sinCantidad}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      type='number'
-                      label='Precio Unitario UF'
-                      value={row.precioUnitarioUF}
-                      onChange={e => handlePrecioChange(index, Number(e.target.value))}
-                      InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
-                        readOnly:
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        type='number'
+                        label='Precio Unitario UF'
+                        value={row.precioUnitarioUF}
+                        onChange={e => handlePrecioChange(index, Number(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                          readOnly:
+                            row.esSubProducto === true ||
+                            (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+                            (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
+                        }}
+                        disabled={
                           row.esSubProducto === true ||
                           (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
                           (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
-                      }}
-                      disabled={
-                        row.esSubProducto === true ||
-                        (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-                        (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
-                      }
-                    />
-                  </Grid>
+                        }
+                      />
+                    </Grid>
 
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      disabled
-                      label='Total Neto UF'
-                      value={row.totalNetoUF || 0}
-                      InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
-                        readOnly: true
-                      }}
-                    />
-                  </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        disabled
+                        label='Total Neto UF'
+                        value={row.totalNetoUF || 0}
+                        InputProps={{
+                          startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                          readOnly: true
+                        }}
+                      />
+                    </Grid>
 
-                  {/* Botones de acción */}
-                  <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
-                    {/* Botones de acción para productos normales y subproductos */}
-                    {!row.esPaquete && (
-                      <>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleMoveUp(index)}
-                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-arrow-up-s-line' />
-                        </IconButton>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleMoveDown(index)}
-                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-arrow-down-s-line' />
-                        </IconButton>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleDeleteRow(index)}
-                          sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-delete-bin-line' />
-                        </IconButton>
-                      </>
-                    )}
-                    {/* Botón especial solo para paquetes */}
-                    {row.esPaquete && (
-                      <>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleMoveUp(index)}
-                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-arrow-up-s-line' />
-                        </IconButton>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleMoveDown(index)}
-                          sx={{ pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-arrow-down-s-line' />
-                        </IconButton>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleDeleteRow(index)}
-                          sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
-                        >
-                          <i className='ri-delete-bin-line' />
-                        </IconButton>
-                        <Tooltip title="Agregar producto a paquete">
+                    {/* Botones de acción */}
+                    <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                      {/* Botones de acción para productos normales y subproductos */}
+                      {!row.esPaquete && (
+                        <>
                           <IconButton
-                            sx={{
-                              backgroundColor: 'primary.main',
-                              color: 'white',
-                              borderRadius: '50%',
-                              width: 40,
-                              height: 40,
-                              ml: 1,
-                              '&:hover': { backgroundColor: 'primary.dark' },
-                              pointerEvents: 'auto',
-                              zIndex: 20
-                            }}
-                            onClick={() => {
-                              // Limpiar todos los filtros antes de abrir el popover
-                              setSelectedTipo('');
-                              setShowOnlyPaquetes(false);
-                              setSearchTerm('');
-                              setSelectedArea('');
-                              setSelectedAreaId(null);
-                              setSelectedFamilia('');
-                              setProductsPage(0); // Resetear el paginador
-                              filterProducts('', '', '', '');
-                              // Agregar una fila vacía como subproducto después del paquete
-                              const newProductRow = {
-                                id: Date.now(),
-                                productoId: '0',
-                                servicio: '',
-                                descripcion: '',
-                                cantidad: 1,
-                                precioUnitarioUF: 0,
-                                totalNetoUF: 0,
-                                area: '',
-                                esSubProducto: true,
-                                subproductos: []
-                              }
-                              const newRows = [...productRows]
-                              newRows.splice(index + 1, 0, newProductRow)
-                              setProductRows(newRows)
-                              setTimeout(() => {
-                                setActiveRowIndex(index + 1)
-                                setAnchorEl(servicioAnchorRefs.current[index + 1])
-                              }, 100)
-                            }}
+                            size='small'
+                            onClick={() => handleMoveUp(index)}
+                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
                           >
-                            <i className='ri-add-line' style={{ fontSize: 20 }} />
+                            <i className='ri-arrow-up-s-line' />
                           </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
+                          <IconButton
+                            size='small'
+                            onClick={() => handleMoveDown(index)}
+                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                          >
+                            <i className='ri-arrow-down-s-line' />
+                          </IconButton>
+                          <IconButton
+                            size='small'
+                            onClick={() => handleDeleteRow(index)}
+                            sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                          >
+                            <i className='ri-delete-bin-line' />
+                          </IconButton>
+                        </>
+                      )}
+                      {/* Botón especial solo para paquetes */}
+                      {row.esPaquete && (
+                        <>
+                          <IconButton
+                            size='small'
+                            onClick={() => handleMoveUp(index)}
+                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                          >
+                            <i className='ri-arrow-up-s-line' />
+                          </IconButton>
+                          <IconButton
+                            size='small'
+                            onClick={() => handleMoveDown(index)}
+                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
+                          >
+                            <i className='ri-arrow-down-s-line' />
+                          </IconButton>
+                          <IconButton
+                            size='small'
+                            onClick={() => handleDeleteRow(index)}
+                            sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                          >
+                            <i className='ri-delete-bin-line' />
+                          </IconButton>
+                          <Tooltip title="Agregar producto a paquete">
+                            <IconButton
+                              sx={{
+                                backgroundColor: 'primary.main',
+                                color: 'white',
+                                borderRadius: '50%',
+                                width: 40,
+                                height: 40,
+                                ml: 1,
+                                '&:hover': { backgroundColor: 'primary.dark' },
+                                pointerEvents: 'auto',
+                                zIndex: 20
+                              }}
+                              onClick={() => {
+                                // Limpiar todos los filtros antes de abrir el popover
+                                setSelectedTipo('');
+                                setShowOnlyPaquetes(false);
+                                setSearchTerm('');
+                                setSelectedArea('');
+                                setSelectedAreaId(null);
+                                setSelectedFamilia('');
+                                setProductsPage(0); // Resetear el paginador
+                                filterProducts('', '', '', '');
+                                // Agregar una fila vacía como subproducto después del paquete
+                                const newProductRow = {
+                                  id: Date.now(),
+                                  productoId: '0',
+                                  servicio: '',
+                                  descripcion: '',
+                                  cantidad: 1,
+                                  precioUnitarioUF: 0,
+                                  totalNetoUF: 0,
+                                  area: '',
+                                  esSubProducto: true,
+                                  subproductos: []
+                                }
+                                const newRows = [...productRows]
+                                newRows.splice(index + 1, 0, newProductRow)
+                                setProductRows(newRows)
+                                setTimeout(() => {
+                                  setActiveRowIndex(index + 1)
+                                  setAnchorEl(servicioAnchorRefs.current[index + 1])
+                                }, 100)
+                              }}
+                            >
+                              <i className='ri-add-line' style={{ fontSize: 20 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Grid>
                   </Grid>
-                </Grid>
-              ))}
+                ))}
 
-              <Button
-                variant='outlined'
-                onClick={handleAddRow}
-                startIcon={<i className='ri-add-line' />}
-                sx={{ mt: 2 }}
-              >
-                Agregar Producto
-              </Button>
-            </Grid>
+                <Button
+                  variant='outlined'
+                  onClick={handleAddRow}
+                  startIcon={<i className='ri-add-line' />}
+                  sx={{ mt: 2 }}
+                >
+                  Agregar Producto
+                </Button>
+              </Grid>
+            )}
+
+
 
             {/* Totales */}
             <Grid item xs={12}>
               <div className='flex justify-end'>
                 <div className='min-w-[300px]'>
-                  {(formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-                  (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto) ? (
+                  {formData.tipoCotizacion === 'D' ? (
                     <>
                       <div className='flex justify-between mb-2'>
                         <Typography>Total Neto:</Typography>
                         <TextField
                           size='small'
                           type='number'
-                          value={
-                            formData.tipoCotizacion === 'B' ? formData.precioEMSTotal : formData.precioMensualTotal
-                          }
+                          value={formData.totalNetoGeneral || ''}
                           onChange={e => {
                             const total = parseFloat(e.target.value) || 0
                             const impuesto = total * 0.19
-
                             updateFormData({
-                              ...(formData.tipoCotizacion === 'B'
-                                ? { precioEMSTotal: total }
-                                : { precioMensualTotal: total }),
+                              totalNetoGeneral: total,
                               subtotal: total,
                               impuesto: impuesto,
                               total: total + impuesto
@@ -2203,27 +2237,67 @@ const AddCard = ({
                         <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
                       </div>
                     </>
-                  ) : (
-                    <>
-                      <div className='flex justify-between mb-2'>
-                        <Typography>Subtotal:</Typography>
-                        <Typography>UF {subtotal?.toFixed(2) || '0.00'}</Typography>
-                      </div>
-                      <div className='flex justify-between mb-2'>
-                        <Typography>Descuento:</Typography>
-                        <Typography>UF {descuentoTotal?.toFixed(2) || '0.00'}</Typography>
-                      </div>
-                      <div className='flex justify-between mb-2'>
-                        <Typography>IVA (19%):</Typography>
-                        <Typography>UF {impuesto?.toFixed(2) || '0.00'}</Typography>
-                      </div>
-                      <Divider className='my-2' />
-                      <div className='flex justify-between'>
-                        <Typography variant='h6'>Total:</Typography>
-                        <Typography variant='h6'>UF {total?.toFixed(2) || '0.00'}</Typography>
-                      </div>
-                    </>
-                  )}
+                  ) :
+                    ((formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+                      (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto) ? (
+                      <>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Total Neto:</Typography>
+                          <TextField
+                            size='small'
+                            type='number'
+                            value={
+                              formData.tipoCotizacion === 'B' ? formData.precioEMSTotal : formData.precioMensualTotal
+                            }
+                            onChange={e => {
+                              const total = parseFloat(e.target.value) || 0
+                              const impuesto = total * 0.19
+                              updateFormData({
+                                ...(formData.tipoCotizacion === 'B'
+                                  ? { precioEMSTotal: total }
+                                  : { precioMensualTotal: total }),
+                                subtotal: total,
+                                impuesto: impuesto,
+                                total: total + impuesto
+                              })
+                            }}
+                            InputProps={{
+                              startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                            }}
+                            sx={{ width: '150px' }}
+                          />
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>IVA (19%):</Typography>
+                          <Typography>UF {formData.impuesto?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                        <Divider className='my-2' />
+                        <div className='flex justify-between'>
+                          <Typography variant='h6'>Total:</Typography>
+                          <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Subtotal:</Typography>
+                          <Typography>UF {subtotal?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Descuento:</Typography>
+                          <Typography>UF {descuentoTotal?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>IVA (19%):</Typography>
+                          <Typography>UF {impuesto?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                        <Divider className='my-2' />
+                        <div className='flex justify-between'>
+                          <Typography variant='h6'>Total:</Typography>
+                          <Typography variant='h6'>UF {total?.toFixed(2) || '0.00'}</Typography>
+                        </div>
+                      </>
+                    ))}
                 </div>
               </div>
             </Grid>
@@ -2337,6 +2411,8 @@ const AddCard = ({
                 }}
               />
             </Grid>
+
+
           </Grid>
           <Grid
             container
@@ -2399,11 +2475,11 @@ const AddCard = ({
           <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
             <FormControl size='small' fullWidth>
               <InputLabel shrink>Área</InputLabel>
-              <Select 
-                value={selectedAreaId?.toString() || ''} 
-                label='Área' 
-                onChange={handleAreaChange} 
-                displayEmpty 
+              <Select
+                value={selectedAreaId?.toString() || ''}
+                label='Área'
+                onChange={handleAreaChange}
+                displayEmpty
                 renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
               >
                 <MenuItem value=''>Todas</MenuItem>
@@ -2434,11 +2510,11 @@ const AddCard = ({
             </FormControl>
             <FormControl size='small' fullWidth>
               <InputLabel shrink>Familia</InputLabel>
-              <Select 
-                value={selectedFamilia} 
-                label='Familia' 
-                onChange={handleFamiliaChange} 
-                displayEmpty 
+              <Select
+                value={selectedFamilia}
+                label='Familia'
+                onChange={handleFamiliaChange}
+                displayEmpty
                 renderValue={selected => selected === '' ? 'Todas' : selected}
                 disabled={!selectedAreaId}
               >

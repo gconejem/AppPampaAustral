@@ -145,7 +145,9 @@ const PreviewCard = () => {
               ? 'Valores Unitarios'
               : previewData.tipoCotizacion === 'B'
                 ? 'EMS'
-                : 'Mensual'}
+                : previewData.tipoCotizacion === 'D'
+                  ? 'Genérica'
+                  : 'Mensual'}
           </Typography>
           <Typography>
             <strong>Proyecto:</strong> {previewData.nombreProyecto || 'No especificado'}
@@ -194,127 +196,145 @@ const PreviewCard = () => {
         )}
 
         {/* Tabla de Productos */}
-        <Table sx={{ mb: 4 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: 'primary.lighter' }}>
-              <TableCell>ÁREA</TableCell>
-              <TableCell>SERVICIO/ENSAYO</TableCell>
-              <TableCell>DESCRIPCIÓN</TableCell>
-              {previewData.precioEMSPorProducto && (
-                <>
-                  <TableCell align='right'>CANTIDAD</TableCell>
-                  <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
-                  <TableCell align='right'>TOTAL NETO UF</TableCell>
-                </>
-              )}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(() => {
-              // Agrupar detalles por área SOLO para productos normales
-              type Detalle = {
-                area?: string
-                esPaquete?: boolean
-                esSubProducto?: boolean
-                [key: string]: any
-              }
-              const detalles: Detalle[] = previewData.detalles || []
-              const areasMap = new Map<string, Detalle[]>()
-              const rows: JSX.Element[] = []
-              let i = 0
-              while (i < detalles.length) {
-                const item = detalles[i]
-                if (item.esPaquete) {
-                  // Renderizar la fila del paquete
-                  rows.push(
-                    <TableRow key={`paquete-${i}`} sx={{ backgroundColor: 'primary.lighter' }}>
-                      <TableCell>{item.area || ''}</TableCell>
-                      <TableCell>
-                        <strong>{item.servicio || ''}</strong>
-                        <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
-                      </TableCell>
-                      <TableCell>{item.descripcion || ''}</TableCell>
-                      {previewData.precioEMSPorProducto && (
-                        <>
-                          <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                          <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                          <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  )
-                  // Mostrar todos los subproductos juntos, sin importar el área
-                  let j = i + 1
-                  while (j < detalles.length && detalles[j].esSubProducto) {
-                    const sub = detalles[j]
+        {previewData.tipoCotizacion === 'D' ? (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant='subtitle2' sx={{ mb: 2 }}>
+              TEXTO GENERAL DE LA COTIZACIÓN:
+            </Typography>
+            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.textoGeneral || 'No especificado'}</Typography>
+          </Box>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: 'primary.lighter' }}>
+                <TableCell>ÁREA</TableCell>
+                <TableCell>SERVICIO/ENSAYO</TableCell>
+                <TableCell>DESCRIPCIÓN</TableCell>
+                {previewData.precioEMSPorProducto && (
+                  <>
+                    <TableCell align='right'>CANTIDAD</TableCell>
+                    <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
+                    <TableCell align='right'>TOTAL NETO UF</TableCell>
+                  </>
+                )}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(() => {
+                // Agrupar detalles por área SOLO para productos normales
+                type Detalle = {
+                  area?: string
+                  esPaquete?: boolean
+                  esSubProducto?: boolean
+                  [key: string]: any
+                }
+                const detalles: Detalle[] = previewData.detalles || []
+                const areasMap = new Map<string, Detalle[]>()
+                const rows: JSX.Element[] = []
+                let i = 0
+                while (i < detalles.length) {
+                  const item = detalles[i]
+                  if (item.esPaquete) {
+                    // Renderizar la fila del paquete
                     rows.push(
-                      <TableRow key={`subproducto-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
-                        <TableCell>{sub.area || ''}</TableCell>
-                        <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
-                        <TableCell>{sub.descripcion || ''}</TableCell>
+                      <TableRow key={`paquete-${i}`} sx={{ backgroundColor: 'primary.lighter' }}>
+                        <TableCell>{item.area || ''}</TableCell>
+                        <TableCell>
+                          <strong>{item.servicio || ''}</strong>
+                          <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
+                        </TableCell>
+                        <TableCell>{item.descripcion || ''}</TableCell>
                         {previewData.precioEMSPorProducto && (
                           <>
-                            <TableCell align='right'>{sub.cantidad || 0}</TableCell>
-                            <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
                           </>
                         )}
                       </TableRow>
                     )
-                    j++
+                    // Mostrar todos los subproductos juntos, sin importar el área
+                    let j = i + 1
+                    while (j < detalles.length && detalles[j].esSubProducto) {
+                      const sub = detalles[j]
+                      rows.push(
+                        <TableRow key={`subproducto-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
+                          <TableCell>{sub.area || ''}</TableCell>
+                          <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
+                          <TableCell>{sub.descripcion || ''}</TableCell>
+                          {previewData.precioEMSPorProducto && (
+                            <>
+                              <TableCell align='right'>{sub.cantidad || 0}</TableCell>
+                              <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                              <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      )
+                      j++
+                    }
+                    i = j
+                  } else if (!item.esSubProducto) {
+                    // Agrupar productos normales por área
+                    const area = item.area || 'Sin área'
+                    if (!areasMap.has(area)) areasMap.set(area, [])
+                    areasMap.get(area)?.push(item)
+                    i++
+                  } else {
+                    // Subproducto sin paquete (caso raro)
+                    i++
                   }
-                  i = j
-                } else if (!item.esSubProducto) {
-                  // Agrupar productos normales por área
-                  const area = item.area || 'Sin área'
-                  if (!areasMap.has(area)) areasMap.set(area, [])
-                  areasMap.get(area)?.push(item)
-                  i++
-                } else {
-                  // Subproducto sin paquete (caso raro)
-                  i++
                 }
-              }
-              // Renderizar productos normales agrupados por área
-              Array.from(areasMap.entries()).forEach(([area, detallesArea], areaIdx) => {
-                rows.push(
-                  <TableRow key={`area-title-${areaIdx}`}>
-                    <TableCell colSpan={previewData.precioEMSPorProducto ? 6 : 3} style={{ background: '#f5f5f5', fontWeight: 700 }}>
-                      {area}
-                    </TableCell>
-                  </TableRow>
-                )
-                detallesArea.forEach((item, idx) => {
+                // Renderizar productos normales agrupados por área
+                Array.from(areasMap.entries()).forEach(([area, detallesArea], areaIdx) => {
                   rows.push(
-                    <TableRow key={`producto-${areaIdx}-${idx}`}>
-                      <TableCell>{item.area || ''}</TableCell>
-                      <TableCell>{item.servicio || ''}</TableCell>
-                      <TableCell>{item.descripcion || ''}</TableCell>
-                      {previewData.precioEMSPorProducto && (
-                        <>
-                          <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                          <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                          <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                        </>
-                      )}
+                    <TableRow key={`area-title-${areaIdx}`}>
+                      <TableCell colSpan={previewData.precioEMSPorProducto ? 6 : 3} style={{ background: '#f5f5f5', fontWeight: 700 }}>
+                        {area}
+                      </TableCell>
                     </TableRow>
                   )
+                  detallesArea.forEach((item, idx) => {
+                    rows.push(
+                      <TableRow key={`producto-${areaIdx}-${idx}`}>
+                        <TableCell>{item.area || ''}</TableCell>
+                        <TableCell>{item.servicio || ''}</TableCell>
+                        <TableCell>{item.descripcion || ''}</TableCell>
+                        {previewData.precioEMSPorProducto && (
+                          <>
+                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    )
+                  })
                 })
-              })
-              return rows
-            })()}
-          </TableBody>
-        </Table>
+                return rows
+              })()}
+            </TableBody>
+          </Table>
+        )}
 
         {/* Totales */}
-        <Box sx={{ mt: 4, textAlign: 'right' }}>
+        <Box sx={{ mb: 4, textAlign: 'right' }}>
           {(() => {
             // Asegurarnos de que todos los valores sean números válidos
-            const subtotal = Number(previewData.subtotal || 0)
-            const descuento = Number(previewData.descuento || 0)
-            const subtotalConDescuento = Math.max(0, subtotal - descuento)
-            const iva = subtotalConDescuento * 0.19
-            const total = subtotalConDescuento + iva
+            let subtotal, descuento, subtotalConDescuento, iva, total;
+            if (previewData.tipoCotizacion === 'D') {
+              subtotal = Number(previewData.totalNetoGeneral || 0);
+              descuento = 0;
+              subtotalConDescuento = subtotal;
+              iva = subtotal * 0.19;
+              total = subtotal + iva;
+            } else {
+              subtotal = Number(previewData.subtotal || 0);
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            }
 
             return (
               <>

@@ -301,6 +301,7 @@ model Cotizacion {
   observaciones    String?
   observacionGestion String?
   notas            String?
+  textoGeneral     String?
   version          String?
   subtotal         Decimal             @db.Decimal(10, 2)
   descuento        Decimal             @db.Decimal(10, 2)
@@ -724,6 +725,7 @@ enum TipoCotizacion {
   A
   B
   C
+  D
 }
 
 enum EstadoCotizacion {

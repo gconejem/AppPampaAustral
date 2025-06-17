@@ -193,7 +193,7 @@ Condiciones para terreno y accesos
           <div class="row">
             <div class="col">
               <div class="label">Datos del Proyecto</div>
-              <div class="value"><b>Tipo:</b> ${cotizacion.tipoCotizacion === 'A' ? 'Valores Unitarios' : cotizacion.tipoCotizacion === 'B' ? 'EMS' : 'Mensual'}</div>
+              <div class="value"><b>Tipo:</b> ${cotizacion.tipoCotizacion === 'A' ? 'Valores Unitarios' : cotizacion.tipoCotizacion === 'B' ? 'EMS' : cotizacion.tipoCotizacion === 'D' ? 'Genérica' : 'Mensual'}</div>
               <div class="value"><b>Proyecto:</b> ${cotizacion.nombreProyecto || '-'}</div>
               <div class="value"><b>Empresa:</b> ${cotizacion.empresa || '-'}</div>
               <div class="value"><b>Ubicación:</b> ${cotizacion.ubicacion || '-'}</div>
@@ -209,6 +209,12 @@ Condiciones para terreno y accesos
             </div>
           </div>
           ` : ''}
+          ${cotizacion.tipoCotizacion === 'D' ? `
+            <div style="margin-top: 24px; margin-bottom: 24px;">
+              <div class="label">Texto General de la Cotización:</div>
+              <div class="value" style="white-space: pre-wrap;">${cotizacion.textoGeneral ? cotizacion.textoGeneral.replace(/\r?\n/g, '<br>') : 'No especificado'}</div>
+            </div>
+          ` : `
           <table class="table">
             <thead>
               <tr>
@@ -226,35 +232,24 @@ Condiciones para terreno y accesos
               ${(() => {
                 let html = '';
                 let currentArea = '';
-                
                 // Recorrer los detalles secuencialmente
                 for (let i = 0; i < cotizacion.detalles.length; i++) {
                   const detalle = cotizacion.detalles[i];
                   const area = detalle.producto?.area || detalle.area || 'Sin área';
-                  
-                  // Si es un subproducto, lo saltamos ya que se mostrará con su paquete
                   if (detalle.esSubProducto) continue;
-                  
-                  // Si cambia el área y no es un subproducto, mostrar el encabezado del área
                   if (area !== currentArea && !detalle.esSubProducto) {
                     currentArea = area;
                     html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
                     html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
                   }
-                  
-                  // Mostrar el detalle actual
                   if (detalle.esPaquete) {
-                    // Construir nombre completo (nombre - norma) en negrita
                     const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
-                    // Label PAQUETE
                     const labelPaquete = '<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold;">PAQUETE</span>';
-                    // Buscar subproductos
                     let subproductosHtml = '';
                     let j = i + 1;
-                    const subproductos: any[] = [];
+                    const subproductos = [];
                     while (j < cotizacion.detalles.length && cotizacion.detalles[j].esSubProducto) {
                       const sub = cotizacion.detalles[j];
-                      // Mostrar nombre y norma si existe
                       let nombreSub = sub.servicio || '';
                       if (sub.norma) {
                         nombreSub += ' - ' + sub.norma;
@@ -275,10 +270,8 @@ Condiciones para terreno y accesos
                       html += `<td>${detalle.totalNetoUF ? Number(detalle.totalNetoUF).toFixed(2) : '-'}</td>`;
                     }
                     html += `</tr>`;
-                    // Saltar los subproductos en el bucle principal
                     i = j - 1;
                   } else {
-                    // Producto normal
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
                     html += `<td>${detalle.servicio || '-'}</td>`;
@@ -295,20 +288,34 @@ Condiciones para terreno y accesos
               })()}
             </tbody>
           </table>
+          `}
           <div class="totales">
             ${(() => {
-              const subtotal = Number(cotizacion.precioEMSPorProducto ? cotizacion.subtotal : cotizacion.precioEMSTotal);
-              const descuento = Number(cotizacion.descuento || 0);
-              const subtotalConDescuento = subtotal - descuento;
-              const iva = subtotalConDescuento * 0.19;
-              const total = subtotalConDescuento + iva;
-
-              return `
-                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
-                <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
-                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
-                <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
-              `;
+              if (cotizacion.tipoCotizacion === 'D') {
+                const subtotal = Number(cotizacion.totalNetoGeneral || 0);
+                const descuento = 0;
+                const subtotalConDescuento = subtotal;
+                const iva = subtotalConDescuento * 0.19;
+                const total = subtotalConDescuento + iva;
+                return `
+                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
+                  <div><strong>Descuento:</strong> UF 0.00</div>
+                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
+                  <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                `;
+              } else {
+                const subtotal = Number(cotizacion.precioEMSPorProducto ? cotizacion.subtotal : cotizacion.precioEMSTotal);
+                const descuento = Number(cotizacion.descuento || 0);
+                const subtotalConDescuento = subtotal - descuento;
+                const iva = subtotalConDescuento * 0.19;
+                const total = subtotalConDescuento + iva;
+                return `
+                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
+                  <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
+                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
+                  <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                `;
+              }
             })()}
           </div>
           ${observacionesYNotasHTML}

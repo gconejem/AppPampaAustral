@@ -110,6 +110,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           antecedentesEMS: body.antecedentesEMS || '',
           plazoEntregaEMS: body.plazoEntregaEMS || ''
         }),
+        // Incluir campos de tipo D
+        ...(body.tipoCotizacion === 'D' && {
+          textoGeneral: body.textoGeneral || '',
+          subtotal: body.totalNetoGeneral || 0
+        }),
         updatedAt: new Date()
       }
     })
