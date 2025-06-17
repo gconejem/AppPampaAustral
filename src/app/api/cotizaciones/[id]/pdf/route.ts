@@ -19,12 +19,30 @@ const formatearFormaPago = (formaPago: string): string => {
 
 function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
   // Notas desde la base de datos
-  const notasHTML = cotizacion.notas ? `
-    <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
-    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
-      ${cotizacion.notas.replace(/\r?\n/g, '<br>')}
-    </div>
-  ` : '';
+  const notasTipoB = `Relacionado al valor del servicio cotizado:
+• Valor Neto (sin IVA incluido)
+• El valor cotizado considera movilización, traslado de personal, equipos y muestras.
+• El servicio incluye la emisión de informes digitales sin costo adicional.
+
+Costos Adicionales contra evento:
+• La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
+  Para Estudio con Ingeniería: 3 UF + IVA.
+  Para Estudio sin Ingeniería: 1,5 UF + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+
+Consideraciones adicionales y requisitos especiales
+• Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente. Cualquier requerimiento adicional deberá ser informado previamente para su evaluación y eventual recotización.
+• Los requerimientos adicionales pueden incluir: Normativas técnicas específicas, Acreditaciones de personal, Exigencias de seguridad, medio ambiente u otras disposiciones del mandante.
+
+Condiciones para terreno y accesos
+• El cliente debe marcar previamente los puntos de prospección (idealmente con georreferencias).
+• Accesos deben estar garantizados por el cliente y el prospector a explorar libre de ductos, tuberías, redes subterráneas o cualquier otro elemento que impida la buena ejecución de los trabajos o puedan atentar la seguridad del equipo de trabajo.
+• No se considera rotura de pavimento.
+• Podrán generarse costos adicionales en las prospecciones solicitadas si: Los accesos no están expeditos o se generan retrasos por falta de autorizaciones u otras condiciones externas al laboratorio.`
+
+  const notasHTML = cotizacion.notas
+    ? `<div><h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;'>${cotizacion.notas}</pre></div>`
+    : '';
 
   return `
   <html>

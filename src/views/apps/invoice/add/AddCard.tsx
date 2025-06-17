@@ -83,6 +83,54 @@ interface FormData {
   notas: string
 }
 
+// Coloca la función aquí antes de initialFormData
+const getNotasDefault = (tipoCotizacion: string) => {
+  if (tipoCotizacion === 'B') {
+    return `Relacionado al valor del servicio cotizado:
+• Valor Neto (sin IVA incluido)
+• El valor cotizado considera movilización, traslado de personal, equipos y muestras.
+• El servicio incluye la emisión de informes digitales sin costo adicional.
+
+Costos Adicionales contra evento:
+• La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
+  Para Estudio con Ingeniería: 3 UF + IVA.
+  Para Estudio sin Ingeniería: 1,5 UF + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+
+Consideraciones adicionales y requisitos especiales
+• Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
+  }
+  if (tipoCotizacion === 'C') {
+    return `Notas:
+* Valor Neto (sin IVA incluido)
+* Adicionales contra evento:
+  • Copia digital adicional tiene un costo de 0.15 UF neto.
+  • Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
+  • Informe con firma y timbres físicos tiene un costo de 0.58 UF neto
+  • Recargos por jornadas extraordinarias (a todos los ítem de la cotización).
+    50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+    100% Adicional Sábado, Domingo o Festivo.
+* Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+  }
+  // Aquí puedes agregar el texto por defecto para otros tipos si lo deseas
+  return `(1) Valores unitarios Neto (sin IVA incluido)
+
+(2) Adicionales en Terreno (contra evento):
+• Km Adicional: 0,013 UF
+• Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
+• Jornada completa de Laboratorista (8 horas): 8.4 UF
+• Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
+  - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+  - 100% Adicional: Sábado, Domingo o Festivo.
+
+(3) Adicionales relacionados a los Informes de Laboratorio:
+• Copia digital adicional: 0.15 UF neto
+• Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
+• Informe con firma y timbres físicos: 0.58 UF neto
+
+(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+}
+
 const AddCard = ({
   invoiceData,
   onFormDataChange
@@ -127,22 +175,7 @@ const AddCard = ({
     duracionMensual: '',
     jornadaMensual: '',
     antecedentesMensual: '',
-    notas: `(1) Valores unitarios Neto (sin IVA incluido)
-
-(2) Adicionales en Terreno (contra evento):
-• Km Adicional: 0,013 UF
-• Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
-• Jornada completa de Laboratorista (8 horas): 8.4 UF
-• Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
-  - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
-  - 100% Adicional: Sábado, Domingo o Festivo.
-
-(3) Adicionales relacionados a los Informes de Laboratorio:
-• Copia digital adicional: 0.15 UF neto
-• Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
-• Informe con firma y timbres físicos: 0.58 UF neto
-
-(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+    notas: getNotasDefault('A'), // 'A' es el valor por defecto inicial
   }
 
   const initialValidationErrors: ValidationErrors = {
@@ -1341,6 +1374,26 @@ const AddCard = ({
     }
   }, [autoOpenRowId, productRows])
 
+  // Estado para recordar el último valor de notas generado automáticamente
+  const [lastAutoNotas, setLastAutoNotas] = useState(getNotasDefault(initialFormData.tipoCotizacion))
+
+  // useEffect para actualizar notas si cambia tipoCotizacion y el usuario no ha editado manualmente
+  useEffect(() => {
+    const autoNotas = getNotasDefault(formData.tipoCotizacion)
+    // Solo actualiza si el valor actual de notas coincide con el último valor generado automáticamente
+    if (formData.notas === lastAutoNotas) {
+      setFormData(prev => ({ ...prev, notas: autoNotas }))
+      setLastAutoNotas(autoNotas)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.tipoCotizacion])
+
+  // Al editar el campo notas manualmente, actualizar lastAutoNotas si el valor es diferente
+  const handleNotasChange = (value: string) => {
+    setFormData(prev => ({ ...prev, notas: value }))
+    // Si el usuario edita, no actualizar lastAutoNotas
+  }
+
   return (
     <>
       <Card
@@ -2260,7 +2313,7 @@ const AddCard = ({
                 multiline
                 rows={12}
                 value={formData.notas}
-                onChange={e => handleChange('notas', e.target.value)}
+                onChange={e => handleNotasChange(e.target.value)}
                 placeholder={formData.tipoCotizacion === 'A' ? `(1) Valores unitarios Neto (sin IVA incluido)
 
 (2) Adicionales en Terreno (contra evento):

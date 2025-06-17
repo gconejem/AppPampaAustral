@@ -156,6 +156,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // Refs para inputs de Servicio
   const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Estado para recordar el último valor de notas generado automáticamente
+  const [lastAutoNotas, setLastAutoNotas] = useState(getNotasDefault(formData?.tipoCotizacion || 'A'))
+
   // Función para calcular totales
   const calcularTotales = useCallback(() => {
     if (!formData) return
@@ -894,6 +897,44 @@ const DuplicateCard = ({ id }: { id: string }) => {
     }
   }, [selectedAreaId])
 
+  // Función para obtener las notas por defecto según el tipo de cotización
+  function getNotasDefault(tipoCotizacion: string) {
+    if (tipoCotizacion === 'B') {
+      return `Relacionado al valor del servicio cotizado:
+• Valor Neto (sin IVA incluido)
+• El valor cotizado considera movilización, traslado de personal, equipos y muestras.
+• El servicio incluye la emisión de informes digitales sin costo adicional.
+
+Costos Adicionales contra evento:
+• La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
+  Para Estudio con Ingeniería: 3 UF + IVA.
+  Para Estudio sin Ingeniería: 1,5 UF + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+
+Consideraciones adicionales y requisitos especiales
+• Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
+    }
+    if (tipoCotizacion === 'C') {
+      return `Notas:
+* Valor Neto (sin IVA incluido)
+* Adicionales contra evento:
+  • Copia digital adicional tiene un costo de 0.15 UF neto.
+  • Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
+  • Informe con firma y timbres físicos tiene un costo de 0.58 UF neto
+  • Recargos por jornadas extraordinarias (a todos los ítem de la cotización).
+    50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+    100% Adicional Sábado, Domingo o Festivo.
+* Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+    }
+    return ''
+  }
+
+  useEffect(() => {
+    if (!formData) return;
+    setFormData(prev => prev ? { ...prev, notas: getNotasDefault(formData.tipoCotizacion) } : prev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData && formData.tipoCotizacion]);
+
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
   if (!formData) return <Typography>No se encontró la cotización</Typography>
@@ -1574,7 +1615,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
               multiline
               rows={12}
               value={formData.notas || ''}
-              onChange={e => setFormData({ ...formData, notas: e.target.value })}
+              onChange={e => handleNotasChange(e.target.value)}
               placeholder='Ingrese aquí las notas de la cotización...'
             />
           </Grid>
