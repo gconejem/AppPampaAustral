@@ -278,7 +278,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                     }
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
-                    html += `<td>${nombreNorma}${labelPaquete}${subproductosHtml}</td>`;
+                    html += `<td>${nombreNorma}${subproductosHtml}</td>`;
                     html += `<td>${detalle.descripcion || '-'}</td>`;
                     if (cotizacion.precioEMSPorProducto) {
                       html += `<td>${detalle.cantidad || '-'}</td>`;

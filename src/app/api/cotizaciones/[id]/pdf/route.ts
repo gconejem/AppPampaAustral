@@ -261,7 +261,6 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
                         <td>
                           <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
                             ${detalle.producto?.nombre || '-'}${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
-                            <span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 8px;">PAQUETE</span>
                           </div>
                           ${subproductos.length > 0 ?
                             '<ul style="margin: 8px 0 0 0; padding-left: 20px;">' +
