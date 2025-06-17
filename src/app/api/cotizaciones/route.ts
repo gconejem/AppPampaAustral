@@ -173,6 +173,7 @@ export async function POST(request: Request) {
           obra: body.obraId ? { connect: { obraId: body.obraId } } : undefined,
           vendedorId: body.vendedorId,
           observaciones: body.observaciones || '',
+          notas: body.notas || '',
           subtotal: body.subtotal || 0,
           descuento: body.descuento || 0,
           impuesto: body.impuesto || 0,

@@ -1047,6 +1047,22 @@ const InvoiceListTable = () => {
                   InputProps={{ readOnly: true }}
                 />
               </Grid>
+
+              {/* Notas */}
+              {selectedCotizacion.notas && (
+                <Grid item xs={12}>
+                  <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
+                    Notas
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={6}
+                    value={selectedCotizacion.notas}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+              )}
             </Grid>
           ) : null}
         </DialogContent>

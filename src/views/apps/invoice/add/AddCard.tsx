@@ -80,6 +80,7 @@ interface FormData {
   duracionMensual: string
   jornadaMensual: string
   antecedentesMensual: string
+  notas: string
 }
 
 const AddCard = ({
@@ -125,7 +126,23 @@ const AddCard = ({
     antecedentesEMS: '',
     duracionMensual: '',
     jornadaMensual: '',
-    antecedentesMensual: ''
+    antecedentesMensual: '',
+    notas: `(1) Valores unitarios Neto (sin IVA incluido)
+
+(2) Adicionales en Terreno (contra evento):
+• Km Adicional: 0,013 UF
+• Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
+• Jornada completa de Laboratorista (8 horas): 8.4 UF
+• Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
+  - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+  - 100% Adicional: Sábado, Domingo o Festivo.
+
+(3) Adicionales relacionados a los Informes de Laboratorio:
+• Copia digital adicional: 0.15 UF neto
+• Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
+• Informe con firma y timbres físicos: 0.58 UF neto
+
+(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
   }
 
   const initialValidationErrors: ValidationErrors = {
@@ -234,6 +251,7 @@ const AddCard = ({
         impuesto: formData.impuesto,
         total: formData.total,
         observaciones: formData.observaciones,
+        notas: formData.notas,
         clienteId: formData.clienteId,
         obraId: formData.obraId,
         contacto: formData.contacto,
@@ -2213,6 +2231,52 @@ const AddCard = ({
                 placeholder='Ingrese aquí cualquier observación o nota adicional para la cotización...'
                 value={formData.observaciones}
                 onChange={e => handleChange('observaciones', e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'background.paper'
+                  }
+                }}
+              />
+            </Grid>
+
+            {/* Campo de Notas */}
+            <Grid item xs={12} sx={{ mt: 6 }}>
+              <Typography
+                variant='h6'
+                sx={{
+                  mb: 2,
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                  textTransform: 'none',
+                  borderBottom: '1px solid',
+                  borderColor: 'primary.main',
+                  pb: 1
+                }}
+              >
+                Notas:
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={12}
+                value={formData.notas}
+                onChange={e => handleChange('notas', e.target.value)}
+                placeholder={formData.tipoCotizacion === 'A' ? `(1) Valores unitarios Neto (sin IVA incluido)
+
+(2) Adicionales en Terreno (contra evento):
+• Km Adicional: 0,013 UF
+• Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
+• Jornada completa de Laboratorista (8 horas): 8.4 UF
+• Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
+  - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+  - 100% Adicional: Sábado, Domingo o Festivo.
+
+(3) Adicionales relacionados a los Informes de Laboratorio:
+• Copia digital adicional: 0.15 UF neto
+• Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
+• Informe con firma y timbres físicos: 0.58 UF neto
+
+(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.` : ''}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     backgroundColor: 'background.paper'

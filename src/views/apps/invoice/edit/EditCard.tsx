@@ -106,6 +106,7 @@ interface FormDataType {
   nombreProyecto: string
   ubicacion: string
   observaciones: string
+  notas: string
   numeroCotizacion: string
   version: string
   fechaCreacion: string
@@ -1529,6 +1530,21 @@ const EditCard = ({ id }: { id: string }) => {
               value={formData.observaciones || ''}
               onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
               placeholder='Ingrese aquí cualquier observación o nota adicional para la cotización...'
+            />
+          </Grid>
+
+          {/* Notas */}
+          <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Notas
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={12}
+              value={formData.notas || ''}
+              onChange={e => setFormData({ ...formData, notas: e.target.value })}
+              placeholder='Ingrese aquí las notas de la cotización...'
             />
           </Grid>
 

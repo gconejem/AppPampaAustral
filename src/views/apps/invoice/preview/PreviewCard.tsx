@@ -337,65 +337,25 @@ const PreviewCard = () => {
 
         {/* Observaciones */}
         {previewData.observaciones && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant='subtitle2' sx={{ mb: 2, color: 'text.secondary' }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant='subtitle2' sx={{ mb: 2 }}>
               OBSERVACIONES:
             </Typography>
-            <Typography sx={{ mt: 1 }} component="div" dangerouslySetInnerHTML={{ __html: (previewData.observaciones || '').replace(/\r?\n/g, '<br>') }} />
+            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.observaciones}</Typography>
           </Box>
         )}
 
-        {/* Notas específicas para tipo A */}
-        {/* {previewData.tipoCotizacion === 'A' && (
-          <Box sx={{ mt: 4, px: 4 }}>
-            <Typography variant='h6' sx={{ mb: 2, color: 'text.secondary' }}>
-              Notas:
+        {/* Notas */}
+        {previewData.notas && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant='subtitle2' sx={{ mb: 2 }}>
+              NOTAS:
             </Typography>
-            <Typography
-              component='div'
-              variant='body2'
-              sx={{
-                fontSize: '0.85rem',
-                '& > p': { mb: 2 },
-                '& > ul': {
-                  listStyle: 'none',
-                  pl: 0,
-                  '& > li': {
-                    mb: 1,
-                    position: 'relative',
-                    pl: 2,
-                    '&::before': {
-                      content: '"•"',
-                      position: 'absolute',
-                      left: 0
-                    }
-                  }
-                }
-              }}
-            >
-              <p>Valores unitarios Neto (sin IVA incluido)</p>
-              <p>Adicionales contra evento:</p>
-              <ul>
-                <li>Copia digital adicional tiene un costo de 0.15 UF neto.</li>
-                <li>
-                  Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de
-                  responsabilidad de Laboratorio Pampa Austral Ltda.
-                </li>
-                <li>Informe con firma y timbres físicos tiene un costo de 0.58 UF neto</li>
-              </ul>
-              <p>Recargos por jornadas extraordinarias (a todos los ítem de la cotización):</p>
-              <ul>
-                <li>50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
-                <li>100% Adicional Sábado, Domingo o Festivo.</li>
-              </ul>
-              <p>
-                Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos
-                o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva
-                cotización si corresponde.
-              </p>
-            </Typography>
+            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.notas}</Typography>
           </Box>
-        )} */}
+        )}
+
+        {/* Pie de página */}
       </CardContent>
     </Card>
   )

@@ -141,6 +141,7 @@ const PreviewActions = () => {
           : parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0) + 
             ((parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19),
         observaciones: previewData.observaciones || '',
+        notas: previewData.notas || '',
 
         //EMS
         superficieEMS: previewData.superficieEMS || '',

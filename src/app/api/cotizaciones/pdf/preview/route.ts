@@ -114,9 +114,20 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
   `;
 
   // Selección dinámica de notas
-  let notasHTML = notasTipoA;
-  if (cotizacion.tipoCotizacion === 'B') notasHTML = notasTipoB;
-  else if (cotizacion.tipoCotizacion === 'C') notasHTML = notasTipoC;
+  let notasHTML = '';
+  if (cotizacion.notas) {
+    notasHTML = `
+      <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
+      <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+        ${cotizacion.notas.replace(/\r?\n/g, '<br>')}
+      </div>
+    `;
+  } else {
+    // Notas por defecto según el tipo de cotización
+    if (cotizacion.tipoCotizacion === 'B') notasHTML = notasTipoB;
+    else if (cotizacion.tipoCotizacion === 'C') notasHTML = notasTipoC;
+    else notasHTML = notasTipoA;
+  }
 
   return `
   <html>
