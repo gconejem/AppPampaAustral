@@ -421,6 +421,7 @@ const AddCard = ({
       if (selectedArea) params.append('area', selectedArea)
       if (selectedTipo) params.append('tipo', selectedTipo)
       if (selectedFamilia) params.append('familia', selectedFamilia)
+      if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
       fetch(`/api/productos?${params.toString()}`)
         .then(res => {
@@ -431,16 +432,7 @@ const AddCard = ({
         })
         .then(response => {
           const data = response.productos || []
-          // Filtrar los productos por nombre, descripción o norma
-          const filteredData = searchTerm
-            ? data.filter(
-                (producto: any) =>
-                  producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  producto.norma?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-            : data
-          setFilteredProductos(filteredData)
+          setFilteredProductos(data)
           setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
         .catch(error => {
@@ -450,7 +442,7 @@ const AddCard = ({
           setTotalProductos(0)
         })
     }
-  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes, anchorEl])
 
   // Agregar useEffect para resetear la página cuando cambien los filtros
   useEffect(() => {

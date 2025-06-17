@@ -139,7 +139,9 @@ export async function GET(req: Request) {
     if (area) where.area = area
     if (tipo) where.tipo = tipo
     if (familia) where.familia = familia
-    if (esPaquete !== undefined) where.esPaquete = esPaquete === 'true'
+    if (esPaquete !== null && esPaquete !== undefined) {
+      where.esPaquete = esPaquete === 'true'
+    }
 
     // Agregar búsqueda por nombre, descripción o norma
     if (search) {
@@ -171,7 +173,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ productos, total })
   } catch (error) {
     console.error('Error al obtener productos:', error)
-
     return NextResponse.json({ error: 'Error al obtener los productos' }, { status: 500 })
   }
 }
