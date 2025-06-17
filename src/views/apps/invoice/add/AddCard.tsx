@@ -48,6 +48,40 @@ import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 import type { ContactoType } from '@/types/apps/contactTypes'
 import { ROLES_CONTACTO } from '@/constants/roles'
 
+interface FormData {
+  numeroCotizacion: string
+  version: string
+  tipoCotizacion: string
+  estado: string
+  nombreProyecto: string
+  ubicacion: string
+  empresa: string
+  fechaInicio: Date
+  fechaFin: Date
+  clienteId: number | null
+  obraId: number | null
+  contactId: number | null
+  subtotal: number
+  descuento: number
+  impuesto: number
+  total: number
+  observaciones: string
+  detalles: any[]
+  formaPago: string
+  infoEMS: string
+  infoMensual: string
+  precioEMSPorProducto: boolean
+  precioEMSTotal: number
+  precioMensualPorProducto: boolean
+  precioMensualTotal: number
+  productos: any[]
+  superficieEMS: string
+  antecedentesEMS: string
+  duracionMensual: string
+  jornadaMensual: string
+  antecedentesMensual: string
+}
+
 const AddCard = ({
   invoiceData,
   onFormDataChange
@@ -60,6 +94,7 @@ const AddCard = ({
   // Actualizar el estado inicial
   const initialFormData: FormData = {
     numeroCotizacion: '0001',
+    version: '00',
     tipoCotizacion: 'A',
     estado: 'BORRADOR',
     nombreProyecto: '',
@@ -184,6 +219,7 @@ const AddCard = ({
 
       const dataToSend = {
         numeroCotizacion: formData.numeroCotizacion,
+        version: formData.version,
         tipoCotizacion: formData.tipoCotizacion,
         estado: formData.estado,
         fechaEmision: fechaEmision.toISOString(),
@@ -1324,16 +1360,29 @@ const AddCard = ({
                       <Typography variant='h5' className='min-is-[95px]'>
                         N° Cotización
                       </Typography>
-                      <TextField
-                        name='numeroCotizacion'
-                        fullWidth
-                        size='small'
-                        value={formData.numeroCotizacion}
-                        InputProps={{
-                          readOnly: true,
-                          startAdornment: <InputAdornment position='start'>#</InputAdornment>
-                        }}
-                      />
+                      <div className='flex items-center gap-2'>
+                        <TextField
+                          name='numeroCotizacion'
+                          size='small'
+                          value={formData.numeroCotizacion}
+                          InputProps={{
+                            readOnly: true,
+                            startAdornment: <InputAdornment position='start'>#</InputAdornment>
+                          }}
+                        />
+                        <Typography>-</Typography>
+                        <TextField
+                          name='version'
+                          size='small'
+                          value={formData.version}
+                          onChange={(e) => handleChange('version', e.target.value)}
+                          inputProps={{
+                            maxLength: 2,
+                            pattern: '[0-9]*'
+                          }}
+                          sx={{ width: '60px' }}
+                        />
+                      </div>
                     </div>
                     <div className='flex items-center gap-2 mb-4'>
                       <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>

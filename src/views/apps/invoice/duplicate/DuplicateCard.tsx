@@ -107,6 +107,7 @@ interface FormDataType {
   ubicacion: string
   observaciones: string
   numeroCotizacion: string
+  version: string
   fechaCreacion: string
   fechaFin: string
   contacto?: ContactoType
@@ -640,6 +641,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       // Crear el objeto con solo los campos necesarios
       const dataToSend = {
         numeroCotizacion: siguienteNumero.toString().padStart(4, '0'),
+        version: '00',
         tipoCotizacion: formData.tipoCotizacion,
         estado: 'BORRADOR',
         clienteId: null,
@@ -702,6 +704,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
     const previewData = {
       ...formData,
       numeroCotizacion: formData.numeroCotizacion.padStart(4, '0'), // Formatear número con ceros a la izquierda
+      version: '00', // Forzar versión '00' para la vista previa en duplicación
       fechaInicio: hoy.toISOString(), // Formato que espera PreviewCard
       fechaFin: fechaVencimiento.toISOString().split('T')[0], // Formato YYYY-MM-DD
       detalles: productRows.map(row => ({
@@ -916,16 +919,28 @@ const DuplicateCard = ({ id }: { id: string }) => {
                     <Typography variant='h5' className='min-is-[95px]'>
                       N° Cotización
                     </Typography>
-                    <TextField
-                      name='numeroCotizacion'
-                      fullWidth
-                      size='small'
-                      value={formData.numeroCotizacion}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: <InputAdornment position='start'>#</InputAdornment>
-                      }}
-                    />
+                    <div className='flex items-center gap-2'>
+                      <TextField
+                        name='numeroCotizacion'
+                        fullWidth
+                        size='small'
+                        value={formData.numeroCotizacion}
+                        InputProps={{
+                          readOnly: true,
+                          startAdornment: <InputAdornment position='start'>#</InputAdornment>
+                        }}
+                      />
+                      <Typography>-</Typography>
+                      <TextField
+                        name='version'
+                        size='small'
+                        value='00'
+                        InputProps={{
+                          readOnly: true
+                        }}
+                        sx={{ width: '60px' }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

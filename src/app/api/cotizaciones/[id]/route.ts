@@ -93,6 +93,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         empresa: body.empresa,
         ubicacion: body.ubicacion,
         tipoCotizacion: body.tipoCotizacion,
+        version: body.version,
         subtotal: body.subtotal,
         descuento: body.descuento,
         impuesto: body.impuesto,

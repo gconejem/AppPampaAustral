@@ -161,6 +161,7 @@ export async function POST(request: Request) {
       const cotizacion = await prisma.cotizacion.create({
         data: {
           numeroCotizacion: body.numeroCotizacion,
+          version: body.version || '00',
           tipoCotizacion: normalizeTipoCotizacion(body.tipoCotizacion),
           fechaInicio,
           fechaFin,

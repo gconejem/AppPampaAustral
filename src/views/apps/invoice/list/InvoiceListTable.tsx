@@ -836,7 +836,7 @@ const InvoiceListTable = () => {
                       <Typography>+56 42-223 82 90</Typography>
                     </Grid>
                     <Grid item xs={12} md={6} sx={{ textAlign: 'right' }}>
-                      <Typography variant='h6'>N° Cotización: #{selectedCotizacion.numeroCotizacion}</Typography>
+                      <Typography variant='h6'>N° Cotización: #{selectedCotizacion.numeroCotizacion}-{selectedCotizacion.version || '00'}</Typography>
                       <Typography>
                         Fecha Emisión: {formatDate(selectedCotizacion.fechaCreacion)}
                       </Typography>

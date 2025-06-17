@@ -114,6 +114,7 @@ const PreviewActions = () => {
 
       const dataToSend = {
         numeroCotizacion: previewData.numeroCotizacion,
+        version: previewData.version || '00',
         tipoCotizacion: tipoCotizacionValue,
         estado: 'BORRADOR',
         clienteId: previewData.cliente?.clienteId ? parseInt(previewData.cliente.clienteId) : null,
@@ -171,12 +172,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      setTimeout(() => {
+      /* setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000)
+      }, 1000) */
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')

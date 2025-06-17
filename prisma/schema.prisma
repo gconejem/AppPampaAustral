@@ -300,6 +300,7 @@ model Cotizacion {
   vendedorId       String?
   observaciones    String?
   observacionGestion String?
+  version          String?
   subtotal         Decimal             @db.Decimal(10, 2)
   descuento        Decimal             @db.Decimal(10, 2)
   impuesto         Decimal             @db.Decimal(10, 2)

@@ -87,7 +87,7 @@ const PreviewCard = () => {
             </Typography>
           </Grid>
           <Grid item xs={6} sx={{ textAlign: 'right' }}>
-            <Typography sx={{ mt: 2 }}>N° COTIZACIÓN {previewData.numeroCotizacion}</Typography>
+            <Typography sx={{ mt: 2 }}>N° COTIZACIÓN {previewData.numeroCotizacion}-{previewData.version || '00'}</Typography>
             <Typography>Fecha Emisión: {formatearFecha(previewData.fechaInicio)}</Typography>
             <Typography>Fecha Vencimiento: {formatearFecha(previewData.fechaFin)}</Typography>
           </Grid>

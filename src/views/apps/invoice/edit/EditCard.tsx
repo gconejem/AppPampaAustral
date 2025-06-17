@@ -107,6 +107,7 @@ interface FormDataType {
   ubicacion: string
   observaciones: string
   numeroCotizacion: string
+  version: string
   fechaCreacion: string
   fechaFin: string
   contacto?: ContactoType
@@ -667,6 +668,7 @@ const EditCard = ({ id }: { id: string }) => {
 
       const dataToSend = {
         ...formData,
+        version: formData.version || '00',
         detalles: detallesValidos,
         listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null,
         contactoId: contactoId,
@@ -856,16 +858,30 @@ const EditCard = ({ id }: { id: string }) => {
                     <Typography variant='h5' className='min-is-[95px]'>
                       N° Cotización
                     </Typography>
-                    <TextField
-                      name='numeroCotizacion'
-                      fullWidth
-                      size='small'
-                      value={formData.numeroCotizacion}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: <InputAdornment position='start'>#</InputAdornment>
-                      }}
-                    />
+                    <div className='flex items-center gap-2'>
+                      <TextField
+                        name='numeroCotizacion'
+                        fullWidth
+                        size='small'
+                        value={formData.numeroCotizacion}
+                        InputProps={{
+                          readOnly: true,
+                          startAdornment: <InputAdornment position='start'>#</InputAdornment>
+                        }}
+                      />
+                      <Typography>-</Typography>
+                      <TextField
+                        name='version'
+                        size='small'
+                        value={formData.version || '00'}
+                        onChange={e => setFormData({ ...formData, version: e.target.value })}
+                        inputProps={{
+                          maxLength: 2,
+                          pattern: '[0-9]*'
+                        }}
+                        sx={{ width: '60px' }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

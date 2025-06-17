@@ -35,6 +35,7 @@ interface ContactoPreview {
 
 interface FormDataPreview {
   numeroCotizacion: string
+  version: string
   tipoCotizacion: string
   estado: string
   fechaInicio: string | Date
@@ -79,6 +80,7 @@ const AddActions: FC<AddActionsProps> = ({ currentFormData }) => {
 
       const formData: FormDataPreview = {
         numeroCotizacion: currentFormData.numeroCotizacion || '',
+        version: currentFormData.version || '00',
         tipoCotizacion: currentFormData.tipoCotizacion || 'A',
         estado: 'BORRADOR',
         fechaInicio: currentFormData.fechaInicio || new Date().toISOString(),

@@ -176,7 +176,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
             <div class="subtitle">Laboratorio acreditado de acuerdo con la Norma NCh-ISO/IEC 17025:2017</div>
           </div>
           <div class="header-right">
-            <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}</div>
+            <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}</div>
             <div><span class="label">Fecha Emisión:</span> ${new Date(cotizacion.fechaInicio || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
             <div><span class="label">Fecha Vencimiento:</span> ${new Date(cotizacion.fechaFin || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
             <div>RPG-05-02 Rev. N° 2</div>
