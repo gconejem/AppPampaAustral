@@ -55,6 +55,8 @@ const PreviewActions = () => {
         tipoCotizacionValue = 'B'
       } else if (previewData.tipoCotizacion === 'C' || previewData.tipoCotizacion === 'MENSUAL') {
         tipoCotizacionValue = 'C'
+      } else if (previewData.tipoCotizacion === 'D' || previewData.tipoCotizacion === 'GENERAL') {
+        tipoCotizacionValue = 'D'
       }
 
       // Debug: ver el tipo de cotización
@@ -64,52 +66,57 @@ const PreviewActions = () => {
       // Para debugging y pruebas, crear un detalle básico si no hay detalles válidos
       let detallesParaEnviar = []
 
-      // Validamos que haya al menos un detalle con productoId válido
-      const detallesValidos = previewData.detalles
-        .filter((detalle: any) => {
-          // Debug: mostrar cada detalle y su productoId
-          console.log(
-            'Verificando detalle:',
-            detalle,
-            'productoId:',
-            detalle.productoId,
-            'esNumero:',
-            !isNaN(parseInt(detalle.productoId || '0')),
-            'esPositivo:',
-            parseInt(detalle.productoId || '0') > 0
+      // Validamos que haya al menos un detalle con productoId válido SOLO si el tipo NO es D
+      if (previewData.tipoCotizacion !== 'D') {
+        const detallesValidos = previewData.detalles
+          .filter((detalle: any) => {
+            // Debug: mostrar cada detalle y su productoId
+            console.log(
+              'Verificando detalle:',
+              detalle,
+              'productoId:',
+              detalle.productoId,
+              'esNumero:',
+              !isNaN(parseInt(detalle.productoId || '0')),
+              'esPositivo:',
+              parseInt(detalle.productoId || '0') > 0
+            )
+
+            // Solo usar detalles que tengan un productoId válido
+            return detalle.productoId && !isNaN(parseInt(detalle.productoId)) && parseInt(detalle.productoId) > 0
+          })
+          .map((detalle: any) => ({
+            productoId: parseInt(detalle.productoId),
+            cantidad: previewData.precioEMSPorProducto ? Number(detalle.cantidad) : 0,
+            precioUnitario: previewData.precioEMSPorProducto ? parseFloat(detalle.precioUnitarioUF || 0) : 0,
+            descuento: 0,
+            subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0,
+            esPaquete: detalle.esPaquete,
+            esSubProducto: detalle.esSubProducto
+          }))
+
+        // Debug: ver los detalles válidos
+        console.log('Detalles válidos:', detallesValidos)
+
+        // Si no hay detalles válidos, usamos un detalle de prueba con ID 1
+        if (detallesValidos.length === 0) {
+          console.log('No hay detalles válidos, usando un detalle de prueba')
+
+          // Verificar si se han agregado productos
+          if (!previewData.detalles || previewData.detalles.length === 0) {
+            throw new Error('No hay productos en la cotización')
+          }
+
+          // Si hay productos pero sin ID válido, mostrar error
+          throw new Error(
+            'No hay productos válidos para guardar en la cotización. Asegúrate de seleccionar productos desde la lista.'
           )
-
-          // Solo usar detalles que tengan un productoId válido
-          return detalle.productoId && !isNaN(parseInt(detalle.productoId)) && parseInt(detalle.productoId) > 0
-        })
-        .map((detalle: any) => ({
-          productoId: parseInt(detalle.productoId),
-          cantidad: previewData.precioEMSPorProducto ? Number(detalle.cantidad) : 0,
-          precioUnitario: previewData.precioEMSPorProducto ? parseFloat(detalle.precioUnitarioUF || 0) : 0,
-          descuento: 0,
-          subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0,
-          esPaquete: detalle.esPaquete,
-          esSubProducto: detalle.esSubProducto
-        }))
-
-      // Debug: ver los detalles válidos
-      console.log('Detalles válidos:', detallesValidos)
-
-      // Si no hay detalles válidos, usamos un detalle de prueba con ID 1
-      if (detallesValidos.length === 0) {
-        console.log('No hay detalles válidos, usando un detalle de prueba')
-
-        // Verificar si se han agregado productos
-        if (!previewData.detalles || previewData.detalles.length === 0) {
-          throw new Error('No hay productos en la cotización')
+        } else {
+          detallesParaEnviar = detallesValidos
         }
-
-        // Si hay productos pero sin ID válido, mostrar error
-        throw new Error(
-          'No hay productos válidos para guardar en la cotización. Asegúrate de seleccionar productos desde la lista.'
-        )
       } else {
-        detallesParaEnviar = detallesValidos
+        // Si es tipo D, no validar productos ni detalles
+        detallesParaEnviar = []
       }
 
       const dataToSend = {
@@ -131,15 +138,24 @@ const PreviewActions = () => {
         empresa: previewData.empresa || '',
         ubicacion: previewData.ubicacion || '',
         formaPago: previewData.formaPago || 'CONTADO',
-        subtotal: previewData.precioEMSPorProducto ? parseFloat(previewData.subtotal) : parseFloat(previewData.precioEMSTotal),
-        descuento: parseFloat(previewData.descuento || 0),
-        impuesto: previewData.precioEMSPorProducto 
-          ? parseFloat(previewData.impuesto) 
-          : (parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19,
-        total: previewData.precioEMSPorProducto 
-          ? parseFloat(previewData.total) 
-          : parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0) + 
+        ...(tipoCotizacionValue === 'D' ? {
+          subtotal: Number(previewData.totalNetoGeneral || 0),
+          descuento: 0,
+          impuesto: Number(previewData.totalNetoGeneral || 0) * 0.19,
+          total: Number(previewData.totalNetoGeneral || 0) * 1.19,
+          textoGeneral: previewData.textoGeneral || '',
+          totalNetoGeneral: Number(previewData.totalNetoGeneral || 0),
+        } : {
+          subtotal: previewData.precioEMSPorProducto ? parseFloat(previewData.subtotal) : parseFloat(previewData.precioEMSTotal),
+          descuento: parseFloat(previewData.descuento || 0),
+          impuesto: previewData.precioEMSPorProducto
+            ? parseFloat(previewData.impuesto)
+            : (parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19,
+          total: previewData.precioEMSPorProducto
+            ? parseFloat(previewData.total)
+            : parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0) +
             ((parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19),
+        }),
         observaciones: previewData.observaciones || '',
         notas: previewData.notas || '',
 
@@ -192,7 +208,7 @@ const PreviewActions = () => {
       const previewData = JSON.parse(localStorage.getItem('cotizacionPreview') || '{}')
 
       console.log('previewData', previewData)
-      
+
       const response = await fetch('/api/cotizaciones/pdf/preview', {
         method: 'POST',
         headers: {

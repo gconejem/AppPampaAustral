@@ -20,6 +20,9 @@ const normalizeTipoCotizacion = (tipo: string): TipoCotizacion => {
     case 'C':
     case 'MENSUAL':
       return 'C'
+    case 'D':
+    case 'GENERICA':
+      return 'D'
     default:
       return 'A'
   }
@@ -185,6 +188,9 @@ export async function POST(request: Request) {
             superficieEMS: body.superficieEMS || '',
             antecedentesEMS: body.antecedentesEMS || '',
             plazoEntregaEMS: body.plazoEntregaEMS || ''
+          }),
+          ...(body.tipoCotizacion === 'D' && {
+            textoGeneral: body.textoGeneral || ''
           })
         }
       })

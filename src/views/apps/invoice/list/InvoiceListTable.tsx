@@ -167,7 +167,7 @@ const InvoiceListTable = () => {
 
       const response = await fetch(`/api/cotizaciones?${params.toString()}`)
       if (!response.ok) throw new Error('Error al cargar cotizaciones')
-      
+
       const data = await response.json()
       setLocalData(data)
     } catch (error) {
@@ -308,6 +308,8 @@ const InvoiceListTable = () => {
         return 'EMS'
       case 'C':
         return 'Mensual'
+      case 'D':
+        return 'Genérica'
       default:
         return 'No especificado'
     }
@@ -332,7 +334,7 @@ const InvoiceListTable = () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/cotizaciones/${id}`)
-      
+
       if (!response.ok) {
         throw new Error('Error al cargar la cotización')
       }
@@ -533,7 +535,7 @@ const InvoiceListTable = () => {
       if (!response.ok) {
         throw new Error('Error al descargar el PDF')
       }
-      
+
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -860,7 +862,9 @@ const InvoiceListTable = () => {
                       ? 'Valores Unitarios'
                       : selectedCotizacion.tipoCotizacion === 'B'
                         ? 'EMS'
-                        : 'Mensual'}
+                        : selectedCotizacion.tipoCotizacion === 'D'
+                          ? 'Genérica'
+                          : 'Mensual'}
                   </Typography>
                   <Typography>
                     <strong>Estado:</strong> {selectedCotizacion.estado}
@@ -962,58 +966,67 @@ const InvoiceListTable = () => {
                 <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
                   Detalle de Servicios
                 </Typography>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Servicio/Producto</TableCell>
-                        <TableCell>Área</TableCell>
-                        <TableCell>Descripción</TableCell>
-                        <TableCell align='right'>Cantidad</TableCell>
-                        <TableCell align='right'>Precio Unit. (UF)</TableCell>
-                        <TableCell align='right'>Total (UF)</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedCotizacion.detalles?.filter((detalle: any) => !detalle.esSubProducto).map((detalle: any, index: number) => (
-                        <Fragment key={`detalle-${index}`}>
-                          <TableRow
-                            sx={{
-                              backgroundColor: detalle.esPaquete ? 'primary.lighter' : 'inherit'
-                            }}
-                          >
-                            <TableCell>
-                              {detalle.producto?.nombre || 'Sin nombre'}
-                              {detalle.producto?.norma && ` - ${detalle.producto.norma}`}
-                              {detalle.esPaquete && (
-                                <Chip size='small' label='Paquete' color='primary' sx={{ mr: 1 }} />
-                              )}
-                              {detalle.esPaquete && (
-                                <Box sx={{ mt: 1, pl: 2 }}>
-                                  {/* Mostrar subproductos del paquete */}
-                                  {selectedCotizacion.detalles
-                                    .filter((d: any) => d.esSubProducto)
-                                    .map((subProducto: any, subIndex: number) => (
-                                      <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
-                                        • {subProducto.producto.nombre}
-                                        {subProducto.producto.norma && ` - ${subProducto.producto.norma}`}
-                                      </Typography>
-                                    ))
-                                  }
-                                </Box>
-                              )}
-                            </TableCell>
-                            <TableCell>{detalle.producto?.area || '-'}</TableCell>
-                            <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
-                            <TableCell align='right'>{detalle.cantidad}</TableCell>
-                            <TableCell align='right'>UF {Number(detalle.precioUnitario || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(detalle.subtotal || 0).toFixed(2)}</TableCell>
-                          </TableRow>
-                        </Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                {selectedCotizacion.tipoCotizacion === 'D' ? (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant='subtitle2' sx={{ mb: 2 }}>
+                      TEXTO GENERAL DE LA COTIZACIÓN:
+                    </Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.textoGeneral || 'No especificado'}</Typography>
+                  </Box>
+                ) : (
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Servicio/Producto</TableCell>
+                          <TableCell>Área</TableCell>
+                          <TableCell>Descripción</TableCell>
+                          <TableCell align='right'>Cantidad</TableCell>
+                          <TableCell align='right'>Precio Unit. (UF)</TableCell>
+                          <TableCell align='right'>Total (UF)</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedCotizacion.detalles?.filter((detalle: any) => !detalle.esSubProducto).map((detalle: any, index: number) => (
+                          <Fragment key={`detalle-${index}`}>
+                            <TableRow
+                              sx={{
+                                backgroundColor: detalle.esPaquete ? 'primary.lighter' : 'inherit'
+                              }}
+                            >
+                              <TableCell>
+                                {detalle.producto?.nombre || 'Sin nombre'}
+                                {detalle.producto?.norma && ` - ${detalle.producto.norma}`}
+                                {detalle.esPaquete && (
+                                  <Chip size='small' label='Paquete' color='primary' sx={{ mr: 1 }} />
+                                )}
+                                {detalle.esPaquete && (
+                                  <Box sx={{ mt: 1, pl: 2 }}>
+                                    {/* Mostrar subproductos del paquete */}
+                                    {selectedCotizacion.detalles
+                                      .filter((d: any) => d.esSubProducto)
+                                      .map((subProducto: any, subIndex: number) => (
+                                        <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
+                                          • {subProducto.producto.nombre}
+                                          {subProducto.producto.norma && ` - ${subProducto.producto.norma}`}
+                                        </Typography>
+                                      ))
+                                    }
+                                  </Box>
+                                )}
+                              </TableCell>
+                              <TableCell>{detalle.producto?.area || '-'}</TableCell>
+                              <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
+                              <TableCell align='right'>{detalle.cantidad}</TableCell>
+                              <TableCell align='right'>UF {Number(detalle.precioUnitario || 0).toFixed(2)}</TableCell>
+                              <TableCell align='right'>UF {Number(detalle.subtotal || 0).toFixed(2)}</TableCell>
+                            </TableRow>
+                          </Fragment>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </Grid>
 
               {/* Totales */}
