@@ -712,9 +712,9 @@ const EditCard = ({ id }: { id: string }) => {
       const detallesValidos = productRows.map(row => ({
         productoId: parseInt(row.productoId),
         cantidad: row.cantidad,
-        precioUnitario: row.precioUnitarioUF,
+        precioUnitario: row.precioUnitarioUF === null || row.precioUnitarioUF === undefined ? 0 : Number(row.precioUnitarioUF),
         descuento: row.descuento || 0,
-        subtotal: row.totalNetoUF,
+        subtotal: row.totalNetoUF === null || row.totalNetoUF === undefined ? 0 : Number(row.totalNetoUF),
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       }))
