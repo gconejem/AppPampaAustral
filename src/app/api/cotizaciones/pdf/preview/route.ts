@@ -466,7 +466,12 @@ export async function POST(request: Request) {
           Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
           Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h<br>
           <span style="font-weight:bold;">contacto@pampaustral.cl</span>
-          <div style="position:absolute;right:20px;bottom:0;font-size:12px;color:#736e7d;">Página <span class='pageNumber'></span> de <span class='totalPages'></span></div>
+          <div style="position:absolute;left:20px;bottom:0;font-size:12px;color:#736e7d;">
+            N° Cotización ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}
+          </div>
+          <div style="position:absolute;right:20px;bottom:0;font-size:12px;color:#736e7d;">
+            Página <span class='pageNumber'></span> de <span class='totalPages'></span>
+          </div>
         </div>
       `
     })
