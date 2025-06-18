@@ -290,11 +290,17 @@ const DuplicateCard = ({ id }: { id: string }) => {
           totalNetoUF: detalle.subtotal,
           area: detalle.producto?.area || '',
           descripcion: detalle.producto?.descripcion || '',
-          servicio: detalle.producto?.norma ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}` : detalle.producto?.nombre,
+          servicio: detalle.producto?.norma
+            ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
+            : detalle.producto?.nombre,
           esPaquete: detalle.esPaquete || false,
           esSubProducto: detalle.esSubProducto || false,
           subproductos: []
         }))
+
+        // Verificar si todos los productos tienen cantidad cero
+        const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+        setSinCantidad(todasCero)
 
         // Actualizar estados
         setFormData(cotizacionData)
