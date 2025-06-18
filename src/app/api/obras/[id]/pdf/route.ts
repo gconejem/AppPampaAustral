@@ -157,7 +157,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
                 <b>Mandante:</b> ${obra.mandante || '-'}
               </td>
               <td style="padding: 4px; border:none;">
-                ${obra.informeMandante ? `<b>Texto Mandante:</b> ${obra.textoMandante || '-'}` : ''}
+               <b>Texto Mandante:</b> ${obra.textoMandante || '-'}
               </td>
               <td style="padding: 4px; border:none;">
                 <b>Informe a Mandante:</b> ${obra.informeMandante ? 'Sí' : 'No'}
