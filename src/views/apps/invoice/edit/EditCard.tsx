@@ -290,6 +290,10 @@ const EditCard = ({ id }: { id: string }) => {
           subproductos: []
         }))
 
+        // Verificar si todos los productos tienen cantidad cero
+        const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+        setSinCantidad(todasCero)
+
         // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
         const contactosMapeados = contactosData.map((contacto: any) => ({
           contactId: contacto.contactId,
