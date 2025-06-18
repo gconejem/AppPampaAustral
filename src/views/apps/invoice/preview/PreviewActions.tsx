@@ -174,8 +174,12 @@ const PreviewActions = () => {
 
       console.log('Data to send:', dataToSend)
 
-      const response = await fetch('/api/cotizaciones', {
-        method: 'POST',
+      // Determinar si es una edición o una nueva cotización
+      const url = previewData.id ? `/api/cotizaciones/${previewData.id}` : '/api/cotizaciones'
+      const method = previewData.id ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json'
         },
