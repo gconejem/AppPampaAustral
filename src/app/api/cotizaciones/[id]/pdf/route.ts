@@ -206,7 +206,7 @@ Condiciones para terreno y accesos
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:center;">${detalle.cantidad || '-'}</td>
                         <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">UF ${Number(detalle.subtotal).toFixed(2)}</td>
+                        <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
                       </tr>`;
                       i += subproductos.length; // Saltar los subproductos ya procesados
                     } else if (!detalle.esSubProducto) {
@@ -219,7 +219,7 @@ Condiciones para terreno y accesos
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:center;">${detalle.cantidad || '-'}</td>
                         <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">UF ${Number(detalle.subtotal).toFixed(2)}</td>
+                        <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
                       </tr>`;
                     }
                   }
@@ -229,10 +229,26 @@ Condiciones para terreno y accesos
             </tbody>
           </table>
           <div class="totales">
-            <div><strong>Subtotal:</strong> UF ${Number(cotizacion.subtotal).toFixed(2)}</div>
-            <div><strong>Descuento:</strong> UF ${Number(cotizacion.descuento).toFixed(2)}</div>
-            <div><strong>IVA (19%):</strong> UF ${Number(cotizacion.impuesto).toFixed(2)}</div>
-            <div><strong>Total: UF ${Number(cotizacion.total).toFixed(2)}</strong></div>
+            ${(() => {
+              const subtotal = Number(cotizacion.subtotal);
+              const descuento = Number(cotizacion.descuento);
+              const iva = Number(cotizacion.impuesto);
+              const total = Number(cotizacion.total);
+              if (subtotal === 0) {
+                return `
+                  <div><strong>Subtotal:</strong> -</div>
+                  <div><strong>Descuento:</strong> -</div>
+                  <div><strong>IVA (19%):</strong> -</div>
+                  <div><strong>Total: -</strong></div>
+                `;
+              }
+              return `
+                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
+                <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
+                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
+                <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+              `;
+            })()}
           </div>
           ${observacionesYNotasHTML}
 

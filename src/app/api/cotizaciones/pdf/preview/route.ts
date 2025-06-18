@@ -267,7 +267,7 @@ Condiciones para terreno y accesos
                     if (cotizacion.precioEMSPorProducto) {
                       html += `<td>${detalle.cantidad || '-'}</td>`;
                       html += `<td>${detalle.precioUnitarioUF ? Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
-                      html += `<td>${detalle.totalNetoUF ? Number(detalle.totalNetoUF).toFixed(2) : '-'}</td>`;
+                      html += `<td>${!detalle.cantidad ? '-' : (detalle.totalNetoUF ? 'UF ' + Number(detalle.totalNetoUF).toFixed(2) : '-')}</td>`;
                     }
                     html += `</tr>`;
                     i = j - 1;
@@ -279,7 +279,7 @@ Condiciones para terreno y accesos
                     if (cotizacion.precioEMSPorProducto) {
                       html += `<td>${detalle.cantidad || '-'}</td>`;
                       html += `<td>${detalle.precioUnitarioUF ? Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
-                      html += `<td>${detalle.totalNetoUF ? Number(detalle.totalNetoUF).toFixed(2) : '-'}</td>`;
+                      html += `<td>${!detalle.cantidad ? '-' : (detalle.totalNetoUF ? 'UF ' + Number(detalle.totalNetoUF).toFixed(2) : '-')}</td>`;
                     }
                     html += `</tr>`;
                   }
@@ -297,6 +297,14 @@ Condiciones para terreno y accesos
                 const subtotalConDescuento = subtotal;
                 const iva = subtotalConDescuento * 0.19;
                 const total = subtotalConDescuento + iva;
+                if (subtotal === 0) {
+                  return `
+                    <div><strong>Subtotal:</strong> -</div>
+                    <div><strong>Descuento:</strong> -</div>
+                    <div><strong>IVA (19%):</strong> -</div>
+                    <div><strong>Total: -</strong></div>
+                  `;
+                }
                 return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF 0.00</div>
@@ -309,6 +317,14 @@ Condiciones para terreno y accesos
                 const subtotalConDescuento = subtotal - descuento;
                 const iva = subtotalConDescuento * 0.19;
                 const total = subtotalConDescuento + iva;
+                if (subtotal === 0) {
+                  return `
+                    <div><strong>Subtotal:</strong> -</div>
+                    <div><strong>Descuento:</strong> -</div>
+                    <div><strong>IVA (19%):</strong> -</div>
+                    <div><strong>Total: -</strong></div>
+                  `;
+                }
                 return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
