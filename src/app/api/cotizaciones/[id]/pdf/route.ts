@@ -17,7 +17,7 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
-function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
+function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: string) {
   // Notas desde la base de datos
   const notasTipoB = `Relacionado al valor del servicio cotizado:
 • Valor Neto (sin IVA incluido)
@@ -196,9 +196,9 @@ Condiciones para terreno y accesos
                             ${detalle.producto?.nombre || '-'}${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                           </div>
                           ${subproductos.length > 0 ?
-                            '<ul style="margin: 8px 0 0 0; padding-left: 20px;">' +
+                            '<ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.57rem;">' +
                             subproductos.map((sub: any) =>
-                              `<li>${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
+                              `<li style=\"font-size: 0.57rem;\">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
                             ).join('') +
                             '</ul>'
                             : ''}
@@ -239,7 +239,7 @@ Condiciones para terreno y accesos
           <!-- Primera página de Términos y Condiciones -->
           <div style="page-break-before: always; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;">
             <div style="margin: 24px 32px 24px 8px;">
-              <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
+              <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
               <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
                 <br>
                 <ol>
@@ -289,8 +289,9 @@ Condiciones para terreno y accesos
           </div>
 
           <!-- Segunda página de Términos y Condiciones -->
-          <div style="page-break-before: always; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
-            <div style="margin: 24px 32px 24px 8px;">
+          <div style="page-break-before: always; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+            <div style="margin: 24px 32px 24px 8px; width: 100%;">
+              <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
               <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
                 <ol start="6">
                   <li><strong>Modificaciones y/o observaciones a informes de ensayo:</strong></li>
@@ -314,12 +315,11 @@ Condiciones para terreno y accesos
                 </ol>
               </div>
             </div>
-          </div>
-
-          <!-- Página final con firma -->
-          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;">
+            <div style="width: 100%; text-align: left; font-size: 14px; margin-bottom: 16px; color: #736e7d; font-family: 'Inter', sans-serif;">
+              En espera de una favorable acogida, le saluda cordialmente.
+            </div>
             <div style="margin-bottom: 40px; font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: center;">
-              MERCEDES LILLO REYES<br />p.p: Sociedad Laboratorio Pampa Austral Ltda.
+              <img src="${firmaBase64}" alt="Firma" style="max-width: 380px; width: 100%; height: auto; display: block; margin: 0 auto;" />
             </div>
           </div>
         </div>
@@ -354,9 +354,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
       : '';
 
+    // Cargar firma como base64
+    const firmaPath = `${process.cwd()}/public/images/logos/firma-cotizaciones-sistema.png`;
+    const firmaBase64 = fs.existsSync(firmaPath)
+      ? 'data:image/png;base64,' + fs.readFileSync(firmaPath).toString('base64')
+      : '';
+
     //console.log('cotizacion', cotizacion)
 
-    const html = renderCotizacionHTML(cotizacion, logoBase64);
+    const html = renderCotizacionHTML(cotizacion, logoBase64, firmaBase64);
 
     // Si la URL tiene ?preview=1, devolvemos el HTML en vez del PDF
     const url = new URL(request.url);

@@ -15,7 +15,7 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
-function renderCotizacionHTML(cotizacion: any, logoBase64: string) {
+function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: string) {
 
     console.log('cotizacionn', cotizacion)
 
@@ -258,7 +258,7 @@ Condiciones para terreno y accesos
                       j++;
                     }
                     if (subproductos.length > 0) {
-                      subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px;'>${subproductos.join('')}</ul>`;
+                      subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px; font-size: 0.57rem;'>${subproductos.map(sub => `<li style=\"font-size: 0.57rem;\">${sub}</li>`).join('')}</ul>`;
                     }
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
@@ -322,7 +322,7 @@ Condiciones para terreno y accesos
 
           <!-- Primera página de Términos y Condiciones -->
           <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;">
-            <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
+            <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
             <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
               <br>
               <ol>
@@ -371,35 +371,37 @@ Condiciones para terreno y accesos
           </div>
 
           <!-- Segunda página de Términos y Condiciones -->
-          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
-            <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
-              <ol start="6">
-                <li><strong>Modificaciones y/o observaciones a informes de ensayo:</strong></li>
-                  <ol type="a">
-                    <li>Se pueden presentar <strong><u>observaciones dentro de 48 horas tras recibir el informe.</u></strong> Transcurrido dicho plazo, el Informe Oficial se dará por Aprobado.</li>
-                    <li>Se evaluará la pertinencia de incorporarlas a un <strong>Anexo de Informe</strong>, el cual reemplaza el Informe Emitido, atribución exclusiva del Laboratorio. El Anexo de Informe, deberá ser entregado al Cliente a los <strong>5 días</strong> de recibida las observaciones. Este nuevo informe tendrá un costo, indicado en la presente propuesta económica, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
-                  </ol>
-                <li><strong>De responsabilidad del solicitante y/o Cliente:</strong></li>
-                  <ol type="a">
-                    <li>Gestionar permisos de ingreso del personal, vehículos y equipos, garantizando accesos expeditos y medidas de seguridad adecuadas en faena. En caso de desviaciones, el laboratorio notificará la ocurrencia y/o recurrencia de las desviaciones, si no hubiera respuesta, Pampa Austral Ltda., queda facultado para suspender el servicio y/o adecuar estos, notificando al cliente.  Si por responsabilidad del cliente no es posible efectuar el servicio en terreno, éste será cobrado como si se hubiese efectuado.</li>
-                    <li>La custodia de probetas de hormigón fresco es responsabilidad exclusiva del cliente. Su pérdida o extravío será de su cargo.</li>
-                    <li>Si se requiere que personal del laboratorio comparezca en procedimientos judiciales o administrativos, los costos asociados serán cotizados previamente.</li>
-                  </ol>
-                <li><strong>Aspectos de confidencialidad e imparcialidad:</strong></li>
-                  <ol type="a">
-                    <li>Laboratorio Pampa Austral Ltda. y su personal garantizan la confidencialidad, imparcialidad e independencia en la ejecución de sus servicios. Se comprometen a la protección y uso reservado de la información obtenida o creada durante sus actividades, incluyendo los derechos de propiedad del cliente.</li>
-                    <li>En caso de que la ley exija la divulgación de información confidencial o cuando esté autorizado por compromisos contractuales, el cliente será notificado vía correo electrónico con anticipación, salvo que esté prohibido por ley.</li>
-                    <li>Laboratorio Pampa Austral Ltda., en su calidad de laboratorio de ensayos acreditado, es auditado periódicamente por la División de Acreditación (DAC) del Instituto Nacional de Normalización (INN), la cual puede acceder de forma aleatoria a información técnica y registros vinculados a los servicios prestados a los clientes, <strong><u>previa suscripción del compromiso de confidencialidad correspondiente</u></strong>, conforme a lo establecido en nuestro Sistema de Gestión de Calidad.</li>
-                    <li>Al aceptar esta cotización, el cliente (o su representante) autoriza el ingreso del equipo evaluador de la DAC del INN a sus instalaciones, en caso de que se requiera verificar in situ el desempeño del laboratorio durante la ejecución de ensayos o la toma de muestras, en cumplimiento de los requisitos propios de su condición de Organismo Evaluador de la Conformidad (OEC).</li>
-                  </ol>
-              </ol>
+          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+            <div style="margin: 24px 32px 24px 8px; width: 100%;">
+              <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
+              <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+                <ol start="6">
+                  <li><strong>Modificaciones y/o observaciones a informes de ensayo:</strong></li>
+                    <ol type="a">
+                      <li>Se pueden presentar <strong><u>observaciones dentro de 48 horas tras recibir el informe.</u></strong> Transcurrido dicho plazo, el Informe Oficial se dará por Aprobado.</li>
+                      <li>Se evaluará la pertinencia de incorporarlas a un <strong>Anexo de Informe</strong>, el cual reemplaza el Informe Emitido, atribución exclusiva del Laboratorio. El Anexo de Informe, deberá ser entregado al Cliente a los <strong>5 días</strong> de recibida las observaciones. Este nuevo informe tendrá un costo, indicado en la presente propuesta económica, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
+                    </ol>
+                  <li><strong>De responsabilidad del solicitante y/o Cliente:</strong></li>
+                    <ol type="a">
+                      <li>Gestionar permisos de ingreso del personal, vehículos y equipos, garantizando accesos expeditos y medidas de seguridad adecuadas en faena. En caso de desviaciones, el laboratorio notificará la ocurrencia y/o recurrencia de las desviaciones, si no hubiera respuesta, Pampa Austral Ltda., queda facultado para suspender el servicio y/o adecuar estos, notificando al cliente.  Si por responsabilidad del cliente no es posible efectuar el servicio en terreno, éste será cobrado como si se hubiese efectuado.</li>
+                      <li>La custodia de probetas de hormigón fresco es responsabilidad exclusiva del cliente. Su pérdida o extravío será de su cargo.</li>
+                      <li>Si se requiere que personal del laboratorio comparezca en procedimientos judiciales o administrativos, los costos asociados serán cotizados previamente.</li>
+                    </ol>
+                  <li><strong>Aspectos de confidencialidad e imparcialidad:</strong></li>
+                    <ol type="a">
+                      <li>Laboratorio Pampa Austral Ltda. y su personal garantizan la confidencialidad, imparcialidad e independencia en la ejecución de sus servicios. Se comprometen a la protección y uso reservado de la información obtenida o creada durante sus actividades, incluyendo los derechos de propiedad del cliente.</li>
+                      <li>En caso de que la ley exija la divulgación de información confidencial o cuando esté autorizado por compromisos contractuales, el cliente será notificado vía correo electrónico con anticipación, salvo que esté prohibido por ley.</li>
+                      <li>Laboratorio Pampa Austral Ltda., en su calidad de laboratorio de ensayos acreditado, es auditado periódicamente por la División de Acreditación (DAC) del Instituto Nacional de Normalización (INN), la cual puede acceder de forma aleatoria a información técnica y registros vinculados a los servicios prestados a los clientes, <strong><u>previa suscripción del compromiso de confidencialidad correspondiente</u></strong>, conforme a lo establecido en nuestro Sistema de Gestión de Calidad.</li>
+                      <li>Al aceptar esta cotización, el cliente (o su representante) autoriza el ingreso del equipo evaluador de la DAC del INN a sus instalaciones, en caso de que se requiera verificar in situ el desempeño del laboratorio durante la ejecución de ensayos o la toma de muestras, en cumplimiento de los requisitos propios de su condición de Organismo Evaluador de la Conformidad (OEC).</li>
+                    </ol>
+                </ol>
+              </div>
             </div>
-          </div>
-
-          <!-- Página final con firma -->
-          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;">
+            <div style="width: 100%; text-align: left; font-size: 14px; margin-bottom: 16px; color: #736e7d; font-family: 'Inter', sans-serif;">
+              En espera de una favorable acogida, le saluda cordialmente.
+            </div>
             <div style="margin-bottom: 40px; font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: center;">
-              MERCEDES LILLO REYES<br />p.p: Sociedad Laboratorio Pampa Austral Ltda.
+              <img src="${firmaBase64}" alt="Firma" style="max-width: 380px; width: 100%; height: auto; display: block; margin: 0 auto;" />
             </div>
           </div>
         </div>
@@ -419,7 +421,13 @@ export async function POST(request: Request) {
       ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
       : '';
 
-    const html = renderCotizacionHTML(cotizacion, logoBase64);
+    // Cargar firma como base64
+    const firmaPath = `${process.cwd()}/public/images/logos/firma-cotizaciones-sistema.png`;
+    const firmaBase64 = fs.existsSync(firmaPath)
+      ? 'data:image/png;base64,' + fs.readFileSync(firmaPath).toString('base64')
+      : '';
+
+    const html = renderCotizacionHTML(cotizacion, logoBase64, firmaBase64);
 
     // TEMPORAL: devolver HTML en vez de PDF
     /* return new NextResponse(html, {
