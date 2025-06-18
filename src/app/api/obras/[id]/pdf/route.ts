@@ -134,7 +134,6 @@ function renderObraHTML(obra: any, logoBase64: string) {
               </td>
             </tr>
             <tr>
-            <tr>
               <td style="padding: 4px; border:none;">
                 <b>Región:</b> ${obra.region}
               </td>
