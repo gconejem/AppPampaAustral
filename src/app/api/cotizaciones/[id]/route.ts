@@ -202,6 +202,75 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = parseInt(params.id)
+    const body = await request.json()
+
+    console.log('Datos recibidos en PATCH:', body)
+
+    // Validar que el estado sea uno válido si se está actualizando
+    if (body.estado && !Object.values(EstadoCotizacion).includes(body.estado)) {
+      return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
+    }
+
+    // Actualizar solo los campos proporcionados
+    const cotizacionActualizada = await prisma.cotizacion.update({
+      where: { id },
+      data: {
+        ...(body.estado && { estado: body.estado }),
+        ...(body.gestionText && { observacionGestion: body.gestionText }),
+        updatedAt: new Date()
+      }
+    })
+
+    // Traer la cotización actualizada con todos sus detalles y relaciones
+    const cotizacionConDetalles = await prisma.cotizacion.findUnique({
+      where: { id },
+      include: {
+        cliente: true,
+        obra: true,
+        contacto: true,
+        listaPrecio: true,
+        detalles: {
+          include: {
+            producto: {
+              select: {
+                productoId: true,
+                nombre: true,
+                descripcion: true,
+                area: true,
+                norma: true,
+                precio: true,
+                esPaquete: true,
+                productosEnPaquete: {
+                  include: {
+                    producto: {
+                      select: {
+                        productoId: true,
+                        nombre: true,
+                        descripcion: true,
+                        area: true,
+                        norma: true,
+                        precio: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(cotizacionConDetalles)
+  } catch (error) {
+    console.error('Error al actualizar parcialmente la cotización:', error)
+    return NextResponse.json({ error: 'Error al actualizar parcialmente la cotización' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)

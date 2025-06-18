@@ -402,7 +402,7 @@ const InvoiceListTable = () => {
   const updateEstadoCotizacion = async (newEstado: string, gestionTextValue?: string) => {
     try {
       const response = await fetch(`/api/cotizaciones/${selectedRowId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
