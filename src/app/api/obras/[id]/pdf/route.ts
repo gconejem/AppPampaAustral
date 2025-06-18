@@ -30,7 +30,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
       <meta charset="utf-8" />
       <link href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,800,900&display=swap" rel="stylesheet">
       <style>
-        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        body { font-family: 'Inter', sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; font-size: 10pt; }
         .header-table {
           width: 100%;
           border-collapse: collapse;
@@ -39,6 +39,7 @@ function renderObraHTML(obra: any, logoBase64: string) {
         }
         .header-table td, .header-table th {
           padding: 4px;
+          font-family: 'Inter', sans-serif;
         }
         .header-logo {
           text-align: center;
@@ -54,22 +55,27 @@ function renderObraHTML(obra: any, logoBase64: string) {
           vertical-align: middle;
           width: 55%;
           background: #fff;
+          font-family: 'Inter', sans-serif;
         }
         .header-meta {
           font-size: 1.05em;
           width: 30%;
           background: #fff;
+          font-family: 'Inter', sans-serif;
         }
-        .header-meta b { font-weight: bold; }
-        .section { margin: 24px 0; font-size: 1em; }
+        .header-meta b { font-weight: bold; font-family: 'Inter', sans-serif; }
+        .section { margin: 24px 0; font-size: 1em; font-family: 'Inter', sans-serif; }
         .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .col { flex: 1; }
-        .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: Arial, sans-serif; }
-        .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: Arial, sans-serif; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: Arial, sans-serif; font-size: 1em; }
-        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 16px; text-align: left; font-family: Arial, sans-serif; }
-        .table td { font-size: 9px; padding: 16px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: Arial, sans-serif; }
-        .section-title { font-size: 1.1em; font-weight: bold; margin-bottom: 16px; color: #736e7d; }
+        .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
+        .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: 'Inter', sans-serif; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: 'Inter', sans-serif; font-size: 1em; table-layout: fixed; }
+        .table-2col col { width: 50%; }
+        .table-3col col { width: 33.33%; }
+        .table-4col col { width: 25%; }
+        .table th, .table td { word-break: break-word; }
+        .table-bordered { border: 1px solid #ccc; }
+        .section-title { font-size: 1.1em; font-weight: bold; margin-bottom: 16px; color: #736e7d; font-family: 'Inter', sans-serif; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         .grid-item { margin-bottom: 8px; }
       </style>
@@ -99,7 +105,11 @@ function renderObraHTML(obra: any, logoBase64: string) {
       <hr style="border: none; border-top: 2px solid #ff0096; margin: 12px 0; width: 100%;">
       <div class="pdf-container">
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+          <table class="table table-2col">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="2" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Datos Principales
@@ -119,7 +129,12 @@ function renderObraHTML(obra: any, logoBase64: string) {
         </div>
 
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px; border:1px solid #ccc;">
+          <table class="table table-3col table-bordered">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border-bottom:1px solid #ccc; border-top:none; border-left:none; border-right:none;">
                 Antecedentes
@@ -172,7 +187,12 @@ function renderObraHTML(obra: any, logoBase64: string) {
         </div>
 
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+          <table class="table table-3col">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Requisitos
@@ -196,7 +216,12 @@ function renderObraHTML(obra: any, logoBase64: string) {
         </div>
 
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+          <table class="table table-3col">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Referencias
@@ -221,7 +246,12 @@ function renderObraHTML(obra: any, logoBase64: string) {
         </div>
 
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+          <table class="table table-3col">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="3" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Facturación
@@ -249,7 +279,13 @@ function renderObraHTML(obra: any, logoBase64: string) {
         </div>
 
         <div class="section">
-          <table style="width:100%; border-collapse:collapse; margin-bottom: 16px;">
+          <table class="table table-4col">
+            <colgroup>
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+              <col span="1" />
+            </colgroup>
             <tr>
               <th colspan="4" style="font-size:1.1em; text-align:left; padding:6px; border:1px solid #ccc;">
                 Contactos
@@ -335,13 +371,31 @@ export async function GET(request: Request, { params }: { params: { id: string }
       })
     }
 
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    const browser = await puppeteer.launch({ 
+      headless: true, 
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ]
+    })
     const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    })
+    
+    // Asegurar que las fuentes se carguen correctamente
+    await page.evaluateHandle('document.fonts.ready')
+    
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
-      scale: 0.8
+      scale: 0.8,
+      printBackground: true,
+      preferCSSPageSize: true
     })
     await browser.close()
 
