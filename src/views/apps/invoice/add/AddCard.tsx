@@ -115,7 +115,8 @@ Consideraciones adicionales y requisitos especiales
 * Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
   }
   // Aquí puedes agregar el texto por defecto para otros tipos si lo deseas
-  return `(1) Valores unitarios Neto (sin IVA incluido)
+  else if (tipoCotizacion === 'A') {
+    return `(1) Valores unitarios Neto (sin IVA incluido)
 
 (2) Adicionales en Terreno (contra evento):
 • Km Adicional: 0,013 UF
@@ -131,6 +132,7 @@ Consideraciones adicionales y requisitos especiales
 • Informe con firma y timbres físicos: 0.58 UF neto
 
 (4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+  }
 }
 
 const AddCard = ({
