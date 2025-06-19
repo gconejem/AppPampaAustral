@@ -271,7 +271,7 @@ Condiciones para terreno y accesos
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
                     html += `<td>${nombreNorma}${subproductosHtml}</td>`;
-                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcion || '-'}</td>`;
+                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
                     if (cotizacion.precioEMSPorProducto) {
                       html += `<td style='text-align:center;'>${detalle.cantidad || '-'}</td>`;
                       html += `<td style='text-align:right;'>${detalle.precioUnitarioUF ? 'UF ' + Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
@@ -283,7 +283,7 @@ Condiciones para terreno y accesos
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
                     html += `<td>${detalle.servicio || '-'}</td>`;
-                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcion || '-'}</td>`;
+                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
                     if (cotizacion.precioEMSPorProducto) {
                       html += `<td style='text-align:center;'>${detalle.cantidad || '-'}</td>`;
                       html += `<td style='text-align:right;'>${detalle.precioUnitarioUF ? 'UF ' + Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
