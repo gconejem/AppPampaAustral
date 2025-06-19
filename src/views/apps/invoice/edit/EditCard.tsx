@@ -1386,7 +1386,13 @@ const EditCard = ({ id }: { id: string }) => {
                           }}
                           onClick={() => {
                             resetProductFilters();
-                            // Agregar una fila vacía como subproducto como primer subproducto después del paquete
+                            // Encontrar el final de los subproductos del paquete actual
+                            let insertIndex = index + 1;
+                            while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
+                              insertIndex++;
+                            }
+
+                            // Agregar una fila vacía como subproducto al final del paquete
                             const newProductRow = {
                               id: Date.now(),
                               productoId: '0',
@@ -1400,13 +1406,12 @@ const EditCard = ({ id }: { id: string }) => {
                               subproductos: []
                             };
                             const newRows = [...productRows];
-                            // Insertar SIEMPRE en index + 1 (justo después del paquete)
-                            newRows.splice(index + 1, 0, newProductRow);
+                            newRows.splice(insertIndex, 0, newProductRow);
                             setProductRows(newRows);
                             setTimeout(() => {
-                              setActiveRowIndex(index + 1);
+                              setActiveRowIndex(insertIndex);
                               // Simular click en el input para abrir el popover
-                              const inputElement = servicioAnchorRefs.current[index + 1]?.querySelector('input');
+                              const inputElement = servicioAnchorRefs.current[insertIndex]?.querySelector('input');
                               if (inputElement) {
                                 inputElement.click();
                               }

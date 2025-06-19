@@ -166,38 +166,62 @@ Condiciones para terreno y accesos
             </thead>
             <tbody>
               ${(() => {
-                // Agrupar detalles por área
+                // Primero, crear un mapa de paquetes con sus subproductos basado en posición
+                const paquetesConSubproductos: Record<number, any[]> = {};
+                const subproductosProcesados = new Set();
+                
+                // Buscar paquetes y sus subproductos en toda la lista
+                for (let i = 0; i < cotizacion.detalles.length; i++) {
+                  const detalle = cotizacion.detalles[i];
+                  if (detalle.esPaquete) {
+                    paquetesConSubproductos[detalle.id] = [];
+                    // Buscar subproductos que siguen al paquete
+                    let j = i + 1;
+                    while (j < cotizacion.detalles.length && 
+                           !cotizacion.detalles[j].esPaquete && 
+                           cotizacion.detalles[j].esSubProducto) {
+                      paquetesConSubproductos[detalle.id].push(cotizacion.detalles[j]);
+                      subproductosProcesados.add(cotizacion.detalles[j].id);
+                      j++;
+                    }
+                  }
+                }
+                
+                // Agrupar detalles por área (excluyendo subproductos ya procesados)
                 const detallesPorArea: Record<string, any[]> = {};
-
+                
                 for (const detalle of cotizacion.detalles) {
+                  // Saltar subproductos que ya están asociados a paquetes
+                  if (subproductosProcesados.has(detalle.id)) continue;
+                  
                   const area = detalle.producto?.area || 'Sin área';
                   if (!detallesPorArea[area]) detallesPorArea[area] = [];
                   detallesPorArea[area].push(detalle);
                 }
+                
                 let html = '';
                 for (const area in detallesPorArea) {
                   html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
                   html += `<td colspan="6">${area}</td></tr>`;
+                  
                   const detalles = detallesPorArea[area];
-                  for (let i = 0; i < detalles.length; i++) {
-                    const detalle = detalles[i];
+                  for (const detalle of detalles) {
                     if (detalle.esPaquete) {
-                      // Asociar subproductos por posición
-                      const subproductos: string[] = [];
-                      let j = i + 1;
-                      while (j < detalles.length && detalles[j].esSubProducto) {
-                        subproductos.push(`<li style="font-size: 0.57rem;">${detalles[j].producto?.nombre || '-'}${detalles[j].producto?.norma ? ` - ${detalles[j].producto.norma}` : ''}</li>`);
-                        j++;
-                      }
+                      // Procesar paquete con sus subproductos
+                      const subproductos = paquetesConSubproductos[detalle.id] || [];
+                      const subproductosHTML = subproductos.map((sub: any) => 
+                        `<li style="font-size: 0.57rem;">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
+                      ).join('');
+                      
                       html += `<tr>
                         <td>${detalle.producto?.area || '-'}</td>
                         <td>
                           <div style="font-weight: bold; margin-bottom: 4px;">
                             ${detalle.producto?.nombre || '-'}${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                           </div>
-                          ${subproductos.length > 0 ?
+                          ${subproductosHTML ? 
                             '<ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.57rem;">' +
-                            subproductos.join('') +
+                            subproductosHTML +
                             '</ul>'
                             : ''}
                         </td>
@@ -206,8 +230,8 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
                         <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
                       </tr>`;
-                      i += subproductos.length; // Saltar los subproductos ya procesados
                     } else if (!detalle.esSubProducto) {
+                      // Producto individual (no paquete ni subproducto)
                       html += `<tr>
                         <td>${detalle.producto?.area || '-'}</td>
                         <td>
@@ -222,6 +246,7 @@ Condiciones para terreno y accesos
                     }
                   }
                 }
+                
                 return html;
               })()}
             </tbody>

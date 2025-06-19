@@ -2155,7 +2155,14 @@ const AddCard = ({
                                 setSelectedFamilia('');
                                 setProductsPage(0); // Resetear el paginador
                                 filterProducts('', '', '', '');
-                                // Agregar una fila vacía como subproducto después del paquete
+
+                                // Encontrar el final de los subproductos del paquete actual
+                                let insertIndex = index + 1;
+                                while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
+                                  insertIndex++;
+                                }
+
+                                // Agregar una fila vacía como subproducto al final del paquete
                                 const newProductRow = {
                                   id: Date.now(),
                                   productoId: '0',
@@ -2169,11 +2176,11 @@ const AddCard = ({
                                   subproductos: []
                                 }
                                 const newRows = [...productRows]
-                                newRows.splice(index + 1, 0, newProductRow)
+                                newRows.splice(insertIndex, 0, newProductRow)
                                 setProductRows(newRows)
                                 setTimeout(() => {
-                                  setActiveRowIndex(index + 1)
-                                  setAnchorEl(servicioAnchorRefs.current[index + 1])
+                                  setActiveRowIndex(insertIndex)
+                                  setAnchorEl(servicioAnchorRefs.current[insertIndex])
                                 }, 100)
                               }}
                             >

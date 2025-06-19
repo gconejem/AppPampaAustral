@@ -750,7 +750,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
       descuento: Number(formData.descuento || 0),
       impuesto: Number(formData.impuesto || 0),
       total: Number(formData.total || 0),
-      totalNetoGeneral: formData.totalNetoGeneral || 0
+      totalNetoGeneral: formData.totalNetoGeneral || 0,
+      // Agregar bandera para indicar que es una duplicación
+      isDuplicacion: true
     }
 
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData))
@@ -1413,7 +1415,14 @@ Consideraciones adicionales y requisitos especiales
                             setShowOnlyPaquetes(false);
                             setProductsPage(0);
                             filterProducts('', '', '', '');
-                            // Agregar una fila vacía como subproducto como primer subproducto después del paquete
+
+                            // Encontrar el final de los subproductos del paquete actual
+                            let insertIndex = index + 1;
+                            while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
+                              insertIndex++;
+                            }
+
+                            // Agregar una fila vacía como subproducto al final del paquete
                             const newProductRow = {
                               id: Date.now(),
                               productoId: '0',
@@ -1427,7 +1436,7 @@ Consideraciones adicionales y requisitos especiales
                               subproductos: []
                             };
                             const newRows = [...productRows];
-                            newRows.splice(index + 1, 0, newProductRow);
+                            newRows.splice(insertIndex, 0, newProductRow);
                             setProductRows(newRows);
                             setAutoOpenRowId(newProductRow.id);
                           }}

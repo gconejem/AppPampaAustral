@@ -175,8 +175,15 @@ const PreviewActions = () => {
       console.log('Data to send:', dataToSend)
 
       // Determinar si es una edición o una nueva cotización
-      const url = previewData.id ? `/api/cotizaciones/${previewData.id}` : '/api/cotizaciones'
-      const method = previewData.id ? 'PUT' : 'POST'
+      // Si es una duplicación (isDuplicacion = true), siempre usar POST
+      // Si no es duplicación, usar PUT si hay id, POST si no hay id
+      const isDuplicacion = previewData.isDuplicacion === true
+      const url = (isDuplicacion || !previewData.id) ? '/api/cotizaciones' : `/api/cotizaciones/${previewData.id}`
+      const method = (isDuplicacion || !previewData.id) ? 'POST' : 'PUT'
+
+      console.log('Es duplicación:', isDuplicacion)
+      console.log('URL:', url)
+      console.log('Método:', method)
 
       const response = await fetch(url, {
         method,
@@ -193,12 +200,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      setTimeout(() => {
+      /* setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000)
+      }, 1000) */
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')
