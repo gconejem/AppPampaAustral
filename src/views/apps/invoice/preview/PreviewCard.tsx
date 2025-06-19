@@ -236,7 +236,7 @@ const PreviewCard = () => {
                           <strong>{item.servicio || ''}</strong>
                           <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
                         </TableCell>
-                        <TableCell>{item.descripcion || ''}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{item.descripcion || ''}</TableCell>
                         {previewData.precioEMSPorProducto && (
                           <>
                             <TableCell align='right'>{item.cantidad || 0}</TableCell>
@@ -255,7 +255,7 @@ const PreviewCard = () => {
                         <TableRow key={`subproducto-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
                           <TableCell>{sub.area || ''}</TableCell>
                           <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
-                          <TableCell>{sub.descripcion || ''}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{sub.descripcion || ''}</TableCell>
                           {previewData.precioEMSPorProducto && (
                             <>
                               <TableCell align='right'>{sub.cantidad || 0}</TableCell>
@@ -275,7 +275,7 @@ const PreviewCard = () => {
                       <TableRow key={`producto-${i}`}>
                         <TableCell>{item.area || ''}</TableCell>
                         <TableCell>{item.servicio || ''}</TableCell>
-                        <TableCell>{item.descripcion || ''}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{item.descripcion || ''}</TableCell>
                         {previewData.precioEMSPorProducto && (
                           <>
                             <TableCell align='right'>{item.cantidad || 0}</TableCell>
