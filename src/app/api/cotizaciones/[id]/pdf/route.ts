@@ -192,7 +192,7 @@ Condiciones para terreno y accesos
                       html += `<tr>
                         <td>${detalle.producto?.area || '-'}</td>
                         <td>
-                          <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
+                          <div style="font-weight: bold; margin-bottom: 4px;">
                             ${detalle.producto?.nombre || '-'}${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                           </div>
                           ${subproductos.length > 0 ?
