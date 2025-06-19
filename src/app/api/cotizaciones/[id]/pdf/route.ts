@@ -183,10 +183,10 @@ Condiciones para terreno y accesos
                     const detalle = detalles[i];
                     if (detalle.esPaquete) {
                       // Asociar subproductos por posición
-                      const subproductos: any[] = [];
+                      const subproductos: string[] = [];
                       let j = i + 1;
                       while (j < detalles.length && detalles[j].esSubProducto) {
-                        subproductos.push(detalles[j]);
+                        subproductos.push(`<li style="font-size: 0.57rem;">${detalles[j].producto?.nombre || '-'}${detalles[j].producto?.norma ? ` - ${detalles[j].producto.norma}` : ''}</li>`);
                         j++;
                       }
                       html += `<tr>
@@ -197,9 +197,7 @@ Condiciones para terreno y accesos
                           </div>
                           ${subproductos.length > 0 ?
                             '<ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.57rem;">' +
-                            subproductos.map((sub: any) =>
-                              `<li style=\"font-size: 0.57rem;\">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
-                            ).join('') +
+                            subproductos.join('') +
                             '</ul>'
                             : ''}
                         </td>

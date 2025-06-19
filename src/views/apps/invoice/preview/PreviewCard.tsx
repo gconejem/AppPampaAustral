@@ -221,19 +221,12 @@ const PreviewCard = () => {
             </TableHead>
             <TableBody>
               {(() => {
-                // Agrupar detalles por área SOLO para productos normales
-                type Detalle = {
-                  area?: string
-                  esPaquete?: boolean
-                  esSubProducto?: boolean
-                  [key: string]: any
-                }
-                const detalles: Detalle[] = previewData.detalles || []
-                const areasMap = new Map<string, Detalle[]>()
+                const detalles = previewData.detalles || []
                 const rows: JSX.Element[] = []
-                let i = 0
-                while (i < detalles.length) {
+
+                for (let i = 0; i < detalles.length; i++) {
                   const item = detalles[i]
+
                   if (item.esPaquete) {
                     // Renderizar la fila del paquete
                     rows.push(
@@ -253,7 +246,8 @@ const PreviewCard = () => {
                         )}
                       </TableRow>
                     )
-                    // Mostrar todos los subproductos juntos, sin importar el área
+
+                    // Buscar y mostrar todos los subproductos que pertenecen a este paquete
                     let j = i + 1
                     while (j < detalles.length && detalles[j].esSubProducto) {
                       const sub = detalles[j]
@@ -273,30 +267,12 @@ const PreviewCard = () => {
                       )
                       j++
                     }
-                    i = j
+                    // Saltar los subproductos que ya procesamos
+                    i = j - 1
                   } else if (!item.esSubProducto) {
-                    // Agrupar productos normales por área
-                    const area = item.area || 'Sin área'
-                    if (!areasMap.has(area)) areasMap.set(area, [])
-                    areasMap.get(area)?.push(item)
-                    i++
-                  } else {
-                    // Subproducto sin paquete (caso raro)
-                    i++
-                  }
-                }
-                // Renderizar productos normales agrupados por área
-                Array.from(areasMap.entries()).forEach(([area, detallesArea], areaIdx) => {
-                  rows.push(
-                    <TableRow key={`area-title-${areaIdx}`}>
-                      <TableCell colSpan={previewData.precioEMSPorProducto ? 6 : 3} style={{ background: '#f5f5f5', fontWeight: 700 }}>
-                        {area}
-                      </TableCell>
-                    </TableRow>
-                  )
-                  detallesArea.forEach((item, idx) => {
+                    // Renderizar producto normal
                     rows.push(
-                      <TableRow key={`producto-${areaIdx}-${idx}`}>
+                      <TableRow key={`producto-${i}`}>
                         <TableCell>{item.area || ''}</TableCell>
                         <TableCell>{item.servicio || ''}</TableCell>
                         <TableCell>{item.descripcion || ''}</TableCell>
@@ -309,8 +285,10 @@ const PreviewCard = () => {
                         )}
                       </TableRow>
                     )
-                  })
-                })
+                  }
+                  // Los subproductos sin paquete se ignoran (caso raro)
+                }
+
                 return rows
               })()}
             </TableBody>
