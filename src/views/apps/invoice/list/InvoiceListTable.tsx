@@ -1179,41 +1179,45 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
           horizontal: 'right'
         }}
       >
+        <Typography variant="subtitle1" sx={{ px: 2, py: 1, fontWeight: 600 }}>
+          Cambiar estado
+        </Typography>
+        <Divider sx={{ my: 1 }} />
         <MenuItem onClick={() => handleEstadoChange('BORRADOR')}>
           <ListItemIcon>
             <Chip label='BORRADOR' size='small' color='default' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Borrador</ListItemText>
+          {/* <ListItemText>Borrador</ListItemText> */}
         </MenuItem>
         <MenuItem onClick={() => handleEstadoChange('COTIZADA')}>
           <ListItemIcon>
             <Chip label='COTIZADA' size='small' color='info' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Cotizada</ListItemText>
+          {/* <ListItemText>Cotizada</ListItemText> */}
         </MenuItem>
         <MenuItem onClick={() => handleEstadoChange('GESTIONADA')}>
           <ListItemIcon>
             <Chip label='GESTIONADA' size='small' color='warning' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Gestionada</ListItemText>
+          {/* <ListItemText>Gestionada</ListItemText> */}
         </MenuItem>
         <MenuItem onClick={() => handleEstadoChange('ACEPTADA')}>
           <ListItemIcon>
             <Chip label='ACEPTADA' size='small' color='success' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Aceptada</ListItemText>
+          {/* <ListItemText>Aceptada</ListItemText> */}
         </MenuItem>
         <MenuItem onClick={() => handleEstadoChange('SIN_RESPUESTA')}>
           <ListItemIcon>
             <Chip label='SIN RESPUESTA' size='small' color='error' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Sin Respuesta</ListItemText>
+          {/* <ListItemText>Sin Respuesta</ListItemText> */}
         </MenuItem>
         <MenuItem onClick={() => handleEstadoChange('RECHAZADA')}>
           <ListItemIcon>
             <Chip label='RECHAZADA' size='small' color='error' variant='outlined' />
           </ListItemIcon>
-          <ListItemText>Rechazada</ListItemText>
+          {/* <ListItemText>Rechazada</ListItemText> */}
         </MenuItem>
       </Menu>
 
