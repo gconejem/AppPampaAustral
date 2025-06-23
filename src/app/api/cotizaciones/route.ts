@@ -99,6 +99,7 @@ export async function GET(request: Request) {
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
         empresa: cotizacion.empresa || 'No especificada',
         observacionGestion: cotizacion.observacionGestion,
+        subtotal: parseFloat(cotizacion.subtotal.toString()),
         total: parseFloat(cotizacion.total.toString())
       }
     })

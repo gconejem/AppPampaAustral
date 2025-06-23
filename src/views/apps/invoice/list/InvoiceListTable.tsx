@@ -70,6 +70,11 @@ interface InvoiceType {
   // ... otros campos necesarios
 }
 
+interface InvoiceListTableProps {
+  invoiceData?: InvoiceType[]
+  onCotizacionDeleted?: () => void
+}
+
 const tiposCotizacion = [
   { value: '', label: 'Todos' },
   { value: 'A', label: 'Valores Unitarios' },
@@ -87,7 +92,7 @@ const estadosCotizacion = [
   { value: 'RECHAZADA', label: 'Rechazada' }
 ]
 
-const InvoiceListTable = () => {
+const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTableProps) => {
   // Configuración de localización
   const locale = 'es'
 
@@ -95,7 +100,7 @@ const InvoiceListTable = () => {
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [localData, setLocalData] = useState<InvoiceType[]>([])
+  const [localData, setLocalData] = useState<InvoiceType[]>(invoiceData || [])
 
   // Estados de los modales y diálogos
   const [openPreview, setOpenPreview] = useState(false)
@@ -190,8 +195,12 @@ const InvoiceListTable = () => {
 
   // Cargar cotizaciones al montar el componente
   useEffect(() => {
-    fetchCotizaciones(filtroFecha, filtroFechaFin)
-  }, [])
+    if (invoiceData) {
+      setLocalData(invoiceData)
+    } else {
+      fetchCotizaciones(filtroFecha, filtroFechaFin)
+    }
+  }, [invoiceData])
 
   // Resetear página cuando cambien los filtros
   useEffect(() => {
@@ -479,6 +488,7 @@ const InvoiceListTable = () => {
 
       setLocalData(prev => prev.filter(row => row.id !== cotizacionToDelete))
       toast.success('Cotización eliminada correctamente')
+      onCotizacionDeleted?.()
     } catch (error) {
       toast.error('No se pudo eliminar la cotización')
     } finally {

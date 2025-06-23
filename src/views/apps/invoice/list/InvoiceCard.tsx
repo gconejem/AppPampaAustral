@@ -24,7 +24,11 @@ import classnames from 'classnames'
 // Component Imports
 import CustomAvatar from '@/@core/components/mui/Avatar'
 
-const InvoiceCard = () => {
+interface InvoiceCardProps {
+  refreshTrigger?: number
+}
+
+const InvoiceCard = ({ refreshTrigger = 0 }: InvoiceCardProps) => {
   // Estados para los totales
   const [stats, setStats] = useState({
     totalCreadas: 0,
@@ -38,7 +42,8 @@ const InvoiceCard = () => {
   const isBelowSmScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
 
   // Obtener el locale
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang as string || 'es'
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -52,18 +57,18 @@ const InvoiceCard = () => {
         // Calcular estadísticas
         const stats = {
           totalCreadas: cotizaciones.length,
-          totalActivas: cotizaciones.filter((c: any) => c.estado === 'PENDIENTE').length,
-          totalCerradas: cotizaciones.filter((c: any) => ['APROBADA', 'RECHAZADA', 'VENCIDA'].includes(c.estado))
+          totalActivas: cotizaciones.filter((c: any) => ['BORRADOR', 'COTIZADA', 'GESTIONADA'].includes(c.estado)).length,
+          totalCerradas: cotizaciones.filter((c: any) => ['ACEPTADA', 'RECHAZADA', 'SIN_RESPUESTA'].includes(c.estado))
             .length,
           totalCotizado: cotizaciones.reduce((acc: number, c: any) => {
             console.log('Procesando cotización:', {
               id: c.id,
-              total: c.total,
-              tipo: typeof c.total
+              subtotal: c.subtotal,
+              tipo: typeof c.subtotal
             })
-            const total = parseFloat(c.total?.toString() || '0')
+            const subtotal = parseFloat(c.subtotal?.toString() || '0')
 
-            return acc + total
+            return acc + subtotal
           }, 0)
         }
 
@@ -75,7 +80,7 @@ const InvoiceCard = () => {
     }
 
     fetchStats()
-  }, [])
+  }, [refreshTrigger])
 
   const data = [
     {
