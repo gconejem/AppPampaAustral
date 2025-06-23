@@ -110,6 +110,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           antecedentesEMS: body.antecedentesEMS || '',
           plazoEntregaEMS: body.plazoEntregaEMS || ''
         }),
+        // Incluir campos mensuales solo si el tipo es C
+        ...(body.tipoCotizacion === 'C' && {
+          duracionMensual: body.duracionMensual || '',
+          jornadaMensual: body.jornadaMensual || '',
+          antecedentesMensual: body.antecedentesMensual || ''
+        }),
         // Incluir campos de tipo D
         ...(body.tipoCotizacion === 'D' && {
           textoGeneral: body.textoGeneral || '',

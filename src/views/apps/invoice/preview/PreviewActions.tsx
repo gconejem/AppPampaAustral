@@ -167,6 +167,12 @@ const PreviewActions = () => {
         precioEMSTotal: parseFloat(previewData.precioEMSTotal || 0),
         //FIN EMS
 
+        //Mensual
+        duracionMensual: previewData.duracionMensual || '',
+        jornadaMensual: previewData.jornadaMensual || '',
+        antecedentesMensual: previewData.antecedentesMensual || '',
+        //FIN Mensual
+
         detalles: {
           create: detallesParaEnviar
         }

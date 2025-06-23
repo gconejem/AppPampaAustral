@@ -121,6 +121,9 @@ interface FormDataType {
   plazoEntregaEMS?: string
   textoGeneral?: string
   totalNetoGeneral?: number
+  duracionMensual?: string
+  jornadaMensual?: string
+  antecedentesMensual?: string
 }
 
 function getNotasDefault(tipoCotizacion: string) {
@@ -752,6 +755,12 @@ const EditCard = ({ id }: { id: string }) => {
           antecedentesEMS: formData.antecedentesEMS || '',
           plazoEntregaEMS: formData.plazoEntregaEMS || ''
         }),
+        // Asegurarnos de incluir los campos mensuales solo si el tipo es C
+        ...(formData.tipoCotizacion === 'C' && {
+          duracionMensual: formData.duracionMensual || '',
+          jornadaMensual: formData.jornadaMensual || '',
+          antecedentesMensual: formData.antecedentesMensual || ''
+        }),
         // Si es tipo D, enviar totalNetoGeneral y textoGeneral, y calcular totales
         ...(formData.tipoCotizacion === 'D' && {
           textoGeneral: formData.textoGeneral || '',
@@ -1228,6 +1237,50 @@ const EditCard = ({ id }: { id: string }) => {
                     value={formData.plazoEntregaEMS || ''}
                     onChange={e => setFormData({ ...formData, plazoEntregaEMS: e.target.value })}
                     placeholder='Ingrese el plazo de entrega EMS...'
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+          )}
+
+          {/* Campos Mensuales cuando el tipo es C */}
+          {formData.tipoCotizacion === 'C' && (
+            <Grid item xs={12}>
+              <Typography variant='h6' sx={{ mb: 2 }}>
+                Información Mensual
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Duración Mensual'
+                    multiline
+                    rows={4}
+                    value={formData.duracionMensual || ''}
+                    onChange={e => setFormData({ ...formData, duracionMensual: e.target.value })}
+                    placeholder='Ingrese la duración mensual...'
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Jornada Mensual'
+                    multiline
+                    rows={4}
+                    value={formData.jornadaMensual || ''}
+                    onChange={e => setFormData({ ...formData, jornadaMensual: e.target.value })}
+                    placeholder='Ingrese la jornada mensual...'
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label='Antecedentes Mensual'
+                    multiline
+                    rows={4}
+                    value={formData.antecedentesMensual || ''}
+                    onChange={e => setFormData({ ...formData, antecedentesMensual: e.target.value })}
+                    placeholder='Ingrese los antecedentes mensuales...'
                   />
                 </Grid>
               </Grid>

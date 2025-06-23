@@ -145,9 +145,11 @@ const PreviewCard = () => {
               ? 'Valores Unitarios'
               : previewData.tipoCotizacion === 'B'
                 ? 'EMS'
-                : previewData.tipoCotizacion === 'D'
-                  ? 'Genérica'
-                  : 'Mensual'}
+                : previewData.tipoCotizacion === 'C'
+                  ? 'Servicio Mensual'
+                  : previewData.tipoCotizacion === 'D'
+                    ? 'Genérica'
+                    : 'Mensual'}
           </Typography>
           <Typography>
             <strong>Proyecto:</strong> {previewData.nombreProyecto || 'No especificado'}
@@ -170,6 +172,19 @@ const PreviewCard = () => {
                     ? 'Crédito 90 días'
                     : 'No especificada'}
           </Typography>
+          {previewData.tipoCotizacion === 'C' && (
+            <>
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                <strong>Duración Mensual:</strong> {previewData.duracionMensual || 'No especificada'}
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                <strong>Jornada Mensual:</strong> {previewData.jornadaMensual || 'No especificada'}
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                <strong>Antecedentes Mensual:</strong> {previewData.antecedentesMensual || 'No especificados'}
+              </Typography>
+            </>
+          )}
         </Box>
 
         {/* Información EMS */}

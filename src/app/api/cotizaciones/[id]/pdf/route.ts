@@ -137,10 +137,16 @@ Condiciones para terreno y accesos
           <div class="row">
             <div class="col">
               <div class="label">Datos del Proyecto</div>
-              <div class="value"><b>Tipo:</b> ${cotizacion.tipoCotizacion === 'A' ? 'Valores Unitarios' : cotizacion.tipoCotizacion === 'B' ? 'EMS' : 'Mensual'}</div>
+              <div class="value"><b>Tipo:</b> ${cotizacion.tipoCotizacion === 'A' ? 'Valores Unitarios' : cotizacion.tipoCotizacion === 'B' ? 'EMS' : cotizacion.tipoCotizacion === 'C' ? 'Servicio Mensual' : cotizacion.tipoCotizacion === 'D' ? 'Genérica' : 'Mensual'}</div>
               <div class="value"><b>Proyecto:</b> ${cotizacion.nombreProyecto || '-'}</div>
               <div class="value"><b>Empresa:</b> ${cotizacion.empresa || '-'}</div>
               <div class="value"><b>Ubicación:</b> ${cotizacion.ubicacion || '-'}</div>
+              <div class="value"><b>Forma de Pago:</b> ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
+              ${cotizacion.tipoCotizacion === 'C' ? `
+              <div class="value"><b>Duración Mensual:</b><br>${(cotizacion.duracionMensual || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Jornada Mensual:</b><br>${(cotizacion.jornadaMensual || '-').replace(/\r?\n/g, '<br>')}</div>
+              <div class="value"><b>Antecedentes Mensual:</b><br>${(cotizacion.antecedentesMensual || '-').replace(/\r?\n/g, '<br>')}</div>
+              ` : ''}
             </div>
           </div>
           ${cotizacion.tipoCotizacion === 'B' ? `

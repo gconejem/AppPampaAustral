@@ -925,9 +925,11 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                       ? 'Valores Unitarios'
                       : selectedCotizacion.tipoCotizacion === 'B'
                         ? 'EMS'
-                        : selectedCotizacion.tipoCotizacion === 'D'
-                          ? 'Genérica'
-                          : 'Mensual'}
+                        : selectedCotizacion.tipoCotizacion === 'C'
+                          ? 'Servicio Mensual'
+                          : selectedCotizacion.tipoCotizacion === 'D'
+                            ? 'Genérica'
+                            : 'Mensual'}
                   </Typography>
                   <Typography>
                     <strong>Estado:</strong> {selectedCotizacion.estado}
@@ -1014,13 +1016,17 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
                     Información Mensual
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={selectedCotizacion.infoMensual || ''}
-                    InputProps={{ readOnly: true }}
-                  />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      <strong>Duración Mensual:</strong> {selectedCotizacion.duracionMensual || 'No especificada'}
+                    </Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      <strong>Jornada Mensual:</strong> {selectedCotizacion.jornadaMensual || 'No especificada'}
+                    </Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      <strong>Antecedentes Mensual:</strong> {selectedCotizacion.antecedentesMensual || 'No especificados'}
+                    </Typography>
+                  </Box>
                 </Grid>
               )}
 

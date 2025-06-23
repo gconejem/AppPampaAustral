@@ -190,6 +190,11 @@ export async function POST(request: Request) {
             antecedentesEMS: body.antecedentesEMS || '',
             plazoEntregaEMS: body.plazoEntregaEMS || ''
           }),
+          ...(normalizeTipoCotizacion(body.tipoCotizacion) === 'C' && {
+            duracionMensual: body.duracionMensual || '',
+            jornadaMensual: body.jornadaMensual || '',
+            antecedentesMensual: body.antecedentesMensual || ''
+          }),
           ...(body.tipoCotizacion === 'D' && {
             textoGeneral: body.textoGeneral || ''
           })
