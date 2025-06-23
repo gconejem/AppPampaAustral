@@ -1518,7 +1518,7 @@ const AddCard = ({
                       />
                     )}
                     renderOption={(props, option) => (
-                      <Box component='li' {...props}>
+                      <Box component='li' {...props} key={option.contactId}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant='body1'>
                             {option.nombre}
