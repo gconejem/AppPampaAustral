@@ -171,6 +171,7 @@ const PreviewActions = () => {
         duracionMensual: previewData.duracionMensual || '',
         jornadaMensual: previewData.jornadaMensual || '',
         antecedentesMensual: previewData.antecedentesMensual || '',
+        alcanceServicio: previewData.alcanceServicio || '',
         //FIN Mensual
 
         detalles: {
@@ -206,12 +207,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      setTimeout(() => {
+      /* setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000)
+      }, 1000) */
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')

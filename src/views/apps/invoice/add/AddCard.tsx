@@ -83,6 +83,7 @@ interface FormData {
   notas: string
   textoGeneral?: string
   totalNetoGeneral?: number
+  alcanceServicio?: string
 }
 
 // Coloca la función aquí antes de initialFormData
@@ -180,6 +181,7 @@ const AddCard = ({
     jornadaMensual: '',
     antecedentesMensual: '',
     notas: getNotasDefault('A'), // 'A' es el valor por defecto inicial
+    alcanceServicio: '',
   }
 
   const initialValidationErrors: ValidationErrors = {
@@ -296,7 +298,8 @@ const AddCard = ({
         contactId:
           typeof formData.contactId === 'number' && !isNaN(formData.contactId) ? formData.contactId : undefined,
         detalles: detallesValidos,
-        formaPago: formData.formaPago
+        formaPago: formData.formaPago,
+        alcanceServicio: formData.alcanceServicio || '',
       }
 
       console.log('Datos completos a enviar:', dataToSend)
@@ -868,7 +871,8 @@ const AddCard = ({
       total: total,
       observaciones: formData.observaciones || '',
       listaPrecioId: selectedListaPrecio,
-      textoGeneral: formData.textoGeneral || '' // Asegurarse de incluir textoGeneral
+      textoGeneral: formData.textoGeneral || '', // Asegurarse de incluir textoGeneral
+      alcanceServicio: formData.alcanceServicio || '',
     };
 
     // Debug para ver qué datos se están enviando
@@ -1399,6 +1403,12 @@ const AddCard = ({
     // Si el usuario edita, no actualizar lastAutoNotas
   }
 
+  useEffect(() => {
+    if (formData.tipoCotizacion === 'C' && !formData.alcanceServicio) {
+      handleChange('alcanceServicio', `General:\n\n• xx Laboratoristas clase C en obra.\n• xx Ayudante en obra. Considera alimentación para nuestros técnicos en Obra.\n• Oficina móvil en obra (2 container: oficina y para instalación de equipamiento).\n• Camioneta estándar minero y combustible.\n• Equipamiento completo para ensayos de suelo y hormigón.\n• Envío digital de Órdenes de Trabajo y emisión de Informes Oficiales digitales con firma electrónica bajo sistema de acreditación MINVU-INN (LES40, LES41, LES42 y LES44).\n• Trazabilidad digital y almacenamiento de datos, respaldados por protocolos de calidad y seguridad.\n\nImplementación Laboratorio en Obra:\n• Área Hormigón: prensa prensa ensayo a compresión, probetas cilíndricas, cono de Abrams, piscina portátil con calefactor, vibrador portátil, termómetros.\n• Área Suelo: tamices de 3\" a N°200, balanzas (0.1 gr y 1 kg), palas, densímetro nuclear, moldes y pisones Proctor y CBR, horno eléctrico, colinela, lavador de muestras, enrasador, pipetas de 1.000 ml y 250 ml, prensa CBR, piscina portátil para molde de CBR.\n\nCondiciones requeridas por el cliente:\n• Autorizaciones y acreditaciones del personal.\n• Accesos expeditos y seguros, además de protección contra riesgos laborales, actos vandálicos u otros hechos adversos.\n• Provisión de energía eléctrica, iluminación, agua y servicios higiénicos para oficina móvil en obra.\n• Prevencionista de Riesgo.\n• Se considerará Bunker para densímetro nuclear en Casa Matriz, de ser solicitado por el mandante se cotiza construcción y autorización de bunker previa solicitud.\n• Comunicar programación semanal de actividades de laboratorio, de tal manera de asignar al personal de terreno tareas adicionales si correspondiera.`)
+    }
+  }, [formData.tipoCotizacion])
+
   return (
     <>
       <Card
@@ -1807,6 +1817,17 @@ const AddCard = ({
                       value={formData.antecedentesMensual}
                       onChange={e => handleChange('antecedentesMensual', e.target.value)}
                       inputProps={{ maxLength: 500 }}
+                      sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+
+                    />
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={10}
+                      label='Alcance del servicio'
+                      value={formData.alcanceServicio || ''}
+                      onChange={e => handleChange('alcanceServicio', e.target.value)}
+                      placeholder='Describa el alcance del servicio...'
                       sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
                     />
                   </CardContent>

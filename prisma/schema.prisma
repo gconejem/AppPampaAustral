@@ -318,6 +318,7 @@ model Cotizacion {
   duracionMensual  String?
   jornadaMensual   String?
   antecedentesMensual String?
+  alcanceServicio  String?
   cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   contacto         Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
   obra             Obra?               @relation(fields: [obraId], references: [obraId])

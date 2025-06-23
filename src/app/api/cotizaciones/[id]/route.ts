@@ -114,7 +114,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         ...(body.tipoCotizacion === 'C' && {
           duracionMensual: body.duracionMensual || '',
           jornadaMensual: body.jornadaMensual || '',
-          antecedentesMensual: body.antecedentesMensual || ''
+          antecedentesMensual: body.antecedentesMensual || '',
+          alcanceServicio: body.alcanceServicio || ''
         }),
         // Incluir campos de tipo D
         ...(body.tipoCotizacion === 'D' && {

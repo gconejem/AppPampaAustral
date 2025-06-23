@@ -183,6 +183,11 @@ const PreviewCard = () => {
               <Typography sx={{ whiteSpace: 'pre-wrap' }}>
                 <strong>Antecedentes Mensual:</strong> {previewData.antecedentesMensual || 'No especificados'}
               </Typography>
+              {previewData.alcanceServicio && (
+                <Typography sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>
+                  <strong>Alcance del servicio:</strong> {previewData.alcanceServicio}
+                </Typography>
+              )}
             </>
           )}
         </Box>

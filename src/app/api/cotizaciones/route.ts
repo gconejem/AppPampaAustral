@@ -193,7 +193,8 @@ export async function POST(request: Request) {
           ...(normalizeTipoCotizacion(body.tipoCotizacion) === 'C' && {
             duracionMensual: body.duracionMensual || '',
             jornadaMensual: body.jornadaMensual || '',
-            antecedentesMensual: body.antecedentesMensual || ''
+            antecedentesMensual: body.antecedentesMensual || '',
+            alcanceServicio: body.alcanceServicio || ''
           }),
           ...(body.tipoCotizacion === 'D' && {
             textoGeneral: body.textoGeneral || ''

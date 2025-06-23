@@ -1026,6 +1026,11 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                     <Typography sx={{ whiteSpace: 'pre-wrap' }}>
                       <strong>Antecedentes Mensual:</strong> {selectedCotizacion.antecedentesMensual || 'No especificados'}
                     </Typography>
+                    {selectedCotizacion.alcanceServicio && (
+                      <Typography sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>
+                        <strong>Alcance del servicio:</strong> {selectedCotizacion.alcanceServicio}
+                      </Typography>
+                    )}
                   </Box>
                 </Grid>
               )}

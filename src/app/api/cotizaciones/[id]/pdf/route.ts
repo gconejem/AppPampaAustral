@@ -146,6 +146,7 @@ Condiciones para terreno y accesos
               <div class="value"><b>Duración Mensual:</b><br>${(cotizacion.duracionMensual || '-').replace(/\r?\n/g, '<br>')}</div>
               <div class="value"><b>Jornada Mensual:</b><br>${(cotizacion.jornadaMensual || '-').replace(/\r?\n/g, '<br>')}</div>
               <div class="value"><b>Antecedentes Mensual:</b><br>${(cotizacion.antecedentesMensual || '-').replace(/\r?\n/g, '<br>')}</div>
+              ${cotizacion.alcanceServicio ? `<div class=\"value\"><b>Alcance del servicio:</b><br>${cotizacion.alcanceServicio.replace(/\r?\n/g, '<br>')}</div>` : ''}
               ` : ''}
             </div>
           </div>

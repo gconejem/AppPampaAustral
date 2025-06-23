@@ -124,6 +124,7 @@ interface FormDataType {
   duracionMensual?: string
   jornadaMensual?: string
   antecedentesMensual?: string
+  alcanceServicio?: string
 }
 
 function getNotasDefault(tipoCotizacion: string) {
@@ -759,7 +760,8 @@ const EditCard = ({ id }: { id: string }) => {
         ...(formData.tipoCotizacion === 'C' && {
           duracionMensual: formData.duracionMensual || '',
           jornadaMensual: formData.jornadaMensual || '',
-          antecedentesMensual: formData.antecedentesMensual || ''
+          antecedentesMensual: formData.antecedentesMensual || '',
+          alcanceServicio: formData.alcanceServicio || ''
         }),
         // Si es tipo D, enviar totalNetoGeneral y textoGeneral, y calcular totales
         ...(formData.tipoCotizacion === 'D' && {
@@ -816,13 +818,12 @@ const EditCard = ({ id }: { id: string }) => {
     const previewData = {
       ...formData,
       detalles: detallesPlanos,
-      // Agregar precioEMSPorProducto basado en el tipo de cotización
       precioEMSPorProducto: formData.tipoCotizacion === 'A' || formData.tipoCotizacion === 'C',
-      // Asegurarnos de que los totales sean números
       subtotal: Number(formData.subtotal || 0),
       descuento: Number(formData.descuento || 0),
       impuesto: Number(formData.impuesto || 0),
-      total: Number(formData.total || 0)
+      total: Number(formData.total || 0),
+      alcanceServicio: formData.alcanceServicio || ''
     };
 
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData));
@@ -940,6 +941,13 @@ const EditCard = ({ id }: { id: string }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData?.tipoCotizacion, formData?.subtotal])
+
+  // Al cargar la cotización o cambiar a tipo C, si el campo está vacío, poner el valor por defecto
+  useEffect(() => {
+    if (formData?.tipoCotizacion === 'C' && !formData.alcanceServicio) {
+      setFormData(prev => prev ? { ...prev, alcanceServicio: `General:\n\n• xx Laboratoristas clase C en obra.\n• xx Ayudante en obra. Considera alimentación para nuestros técnicos en Obra.\n• Oficina móvil en obra (2 container: oficina y para instalación de equipamiento).\n• Camioneta estándar minero y combustible.\n• Equipamiento completo para ensayos de suelo y hormigón.\n• Envío digital de Órdenes de Trabajo y emisión de Informes Oficiales digitales con firma electrónica bajo sistema de acreditación MINVU-INN (LES40, LES41, LES42 y LES44).\n• Trazabilidad digital y almacenamiento de datos, respaldados por protocolos de calidad y seguridad.\n\nImplementación Laboratorio en Obra:\n• Área Hormigón: prensa prensa ensayo a compresión, probetas cilíndricas, cono de Abrams, piscina portátil con calefactor, vibrador portátil, termómetros.\n• Área Suelo: tamices de 3" a N°200, balanzas (0.1 gr y 1 kg), palas, densímetro nuclear, moldes y pisones Proctor y CBR, horno eléctrico, colinela, lavador de muestras, enrasador, pipetas de 1.000 ml y 250 ml, prensa CBR, piscina portátil para molde de CBR.\n\nCondiciones requeridas por el cliente:\n• Autorizaciones y acreditaciones del personal.\n• Accesos expeditos y seguros, además de protección contra riesgos laborales, actos vandálicos u otros hechos adversos.\n• Provisión de energía eléctrica, iluminación, agua y servicios higiénicos para oficina móvil en obra.\n• Prevencionista de Riesgo.\n• Se considerará Bunker para densímetro nuclear en Casa Matriz, de ser solicitado por el mandante se cotiza construcción y autorización de bunker previa solicitud.\n• Comunicar programación semanal de actividades de laboratorio, de tal manera de asignar al personal de terreno tareas adicionales si correspondiera.` } : prev)
+    }
+  }, [formData?.tipoCotizacion])
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -1284,6 +1292,24 @@ const EditCard = ({ id }: { id: string }) => {
                   />
                 </Grid>
               </Grid>
+            </Grid>
+          )}
+
+          {/* Alcance del servicio */}
+          {formData.tipoCotizacion === 'C' && (
+            <Grid item xs={12}>
+              <Typography variant='h6' sx={{ mb: 2 }}>
+                Alcance del servicio
+              </Typography>
+              <TextField
+                fullWidth
+                label='Alcance del servicio'
+                multiline
+                rows={10}
+                value={formData.alcanceServicio || ''}
+                onChange={e => setFormData({ ...formData, alcanceServicio: e.target.value })}
+                placeholder='Describa el alcance del servicio...'
+              />
             </Grid>
           )}
 
@@ -1681,33 +1707,6 @@ const EditCard = ({ id }: { id: string }) => {
                         <Typography variant='caption' color='text.secondary'>
                           {producto.area} - {producto.tipo} - {producto.familia}
                         </Typography>
-                        {/* {producto.esPaquete &&
-                          producto.productosEnPaquete &&
-                          producto.productosEnPaquete.length > 0 && (
-                            <Box sx={{ mt: 0.5 }}>
-                              <Typography variant='caption' color='text.secondary' sx={{ fontStyle: 'italic' }}>
-                                Incluye:
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1 }}>
-                                {producto.productosEnPaquete.map((pp: any, i: number) => (
-                                  <Typography
-                                    key={i}
-                                    variant='caption'
-                                    color='text.secondary'
-                                    sx={{
-                                      display: 'inline-block',
-                                      '&:not(:last-child):after': {
-                                        content: '","',
-                                        marginRight: '4px'
-                                      }
-                                    }}
-                                  >
-                                    {pp.nombre}
-                                  </Typography>
-                                ))}
-                              </Box>
-                            </Box>
-                          )} */}
                       </Box>
                     }
                   />
