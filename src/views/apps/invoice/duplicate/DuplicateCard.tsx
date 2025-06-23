@@ -121,6 +121,10 @@ interface FormDataType {
   plazoEntregaEMS?: string
   textoGeneral?: string
   totalNetoGeneral?: number
+  duracionMensual?: string
+  jornadaMensual?: string
+  antecedentesMensual?: string
+  alcanceServicio?: string
 }
 
 const DuplicateCard = ({ id }: { id: string }) => {
@@ -687,6 +691,10 @@ const DuplicateCard = ({ id }: { id: string }) => {
         plazoEntregaEMS: formData.plazoEntregaEMS || '',
         textoGeneral: formData.textoGeneral || '',
         totalNetoGeneral: formData.totalNetoGeneral || 0,
+        duracionMensual: formData.duracionMensual || '',
+        jornadaMensual: formData.jornadaMensual || '',
+        antecedentesMensual: formData.antecedentesMensual || '',
+        alcanceServicio: formData.alcanceServicio || '',
         detalles: {
           create: detallesValidos
         }
@@ -751,6 +759,11 @@ const DuplicateCard = ({ id }: { id: string }) => {
       impuesto: Number(formData.impuesto || 0),
       total: Number(formData.total || 0),
       totalNetoGeneral: formData.totalNetoGeneral || 0,
+      // Campos mensuales
+      duracionMensual: formData.duracionMensual || '',
+      jornadaMensual: formData.jornadaMensual || '',
+      antecedentesMensual: formData.antecedentesMensual || '',
+      alcanceServicio: formData.alcanceServicio || '',
       // Agregar bandera para indicar que es una duplicación
       isDuplicacion: true
     }
@@ -974,6 +987,30 @@ Consideraciones adicionales y requisitos especiales
     setFormData(prev => prev ? { ...prev, notas: getNotasDefault(formData.tipoCotizacion) || '' } : prev);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData && formData.tipoCotizacion]);
+
+  // Inicializar campo alcanceServicio para cotizaciones tipo C
+  useEffect(() => {
+    if (formData?.tipoCotizacion === 'C' && !formData.alcanceServicio) {
+      const alcanceDefault = `General:
+
+• xx Laboratoristas clase C en obra.
+• xx Ayudante en obra. Considera alimentación para nuestros técnicos en Obra.
+• Oficina móvil en obra (2 container: oficina y para instalación de equipamiento).
+• Camioneta estándar minero y combustible.
+• Equipamiento completo para ensayos de suelo y hormigón.
+• Envío digital de Órdenes de Trabajo y emisión de Informes Oficiales digitales con firma electrónica bajo sistema de acreditación.
+• Personal técnico con acreditación vigente.
+• Equipos de ensayo calibrados y verificados.
+• Muestreo y ensayos según normativas vigentes.
+• Informes técnicos con resultados y análisis.
+• Soporte técnico durante la ejecución del proyecto.
+• Capacitación al personal del cliente si se requiere.
+• Reuniones de coordinación según programación.
+• Seguimiento y control de calidad continuo.`;
+
+      setFormData(prev => prev ? { ...prev, alcanceServicio: alcanceDefault } : prev);
+    }
+  }, [formData?.tipoCotizacion, formData?.alcanceServicio]);
 
   if (loading) return <Typography>Cargando...</Typography>
   if (error) return <Typography color='error'>{error}</Typography>
@@ -1246,6 +1283,69 @@ Consideraciones adicionales y requisitos especiales
                   />
                 </Grid>
               </Grid>
+            </Grid>
+          )}
+
+          {/* Campos Mensuales cuando el tipo es C */}
+          {formData.tipoCotizacion === 'C' && (
+            <Grid item xs={12}>
+              <Card sx={{ bgcolor: 'action.hover', p: 2 }}>
+                <CardContent>
+                  <Typography variant='h6' gutterBottom>
+                    Información Mensual
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        label='Duración Mensual'
+                        multiline
+                        rows={4}
+                        value={formData.duracionMensual || ''}
+                        onChange={e => setFormData({ ...formData, duracionMensual: e.target.value })}
+                        placeholder='Ingrese la duración mensual...'
+                        sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        label='Jornada Laboral y Horario'
+                        multiline
+                        rows={4}
+                        value={formData.jornadaMensual || ''}
+                        onChange={e => setFormData({ ...formData, jornadaMensual: e.target.value })}
+                        inputProps={{ maxLength: 500 }}
+                        sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        label='Antecedentes'
+                        value={formData.antecedentesMensual || ''}
+                        onChange={e => setFormData({ ...formData, antecedentesMensual: e.target.value })}
+                        inputProps={{ maxLength: 500 }}
+                        sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={12}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={10}
+                        label='Alcance del servicio'
+                        value={formData.alcanceServicio || ''}
+                        onChange={e => setFormData({ ...formData, alcanceServicio: e.target.value })}
+                        placeholder='Describa el alcance del servicio...'
+                        sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                      />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
             </Grid>
           )}
 
