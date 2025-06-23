@@ -59,7 +59,7 @@ const ROLES_CONTACTO = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ] as const
 
 const SECTORES_COMERCIALES = [
@@ -429,7 +429,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   useEffect(() => {
     console.log('contactos actualizados:', contactos)
   }, [contactos])
-  
+
   // efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
     const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
@@ -554,7 +554,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     const areaNombre = e.target.value
     setSelectedArea(areaNombre)
     setSelectedFamilia('') // Resetear familia cuando cambia el área
-    
+
     // Encontrar el ID del área seleccionada
     const areaSeleccionada = areas.find(a => a.nombre === areaNombre)
     setSelectedAreaId(areaSeleccionada?.id || null)
@@ -1212,7 +1212,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   }))
                 }}
               >
-                {SECTORES_COMERCIALES.map(s => 
+                {SECTORES_COMERCIALES.map(s =>
                   <MenuItem key={s.value} value={s.label}>
                     {s.label}
                   </MenuItem>
@@ -1307,7 +1307,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               label='Referencia'
               value={selectedReferencia}
               placeholder='Ej: Cerca del supermercado, Edificio azul, etc.'
-              onChange={e =>{
+              onChange={e => {
                 setSelectedReferencia(e.target.value)
                 setFormData(prev => ({
                   ...prev,
@@ -1511,8 +1511,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   readOnly: true,
                   endAdornment: (
                     <InputAdornment position='end'>
-                      <IconButton 
-                        size='small' 
+                      <IconButton
+                        size='small'
                         onClick={(e) => {
                           e.stopPropagation()
                           handleOpenPopover(servicioAnchorRef.current)
@@ -1599,11 +1599,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <Grid item xs={12} sm={4}>
                   <FormControl size='small' fullWidth>
                     <InputLabel shrink>Familia</InputLabel>
-                    <Select 
-                      value={selectedFamilia} 
-                      label='Familia' 
-                      onChange={handleFamiliaChange} 
-                      displayEmpty 
+                    <Select
+                      value={selectedFamilia}
+                      label='Familia'
+                      onChange={handleFamiliaChange}
+                      displayEmpty
                       renderValue={selected => selected === '' ? 'Todas' : selected}
                       disabled={!selectedAreaId}
                     >

@@ -53,7 +53,7 @@ const CARGOS_OBRA = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 const MANDANTES = [
@@ -165,17 +165,17 @@ const DuplicateWork = (props: Props) => {
     contactId: contacto.id ? String(contacto.id) : undefined,
     isPrincipal: contacto.isPrincipal
   })) || [
-    {
-      rol: 'Encargado de Obra',
-      nombre: '',
-      email: '',
-      telefono1: '',
-      telefono2: '',
-      isEditing: false,
-      contactId: undefined,
-      isPrincipal: false
-    }
-  ]
+      {
+        rol: 'Encargado de Obra',
+        nombre: '',
+        email: '',
+        telefono1: '',
+        telefono2: '',
+        isEditing: false,
+        contactId: undefined,
+        isPrincipal: false
+      }
+    ]
 
   const [contactos, setContactos] = useState<ContactoObraForm[]>(contactosPrincipales)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
@@ -193,20 +193,20 @@ const DuplicateWork = (props: Props) => {
   // Definir el cliente seleccionado a partir de initialData
   const selectedClient = initialData && initialData.rut && initialData.nombreCliente
     ? {
-        clienteId: 0, // No tenemos el ID real, pero es necesario para el Autocomplete
-        rut: initialData.rut,
-        nombreCliente: initialData.nombreCliente,
-        razonSocial: initialData.razonSocial || '',
-        giro: initialData.giro || '',
-        direccionComercial: initialData.direccionComercial || '',
-        comunaFacturacion: initialData.comunaFacturacion || '',
-        telefono: initialData.telefono || initialData.telefonoFacturacion || '',
-        telefonoFacturacion: initialData.telefonoFacturacion || '',
-        mailRecepcionFactura: initialData.mailRecepcionFactura || '',
-        listaPrecios: initialData.listaPrecios || '',
-        otroRut: initialData.rutRepresentanteLegal || '',
-        representanteLegal: initialData.representanteLegal || ''
-      }
+      clienteId: 0, // No tenemos el ID real, pero es necesario para el Autocomplete
+      rut: initialData.rut,
+      nombreCliente: initialData.nombreCliente,
+      razonSocial: initialData.razonSocial || '',
+      giro: initialData.giro || '',
+      direccionComercial: initialData.direccionComercial || '',
+      comunaFacturacion: initialData.comunaFacturacion || '',
+      telefono: initialData.telefono || initialData.telefonoFacturacion || '',
+      telefonoFacturacion: initialData.telefonoFacturacion || '',
+      mailRecepcionFactura: initialData.mailRecepcionFactura || '',
+      listaPrecios: initialData.listaPrecios || '',
+      otroRut: initialData.rutRepresentanteLegal || '',
+      representanteLegal: initialData.representanteLegal || ''
+    }
     : null;
 
   useEffect(() => {
@@ -234,7 +234,7 @@ const DuplicateWork = (props: Props) => {
   useEffect(() => {
     if (open && initialData) {
       console.log('initialData recibido:', initialData)
-      
+
       // Preparar los datos del formulario
       const formData = {
         ...initialFormData,
@@ -243,9 +243,9 @@ const DuplicateWork = (props: Props) => {
         direccion: '',
         estado: initialData.estado || 'activa',
         estadoObra: initialData.estadoObra || 'activa',
-        fechaIngreso: initialData.fechaIngreso instanceof Date 
+        fechaIngreso: initialData.fechaIngreso instanceof Date
           ? initialData.fechaIngreso.toISOString().split('T')[0]
-          : typeof initialData.fechaIngreso === 'string' 
+          : typeof initialData.fechaIngreso === 'string'
             ? initialData.fechaIngreso.split('T')[0]
             : new Date().toISOString().split('T')[0],
         rut: initialData.rut || '',
@@ -260,10 +260,10 @@ const DuplicateWork = (props: Props) => {
         representanteLegal: initialData.representanteLegal || '',
         telefono: initialData.telefono || initialData.telefonoFacturacion || '',
         otrasReferencias: typeof initialData.otrasReferencias === 'string' ? initialData.otrasReferencias : '',
-        correos: typeof initialData.correos === 'string' 
+        correos: typeof initialData.correos === 'string'
           ? initialData.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
-          : Array.isArray(initialData.correos) 
-            ? initialData.correos 
+          : Array.isArray(initialData.correos)
+            ? initialData.correos
             : []
       }
 
@@ -338,10 +338,10 @@ const DuplicateWork = (props: Props) => {
       setIsSubmitting(true);
 
       // Procesar correos
-      const correosArray = typeof data.correos === 'string' 
+      const correosArray = typeof data.correos === 'string'
         ? data.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
-        : Array.isArray(data.correos) 
-          ? data.correos 
+        : Array.isArray(data.correos)
+          ? data.correos
           : [];
 
       const mailRecepcionArray = typeof data.mailRecepcionFactura === 'string'
@@ -524,816 +524,816 @@ const DuplicateWork = (props: Props) => {
         <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
           {/* Primera sección: 4-4-4 */}
           <Grid container spacing={5}>
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='numeroObra'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label='Número Obra' disabled value={lastObraNumber} />
-                  )}
-                />
-              </Grid>
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='numeroObra'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Número Obra' disabled value={lastObraNumber} />
+                )}
+              />
+            </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='fechaIngreso'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Fecha Ingreso *'
-                      type='date'
-                      InputLabelProps={{ shrink: true }}
-                      error={Boolean(errors.fechaIngreso)}
-                      helperText={errors.fechaIngreso && 'Este campo es obligatorio'}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth error={Boolean(errors.estadoObra)}>
-                  <InputLabel>Estado Obra *</InputLabel>
-                  <Controller
-                    name='estadoObra'
-                    control={control}
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select {...field} label='Estado Obra'>
-                        {ESTADOS_OBRA.map(estado => (
-                          <MenuItem key={estado.value} value={estado.value}>
-                            {estado.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='fechaIngreso'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Fecha Ingreso *'
+                    type='date'
+                    InputLabelProps={{ shrink: true }}
+                    error={Boolean(errors.fechaIngreso)}
+                    helperText={errors.fechaIngreso && 'Este campo es obligatorio'}
                   />
-                  {errors.estadoObra && <FormHelperText>Este campo es obligatorio</FormHelperText>}
-                </FormControl>
-              </Grid>
+                )}
+              />
             </Grid>
 
-            {/* Segunda sección: 12 (Búsqueda de cliente) */}
-            <Grid container spacing={5}>
-              <Grid item xs={12}>
-                <ClientSearch
-                  value={selectedClient}
-                  onClientSelect={cliente => {
-                    // Campos básicos del cliente
-                    setValue('rut', cliente.rut)
-                    setValue('nombreCliente', cliente.nombreCliente)
-                    setValue('razonSocial', cliente.razonSocial)
-                    // Campos de facturación
-                    setValue('giro', cliente.giro || '')
-                    setValue('direccionComercial', cliente.direccionComercial || '')
-                    const comunaCliente = (cliente.comunaFacturacion || '').trim()
-                    const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
-                    if (!existe && comunaCliente) {
-                      comunas.push({ id: 'custom', nombre: comunaCliente })
-                    }
-                    setValue('comunaFacturacion', comunaCliente)
-                    setValue('listaPrecios', cliente.listaPrecios || '')
-                    setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
-                    setValue('telefono', cliente.telefono || '')
-                    setValue('rutRepresentanteLegal', cliente.otroRut || '')
-                    setValue('representanteLegal', cliente.representanteLegal || '')
-                    trigger([
-                      'rut',
-                      'nombreCliente',
-                      'razonSocial',
-                      'giro',
-                      'direccionComercial',
-                      'comunaFacturacion',
-                      'listaPrecios',
-                      'mailRecepcionFactura',
-                      'rutRepresentanteLegal',
-                      'representanteLegal'
-                    ])
-                  }}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Campos de cliente (solo lectura) */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={Boolean(errors.estadoObra)}>
+                <InputLabel>Estado Obra *</InputLabel>
                 <Controller
-                  name='rut'
-                  control={control}
-                  rules={{
-                    required: 'El RUT es requerido',
-                    validate: value => validateRut(value) || 'RUT inválido'
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='RUT *'
-                      error={Boolean(errors.rut)}
-                      helperText={errors.rut?.message}
-                      InputProps={{
-                        readOnly: true
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='nombreCliente'
+                  name='estadoObra'
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Nombre Cliente *'
-                      error={Boolean(errors.nombreCliente)}
-                      helperText={errors.nombreCliente && 'Este campo es obligatorio'}
-                      InputProps={{
-                        readOnly: true
-                      }}
-                    />
+                    <Select {...field} label='Estado Obra'>
+                      {ESTADOS_OBRA.map(estado => (
+                        <MenuItem key={estado.value} value={estado.value}>
+                          {estado.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   )}
                 />
-              </Grid>
+                {errors.estadoObra && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+              </FormControl>
             </Grid>
+          </Grid>
 
-            {/* Antecedentes */}
-            <Divider sx={{ my: 4 }} />
-            <Typography variant='h6'>Antecedentes</Typography>
-
-            {/* Nombre Obra: 12 */}
-            <Grid container spacing={5}>
-              <Grid item xs={12}>
-                <Controller
-                  name='nombreObra'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Nombre Obra *'
-                      error={Boolean(errors.nombreObra)}
-                      helperText={errors.nombreObra && 'Este campo es obligatorio'}
-                    />
-                  )}
-                />
-              </Grid>
+          {/* Segunda sección: 12 (Búsqueda de cliente) */}
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <ClientSearch
+                value={selectedClient}
+                onClientSelect={cliente => {
+                  // Campos básicos del cliente
+                  setValue('rut', cliente.rut)
+                  setValue('nombreCliente', cliente.nombreCliente)
+                  setValue('razonSocial', cliente.razonSocial)
+                  // Campos de facturación
+                  setValue('giro', cliente.giro || '')
+                  setValue('direccionComercial', cliente.direccionComercial || '')
+                  const comunaCliente = (cliente.comunaFacturacion || '').trim()
+                  const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
+                  if (!existe && comunaCliente) {
+                    comunas.push({ id: 'custom', nombre: comunaCliente })
+                  }
+                  setValue('comunaFacturacion', comunaCliente)
+                  setValue('listaPrecios', cliente.listaPrecios || '')
+                  setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
+                  setValue('telefono', cliente.telefono || '')
+                  setValue('rutRepresentanteLegal', cliente.otroRut || '')
+                  setValue('representanteLegal', cliente.representanteLegal || '')
+                  trigger([
+                    'rut',
+                    'nombreCliente',
+                    'razonSocial',
+                    'giro',
+                    'direccionComercial',
+                    'comunaFacturacion',
+                    'listaPrecios',
+                    'mailRecepcionFactura',
+                    'rutRepresentanteLegal',
+                    'representanteLegal'
+                  ])
+                }}
+              />
             </Grid>
+          </Grid>
 
-            {/* Dirección y Región: 6-6 */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='direccion'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Dirección *'
-                      error={Boolean(errors.direccion)}
-                      helperText={errors.direccion && 'Este campo es obligatorio'}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Región</InputLabel>
-                  <Select value={selectedRegion} label='Región' onChange={handleRegionChange}>
-                    {regiones.map(region => (
-                      <MenuItem key={region.id} value={region.nombre}>
-                        {region.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-
-            {/* Comuna, Sector, Georreferencia, Referencia: 3-3-3-3 */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Comuna</InputLabel>
-                  <Select
-                    value={selectedComuna}
-                    label='Comuna'
-                    onChange={e => setSelectedComuna(e.target.value)}
-                    disabled={!selectedRegion}
-                  >
-                    {comunas.map(comuna => (
-                      <MenuItem key={comuna.id} value={comuna.nombre}>
-                        {comuna.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='sector'
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Sector' />}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Nueva fila para georreferencia y referencia */}
-            <Grid container spacing={5} sx={{ mt: 0 }}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='georreferencia'
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Georreferencia' InputLabelProps={{ shrink: true }} />}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='referencia'
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Referencia' />}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Mandante section */}
-            <Grid container spacing={5} sx={{ mt: 2 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Mandante</InputLabel>
-                  <Controller
-                    name='mandante'
-                    control={control}
-                    render={({ field }) => (
-                      <Select {...field} label='Mandante'>
-                        {MANDANTES.map(mandante => (
-                          <MenuItem key={mandante.value} value={mandante.value}>
-                            {mandante.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
+          {/* Campos de cliente (solo lectura) */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='rut'
+                control={control}
+                rules={{
+                  required: 'El RUT es requerido',
+                  validate: value => validateRut(value) || 'RUT inválido'
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='RUT *'
+                    error={Boolean(errors.rut)}
+                    helperText={errors.rut?.message}
+                    InputProps={{
+                      readOnly: true
+                    }}
                   />
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='textoMandante'
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />}
-                />
-              </Grid>
+                )}
+              />
             </Grid>
 
-            {/* Correos */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='correos'
-                  control={control}
-                  defaultValue=''
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Enviar informes a:'
-                      placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
-                      helperText='Separar múltiples correos con comas'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        field.onChange(e.target.value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='nombreCliente'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Nombre Cliente *'
+                    error={Boolean(errors.nombreCliente)}
+                    helperText={errors.nombreCliente && 'Este campo es obligatorio'}
+                    InputProps={{
+                      readOnly: true
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Antecedentes */}
+          <Divider sx={{ my: 4 }} />
+          <Typography variant='h6'>Antecedentes</Typography>
+
+          {/* Nombre Obra: 12 */}
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <Controller
+                name='nombreObra'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Nombre Obra *'
+                    error={Boolean(errors.nombreObra)}
+                    helperText={errors.nombreObra && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Dirección y Región: 6-6 */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='direccion'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Dirección *'
+                    error={Boolean(errors.direccion)}
+                    helperText={errors.direccion && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
             </Grid>
 
-            {/* Sección de Contactos */}
-            <Divider sx={{ my: 4 }} />
-            <Grid container alignItems='center' spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant='h5'>Contactos</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <ContactSearch
-                  onContactSelect={contact => {
-                    // Verificar si el contacto ya existe
-                    const exists = contactos.some(c => c.contactId === contact.contactId)
-
-                    if (exists) {
-                      toast.error('Este contacto ya está en la lista')
-
-                      return
-                    }
-
-                    // Si es el primer contacto (Encargado de Obra)
-                    if (contactos[0].nombre === '') {
-                      const updatedContactos = [...contactos]
-
-                      updatedContactos[0] = {
-                        contactId: contact.contactId?.toString(),
-                        rol: 'Encargado de Obra',
-                        nombre: contact.nombre,
-                        email: contact.email,
-                        telefono1: contact.telefono1,
-                        telefono2: contact.telefono2 || '',
-                        isPrincipal: true,
-                        isEditing: false
-                      }
-                      setContactos(updatedContactos)
-                      toast.success('Encargado de Obra asignado exitosamente')
-                    } else {
-                      // Para contactos adicionales
-                      const newContact: ContactoObraForm = {
-                        contactId: contact.contactId?.toString(),
-                        rol: contact.cargo || '',
-                        nombre: contact.nombre,
-                        email: contact.email,
-                        telefono1: contact.telefono1,
-                        telefono2: contact.telefono2 || '',
-                        isPrincipal: false,
-                        isEditing: false
-                      }
-
-                      setContactos([...contactos, newContact])
-                      toast.success('Contacto agregado exitosamente')
-                    }
-                  }}
-                />
-              </Grid>
-            </Grid>
-
-            <TableContainer sx={{ mt: 2 }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>CARGO</TableCell>
-                    <TableCell>NOMBRE</TableCell>
-                    <TableCell>EMAIL</TableCell>
-                    <TableCell>TELÉFONO</TableCell>
-                    <TableCell>ACCIÓN</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {contactos.map((contacto, index) => (
-                    <TableRow key={index}>
-                      {editingContactIndex === index ? (
-                        // Modo edición
-                        <>
-                          <TableCell>
-                            {index === 0 && contacto.rol === 'encargado_obra' ? (
-                              <TextField value='Encargado de Obra' fullWidth size='small' disabled />
-                            ) : (
-                              <FormControl fullWidth size='small'>
-                                <Select
-                                  value={editingContact.rol}
-                                  onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
-                                >
-                                  {CARGOS_OBRA.map(rol => (
-                                    <MenuItem key={rol.value} value={rol.value}>
-                                      {rol.label}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              fullWidth
-                              size='small'
-                              value={editingContact.nombre}
-                              onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              fullWidth
-                              size='small'
-                              value={editingContact.email}
-                              onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
-                              error={!validateEmail(editingContact.email)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              fullWidth
-                              size='small'
-                              value={editingContact.telefono1}
-                              onChange={e => {
-                                const formatted = e.target.value.replace(/[^0-9+]/g, '')
-                                setEditingContact({ ...editingContact, telefono1: formatted })
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton color='success' onClick={guardarEdicion}>
-                                <i className='ri-check-line' />
-                              </IconButton>
-                              <IconButton color='error' onClick={handleCancelEdit}>
-                                <i className='ri-close-line' />
-                              </IconButton>
-                              <IconButton
-                                color={editingContact.isPrincipal ? 'warning' : 'default'}
-                                onClick={() =>
-                                  setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
-                                }
-                              >
-                                <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </>
-                      ) : (
-                        // Modo visualización
-                        <>
-                          <TableCell>{CARGOS_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
-                          <TableCell>{contacto.nombre}</TableCell>
-                          <TableCell>{contacto.email}</TableCell>
-                          <TableCell>{contacto.telefono1}</TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton color='info' onClick={() => editarContacto(index)}>
-                                <i className='ri-edit-line' />
-                              </IconButton>
-                              <IconButton color='error' onClick={() => eliminarContacto(index)}>
-                                <i className='ri-delete-bin-line' />
-                              </IconButton>
-                              <IconButton
-                                color={contacto.isPrincipal ? 'warning' : 'default'}
-                                onClick={() => {
-                                  const updatedContactos = contactos.map(c => ({
-                                    ...c,
-                                    isPrincipal: c.contactId === contacto.contactId ? !c.isPrincipal : false
-                                  }))
-
-                                  setContactos(updatedContactos)
-                                }}
-                              >
-                                <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </>
-                      )}
-                    </TableRow>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Región</InputLabel>
+                <Select value={selectedRegion} label='Región' onChange={handleRegionChange}>
+                  {regiones.map(region => (
+                    <MenuItem key={region.id} value={region.nombre}>
+                      {region.nombre}
+                    </MenuItem>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-            {/* Requisitos */}
-            <Divider sx={{ my: 4 }} />
-            <Grid container spacing={5}>
-              <Grid item xs={12}>
-                <Typography variant='h5'>Requisitos</Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='acreditacionPersonal'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Checkbox {...field} checked={field.value} />}
-                      label='Acreditación de Personal'
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='especificacionesTecnicas'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Checkbox {...field} checked={field.value} />}
-                      label='Especificaciones Técnicas (EETT)'
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='acreditacionEquipos'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Checkbox {...field} checked={field.value} />}
-                      label='Acreditación de Equipos'
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='cartaCompromiso'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Checkbox {...field} checked={field.value} />}
-                      label='Carta de Compromiso'
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='mandatoServiu'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Checkbox {...field} checked={field.value} />}
-                      label='Mandato y Envío de Informes a SERVIU'
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='otrosRequisitos'
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos' />}
-                />
-              </Grid>
+          {/* Comuna, Sector, Georreferencia, Referencia: 3-3-3-3 */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Comuna</InputLabel>
+                <Select
+                  value={selectedComuna}
+                  label='Comuna'
+                  onChange={e => setSelectedComuna(e.target.value)}
+                  disabled={!selectedRegion}
+                >
+                  {comunas.map(comuna => (
+                    <MenuItem key={comuna.id} value={comuna.nombre}>
+                      {comuna.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
-            {/* Facturación */}
-            <Divider sx={{ my: 4 }} />
-            <Grid container spacing={5}>
-              <Grid item xs={12}>
-                <Typography variant='h5'>Facturación</Typography>
-              </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='sector'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Sector' />}
+              />
+            </Grid>
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
+          {/* Nueva fila para georreferencia y referencia */}
+          <Grid container spacing={5} sx={{ mt: 0 }}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='georreferencia'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Georreferencia' InputLabelProps={{ shrink: true }} />}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='referencia'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Referencia' />}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Mandante section */}
+          <Grid container spacing={5} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Mandante</InputLabel>
                 <Controller
-                  name='razonSocial'
+                  name='mandante'
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label='Mandante'>
+                      {MANDANTES.map(mandante => (
+                        <MenuItem key={mandante.value} value={mandante.value}>
+                          {mandante.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='textoMandante'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Texto Mandante' InputLabelProps={{ shrink: true }} />}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Correos */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='correos'
+                control={control}
+                defaultValue=''
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Enviar informes a:'
+                    placeholder='correo1@ejemplo.com, correo2@ejemplo.com'
+                    helperText='Separar múltiples correos con comas'
+                    value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                    onChange={e => {
+                      field.onChange(e.target.value);
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Sección de Contactos */}
+          <Divider sx={{ my: 4 }} />
+          <Grid container alignItems='center' spacing={2}>
+            <Grid item xs={6}>
+              <Typography variant='h5'>Contactos</Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <ContactSearch
+                onContactSelect={contact => {
+                  // Verificar si el contacto ya existe
+                  const exists = contactos.some(c => c.contactId === contact.contactId)
+
+                  if (exists) {
+                    toast.error('Este contacto ya está en la lista')
+
+                    return
+                  }
+
+                  // Si es el primer contacto (Encargado de Obra)
+                  if (contactos[0].nombre === '') {
+                    const updatedContactos = [...contactos]
+
+                    updatedContactos[0] = {
+                      contactId: contact.contactId?.toString(),
+                      rol: 'Encargado de Obra',
+                      nombre: contact.nombre,
+                      email: contact.email,
+                      telefono1: contact.telefono1,
+                      telefono2: contact.telefono2 || '',
+                      isPrincipal: true,
+                      isEditing: false
+                    }
+                    setContactos(updatedContactos)
+                    toast.success('Encargado de Obra asignado exitosamente')
+                  } else {
+                    // Para contactos adicionales
+                    const newContact: ContactoObraForm = {
+                      contactId: contact.contactId?.toString(),
+                      rol: contact.cargo || '',
+                      nombre: contact.nombre,
+                      email: contact.email,
+                      telefono1: contact.telefono1,
+                      telefono2: contact.telefono2 || '',
+                      isPrincipal: false,
+                      isEditing: false
+                    }
+
+                    setContactos([...contactos, newContact])
+                    toast.success('Contacto agregado exitosamente')
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+
+          <TableContainer sx={{ mt: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>CARGO</TableCell>
+                  <TableCell>NOMBRE</TableCell>
+                  <TableCell>EMAIL</TableCell>
+                  <TableCell>TELÉFONO</TableCell>
+                  <TableCell>ACCIÓN</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {contactos.map((contacto, index) => (
+                  <TableRow key={index}>
+                    {editingContactIndex === index ? (
+                      // Modo edición
+                      <>
+                        <TableCell>
+                          {index === 0 && contacto.rol === 'encargado_obra' ? (
+                            <TextField value='Encargado de Obra' fullWidth size='small' disabled />
+                          ) : (
+                            <FormControl fullWidth size='small'>
+                              <Select
+                                value={editingContact.rol}
+                                onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                              >
+                                {CARGOS_OBRA.map(rol => (
+                                  <MenuItem key={rol.value} value={rol.value}>
+                                    {rol.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editingContact.nombre}
+                            onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editingContact.email}
+                            onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                            error={!validateEmail(editingContact.email)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editingContact.telefono1}
+                            onChange={e => {
+                              const formatted = e.target.value.replace(/[^0-9+]/g, '')
+                              setEditingContact({ ...editingContact, telefono1: formatted })
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='success' onClick={guardarEdicion}>
+                              <i className='ri-check-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={handleCancelEdit}>
+                              <i className='ri-close-line' />
+                            </IconButton>
+                            <IconButton
+                              color={editingContact.isPrincipal ? 'warning' : 'default'}
+                              onClick={() =>
+                                setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
+                              }
+                            >
+                              <i className={`ri-star-${editingContact.isPrincipal ? 'fill' : 'line'}`} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </>
+                    ) : (
+                      // Modo visualización
+                      <>
+                        <TableCell>{CARGOS_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
+                        <TableCell>{contacto.nombre}</TableCell>
+                        <TableCell>{contacto.email}</TableCell>
+                        <TableCell>{contacto.telefono1}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='info' onClick={() => editarContacto(index)}>
+                              <i className='ri-edit-line' />
+                            </IconButton>
+                            <IconButton color='error' onClick={() => eliminarContacto(index)}>
+                              <i className='ri-delete-bin-line' />
+                            </IconButton>
+                            <IconButton
+                              color={contacto.isPrincipal ? 'warning' : 'default'}
+                              onClick={() => {
+                                const updatedContactos = contactos.map(c => ({
+                                  ...c,
+                                  isPrincipal: c.contactId === contacto.contactId ? !c.isPrincipal : false
+                                }))
+
+                                setContactos(updatedContactos)
+                              }}
+                            >
+                              <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Requisitos */}
+          <Divider sx={{ my: 4 }} />
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <Typography variant='h5'>Requisitos</Typography>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='acreditacionPersonal'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Checkbox {...field} checked={field.value} />}
+                    label='Acreditación de Personal'
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='especificacionesTecnicas'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Checkbox {...field} checked={field.value} />}
+                    label='Especificaciones Técnicas (EETT)'
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='acreditacionEquipos'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Checkbox {...field} checked={field.value} />}
+                    label='Acreditación de Equipos'
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='cartaCompromiso'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Checkbox {...field} checked={field.value} />}
+                    label='Carta de Compromiso'
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='mandatoServiu'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Checkbox {...field} checked={field.value} />}
+                    label='Mandato y Envío de Informes a SERVIU'
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='otrosRequisitos'
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos' />}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Facturación */}
+          <Divider sx={{ my: 4 }} />
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <Typography variant='h5'>Facturación</Typography>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='razonSocial'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Razón Social *'
+                    error={Boolean(errors.razonSocial)}
+                    helperText={errors.razonSocial && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='giro'
+                control={control}
+                rules={{
+                  required: 'El giro es requerido'
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Giro *'
+                    error={Boolean(errors.giro)}
+                    helperText={errors.giro?.message}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='direccionComercial'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Dirección Comercial *'
+                    error={Boolean(errors.direccionComercial)}
+                    helperText={errors.direccionComercial && 'Este campo es obligatorio'}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='mailRecepcionFactura'
+                control={control}
+                rules={{
+                  required: 'El email es requerido'
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Mail Recepción Factura *'
+                    error={Boolean(errors.mailRecepcionFactura)}
+                    helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con comas'}
+                    placeholder='ejemplo@email.com, otro@email.com'
+                    value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                    onChange={e => {
+                      const value = e.target.value;
+                      field.onChange(value);
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
+                <InputLabel>Comuna *</InputLabel>
+                <Controller
+                  name='comunaFacturacion'
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Razón Social *'
-                      error={Boolean(errors.razonSocial)}
-                      helperText={errors.razonSocial && 'Este campo es obligatorio'}
-                    />
+                    <Select {...field} label='Comuna'>
+                      {comunas.map(comuna => (
+                        <MenuItem key={comuna.id} value={comuna.nombre}>
+                          {comuna.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   )}
                 />
-              </Grid>
+                {errors.comunaFacturacion && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+              </FormControl>
+            </Grid>
 
-              <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={Boolean(errors.listaPrecios)}>
+                <InputLabel>Lista de Precios *</InputLabel>
                 <Controller
-                  name='giro'
-                  control={control}
-                  rules={{
-                    required: 'El giro es requerido'
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Giro *'
-                      error={Boolean(errors.giro)}
-                      helperText={errors.giro?.message}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='direccionComercial'
+                  name='listaPrecios'
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Dirección Comercial *'
-                      error={Boolean(errors.direccionComercial)}
-                      helperText={errors.direccionComercial && 'Este campo es obligatorio'}
-                    />
+                    <Select {...field} label='Lista de Precios'>
+                      {listasPrecios.map(lista => (
+                        <MenuItem key={lista.id} value={lista.id}>
+                          {lista.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   )}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='mailRecepcionFactura'
-                  control={control}
-                  rules={{
-                    required: 'El email es requerido'
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Mail Recepción Factura *'
-                      error={Boolean(errors.mailRecepcionFactura)}
-                      helperText={errors.mailRecepcionFactura?.message || 'Separar múltiples correos con comas'}
-                      placeholder='ejemplo@email.com, otro@email.com'
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        field.onChange(value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
+                {errors.listaPrecios && <FormHelperText>Este campo es obligatorio</FormHelperText>}
+              </FormControl>
+            </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
-                  <InputLabel>Comuna *</InputLabel>
-                  <Controller
-                    name='comunaFacturacion'
-                    control={control}
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select {...field} label='Comuna'>
-                        {comunas.map(comuna => (
-                          <MenuItem key={comuna.id} value={comuna.nombre}>
-                            {comuna.nombre}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
+            <Grid item xs={12} sm={4}>
+              <Controller
+                name='telefono'
+                control={control}
+                rules={{
+                  required: 'El teléfono es requerido'
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Teléfono *'
+                    placeholder='+56 9 XXXX XXXX'
+                    error={Boolean(errors.telefono)}
+                    helperText={errors.telefono?.message}
+                    onChange={e => {
+                      const formatted = formatPhone(e.target.value)
+
+                      field.onChange(formatted)
+                    }}
+                    inputProps={{
+                      inputMode: 'text'
+                    }}
+                    InputLabelProps={{
+                      shrink: true
+                    }}
                   />
-                  {errors.comunaFacturacion && <FormHelperText>Este campo es obligatorio</FormHelperText>}
-                </FormControl>
-              </Grid>
+                )}
+              />
+            </Grid>
+          </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth error={Boolean(errors.listaPrecios)}>
-                  <InputLabel>Lista de Precios *</InputLabel>
-                  <Controller
-                    name='listaPrecios'
-                    control={control}
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select {...field} label='Lista de Precios'>
-                        {listasPrecios.map(lista => (
-                          <MenuItem key={lista.id} value={lista.id}>
-                            {lista.nombre}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
+          {/* Nueva fila para otroRut y representanteLegal */}
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='rutRepresentanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='RUT Representante Legal'
+                    placeholder='12.345.678-9'
+                    onChange={e => {
+                      const formatted = formatRut(e.target.value)
+
+                      field.onChange(formatted)
+                    }}
                   />
-                  {errors.listaPrecios && <FormHelperText>Este campo es obligatorio</FormHelperText>}
-                </FormControl>
-              </Grid>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='representanteLegal'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label='Representante Legal'
+                    placeholder='Nombre del representante legal'
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name='telefono'
-                  control={control}
-                  rules={{
-                    required: 'El teléfono es requerido'
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Teléfono *'
-                      placeholder='+56 9 XXXX XXXX'
-                      error={Boolean(errors.telefono)}
-                      helperText={errors.telefono?.message}
-                      onChange={e => {
-                        const formatted = formatPhone(e.target.value)
-
-                        field.onChange(formatted)
-                      }}
-                      inputProps={{
-                        inputMode: 'text'
-                      }}
-                      InputLabelProps={{
-                        shrink: true
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
+          {/* Referencias */}
+          <Divider sx={{ my: 4 }} />
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <Typography variant='h5'>Referencias</Typography>
             </Grid>
 
-            {/* Nueva fila para otroRut y representanteLegal */}
-            <Grid container spacing={5}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='rutRepresentanteLegal'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='RUT Representante Legal'
-                      placeholder='12.345.678-9'
-                      onChange={e => {
-                        const formatted = formatRut(e.target.value)
-
-                        field.onChange(formatted)
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='representanteLegal'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Representante Legal'
-                      placeholder='Nombre del representante legal'
-                    />
-                  )}
-                />
-              </Grid>
+            <Grid item xs={12} sm={3}>
+              <Controller
+                name='estadoPago'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='Estado de Pago' />
+                )}
+              />
             </Grid>
 
-            {/* Referencias */}
-            <Divider sx={{ my: 4 }} />
-            <Grid container spacing={5}>
-              <Grid item xs={12}>
-                <Typography variant='h5'>Referencias</Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={3}>
-                <Controller
-                  name='estadoPago'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='Estado de Pago' />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={3}>
-                <Controller
-                  name='hes'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='HES' />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={3}>
-                <FormControlLabel
-                  control={
-                    <Controller
-                      name='oc'
-                      control={control}
-                      render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
-                    />
-                  }
-                  label='OC'
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={3}>
-                <FormControlLabel
-                  control={
-                    <Controller
-                      name='envioInformes'
-                      control={control}
-                      render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
-                    />
-                  }
-                  label='Envío de Informes'
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Controller
-                  name='otrasReferencias'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label='Otras Referencias' multiline rows={4} InputLabelProps={{ shrink: true }} value={field.value || ''} />
-                  )}
-                />
-              </Grid>
+            <Grid item xs={12} sm={3}>
+              <Controller
+                name='hes'
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label='HES' />
+                )}
+              />
             </Grid>
+
+            <Grid item xs={12} sm={3}>
+              <FormControlLabel
+                control={
+                  <Controller
+                    name='oc'
+                    control={control}
+                    render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
+                  />
+                }
+                label='OC'
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={3}>
+              <FormControlLabel
+                control={
+                  <Controller
+                    name='envioInformes'
+                    control={control}
+                    render={({ field }) => <Checkbox {...field} checked={field.value || false} />}
+                  />
+                }
+                label='Envío de Informes'
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Controller
+                name='otrasReferencias'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label='Otras Referencias' multiline rows={4} InputLabelProps={{ shrink: true }} value={field.value || ''} />
+                )}
+              />
+            </Grid>
+          </Grid>
           {/* Botones de acción */}
           <div className='flex items-center gap-4 mt-5'>
             <Button variant='contained' type='submit' disabled={isSubmitting}>

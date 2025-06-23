@@ -56,7 +56,7 @@ const ROLES_CONTACTO = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 // Agregar la constante para los mandantes
@@ -277,10 +277,10 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
     try {
       // Procesar correos
-      const correosArray = typeof formData.correos === 'string' 
+      const correosArray = typeof formData.correos === 'string'
         ? formData.correos.split(', ').map(correo => correo.trim()).filter(correo => correo !== '')
-        : Array.isArray(formData.correos) 
-          ? formData.correos 
+        : Array.isArray(formData.correos)
+          ? formData.correos
           : [];
 
       const mailRecepcionArray = typeof formData.mailRecepcionFactura === 'string'
@@ -986,7 +986,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
             <Controller
               name='otrosRequisitos'
               control={control}
-              render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos'  InputLabelProps={{ shrink: true }}  />}
+              render={({ field }) => <TextField {...field} fullWidth label='Otros Requisitos' InputLabelProps={{ shrink: true }} />}
             />
           </Grid>
         </Grid>
@@ -1123,53 +1123,53 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               )}
             />
           </Grid>
-          
-          
+
+
 
           <Grid item xs={12} sm={6}>
-                <Controller
-                  name='rutRepresentanteLegal'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='RUT Representante Legal'
-                      placeholder='12.345.678-9'
-                      error={Boolean(errors.rutRepresentanteLegal)}
-                      helperText={errors.rutRepresentanteLegal?.message}
-                      onChange={e => {
-                        // Permitir solo números, k, K y el guión
-                        const value = e.target.value.replace(/[^0-9kK-]/g, '')
-                        // Formatear solo si hay suficientes caracteres
-                        const formatted = value.length > 1 ? formatRut(value) : value
-                        field.onChange(formatted)
-                      }}
-                      value={field.value ?? ''}
-                    />
-                  )}
+            <Controller
+              name='rutRepresentanteLegal'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='RUT Representante Legal'
+                  placeholder='12.345.678-9'
+                  error={Boolean(errors.rutRepresentanteLegal)}
+                  helperText={errors.rutRepresentanteLegal?.message}
+                  onChange={e => {
+                    // Permitir solo números, k, K y el guión
+                    const value = e.target.value.replace(/[^0-9kK-]/g, '')
+                    // Formatear solo si hay suficientes caracteres
+                    const formatted = value.length > 1 ? formatRut(value) : value
+                    field.onChange(formatted)
+                  }}
+                  value={field.value ?? ''}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name='representanteLegal'
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label='Representante Legal'
-                      placeholder='Nombre del representante legal'
-                      error={Boolean(errors.representanteLegal)}
-                      helperText={errors.representanteLegal?.message}
-                      onChange={e => {
-                        field.onChange(e.target.value)
-                        setValue('representanteLegal', e.target.value)
-                      }}
-                    />
-                  )}
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name='representanteLegal'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label='Representante Legal'
+                  placeholder='Nombre del representante legal'
+                  error={Boolean(errors.representanteLegal)}
+                  helperText={errors.representanteLegal?.message}
+                  onChange={e => {
+                    field.onChange(e.target.value)
+                    setValue('representanteLegal', e.target.value)
+                  }}
                 />
-              </Grid>
+              )}
+            />
+          </Grid>
 
         </Grid>
 

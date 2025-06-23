@@ -146,7 +146,7 @@ const ROLES_CONTACTO = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 const getCargoLabel = (value: string) => {
@@ -985,16 +985,16 @@ const ClientListTable = ({ userData, setData }: Props) => {
           title={<Typography variant='h5'>Clientes</Typography>}
           action={
             <div className='flex gap-2'>
-              <Button 
-                variant='outlined' 
-                onClick={() => setImportDialogOpen(true)} 
+              <Button
+                variant='outlined'
+                onClick={() => setImportDialogOpen(true)}
                 startIcon={<i className='ri-upload-2-line' />}
               >
                 Importar
               </Button>
-              <Button 
-                variant='contained' 
-                onClick={() => setAddUserOpen(true)} 
+              <Button
+                variant='contained'
+                onClick={() => setAddUserOpen(true)}
                 startIcon={<i className='ri-add-line' />}
               >
                 Nuevo Cliente
@@ -1291,19 +1291,19 @@ const ClientListTable = ({ userData, setData }: Props) => {
       </Dialog>
 
       {/* Diálogo de importación */}
-      <Dialog 
-        open={importDialogOpen} 
+      <Dialog
+        open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         maxWidth='md'
         fullWidth
       >
         <DialogTitle>Importar Clientes desde Excel</DialogTitle>
         <DialogContent>
-          <ImportClientsExcel 
+          <ImportClientsExcel
             onSuccess={() => {
               setImportDialogOpen(false)
               fetchClients()
-            }} 
+            }}
           />
         </DialogContent>
       </Dialog>

@@ -23,7 +23,7 @@ export const CARGOS_OBRA = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 // Usar la misma estructura de regiones que en clientes

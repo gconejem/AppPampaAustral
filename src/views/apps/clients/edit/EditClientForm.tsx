@@ -52,17 +52,17 @@ type Props = {
 // Definir los roles legibles
 const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
-    { value: 'dueno', label: 'Dueño' },
-    { value: 'representante', label: 'Representante' },
-    { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
-    { value: 'supervisor', label: 'Supervisor' },
-    { value: 'administrador_obra', label: 'Administrador de Obra' },
-    { value: 'encargado_calidad', label: 'Encargado de Calidad' },
-    { value: 'autocontrol', label: 'Autocontrol' },
-    { value: 'profesional', label: 'Profesional' },
-    { value: 'laboratorista', label: 'Laboratorista' },
-    { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-    { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'dueno', label: 'Dueño' },
+  { value: 'representante', label: 'Representante' },
+  { value: 'jefe_obra_planta', label: 'Jefe de Obra / Planta' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'administrador_obra', label: 'Administrador de Obra' },
+  { value: 'encargado_calidad', label: 'Encargado de Calidad' },
+  { value: 'autocontrol', label: 'Autocontrol' },
+  { value: 'profesional', label: 'Profesional' },
+  { value: 'laboratorista', label: 'Laboratorista' },
+  { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
+  { value: 'otro', label: 'Otro' }
 ]
 
 const getCargoLabel = (value: string) => {
@@ -231,9 +231,9 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         giro: data.giro || '',
         emailFacturacion: data.emailFacturacion
           ? data.emailFacturacion
-              .split(',')
-              .map((email: string) => email.trim())
-              .filter((email: string) => email.length > 0)
+            .split(',')
+            .map((email: string) => email.trim())
+            .filter((email: string) => email.length > 0)
           : [],
         rutRepresentanteLegal: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
@@ -279,10 +279,10 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   const handleEditContact = (contact: Contacto, index: number) => {
     console.log('contact', contact)
     setEditingContactIndex(index)
-    
+
     // Encontrar el rol correspondiente en ROLES_CONTACTO
     const rolEncontrado = ROLES_CONTACTO.find(r => r.label === contact.cargo)
-    
+
     setEditingContact({
       ...contact,
       cargo: rolEncontrado?.value || contact.cargo

@@ -114,7 +114,7 @@ const AddClienteDrawer = (props: Props) => {
     { value: 'profesional', label: 'Profesional' },
     { value: 'laboratorista', label: 'Laboratorista' },
     { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-    { value: 'otro', label: 'Otro (Especificar)' }
+    { value: 'otro', label: 'Otro' }
   ]
 
   const { regiones, comunas, selectedRegion, setSelectedRegion, selectedComuna, setSelectedComuna } = useUbicacion()
@@ -382,19 +382,19 @@ const AddClienteDrawer = (props: Props) => {
         giro: data.giro || '',
         emailFacturacion: data.emailFacturacion
           ? data.emailFacturacion
-              .split(',')
-              .map((email: string) => email.trim())
-              .filter((email: string) => email.length > 0)
+            .split(',')
+            .map((email: string) => email.trim())
+            .filter((email: string) => email.length > 0)
           : [],
         otroRut: data.rutRepresentanteLegal || '',
         representanteLegal: data.representanteLegal || '',
         fechaCreacion: new Date(),
         clientesContactos: contactos.map(c => {
-              return {
-                contactId: c.contacto.contactId,
-                cargo: c.cargo || 'Sin especificar',
-                isPrincipal: c.isPrincipal
-              }
+          return {
+            contactId: c.contacto.contactId,
+            cargo: c.cargo || 'Sin especificar',
+            isPrincipal: c.isPrincipal
+          }
         }),
         condicionesComerciales: {
           create: {

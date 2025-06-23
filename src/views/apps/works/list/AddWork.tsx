@@ -68,7 +68,7 @@ const CARGOS_OBRA = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 // Agregar la constante para los mandantes
@@ -258,10 +258,10 @@ const AddObraDrawer = (props: Props) => {
       }
 
       // Procesar correos
-      const correosArray = typeof data.correos === 'string' 
+      const correosArray = typeof data.correos === 'string'
         ? data.correos.split(',').map(correo => correo.trim()).filter(correo => correo !== '')
-        : Array.isArray(data.correos) 
-          ? data.correos 
+        : Array.isArray(data.correos)
+          ? data.correos
           : [];
 
       const mailRecepcionArray = typeof data.mailRecepcionFactura === 'string'
@@ -370,7 +370,7 @@ const AddObraDrawer = (props: Props) => {
     setValue('textoMandante', '')
     setValue('otrasReferencias', '')
     setValue('otrosRequisitos', '')
-    
+
     // Limpiar campos de facturación
     setValue('telefono', '')
     setValue('giro', '')
@@ -380,7 +380,7 @@ const AddObraDrawer = (props: Props) => {
     setValue('mailRecepcionFactura', '')
     setValue('rutRepresentanteLegal', '')
     setValue('representanteLegal', '')
-    
+
     // Limpiar checkboxes
     setValue('acreditacionPersonal', false)
     setValue('especificacionesTecnicas', false)
@@ -1474,7 +1474,7 @@ const AddObraDrawer = (props: Props) => {
 
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth error={Boolean(errors.comunaFacturacion)}>
-                  
+
                   <Controller
                     name='comunaFacturacion'
                     control={control}

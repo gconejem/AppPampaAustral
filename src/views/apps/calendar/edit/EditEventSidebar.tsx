@@ -120,7 +120,7 @@ const ROLES_CONTACTO = [
   { value: 'profesional', label: 'Profesional' },
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-  { value: 'otro', label: 'Otro (Especificar)' }
+  { value: 'otro', label: 'Otro' }
 ]
 
 // Definir el tipo de contacto
@@ -887,150 +887,150 @@ const EditEventSidebar = ({
               </Grid>
 
               {/* Sección de Contactos */}
-          <Divider sx={{ my: 4 }} />
-          <Grid item xs={12}>
-          <Grid container alignItems='center' spacing={2}>
-            <Grid item xs={6}>
-              <Button
-                variant='contained'
-                color='primary'
-                onClick={() => setAddContactOpen(true)}
-                startIcon={<i className='ri-add-line' />}
-              >
-                Nuevo Contacto
-              </Button>
-            </Grid>
-            <Grid item xs={6}>
-              <ContactSearch
-                onContactSelect={contact => {
-                  const newContact = {
-                    nombre: contact.nombre,
-                    rol: contact.rol || contact.cargo || '',
-                    email: contact.email,
-                    telefono1: contact.telefono1,
-                    telefono2: contact.telefono2,
-                    isPrincipal: contactos.length === 0
-                  }
-                  setContactos([...contactos, newContact])
-                }}
-              />
-            </Grid>
-          </Grid>
-          <TableContainer sx={{ mt: 2 }}>
-            <Table>
-              <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>CARGO</TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>NOMBRE</TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>EMAIL</TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>TELÉFONO 1</TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>TELÉFONO 2</TableCell>
-                  <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0' }}>ACCIÓN</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {contactos.map((contacto, index) => (
-                  <TableRow key={index}>
-                    {editingContactIndex === index ? (
-                      <>
-                        <TableCell>
-                          <FormControl fullWidth size='small'>
-                            <Select
-                              value={editingContact.rol}
-                              onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
-                            >
-                              {ROLES_CONTACTO.map(rol => (
-                                <MenuItem key={rol.value} value={rol.value}>
-                                  {rol.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.nombre}
-                            onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
-                            placeholder='Nombre'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.email}
-                            onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
-                            placeholder='Email'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.telefono1}
-                            onChange={e => setEditingContact({ ...editingContact, telefono1: e.target.value })}
-                            placeholder='Teléfono 1'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            value={editingContact.telefono2}
-                            onChange={e => setEditingContact({ ...editingContact, telefono2: e.target.value })}
-                            placeholder='Teléfono 2'
-                            fullWidth
-                            size='small'
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='success' onClick={handleSaveEdit}>
-                              <i className='ri-check-line' />
-                            </IconButton>
-                            <IconButton color='error' onClick={handleCancelEdit}>
-                              <i className='ri-close-line' />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </>
-                    ) : (
-                      <>
-                        <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label}</TableCell>
-                        <TableCell>{contacto.nombre}</TableCell>
-                        <TableCell>{contacto.email}</TableCell>
-                        <TableCell>{contacto.telefono1}</TableCell>
-                        <TableCell>{contacto.telefono2}</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='info' onClick={() => handleEditClick(index)}>
-                              <i className='ri-edit-line' />
-                            </IconButton>
-                            <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                            <IconButton
-                              color={contacto.isPrincipal ? 'warning' : 'default'}
-                              onClick={() => {
-                                const updatedContactos = contactos.map((c, i) => ({
-                                  ...c,
-                                  isPrincipal: i === index ? !c.isPrincipal : false
-                                }))
-                                setContactos(updatedContactos)
-                              }}
-                            >
-                              <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          </Grid>
+              <Divider sx={{ my: 4 }} />
+              <Grid item xs={12}>
+                <Grid container alignItems='center' spacing={2}>
+                  <Grid item xs={6}>
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      onClick={() => setAddContactOpen(true)}
+                      startIcon={<i className='ri-add-line' />}
+                    >
+                      Nuevo Contacto
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <ContactSearch
+                      onContactSelect={contact => {
+                        const newContact = {
+                          nombre: contact.nombre,
+                          rol: contact.rol || contact.cargo || '',
+                          email: contact.email,
+                          telefono1: contact.telefono1,
+                          telefono2: contact.telefono2,
+                          isPrincipal: contactos.length === 0
+                        }
+                        setContactos([...contactos, newContact])
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+                <TableContainer sx={{ mt: 2 }}>
+                  <Table>
+                    <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>CARGO</TableCell>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>NOMBRE</TableCell>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>EMAIL</TableCell>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>TELÉFONO 1</TableCell>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0', width: '200px' }}>TELÉFONO 2</TableCell>
+                        <TableCell sx={{ fontWeight: '500', textAlign: 'left', borderRight: '1px solid #E0E0E0' }}>ACCIÓN</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {contactos.map((contacto, index) => (
+                        <TableRow key={index}>
+                          {editingContactIndex === index ? (
+                            <>
+                              <TableCell>
+                                <FormControl fullWidth size='small'>
+                                  <Select
+                                    value={editingContact.rol}
+                                    onChange={e => setEditingContact({ ...editingContact, rol: e.target.value })}
+                                  >
+                                    {ROLES_CONTACTO.map(rol => (
+                                      <MenuItem key={rol.value} value={rol.value}>
+                                        {rol.label}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.nombre}
+                                  onChange={e => setEditingContact({ ...editingContact, nombre: e.target.value })}
+                                  placeholder='Nombre'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.email}
+                                  onChange={e => setEditingContact({ ...editingContact, email: e.target.value })}
+                                  placeholder='Email'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.telefono1}
+                                  onChange={e => setEditingContact({ ...editingContact, telefono1: e.target.value })}
+                                  placeholder='Teléfono 1'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={editingContact.telefono2}
+                                  onChange={e => setEditingContact({ ...editingContact, telefono2: e.target.value })}
+                                  placeholder='Teléfono 2'
+                                  fullWidth
+                                  size='small'
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <IconButton color='success' onClick={handleSaveEdit}>
+                                    <i className='ri-check-line' />
+                                  </IconButton>
+                                  <IconButton color='error' onClick={handleCancelEdit}>
+                                    <i className='ri-close-line' />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label}</TableCell>
+                              <TableCell>{contacto.nombre}</TableCell>
+                              <TableCell>{contacto.email}</TableCell>
+                              <TableCell>{contacto.telefono1}</TableCell>
+                              <TableCell>{contacto.telefono2}</TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <IconButton color='info' onClick={() => handleEditClick(index)}>
+                                    <i className='ri-edit-line' />
+                                  </IconButton>
+                                  <IconButton color='error' onClick={() => handleDeleteContacto(index)}>
+                                    <i className='ri-delete-bin-line' />
+                                  </IconButton>
+                                  <IconButton
+                                    color={contacto.isPrincipal ? 'warning' : 'default'}
+                                    onClick={() => {
+                                      const updatedContactos = contactos.map((c, i) => ({
+                                        ...c,
+                                        isPrincipal: i === index ? !c.isPrincipal : false
+                                      }))
+                                      setContactos(updatedContactos)
+                                    }}
+                                  >
+                                    <i className={`ri-star-${contacto.isPrincipal ? 'fill' : 'line'}`} />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
 
               {/* Sección de Servicios */}
               <Grid item xs={12}>
@@ -1344,7 +1344,7 @@ const EditEventSidebar = ({
             </Grid>
           </Grid>
 
-          
+
           <AddContact
             open={addContactOpen}
             handleClose={() => setAddContactOpen(false)}

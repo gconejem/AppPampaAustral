@@ -56,7 +56,7 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
     { value: 'profesional', label: 'Profesional' },
     { value: 'laboratorista', label: 'Laboratorista' },
     { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
-    { value: 'otro', label: 'Otro (Especificar)' }
+    { value: 'otro', label: 'Otro' }
   ]
 
   // Función para obtener el label legible
@@ -212,19 +212,19 @@ const ClientPreview = ({ client }: ClientPreviewProps) => {
                 [...client.clientesContactos]
                   .sort((a, b) => (b.isPrincipal ? 1 : -1))
                   .map((cc, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {cc.nombre || cc.contacto?.nombre}
-                      {cc.isPrincipal && (
-                        <span className='ml-2 text-xs text-primary'>Principal</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
-                    <TableCell>{cc.email || cc.contacto?.email}</TableCell>
-                    <TableCell>{cc.telefono1 || cc.contacto?.telefono1}</TableCell>
-                    <TableCell>{cc.telefono2 || cc.contacto?.telefono2 || '-'}</TableCell>
-                  </TableRow>
-                ))
+                    <TableRow key={index}>
+                      <TableCell>
+                        {cc.nombre || cc.contacto?.nombre}
+                        {cc.isPrincipal && (
+                          <span className='ml-2 text-xs text-primary'>Principal</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getCargoLabel(cc.cargo)}</TableCell>
+                      <TableCell>{cc.email || cc.contacto?.email}</TableCell>
+                      <TableCell>{cc.telefono1 || cc.contacto?.telefono1}</TableCell>
+                      <TableCell>{cc.telefono2 || cc.contacto?.telefono2 || '-'}</TableCell>
+                    </TableRow>
+                  ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} align='center'>
