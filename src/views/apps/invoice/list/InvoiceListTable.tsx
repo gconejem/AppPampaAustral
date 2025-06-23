@@ -35,6 +35,7 @@ import MuiLink from '@mui/material/Link'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
+import TablePagination from '@mui/material/TablePagination'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -117,6 +118,10 @@ const InvoiceListTable = () => {
   const [pdfHtmlContent, setPdfHtmlContent] = useState('')
   const [pdfLoading, setPdfLoading] = useState(false)
 
+  // Estados de paginación
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+
   // Obtener el primer y último día del mes actual
   const getFirstAndLastDayOfMonth = () => {
     const now = new Date()
@@ -157,6 +162,11 @@ const InvoiceListTable = () => {
     }).replace(/\//g, '-')
   }
 
+  // Función para resetear la página cuando se apliquen filtros
+  const resetPage = () => {
+    setPage(0)
+  }
+
   // Función para cargar las cotizaciones con filtros
   const fetchCotizaciones = async (fechaInicio?: string, fechaFin?: string) => {
     try {
@@ -183,10 +193,16 @@ const InvoiceListTable = () => {
     fetchCotizaciones(filtroFecha, filtroFechaFin)
   }, [])
 
+  // Resetear página cuando cambien los filtros
+  useEffect(() => {
+    resetPage()
+  }, [filtroTipo, filtroEstado, globalFilter])
+
   // Modificar los manejadores de cambio de fecha
   const handleFechaInicioChange = (date: Date | null) => {
     if (!date) {
       setFiltroFecha('')
+      resetPage()
       return
     }
     const year = date.getFullYear()
@@ -194,12 +210,14 @@ const InvoiceListTable = () => {
     const day = String(date.getDate()).padStart(2, '0')
     const newFecha = `${year}-${month}-${day}`
     setFiltroFecha(newFecha)
+    resetPage()
     fetchCotizaciones(newFecha, filtroFechaFin)
   }
 
   const handleFechaFinChange = (date: Date | null) => {
     if (!date) {
       setFiltroFechaFin('')
+      resetPage()
       return
     }
     const year = date.getFullYear()
@@ -207,14 +225,17 @@ const InvoiceListTable = () => {
     const day = String(date.getDate()).padStart(2, '0')
     const newFecha = `${year}-${month}-${day}`
     setFiltroFechaFin(newFecha)
+    resetPage()
     fetchCotizaciones(filtroFecha, newFecha)
   }
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && localData) {
-      setSelectedRows(localData.map(row => row.id))
+    if (checked && paginatedData) {
+      setSelectedRows(prev => [...new Set([...prev, ...paginatedData.map(row => row.id)])])
     } else {
-      setSelectedRows([])
+      // Solo deseleccionar las filas de la página actual
+      const currentPageIds = paginatedData.map(row => row.id)
+      setSelectedRows(prev => prev.filter(id => !currentPageIds.includes(id)))
     }
   }
 
@@ -466,6 +487,16 @@ const InvoiceListTable = () => {
     }
   }
 
+  // Funciones de paginación
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   // Modificar filteredData para solo filtrar por tipo, estado y búsqueda global
   const filteredData = localData?.filter(row => {
     if (filtroTipo && row.tipo !== filtroTipo) return false
@@ -481,6 +512,9 @@ const InvoiceListTable = () => {
       row.contacto?.nombre?.toLowerCase().includes(searchStr)
     )
   })
+
+  // Aplicar paginación a los datos filtrados
+  const paginatedData = filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) || []
 
   const ContactsModal = ({ open, handleClose, contact }: { open: boolean; handleClose: () => void; contact: any }) => {
     if (!contact) return null
@@ -643,16 +677,23 @@ const InvoiceListTable = () => {
       </Card>
       {/* Fila de exportar y buscar */}
       <div className='flex justify-between p-5 pt-2 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-        <Button
-          color='secondary'
-          variant='outlined'
-          startIcon={<i className='ri-upload-2-line text-xl' />}
-          onClick={handleExport}
-          disabled={isLoading}
-          className='max-sm:is-full'
-        >
-          Exportar
-        </Button>
+        <div className='flex items-center gap-4'>
+          <Button
+            color='secondary'
+            variant='outlined'
+            startIcon={<i className='ri-upload-2-line text-xl' />}
+            onClick={handleExport}
+            disabled={isLoading}
+            className='max-sm:is-full'
+          >
+            Exportar
+          </Button>
+          {selectedRows.length > 0 && (
+            <Typography variant='body2' color='text.secondary'>
+              {selectedRows.length} fila(s) seleccionada(s)
+            </Typography>
+          )}
+        </div>
         <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
           <TextField
             size='small'
@@ -685,9 +726,9 @@ const InvoiceListTable = () => {
               <TableCell padding='checkbox'>
                 <Checkbox
                   indeterminate={
-                    filteredData?.length ? selectedRows.length > 0 && selectedRows.length < filteredData.length : false
+                    paginatedData?.length ? selectedRows.length > 0 && selectedRows.length < paginatedData.length : false
                   }
-                  checked={filteredData?.length ? selectedRows.length === filteredData.length : false}
+                  checked={paginatedData?.length ? selectedRows.length === paginatedData.length : false}
                   onChange={event => handleSelectAll(event.target.checked)}
                   inputProps={{ 'aria-label': 'select all' }}
                 />
@@ -704,7 +745,7 @@ const InvoiceListTable = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData?.map(row => (
+            {paginatedData.map(row => (
               <TableRow key={row.id}>
                 <TableCell padding='checkbox'>
                   <Checkbox
@@ -817,6 +858,18 @@ const InvoiceListTable = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        component="div"
+        count={filteredData?.length || 0}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Filas por página:"
+        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`}
+      />
 
       <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth='lg' fullWidth>
         <DialogTitle>Vista Previa de Cotización</DialogTitle>
