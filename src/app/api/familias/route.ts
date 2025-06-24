@@ -33,6 +33,10 @@ export async function GET(request: Request) {
         'Prefabricados de Hormigón',
         'Otros Elementos y Componentes'
       ],
+      'Áridos': [
+        'Muestreo de áridos',
+        'Análisis de áridos'
+      ],
       'Otros': [
         'Pintura'
       ],
@@ -70,6 +74,36 @@ export async function GET(request: Request) {
           return indexA - indexB
         })
       }
+    } else {
+      // Si no hay areaId, ordenar todas las familias por área y luego por orden personalizado
+      const ordenAreas = [
+        'Suelo',
+        'Hormigón',
+        'Asfalto',
+        'Elementos y Componentes',
+        'Áridos',
+        'Otros',
+        'Servicios'
+      ]
+      
+      familias.sort((a, b) => {
+        const areaA = a.area?.nombre || ''
+        const areaB = b.area?.nombre || ''
+        
+        const indexAreaA = ordenAreas.indexOf(areaA)
+        const indexAreaB = ordenAreas.indexOf(areaB)
+        
+        // Si están en la misma área, ordenar por el orden personalizado de familias
+        if (indexAreaA === indexAreaB) {
+          const ordenFamilias = ordenFamiliasPorArea[areaA] || []
+          const indexFamiliaA = ordenFamilias.indexOf(a.nombre)
+          const indexFamiliaB = ordenFamilias.indexOf(b.nombre)
+          return indexFamiliaA - indexFamiliaB
+        }
+        
+        // Si están en áreas diferentes, ordenar por área
+        return indexAreaA - indexAreaB
+      })
     }
 
     return NextResponse.json(familias)

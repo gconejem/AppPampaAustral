@@ -10,13 +10,24 @@ async function main() {
     { nombre: 'Asfalto' },
     { nombre: 'Elementos y Componentes' },
     { nombre: 'Otros' },
-    { nombre: 'Servicios' }
+    { nombre: 'Servicios' },
+    { nombre: 'Áridos' }
   ]
 
+  // Crear áreas solo si no existen
   for (const area of areas) {
-    await prisma.area.create({
-      data: area
-    })
+    try {
+      await prisma.area.create({
+        data: area
+      })
+      console.log(`Área "${area.nombre}" creada exitosamente`)
+    } catch (error) {
+      if (error.code === 'P2002') {
+        console.log(`Área "${area.nombre}" ya existe, omitiendo...`)
+      } else {
+        throw error
+      }
+    }
   }
 
   // Obtener todas las áreas para usar sus IDs
@@ -55,19 +66,35 @@ async function main() {
     // Servicios
     { nombre: 'Adicionales', areaId: areasCreadas.find(a => a.nombre === 'Servicios')?.id },
     { nombre: 'Profesionales', areaId: areasCreadas.find(a => a.nombre === 'Servicios')?.id },
-    { nombre: 'Otros Servicios', areaId: areasCreadas.find(a => a.nombre === 'Servicios')?.id }
+    { nombre: 'Otros Servicios', areaId: areasCreadas.find(a => a.nombre === 'Servicios')?.id },
+
+    // Áridos
+    { nombre: 'Muestreo de áridos', areaId: areasCreadas.find(a => a.nombre === 'Áridos')?.id },
+    { nombre: 'Análisis de áridos', areaId: areasCreadas.find(a => a.nombre === 'Áridos')?.id }
   ]
 
+  // Crear familias solo si no existen
   for (const familia of familias) {
     if (familia.areaId) {
-      await prisma.familia.create({
-        data: {
-          nombre: familia.nombre,
-          areaId: familia.areaId
+      try {
+        await prisma.familia.create({
+          data: {
+            nombre: familia.nombre,
+            areaId: familia.areaId
+          }
+        })
+        console.log(`Familia "${familia.nombre}" creada exitosamente`)
+      } catch (error) {
+        if (error.code === 'P2002') {
+          console.log(`Familia "${familia.nombre}" ya existe, omitiendo...`)
+        } else {
+          throw error
         }
-      })
+      }
     }
   }
+
+  console.log('Seed completado exitosamente')
 }
 
 main()

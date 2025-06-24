@@ -8,6 +8,7 @@ export async function GET() {
       'Hormigón',
       'Asfalto',
       'Elementos y Componentes',
+      'Áridos',
       'Otros',
       'Servicios'
     ]
