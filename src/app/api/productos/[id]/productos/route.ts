@@ -23,11 +23,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Paquete no encontrado' }, { status: 404 })
     }
 
-    // Formatear la respuesta para devolver los productos con sus cantidades
-    const productosDelPaquete = productos.productosEnPaquete.map(pp => ({
-      producto: pp.producto,
-      cantidad: pp.cantidad
-    }))
+    // Formatear la respuesta para devolver solo los productos
+    const productosDelPaquete = productos.productosEnPaquete.map(pp => pp.producto)
 
     return NextResponse.json({
       productos: productosDelPaquete
