@@ -71,8 +71,8 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [selectedInPackage, setSelectedInPackage] = useState<number[]>([])
 
   // Estados para áreas y familias
-  const [areaOptions, setAreaOptions] = useState<string[]>([])
-  const [familiaOptions, setFamiliaOptions] = useState<string[]>([])
+  const [areaOptions, setAreaOptions] = useState<any[]>([])
+  const [familiaOptions, setFamiliaOptions] = useState<any[]>([])
 
   // Cargar datos iniciales cuando se abre el modal
   useEffect(() => {
@@ -82,8 +82,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setSku(paquete.sku)
       setNorma(paquete.norma || '')
       setDescripcion(paquete.descripcion || '')
-      setArea(paquete.area || '')
-      setFamilia(paquete.familia || '')
       setCantidad(paquete.cantidad || 1)
       setPrecio(paquete.precio || 0)
 
@@ -107,6 +105,54 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       fetchProductosDelPaquete()
     }
   }, [open, paquete])
+
+  // Primer useEffect: setear solo el área
+  useEffect(() => {
+    if (open && paquete && areaOptions.length > 0) {
+      const areaObj = areaOptions.find(opt => opt.nombre === paquete.area || opt.id === paquete.area)
+      setArea(areaObj ? areaObj.id : '')
+    }
+  }, [open, paquete, areaOptions])
+
+  // Segundo useEffect: setear la familia cuando el área y las familias estén listas
+  useEffect(() => {
+    if (open && paquete && area && familiaOptions.length > 0) {
+      const familiaId = paquete.familia?.id ?? paquete.familia
+      let familiaObj
+      if (typeof familiaId === 'number') {
+        familiaObj = familiaOptions.find(opt => opt.id === familiaId && String(opt.area?.id) === String(area))
+      } else if (typeof familiaId === 'string') {
+        familiaObj = familiaOptions.find(opt => opt.nombre === familiaId && String(opt.area?.id) === String(area))
+      }
+      console.log('familiaId del paquete:', familiaId)
+      console.log('area seleccionada:', area)
+      console.log('familiaOptions:', familiaOptions)
+      console.log('familiaObj encontrado:', familiaObj)
+      setFamilia(familiaObj ? familiaObj.id : '')
+    }
+  }, [open, paquete, area, familiaOptions])
+
+  // Cuando cambia el área, limpiar la familia si ya no corresponde
+  useEffect(() => {
+    if (familia && area && familiaOptions.length > 0) {
+      const familiaObj = familiaOptions.find(f => f.id === familia)
+      if (familiaObj && String(familiaObj.area?.id) !== String(area)) {
+        setFamilia('')
+      }
+    }
+  }, [area, familia, familiaOptions])
+
+  // Log para depuración de familias y área seleccionada
+  useEffect(() => {
+    console.log('familiaOptions:', familiaOptions)
+    if (familiaOptions.length > 0) {
+      console.log('Primer objeto de familiaOptions:', familiaOptions[0])
+      console.log('Claves del primer objeto:', Object.keys(familiaOptions[0]))
+    }
+    console.log('area seleccionada:', area)
+    const familiasFiltradas = familiaOptions.filter(option => String(option.areaId) === String(area))
+    console.log('familias filtradas:', familiasFiltradas)
+  }, [area, familiaOptions])
 
   const fetchProductos = async () => {
     try {
@@ -249,8 +295,8 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                   <em>Ninguna</em>
                 </MenuItem>
                 {areaOptions.map(option => (
-                  <MenuItem key={option} value={option}>
-                    {option}
+                  <MenuItem key={option.id} value={option.id}>
+                    {option.nombre}
                   </MenuItem>
                 ))}
               </Select>
@@ -265,11 +311,13 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                 <MenuItem value=''>
                   <em>Ninguna</em>
                 </MenuItem>
-                {familiaOptions.map(option => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
+                {familiaOptions
+                  .filter(option => String(option.area?.id) === String(area))
+                  .map(option => (
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.nombre}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>
