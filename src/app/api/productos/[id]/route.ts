@@ -96,6 +96,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         productosEnPaquete: {
           deleteMany: {},
           create: data.productosEnPaquete?.map((producto: { productoId: number }) => ({
+            cantidad: data.cantidad,
             productoId: producto.productoId,
             createdAt: new Date(),
             updatedAt: new Date()

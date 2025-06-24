@@ -84,7 +84,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setDescripcion(paquete.descripcion || '')
       setArea(paquete.area || '')
       setFamilia(paquete.familia || '')
-      setCantidad(paquete.cantidad || 1)
+      setCantidad(paquete.productosEnPaquete[0].cantidad || 1)
       setPrecio(paquete.precio || 0)
 
       // Cargar cantidades si existen
