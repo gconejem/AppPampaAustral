@@ -80,6 +80,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [area, setArea] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
   const [familia, setFamilia] = useState('')
+  const [cantidadPaquete, setCantidadPaquete] = useState(1) // Estado para la cantidad del paquete padre
 
   // Estado para las áreas y familias
   const [areas, setAreas] = useState<Area[]>([])
@@ -119,6 +120,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
     setArea('')
     setAplicaImpuesto(false)
     setFamilia('')
+    setCantidadPaquete(1)
     setBuscarPaquete('')
     setBuscarProductos('')
     setProductos([])
@@ -241,10 +243,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         familia: familia || '',
         norma: norma || '',
         aplicaImpuesto: aplicaImpuesto,
-        cantidad: 1, // Agregamos la cantidad por defecto
+        cantidad: cantidadPaquete,
         productos: productosSeleccionados.map(producto => ({
           productoId: producto.productoId,
-          cantidad: cantidades[producto.productoId] || 1,
+          cantidad: cantidadPaquete,
           descripcion: `Producto incluido en paquete ${nombre}`
         }))
       }
@@ -323,9 +325,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
           <Grid item xs={4}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
-              <Select 
-                value={familia} 
-                label='Familia' 
+              <Select
+                value={familia}
+                label='Familia'
                 onChange={e => setFamilia(e.target.value)}
                 disabled={!selectedAreaId}
               >
@@ -346,17 +348,10 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               label='Cantidad'
               type='number'
               size='small'
-              defaultValue={1}
+              value={cantidadPaquete}
               onChange={e => {
                 const value = parseInt(e.target.value) || 1
-                const selectedIds = productosSeleccionados.map(p => p.productoId)
-                const newCantidades = { ...cantidades }
-
-                selectedIds.forEach(id => {
-                  newCantidades[id] = value
-                })
-
-                setCantidades(newCantidades)
+                setCantidadPaquete(value)
               }}
               InputProps={{
                 inputProps: { min: 1 }
@@ -452,7 +447,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                       }
                     }}
                   >
-                    <ListItemText 
+                    <ListItemText
                       primary={producto.sku}
                       secondary={
                         <Typography variant="body2" component="span">
@@ -546,7 +541,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                       }
                     }}
                   >
-                    <ListItemText 
+                    <ListItemText
                       primary={producto.sku}
                       secondary={
                         <Typography variant="body2" component="span">

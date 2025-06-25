@@ -82,7 +82,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setSku(paquete.sku)
       setNorma(paquete.norma || '')
       setDescripcion(paquete.descripcion || '')
-      setCantidad(paquete.cantidad || 1)
+      setCantidad(paquete.productosEnPaquete.length > 0 ? paquete.productosEnPaquete[0].cantidad : 1)
       setPrecio(paquete.precio || 0)
 
       // Cargar cantidades si existen
@@ -101,8 +101,12 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       fetchAreas()
       fetchFamilias()
 
+      console.log('paquete:', paquete)
+
+      setProductosSeleccionados(paquete.productosEnPaquete)
+
       // Cargar los productos del paquete
-      fetchProductosDelPaquete()
+      //fetchProductosDelPaquete()
     }
   }, [open, paquete])
 
@@ -124,10 +128,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       } else if (typeof familiaId === 'string') {
         familiaObj = familiaOptions.find(opt => opt.nombre === familiaId && String(opt.area?.id) === String(area))
       }
-      console.log('familiaId del paquete:', familiaId)
-      console.log('area seleccionada:', area)
-      console.log('familiaOptions:', familiaOptions)
-      console.log('familiaObj encontrado:', familiaObj)
       setFamilia(familiaObj ? familiaObj.id : '')
     }
   }, [open, paquete, area, familiaOptions])
@@ -224,8 +224,8 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           sku,
           norma,
           descripcion,
-          area,
-          familia,
+          area: areaOptions.find(opt => opt.id === area)?.nombre,
+          familia: familiaOptions.find(opt => opt.id === familia)?.nombre,
           cantidad,
           precio,
           productosEnPaquete: productosSeleccionados.map(p => ({ productoId: p.productoId }))

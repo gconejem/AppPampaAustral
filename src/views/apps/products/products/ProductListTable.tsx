@@ -326,16 +326,16 @@ const ProductListTable = () => {
       setPage(0) // Reiniciar la página al limpiar la búsqueda
       return
     }
-    
+
     const lowercaseQuery = query.toLowerCase()
-    const resultados = allProductos.filter(producto => 
-      producto.nombre.toLowerCase().includes(lowercaseQuery) || 
+    const resultados = allProductos.filter(producto =>
+      producto.nombre.toLowerCase().includes(lowercaseQuery) ||
       producto.sku.toLowerCase().includes(lowercaseQuery) ||
       producto.area.toLowerCase().includes(lowercaseQuery) ||
       producto.familia.toLowerCase().includes(lowercaseQuery) ||
       producto.tipo.toLowerCase().includes(lowercaseQuery)
     )
-    
+
     setFilteredProductos(resultados)
     setPage(0) // Reiniciar la página al aplicar una búsqueda
   }
@@ -535,12 +535,43 @@ const ProductListTable = () => {
   }
 
   // Función para abrir el modal correcto según el tipo
-  const handleEditOpen = (producto: Producto) => {
-    setEditingProduct(producto)
+  const handleEditOpen = async (producto: Producto) => {
 
     if (producto.esPaquete) {
-      setEditPackageModalOpen(true)
+      try {
+        // Obtener toda la información del paquete desde el backend
+        const response = await fetch(`/api/productos/${producto.productoId}/productos`)
+        const data = await response.json()
+
+        console.log('handleEditOpen data:', data)
+
+        if (response.ok) {
+          // Combinar la información del paquete con los productos incluidos
+          const paqueteCompleto = {
+            ...producto,
+            productosEnPaquete: data.productos || []
+          }
+          console.log('handleEditOpen paqueteCompleto:', paqueteCompleto)
+
+
+          setEditingProduct(paqueteCompleto)
+          setEditPackageModalOpen(true)
+        } else {
+          console.error('Error al obtener información del paquete:', data)
+          toast.error('Error al cargar la información del paquete')
+          // Si falla, usar el producto original
+          setEditingProduct(producto)
+          setEditPackageModalOpen(true)
+        }
+      } catch (error) {
+        console.error('Error al obtener información del paquete:', error)
+        toast.error('Error al cargar la información del paquete')
+        // Si falla, usar el producto original
+        setEditingProduct(producto)
+        setEditPackageModalOpen(true)
+      }
     } else {
+      setEditingProduct(producto)
       setEditModalOpen(true)
     }
   }
@@ -613,7 +644,7 @@ const ProductListTable = () => {
     try {
       // Determinar el nuevo estado (opuesto al actual)
       const nuevoEstado = producto.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
-      
+
       // Llamar al endpoint para actualizar el estado
       const response = await fetch(`/api/productos/${producto.productoId}/estado`, {
         method: 'PATCH',
@@ -628,21 +659,21 @@ const ProductListTable = () => {
       }
 
       const data = await response.json()
-      
+
       // Actualizar el estado local
       setProductos(prevProductos =>
         prevProductos.map(p =>
           p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
         )
       )
-      
+
       // Actualizar también en la lista filtrada
       setFilteredProductos(prevProductos =>
         prevProductos.map(p =>
           p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
         )
       )
-      
+
       // Actualizar en la lista completa
       setAllProductos(prevProductos =>
         prevProductos.map(p =>
