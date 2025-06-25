@@ -156,10 +156,11 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 
   const fetchProductos = async () => {
     try {
-      const response = await fetch('/api/productos?esPaquete=false')
+      // Usar el endpoint de búsqueda que no tiene paginación por defecto
+      const response = await fetch('/api/productos/search?esPaquete=false')
       const data = await response.json()
 
-      setProductos(Array.isArray(data.productos) ? data.productos : [])
+      setProductos(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error al cargar productos:', error)
       setProductos([])
@@ -339,7 +340,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                   {Array.isArray(productos) &&
                     productos
                       .filter(p => !productosSeleccionados.some(ps => ps.productoId === p.productoId))
-                      .filter(p => p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()))
+                      .filter(p =>
+                        p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()) ||
+                        p.sku.toLowerCase().includes(buscarProducto.toLowerCase())
+                      )
                       .map(producto => (
                         <ListItem
                           key={producto.productoId}
@@ -353,7 +357,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                             }
                           }}
                         >
-                          <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                          <ListItemText
+                            primary={producto.sku}
+                            secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'}`}
+                          />
                           <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} />
                         </ListItem>
                       ))}
@@ -404,7 +411,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
               <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
                 <List sx={{ height: 300, overflow: 'auto' }}>
                   {productosSeleccionados
-                    .filter(p => p.nombre.toLowerCase().includes(buscarSeleccionados.toLowerCase()))
+                    .filter(p =>
+                      p.nombre.toLowerCase().includes(buscarSeleccionados.toLowerCase()) ||
+                      p.sku.toLowerCase().includes(buscarSeleccionados.toLowerCase())
+                    )
                     .map(producto => (
                       <ListItem
                         key={producto.productoId}
@@ -418,7 +428,10 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                           }
                         }}
                       >
-                        <ListItemText primary={producto.sku} secondary={producto.nombre} />
+                        <ListItemText
+                          primary={producto.sku}
+                          secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'}`}
+                        />
                         <Checkbox edge='end' checked={selectedInPackage.includes(producto.productoId)} />
                       </ListItem>
                     ))}
