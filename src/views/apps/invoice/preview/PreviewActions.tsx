@@ -138,6 +138,7 @@ const PreviewActions = () => {
         empresa: previewData.empresa || '',
         ubicacion: previewData.ubicacion || '',
         formaPago: previewData.formaPago || 'CONTADO',
+        sinCantidad: previewData.sinCantidad || false,
         ...(tipoCotizacionValue === 'D' ? {
           subtotal: Number(previewData.totalNetoGeneral || 0),
           descuento: 0,
@@ -207,12 +208,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      setTimeout(() => {
+      /* setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000)
+      }, 1000) */
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')

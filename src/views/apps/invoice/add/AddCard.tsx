@@ -300,6 +300,7 @@ const AddCard = ({
         detalles: detallesValidos,
         formaPago: formData.formaPago,
         alcanceServicio: formData.alcanceServicio || '',
+        sinCantidad: sinCantidad,
       }
 
       console.log('Datos completos a enviar:', dataToSend)

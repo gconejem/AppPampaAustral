@@ -1091,9 +1091,15 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                               </TableCell>
                               <TableCell>{detalle.producto?.area || '-'}</TableCell>
                               <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
-                              <TableCell align='right'>{detalle.cantidad}</TableCell>
-                              <TableCell align='right'>UF {Number(detalle.precioUnitario || 0).toFixed(2)}</TableCell>
-                              <TableCell align='right'>UF {Number(detalle.subtotal || 0).toFixed(2)}</TableCell>
+                              <TableCell align='right'>
+                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : detalle.cantidad}
+                              </TableCell>
+                              <TableCell align='right'>
+                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`}
+                              </TableCell>
+                              <TableCell align='right'>
+                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : `UF ${Number(detalle.subtotal || 0).toFixed(2)}`}
+                              </TableCell>
                             </TableRow>
                           </Fragment>
                         ))}
@@ -1106,18 +1112,37 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
               {/* Totales */}
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, mt: 2 }}>
-                  <Typography>
-                    <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(2)}
-                  </Typography>
-                  <Typography>
-                    <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(2)}
-                  </Typography>
-                  <Typography>
-                    <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(2)}
-                  </Typography>
-                  <Typography variant='h6' sx={{ mt: 1 }}>
-                    <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(2)}
-                  </Typography>
+                  {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? (
+                    <>
+                      <Typography>
+                        <strong>Subtotal:</strong> -
+                      </Typography>
+                      <Typography>
+                        <strong>Descuento:</strong> -
+                      </Typography>
+                      <Typography>
+                        <strong>IVA (19%):</strong> -
+                      </Typography>
+                      <Typography variant='h6' sx={{ mt: 1 }}>
+                        <strong>Total:</strong> -
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography>
+                        <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(2)}
+                      </Typography>
+                      <Typography>
+                        <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(2)}
+                      </Typography>
+                      <Typography>
+                        <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(2)}
+                      </Typography>
+                      <Typography variant='h6' sx={{ mt: 1 }}>
+                        <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(2)}
+                      </Typography>
+                    </>
+                  )}
                 </Box>
               </Grid>
 

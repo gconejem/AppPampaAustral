@@ -695,6 +695,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         jornadaMensual: formData.jornadaMensual || '',
         antecedentesMensual: formData.antecedentesMensual || '',
         alcanceServicio: formData.alcanceServicio || '',
+        sinCantidad: sinCantidad,
         detalles: {
           create: detallesValidos
         }
@@ -764,6 +765,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
       jornadaMensual: formData.jornadaMensual || '',
       antecedentesMensual: formData.antecedentesMensual || '',
       alcanceServicio: formData.alcanceServicio || '',
+      // Agregar campo sinCantidad
+      sinCantidad: sinCantidad,
       // Agregar bandera para indicar que es una duplicación
       isDuplicacion: true
     }
