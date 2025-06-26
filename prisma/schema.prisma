@@ -319,6 +319,9 @@ model Cotizacion {
   jornadaMensual   String?
   antecedentesMensual String?
   alcanceServicio  String?
+  sinCantidad      Boolean?
+  precioProducto   Boolean?
+  precioTotal      Boolean?
   cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
   contacto         Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
   obra             Obra?               @relation(fields: [obraId], references: [obraId])

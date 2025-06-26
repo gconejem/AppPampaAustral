@@ -631,24 +631,42 @@ const AddCard = ({
 
   // Reemplazar calcularTotales por un useEffect puro:
   useEffect(() => {
-    if (sinCantidad) {
+    // Determinar si debemos calcular totales basados en precios unitarios
+    const calcularPorPreciosUnitarios = sinCantidad && (
+      (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
+      (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto) ||
+      formData.tipoCotizacion === 'A'
+    );
+
+    if (sinCantidad && !calcularPorPreciosUnitarios) {
+      // Para tipos B/C con precio total y sinCantidad, no calcular totales automáticamente
       if (subtotal !== 0) setSubtotal(0)
       if (descuentoTotal !== 0) setDescuentoTotal(0)
       if (impuesto !== 0) setImpuesto(0)
       if (total !== 0) setTotal(0)
       return
     }
-    // Calcular el subtotal sumando todos los totales netos
-    const subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.totalNetoUF || 0), 0)
+
+    let subtotalTotal;
+
+    if (calcularPorPreciosUnitarios) {
+      // Calcular subtotal sumando los precios unitarios (no los totales netos)
+      subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.precioUnitarioUF || 0), 0)
+    } else {
+      // Calcular el subtotal sumando todos los totales netos (caso normal)
+      subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.totalNetoUF || 0), 0)
+    }
+
     const descuento = Number(formData.descuento || 0)
     const baseImponible = subtotalTotal - descuento
     const iva = baseImponible * 0.19
     const totalFinal = baseImponible + iva
+
     if (subtotal !== subtotalTotal) setSubtotal(parseFloat(subtotalTotal.toFixed(2)))
     if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(2)))
     if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(2)))
     if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(2)))
-  }, [productRows, sinCantidad, formData.descuento])
+  }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
   /* useEffect(() => {
@@ -873,6 +891,12 @@ const AddCard = ({
       listaPrecioId: selectedListaPrecio,
       textoGeneral: formData.textoGeneral || '', // Asegurarse de incluir textoGeneral
       alcanceServicio: formData.alcanceServicio || '',
+      sinCantidad: sinCantidad, // Agregar el campo sinCantidad
+      // Incluir los campos específicos para tipos B y C
+      precioEMSPorProducto: formData.precioEMSPorProducto,
+      precioEMSTotal: formData.precioEMSTotal,
+      precioMensualPorProducto: formData.precioMensualPorProducto,
+      precioMensualTotal: formData.precioMensualTotal,
     };
 
     // Debug para ver qué datos se están enviando
@@ -1646,8 +1670,26 @@ const AddCard = ({
                       label='Tipo de Cotización'
                       value={formData.tipoCotizacion}
                       onChange={e => {
-                        handleChange('tipoCotizacion', e.target.value as TipoCotizacion)
+                        const nuevoTipo = e.target.value as TipoCotizacion
+                        handleChange('tipoCotizacion', nuevoTipo)
                         setValidationErrors({ ...validationErrors, tipoCotizacion: false })
+
+                        // Configurar "Precio total" por defecto para tipos B, C y D
+                        if (nuevoTipo === 'B') {
+                          updateFormData({
+                            precioEMSPorProducto: false,
+                            precioEMSTotal: 0
+                          })
+                        } else if (nuevoTipo === 'C') {
+                          updateFormData({
+                            precioMensualPorProducto: false,
+                            precioMensualTotal: 0
+                          })
+                        } else if (nuevoTipo === 'D') {
+                          // Para tipo D no necesitamos configurar precios por producto
+                          // ya que no se muestran los radio buttons
+                        }
+                        // Para tipo A se mantiene "Precio por producto" por defecto
                       }}
                     >
                       <MenuItem value='A'>Valores Unitarios</MenuItem>

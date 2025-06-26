@@ -228,17 +228,111 @@ Condiciones para terreno y accesos
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
-                ${cotizacion.precioEMSPorProducto ? `
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">CANTIDAD</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
-                ` : ''}
+                ${(() => {
+                  // Mostrar columnas cuando:
+                  // 1. No es sinCantidad y es precio por producto (caso normal)
+                  // 2. Es sinCantidad y es precio total (mostrar columnas vacías)
+                  // 3. NO es sinCantidad y es precio total (mostrar cantidades pero precio/total vacíos)
+                  // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
+                  const mostrarColumnas = 
+                    (!cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'A')) ||
+                    (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) ||
+                    (!cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) ||
+                    (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'A'));
+
+                  return mostrarColumnas ? `
+                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">CANTIDAD</th>
+                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
+                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
+                  ` : '';
+                })()}
               </tr>
             </thead>
             <tbody>
               ${(() => {
+                // Función auxiliar para determinar si mostrar columnas
+                const mostrarColumnas = () => {
+                  return (!cotizacion.sinCantidad && 
+                    ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
+                     (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                     cotizacion.tipoCotizacion === 'A')) ||
+                    (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) ||
+                    (!cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) ||
+                    (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'A'));
+                };
+
+                // Función auxiliar para renderizar las celdas de cantidad/precio/total
+                const renderizarCeldasPrecio = (detalle: any) => {
+                  if (!mostrarColumnas()) return '';
+                  
+                  // Si es sinCantidad y precio total, mostrar columnas vacías
+                  if (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) {
+                    return `
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>-</td>
+                    `;
+                  }
+                  
+                  // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
+                  if (cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'A')) {
+                    return `
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                    `;
+                  }
+                  
+                  // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
+                  if (!cotizacion.sinCantidad && 
+                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
+                       cotizacion.tipoCotizacion === 'D')) {
+                    return `
+                      <td style='text-align:right;'>${detalle.cantidad || 0}</td>
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>-</td>
+                    `;
+                  }
+                  
+                  // Caso normal: mostrar valores
+                  return `
+                    <td style='text-align:right;'>${detalle.cantidad || 0}</td>
+                    <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                    <td style='text-align:right;'>UF ${Number(detalle.totalNetoUF || 0).toFixed(2)}</td>
+                  `;
+                };
+
                 let html = '';
                 let currentArea = '';
+
                 // Recorrer los detalles secuencialmente
                 for (let i = 0; i < cotizacion.detalles.length; i++) {
                   const detalle = cotizacion.detalles[i];
@@ -247,7 +341,7 @@ Condiciones para terreno y accesos
                   if (area !== currentArea && !detalle.esSubProducto) {
                     currentArea = area;
                     html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
-                    html += `<td colspan="${cotizacion.precioEMSPorProducto ? 6 : 3}">${area}</td></tr>`;
+                    html += `<td colspan="${mostrarColumnas() ? 6 : 3}">${area}</td></tr>`;
                   }
                   if (detalle.esPaquete) {
                     const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
@@ -279,11 +373,7 @@ Condiciones para terreno y accesos
                     html += `<td>${area}</td>`;
                     html += `<td>${nombreNorma}${subproductosHtml}</td>`;
                     html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
-                    if (cotizacion.precioEMSPorProducto) {
-                      html += `<td style='text-align:center;'>${detalle.cantidad || '-'}</td>`;
-                      html += `<td style='text-align:right;'>${detalle.precioUnitarioUF ? 'UF ' + Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
-                      html += `<td>${!detalle.cantidad ? '-' : (detalle.totalNetoUF ? 'UF ' + Number(detalle.totalNetoUF).toFixed(2) : '-')}</td>`;
-                    }
+                    html += renderizarCeldasPrecio(detalle);
                     html += `</tr>`;
                     i = j - 1;
                   } else {
@@ -291,11 +381,7 @@ Condiciones para terreno y accesos
                     html += `<td>${area}</td>`;
                     html += `<td>${detalle.servicio || '-'}</td>`;
                     html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
-                    if (cotizacion.precioEMSPorProducto) {
-                      html += `<td style='text-align:center;'>${detalle.cantidad || '-'}</td>`;
-                      html += `<td style='text-align:right;'>${detalle.precioUnitarioUF ? 'UF ' + Number(detalle.precioUnitarioUF).toFixed(2) : '-'}</td>`;
-                      html += `<td>${!detalle.cantidad ? '-' : (detalle.totalNetoUF ? 'UF ' + Number(detalle.totalNetoUF).toFixed(2) : '-')}</td>`;
-                    }
+                    html += renderizarCeldasPrecio(detalle);
                     html += `</tr>`;
                   }
                 }

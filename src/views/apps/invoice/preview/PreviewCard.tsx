@@ -230,19 +230,120 @@ const PreviewCard = () => {
                 <TableCell>ÁREA</TableCell>
                 <TableCell>SERVICIO/ENSAYO</TableCell>
                 <TableCell>DESCRIPCIÓN</TableCell>
-                {previewData.precioEMSPorProducto && (
-                  <>
-                    <TableCell align='right'>CANTIDAD</TableCell>
-                    <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
-                    <TableCell align='right'>TOTAL NETO UF</TableCell>
-                  </>
-                )}
+                {(() => {
+                  // Mostrar columnas cuando:
+                  // 1. No es sinCantidad y es precio por producto (caso normal)
+                  // 2. Es sinCantidad y es precio total (mostrar columnas vacías)
+                  // 3. NO es sinCantidad y es precio total (mostrar cantidades pero precio/total vacíos)
+                  // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
+                  const mostrarColumnas =
+                    (!previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'A')) ||
+                    (previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'D')) ||
+                    (!previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'D')) ||
+                    (previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'A'));
+
+                  return mostrarColumnas ? (
+                    <>
+                      <TableCell align='right'>CANTIDAD</TableCell>
+                      <TableCell align='right'>PRECIO UNITARIO UF</TableCell>
+                      <TableCell align='right'>TOTAL NETO UF</TableCell>
+                    </>
+                  ) : null;
+                })()}
               </TableRow>
             </TableHead>
             <TableBody>
               {(() => {
                 const detalles = previewData.detalles || []
                 const rows: JSX.Element[] = []
+
+                // Función auxiliar para determinar si mostrar columnas
+                const mostrarColumnas = () => {
+                  return (!previewData.sinCantidad &&
+                    ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
+                      previewData.tipoCotizacion === 'A')) ||
+                    (previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'D')) ||
+                    (!previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'D')) ||
+                    (previewData.sinCantidad &&
+                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
+                        previewData.tipoCotizacion === 'A'));
+                };
+
+                // Función auxiliar para renderizar las celdas de cantidad/precio/total
+                const renderizarCeldasPrecio = (item: any) => {
+                  if (!mostrarColumnas()) return null;
+
+                  // Si es sinCantidad y precio total, mostrar columnas vacías
+                  if (previewData.sinCantidad &&
+                    ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                      (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                      previewData.tipoCotizacion === 'D')) {
+                    return (
+                      <>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                      </>
+                    );
+                  }
+
+                  // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
+                  if (previewData.sinCantidad &&
+                    ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
+                      previewData.tipoCotizacion === 'A')) {
+                    return (
+                      <>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                      </>
+                    );
+                  }
+
+                  // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
+                  if (!previewData.sinCantidad &&
+                    ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+                      (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
+                      previewData.tipoCotizacion === 'D')) {
+                    return (
+                      <>
+                        <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                      </>
+                    );
+                  }
+
+                  // Caso normal: mostrar valores
+                  return (
+                    <>
+                      <TableCell align='right'>{item.cantidad || 0}</TableCell>
+                      <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                      <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                    </>
+                  );
+                };
 
                 for (let i = 0; i < detalles.length; i++) {
                   const item = detalles[i]
@@ -257,13 +358,7 @@ const PreviewCard = () => {
                           <span style={{ marginLeft: 8, fontSize: '0.75em', color: '#1976d2' }}>[Paquete]</span>
                         </TableCell>
                         <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{item.descripcion || ''}</TableCell>
-                        {previewData.precioEMSPorProducto && (
-                          <>
-                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                          </>
-                        )}
+                        {renderizarCeldasPrecio(item)}
                       </TableRow>
                     )
 
@@ -276,13 +371,7 @@ const PreviewCard = () => {
                           <TableCell>{sub.area || ''}</TableCell>
                           <TableCell sx={{ pl: 4 }}>{sub.servicio || ''}</TableCell>
                           <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{sub.descripcion || ''}</TableCell>
-                          {previewData.precioEMSPorProducto && (
-                            <>
-                              <TableCell align='right'>{sub.cantidad || 0}</TableCell>
-                              <TableCell align='right'>UF {Number(sub.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                              <TableCell align='right'>UF {Number(sub.totalNetoUF || 0).toFixed(2)}</TableCell>
-                            </>
-                          )}
+                          {renderizarCeldasPrecio(sub)}
                         </TableRow>
                       )
                       j++
@@ -296,13 +385,7 @@ const PreviewCard = () => {
                         <TableCell>{item.area || ''}</TableCell>
                         <TableCell>{item.servicio || ''}</TableCell>
                         <TableCell sx={{ whiteSpace: 'pre-wrap' }}>{item.descripcion || ''}</TableCell>
-                        {previewData.precioEMSPorProducto && (
-                          <>
-                            <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                            <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                            <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
-                          </>
-                        )}
+                        {renderizarCeldasPrecio(item)}
                       </TableRow>
                     )
                   }
@@ -320,13 +403,66 @@ const PreviewCard = () => {
           {(() => {
             // Asegurarnos de que todos los valores sean números válidos
             let subtotal, descuento, subtotalConDescuento, iva, total;
+
             if (previewData.tipoCotizacion === 'D') {
+              // Cotización tipo D (Genérica)
               subtotal = Number(previewData.totalNetoGeneral || 0);
               descuento = 0;
               subtotalConDescuento = subtotal;
               iva = subtotal * 0.19;
               total = subtotal + iva;
+            } else if (previewData.tipoCotizacion === 'B' && previewData.sinCantidad && !previewData.precioEMSPorProducto) {
+              // Cotización tipo B (EMS) con sinCantidad true y precio total
+              subtotal = Number(previewData.precioEMSTotal || 0);
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'B' && previewData.sinCantidad && previewData.precioEMSPorProducto) {
+              // Cotización tipo B (EMS) con sinCantidad true y precio por producto
+              // Calcular subtotal sumando los precios unitarios de todos los productos
+              const subtotalCalculado = (previewData.detalles || []).reduce((acc: number, detalle: any) => {
+                return acc + Number(detalle.precioUnitarioUF || 0);
+              }, 0);
+              subtotal = subtotalCalculado;
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'B' && !previewData.sinCantidad && !previewData.precioEMSPorProducto) {
+              // Cotización tipo B (EMS) con precio total
+              subtotal = Number(previewData.precioEMSTotal || 0);
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'C' && previewData.sinCantidad && !previewData.precioMensualPorProducto) {
+              // Cotización tipo C (Mensual) con sinCantidad true y precio total
+              subtotal = Number(previewData.precioMensualTotal || 0);
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'C' && previewData.sinCantidad && previewData.precioMensualPorProducto) {
+              // Cotización tipo C (Mensual) con sinCantidad true y precio por producto
+              // Calcular subtotal sumando los precios unitarios de todos los productos
+              const subtotalCalculado = (previewData.detalles || []).reduce((acc: number, detalle: any) => {
+                return acc + Number(detalle.precioUnitarioUF || 0);
+              }, 0);
+              subtotal = subtotalCalculado;
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'C' && !previewData.sinCantidad && !previewData.precioMensualPorProducto) {
+              // Cotización tipo C (Mensual) con precio total
+              subtotal = Number(previewData.precioMensualTotal || 0);
+              descuento = Number(previewData.descuento || 0);
+              subtotalConDescuento = Math.max(0, subtotal - descuento);
+              iva = subtotalConDescuento * 0.19;
+              total = subtotalConDescuento + iva;
             } else {
+              // Otros casos (tipo A, o tipos B/C con precio por producto y sinCantidad false)
               subtotal = Number(previewData.subtotal || 0);
               descuento = Number(previewData.descuento || 0);
               subtotalConDescuento = Math.max(0, subtotal - descuento);
