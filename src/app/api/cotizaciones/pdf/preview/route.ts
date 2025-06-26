@@ -290,7 +290,8 @@ Condiciones para terreno y accesos
                   if (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) {
+                       cotizacion.tipoCotizacion === 'D' ||
+                       cotizacion.tipoCotizacion === 'A')) {
                     return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>-</td>
@@ -301,8 +302,7 @@ Condiciones para terreno y accesos
                   // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
                   if (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'A')) {
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto))) {
                     return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
@@ -411,6 +411,14 @@ Condiciones para terreno y accesos
                   <div><strong>Descuento:</strong> UF 0.00</div>
                   <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
                   <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                `;
+              } else if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
+                return `
+                  <div><strong>Subtotal:</strong> -</div>
+                  <div><strong>Descuento:</strong> -</div>
+                  <div><strong>IVA (19%):</strong> -</div>
+                  <div><strong>Total: -</strong></div>
                 `;
               } else {
                 const subtotal = Number(cotizacion.precioEMSPorProducto ? cotizacion.subtotal : cotizacion.precioEMSTotal);

@@ -634,12 +634,11 @@ const AddCard = ({
     // Determinar si debemos calcular totales basados en precios unitarios
     const calcularPorPreciosUnitarios = sinCantidad && (
       (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
-      (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto) ||
-      formData.tipoCotizacion === 'A'
+      (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto)
     );
 
     if (sinCantidad && !calcularPorPreciosUnitarios) {
-      // Para tipos B/C con precio total y sinCantidad, no calcular totales automáticamente
+      // Para tipos B/C con precio total y sinCantidad, y tipo A con sinCantidad, no calcular totales automáticamente
       if (subtotal !== 0) setSubtotal(0)
       if (descuentoTotal !== 0) setDescuentoTotal(0)
       if (impuesto !== 0) setImpuesto(0)

@@ -297,7 +297,8 @@ const PreviewCard = () => {
                   if (previewData.sinCantidad &&
                     ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
                       (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                      previewData.tipoCotizacion === 'D')) {
+                      previewData.tipoCotizacion === 'D' ||
+                      previewData.tipoCotizacion === 'A')) {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
@@ -310,8 +311,7 @@ const PreviewCard = () => {
                   // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
                   if (previewData.sinCantidad &&
                     ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                      previewData.tipoCotizacion === 'A')) {
+                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto))) {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
@@ -461,6 +461,24 @@ const PreviewCard = () => {
               subtotalConDescuento = Math.max(0, subtotal - descuento);
               iva = subtotalConDescuento * 0.19;
               total = subtotalConDescuento + iva;
+            } else if (previewData.tipoCotizacion === 'A' && previewData.sinCantidad) {
+              // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
+              return (
+                <>
+                  <Typography>
+                    <strong>Subtotal:</strong> -
+                  </Typography>
+                  <Typography>
+                    <strong>Descuento:</strong> -
+                  </Typography>
+                  <Typography>
+                    <strong>IVA (19%):</strong> -
+                  </Typography>
+                  <Typography variant='h6'>
+                    <strong>Total:</strong> -
+                  </Typography>
+                </>
+              );
             } else {
               // Otros casos (tipo A, o tipos B/C con precio por producto y sinCantidad false)
               subtotal = Number(previewData.subtotal || 0);
