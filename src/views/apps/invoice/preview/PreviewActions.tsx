@@ -87,10 +87,10 @@ const PreviewActions = () => {
           })
           .map((detalle: any) => ({
             productoId: parseInt(detalle.productoId),
-            cantidad: previewData.precioEMSPorProducto ? Number(detalle.cantidad) : 0,
-            precioUnitario: previewData.precioEMSPorProducto ? parseFloat(detalle.precioUnitarioUF || 0) : 0,
+            cantidad: previewData.sinCantidad ? 0 : Number(detalle.cantidad || 0),
+            precioUnitario: previewData.sinCantidad ? 0 : parseFloat(detalle.precioUnitarioUF || 0),
             descuento: 0,
-            subtotal: previewData.precioEMSPorProducto ? parseFloat(detalle.totalNetoUF || 0) : 0,
+            subtotal: previewData.sinCantidad ? 0 : parseFloat(detalle.totalNetoUF || 0),
             esPaquete: detalle.esPaquete,
             esSubProducto: detalle.esSubProducto
           }))
