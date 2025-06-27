@@ -87,10 +87,10 @@ const PreviewActions = () => {
           })
           .map((detalle: any) => ({
             productoId: parseInt(detalle.productoId),
-            cantidad: previewData.sinCantidad ? 0 : Number(detalle.cantidad || 0),
-            precioUnitario: previewData.sinCantidad ? 0 : parseFloat(detalle.precioUnitarioUF || 0),
+            cantidad: Number(detalle.cantidad || 0),
+            precioUnitario: parseFloat(detalle.precioUnitarioUF || 0),
             descuento: 0,
-            subtotal: previewData.sinCantidad ? 0 : parseFloat(detalle.totalNetoUF || 0),
+            subtotal: parseFloat(detalle.totalNetoUF || 0),
             esPaquete: detalle.esPaquete,
             esSubProducto: detalle.esSubProducto
           }))
@@ -139,6 +139,14 @@ const PreviewActions = () => {
         ubicacion: previewData.ubicacion || '',
         formaPago: previewData.formaPago || 'CONTADO',
         sinCantidad: previewData.sinCantidad || false,
+        precioProducto: previewData.precioProducto ||
+          (previewData.tipoCotizacion === 'A') ||
+          (previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
+          (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto),
+        precioTotal: previewData.precioTotal ||
+          (previewData.tipoCotizacion === 'D') ||
+          (previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
+          (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto),
         ...(tipoCotizacionValue === 'D' ? {
           subtotal: Number(previewData.totalNetoGeneral || 0),
           descuento: 0,
@@ -147,15 +155,10 @@ const PreviewActions = () => {
           textoGeneral: previewData.textoGeneral || '',
           totalNetoGeneral: Number(previewData.totalNetoGeneral || 0),
         } : {
-          subtotal: previewData.precioEMSPorProducto ? parseFloat(previewData.subtotal) : parseFloat(previewData.precioEMSTotal),
+          subtotal: parseFloat(previewData.subtotal || 0),
           descuento: parseFloat(previewData.descuento || 0),
-          impuesto: previewData.precioEMSPorProducto
-            ? parseFloat(previewData.impuesto)
-            : (parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19,
-          total: previewData.precioEMSPorProducto
-            ? parseFloat(previewData.total)
-            : parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0) +
-            ((parseFloat(previewData.precioEMSTotal) - parseFloat(previewData.descuento || 0)) * 0.19),
+          impuesto: parseFloat(previewData.impuesto || 0),
+          total: parseFloat(previewData.total || 0),
         }),
         observaciones: previewData.observaciones || '',
         notas: previewData.notas || '',
@@ -165,7 +168,6 @@ const PreviewActions = () => {
         antecedentesEMS: previewData.antecedentesEMS || '',
         plazoEntregaEMS: previewData.plazoEntregaEMS || '',
         precioEMSPorProducto: previewData.precioEMSPorProducto || false,
-        precioEMSTotal: parseFloat(previewData.precioEMSTotal || 0),
         //FIN EMS
 
         //Mensual

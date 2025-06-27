@@ -105,6 +105,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         contacto: body.contactoId ? { connect: { contactId: body.contactoId } } : undefined,
         listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
         sinCantidad: body.sinCantidad || false,
+        precioProducto: body.precioProducto || false,
+        precioTotal: body.precioTotal || false,
         // Incluir campos EMS solo si el tipo es B
         ...(body.tipoCotizacion === 'B' && {
           superficieEMS: body.superficieEMS || '',
@@ -121,7 +123,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         // Incluir campos de tipo D
         ...(body.tipoCotizacion === 'D' && {
           textoGeneral: body.textoGeneral || '',
-          subtotal: body.totalNetoGeneral || 0
+          totalNetoGeneral: body.totalNetoGeneral || 0
         }),
         updatedAt: new Date()
       }

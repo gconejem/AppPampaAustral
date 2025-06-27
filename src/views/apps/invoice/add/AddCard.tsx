@@ -84,6 +84,8 @@ interface FormData {
   textoGeneral?: string
   totalNetoGeneral?: number
   alcanceServicio?: string
+  precioProducto?: boolean
+  precioTotal?: boolean
 }
 
 // Coloca la función aquí antes de initialFormData
@@ -182,6 +184,8 @@ const AddCard = ({
     antecedentesMensual: '',
     notas: getNotasDefault('A'), // 'A' es el valor por defecto inicial
     alcanceServicio: '',
+    precioProducto: true, // Por defecto precio por producto para tipo A
+    precioTotal: false, // Por defecto false para tipo A
   }
 
   const initialValidationErrors: ValidationErrors = {
@@ -301,6 +305,14 @@ const AddCard = ({
         formaPago: formData.formaPago,
         alcanceServicio: formData.alcanceServicio || '',
         sinCantidad: sinCantidad,
+        precioProducto: formData.precioProducto ||
+          (formData.tipoCotizacion === 'A') ||
+          (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
+          (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto),
+        precioTotal: formData.precioTotal ||
+          (formData.tipoCotizacion === 'D') ||
+          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto),
       }
 
       console.log('Datos completos a enviar:', dataToSend)
@@ -700,7 +712,7 @@ const AddCard = ({
           descripcion: pp.descripcion || pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
           precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-          totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
@@ -796,7 +808,7 @@ const AddCard = ({
           descripcion: pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
           precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-          totalNetoUF: sinCantidad ? 0 : (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
@@ -834,7 +846,7 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       precioUnitarioUF: precio,
-      totalNetoUF: sinCantidad ? 0 : precio * cantidad,
+      totalNetoUF: precio * cantidad, // Mantener el cálculo normal, sinCantidad solo deshabilita en UI
       precioEditado: true // Marca como editado manualmente
     }
 
@@ -844,12 +856,12 @@ const AddCard = ({
   const handleCantidadChange = (index: number, cantidad: number) => {
     const newRows = [...productRows]
     const precioUF = Number(newRows[index].precioUnitarioUF || 0)
-    const cantidadNum = sinCantidad ? 1 : Number(cantidad)
+    const cantidadNum = Number(cantidad)
 
     newRows[index] = {
       ...newRows[index],
       cantidad: cantidadNum,
-      totalNetoUF: sinCantidad ? 0 : precioUF * cantidadNum
+      totalNetoUF: precioUF * cantidadNum // Mantener el cálculo normal, sinCantidad solo deshabilita en UI
     }
 
     setProductRows(newRows)
@@ -963,7 +975,7 @@ const AddCard = ({
       id: Date.now(), // Usar timestamp para ID único
       productoId: '0',
       servicio: '',
-      cantidad: sinCantidad ? 1 : 1,
+      cantidad: 1,
       precioUnitarioUF: 0,
       totalNetoUF: 0,
       area: '',
@@ -1336,12 +1348,14 @@ const AddCard = ({
   }, [anchorEl, productsPage, selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   // useEffect para actualizar cantidades cuando cambia sinCantidad
+  // Nota: Cuando sinCantidad es true, solo deshabilitamos los campos, no ponemos valores a cero
   useEffect(() => {
     setProductRows(prevRows =>
       prevRows.map(row => ({
         ...row,
-        cantidad: sinCantidad ? 0 : 1,
-        totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : 1)
+        // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
+        cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
+        totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
       }))
     )
   }, [sinCantidad])
@@ -1678,18 +1692,31 @@ const AddCard = ({
                         if (nuevoTipo === 'B') {
                           updateFormData({
                             precioEMSPorProducto: false,
-                            precioEMSTotal: 0
+                            precioEMSTotal: 0,
+                            precioProducto: false,
+                            precioTotal: true
                           })
                         } else if (nuevoTipo === 'C') {
                           updateFormData({
                             precioMensualPorProducto: false,
-                            precioMensualTotal: 0
+                            precioMensualTotal: 0,
+                            precioProducto: false,
+                            precioTotal: true
                           })
                         } else if (nuevoTipo === 'D') {
                           // Para tipo D no necesitamos configurar precios por producto
                           // ya que no se muestran los radio buttons
+                          updateFormData({
+                            precioProducto: false,
+                            precioTotal: true
+                          })
+                        } else if (nuevoTipo === 'A') {
+                          // Para tipo A se mantiene "Precio por producto" por defecto
+                          updateFormData({
+                            precioProducto: true,
+                            precioTotal: false
+                          })
                         }
-                        // Para tipo A se mantiene "Precio por producto" por defecto
                       }}
                     >
                       <MenuItem value='A'>Valores Unitarios</MenuItem>
@@ -1956,11 +1983,15 @@ const AddCard = ({
                             ...(isEMS
                               ? {
                                 precioEMSPorProducto: porProducto,
-                                precioEMSTotal: !porProducto ? formData.subtotal : 0
+                                precioEMSTotal: !porProducto ? formData.subtotal : 0,
+                                precioTotal: !porProducto, // true si es precio total, false si es por producto
+                                precioProducto: porProducto // true si es por producto, false si es precio total
                               }
                               : {
                                 precioMensualPorProducto: porProducto,
-                                precioMensualTotal: !porProducto ? formData.subtotal : 0
+                                precioMensualTotal: !porProducto ? formData.subtotal : 0,
+                                precioTotal: !porProducto, // true si es precio total, false si es por producto
+                                precioProducto: porProducto // true si es por producto, false si es precio total
                               })
                           })
                         }}

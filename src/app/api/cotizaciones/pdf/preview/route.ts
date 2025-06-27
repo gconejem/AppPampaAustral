@@ -238,18 +238,20 @@ Condiciones para terreno y accesos
                     (!cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
                        cotizacion.tipoCotizacion === 'A')) ||
                     (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) ||
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
                     (!cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) ||
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
                     (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
                        cotizacion.tipoCotizacion === 'A'));
 
                   return mostrarColumnas ? `
@@ -267,18 +269,20 @@ Condiciones para terreno y accesos
                   return (!cotizacion.sinCantidad && 
                     ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
                      (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                     (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
                      cotizacion.tipoCotizacion === 'A')) ||
                     (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) ||
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
                     (!cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) ||
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
                     (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
                        cotizacion.tipoCotizacion === 'A'));
                 };
 
@@ -290,7 +294,7 @@ Condiciones para terreno y accesos
                   if (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D' ||
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto) ||
                        cotizacion.tipoCotizacion === 'A')) {
                     return `
                       <td style='text-align:right;'>-</td>
@@ -302,7 +306,8 @@ Condiciones para terreno y accesos
                   // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
                   if (cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto))) {
+                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
+                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto))) {
                     return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
@@ -314,7 +319,7 @@ Condiciones para terreno y accesos
                   if (!cotizacion.sinCantidad && 
                       ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
                        (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       cotizacion.tipoCotizacion === 'D')) {
+                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) {
                     return `
                       <td style='text-align:right;'>${detalle.cantidad || 0}</td>
                       <td style='text-align:right;'>-</td>
@@ -421,11 +426,10 @@ Condiciones para terreno y accesos
                   <div><strong>Total: -</strong></div>
                 `;
               } else {
-                const subtotal = Number(cotizacion.precioEMSPorProducto ? cotizacion.subtotal : cotizacion.precioEMSTotal);
+                const subtotal = Number(cotizacion.subtotal || 0);
                 const descuento = Number(cotizacion.descuento || 0);
-                const subtotalConDescuento = subtotal - descuento;
-                const iva = subtotalConDescuento * 0.19;
-                const total = subtotalConDescuento + iva;
+                const iva = Number(cotizacion.impuesto || 0);
+                const total = Number(cotizacion.total || 0);
                 if (subtotal === 0) {
                   return `
                     <div><strong>Subtotal:</strong> -</div>

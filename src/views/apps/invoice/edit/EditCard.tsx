@@ -31,6 +31,9 @@ import IconButton from '@mui/material/IconButton'
 import DeleteIcon from '@mui/icons-material/Delete'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import Tooltip from '@mui/material/Tooltip'
+import RadioGroup from '@mui/material/RadioGroup'
+import Radio from '@mui/material/Radio'
+import Divider from '@mui/material/Divider'
 
 // Third-party Imports
 import { toast } from 'react-hot-toast'
@@ -125,6 +128,11 @@ interface FormDataType {
   jornadaMensual?: string
   antecedentesMensual?: string
   alcanceServicio?: string
+  sinCantidad?: boolean
+  precioProducto?: boolean
+  precioTotal?: boolean
+  precioEMSPorProducto?: boolean
+  precioMensualPorProducto?: boolean
 }
 
 function getNotasDefault(tipoCotizacion: string) {
@@ -203,6 +211,10 @@ const EditCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
+  // 2. Estados para precio por producto y precio total
+  const [precioEMSPorProducto, setPrecioEMSPorProducto] = useState(true)
+  const [precioMensualPorProducto, setPrecioMensualPorProducto] = useState(true)
+
   // Estado para la fila activa y referencias para inputs (para abrir el popover en la fila nueva)
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -220,7 +232,39 @@ const EditCard = ({ id }: { id: string }) => {
   const calcularTotales = useCallback(() => {
     if (!formData) return
 
-    const subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+    // Para tipos B, C o D con precioTotal = true y sinCantidad = false, 
+    // mantener el subtotal del backend y no recalcularlo
+    const debeManternerSubtotal =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === false &&
+      formData.precioTotal === true &&
+      formData.sinCantidad === false
+
+    // Para tipos B, C o D con sinCantidad = true y precioTotal = true,
+    // también mantener el subtotal del backend (no recalcular)
+    const debeManternerSubtotalSinCantidad =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === false &&
+      formData.precioTotal === true &&
+      formData.sinCantidad === true
+
+    // Para tipos B, C o D con sinCantidad = true y precioProducto = true,
+    // usar el valor del backend o el calculado de los productos
+    const debeManternerSubtotalPrecioProducto =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === true &&
+      formData.precioTotal === false &&
+      formData.sinCantidad === true
+
+    let subtotalTotal
+    if (debeManternerSubtotal || debeManternerSubtotalSinCantidad || debeManternerSubtotalPrecioProducto) {
+      // Mantener el subtotal actual del formData (que viene del backend)
+      subtotalTotal = Number(formData.subtotal || 0)
+    } else {
+      // Calcular el subtotal sumando los totales netos de las filas
+      subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+    }
+
     const descuentoTotal = Number(formData.descuento || 0)
     const baseImponible = Number(subtotalTotal - descuentoTotal)
     const impuesto = Number(baseImponible * 0.19)
@@ -314,6 +358,26 @@ const EditCard = ({ id }: { id: string }) => {
         // Verificar si todos los productos tienen cantidad cero
         const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
         setSinCantidad(todasCero)
+
+        // Configurar estados de precio por producto y precio total según los datos del backend
+        if (cotizacionData.tipoCotizacion === 'B') {
+          setPrecioEMSPorProducto(cotizacionData.precioProducto || false)
+        } else if (cotizacionData.tipoCotizacion === 'C') {
+          setPrecioMensualPorProducto(cotizacionData.precioProducto || false)
+        }
+
+        // Lógica específica para tipos B, C o D con precioTotal = true y sinCantidad = false
+        // El campo "Total Neto" debe inicializarse con el valor del subtotal del backend
+        if (
+          ['B', 'C', 'D'].includes(cotizacionData.tipoCotizacion) &&
+          cotizacionData.precioProducto === false &&
+          cotizacionData.precioTotal === true &&
+          cotizacionData.sinCantidad === false
+        ) {
+          // Para estos casos, el subtotal del backend ya contiene el valor correcto para "Total Neto"
+          // No necesitamos modificarlo, solo asegurar que se mantenga
+          console.log('Aplicando lógica de Total Neto para tipo', cotizacionData.tipoCotizacion, 'con subtotal:', cotizacionData.subtotal)
+        }
 
         // Mapear los datos para asegurar la estructura correcta y mostrar el label del cargo
         const contactosMapeados = contactosData.map((contacto: any) => ({
@@ -818,7 +882,12 @@ const EditCard = ({ id }: { id: string }) => {
     const previewData = {
       ...formData,
       detalles: detallesPlanos,
-      precioEMSPorProducto: formData.tipoCotizacion === 'A' || formData.tipoCotizacion === 'C',
+      // Enviar los valores correctos según el tipo de cotización
+      precioEMSPorProducto: formData.tipoCotizacion === 'B' ? precioEMSPorProducto : false,
+      precioMensualPorProducto: formData.tipoCotizacion === 'C' ? precioMensualPorProducto : false,
+      // Para tipo A, siempre es precio por producto
+      // Para tipo D, no aplican estos conceptos
+      sinCantidad: sinCantidad,
       subtotal: Number(formData.subtotal || 0),
       descuento: Number(formData.descuento || 0),
       impuesto: Number(formData.impuesto || 0),
@@ -1376,172 +1445,290 @@ const EditCard = ({ id }: { id: string }) => {
             </>
           ) : (
             <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant='h6'>Detalle de Servicios</Typography>
-                <FormControlLabel
-                  control={<Switch checked={sinCantidad} onChange={e => setSinCantidad(e.target.checked)} size='small' />}
-                  label='Sin cantidad'
-                />
-              </Box>
-              {productRows.map((row, index) => (
-                <Grid
-                  container
-                  spacing={2}
-                  key={row.id}
-                  sx={{
-                    mb: 2,
-                    p: 2,
-                    backgroundColor: 'background.paper',
-                    borderRadius: '4px',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    ...(row.esSubProducto && {
-                      ml: 4,
-                      width: 'calc(100% - 32px)'
-                    })
-                  }}
-                >
-                  <Grid item xs={12} md={3}>
-                    <div ref={el => { servicioAnchorRefs.current[index] = el; }} style={{ width: '100%' }}>
-                      <TextField
-                        fullWidth
-                        label='Servicio'
-                        value={row.servicio || ''}
-                        onClick={() => {
-                          resetProductFilters();
-                          setActiveRowIndex(index);
-                          setAnchorEl(servicioAnchorRefs.current[index]);
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant='h6'>Detalle de Servicios</Typography>
+                  <FormControlLabel
+                    control={<Switch checked={sinCantidad} onChange={e => setSinCantidad(e.target.checked)} size='small' />}
+                    label='Sin cantidad'
+                  />
+                </Box>
+
+                {/* Selectores de precio por producto y precio total para tipos B y C */}
+                {(formData?.tipoCotizacion === 'B' || formData?.tipoCotizacion === 'C') && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                    <FormControl>
+                      <RadioGroup
+                        row
+                        value={
+                          formData.tipoCotizacion === 'B'
+                            ? precioEMSPorProducto
+                            : precioMensualPorProducto
+                        }
+                        onChange={e => {
+                          const porProducto = e.target.value === 'true'
+                          if (formData.tipoCotizacion === 'B') {
+                            setPrecioEMSPorProducto(porProducto)
+                          } else if (formData.tipoCotizacion === 'C') {
+                            setPrecioMensualPorProducto(porProducto)
+                          }
                         }}
-                      />
-                    </div>
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField fullWidth label='Área' value={row.area || ''} disabled />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField fullWidth label='Descripción' value={row.descripcion || ''} multiline maxRows={4} />
-                  </Grid>
-                  <Grid item xs={12} md={1}>
-                    <TextField
-                      fullWidth
-                      type='number'
-                      label='Cantidad'
-                      value={row.cantidad}
-                      onChange={e => handleCantidadChange(index, Number(e.target.value))}
-                      inputProps={{ min: 1 }}
-                      disabled={sinCantidad}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      type='number'
-                      label='Precio Unitario UF'
-                      value={row.precioUnitarioUF}
-                      onChange={e => handlePrecioChange(index, Number(e.target.value))}
-                      InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      fullWidth
-                      label='Total Neto UF'
-                      value={row.totalNetoUF || 0}
-                      InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
-                        readOnly: true
-                      }}
-                      disabled
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
-                    <IconButton size="small" onClick={() => handleMoveUp(index)}>
-                      <i className="ri-arrow-up-s-line" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleMoveDown(index)}>
-                      <i className="ri-arrow-down-s-line" />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}>
-                      <i className='ri-delete-bin-line' />
-                    </IconButton>
-                    {row.esPaquete && (
-                      <Tooltip title="Agregar producto a paquete">
-                        <IconButton
-                          sx={{
-                            backgroundColor: 'primary.main',
-                            color: 'white',
-                            borderRadius: '50%',
-                            width: 40,
-                            height: 40,
-                            ml: 1,
-                            '&:hover': { backgroundColor: 'primary.dark' },
-                            pointerEvents: 'auto',
-                            zIndex: 20
-                          }}
+                      >
+                        <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
+                        <FormControlLabel value={false} control={<Radio size='small' />} label='Precio total' />
+                      </RadioGroup>
+                    </FormControl>
+                  </Box>
+                )}
+              </Grid>
+              <Grid item xs={12}>
+                {productRows.map((row, index) => (
+                  <Grid
+                    container
+                    spacing={2}
+                    key={row.id}
+                    sx={{
+                      mb: 2,
+                      p: 2,
+                      backgroundColor: 'background.paper',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      ...(row.esSubProducto && {
+                        ml: 4,
+                        width: 'calc(100% - 32px)'
+                      })
+                    }}
+                  >
+                    <Grid item xs={12} md={3}>
+                      <div ref={el => { servicioAnchorRefs.current[index] = el; }} style={{ width: '100%' }}>
+                        <TextField
+                          fullWidth
+                          label='Servicio'
+                          value={row.servicio || ''}
                           onClick={() => {
                             resetProductFilters();
-                            // Encontrar el final de los subproductos del paquete actual
-                            let insertIndex = index + 1;
-                            while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
-                              insertIndex++;
-                            }
-
-                            // Agregar una fila vacía como subproducto al final del paquete
-                            const newProductRow = {
-                              id: Date.now(),
-                              productoId: '0',
-                              servicio: '',
-                              descripcion: '',
-                              cantidad: 1,
-                              precioUnitarioUF: 0,
-                              totalNetoUF: 0,
-                              area: '',
-                              esSubProducto: true,
-                              subproductos: []
-                            };
-                            const newRows = [...productRows];
-                            newRows.splice(insertIndex, 0, newProductRow);
-                            setProductRows(newRows);
-                            setTimeout(() => {
-                              setActiveRowIndex(insertIndex);
-                              // Simular click en el input para abrir el popover
-                              const inputElement = servicioAnchorRefs.current[insertIndex]?.querySelector('input');
-                              if (inputElement) {
-                                inputElement.click();
-                              }
-                            }, 100);
+                            setActiveRowIndex(index);
+                            setAnchorEl(servicioAnchorRefs.current[index]);
                           }}
-                        >
-                          <i className='ri-add-line' style={{ fontSize: 20 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                        />
+                      </div>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField fullWidth label='Área' value={row.area || ''} disabled />
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField fullWidth label='Descripción' value={row.descripcion || ''} multiline maxRows={4} />
+                    </Grid>
+                    <Grid item xs={12} md={1}>
+                      <TextField
+                        fullWidth
+                        type='number'
+                        label='Cantidad'
+                        value={row.cantidad}
+                        onChange={e => handleCantidadChange(index, Number(e.target.value))}
+                        inputProps={{ min: 1 }}
+                        disabled={sinCantidad}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        type='number'
+                        label='Precio Unitario UF'
+                        value={row.precioUnitarioUF}
+                        onChange={e => handlePrecioChange(index, Number(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                          readOnly:
+                            row.esSubProducto === true ||
+                            (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
+                            (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                        }}
+                        disabled={
+                          row.esSubProducto === true ||
+                          (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
+                          (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                        }
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        fullWidth
+                        label='Total Neto UF'
+                        value={row.totalNetoUF || 0}
+                        InputProps={{
+                          startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                          readOnly: true
+                        }}
+                        disabled
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                      <IconButton size="small" onClick={() => handleMoveUp(index)}>
+                        <i className="ri-arrow-up-s-line" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleMoveDown(index)}>
+                        <i className="ri-arrow-down-s-line" />
+                      </IconButton>
+                      <IconButton onClick={() => handleDeleteRow(index)} sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}>
+                        <i className='ri-delete-bin-line' />
+                      </IconButton>
+                      {row.esPaquete && (
+                        <Tooltip title="Agregar producto a paquete">
+                          <IconButton
+                            sx={{
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                              borderRadius: '50%',
+                              width: 40,
+                              height: 40,
+                              ml: 1,
+                              '&:hover': { backgroundColor: 'primary.dark' },
+                              pointerEvents: 'auto',
+                              zIndex: 20
+                            }}
+                            onClick={() => {
+                              resetProductFilters();
+                              // Encontrar el final de los subproductos del paquete actual
+                              let insertIndex = index + 1;
+                              while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
+                                insertIndex++;
+                              }
+
+                              // Agregar una fila vacía como subproducto al final del paquete
+                              const newProductRow = {
+                                id: Date.now(),
+                                productoId: '0',
+                                servicio: '',
+                                descripcion: '',
+                                cantidad: 1,
+                                precioUnitarioUF: 0,
+                                totalNetoUF: 0,
+                                area: '',
+                                esSubProducto: true,
+                                subproductos: []
+                              };
+                              const newRows = [...productRows];
+                              newRows.splice(insertIndex, 0, newProductRow);
+                              setProductRows(newRows);
+                              setTimeout(() => {
+                                setActiveRowIndex(insertIndex);
+                                // Simular click en el input para abrir el popover
+                                const inputElement = servicioAnchorRefs.current[insertIndex]?.querySelector('input');
+                                if (inputElement) {
+                                  inputElement.click();
+                                }
+                              }, 100);
+                            }}
+                          >
+                            <i className='ri-add-line' style={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Grid>
                   </Grid>
+                ))}
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant='outlined'
+                  onClick={() => {
+                    setProductRows([
+                      ...productRows,
+                      {
+                        id: Date.now(),
+                        productoId: '0',
+                        cantidad: 1,
+                        precioUnitarioUF: 0,
+                        totalNetoUF: 0,
+                        area: '',
+                        descripcion: '',
+                        subproductos: []
+                      }
+                    ])
+                  }}
+                  startIcon={<i className='ri-add-line' />}
+                >
+                  Agregar Producto
+                </Button>
+              </Grid>
+
+              {/* Bloque de totales para B, C, D y casos especiales de A */}
+              {((['B', 'C', 'D'].includes(formData.tipoCotizacion) && (formData.precioTotal || formData.precioProducto)) ||
+                (formData.tipoCotizacion === 'A' && formData.sinCantidad)) && (
+                  <Grid item xs={12}>
+                    <div className='flex justify-end'>
+                      <div className='min-w-[300px]'>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Total Neto:</Typography>
+                          {formData.tipoCotizacion === 'A' && formData.sinCantidad ? (
+                            <Typography>-</Typography>
+                          ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
+                            // Para precio por producto (readonly)
+                            <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                          ) : (
+                            // Para precio total (editable)
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={formData.subtotal || ''}
+                              onChange={e => {
+                                const total = parseFloat(e.target.value) || 0
+                                const impuesto = total * 0.19
+                                setFormData(prev => prev ? { ...prev, subtotal: total, impuesto: impuesto, total: total + impuesto } : null)
+                              }}
+                              InputProps={{
+                                startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                              }}
+                              sx={{ width: '150px' }}
+                            />
+                          )}
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Descuento:</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.descuento || 0).toFixed(2)}`}</Typography>
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>IVA (19%):</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.impuesto || 0).toFixed(2)}`}</Typography>
+                        </div>
+                        <Divider className='my-2' />
+                        <div className='flex justify-between'>
+                          <Typography variant='h6'>Total:</Typography>
+                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.total || 0).toFixed(2)}`}</Typography>
+                        </div>
+                      </div>
+                    </div>
+                  </Grid>
+                )}
+
+              {/* Bloque de totales normal para tipo A con sinCantidad = false */}
+              {formData.tipoCotizacion === 'A' && !formData.sinCantidad && (
+                <Grid item xs={12}>
+                  <div className='flex justify-end'>
+                    <div className='min-w-[300px]'>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Total Neto:</Typography>
+                        <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Descuento:</Typography>
+                        <Typography>UF {Number(formData.descuento || 0).toFixed(2)}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>IVA (19%):</Typography>
+                        <Typography>UF {Number(formData.impuesto || 0).toFixed(2)}</Typography>
+                      </div>
+                      <Divider className='my-2' />
+                      <div className='flex justify-between'>
+                        <Typography variant='h6'>Total:</Typography>
+                        <Typography variant='h6'>UF {Number(formData.total || 0).toFixed(2)}</Typography>
+                      </div>
+                    </div>
+                  </div>
                 </Grid>
-              ))}
-              <Button
-                variant='outlined'
-                onClick={() => {
-                  setProductRows([
-                    ...productRows,
-                    {
-                      id: Date.now(),
-                      productoId: '0',
-                      cantidad: 1,
-                      precioUnitarioUF: 0,
-                      totalNetoUF: 0,
-                      area: '',
-                      descripcion: '',
-                      subproductos: []
-                    }
-                  ])
-                }}
-                startIcon={<i className='ri-add-line' />}
-              >
-                Agregar Producto
-              </Button>
+              )}
             </>
           )}
 

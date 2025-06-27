@@ -186,6 +186,8 @@ export async function POST(request: Request) {
           formaPago: body.formaPago || '',
           listaPrecio: body.listaPrecioId ? { connect: { id: body.listaPrecioId } } : undefined,
           sinCantidad: body.sinCantidad || false,
+          precioProducto: body.precioProducto || false,
+          precioTotal: body.precioTotal || false,
           ...(normalizeTipoCotizacion(body.tipoCotizacion) === 'B' && {
             superficieEMS: body.superficieEMS || '',
             antecedentesEMS: body.antecedentesEMS || '',
@@ -198,7 +200,8 @@ export async function POST(request: Request) {
             alcanceServicio: body.alcanceServicio || ''
           }),
           ...(body.tipoCotizacion === 'D' && {
-            textoGeneral: body.textoGeneral || ''
+            textoGeneral: body.textoGeneral || '',
+            totalNetoGeneral: body.totalNetoGeneral || 0
           })
         }
       })

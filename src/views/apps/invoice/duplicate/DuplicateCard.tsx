@@ -31,6 +31,9 @@ import IconButton from '@mui/material/IconButton'
 import DeleteIcon from '@mui/icons-material/Delete'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import Tooltip from '@mui/material/Tooltip'
+import RadioGroup from '@mui/material/RadioGroup'
+import Radio from '@mui/material/Radio'
+import Divider from '@mui/material/Divider'
 
 // Third-party Imports
 import { toast } from 'react-hot-toast'
@@ -125,6 +128,11 @@ interface FormDataType {
   jornadaMensual?: string
   antecedentesMensual?: string
   alcanceServicio?: string
+  sinCantidad?: boolean
+  precioProducto?: boolean
+  precioTotal?: boolean
+  precioEMSPorProducto?: boolean
+  precioMensualPorProducto?: boolean
 }
 
 const DuplicateCard = ({ id }: { id: string }) => {
@@ -155,6 +163,10 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
+  // 2. Estados para precio por producto y precio total
+  const [precioEMSPorProducto, setPrecioEMSPorProducto] = useState(true)
+  const [precioMensualPorProducto, setPrecioMensualPorProducto] = useState(true)
+
   // Estado para abrir automáticamente el popover en una fila nueva
   const [autoOpenRowId, setAutoOpenRowId] = useState<number | null>(null);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
@@ -169,7 +181,39 @@ const DuplicateCard = ({ id }: { id: string }) => {
   const calcularTotales = useCallback(() => {
     if (!formData) return
 
-    const subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+    // Para tipos B, C o D con precioTotal = true y sinCantidad = false, 
+    // mantener el subtotal del backend y no recalcularlo
+    const debeManternerSubtotal =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === false &&
+      formData.precioTotal === true &&
+      formData.sinCantidad === false
+
+    // Para tipos B, C o D con sinCantidad = true y precioTotal = true,
+    // también mantener el subtotal del backend (no recalcular)
+    const debeManternerSubtotalSinCantidad =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === false &&
+      formData.precioTotal === true &&
+      formData.sinCantidad === true
+
+    // Para tipos B, C o D con sinCantidad = true y precioProducto = true,
+    // usar el valor del backend o el calculado de los productos
+    const debeManternerSubtotalPrecioProducto =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === true &&
+      formData.precioTotal === false &&
+      formData.sinCantidad === true
+
+    let subtotalTotal
+    if (debeManternerSubtotal || debeManternerSubtotalSinCantidad || debeManternerSubtotalPrecioProducto) {
+      // Mantener el subtotal actual del formData (que viene del backend)
+      subtotalTotal = Number(formData.subtotal || 0)
+    } else {
+      // Calcular el subtotal sumando los totales netos de las filas
+      subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+    }
+
     const descuentoTotal = Number(formData.descuento || 0)
     const baseImponible = Number(subtotalTotal - descuentoTotal)
     const impuesto = Number(baseImponible * 0.19)
@@ -305,6 +349,26 @@ const DuplicateCard = ({ id }: { id: string }) => {
         // Verificar si todos los productos tienen cantidad cero
         const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
         setSinCantidad(todasCero)
+
+        // Configurar estados de precio por producto y precio total según los datos del backend
+        if (cotizacionData.tipoCotizacion === 'B') {
+          setPrecioEMSPorProducto(cotizacionData.precioProducto || false)
+        } else if (cotizacionData.tipoCotizacion === 'C') {
+          setPrecioMensualPorProducto(cotizacionData.precioProducto || false)
+        }
+
+        // Lógica específica para tipos B, C o D con precioTotal = true y sinCantidad = false
+        // El campo "Total Neto" debe inicializarse con el valor del subtotal del backend
+        if (
+          ['B', 'C', 'D'].includes(cotizacionData.tipoCotizacion) &&
+          cotizacionData.precioProducto === false &&
+          cotizacionData.precioTotal === true &&
+          cotizacionData.sinCantidad === false
+        ) {
+          // Para estos casos, el subtotal del backend ya contiene el valor correcto para "Total Neto"
+          // No necesitamos modificarlo, solo asegurar que se mantenga
+          console.log('Aplicando lógica de Total Neto para tipo', cotizacionData.tipoCotizacion, 'con subtotal:', cotizacionData.subtotal)
+        }
 
         // Actualizar estados
         setFormData(cotizacionData)
@@ -696,6 +760,14 @@ const DuplicateCard = ({ id }: { id: string }) => {
         antecedentesMensual: formData.antecedentesMensual || '',
         alcanceServicio: formData.alcanceServicio || '',
         sinCantidad: sinCantidad,
+        precioProducto: formData.precioProducto ||
+          (formData.tipoCotizacion === 'A') ||
+          (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
+          (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto),
+        precioTotal: formData.precioTotal ||
+          (formData.tipoCotizacion === 'D') ||
+          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
+          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto),
         detalles: {
           create: detallesValidos
         }
@@ -1422,6 +1494,33 @@ Consideraciones adicionales y requisitos especiales
                 />
               </Box>
 
+              {/* Selectores de precio por producto y precio total para tipos B y C */}
+              {(formData?.tipoCotizacion === 'B' || formData?.tipoCotizacion === 'C') && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <FormControl>
+                    <RadioGroup
+                      row
+                      value={
+                        formData.tipoCotizacion === 'B'
+                          ? precioEMSPorProducto
+                          : precioMensualPorProducto
+                      }
+                      onChange={e => {
+                        const porProducto = e.target.value === 'true'
+                        if (formData.tipoCotizacion === 'B') {
+                          setPrecioEMSPorProducto(porProducto)
+                        } else if (formData.tipoCotizacion === 'C') {
+                          setPrecioMensualPorProducto(porProducto)
+                        }
+                      }}
+                    >
+                      <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
+                      <FormControlLabel value={false} control={<Radio size='small' />} label='Precio total' />
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+              )}
+
               {productRows.map((row, index) => (
                 <Grid
                   container
@@ -1486,8 +1585,17 @@ Consideraciones adicionales y requisitos especiales
                       value={row.precioUnitarioUF}
                       onChange={e => handlePrecioChange(index, Number(e.target.value))}
                       InputProps={{
-                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                        startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
+                        readOnly:
+                          row.esSubProducto === true ||
+                          (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
+                          (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
                       }}
+                      disabled={
+                        row.esSubProducto === true ||
+                        (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
+                        (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                      }
                     />
                   </Grid>
                   <Grid item xs={12} md={2}>
@@ -1590,6 +1698,82 @@ Consideraciones adicionales y requisitos especiales
               >
                 Agregar Producto
               </Button>
+
+              {/* Bloque de totales para B, C, D y casos especiales de A */}
+              {((['B', 'C', 'D'].includes(formData.tipoCotizacion) && (formData.precioTotal || formData.precioProducto)) ||
+                (formData.tipoCotizacion === 'A' && formData.sinCantidad)) && (
+                  <Grid item xs={12}>
+                    <div className='flex justify-end'>
+                      <div className='min-w-[300px]'>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Total Neto:</Typography>
+                          {formData.tipoCotizacion === 'A' && formData.sinCantidad ? (
+                            <Typography>-</Typography>
+                          ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
+                            // Para precio por producto (readonly)
+                            <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                          ) : (
+                            // Para precio total (editable)
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={formData.subtotal || ''}
+                              onChange={e => {
+                                const total = parseFloat(e.target.value) || 0
+                                const impuesto = total * 0.19
+                                setFormData(prev => prev ? { ...prev, subtotal: total, impuesto: impuesto, total: total + impuesto } : null)
+                              }}
+                              InputProps={{
+                                startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                              }}
+                              sx={{ width: '150px' }}
+                            />
+                          )}
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Descuento:</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.descuento || 0).toFixed(2)}`}</Typography>
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>IVA (19%):</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.impuesto || 0).toFixed(2)}`}</Typography>
+                        </div>
+                        <Divider className='my-2' />
+                        <div className='flex justify-between'>
+                          <Typography variant='h6'>Total:</Typography>
+                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.total || 0).toFixed(2)}`}</Typography>
+                        </div>
+                      </div>
+                    </div>
+                  </Grid>
+                )}
+
+              {/* Bloque de totales normal para tipo A con sinCantidad = false */}
+              {formData.tipoCotizacion === 'A' && !formData.sinCantidad && (
+                <Grid item xs={12}>
+                  <div className='flex justify-end'>
+                    <div className='min-w-[300px]'>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Total Neto:</Typography>
+                        <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Descuento:</Typography>
+                        <Typography>UF {Number(formData.descuento || 0).toFixed(2)}</Typography>
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>IVA (19%):</Typography>
+                        <Typography>UF {Number(formData.impuesto || 0).toFixed(2)}</Typography>
+                      </div>
+                      <Divider className='my-2' />
+                      <div className='flex justify-between'>
+                        <Typography variant='h6'>Total:</Typography>
+                        <Typography variant='h6'>UF {Number(formData.total || 0).toFixed(2)}</Typography>
+                      </div>
+                    </div>
+                  </div>
+                </Grid>
+              )}
             </Grid>
           )}
 
