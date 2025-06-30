@@ -272,6 +272,17 @@ const PreviewCard = () => {
                 const renderizarCeldasPrecio = (item: any) => {
                   if (!mostrarColumnas()) return null;
 
+                  // Si es tipo A con sinCantidad = true, mostrar guiones en todas las columnas
+                  if (previewData.tipoCotizacion === 'A' && previewData.sinCantidad) {
+                    return (
+                      <>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>-</TableCell>
+                      </>
+                    );
+                  }
+
                   // Si es sinCantidad y precio total, mostrar columnas vacías
                   if (previewData.sinCantidad && previewData.precioTotal) {
                     return (

@@ -264,6 +264,15 @@ Condiciones para terreno y accesos
                 const renderizarCeldasPrecio = (detalle: any) => {
                   if (!mostrarColumnas()) return '';
                   
+                  // Si es tipo A con sinCantidad = true, mostrar guiones en todas las columnas
+                  if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                    return `
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>-</td>
+                    `;
+                  }
+                  
                   // Si es sinCantidad y precio total, mostrar columnas vacías
                   if (cotizacion.sinCantidad && cotizacion.precioTotal) {
                     return `
