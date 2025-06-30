@@ -128,7 +128,7 @@ Condiciones para terreno y accesos
               <div class="label">Datos Bancarios</div>
               <div class="value">Nombre: Sociedad Laboratorio Pampa Austral Ltda.</div>
               <div class="value">Rut: 77.390.460-K</div>
-              <div class="value">Dirección: Dirección: Calle Santa Blanca N° 51, Chillán. Región de Ñuble, Chile</div>
+              <div class="value">Dirección: Calle Santa Blanca N° 51, Chillán. Región de Ñuble, Chile</div>
               <div class="value">Cuenta Corriente: 220-02813-03, Banco de Chile</div>
               <div class="value">Forma de pago: ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
               <div class="value"><b>Métodos de pago:</b> Transferencia, Tarjetas vía flow.cl, solicitar link.</div>
@@ -233,9 +233,9 @@ Condiciones para terreno y accesos
                             : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:center;">${detalle.cantidad || '-'}</td>
-                        <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
+                        <td style="text-align:center;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (detalle.cantidad || '-')}</td>
+                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : 'UF ' + Number(detalle.precioUnitario).toFixed(2)}</td>
+                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2))}</td>
                       </tr>`;
                     } else if (!detalle.esSubProducto) {
                       // Producto individual (no paquete ni subproducto)
@@ -246,9 +246,9 @@ Condiciones para terreno y accesos
                           ${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:right;">${detalle.cantidad || '-'}</td>
-                        <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
+                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (detalle.cantidad || '-')}</td>
+                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : 'UF ' + Number(detalle.precioUnitario).toFixed(2)}</td>
+                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2))}</td>
                       </tr>`;
                     }
                   }
@@ -264,7 +264,9 @@ Condiciones para terreno y accesos
               const descuento = Number(cotizacion.descuento);
               const iva = Number(cotizacion.impuesto);
               const total = Number(cotizacion.total);
-              if (subtotal === 0) {
+              
+              // Mostrar guiones si es tipo A con sinCantidad true o si el subtotal es 0
+              if ((cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) || subtotal === 0) {
                 return `
                   <div><strong>Subtotal:</strong> -</div>
                   <div><strong>Descuento:</strong> -</div>
