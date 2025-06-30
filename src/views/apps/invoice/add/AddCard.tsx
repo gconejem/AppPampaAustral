@@ -865,6 +865,14 @@ const AddCard = ({
 
     console.log('productRows', productRows);
 
+    // Determinar si usar valores del formulario o valores calculados
+    // Para tipos B, C, D con precioProducto: false y precioTotal: true
+    // usar los valores ingresados por el usuario en el formulario (independiente de sinCantidad)
+    const usarValoresFormulario =
+      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
+      formData.precioProducto === false &&
+      formData.precioTotal === true;
+
     // Preparar los datos para la previsualización
     const previewData = {
       ...formData,
@@ -880,10 +888,11 @@ const AddCard = ({
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       })),
-      subtotal: subtotal,
-      descuento: descuentoTotal,
-      impuesto: impuesto,
-      total: total,
+      // Usar valores del formulario si es el caso especial, sino usar valores calculados
+      subtotal: usarValoresFormulario ? Number(formData.subtotal || 0) : subtotal,
+      descuento: usarValoresFormulario ? Number(formData.descuento || 0) : descuentoTotal,
+      impuesto: usarValoresFormulario ? Number(formData.impuesto || 0) : impuesto,
+      total: usarValoresFormulario ? Number(formData.total || 0) : total,
       observaciones: formData.observaciones || '',
       listaPrecioId: selectedListaPrecio,
       textoGeneral: formData.textoGeneral || '', // Asegurarse de incluir textoGeneral
@@ -897,6 +906,7 @@ const AddCard = ({
     // Debug para ver qué datos se están enviando
     console.log('Datos de preview:', previewData);
     console.log('Detalles a enviar:', previewData.detalles);
+    console.log('Usando valores del formulario:', usarValoresFormulario);
 
     // Guardar en localStorage
     localStorage.setItem('cotizacionPreview', JSON.stringify(previewData));

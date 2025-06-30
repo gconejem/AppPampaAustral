@@ -245,20 +245,14 @@ const EditCard = ({ id }: { id: string }) => {
       formData.precioTotal === true &&
       formData.sinCantidad === true
 
-    // Para tipos B, C o D con sinCantidad = true y precioProducto = true,
-    // usar el valor del backend o el calculado de los productos
-    const debeManternerSubtotalPrecioProducto =
-      ['B', 'C', 'D'].includes(formData.tipoCotizacion) &&
-      formData.precioProducto === true &&
-      formData.precioTotal === false &&
-      formData.sinCantidad === true
-
     let subtotalTotal
-    if (debeManternerSubtotal || debeManternerSubtotalSinCantidad || debeManternerSubtotalPrecioProducto) {
+    if (debeManternerSubtotal || debeManternerSubtotalSinCantidad) {
       // Mantener el subtotal actual del formData (que viene del backend)
       subtotalTotal = Number(formData.subtotal || 0)
     } else {
       // Calcular el subtotal sumando los totales netos de las filas
+      // Esto incluye el caso de sinCantidad: true, precioProducto: true, precioTotal: false
+      // donde SÍ queremos recalcular cuando el usuario cambia cantidades/precios
       subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
     }
 
@@ -352,9 +346,14 @@ const EditCard = ({ id }: { id: string }) => {
           subproductos: []
         }))
 
-        // Verificar si todos los productos tienen cantidad cero
-        const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
-        setSinCantidad(todasCero)
+        // Usar el valor sinCantidad del backend si está disponible, sino calcular basado en cantidades
+        if (cotizacionData.sinCantidad !== undefined && cotizacionData.sinCantidad !== null) {
+          setSinCantidad(cotizacionData.sinCantidad)
+        } else {
+          // Fallback: verificar si todos los productos tienen cantidad cero
+          const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+          setSinCantidad(todasCero)
+        }
 
 
 
@@ -521,27 +520,33 @@ const EditCard = ({ id }: { id: string }) => {
     }
   }, [productRows]) // Solo depender de productRows, no de calcularTotales ni formData
 
-  // 2. Al cargar la cotización, si todas las cantidades son 0, setear sinCantidad en true
-  useEffect(() => {
-    if (productRows.length > 0) {
-      const todasCero = productRows.every(row => Number(row.cantidad) === 0)
-      setSinCantidad(todasCero)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Este useEffect ya no es necesario porque sinCantidad se inicializa correctamente en fetchData
 
   // 4. Cuando sinCantidad cambie, actualizar cantidades y recalcular totales
   useEffect(() => {
     setProductRows(prevRows =>
-      prevRows.map(row => ({
-        ...row,
-        cantidad: sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad),
-        totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad))
-      }))
+      prevRows.map(row => {
+        // Para el caso específico de sinCantidad: true, precioProducto: true, precioTotal: false
+        // mantener el totalNetoUF igual al precioUnitarioUF para que los totales se calculen correctamente
+        const debeCalcularConPrecio =
+          sinCantidad &&
+          formData?.precioProducto === true &&
+          formData?.precioTotal === false;
+
+        return {
+          ...row,
+          cantidad: sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad),
+          totalNetoUF: debeCalcularConPrecio
+            ? Number(row.precioUnitarioUF || 0) // Usar precio unitario directamente
+            : sinCantidad
+              ? 0
+              : Number(row.precioUnitarioUF || 0) * (row.cantidad === 0 ? 1 : row.cantidad)
+        }
+      })
     )
     // Recalcular totales
     if (formData) calcularTotales()
-  }, [sinCantidad])
+  }, [sinCantidad, formData?.precioProducto, formData?.precioTotal])
 
   // Función para manejar cambios en los productos
   const handleSelectProduct = async (producto: ProductoType) => {
@@ -688,7 +693,17 @@ const EditCard = ({ id }: { id: string }) => {
 
       if (row) {
         row.precioUnitarioUF = precio
-        row.totalNetoUF = (row.cantidad || 1) * precio
+
+        // Para el caso de sinCantidad: true, precioProducto: true, precioTotal: false
+        // usar el precio directamente como totalNetoUF
+        const debeCalcularConPrecio =
+          sinCantidad &&
+          formData?.precioProducto === true &&
+          formData?.precioTotal === false;
+
+        row.totalNetoUF = debeCalcularConPrecio
+          ? precio  // Usar precio directamente cuando sinCantidad es true pero se permite modificar precios
+          : (row.cantidad || 1) * precio
       }
 
       return newRows

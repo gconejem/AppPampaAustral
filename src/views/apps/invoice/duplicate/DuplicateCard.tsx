@@ -343,9 +343,14 @@ const DuplicateCard = ({ id }: { id: string }) => {
           subproductos: []
         }))
 
-        // Verificar si todos los productos tienen cantidad cero
-        const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
-        setSinCantidad(todasCero)
+        // Usar el valor sinCantidad del backend si está disponible, sino calcular basado en cantidades
+        if (cotizacionData.sinCantidad !== undefined && cotizacionData.sinCantidad !== null) {
+          setSinCantidad(cotizacionData.sinCantidad)
+        } else {
+          // Fallback: verificar si todos los productos tienen cantidad cero
+          const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+          setSinCantidad(todasCero)
+        }
 
         // Los valores de precioProducto y precioTotal ya están en cotizacionData
 
@@ -402,14 +407,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
     }
   }, [productRows]) // Solo depender de productRows, no de calcularTotales ni formData
 
-  // 2. Al cargar la cotización, si todas las cantidades son 0, setear sinCantidad en true
-  useEffect(() => {
-    if (productRows.length > 0) {
-      const todasCero = productRows.every(row => Number(row.cantidad) === 0)
-      setSinCantidad(todasCero)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Este useEffect ya no es necesario porque sinCantidad se inicializa correctamente en fetchData
 
   // 4. Cuando sinCantidad cambie, actualizar cantidades y recalcular totales
   useEffect(() => {
@@ -810,8 +808,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       })),
-      // Agregar precioEMSPorProducto basado en el tipo de cotización
-      precioEMSPorProducto: formData.tipoCotizacion === 'A' || formData.tipoCotizacion === 'C',
+      // Usar los valores booleanos unificados
+      precioProducto: formData.precioProducto || false,
+      precioTotal: formData.precioTotal || false,
       // Asegurarnos de que los totales sean números
       subtotal: Number(formData.subtotal || 0),
       descuento: Number(formData.descuento || 0),
@@ -1486,18 +1485,14 @@ Consideraciones adicionales y requisitos especiales
                   <FormControl>
                     <RadioGroup
                       row
-                      value={
-                        formData.tipoCotizacion === 'B'
-                          ? precioEMSPorProducto
-                          : precioMensualPorProducto
-                      }
+                      value={formData.precioProducto}
                       onChange={e => {
                         const porProducto = e.target.value === 'true'
-                        if (formData.tipoCotizacion === 'B') {
-                          setPrecioEMSPorProducto(porProducto)
-                        } else if (formData.tipoCotizacion === 'C') {
-                          setPrecioMensualPorProducto(porProducto)
-                        }
+                        setFormData(prev => prev ? {
+                          ...prev,
+                          precioProducto: porProducto,
+                          precioTotal: !porProducto
+                        } : prev)
                       }}
                     >
                       <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
@@ -1574,13 +1569,11 @@ Consideraciones adicionales y requisitos especiales
                         startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                         readOnly:
                           row.esSubProducto === true ||
-                          (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
-                          (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                          !formData?.precioProducto
                       }}
                       disabled={
                         row.esSubProducto === true ||
-                        (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
-                        (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                        !formData?.precioProducto
                       }
                     />
                   </Grid>
