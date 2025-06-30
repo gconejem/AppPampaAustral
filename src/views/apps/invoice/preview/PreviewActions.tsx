@@ -139,14 +139,8 @@ const PreviewActions = () => {
         ubicacion: previewData.ubicacion || '',
         formaPago: previewData.formaPago || 'CONTADO',
         sinCantidad: previewData.sinCantidad || false,
-        precioProducto: previewData.precioProducto ||
-          (previewData.tipoCotizacion === 'A') ||
-          (previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-          (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto),
-        precioTotal: previewData.precioTotal ||
-          (previewData.tipoCotizacion === 'D') ||
-          (previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-          (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto),
+        precioProducto: previewData.precioProducto || false,
+        precioTotal: previewData.precioTotal || false,
         ...(tipoCotizacionValue === 'D' ? {
           subtotal: Number(previewData.totalNetoGeneral || 0),
           descuento: 0,
@@ -167,7 +161,6 @@ const PreviewActions = () => {
         superficieEMS: previewData.superficieEMS || '',
         antecedentesEMS: previewData.antecedentesEMS || '',
         plazoEntregaEMS: previewData.plazoEntregaEMS || '',
-        precioEMSPorProducto: previewData.precioEMSPorProducto || false,
         //FIN EMS
 
         //Mensual

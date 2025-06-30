@@ -235,24 +235,11 @@ Condiciones para terreno y accesos
                   // 3. NO es sinCantidad y es precio total (mostrar cantidades pero precio/total vacíos)
                   // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
                   const mostrarColumnas = 
-                    (!cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
-                       cotizacion.tipoCotizacion === 'A')) ||
-                    (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
-                    (!cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
-                    (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
-                       cotizacion.tipoCotizacion === 'A'));
+                    (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
+                    (cotizacion.sinCantidad && cotizacion.precioTotal) ||
+                    (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
+                    (cotizacion.sinCantidad && cotizacion.precioProducto) ||
+                    cotizacion.tipoCotizacion === 'A';
 
                   return mostrarColumnas ? `
                     <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">CANTIDAD</th>
@@ -266,24 +253,11 @@ Condiciones para terreno y accesos
               ${(() => {
                 // Función auxiliar para determinar si mostrar columnas
                 const mostrarColumnas = () => {
-                  return (!cotizacion.sinCantidad && 
-                    ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                     (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                     (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
-                     cotizacion.tipoCotizacion === 'A')) ||
-                    (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
-                    (!cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) ||
-                    (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto) ||
-                       cotizacion.tipoCotizacion === 'A'));
+                  return (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
+                    (cotizacion.sinCantidad && cotizacion.precioTotal) ||
+                    (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
+                    (cotizacion.sinCantidad && cotizacion.precioProducto) ||
+                    cotizacion.tipoCotizacion === 'A';
                 };
 
                 // Función auxiliar para renderizar las celdas de cantidad/precio/total
@@ -291,11 +265,7 @@ Condiciones para terreno y accesos
                   if (!mostrarColumnas()) return '';
                   
                   // Si es sinCantidad y precio total, mostrar columnas vacías
-                  if (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto) ||
-                       cotizacion.tipoCotizacion === 'A')) {
+                  if (cotizacion.sinCantidad && cotizacion.precioTotal) {
                     return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>-</td>
@@ -304,10 +274,7 @@ Condiciones para terreno y accesos
                   }
                   
                   // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
-                  if (cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && cotizacion.precioProducto))) {
+                  if (cotizacion.sinCantidad && cotizacion.precioProducto) {
                     return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
@@ -316,10 +283,7 @@ Condiciones para terreno y accesos
                   }
                   
                   // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
-                  if (!cotizacion.sinCantidad && 
-                      ((cotizacion.tipoCotizacion === 'B' && !cotizacion.precioEMSPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'C' && !cotizacion.precioMensualPorProducto) ||
-                       (cotizacion.tipoCotizacion === 'D' && !cotizacion.precioProducto))) {
+                  if (!cotizacion.sinCantidad && cotizacion.precioTotal) {
                     return `
                       <td style='text-align:right;'>${detalle.cantidad || 0}</td>
                       <td style='text-align:right;'>-</td>

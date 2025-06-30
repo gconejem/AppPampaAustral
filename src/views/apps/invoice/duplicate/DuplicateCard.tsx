@@ -131,8 +131,7 @@ interface FormDataType {
   sinCantidad?: boolean
   precioProducto?: boolean
   precioTotal?: boolean
-  precioEMSPorProducto?: boolean
-  precioMensualPorProducto?: boolean
+
 }
 
 const DuplicateCard = ({ id }: { id: string }) => {
@@ -163,9 +162,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
-  // 2. Estados para precio por producto y precio total
-  const [precioEMSPorProducto, setPrecioEMSPorProducto] = useState(true)
-  const [precioMensualPorProducto, setPrecioMensualPorProducto] = useState(true)
+  // 2. Estados unificados ya están en formData
 
   // Estado para abrir automáticamente el popover en una fila nueva
   const [autoOpenRowId, setAutoOpenRowId] = useState<number | null>(null);
@@ -350,12 +347,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
         setSinCantidad(todasCero)
 
-        // Configurar estados de precio por producto y precio total según los datos del backend
-        if (cotizacionData.tipoCotizacion === 'B') {
-          setPrecioEMSPorProducto(cotizacionData.precioProducto || false)
-        } else if (cotizacionData.tipoCotizacion === 'C') {
-          setPrecioMensualPorProducto(cotizacionData.precioProducto || false)
-        }
+        // Los valores de precioProducto y precioTotal ya están en cotizacionData
 
         // Lógica específica para tipos B, C o D con precioTotal = true y sinCantidad = false
         // El campo "Total Neto" debe inicializarse con el valor del subtotal del backend
@@ -760,14 +752,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         antecedentesMensual: formData.antecedentesMensual || '',
         alcanceServicio: formData.alcanceServicio || '',
         sinCantidad: sinCantidad,
-        precioProducto: formData.precioProducto ||
-          (formData.tipoCotizacion === 'A') ||
-          (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
-          (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto),
-        precioTotal: formData.precioTotal ||
-          (formData.tipoCotizacion === 'D') ||
-          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto),
+        precioProducto: formData.precioProducto || false,
+        precioTotal: formData.precioTotal || false,
         detalles: {
           create: detallesValidos
         }

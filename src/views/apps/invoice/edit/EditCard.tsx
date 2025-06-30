@@ -131,8 +131,7 @@ interface FormDataType {
   sinCantidad?: boolean
   precioProducto?: boolean
   precioTotal?: boolean
-  precioEMSPorProducto?: boolean
-  precioMensualPorProducto?: boolean
+
 }
 
 function getNotasDefault(tipoCotizacion: string) {
@@ -211,9 +210,7 @@ const EditCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
-  // 2. Estados para precio por producto y precio total
-  const [precioEMSPorProducto, setPrecioEMSPorProducto] = useState(true)
-  const [precioMensualPorProducto, setPrecioMensualPorProducto] = useState(true)
+
 
   // Estado para la fila activa y referencias para inputs (para abrir el popover en la fila nueva)
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
@@ -359,12 +356,7 @@ const EditCard = ({ id }: { id: string }) => {
         const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
         setSinCantidad(todasCero)
 
-        // Configurar estados de precio por producto y precio total según los datos del backend
-        if (cotizacionData.tipoCotizacion === 'B') {
-          setPrecioEMSPorProducto(cotizacionData.precioProducto || false)
-        } else if (cotizacionData.tipoCotizacion === 'C') {
-          setPrecioMensualPorProducto(cotizacionData.precioProducto || false)
-        }
+
 
         // Lógica específica para tipos B, C o D con precioTotal = true y sinCantidad = false
         // El campo "Total Neto" debe inicializarse con el valor del subtotal del backend
@@ -882,11 +874,7 @@ const EditCard = ({ id }: { id: string }) => {
     const previewData = {
       ...formData,
       detalles: detallesPlanos,
-      // Enviar los valores correctos según el tipo de cotización
-      precioEMSPorProducto: formData.tipoCotizacion === 'B' ? precioEMSPorProducto : false,
-      precioMensualPorProducto: formData.tipoCotizacion === 'C' ? precioMensualPorProducto : false,
-      // Para tipo A, siempre es precio por producto
-      // Para tipo D, no aplican estos conceptos
+      // Usar los valores booleanos unificados
       sinCantidad: sinCantidad,
       subtotal: Number(formData.subtotal || 0),
       descuento: Number(formData.descuento || 0),
@@ -1460,18 +1448,14 @@ const EditCard = ({ id }: { id: string }) => {
                     <FormControl>
                       <RadioGroup
                         row
-                        value={
-                          formData.tipoCotizacion === 'B'
-                            ? precioEMSPorProducto
-                            : precioMensualPorProducto
-                        }
+                        value={formData.precioProducto}
                         onChange={e => {
                           const porProducto = e.target.value === 'true'
-                          if (formData.tipoCotizacion === 'B') {
-                            setPrecioEMSPorProducto(porProducto)
-                          } else if (formData.tipoCotizacion === 'C') {
-                            setPrecioMensualPorProducto(porProducto)
-                          }
+                          setFormData(prev => prev ? {
+                            ...prev,
+                            precioProducto: porProducto,
+                            precioTotal: !porProducto
+                          } : prev)
                         }}
                       >
                         <FormControlLabel value={true} control={<Radio size='small' />} label='Precio por producto' />
@@ -1542,13 +1526,11 @@ const EditCard = ({ id }: { id: string }) => {
                           startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                           readOnly:
                             row.esSubProducto === true ||
-                            (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
-                            (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                            !formData?.precioProducto
                         }}
                         disabled={
                           row.esSubProducto === true ||
-                          (formData?.tipoCotizacion === 'B' && !precioEMSPorProducto) ||
-                          (formData?.tipoCotizacion === 'C' && !precioMensualPorProducto)
+                          !formData?.precioProducto
                         }
                       />
                     </Grid>

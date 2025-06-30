@@ -238,24 +238,11 @@ const PreviewCard = () => {
                   // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
                   // 5. Para tipo D con precioProducto: true
                   const mostrarColumnas =
-                    (!previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && previewData.precioProducto) ||
-                        previewData.tipoCotizacion === 'A')) ||
-                    (previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && !previewData.precioProducto))) ||
-                    (!previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && !previewData.precioProducto))) ||
-                    (previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && previewData.precioProducto) ||
-                        previewData.tipoCotizacion === 'A'));
+                    (!previewData.sinCantidad && previewData.precioProducto) ||
+                    (previewData.sinCantidad && previewData.precioTotal) ||
+                    (!previewData.sinCantidad && previewData.precioTotal) ||
+                    (previewData.sinCantidad && previewData.precioProducto) ||
+                    previewData.tipoCotizacion === 'A';
 
                   return mostrarColumnas ? (
                     <>
@@ -274,24 +261,11 @@ const PreviewCard = () => {
 
                 // Función auxiliar para determinar si mostrar columnas
                 const mostrarColumnas = () => {
-                  return (!previewData.sinCantidad &&
-                    ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                      (previewData.tipoCotizacion === 'D' && previewData.precioProducto) ||
-                      previewData.tipoCotizacion === 'A')) ||
-                    (previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && !previewData.precioProducto))) ||
-                    (!previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && !previewData.precioProducto))) ||
-                    (previewData.sinCantidad &&
-                      ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                        (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                        (previewData.tipoCotizacion === 'D' && previewData.precioProducto) ||
-                        previewData.tipoCotizacion === 'A'));
+                  return (!previewData.sinCantidad && previewData.precioProducto) ||
+                    (previewData.sinCantidad && previewData.precioTotal) ||
+                    (!previewData.sinCantidad && previewData.precioTotal) ||
+                    (previewData.sinCantidad && previewData.precioProducto) ||
+                    previewData.tipoCotizacion === 'A';
                 };
 
                 // Función auxiliar para renderizar las celdas de cantidad/precio/total
@@ -299,11 +273,7 @@ const PreviewCard = () => {
                   if (!mostrarColumnas()) return null;
 
                   // Si es sinCantidad y precio total, mostrar columnas vacías
-                  if (previewData.sinCantidad &&
-                    ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                      (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                      (previewData.tipoCotizacion === 'D' && !previewData.precioProducto) ||
-                      previewData.tipoCotizacion === 'A')) {
+                  if (previewData.sinCantidad && previewData.precioTotal) {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
@@ -314,10 +284,7 @@ const PreviewCard = () => {
                   }
 
                   // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
-                  if (previewData.sinCantidad &&
-                    ((previewData.tipoCotizacion === 'B' && previewData.precioEMSPorProducto) ||
-                      (previewData.tipoCotizacion === 'C' && previewData.precioMensualPorProducto) ||
-                      (previewData.tipoCotizacion === 'D' && previewData.precioProducto))) {
+                  if (previewData.sinCantidad && previewData.precioProducto) {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
@@ -328,10 +295,7 @@ const PreviewCard = () => {
                   }
 
                   // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
-                  if (!previewData.sinCantidad &&
-                    ((previewData.tipoCotizacion === 'B' && !previewData.precioEMSPorProducto) ||
-                      (previewData.tipoCotizacion === 'C' && !previewData.precioMensualPorProducto) ||
-                      (previewData.tipoCotizacion === 'D' && !previewData.precioProducto))) {
+                  if (!previewData.sinCantidad && previewData.precioTotal) {
                     return (
                       <>
                         <TableCell align='right'>{item.cantidad || 0}</TableCell>

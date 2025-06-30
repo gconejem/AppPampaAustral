@@ -70,10 +70,7 @@ interface FormData {
   formaPago: string
   infoEMS: string
   infoMensual: string
-  precioEMSPorProducto: boolean
-  precioEMSTotal: number
-  precioMensualPorProducto: boolean
-  precioMensualTotal: number
+
   productos: any[]
   superficieEMS: string
   antecedentesEMS: string
@@ -172,10 +169,7 @@ const AddCard = ({
       'Superficie: Construcción 1.800 mt2\n\nAntecedentes:\n- Instalaciones de la empresa PONSSE.\n- Galpon Industrial\n- Puente grúa con capacidad de 10 toneladas.\n- Taller de mantención de maquinarias, oficinas',
     infoMensual:
       'Duración: 12 meses\n\nJornada Laboral y Horaria:\n- Lunes a viernes de 8:00 a 18:00\n- Media jornada tarde el día viernes (evaluación, mantención de equipos/vehículo, y trazabilidad de los controles, ensayos y emisión de informes en casa matriz)\n- Sábado de 8:00 a 14:00 (Se considerará pago de jornada extraordinaria)\n\nAntecedentes:\nVolúmenes de trabajo no proporcionados.',
-    precioEMSPorProducto: true,
-    precioEMSTotal: 0,
-    precioMensualPorProducto: true,
-    precioMensualTotal: 0,
+
     productos: [],
     superficieEMS: '',
     antecedentesEMS: '',
@@ -305,14 +299,8 @@ const AddCard = ({
         formaPago: formData.formaPago,
         alcanceServicio: formData.alcanceServicio || '',
         sinCantidad: sinCantidad,
-        precioProducto: formData.precioProducto ||
-          (formData.tipoCotizacion === 'A') ||
-          (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
-          (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto),
-        precioTotal: formData.precioTotal ||
-          (formData.tipoCotizacion === 'D') ||
-          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto),
+        precioProducto: formData.precioProducto || false,
+        precioTotal: formData.precioTotal || false,
       }
 
       console.log('Datos completos a enviar:', dataToSend)
@@ -645,13 +633,10 @@ const AddCard = ({
   // Reemplazar calcularTotales por un useEffect puro:
   useEffect(() => {
     // Determinar si debemos calcular totales basados en precios unitarios
-    const calcularPorPreciosUnitarios = sinCantidad && (
-      (formData.tipoCotizacion === 'B' && formData.precioEMSPorProducto) ||
-      (formData.tipoCotizacion === 'C' && formData.precioMensualPorProducto)
-    );
+    const calcularPorPreciosUnitarios = sinCantidad && formData.precioProducto;
 
     if (sinCantidad && !calcularPorPreciosUnitarios) {
-      // Para tipos B/C con precio total y sinCantidad, y tipo A con sinCantidad, no calcular totales automáticamente
+      // Para tipos con precio total y sinCantidad, no calcular totales automáticamente
       if (subtotal !== 0) setSubtotal(0)
       if (descuentoTotal !== 0) setDescuentoTotal(0)
       if (impuesto !== 0) setImpuesto(0)
@@ -678,7 +663,7 @@ const AddCard = ({
     if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(2)))
     if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(2)))
     if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(2)))
-  }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
+  }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioProducto, formData.precioTotal])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
   /* useEffect(() => {
@@ -904,11 +889,9 @@ const AddCard = ({
       textoGeneral: formData.textoGeneral || '', // Asegurarse de incluir textoGeneral
       alcanceServicio: formData.alcanceServicio || '',
       sinCantidad: sinCantidad, // Agregar el campo sinCantidad
-      // Incluir los campos específicos para tipos B y C
-      precioEMSPorProducto: formData.precioEMSPorProducto,
-      precioEMSTotal: formData.precioEMSTotal,
-      precioMensualPorProducto: formData.precioMensualPorProducto,
-      precioMensualTotal: formData.precioMensualTotal,
+      // Usar los campos unificados
+      precioProducto: formData.precioProducto || false,
+      precioTotal: formData.precioTotal || false,
     };
 
     // Debug para ver qué datos se están enviando
@@ -1303,7 +1286,7 @@ const AddCard = ({
   useEffect(() => {
     // Forzar refresco de filas para que se apliquen los nuevos disabled/readOnly
     setProductRows(rows => [...rows])
-  }, [formData.tipoCotizacion, formData.precioEMSPorProducto, formData.precioMensualPorProducto])
+  }, [formData.tipoCotizacion, formData.precioProducto, formData.precioTotal])
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaId = e.target.value ? Number(e.target.value) : null
@@ -1689,23 +1672,8 @@ const AddCard = ({
                         setValidationErrors({ ...validationErrors, tipoCotizacion: false })
 
                         // Configurar "Precio total" por defecto para tipos B, C y D
-                        if (nuevoTipo === 'B') {
-                          updateFormData({
-                            precioEMSPorProducto: false,
-                            precioEMSTotal: 0,
-                            precioProducto: false,
-                            precioTotal: true
-                          })
-                        } else if (nuevoTipo === 'C') {
-                          updateFormData({
-                            precioMensualPorProducto: false,
-                            precioMensualTotal: 0,
-                            precioProducto: false,
-                            precioTotal: true
-                          })
-                        } else if (nuevoTipo === 'D') {
-                          // Para tipo D no necesitamos configurar precios por producto
-                          // ya que no se muestran los radio buttons
+                        if (nuevoTipo === 'B' || nuevoTipo === 'C' || nuevoTipo === 'D') {
+                          // Para tipos B, C y D usar precio total por defecto
                           updateFormData({
                             precioProducto: false,
                             precioTotal: true
@@ -1970,29 +1938,13 @@ const AddCard = ({
                     <FormControl>
                       <RadioGroup
                         row
-                        value={
-                          formData.tipoCotizacion === 'B'
-                            ? formData.precioEMSPorProducto
-                            : formData.precioMensualPorProducto
-                        }
+                        value={formData.precioProducto}
                         onChange={e => {
                           const porProducto = e.target.value === 'true'
-                          const isEMS = formData.tipoCotizacion === 'B'
 
                           updateFormData({
-                            ...(isEMS
-                              ? {
-                                precioEMSPorProducto: porProducto,
-                                precioEMSTotal: !porProducto ? formData.subtotal : 0,
-                                precioTotal: !porProducto, // true si es precio total, false si es por producto
-                                precioProducto: porProducto // true si es por producto, false si es precio total
-                              }
-                              : {
-                                precioMensualPorProducto: porProducto,
-                                precioMensualTotal: !porProducto ? formData.subtotal : 0,
-                                precioTotal: !porProducto, // true si es precio total, false si es por producto
-                                precioProducto: porProducto // true si es por producto, false si es precio total
-                              })
+                            precioTotal: !porProducto, // true si es precio total, false si es por producto
+                            precioProducto: porProducto // true si es por producto, false si es precio total
                           })
                         }}
                       >
@@ -2151,13 +2103,11 @@ const AddCard = ({
                           startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                           readOnly:
                             row.esSubProducto === true ||
-                            (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-                            (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
+                            !formData.precioProducto
                         }}
                         disabled={
                           row.esSubProducto === true ||
-                          (formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-                          (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto)
+                          !formData.precioProducto
                         }
                       />
                     </Grid>
@@ -2340,25 +2290,19 @@ const AddCard = ({
                         <Typography variant='h6'>UF {formData.total?.toFixed(2) || '0.00'}</Typography>
                       </div>
                     </>
-                  ) :
-                    ((formData.tipoCotizacion === 'B' && !formData.precioEMSPorProducto) ||
-                      (formData.tipoCotizacion === 'C' && !formData.precioMensualPorProducto) ? (
+                  ) : (
+                    formData.precioTotal ? (
                       <>
                         <div className='flex justify-between mb-2'>
                           <Typography>Total Neto:</Typography>
                           <TextField
                             size='small'
                             type='number'
-                            value={
-                              formData.tipoCotizacion === 'B' ? formData.precioEMSTotal : formData.precioMensualTotal
-                            }
+                            value={formData.subtotal || ''}
                             onChange={e => {
                               const total = parseFloat(e.target.value) || 0
                               const impuesto = total * 0.19
                               updateFormData({
-                                ...(formData.tipoCotizacion === 'B'
-                                  ? { precioEMSTotal: total }
-                                  : { precioMensualTotal: total }),
                                 subtotal: total,
                                 impuesto: impuesto,
                                 total: total + impuesto
