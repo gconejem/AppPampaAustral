@@ -234,10 +234,28 @@ Condiciones para terreno y accesos
                 </div>
               ` : ''}
               
-              <div style="margin-bottom: 16px;">
-                <div class="label">Texto General:</div>
-                <div class="value" style="white-space: pre-wrap;">${cotizacion.textoGeneral ? cotizacion.textoGeneral.replace(/\r?\n/g, '<br>') : 'No especificado'}</div>
-              </div>
+              ${(() => {
+                const textoGeneral = cotizacion.textoGeneral || 'No especificado';
+                const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
+                
+                if (esTextoLargo) {
+                  // Si el texto es muy largo, ponerlo en una nueva página
+                  return `
+                    <div style="page-break-before: always; margin-top: 24px;">
+                      <div class="label">Texto General:</div>
+                      <div class="value" style="white-space: pre-wrap;">${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
+                    </div>
+                  `;
+                } else {
+                  // Si el texto es corto, mantenerlo en la misma página
+                  return `
+                    <div style="margin-bottom: 16px;">
+                      <div class="label">Texto General:</div>
+                      <div class="value" style="white-space: pre-wrap;">${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
+                    </div>
+                  `;
+                }
+              })()}
             </div>
           ` : `
           <table class="table">

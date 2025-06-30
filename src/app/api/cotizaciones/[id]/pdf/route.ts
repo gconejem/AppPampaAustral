@@ -166,7 +166,24 @@ Condiciones para terreno y accesos
               <div class="label">Información de la Cotización</div>
               ${cotizacion.antecedentesGeneral ? `<div class="value"><b>Antecedentes:</b><br>${cotizacion.antecedentesGeneral.replace(/\r?\n/g, '<br>')}</div>` : ''}
               ${cotizacion.plazoEntregaGeneral ? `<div class="value"><b>Plazo de Entrega:</b><br>${cotizacion.plazoEntregaGeneral.replace(/\r?\n/g, '<br>')}</div>` : ''}
-              <div class="value"><b>Texto General:</b><br>${(cotizacion.textoGeneral || 'No especificado').replace(/\r?\n/g, '<br>')}</div>
+              
+              ${(() => {
+                const textoGeneral = cotizacion.textoGeneral || 'No especificado';
+                const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
+                
+                if (esTextoLargo) {
+                  // Si el texto es muy largo, ponerlo en una nueva página
+                  return `
+                    <div style="page-break-before: always; margin-top: 24px;">
+                      <div class="label">Texto General</div>
+                      <div class="value"><b>Texto General:</b><br>${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
+                    </div>
+                  `;
+                } else {
+                  // Si el texto es corto, mantenerlo en la misma página
+                  return `<div class="value"><b>Texto General:</b><br>${textoGeneral.replace(/\r?\n/g, '<br>')}</div>`;
+                }
+              })()}
             </div>
           </div>
           ` : `
