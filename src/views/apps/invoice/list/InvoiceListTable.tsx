@@ -1092,13 +1092,76 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                               <TableCell>{detalle.producto?.area || '-'}</TableCell>
                               <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
                               <TableCell align='right'>
-                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : detalle.cantidad}
+                                {(() => {
+                                  // Tipo A con sinCantidad true - mostrar guión
+                                  if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === true &&
+                                    selectedCotizacion.precioProducto === false &&
+                                    selectedCotizacion.precioTotal === true) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === true &&
+                                    selectedCotizacion.precioProducto === true &&
+                                    selectedCotizacion.precioTotal === false) {
+                                    return '-';
+                                  }
+                                  // Para todos los demás casos, mostrar cantidad
+                                  return detalle.cantidad;
+                                })()}
                               </TableCell>
                               <TableCell align='right'>
-                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`}
+                                {(() => {
+                                  // Tipo A con sinCantidad true - mostrar guión
+                                  if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === false &&
+                                    selectedCotizacion.precioProducto === false &&
+                                    selectedCotizacion.precioTotal === true) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === true &&
+                                    selectedCotizacion.precioProducto === false &&
+                                    selectedCotizacion.precioTotal === true) {
+                                    return '-';
+                                  }
+                                  // Para todos los demás casos, mostrar precio
+                                  return `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`;
+                                })()}
                               </TableCell>
                               <TableCell align='right'>
-                                {selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad ? '-' : `UF ${Number(detalle.subtotal || 0).toFixed(2)}`}
+                                {(() => {
+                                  // Tipo A con sinCantidad true - mostrar guión
+                                  if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === false &&
+                                    selectedCotizacion.precioProducto === false &&
+                                    selectedCotizacion.precioTotal === true) {
+                                    return '-';
+                                  }
+                                  // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                                  if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
+                                    selectedCotizacion.sinCantidad === true &&
+                                    selectedCotizacion.precioProducto === false &&
+                                    selectedCotizacion.precioTotal === true) {
+                                    return '-';
+                                  }
+                                  // Para todos los demás casos, mostrar total
+                                  return `UF ${Number(detalle.subtotal || 0).toFixed(2)}`;
+                                })()}
                               </TableCell>
                             </TableRow>
                           </Fragment>
