@@ -201,7 +201,8 @@ export async function POST(request: Request) {
           }),
           ...(body.tipoCotizacion === 'D' && {
             textoGeneral: body.textoGeneral || '',
-            totalNetoGeneral: body.totalNetoGeneral || 0
+            antecedentesGeneral: body.antecedentesGeneral || '',
+            plazoEntregaGeneral: body.plazoEntregaGeneral || ''
           })
         }
       })

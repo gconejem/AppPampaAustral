@@ -123,11 +123,13 @@ interface FormDataType {
   antecedentesEMS?: string
   plazoEntregaEMS?: string
   textoGeneral?: string
-  totalNetoGeneral?: number
+
   duracionMensual?: string
   jornadaMensual?: string
   antecedentesMensual?: string
   alcanceServicio?: string
+  antecedentesGeneral?: string
+  plazoEntregaGeneral?: string
   sinCantidad?: boolean
   precioProducto?: boolean
   precioTotal?: boolean
@@ -274,10 +276,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
         // Si la cotización original es tipo D, mantener el texto general y los totales
         if (cotizacionData.tipoCotizacion === 'D') {
           cotizacionData.textoGeneral = cotizacionData.textoGeneral || ''
-          cotizacionData.totalNetoGeneral = Number(cotizacionData.totalNetoGeneral || cotizacionData.subtotal || 0)
-          cotizacionData.subtotal = Number(cotizacionData.totalNetoGeneral || cotizacionData.subtotal || 0)
-          cotizacionData.impuesto = Number(cotizacionData.totalNetoGeneral || cotizacionData.subtotal || 0) * 0.19
-          cotizacionData.total = Number(cotizacionData.totalNetoGeneral || cotizacionData.subtotal || 0) * 1.19
+          cotizacionData.subtotal = Number(cotizacionData.subtotal || 0)
+          cotizacionData.impuesto = Number(cotizacionData.subtotal || 0) * 0.19
+          cotizacionData.total = Number(cotizacionData.subtotal || 0) * 1.19
           cotizacionData.descuento = 0
         }
 
@@ -758,7 +759,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
         antecedentesEMS: formData.antecedentesEMS || '',
         plazoEntregaEMS: formData.plazoEntregaEMS || '',
         textoGeneral: formData.textoGeneral || '',
-        totalNetoGeneral: formData.totalNetoGeneral || 0,
+
+        antecedentesGeneral: formData.antecedentesGeneral || '',
+        plazoEntregaGeneral: formData.plazoEntregaGeneral || '',
         duracionMensual: formData.duracionMensual || '',
         jornadaMensual: formData.jornadaMensual || '',
         antecedentesMensual: formData.antecedentesMensual || '',
@@ -830,12 +833,15 @@ const DuplicateCard = ({ id }: { id: string }) => {
       descuento: Number(formData.descuento || 0),
       impuesto: Number(formData.impuesto || 0),
       total: Number(formData.total || 0),
-      totalNetoGeneral: formData.totalNetoGeneral || 0,
+
       // Campos mensuales
       duracionMensual: formData.duracionMensual || '',
       jornadaMensual: formData.jornadaMensual || '',
       antecedentesMensual: formData.antecedentesMensual || '',
       alcanceServicio: formData.alcanceServicio || '',
+      // Campos para tipo D (Genérica)
+      antecedentesGeneral: formData.antecedentesGeneral || '',
+      plazoEntregaGeneral: formData.plazoEntregaGeneral || '',
       // Agregar campo sinCantidad
       sinCantidad: sinCantidad,
       // Agregar bandera para indicar que es una duplicación
@@ -1461,10 +1467,17 @@ Consideraciones adicionales y requisitos especiales
                     fullWidth
                     type='number'
                     label='Total Neto (UF)'
-                    value={formData.totalNetoGeneral ?? ''}
+                    value={formData.subtotal ?? ''}
                     onChange={e => {
                       const value = Number(e.target.value)
-                      setFormData(prev => prev ? { ...prev, totalNetoGeneral: isNaN(value) ? 0 : value } : prev)
+                      const impuesto = value * 0.19
+                      const total = value + impuesto
+                      setFormData(prev => prev ? {
+                        ...prev,
+                        subtotal: isNaN(value) ? 0 : value,
+                        impuesto: impuesto,
+                        total: total
+                      } : prev)
                     }}
                     InputProps={{
                       startAdornment: <InputAdornment position='start'>UF</InputAdornment>
@@ -1474,10 +1487,10 @@ Consideraciones adicionales y requisitos especiales
                   {/* Mostrar IVA y Total con IVA */}
                   <Box sx={{ mt: 2, textAlign: 'right' }}>
                     <Typography>
-                      <strong>IVA (19%):</strong> UF {((formData.totalNetoGeneral || 0) * 0.19).toFixed(2)}
+                      <strong>IVA (19%):</strong> UF {((formData.subtotal || 0) * 0.19).toFixed(2)}
                     </Typography>
                     <Typography variant='h6'>
-                      <strong>Total con IVA:</strong> UF {((formData.totalNetoGeneral || 0) * 1.19).toFixed(2)}
+                      <strong>Total con IVA:</strong> UF {((formData.subtotal || 0) * 1.19).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>

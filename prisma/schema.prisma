@@ -319,6 +319,8 @@ model Cotizacion {
   jornadaMensual   String?
   antecedentesMensual String?
   alcanceServicio  String?
+  antecedentesGeneral String?
+  plazoEntregaGeneral String?
   sinCantidad      Boolean?
   precioProducto   Boolean?
   precioTotal      Boolean?

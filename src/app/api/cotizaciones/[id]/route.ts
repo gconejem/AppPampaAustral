@@ -94,7 +94,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         ubicacion: body.ubicacion,
         tipoCotizacion: body.tipoCotizacion,
         version: body.version,
-        subtotal: body.subtotal,
+        subtotal: body.subtotal || 0,
         descuento: body.descuento,
         impuesto: body.impuesto,
         total: body.total,
@@ -123,7 +123,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         // Incluir campos de tipo D
         ...(body.tipoCotizacion === 'D' && {
           textoGeneral: body.textoGeneral || '',
-          totalNetoGeneral: body.totalNetoGeneral || 0
+          antecedentesGeneral: body.antecedentesGeneral || '',
+          plazoEntregaGeneral: body.plazoEntregaGeneral || ''
         }),
         updatedAt: new Date()
       }

@@ -45,8 +45,84 @@ import { toast } from 'react-hot-toast'
 // Type Imports
 import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 
-import type { ContactoType } from '@/types/apps/contactTypes'
+import type { ContactType } from '@/types/apps/contactTypes'
 import { ROLES_CONTACTO } from '@/constants/roles'
+
+// Interfaces locales
+interface InvoiceType {
+  id: number
+  numeroCotizacion: string
+  tipoCotizacion: string
+  estado: string
+  contacto: ContactType | null
+  fecha: string
+  comuna: string
+  tipo: string
+  empresa: string
+  detalles: any[]
+  total: number
+  observacionGestion?: string
+}
+
+interface ClienteType {
+  clienteId: number
+  razonSocial: string
+  rut: string
+  direccion: string
+  telefono: string
+  email: string
+}
+
+interface ProductoType {
+  id: number
+  productoId: number
+  sku: string
+  nombre: string
+  precio: number
+  area?: string
+  familia?: string
+  tipo?: string
+  descripcion?: string
+  esPaquete?: boolean
+  norma?: string
+  nombreCompleto?: string
+  servicio?: string
+  productosEnPaquete?: any[]
+  listasPrecios?: ProductoListaPrecio[]
+}
+
+interface ProductoListaPrecio {
+  listaPrecioId: number
+  precio: number
+}
+
+interface ProductRow {
+  id: number
+  productoId: string
+  cantidad: number
+  precioUnitarioUF: number
+  totalNetoUF: number
+  area: string
+  descripcion: string
+  subproductos: never[]
+  precio?: number
+  descuento?: number
+  esSubProducto?: boolean
+  esPaquete?: boolean
+  servicio?: string
+  precioEditado?: boolean
+  norma?: string
+}
+
+interface ValidationErrors {
+  tipoCotizacion: boolean
+  nombreProyecto: boolean
+  ubicacion: boolean
+}
+
+interface ContactoType extends ContactType {
+  empresa?: string
+}
 
 interface FormData {
   numeroCotizacion: string
@@ -74,15 +150,19 @@ interface FormData {
   productos: any[]
   superficieEMS: string
   antecedentesEMS: string
+  plazoEntregaEMS?: string
   duracionMensual: string
   jornadaMensual: string
   antecedentesMensual: string
+  antecedentesGeneral?: string
+  plazoEntregaGeneral?: string
   notas: string
   textoGeneral?: string
-  totalNetoGeneral?: number
   alcanceServicio?: string
   precioProducto?: boolean
   precioTotal?: boolean
+  contacto?: ContactoType
+  listaPrecioId?: number | null
 }
 
 // Coloca la función aquí antes de initialFormData
@@ -176,7 +256,9 @@ const AddCard = ({
     duracionMensual: '',
     jornadaMensual: '',
     antecedentesMensual: '',
-    notas: getNotasDefault('A'), // 'A' es el valor por defecto inicial
+    antecedentesGeneral: '',
+    plazoEntregaGeneral: '',
+    notas: getNotasDefault('A') || '', // 'A' es el valor por defecto inicial
     alcanceServicio: '',
     precioProducto: true, // Por defecto precio por producto para tipo A
     precioTotal: false, // Por defecto false para tipo A
@@ -263,7 +345,8 @@ const AddCard = ({
           subtotal: row.totalNetoUF
         }))
 
-      if (detallesValidos.length === 0) {
+      // Para tipo D no validamos productos, para otros tipos sí
+      if (formData.tipoCotizacion !== 'D' && detallesValidos.length === 0) {
         toast.error('Debe agregar al menos un producto a la cotización')
 
         return
@@ -298,6 +381,9 @@ const AddCard = ({
         detalles: detallesValidos,
         formaPago: formData.formaPago,
         alcanceServicio: formData.alcanceServicio || '',
+        antecedentesGeneral: formData.antecedentesGeneral || '',
+        plazoEntregaGeneral: formData.plazoEntregaGeneral || '',
+        textoGeneral: formData.textoGeneral || '',
         sinCantidad: sinCantidad,
         precioProducto: formData.precioProducto || false,
         precioTotal: formData.precioTotal || false,
@@ -897,6 +983,8 @@ const AddCard = ({
       listaPrecioId: selectedListaPrecio,
       textoGeneral: formData.textoGeneral || '', // Asegurarse de incluir textoGeneral
       alcanceServicio: formData.alcanceServicio || '',
+      antecedentesGeneral: formData.antecedentesGeneral || '', // Agregar antecedentes general
+      plazoEntregaGeneral: formData.plazoEntregaGeneral || '', // Agregar plazo entrega general
       sinCantidad: sinCantidad, // Agregar el campo sinCantidad
       // Usar los campos unificados
       precioProducto: formData.precioProducto || false,
@@ -1865,7 +1953,6 @@ const AddCard = ({
                       onChange={e => handleChange('antecedentesMensual', e.target.value)}
                       inputProps={{ maxLength: 500 }}
                       sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
-
                     />
                     <TextField
                       fullWidth
@@ -1898,12 +1985,35 @@ const AddCard = ({
                     mb: 2
                   }}
                 >
-                  Texto General de la Cotización:
+                  Información de la Cotización:
                 </Typography>
                 <TextField
                   fullWidth
                   multiline
+                  rows={3}
+                  label='Antecedentes'
+                  value={formData.antecedentesGeneral || ''}
+                  onChange={e => handleChange('antecedentesGeneral', e.target.value)}
+                  placeholder='Ingrese los antecedentes...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label='Plazo de Entrega'
+                  value={formData.plazoEntregaGeneral || ''}
+                  onChange={e => handleChange('plazoEntregaGeneral', e.target.value)}
+                  placeholder='Ingrese el plazo de entrega...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+                <TextField
+                  fullWidth
+                  multiline
                   rows={12}
+                  label='Texto General'
                   value={formData.textoGeneral || ''}
                   onChange={e => handleChange('textoGeneral', e.target.value)}
                   placeholder='Ingrese el texto general de la cotización'
@@ -2273,12 +2383,11 @@ const AddCard = ({
                         <TextField
                           size='small'
                           type='number'
-                          value={formData.totalNetoGeneral || ''}
+                          value={formData.subtotal || ''}
                           onChange={e => {
                             const total = parseFloat(e.target.value) || 0
                             const impuesto = total * 0.19
                             updateFormData({
-                              totalNetoGeneral: total,
                               subtotal: total,
                               impuesto: impuesto,
                               total: total + impuesto

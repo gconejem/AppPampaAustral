@@ -160,7 +160,17 @@ Condiciones para terreno y accesos
             </div>
           </div>
           ` : ''}
-          <table class="table">
+          ${cotizacion.tipoCotizacion === 'D' ? `
+          <div class="row" style="margin-top: 16px;">
+            <div class="col">
+              <div class="label">Información de la Cotización</div>
+              ${cotizacion.antecedentesGeneral ? `<div class="value"><b>Antecedentes:</b><br>${cotizacion.antecedentesGeneral.replace(/\r?\n/g, '<br>')}</div>` : ''}
+              ${cotizacion.plazoEntregaGeneral ? `<div class="value"><b>Plazo de Entrega:</b><br>${cotizacion.plazoEntregaGeneral.replace(/\r?\n/g, '<br>')}</div>` : ''}
+              <div class="value"><b>Texto General:</b><br>${(cotizacion.textoGeneral || 'No especificado').replace(/\r?\n/g, '<br>')}</div>
+            </div>
+          </div>
+          ` : `
+          <table class="table"`}
             <thead>
               <tr>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
@@ -384,6 +394,7 @@ Condiciones para terreno y accesos
               })()}
             </tbody>
           </table>
+          `}
           <div class="totales">
             ${(() => {
               const subtotal = Number(cotizacion.subtotal);

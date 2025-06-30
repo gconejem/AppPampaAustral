@@ -141,18 +141,16 @@ const PreviewActions = () => {
         sinCantidad: previewData.sinCantidad || false,
         precioProducto: previewData.precioProducto || false,
         precioTotal: previewData.precioTotal || false,
-        ...(tipoCotizacionValue === 'D' ? {
-          subtotal: Number(previewData.totalNetoGeneral || 0),
-          descuento: 0,
-          impuesto: Number(previewData.totalNetoGeneral || 0) * 0.19,
-          total: Number(previewData.totalNetoGeneral || 0) * 1.19,
+        // Enviar siempre los totales
+        subtotal: parseFloat(previewData.subtotal || 0),
+        descuento: parseFloat(previewData.descuento || 0),
+        impuesto: parseFloat(previewData.impuesto || 0),
+        total: parseFloat(previewData.total || 0),
+        // Campos específicos para tipo D
+        ...(tipoCotizacionValue === 'D' && {
           textoGeneral: previewData.textoGeneral || '',
-          totalNetoGeneral: Number(previewData.totalNetoGeneral || 0),
-        } : {
-          subtotal: parseFloat(previewData.subtotal || 0),
-          descuento: parseFloat(previewData.descuento || 0),
-          impuesto: parseFloat(previewData.impuesto || 0),
-          total: parseFloat(previewData.total || 0),
+          antecedentesGeneral: previewData.antecedentesGeneral || '',
+          plazoEntregaGeneral: previewData.plazoEntregaGeneral || '',
         }),
         observaciones: previewData.observaciones || '',
         notas: previewData.notas || '',

@@ -219,9 +219,36 @@ const PreviewCard = () => {
         {previewData.tipoCotizacion === 'D' ? (
           <Box sx={{ mb: 4 }}>
             <Typography variant='subtitle2' sx={{ mb: 2 }}>
-              TEXTO GENERAL DE LA COTIZACIÓN:
+              INFORMACIÓN DE LA COTIZACIÓN:
             </Typography>
-            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.textoGeneral || 'No especificado'}</Typography>
+
+            {/* Antecedentes */}
+            {previewData.antecedentesGeneral && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                  Antecedentes:
+                </Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.antecedentesGeneral}</Typography>
+              </Box>
+            )}
+
+            {/* Plazo de Entrega */}
+            {previewData.plazoEntregaGeneral && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                  Plazo de Entrega:
+                </Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.plazoEntregaGeneral}</Typography>
+              </Box>
+            )}
+
+            {/* Texto General */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                Texto General:
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>{previewData.textoGeneral || 'No especificado'}</Typography>
+            </Box>
           </Box>
         ) : (
           <Table>

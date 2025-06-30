@@ -123,11 +123,12 @@ interface FormDataType {
   antecedentesEMS?: string
   plazoEntregaEMS?: string
   textoGeneral?: string
-  totalNetoGeneral?: number
   duracionMensual?: string
   jornadaMensual?: string
   antecedentesMensual?: string
   alcanceServicio?: string
+  antecedentesGeneral?: string
+  plazoEntregaGeneral?: string
   sinCantidad?: boolean
   precioProducto?: boolean
   precioTotal?: boolean
@@ -844,13 +845,11 @@ const EditCard = ({ id }: { id: string }) => {
           antecedentesMensual: formData.antecedentesMensual || '',
           alcanceServicio: formData.alcanceServicio || ''
         }),
-        // Si es tipo D, enviar totalNetoGeneral y textoGeneral, y calcular totales
+        // Si es tipo D, enviar textoGeneral y usar el subtotal directamente
         ...(formData.tipoCotizacion === 'D' && {
           textoGeneral: formData.textoGeneral || '',
-          totalNetoGeneral: Number(formData.totalNetoGeneral || 0),
-          subtotal: Number(formData.totalNetoGeneral || 0),
-          impuesto: Number(formData.totalNetoGeneral || 0) * 0.19,
-          total: Number(formData.totalNetoGeneral || 0) * 1.19,
+          antecedentesGeneral: formData.antecedentesGeneral || '',
+          plazoEntregaGeneral: formData.plazoEntregaGeneral || '',
           descuento: 0
         })
       }
@@ -1013,16 +1012,7 @@ const EditCard = ({ id }: { id: string }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData?.tipoCotizacion])
 
-  // Prellenar totalNetoGeneral con el subtotal al cambiar a tipo D o al cargar la cotización
-  useEffect(() => {
-    if (
-      formData?.tipoCotizacion === 'D' &&
-      (!totalNetoManual || formData.totalNetoGeneral === undefined || formData.totalNetoGeneral === 0)
-    ) {
-      setFormData(prev => prev ? { ...prev, totalNetoGeneral: Number(prev.subtotal || 0) } : prev)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData?.tipoCotizacion, formData?.subtotal])
+  // Al cambiar el tipo a D, no necesitamos prellenar nada, solo usar el subtotal directamente
 
   // Al cargar la cotización o cambiar a tipo C, si el campo está vacío, poner el valor por defecto
   useEffect(() => {
@@ -1411,12 +1401,38 @@ const EditCard = ({ id }: { id: string }) => {
                     mb: 2
                   }}
                 >
-                  Texto General de la Cotización:
+                  Información de la Cotización:
                 </Typography>
+
                 <TextField
                   fullWidth
                   multiline
-                  rows={12}
+                  rows={3}
+                  label='Antecedentes'
+                  value={formData.antecedentesGeneral || ''}
+                  onChange={e => setFormData(prev => prev ? { ...prev, antecedentesGeneral: e.target.value } : prev)}
+                  placeholder='Ingrese los antecedentes...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label='Plazo de Entrega'
+                  value={formData.plazoEntregaGeneral || ''}
+                  onChange={e => setFormData(prev => prev ? { ...prev, plazoEntregaGeneral: e.target.value } : prev)}
+                  placeholder='Ingrese el plazo de entrega...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  label='Texto General'
                   value={formData.textoGeneral || ''}
                   onChange={e => setFormData(prev => prev ? { ...prev, textoGeneral: e.target.value } : prev)}
                   placeholder='Ingrese el texto general de la cotización'
@@ -1433,11 +1449,17 @@ const EditCard = ({ id }: { id: string }) => {
                     fullWidth
                     type='number'
                     label='Total Neto (UF)'
-                    value={formData.totalNetoGeneral ?? ''}
+                    value={formData.subtotal ?? ''}
                     onChange={e => {
                       const value = Number(e.target.value)
-                      setTotalNetoManual(true)
-                      setFormData(prev => prev ? { ...prev, totalNetoGeneral: isNaN(value) ? 0 : value } : prev)
+                      const impuesto = value * 0.19
+                      const total = value + impuesto
+                      setFormData(prev => prev ? {
+                        ...prev,
+                        subtotal: isNaN(value) ? 0 : value,
+                        impuesto: impuesto,
+                        total: total
+                      } : prev)
                     }}
                     InputProps={{
                       startAdornment: <InputAdornment position='start'>UF</InputAdornment>
@@ -1447,10 +1469,10 @@ const EditCard = ({ id }: { id: string }) => {
                   {/* Mostrar IVA y Total con IVA */}
                   <Box sx={{ mt: 2, textAlign: 'right' }}>
                     <Typography>
-                      <strong>IVA (19%):</strong> UF {((formData.totalNetoGeneral || 0) * 0.19).toFixed(2)}
+                      <strong>IVA (19%):</strong> UF {((formData.subtotal || 0) * 0.19).toFixed(2)}
                     </Typography>
                     <Typography variant='h6'>
-                      <strong>Total con IVA:</strong> UF {((formData.totalNetoGeneral || 0) * 1.19).toFixed(2)}
+                      <strong>Total con IVA:</strong> UF {((formData.subtotal || 0) * 1.19).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>

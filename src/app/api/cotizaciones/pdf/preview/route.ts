@@ -218,8 +218,26 @@ Condiciones para terreno y accesos
           ` : ''}
           ${cotizacion.tipoCotizacion === 'D' ? `
             <div style="margin-top: 24px; margin-bottom: 24px;">
-              <div class="label">Texto General de la Cotización:</div>
-              <div class="value" style="white-space: pre-wrap;">${cotizacion.textoGeneral ? cotizacion.textoGeneral.replace(/\r?\n/g, '<br>') : 'No especificado'}</div>
+              <div class="label">Información de la Cotización:</div>
+              
+              ${cotizacion.antecedentesGeneral ? `
+                <div style="margin-bottom: 16px;">
+                  <div class="label">Antecedentes:</div>
+                  <div class="value" style="white-space: pre-wrap;">${cotizacion.antecedentesGeneral.replace(/\r?\n/g, '<br>')}</div>
+                </div>
+              ` : ''}
+              
+              ${cotizacion.plazoEntregaGeneral ? `
+                <div style="margin-bottom: 16px;">
+                  <div class="label">Plazo de Entrega:</div>
+                  <div class="value" style="white-space: pre-wrap;">${cotizacion.plazoEntregaGeneral.replace(/\r?\n/g, '<br>')}</div>
+                </div>
+              ` : ''}
+              
+              <div style="margin-bottom: 16px;">
+                <div class="label">Texto General:</div>
+                <div class="value" style="white-space: pre-wrap;">${cotizacion.textoGeneral ? cotizacion.textoGeneral.replace(/\r?\n/g, '<br>') : 'No especificado'}</div>
+              </div>
             </div>
           ` : `
           <table class="table">
@@ -371,7 +389,7 @@ Condiciones para terreno y accesos
           <div class="totales">
             ${(() => {
               if (cotizacion.tipoCotizacion === 'D') {
-                const subtotal = Number(cotizacion.totalNetoGeneral || 0);
+                const subtotal = Number(cotizacion.subtotal || 0);
                 const descuento = 0;
                 const subtotalConDescuento = subtotal;
                 const iva = subtotalConDescuento * 0.19;
