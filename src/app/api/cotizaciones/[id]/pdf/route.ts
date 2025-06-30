@@ -246,7 +246,7 @@ Condiciones para terreno y accesos
                           ${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:center;">${detalle.cantidad || '-'}</td>
+                        <td style="text-align:right;">${detalle.cantidad || '-'}</td>
                         <td style="text-align:right;">UF ${Number(detalle.precioUnitario).toFixed(2)}</td>
                         <td style="text-align:right;">${!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2)}</td>
                       </tr>`;
