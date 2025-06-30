@@ -233,9 +233,72 @@ Condiciones para terreno y accesos
                             : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:center;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (detalle.cantidad || '-')}</td>
-                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : 'UF ' + Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2))}</td>
+                        <td style="text-align:center;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === true && 
+                              cotizacion.precioTotal === false) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar cantidad
+                          return detalle.cantidad || '-';
+                        })()}</td>
+                        <td style="text-align:right;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === false && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar precio
+                          return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                        })()}</td>
+                        <td style="text-align:right;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === false && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar total
+                          return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+                        })()}</td>
                       </tr>`;
                     } else if (!detalle.esSubProducto) {
                       // Producto individual (no paquete ni subproducto)
@@ -246,9 +309,72 @@ Condiciones para terreno y accesos
                           ${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (detalle.cantidad || '-')}</td>
-                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : 'UF ' + Number(detalle.precioUnitario).toFixed(2)}</td>
-                        <td style="text-align:right;">${cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad ? '-' : (!detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2))}</td>
+                        <td style="text-align:right;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === true && 
+                              cotizacion.precioTotal === false) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar cantidad
+                          return detalle.cantidad || '-';
+                        })()}</td>
+                        <td style="text-align:right;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === false && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar precio
+                          return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                        })()}</td>
+                        <td style="text-align:right;">${(() => {
+                          // Tipo A con sinCantidad true - mostrar guión
+                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === false && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
+                              cotizacion.sinCantidad === true && 
+                              cotizacion.precioProducto === false && 
+                              cotizacion.precioTotal === true) {
+                            return '-';
+                          }
+                          // Para todos los demás casos, mostrar total
+                          return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+                        })()}</td>
                       </tr>`;
                     }
                   }
