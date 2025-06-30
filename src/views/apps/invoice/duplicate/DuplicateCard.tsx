@@ -1445,12 +1445,38 @@ Consideraciones adicionales y requisitos especiales
                     mb: 2
                   }}
                 >
-                  Texto General de la Cotización:
+                  Información de la Cotización:
                 </Typography>
+
                 <TextField
                   fullWidth
                   multiline
-                  rows={12}
+                  rows={3}
+                  label='Antecedentes'
+                  value={formData.antecedentesGeneral || ''}
+                  onChange={e => setFormData(prev => prev ? { ...prev, antecedentesGeneral: e.target.value } : prev)}
+                  placeholder='Ingrese los antecedentes...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label='Plazo de Entrega'
+                  value={formData.plazoEntregaGeneral || ''}
+                  onChange={e => setFormData(prev => prev ? { ...prev, plazoEntregaGeneral: e.target.value } : prev)}
+                  placeholder='Ingrese el plazo de entrega...'
+                  inputProps={{ maxLength: 500 }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  label='Texto General'
                   value={formData.textoGeneral || ''}
                   onChange={e => setFormData(prev => prev ? { ...prev, textoGeneral: e.target.value } : prev)}
                   placeholder='Ingrese el texto general de la cotización'
