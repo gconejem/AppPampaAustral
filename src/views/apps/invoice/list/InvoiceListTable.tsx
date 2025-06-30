@@ -1043,9 +1043,57 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                 {selectedCotizacion.tipoCotizacion === 'D' ? (
                   <Box sx={{ mb: 4 }}>
                     <Typography variant='subtitle2' sx={{ mb: 2 }}>
-                      TEXTO GENERAL DE LA COTIZACIÓN:
+                      INFORMACIÓN DE LA COTIZACIÓN:
                     </Typography>
-                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.textoGeneral || 'No especificado'}</Typography>
+
+                    {/* Antecedentes */}
+                    {selectedCotizacion.antecedentesGeneral && (
+                      <Box sx={{
+                        mb: 3,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        p: 2,
+                        backgroundColor: 'background.paper'
+                      }}>
+                        <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                          Antecedentes:
+                        </Typography>
+                        <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.antecedentesGeneral}</Typography>
+                      </Box>
+                    )}
+
+                    {/* Plazo de Entrega */}
+                    {selectedCotizacion.plazoEntregaGeneral && (
+                      <Box sx={{
+                        mb: 3,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        p: 2,
+                        backgroundColor: 'background.paper'
+                      }}>
+                        <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                          Plazo de Entrega:
+                        </Typography>
+                        <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.plazoEntregaGeneral}</Typography>
+                      </Box>
+                    )}
+
+                    {/* Texto General */}
+                    <Box sx={{
+                      mb: 3,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 2,
+                      backgroundColor: 'background.paper'
+                    }}>
+                      <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 1 }}>
+                        Texto General:
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedCotizacion.textoGeneral || 'No especificado'}</Typography>
+                    </Box>
                   </Box>
                 ) : (
                   <TableContainer>
@@ -1214,13 +1262,18 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                 <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
                   Observaciones
                 </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={selectedCotizacion.observaciones || 'Sin observaciones'}
-                  InputProps={{ readOnly: true }}
-                />
+                <Box sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 2,
+                  backgroundColor: 'background.paper',
+                  minHeight: '80px'
+                }}>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                    {selectedCotizacion.observaciones || 'Sin observaciones'}
+                  </Typography>
+                </Box>
               </Grid>
 
               {/* Notas */}
@@ -1229,13 +1282,18 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   <Typography variant='h6' sx={{ mb: 2, color: 'primary.main', borderBottom: '2px solid', pb: 1 }}>
                     Notas
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={6}
-                    value={selectedCotizacion.notas}
-                    InputProps={{ readOnly: true }}
-                  />
+                  <Box sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 2,
+                    backgroundColor: 'background.paper',
+                    minHeight: '120px'
+                  }}>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selectedCotizacion.notas}
+                    </Typography>
+                  </Box>
                 </Grid>
               )}
             </Grid>
