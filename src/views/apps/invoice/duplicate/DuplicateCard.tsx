@@ -410,17 +410,31 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // Este useEffect ya no es necesario porque sinCantidad se inicializa correctamente en fetchData
 
   // 4. Cuando sinCantidad cambie, actualizar cantidades y recalcular totales
+  // Nota: Para tipo A, cuando sinCantidad es true, solo deshabilitamos los campos, no ponemos valores a cero
   useEffect(() => {
     setProductRows(prevRows =>
-      prevRows.map(row => ({
-        ...row,
-        cantidad: sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad),
-        totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad))
-      }))
+      prevRows.map(row => {
+        // Para tipo A: mantener valores originales cuando sinCantidad es true, solo deshabilitar en UI
+        if (formData?.tipoCotizacion === 'A') {
+          return {
+            ...row,
+            // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
+            cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
+            totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
+          }
+        }
+
+        // Para tipos B, C, D: comportamiento específico según configuración
+        return {
+          ...row,
+          cantidad: sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad),
+          totalNetoUF: sinCantidad ? 0 : Number(row.precioUnitarioUF || 0) * (sinCantidad ? 0 : (row.cantidad === 0 ? 1 : row.cantidad))
+        }
+      })
     )
     // Recalcular totales
     if (formData) calcularTotales()
-  }, [sinCantidad])
+  }, [sinCantidad, formData?.tipoCotizacion])
 
   // useEffect para abrir el popover automáticamente en la fila nueva
   useEffect(() => {
