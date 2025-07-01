@@ -260,7 +260,7 @@ Condiciones para terreno y accesos
                             : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</td>
-                        <td style="text-align:center;">${(() => {
+                        <td style="text-align:right;">${(() => {
                           // Tipo A con sinCantidad true - mostrar guión
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';

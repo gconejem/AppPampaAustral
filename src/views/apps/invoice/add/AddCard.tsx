@@ -52,7 +52,7 @@ import { ROLES_CONTACTO } from '@/constants/roles'
 let idCounter = 0;
 const generateUniqueId = () => {
   idCounter++;
-  return Date.now() + idCounter;
+  return Date.now() + idCounter + Math.random() * 1000;
 };
 
 // Interfaces locales
@@ -944,6 +944,23 @@ const AddCard = ({
     }
 
     setProductRows(newRows)
+  }
+
+  const handleDescripcionChange = (index: number, descripcion: string) => {
+    console.log('handleDescripcionChange called:', { index, descripcion, rowId: productRows[index]?.id, esSubProducto: productRows[index]?.esSubProducto })
+    setProductRows(prevRows => {
+      const newRows = [...prevRows]
+      const row = newRows[index]
+
+      if (row) {
+        console.log('Updating descripcion for row:', { id: row.id, oldDescripcion: row.descripcion, newDescripcion: descripcion })
+        row.descripcion = descripcion
+      } else {
+        console.log('Row not found at index:', index)
+      }
+
+      return newRows
+    })
   }
 
   // Función para manejar la visualización
@@ -2108,7 +2125,8 @@ const AddCard = ({
                           width: 16,
                           height: 1,
                           backgroundColor: '#000',
-                          opacity: 0
+                          opacity: 0,
+                          pointerEvents: 'none'
                         },
                         '&::after': {
                           content: '""',
@@ -2119,6 +2137,7 @@ const AddCard = ({
                           height: 'calc(100% + 48px)',
                           backgroundColor: '#000',
                           opacity: 0,
+                          pointerEvents: 'none',
                           display:
                             index < productRows.length - 1 && productRows[index + 1]?.esSubProducto ? 'block' : 'none'
                         }
@@ -2126,7 +2145,7 @@ const AddCard = ({
                     }}
                   >
                     <Grid item xs={12} md={3}>
-                      <div ref={el => servicioAnchorRefs.current[index] = el} style={{ width: '100%' }}>
+                      <div ref={el => { servicioAnchorRefs.current[index] = el; }} style={{ width: '100%' }}>
                         <TextField
                           label='Servicio / Ensayo'
                           size='small'
@@ -2193,13 +2212,14 @@ const AddCard = ({
                         label='Descripción'
                         value={row.descripcion || ''}
                         onChange={e => {
-                          const newRows = [...productRows]
-
-                          newRows[index] = {
-                            ...row,
-                            descripcion: e.target.value
-                          }
-                          setProductRows(newRows)
+                          console.log('onChange triggered for descripcion:', { index, value: e.target.value, rowId: row.id, esSubProducto: row.esSubProducto })
+                          handleDescripcionChange(index, e.target.value)
+                        }}
+                        onClick={e => {
+                          console.log('onClick triggered for descripcion:', { index, rowId: row.id, esSubProducto: row.esSubProducto })
+                        }}
+                        onFocus={e => {
+                          console.log('onFocus triggered for descripcion:', { index, rowId: row.id, esSubProducto: row.esSubProducto })
                         }}
                         multiline
                         maxRows={4}
@@ -2214,7 +2234,16 @@ const AddCard = ({
                         type='number'
                         label='Cantidad'
                         value={row.cantidad}
-                        onChange={e => handleCantidadChange(index, Number(e.target.value))}
+                        onChange={e => {
+                          console.log('onChange triggered for cantidad:', { index, value: e.target.value, rowId: row.id, esSubProducto: row.esSubProducto })
+                          handleCantidadChange(index, Number(e.target.value))
+                        }}
+                        onClick={e => {
+                          console.log('onClick triggered for cantidad:', { index, rowId: row.id, esSubProducto: row.esSubProducto })
+                        }}
+                        onFocus={e => {
+                          console.log('onFocus triggered for cantidad:', { index, rowId: row.id, esSubProducto: row.esSubProducto })
+                        }}
                         inputProps={{ min: 0 }}
                         disabled={sinCantidad}
                       />
@@ -2256,28 +2285,26 @@ const AddCard = ({
                     </Grid>
 
                     {/* Botones de acción */}
-                    <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center', pointerEvents: 'auto', zIndex: 10 }}>
+                    <Grid item xs={12} md={1} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                       {/* Botones de acción para productos normales y subproductos */}
                       {!row.esPaquete && (
                         <>
                           <IconButton
                             size='small'
                             onClick={() => handleMoveUp(index)}
-                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
                           >
                             <i className='ri-arrow-up-s-line' />
                           </IconButton>
                           <IconButton
                             size='small'
                             onClick={() => handleMoveDown(index)}
-                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
                           >
                             <i className='ri-arrow-down-s-line' />
                           </IconButton>
                           <IconButton
                             size='small'
                             onClick={() => handleDeleteRow(index)}
-                            sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                            sx={{ color: 'error.main' }}
                           >
                             <i className='ri-delete-bin-line' />
                           </IconButton>
@@ -2289,21 +2316,19 @@ const AddCard = ({
                           <IconButton
                             size='small'
                             onClick={() => handleMoveUp(index)}
-                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
                           >
                             <i className='ri-arrow-up-s-line' />
                           </IconButton>
                           <IconButton
                             size='small'
                             onClick={() => handleMoveDown(index)}
-                            sx={{ pointerEvents: 'auto', zIndex: 20 }}
                           >
                             <i className='ri-arrow-down-s-line' />
                           </IconButton>
                           <IconButton
                             size='small'
                             onClick={() => handleDeleteRow(index)}
-                            sx={{ color: 'error.main', pointerEvents: 'auto', zIndex: 20 }}
+                            sx={{ color: 'error.main' }}
                           >
                             <i className='ri-delete-bin-line' />
                           </IconButton>
@@ -2316,9 +2341,7 @@ const AddCard = ({
                                 width: 40,
                                 height: 40,
                                 ml: 1,
-                                '&:hover': { backgroundColor: 'primary.dark' },
-                                pointerEvents: 'auto',
-                                zIndex: 20
+                                '&:hover': { backgroundColor: 'primary.dark' }
                               }}
                               onClick={() => {
                                 // Limpiar todos los filtros antes de abrir el popover
