@@ -1283,6 +1283,7 @@ const AddCard = ({
     const newRows = [...productRows]
     const currentRow = newRows[index]
 
+    // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let parentIndex = index - 1
       while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
@@ -1295,17 +1296,81 @@ const AddCard = ({
       }
       return
     }
-    [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
-    setProductRows(newRows)
-    console.log('Producto/paquete movido arriba', newRows)
+
+    // Si es un paquete, mover todo el bloque (paquete + subproductos)
+    if (currentRow.esPaquete) {
+      // Encontrar el final del paquete (último subproducto)
+      let lastSubproductIndex = index + 1
+      while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
+        lastSubproductIndex++
+      }
+      lastSubproductIndex--; // Ajustar al último subproducto real
+
+      // Calcular cuántos elementos hay en el paquete (incluyendo el paquete mismo)
+      const packageSize = lastSubproductIndex - index + 1
+
+      // Si no hay elementos arriba para intercambiar, salir
+      if (index - 1 < 0) return;
+
+      // Extraer el paquete completo (paquete + todos sus subproductos)
+      const packageItems = newRows.splice(index, packageSize);
+
+      // Caso especial: si el elemento anterior es parte de otro paquete
+      if (index > 0 && (newRows[index - 1].esPaquete || newRows[index - 1].esSubProducto)) {
+        // Encontrar el inicio del paquete anterior
+        let prevPackageStartIndex = index - 1;
+        while (prevPackageStartIndex > 0 && !newRows[prevPackageStartIndex].esPaquete) {
+          prevPackageStartIndex--;
+        }
+
+        // Insertar antes del paquete anterior
+        newRows.splice(prevPackageStartIndex, 0, ...packageItems);
+      } else {
+        // Insertar antes de la posición anterior (caso normal)
+        newRows.splice(index - 1, 0, ...packageItems);
+      }
+
+      setProductRows(newRows)
+      console.log('Paquete completo movido arriba', newRows)
+      return
+    }
+
+    // Caso especial: el producto está precedido por un paquete
+    if (index > 0 && newRows[index - 1].esSubProducto) {
+      // Encontrar el inicio del paquete
+      let packageStartIndex = index - 1
+      while (packageStartIndex >= 0 && !newRows[packageStartIndex].esPaquete) {
+        packageStartIndex--
+      }
+
+      // Guardar el producto actual
+      const productoActual = newRows[index];
+
+      // Eliminar el producto de su posición actual
+      newRows.splice(index, 1);
+
+      // Insertar el producto antes del paquete
+      newRows.splice(packageStartIndex, 0, productoActual);
+
+      setProductRows(newRows);
+      console.log('Producto movido antes del paquete', newRows);
+      return;
+    }
+
+    // Caso normal: intercambiar directamente con el elemento anterior
+    [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]];
+    setProductRows(newRows);
+    console.log('Producto movido arriba', newRows);
   }
 
   const handleMoveDown = (index: number) => {
     console.log('handleMoveDown', { index, row: productRows[index] })
     if (index === productRows.length - 1) return
+
     const newRows = [...productRows]
     const currentRow = newRows[index]
 
+    // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let nextPackageIndex = index + 1
       while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
@@ -1318,9 +1383,69 @@ const AddCard = ({
       }
       return
     }
-    [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
-    setProductRows(newRows)
-    console.log('Producto/paquete movido abajo', newRows)
+
+    // Si es un paquete, mover todo el bloque (paquete + subproductos)
+    if (currentRow.esPaquete) {
+      // Encontrar el final del paquete (último subproducto)
+      let lastSubproductIndex = index + 1
+      while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
+        lastSubproductIndex++
+      }
+      lastSubproductIndex--; // Ajustar al último subproducto real
+
+      // Si no hay elementos abajo para intercambiar, salir
+      if (lastSubproductIndex + 1 >= newRows.length) return;
+
+      // Extraer el paquete completo (paquete + todos sus subproductos)
+      const packageSize = lastSubproductIndex - index + 1;
+      const packageItems = newRows.splice(index, packageSize);
+
+      // Si el siguiente elemento es otro paquete, manejar especialmente
+      if (index < newRows.length && newRows[index].esPaquete) {
+        // Encontrar el final del siguiente paquete
+        let nextPackageLastIndex = index;
+        while (nextPackageLastIndex + 1 < newRows.length && newRows[nextPackageLastIndex + 1].esSubProducto) {
+          nextPackageLastIndex++;
+        }
+
+        // Insertar después del siguiente paquete completo
+        newRows.splice(nextPackageLastIndex + 1, 0, ...packageItems);
+      } else {
+        // Insertar después del siguiente elemento (intercambio simple)
+        newRows.splice(index + 1, 0, ...packageItems);
+      }
+
+      setProductRows(newRows)
+      console.log('Paquete completo movido abajo', newRows)
+      return
+    }
+
+    // Caso especial: el producto está seguido inmediatamente por un paquete
+    if (index + 1 < newRows.length && newRows[index + 1].esPaquete) {
+      // Encontrar el fin del paquete
+      let paqueteEndIndex = index + 1;
+      while (paqueteEndIndex + 1 < newRows.length && newRows[paqueteEndIndex + 1].esSubProducto) {
+        paqueteEndIndex++;
+      }
+
+      // Guardar el producto actual
+      const productoActual = newRows[index];
+
+      // Eliminar el producto de su posición actual
+      newRows.splice(index, 1);
+
+      // Insertar el producto después del paquete
+      newRows.splice(paqueteEndIndex, 0, productoActual);
+
+      setProductRows(newRows);
+      console.log('Producto movido después del paquete', newRows);
+      return;
+    }
+
+    // Caso normal: intercambiar directamente con el siguiente elemento
+    [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]];
+    setProductRows(newRows);
+    console.log('Producto movido abajo', newRows);
   }
 
   const canMoveUp = (index: number): boolean => {
