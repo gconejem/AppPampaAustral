@@ -2317,7 +2317,7 @@ const AddCard = ({
                       </div>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={1}>
                       <TextField
                         fullWidth
                         size='small'
@@ -2330,7 +2330,7 @@ const AddCard = ({
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={3}>
                       <TextField
                         fullWidth
                         size='small'

@@ -1690,10 +1690,10 @@ const EditCard = ({ id }: { id: string }) => {
                         />
                       </div>
                     </Grid>
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={1}>
                       <TextField fullWidth label='Área' value={row.area || ''} disabled />
                     </Grid>
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={3}>
                       <TextField
                         fullWidth
                         label='Descripción'
