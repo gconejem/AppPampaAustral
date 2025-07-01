@@ -335,7 +335,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
           precioUnitarioUF: detalle.precioUnitario,
           totalNetoUF: detalle.subtotal,
           area: detalle.producto?.area || '',
-          descripcion: detalle.producto?.descripcion || '',
+          descripcion: detalle.descripcionPersonalizada || detalle.producto?.descripcion || '',
           servicio: detalle.producto?.norma
             ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
             : detalle.producto?.nombre,
@@ -603,6 +603,19 @@ const DuplicateCard = ({ id }: { id: string }) => {
     })
   }
 
+  const handleDescripcionChange = (index: number, descripcion: string) => {
+    setProductRows(prevRows => {
+      const newRows = [...prevRows]
+      const row = newRows[index]
+
+      if (row) {
+        row.descripcion = descripcion
+      }
+
+      return newRows
+    })
+  }
+
   const handleDeleteRow = (index: number) => {
     setProductRows(prevRows => {
       const newRows = [...prevRows]
@@ -730,7 +743,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         descuento: 0,
         subtotal: Number(row.totalNetoUF),
         esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false
+        esSubProducto: row.esSubProducto || false,
+        descripcionPersonalizada: row.descripcion || null
       }))
 
       // Crear el objeto con solo los campos necesarios
@@ -1598,7 +1612,14 @@ Consideraciones adicionales y requisitos especiales
                     <TextField fullWidth label='Área' value={row.area || ''} disabled />
                   </Grid>
                   <Grid item xs={12} md={2}>
-                    <TextField fullWidth label='Descripción' value={row.descripcion || ''} multiline maxRows={4} />
+                    <TextField
+                      fullWidth
+                      label='Descripción'
+                      value={row.descripcion || ''}
+                      onChange={e => handleDescripcionChange(index, e.target.value)}
+                      multiline
+                      maxRows={4}
+                    />
                   </Grid>
                   <Grid item xs={12} md={1}>
                     <TextField

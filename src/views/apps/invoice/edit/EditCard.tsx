@@ -338,7 +338,7 @@ const EditCard = ({ id }: { id: string }) => {
           precioUnitarioUF: detalle.precioUnitario,
           totalNetoUF: detalle.subtotal,
           area: detalle.producto?.area || '',
-          descripcion: detalle.producto?.descripcion || '',
+          descripcion: detalle.descripcionPersonalizada || detalle.producto?.descripcion || '',
           servicio: detalle.producto?.norma
             ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
             : detalle.producto?.nombre,
@@ -721,6 +721,19 @@ const EditCard = ({ id }: { id: string }) => {
     })
   }
 
+  const handleDescripcionChange = (index: number, descripcion: string) => {
+    setProductRows(prevRows => {
+      const newRows = [...prevRows]
+      const row = newRows[index]
+
+      if (row) {
+        row.descripcion = descripcion
+      }
+
+      return newRows
+    })
+  }
+
   const handleDeleteRow = (index: number) => {
     setProductRows(prevRows => {
       const newRows = [...prevRows]
@@ -819,7 +832,8 @@ const EditCard = ({ id }: { id: string }) => {
         descuento: row.descuento || 0,
         subtotal: row.totalNetoUF === null || row.totalNetoUF === undefined ? 0 : Number(row.totalNetoUF),
         esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false
+        esSubProducto: row.esSubProducto || false,
+        descripcionPersonalizada: row.descripcion || null
       }))
 
       // Asegurarnos de que el contactoId sea el del contacto seleccionado
@@ -1549,7 +1563,14 @@ const EditCard = ({ id }: { id: string }) => {
                       <TextField fullWidth label='Área' value={row.area || ''} disabled />
                     </Grid>
                     <Grid item xs={12} md={2}>
-                      <TextField fullWidth label='Descripción' value={row.descripcion || ''} multiline maxRows={4} />
+                      <TextField
+                        fullWidth
+                        label='Descripción'
+                        value={row.descripcion || ''}
+                        onChange={e => handleDescripcionChange(index, e.target.value)}
+                        multiline
+                        maxRows={4}
+                      />
                     </Grid>
                     <Grid item xs={12} md={1}>
                       <TextField

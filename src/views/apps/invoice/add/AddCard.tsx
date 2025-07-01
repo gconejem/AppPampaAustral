@@ -48,6 +48,13 @@ import type { TipoCotizacion, EstadoCotizacion } from '@prisma/client'
 import type { ContactType } from '@/types/apps/contactTypes'
 import { ROLES_CONTACTO } from '@/constants/roles'
 
+// Función para generar IDs únicos
+let idCounter = 0;
+const generateUniqueId = () => {
+  idCounter++;
+  return Date.now() + idCounter;
+};
+
 // Interfaces locales
 interface InvoiceType {
   id: number
@@ -342,7 +349,8 @@ const AddCard = ({
           cantidad: row.cantidad,
           precioUnitario: row.precioUnitarioUF,
           descuento: row.descuento || 0,
-          subtotal: row.totalNetoUF
+          subtotal: row.totalNetoUF,
+          descripcionPersonalizada: row.descripcion || null
         }))
 
       // Para tipo D no validamos productos, para otros tipos sí
@@ -777,7 +785,7 @@ const AddCard = ({
 
         // Agregar los productos del paquete como subfilas, asegurando que los campos estén completos
         const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
-          id: Date.now() + i + 1,
+          id: generateUniqueId(),
           productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
           servicio: pp.nombre || pp.producto?.nombre || '',
           descripcion: pp.descripcion || pp.producto?.descripcion || '',
@@ -859,7 +867,7 @@ const AddCard = ({
 
         // Agregar el paquete como fila principal
         const paqueteRow = {
-          id: Date.now(),
+          id: generateUniqueId(),
           productoId: producto.productoId.toString(),
           servicio: nombreCompleto,
           descripcion: producto.descripcion || '',
@@ -873,7 +881,7 @@ const AddCard = ({
 
         // Agregar los productos del paquete como subfilas
         const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
-          id: Date.now() + i + 1,
+          id: generateUniqueId(),
           productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
           servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
           descripcion: pp.producto?.descripcion || '',
@@ -1053,7 +1061,7 @@ const AddCard = ({
   // Función para agregar una nueva fila
   const handleAddRow = () => {
     const newRow = {
-      id: Date.now(), // Usar timestamp para ID único
+      id: generateUniqueId(), // Usar función que genera ID único
       productoId: '0',
       servicio: '',
       cantidad: 1,
@@ -1785,10 +1793,10 @@ const AddCard = ({
                         }
                       }}
                     >
-                      <MenuItem value='A'>Valores Unitarios</MenuItem>
-                      <MenuItem value='B'>EMS</MenuItem>
-                      <MenuItem value='C'>Mensual</MenuItem>
-                      <MenuItem value='D'>Genérica</MenuItem>
+                      <MenuItem key='A' value='A'>Valores Unitarios</MenuItem>
+                      <MenuItem key='B' value='B'>EMS</MenuItem>
+                      <MenuItem key='C' value='C'>Mensual</MenuItem>
+                      <MenuItem key='D' value='D'>Genérica</MenuItem>
                     </Select>
                     {validationErrors.tipoCotizacion && <FormHelperText>Este campo es requerido</FormHelperText>}
                   </FormControl>
@@ -1825,10 +1833,11 @@ const AddCard = ({
                       value={formData.formaPago}
                       onChange={e => handleChange('formaPago', e.target.value)}
                     >
-                      <MenuItem value='CONTADO'>Contado</MenuItem>
-                      <MenuItem value='CREDITO_30'>Crédito 30 días</MenuItem>
-                      <MenuItem value='CREDITO_60'>Crédito 60 días</MenuItem>
-                      <MenuItem value='CREDITO_90'>Crédito 90 días</MenuItem>
+
+                      <MenuItem key='CONTADO' value='CONTADO'>Contado</MenuItem>
+                      <MenuItem key='CREDITO_30' value='CREDITO_30'>Crédito 30 días</MenuItem>
+                      <MenuItem key='CREDITO_60' value='CREDITO_60'>Crédito 60 días</MenuItem>
+                      <MenuItem key='CREDITO_90' value='CREDITO_90'>Crédito 90 días</MenuItem>
                     </Select>
                     <Typography
                       variant='caption'
@@ -2330,7 +2339,7 @@ const AddCard = ({
 
                                 // Agregar una fila vacía como subproducto al final del paquete
                                 const newProductRow = {
-                                  id: Date.now(),
+                                  id: generateUniqueId(),
                                   productoId: '0',
                                   servicio: '',
                                   descripcion: '',
@@ -2648,7 +2657,7 @@ const AddCard = ({
                 displayEmpty
                 renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
               >
-                <MenuItem value=''>Todas</MenuItem>
+                <MenuItem key='todas-areas' value=''>Todas</MenuItem>
                 {areas.map(area => (
                   <MenuItem key={area.id} value={area.id}>
                     {area.nombre}
@@ -2666,7 +2675,7 @@ const AddCard = ({
                 displayEmpty
                 renderValue={selected => selected === '' ? 'Todos' : selected}
               >
-                <MenuItem value=''>Todos</MenuItem>
+                <MenuItem key='todos-tipos' value=''>Todos</MenuItem>
                 {tipos.map(tipo => (
                   <MenuItem key={tipo} value={tipo}>
                     {tipo}
@@ -2684,7 +2693,7 @@ const AddCard = ({
                 renderValue={selected => selected === '' ? 'Todas' : selected}
                 disabled={!selectedAreaId}
               >
-                <MenuItem value=''>Todas</MenuItem>
+                <MenuItem key='todas-familias' value=''>Todas</MenuItem>
                 {familias.map(familia => (
                   <MenuItem key={familia.id} value={familia.nombre}>
                     {familia.nombre}

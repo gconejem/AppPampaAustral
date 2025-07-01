@@ -228,7 +228,8 @@ export async function POST(request: Request) {
               subtotal: detalle.subtotal,
               esPaquete: detalle.esPaquete || false,
               esSubProducto: detalle.esSubProducto || false,
-              paqueteId: detalle.paqueteId || null
+              paqueteId: detalle.paqueteId || null,
+              descripcionPersonalizada: detalle.descripcionPersonalizada || null
             }))
           })
         } catch (error) {

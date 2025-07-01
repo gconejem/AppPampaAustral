@@ -336,22 +336,23 @@ model Cotizacion {
 }
 
 model DetalleCotizacion {
-  id             Int                 @id @default(autoincrement())
-  cotizacionId   Int
-  productoId     Int
-  cantidad       Int
-  precioUnitario Decimal             @db.Decimal(10, 2)
-  descuento      Decimal             @db.Decimal(10, 2)
-  subtotal       Decimal             @db.Decimal(10, 2)
-  esPaquete      Boolean             @default(false)
-  esSubProducto  Boolean             @default(false)
-  paqueteId      Int?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  cotizacion     Cotizacion          @relation(fields: [cotizacionId], references: [id])
-  detallePaquete DetalleCotizacion?  @relation("DetallesPaquete", fields: [paqueteId], references: [id])
-  subDetalles    DetalleCotizacion[] @relation("DetallesPaquete")
-  producto       Producto            @relation(fields: [productoId], references: [productoId])
+  id                      Int                 @id @default(autoincrement())
+  cotizacionId            Int
+  productoId              Int
+  cantidad                Int
+  precioUnitario          Decimal             @db.Decimal(10, 2)
+  descuento               Decimal             @db.Decimal(10, 2)
+  subtotal                Decimal             @db.Decimal(10, 2)
+  esPaquete               Boolean             @default(false)
+  esSubProducto           Boolean             @default(false)
+  paqueteId               Int?
+  descripcionPersonalizada String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  cotizacion              Cotizacion          @relation(fields: [cotizacionId], references: [id])
+  detallePaquete          DetalleCotizacion?  @relation("DetallesPaquete", fields: [paqueteId], references: [id])
+  subDetalles             DetalleCotizacion[] @relation("DetallesPaquete")
+  producto                Producto            @relation(fields: [productoId], references: [productoId])
 
   @@index([cotizacionId])
   @@index([productoId])

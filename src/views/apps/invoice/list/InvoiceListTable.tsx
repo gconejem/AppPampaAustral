@@ -1138,7 +1138,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                 )}
                               </TableCell>
                               <TableCell>{detalle.producto?.area || '-'}</TableCell>
-                              <TableCell>{detalle.producto?.descripcion || '-'}</TableCell>
+                              <TableCell>{detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</TableCell>
                               <TableCell align='right'>
                                 {(() => {
                                   // Tipo A con sinCantidad true - mostrar guión

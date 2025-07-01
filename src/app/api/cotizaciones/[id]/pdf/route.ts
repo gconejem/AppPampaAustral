@@ -187,7 +187,7 @@ Condiciones para terreno y accesos
             </div>
           </div>
           ` : `
-          <table class="table"`}
+          <table class="table">
             <thead>
               <tr>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
@@ -259,7 +259,7 @@ Condiciones para terreno y accesos
                             '</ul>'
                             : ''}
                         </td>
-                        <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
+                        <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:center;">${(() => {
                           // Tipo A con sinCantidad true - mostrar guión
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
@@ -335,7 +335,7 @@ Condiciones para terreno y accesos
                           ${detalle.producto?.nombre || '-'}
                           ${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                         </td>
-                        <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.producto?.descripcion || '-'}</td>
+                        <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:right;">${(() => {
                           // Tipo A con sinCantidad true - mostrar guión
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {

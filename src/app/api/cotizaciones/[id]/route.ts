@@ -156,7 +156,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           subtotal: detalle.subtotal,
           esPaquete: detalle.esPaquete || false,
           esSubProducto: detalle.esSubProducto || false,
-          paqueteId: detalle.paqueteId || null
+          paqueteId: detalle.paqueteId || null,
+          descripcionPersonalizada: detalle.descripcionPersonalizada || null
         }))
       })
 

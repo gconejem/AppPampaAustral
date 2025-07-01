@@ -61,11 +61,11 @@ const InvoiceCard = ({ refreshTrigger = 0 }: InvoiceCardProps) => {
           totalCerradas: cotizaciones.filter((c: any) => ['ACEPTADA', 'RECHAZADA', 'SIN_RESPUESTA'].includes(c.estado))
             .length,
           totalCotizado: cotizaciones.reduce((acc: number, c: any) => {
-            console.log('Procesando cotización:', {
+            /* console.log('Procesando cotización:', {
               id: c.id,
               subtotal: c.subtotal,
               tipo: typeof c.subtotal
-            })
+            }) */
             const subtotal = parseFloat(c.subtotal?.toString() || '0')
 
             return acc + subtotal
