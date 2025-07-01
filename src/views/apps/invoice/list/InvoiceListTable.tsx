@@ -239,12 +239,11 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
   }
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && paginatedData) {
-      setSelectedRows(prev => [...new Set([...prev, ...paginatedData.map(row => row.id)])])
+    if (checked && filteredData) {
+      setSelectedRows(prev => [...new Set([...prev, ...filteredData.map(row => row.id)])])
     } else {
-      // Solo deseleccionar las filas de la página actual
-      const currentPageIds = paginatedData.map(row => row.id)
-      setSelectedRows(prev => prev.filter(id => !currentPageIds.includes(id)))
+      // Deseleccionar todas las filas filtradas
+      setSelectedRows([])
     }
   }
 
@@ -267,7 +266,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
       }
 
       // Preparar los datos para CSV
-      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'EMPRESA', 'TIPO', 'CONTACTO', 'ESTADO', 'TOTAL UF']
+      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'EMPRESA', 'TIPO', 'CONTACTO', 'ESTADO', 'TOTAL UF', 'OBSERVACIONES']
 
       const selectedData = localData?.filter(row => selectedRows.includes(row.id)) || []
 
@@ -281,7 +280,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
         getTipoLabel(row.tipo),
         row.contacto?.nombre || '',
         row.estado,
-        row.total
+        row.total,
+        row.observacionGestion || ''
       ])
 
       // Crear el contenido del CSV
@@ -736,9 +736,9 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
               <TableCell padding='checkbox'>
                 <Checkbox
                   indeterminate={
-                    paginatedData?.length ? selectedRows.length > 0 && selectedRows.length < paginatedData.length : false
+                    filteredData?.length ? selectedRows.length > 0 && selectedRows.length < filteredData.length : false
                   }
-                  checked={paginatedData?.length ? selectedRows.length === paginatedData.length : false}
+                  checked={filteredData?.length ? selectedRows.length === filteredData.length : false}
                   onChange={event => handleSelectAll(event.target.checked)}
                   inputProps={{ 'aria-label': 'select all' }}
                 />
