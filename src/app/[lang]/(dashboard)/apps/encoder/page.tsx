@@ -23,10 +23,7 @@ import { getUserData } from '@/app/server/actions'
 } */
 
 const UserListApp = async () => {
-  // Vars
-  const data = await getUserData()
-
-  return <UserList userData={data} />
+  return <UserList />
 }
 
 export default UserListApp

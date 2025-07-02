@@ -1,8 +1,8 @@
 // Type Imports
 import type { ChatDataType } from '@/types/apps/chatTypes'
 
-const previousDay = new Date(new Date().getTime() - 24 * 60 * 60 * 1000)
-const dayBeforePreviousDay = new Date(new Date().getTime() - 24 * 60 * 60 * 1000 * 2)
+const previousDay = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toString()
+const dayBeforePreviousDay = new Date(new Date().getTime() - 24 * 60 * 60 * 1000 * 2).toString()
 
 export const db: ChatDataType = {
   profileUser: {

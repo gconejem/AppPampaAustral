@@ -121,6 +121,7 @@ const AddContact = (props: Props) => {
 
       if (!response.ok) {
         const errorData = await response.json()
+
         console.error('Error response:', errorData)
         throw new Error(errorData.error || 'Error al crear contacto')
       }
@@ -257,7 +258,8 @@ const AddContact = (props: Props) => {
                       }
                     }}
                     onChange={e => {
-                      let value = e.target.value.replace(/[^\d+]/g, '')
+                      const value = e.target.value.replace(/[^\d+]/g, '')
+
                       field.onChange(value)
                     }}
                   />
@@ -291,7 +293,8 @@ const AddContact = (props: Props) => {
                       }
                     }}
                     onChange={e => {
-                      let value = e.target.value.replace(/[^\d+]/g, '')
+                      const value = e.target.value.replace(/[^\d+]/g, '')
+
                       field.onChange(value)
                     }}
                   />

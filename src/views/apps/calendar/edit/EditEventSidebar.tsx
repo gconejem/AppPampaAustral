@@ -23,8 +23,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
-import ContactSearch from '@/views/apps/clients/components/ContactSearch'
-import AddContact from '@/views/apps/contacts/list/AddContact'
+
 import Divider from '@mui/material/Divider'
 import TableContainer from '@mui/material/TableContainer'
 import Table from '@mui/material/Table'
@@ -35,10 +34,15 @@ import TableBody from '@mui/material/TableBody'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
 
+import AddContact from '@/views/apps/contacts/list/AddContact'
+import ContactSearch from '@/views/apps/clients/components/ContactSearch'
+
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 
 // Types
+import type { ContactType } from '@/types/apps/contactTypes'
+
 interface EditEventSidebarProps {
   editEventSidebarOpen: boolean
   handleEditEventSidebarToggle: () => void
@@ -186,13 +190,17 @@ const EditEventSidebar = ({
   // Convertir las fechas string a objetos Date para los datepickers
   const [fechaInicio, setFechaInicio] = useState<Date | null>(() => {
     const d = formData.fechaInicio ? new Date(formData.fechaInicio) : new Date();
+
     d.setHours(0, 0, 0, 0);
+
     return d;
   });
 
   const [fechaFin, setFechaFin] = useState<Date | null>(() => {
     const d = formData.fechaFin ? new Date(formData.fechaFin) : new Date();
+
     d.setHours(0, 0, 0, 0);
+
     return d;
   });
 
@@ -288,14 +296,18 @@ const EditEventSidebar = ({
       const formatDate = (date: any) => {
         if (!date) return ''
         const d = new Date(date)
+
         if (isNaN(d.getTime())) return ''
+
         return d.toISOString().slice(0, 16)
       }
 
       // Buscar referencia de la obra si no viene en el evento
       let referenciaFinal = getValue('referencia')
+
       if (!referenciaFinal && (selectedEvent.obra || selectedEvent.extendedProps?.obra)) {
         const obra = selectedEvent.obra || selectedEvent.extendedProps?.obra
+
         referenciaFinal = obra.referencia || ''
       }
 
@@ -375,15 +387,18 @@ const EditEventSidebar = ({
   // Estado para contactos
   const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
   const [editingContact, setEditingContact] = useState<ContactoAgendaForm>({
     rol: '', nombre: '', email: '', telefono1: '', telefono2: '', isPrincipal: false
   })
+
   const [addContactOpen, setAddContactOpen] = useState(false)
 
   // Cargar contactos del evento al abrir
   useEffect(() => {
     if (selectedEvent && editEventSidebarOpen) {
       const contactosEvento = selectedEvent.contactos || selectedEvent.extendedProps?.contactos || []
+
       setContactos(contactosEvento)
     }
   }, [selectedEvent, editEventSidebarOpen])
@@ -400,26 +415,31 @@ const EditEventSidebar = ({
       try {
         const response = await fetch('/api/users/laboratoristas')
         const data = await response.json()
+
         const formattedLaboratoristas = data.map((lab: any) => ({
           id: lab.id,
           name: lab.name,
           email: lab.email,
           rol: lab.roles?.[0]?.rol?.nombre || 'Sin rol asignado'
         }))
+
         setLaboratoristas(formattedLaboratoristas)
       } catch (error) {
         console.error('Error cargando laboratoristas:', error)
       }
     }
+
     const fetchEquipos = async () => {
       try {
         const response = await fetch('/api/agenda/equipos')
         const data = await response.json()
+
         setEquipos(data)
       } catch (error) {
         console.error('Error cargando equipos:', error)
       }
     }
+
     fetchLaboratoristas()
     fetchEquipos()
   }, [])
@@ -480,6 +500,7 @@ const EditEventSidebar = ({
 
       if (!response.ok) {
         const error = await response.json()
+
         throw new Error(error.message || 'Error al actualizar la agenda')
       }
 
@@ -520,51 +541,66 @@ const EditEventSidebar = ({
     setEditingContactIndex(index)
     setEditingContact({ ...contactos[index] })
   }
+
   const handleSaveEdit = () => {
     if (editingContactIndex !== null) {
       const updatedContactos = contactos.map((contacto, index) =>
         index === editingContactIndex ? editingContact : contacto
       )
+
       setContactos(updatedContactos)
       setEditingContactIndex(null)
     }
   }
+
   const handleCancelEdit = () => setEditingContactIndex(null)
+
   const handleDeleteContacto = (index: number) => {
     const updatedContactos = contactos.filter((_, i) => i !== index)
+
     setContactos(updatedContactos)
   }
-  const handleAddContact = (contact) => {
+
+  const handleAddContact = (contact: ContactType) => {
     if (!contact) return
+
     const newContact = {
       nombre: contact.nombre,
-      rol: contact.rol || contact.cargo || '',
+      rol: contact.cargo || '',
       email: contact.email,
       telefono1: contact.telefono1,
       telefono2: contact.telefono2,
       isPrincipal: contactos.length === 0
     }
+
     setContactos([...contactos, newContact])
   }
 
   // Métodos para agregar laboratorista y equipo
   const handleAgregarLaboratorista = () => {
     if (!laboratoristaSeleccionado) return
+
     const nuevoLaboratorista = {
       id: laboratoristaSeleccionado.id,
       nombre: laboratoristaSeleccionado.name,
       email: laboratoristaSeleccionado.email
     }
+
     setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
     setLaboratoristaSeleccionado(null)
   }
+
   const handleAgregarEquipo = () => {
     if (!equipoSeleccionado) return
+
     const nuevoEquipo = {
       id: equipoSeleccionado.id,
       codigo: equipoSeleccionado.codigo,
-      nombre: equipoSeleccionado.nombre
+      nombre: equipoSeleccionado.nombre,
+      cantidad: 1,
+      observacion: ''
     }
+
     setEquiposAgendados(prev => [...prev, nuevoEquipo])
     setEquipoSeleccionado(null)
   }
@@ -675,9 +711,12 @@ const EditEventSidebar = ({
                     onChange={newDate => {
                       if (newDate) {
                         setFechaInicio(newDate)
+
+
                         // Si la fecha de término está vacía, usamos la misma fecha
                         if (!fechaFin) {
                           const endDate = new Date(newDate)
+
                           endDate.setHours(newDate.getHours() + 1)
                           setFechaFin(endDate)
                         }
@@ -701,6 +740,7 @@ const EditEventSidebar = ({
                   value={formData.fechaInicio.split('T')[1] || ''}
                   onChange={e => {
                     const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
+
                     handleInputChange('fechaInicio', `${date}T${e.target.value}`)
                   }}
                   InputLabelProps={{
@@ -719,6 +759,7 @@ const EditEventSidebar = ({
                   value={formData.fechaFin.split('T')[1] || ''}
                   onChange={e => {
                     const date = formData.fechaFin.split('T')[0] || formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
+
                     handleInputChange('fechaFin', `${date}T${e.target.value}`)
                   }}
                   InputLabelProps={{
@@ -905,12 +946,13 @@ const EditEventSidebar = ({
                       onContactSelect={contact => {
                         const newContact = {
                           nombre: contact.nombre,
-                          rol: contact.rol || contact.cargo || '',
+                          rol: contact.cargo || '',
                           email: contact.email,
                           telefono1: contact.telefono1,
                           telefono2: contact.telefono2,
                           isPrincipal: contactos.length === 0
                         }
+
                         setContactos([...contactos, newContact])
                       }}
                     />
@@ -1016,6 +1058,7 @@ const EditEventSidebar = ({
                                         ...c,
                                         isPrincipal: i === index ? !c.isPrincipal : false
                                       }))
+
                                       setContactos(updatedContactos)
                                     }}
                                   >

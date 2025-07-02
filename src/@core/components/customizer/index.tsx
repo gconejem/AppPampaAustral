@@ -54,7 +54,7 @@ type CustomizerProps = {
   disableDirection?: boolean
 }
 
-const getLocalePath = (pathName: string, locale: string) => {
+const getLocalePath = (pathName: string | null, locale: string): string => {
   if (!pathName) return '/'
   const segments = pathName.split('/')
 
@@ -332,8 +332,8 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                 </div>
               </div>
               {settings.mode === 'dark' ||
-              (settings.mode === 'system' && isSystemDark) ||
-              settings.layout === 'horizontal' ? null : (
+                (settings.mode === 'system' && isSystemDark) ||
+                settings.layout === 'horizontal' ? null : (
                 <div className='flex items-center justify-between'>
                   <label className='font-medium cursor-pointer' htmlFor='customizer-semi-dark'>
                     Semi Dark

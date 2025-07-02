@@ -183,9 +183,11 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
       params.append('esPaquete', 'false')
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
+
       if (buscarProductos) {
         params.append('q', buscarProductos)
       }
+
       if (area) params.append('area', area)
 
       fetch(`/api/productos/search?${params.toString()}`)
@@ -223,13 +225,15 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
       // Validaciones básicas
       if (!nombre || !sku) {
         toast.error('Por favor complete los campos nombre y SKU')
-        return
+        
+return
       }
 
       // Validar que haya productos seleccionados
       if (productosSeleccionados.length === 0) {
         toast.error('Por favor seleccione al menos un producto para el paquete')
-        return
+        
+return
       }
 
       // Crear el objeto con los datos
@@ -263,6 +267,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
       if (!response.ok) {
         const errorData = await response.json()
+
         throw new Error(errorData.error || 'Error al crear el paquete')
       }
 
@@ -305,6 +310,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 label='Área'
                 onChange={e => {
                   const areaId = e.target.value ? Number(e.target.value) : null
+
                   setSelectedAreaId(areaId)
                   setArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
                   setFamilia('')
@@ -351,6 +357,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               value={cantidadPaquete}
               onChange={e => {
                 const value = parseInt(e.target.value) || 1
+
                 setCantidadPaquete(value)
               }}
               InputProps={{

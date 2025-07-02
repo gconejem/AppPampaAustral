@@ -372,8 +372,10 @@ const PreviewCard = () => {
 
                     // Buscar y mostrar todos los subproductos que pertenecen a este paquete
                     let j = i + 1
+
                     while (j < detalles.length && detalles[j].esSubProducto) {
                       const sub = detalles[j]
+
                       rows.push(
                         <TableRow key={`subproducto-${j}`} sx={{ backgroundColor: '#e3f2fd' }}>
                           <TableCell>{sub.area || ''}</TableCell>
@@ -384,6 +386,8 @@ const PreviewCard = () => {
                       )
                       j++
                     }
+
+
                     // Saltar los subproductos que ya procesamos
                     i = j - 1
                   } else if (!item.esSubProducto) {
@@ -397,6 +401,7 @@ const PreviewCard = () => {
                       </TableRow>
                     )
                   }
+
                   // Los subproductos sin paquete se ignoran (caso raro)
                 }
 

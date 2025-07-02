@@ -30,10 +30,7 @@ const getAgendaData = async () => {
 
 // Page Component
 const UserListPage = async () => {
-  // Vars
-  const data = await getAgendaData()
-
-  return <UserList data={data} />
+  return <UserList />
 }
 
 export default UserListPage

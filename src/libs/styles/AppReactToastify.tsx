@@ -18,6 +18,9 @@ import type { Direction } from '@core/types'
 // Config Imports
 import themeConfig from '@configs/themeConfig'
 
+// Definir un valor por defecto para toastPosition
+const defaultToastPosition: ToastPosition = 'top-right'
+
 type Props = ToastContainerProps & {
   boxProps?: BoxProps
   direction?: Direction
@@ -108,11 +111,16 @@ const AppReactToastify = (props: Props) => {
     'bottom-center': 'bottom-center'
   }
 
-  const position = direction === 'rtl' ? positionMap[themeConfig.toastPosition] : themeConfig.toastPosition
+  // Usar el valor por defecto si toastPosition no está definido en themeConfig
+  const toastPosition = (themeConfig as any).toastPosition || defaultToastPosition
+
+  // Asegurar que positionMap tenga una entrada para toastPosition
+  const mappedPosition = toastPosition in positionMap ? positionMap[toastPosition as keyof typeof positionMap] : toastPosition
+  const position = direction === 'rtl' ? mappedPosition : toastPosition
 
   return (
     <ToastifyWrapper {...boxProps}>
-      <ToastContainer rtl={direction === 'rtl'} position={position} {...rest} />
+      <ToastContainer rtl={direction === 'rtl'} position={position as ToastPosition} {...rest} />
     </ToastifyWrapper>
   )
 }

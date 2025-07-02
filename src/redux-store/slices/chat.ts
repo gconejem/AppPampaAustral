@@ -56,7 +56,7 @@ export const chatSlice = createSlice({
       if (existingChat) {
         existingChat.chat.push({
           message: msg,
-          time: new Date(),
+          time: new Date().toISOString(),
           senderId: state.profileUser.id,
           msgStatus: {
             isSent: true,

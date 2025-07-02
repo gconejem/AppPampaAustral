@@ -1,5 +1,6 @@
 import { Dialog, Typography, Box, IconButton, Button, Checkbox, FormControlLabel, Grid } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+
 import { ROLES_CONTACTO } from '@/constants/roles'
 
 interface EventPreviewProps {

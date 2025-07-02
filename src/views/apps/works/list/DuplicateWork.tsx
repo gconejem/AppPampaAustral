@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+
 import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import FormControl from '@mui/material/FormControl'
@@ -33,6 +34,7 @@ import Star from '@mui/icons-material/Star'
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
+
 import { validateRut } from '@/utils/rut-utils'
 import type { Obra, FormValidateType } from '@/types/forms/obra'
 import { initialFormData } from '@/types/forms/obra'
@@ -90,22 +92,29 @@ interface ContactoObraForm {
 // Función de validación de email
 const validateEmail = (email: string) => {
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-  return emailRegex.test(email);
+
+  
+return emailRegex.test(email);
 };
 
 // Función de validación de teléfono
 const validatePhone = (phone: string) => {
   const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '');
-  return /^\+?[0-9]+$/.test(cleanPhone);
+
+  
+return /^\+?[0-9]+$/.test(cleanPhone);
 };
 
 // Función para formatear teléfonos
 const formatPhone = (value: string) => {
   let formatted = value.replace(/[^\d+]/g, '');
+
   if (formatted.includes('+')) {
     formatted = '+' + formatted.replace(/\+/g, '');
   }
-  return formatted;
+
+  
+return formatted;
 };
 
 // Función reutilizable para obtener el siguiente número de obra
@@ -113,9 +122,11 @@ const fetchLastObraNumber = async (setLastObraNumber: (n: string) => void, setVa
   try {
     const response = await axios.get('/api/obras')
     const obras: Obra[] = response.data
+
     if (obras && obras.length > 0) {
       const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
       const nextNumber = (maxNumber + 1).toString()
+
       setLastObraNumber(nextNumber)
       setValue('numeroObra', nextNumber)
     } else {
@@ -179,6 +190,7 @@ const DuplicateWork = (props: Props) => {
 
   const [contactos, setContactos] = useState<ContactoObraForm[]>(contactosPrincipales)
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null)
+
   const [editingContact, setEditingContact] = useState<ContactoObraForm>({
     rol: '',
     nombre: '',
@@ -188,6 +200,7 @@ const DuplicateWork = (props: Props) => {
     isEditing: true,
     isPrincipal: false
   })
+
   const { regiones, comunas, selectedRegion, selectedComuna, setSelectedRegion, setSelectedComuna } = useRegionesYComunas()
 
   // Definir el cliente seleccionado a partir de initialData
@@ -219,6 +232,7 @@ const DuplicateWork = (props: Props) => {
     const fetchListasPrecios = async () => {
       try {
         const response = await axios.get('/api/listas-precios')
+
         setListasPrecios(response.data)
       } catch (error) {
         console.error('Error al cargar las listas de precios:', error)
@@ -281,11 +295,14 @@ const DuplicateWork = (props: Props) => {
       if (initialData.region) {
         setSelectedRegion(initialData.region)
       }
+
       if (initialData.comuna) {
         setSelectedComuna(initialData.comuna)
       }
+
       if (initialData.comunaFacturacion) {
         const existe = comunas.some(c => c.nombre.trim().toLowerCase() === initialData.comunaFacturacion!.trim().toLowerCase())
+
         if (!existe) {
           comunas.push({ id: 'custom', nombre: initialData.comunaFacturacion! })
         }
@@ -317,24 +334,31 @@ const DuplicateWork = (props: Props) => {
   const onSubmit = async (data: FormValidateType) => {
     try {
       const encargadoObra = contactos[0];
+
       if (!encargadoObra?.nombre || !encargadoObra?.email || !encargadoObra?.telefono1) {
         toast.error('El contacto Encargado de Obra es obligatorio y debe tener nombre, email y teléfono');
-        return;
+        
+return;
       }
+
       for (const contacto of contactos) {
         if (!validateEmail(contacto.email)) {
           toast.error('Email inválido');
-          return;
+          
+return;
         }
+
         if (!validatePhone(contacto.telefono1)) {
           toast.error('Teléfono inválido');
-          return;
+          
+return;
         }
       }
 
       if (!data.numeroObra) {
         data.numeroObra = lastObraNumber;
       }
+
       setIsSubmitting(true);
 
       // Procesar correos
@@ -357,13 +381,15 @@ const DuplicateWork = (props: Props) => {
       if (correosInvalidos.length > 0) {
         toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       if (mailRecepcionInvalidos.length > 0) {
         toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       const payload = {
@@ -386,7 +412,9 @@ const DuplicateWork = (props: Props) => {
         correos: correosArray,
         mailRecepcionFactura: mailRecepcionArray
       };
+
       const response = await axios.post('/api/obras', payload);
+
       if (response.data) {
         setData(prevData => [...prevData, response.data]);
         setFilteredData(prevData => [...prevData, response.data]);
@@ -451,10 +479,12 @@ const DuplicateWork = (props: Props) => {
     // Validaciones
     if (!editingContact.nombre || !editingContact.email || !validateEmail(editingContact.email)) {
       toast.error('Por favor complete los campos requeridos correctamente')
-      return
+      
+return
     }
 
     const updatedContactos = [...contactos]
+
     updatedContactos[editingContactIndex] = {
       ...contactos[editingContactIndex],
       ...editingContact
@@ -490,6 +520,7 @@ const DuplicateWork = (props: Props) => {
 
   const eliminarContacto = (index: number) => {
     const updatedContactos = contactos.filter((_, i) => i !== index)
+
     setContactos(updatedContactos)
     toast.success('Contacto eliminado exitosamente')
   }
@@ -585,14 +616,17 @@ const DuplicateWork = (props: Props) => {
                   setValue('rut', cliente.rut)
                   setValue('nombreCliente', cliente.nombreCliente)
                   setValue('razonSocial', cliente.razonSocial)
+
                   // Campos de facturación
                   setValue('giro', cliente.giro || '')
                   setValue('direccionComercial', cliente.direccionComercial || '')
                   const comunaCliente = (cliente.comunaFacturacion || '').trim()
                   const existe = comunas.some(c => c.nombre.trim().toLowerCase() === comunaCliente.toLowerCase())
+
                   if (!existe && comunaCliente) {
                     comunas.push({ id: 'custom', nombre: comunaCliente })
                   }
+
                   setValue('comunaFacturacion', comunaCliente)
                   setValue('listaPrecios', cliente.listaPrecios || '')
                   setValue('mailRecepcionFactura', cliente.mailRecepcionFactura || '')
@@ -890,6 +924,7 @@ const DuplicateWork = (props: Props) => {
                 {contactos.map((contacto, index) => (
                   <TableRow key={index}>
                     {editingContactIndex === index ? (
+
                       // Modo edición
                       <>
                         <TableCell>
@@ -934,6 +969,7 @@ const DuplicateWork = (props: Props) => {
                             value={editingContact.telefono1}
                             onChange={e => {
                               const formatted = e.target.value.replace(/[^0-9+]/g, '')
+
                               setEditingContact({ ...editingContact, telefono1: formatted })
                             }}
                           />
@@ -958,6 +994,7 @@ const DuplicateWork = (props: Props) => {
                         </TableCell>
                       </>
                     ) : (
+
                       // Modo visualización
                       <>
                         <TableCell>{CARGOS_OBRA.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
@@ -1153,6 +1190,7 @@ const DuplicateWork = (props: Props) => {
                     value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
                     onChange={e => {
                       const value = e.target.value;
+
                       field.onChange(value);
                     }}
                   />

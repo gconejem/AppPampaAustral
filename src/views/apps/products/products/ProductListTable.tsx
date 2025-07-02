@@ -275,11 +275,13 @@ const ProductListTable = () => {
         // Cargar áreas
         const areasResponse = await fetch('/api/areas')
         const areasData = await areasResponse.json()
+
         setAreas(areasData.map((area: any) => area.nombre))
 
         // Cargar familias
         const familiasResponse = await fetch('/api/familias')
         const familiasData = await familiasResponse.json()
+
         setFamilias(familiasData.map((familia: any) => familia.nombre))
       } catch (error) {
         console.error('Error cargando datos:', error)
@@ -302,6 +304,7 @@ const ProductListTable = () => {
       if (data.productos) {
         const productosFormateados = data.productos.map(p => ({
           ...p,
+
           // Asegurarse de que listasPrecios sea un array
           listasPrecios: Array.isArray(p.listasPrecios) ? p.listasPrecios : []
         }))
@@ -324,10 +327,12 @@ const ProductListTable = () => {
     if (!query) {
       setFilteredProductos(allProductos)
       setPage(0) // Reiniciar la página al limpiar la búsqueda
-      return
+      
+return
     }
 
     const lowercaseQuery = query.toLowerCase()
+
     const resultados = allProductos.filter(producto =>
       producto.nombre.toLowerCase().includes(lowercaseQuery) ||
       producto.sku.toLowerCase().includes(lowercaseQuery) ||
@@ -551,6 +556,7 @@ const ProductListTable = () => {
             ...producto,
             productosEnPaquete: data.productos || []
           }
+
           console.log('handleEditOpen paqueteCompleto:', paqueteCompleto)
 
 
@@ -559,6 +565,7 @@ const ProductListTable = () => {
         } else {
           console.error('Error al obtener información del paquete:', data)
           toast.error('Error al cargar la información del paquete')
+
           // Si falla, usar el producto original
           setEditingProduct(producto)
           setEditPackageModalOpen(true)
@@ -566,6 +573,7 @@ const ProductListTable = () => {
       } catch (error) {
         console.error('Error al obtener información del paquete:', error)
         toast.error('Error al cargar la información del paquete')
+
         // Si falla, usar el producto original
         setEditingProduct(producto)
         setEditPackageModalOpen(true)
@@ -819,6 +827,7 @@ const ProductListTable = () => {
   // Actualizar el manejo del cambio en el filtro global
   const handleGlobalFilterChange = (value: string | number) => {
     setGlobalFilter(String(value))
+
     if (value === '') {
       setPage(0) // Reiniciar la página cuando se limpia el filtro
     }
@@ -988,6 +997,7 @@ const ProductListTable = () => {
           }}
           onRowsPerPageChange={e => {
             const newRowsPerPage = Number(e.target.value)
+
             setRowsPerPage(newRowsPerPage)
             setPage(0)
             table.setPageSize(newRowsPerPage)

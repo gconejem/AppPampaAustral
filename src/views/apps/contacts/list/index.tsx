@@ -1,19 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-import { Card } from '@mui/material'
+import { Card, CircularProgress } from '@mui/material'
 
 import ContactListTable from './ContactListTable'
 import TableFilters from './TableFilters'
 import type { ContactoWithRelations } from '@/types/apps/contactTypes'
 
-interface ContactListProps {
-  contactData: ContactoWithRelations[]
-}
+const ContactList = () => {
+  const [loading, setLoading] = useState(true)
+  const [contactData, setContactData] = useState<ContactoWithRelations[]>([])
+  const [filteredData, setFilteredData] = useState<ContactoWithRelations[]>([])
 
-const ContactList = ({ contactData }: ContactListProps) => {
-  const [filteredData, setFilteredData] = useState<ContactoWithRelations[]>(contactData)
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/contacts')
+        const data = await response.json()
+
+        setContactData(data)
+        setFilteredData(data)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching contacts:', error)
+        setLoading(false)
+      }
+    }
+
+    fetchContacts()
+  }, [])
 
   const handleDateRangeChange = (range: [Date | null, Date | null]) => {
     const [startDate, endDate] = range
@@ -53,6 +70,14 @@ const ContactList = ({ contactData }: ContactListProps) => {
     })
 
     setFilteredData(filtered)
+  }
+
+  if (loading) {
+    return (
+      <div className='flex justify-center items-center h-[400px]'>
+        <CircularProgress />
+      </div>
+    )
   }
 
   return (

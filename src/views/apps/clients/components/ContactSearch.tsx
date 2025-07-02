@@ -43,6 +43,7 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
 
       console.log('Contactos cargados:', data)
       setOptions(data || [])
+
       if (onContactCreated && data && data.length > 0) {
         onContactCreated(data[0])
       }
@@ -59,12 +60,14 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
 
     if (!searchValue) {
       loadAllContacts()
-      return
+      
+return
     }
 
     if (searchValue.length < 2) {
       setOptions([])
-      return
+      
+return
     }
 
     setLoading(true)
@@ -103,7 +106,9 @@ const ContactSearch = ({ onContactSelect, refreshKey, onContactCreated }: Contac
       isOptionEqualToValue={(option, value) => option.email === value.email}
       getOptionLabel={option => {
         const cargoLabel = option.cargo ? CARGOS_OBRA.find(c => c.value === option.cargo)?.label || option.cargo : ''
-        return `${option.nombre}${option.empresa ? ` (${option.empresa})` : ''}${cargoLabel ? ` - ${cargoLabel}` : ''}${option.email ? ` (${option.email})` : ''}`
+
+        
+return `${option.nombre}${option.empresa ? ` (${option.empresa})` : ''}${cargoLabel ? ` - ${cargoLabel}` : ''}${option.email ? ` (${option.email})` : ''}`
       }}
       options={options}
       loading={loading}

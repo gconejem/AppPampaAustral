@@ -1,5 +1,6 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
@@ -16,6 +17,7 @@ export async function GET() {
     return NextResponse.json({ siguienteNumero })
   } catch (error) {
     console.error('Error al obtener último número:', error)
-    return NextResponse.json({ error: 'Error al obtener número de cotización' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Error al obtener número de cotización' }, { status: 500 })
   }
 }

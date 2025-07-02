@@ -16,6 +16,7 @@ export interface ContactType {
 }
 
 export interface ContactoWithRelations extends ContactType {
+
   // Aquí puedes añadir las relaciones si las hay
 }
 

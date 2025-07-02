@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
@@ -66,12 +67,16 @@ export async function GET(request: Request) {
     // Si hay un areaId, ordenar las familias según el orden personalizado
     if (areaId) {
       const area = familias[0]?.area?.nombre
+
       if (area && ordenFamiliasPorArea[area]) {
         const ordenPersonalizado = ordenFamiliasPorArea[area]
+
         familias.sort((a, b) => {
           const indexA = ordenPersonalizado.indexOf(a.nombre)
           const indexB = ordenPersonalizado.indexOf(b.nombre)
-          return indexA - indexB
+
+          
+return indexA - indexB
         })
       }
     } else {
@@ -98,7 +103,9 @@ export async function GET(request: Request) {
           const ordenFamilias = ordenFamiliasPorArea[areaA] || []
           const indexFamiliaA = ordenFamilias.indexOf(a.nombre)
           const indexFamiliaB = ordenFamilias.indexOf(b.nombre)
-          return indexFamiliaA - indexFamiliaB
+
+          
+return indexFamiliaA - indexFamiliaB
         }
         
         // Si están en áreas diferentes, ordenar por área
@@ -109,6 +116,7 @@ export async function GET(request: Request) {
     return NextResponse.json(familias)
   } catch (error) {
     console.error('Error al obtener familias:', error)
-    return NextResponse.json({ error: 'Error al obtener familias' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Error al obtener familias' }, { status: 500 })
   }
 }

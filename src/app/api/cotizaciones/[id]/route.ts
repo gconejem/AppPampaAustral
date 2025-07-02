@@ -107,12 +107,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         sinCantidad: body.sinCantidad || false,
         precioProducto: body.precioProducto || false,
         precioTotal: body.precioTotal || false,
+
         // Incluir campos EMS solo si el tipo es B
         ...(body.tipoCotizacion === 'B' && {
           superficieEMS: body.superficieEMS || '',
           antecedentesEMS: body.antecedentesEMS || '',
           plazoEntregaEMS: body.plazoEntregaEMS || ''
         }),
+
         // Incluir campos mensuales solo si el tipo es C
         ...(body.tipoCotizacion === 'C' && {
           duracionMensual: body.duracionMensual || '',
@@ -120,6 +122,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           antecedentesMensual: body.antecedentesMensual || '',
           alcanceServicio: body.alcanceServicio || ''
         }),
+
         // Incluir campos de tipo D
         ...(body.tipoCotizacion === 'D' && {
           textoGeneral: body.textoGeneral || '',
@@ -279,7 +282,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json(cotizacionConDetalles)
   } catch (error) {
     console.error('Error al actualizar parcialmente la cotización:', error)
-    return NextResponse.json({ error: 'Error al actualizar parcialmente la cotización' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Error al actualizar parcialmente la cotización' }, { status: 500 })
   }
 }
 

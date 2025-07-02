@@ -162,15 +162,15 @@ export const getClienteById = async (id: number) => {
 // Actualizar un cliente
 export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput) => {
   return prisma.cliente.update({
-    where: { id },
+    where: { clienteId: id },
     data,
     include: {
-      ClienteContacto: {
+      clientesContactos: {
         include: {
           contacto: true
         }
       },
-      CondicionComercial: true
+      condicionesComerciales: true
     }
   })
 }
@@ -178,25 +178,20 @@ export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput)
 // Eliminar un cliente
 export const deleteCliente = async (id: number) => {
   // Iniciamos una transacción para asegurar que todo se ejecute o nada
-  return prisma.$transaction(async (tx: typeof prisma) => {
-    try {
-      // 1. Eliminamos los contactos asociados
-      await tx.clienteContacto.deleteMany({
-        where: { clienteId: id }
-      })
+  return prisma.$transaction(async (prisma) => {
+    // 1. Eliminamos los contactos asociados
+    await prisma.clienteContacto.deleteMany({
+      where: { clienteId: id }
+    })
 
-      // 2. Eliminamos las condiciones comerciales
-      await tx.condicionComercial.deleteMany({
-        where: { clienteId: id }
-      })
+    // 2. Eliminamos las condiciones comerciales
+    await prisma.condicionComercial.deleteMany({
+      where: { clienteId: id }
+    })
 
-      // 3. Finalmente eliminamos el cliente usando clienteId
-      return tx.cliente.delete({
-        where: { clienteId: id }
-      })
-    } catch (error) {
-      console.error('Error en la transacción de eliminación:', error)
-      throw error
-    }
+    // 3. Finalmente eliminamos el cliente usando clienteId
+    return prisma.cliente.delete({
+      where: { clienteId: id }
+    })
   })
 }

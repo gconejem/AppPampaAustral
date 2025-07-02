@@ -50,9 +50,11 @@ import { ROLES_CONTACTO } from '@/constants/roles'
 
 // Función para generar IDs únicos
 let idCounter = 0;
+
 const generateUniqueId = () => {
   idCounter++;
-  return Date.now() + idCounter + Math.random() * 1000;
+  
+return Date.now() + idCounter + Math.random() * 1000;
 };
 
 // Interfaces locales
@@ -189,6 +191,7 @@ Costos Adicionales contra evento:
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
   }
+
   if (tipoCotizacion === 'C') {
     return `Notas:
 * Valor Neto (sin IVA incluido)
@@ -201,6 +204,7 @@ Consideraciones adicionales y requisitos especiales
     100% Adicional Sábado, Domingo o Festivo.
 * Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
   }
+
   // Aquí puedes agregar el texto por defecto para otros tipos si lo deseas
   else if (tipoCotizacion === 'A') {
     return `(1) Valores unitarios Neto (sin IVA incluido)
@@ -517,6 +521,7 @@ const AddCard = ({
 
   // Crear un array de refs para los inputs de Servicio/Ensayo
   const servicioRefs = useRef<(HTMLInputElement | null)[]>([])
+
   // Crear un array de refs para los divs contenedores
   const servicioAnchorRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -575,7 +580,9 @@ const AddCard = ({
         if (!res.ok) {
           throw new Error('Error al cargar productos')
         }
-        return res.json()
+
+        
+return res.json()
       })
       .then(response => {
         const data = response.productos || []
@@ -604,6 +611,7 @@ const AddCard = ({
   useEffect(() => {
     if (anchorEl) { // Solo ejecutar cuando el popover está abierto
       const params = new URLSearchParams()
+
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
       if (searchTerm) params.append('search', searchTerm)
@@ -617,10 +625,13 @@ const AddCard = ({
           if (!res.ok) {
             throw new Error('Error al cargar productos')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(response => {
           const data = response.productos || []
+
           setFilteredProductos(data)
           setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
@@ -735,7 +746,8 @@ const AddCard = ({
       if (descuentoTotal !== 0) setDescuentoTotal(0)
       if (impuesto !== 0) setImpuesto(0)
       if (total !== 0) setTotal(0)
-      return
+      
+return
     }
 
     let subtotalTotal;
@@ -827,6 +839,7 @@ const AddCard = ({
     }
 
     setProductRows(newRows)
+
     // calcularTotales()
   }
 
@@ -853,6 +866,7 @@ const AddCard = ({
           try {
             const response = await fetch(`/api/productos/${producto.productoId}/productos`)
             const data = await response.json()
+
             productosEnPaquete = data.productos || []
           } catch (error) {
             console.error('Error al obtener productos del paquete:', error)
@@ -898,6 +912,7 @@ const AddCard = ({
       } else {
         // Si no es un paquete, actualizar la fila normal o subproducto
         const nombreCompleto = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre
+
         newRows[activeRowIndex] = {
           ...newRows[activeRowIndex],
           productoId: producto.productoId.toString(),
@@ -968,9 +983,11 @@ const AddCard = ({
     // Validar que haya al menos un producto solo si el tipo de cotización no es D
     if (formData.tipoCotizacion !== 'D') {
       const productosValidos = productRows.filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto);
+
       if (productosValidos.length === 0) {
         toast.error('Debe agregar al menos un producto a la cotización');
-        return;
+        
+return;
       }
     }
 
@@ -999,6 +1016,7 @@ const AddCard = ({
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       })),
+
       // Usar valores del formulario si es el caso especial, sino usar valores calculados
       subtotal: usarValoresFormulario ? Number(formData.subtotal || 0) : subtotal,
       descuento: usarValoresFormulario ? Number(formData.descuento || 0) : descuentoTotal,
@@ -1100,15 +1118,18 @@ const AddCard = ({
 
     if (rowToDelete.esPaquete) {
       let nextIndex = index + 1
+
       while (nextIndex < newRows.length && newRows[nextIndex].esSubProducto) {
         nextIndex++
       }
+
       newRows.splice(index, nextIndex - index)
       console.log('Paquete y subproductos eliminados', newRows)
     } else {
       newRows.splice(index, 1)
       console.log('Producto/subproducto eliminado', newRows)
     }
+
     setProductRows(newRows)
   }
 
@@ -1236,6 +1257,7 @@ const AddCard = ({
     setShowOnlyPaquetes(false) // El switch debe estar apagado
     filterProducts('', '', '', '')
     setLoadingProductos(false)
+
     // Forzar el reseteo visual y funcional en el siguiente ciclo de render
     setTimeout(() => {
       setSelectedTipo('')
@@ -1274,6 +1296,7 @@ const AddCard = ({
 
   const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setShowOnlyPaquetes(event.target.checked)
+
     // No modificar selectedTipo aquí
   }
 
@@ -1286,24 +1309,30 @@ const AddCard = ({
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let parentIndex = index - 1
+
       while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
         parentIndex--
       }
+
       if (parentIndex >= 0 && index > parentIndex + 1) {
         [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido arriba', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Calcular cuántos elementos hay en el paquete (incluyendo el paquete mismo)
@@ -1319,6 +1348,7 @@ const AddCard = ({
       if (index > 0 && (newRows[index - 1].esPaquete || newRows[index - 1].esSubProducto)) {
         // Encontrar el inicio del paquete anterior
         let prevPackageStartIndex = index - 1;
+
         while (prevPackageStartIndex > 0 && !newRows[prevPackageStartIndex].esPaquete) {
           prevPackageStartIndex--;
         }
@@ -1332,13 +1362,15 @@ const AddCard = ({
 
       setProductRows(newRows)
       console.log('Paquete completo movido arriba', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está precedido por un paquete
     if (index > 0 && newRows[index - 1].esSubProducto) {
       // Encontrar el inicio del paquete
       let packageStartIndex = index - 1
+
       while (packageStartIndex >= 0 && !newRows[packageStartIndex].esPaquete) {
         packageStartIndex--
       }
@@ -1354,7 +1386,8 @@ const AddCard = ({
 
       setProductRows(newRows);
       console.log('Producto movido antes del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el elemento anterior
@@ -1373,24 +1406,30 @@ const AddCard = ({
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let nextPackageIndex = index + 1
+
       while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
         nextPackageIndex++
       }
+
       if (index < nextPackageIndex - 1) {
         [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido abajo', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Si no hay elementos abajo para intercambiar, salir
@@ -1404,6 +1443,7 @@ const AddCard = ({
       if (index < newRows.length && newRows[index].esPaquete) {
         // Encontrar el final del siguiente paquete
         let nextPackageLastIndex = index;
+
         while (nextPackageLastIndex + 1 < newRows.length && newRows[nextPackageLastIndex + 1].esSubProducto) {
           nextPackageLastIndex++;
         }
@@ -1417,13 +1457,15 @@ const AddCard = ({
 
       setProductRows(newRows)
       console.log('Paquete completo movido abajo', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está seguido inmediatamente por un paquete
     if (index + 1 < newRows.length && newRows[index + 1].esPaquete) {
       // Encontrar el fin del paquete
       let paqueteEndIndex = index + 1;
+
       while (paqueteEndIndex + 1 < newRows.length && newRows[paqueteEndIndex + 1].esSubProducto) {
         paqueteEndIndex++;
       }
@@ -1439,7 +1481,8 @@ const AddCard = ({
 
       setProductRows(newRows);
       console.log('Producto movido después del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el siguiente elemento
@@ -1457,10 +1500,13 @@ const AddCard = ({
     if (currentRow.esSubProducto) {
       // Buscar el índice del paquete padre
       let parentIndex = index - 1
+
       while (parentIndex >= 0 && !productRows[parentIndex].esPaquete) {
         parentIndex--
       }
-      return parentIndex >= 0 && index > parentIndex + 1
+
+      
+return parentIndex >= 0 && index > parentIndex + 1
     }
 
     return true
@@ -1475,10 +1521,13 @@ const AddCard = ({
     if (currentRow.esSubProducto) {
       // Buscar el siguiente paquete o el final de la lista
       let nextPackageIndex = index + 1
+
       while (nextPackageIndex < productRows.length && !productRows[nextPackageIndex].esPaquete) {
         nextPackageIndex++
       }
-      return index < nextPackageIndex - 1
+
+      
+return index < nextPackageIndex - 1
     }
 
     return true
@@ -1538,6 +1587,7 @@ const AddCard = ({
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaId = e.target.value ? Number(e.target.value) : null
+
     setSelectedAreaId(areaId)
     setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
     setSelectedFamilia('') // Resetear familia cuando cambia el área
@@ -1555,6 +1605,7 @@ const AddCard = ({
     const fetchFilteredProducts = async () => {
       try {
         const url = new URL('/api/productos', window.location.origin)
+
         url.searchParams.append('page', (productsPage + 1).toString()) // Aseguramos que page sea al menos 1
         url.searchParams.append('limit', '10')
         if (selectedArea) url.searchParams.append('area', selectedArea)
@@ -1584,6 +1635,7 @@ const AddCard = ({
     setProductRows(prevRows =>
       prevRows.map(row => ({
         ...row,
+
         // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
         cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
         totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
@@ -1599,7 +1651,9 @@ const AddCard = ({
         if (!res.ok) {
           throw new Error('Error al cargar áreas')
         }
-        return res.json()
+
+        
+return res.json()
       })
       .then(data => {
         console.log('Áreas cargadas:', data)
@@ -1620,7 +1674,9 @@ const AddCard = ({
           if (!res.ok) {
             throw new Error('Error al cargar familias')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(data => {
           console.log('Familias cargadas:', data)
@@ -1642,8 +1698,10 @@ const AddCard = ({
       // Esperar a que la fila esté en el DOM
       setTimeout(() => {
         const targetElement = document.querySelector(`[data-row-id="${autoOpenRowId}"] input`)
+
         if (targetElement) {
           (targetElement as HTMLElement).focus()
+
             // Simular click para abrir el popover
             (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
           setAutoOpenRowId(null)
@@ -1658,6 +1716,8 @@ const AddCard = ({
   // useEffect para actualizar notas si cambia tipoCotizacion y el usuario no ha editado manualmente
   useEffect(() => {
     const autoNotas = getNotasDefault(formData.tipoCotizacion)
+
+
     // Solo actualiza si el valor actual de notas coincide con el último valor generado automáticamente
     if (formData.notas === lastAutoNotas) {
       setFormData(prev => ({ ...prev, notas: autoNotas }))
@@ -1669,6 +1729,7 @@ const AddCard = ({
   // Al editar el campo notas manualmente, actualizar lastAutoNotas si el valor es diferente
   const handleNotasChange = (value: string) => {
     setFormData(prev => ({ ...prev, notas: value }))
+
     // Si el usuario edita, no actualizar lastAutoNotas
   }
 
@@ -1916,6 +1977,7 @@ const AddCard = ({
                       value={formData.tipoCotizacion}
                       onChange={e => {
                         const nuevoTipo = e.target.value as TipoCotizacion
+
                         handleChange('tipoCotizacion', nuevoTipo)
                         setValidationErrors({ ...validationErrors, tipoCotizacion: false })
 
@@ -2176,6 +2238,7 @@ const AddCard = ({
                 />
               </Grid>
             ) : (
+
               // Aquí va TODO el bloque original de Detalle Servicios Solicitados (incluyendo título, switch, tabla, botón, etc.)
               <Grid item xs={12} sx={{ mt: 8 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -2481,6 +2544,7 @@ const AddCard = ({
 
                                 // Encontrar el final de los subproductos del paquete actual
                                 let insertIndex = index + 1;
+
                                 while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
                                   insertIndex++;
                                 }
@@ -2498,7 +2562,9 @@ const AddCard = ({
                                   esSubProducto: true,
                                   subproductos: []
                                 }
+
                                 const newRows = [...productRows]
+
                                 newRows.splice(insertIndex, 0, newProductRow)
                                 setProductRows(newRows)
                                 setTimeout(() => {
@@ -2544,6 +2610,7 @@ const AddCard = ({
                           onChange={e => {
                             const total = parseFloat(e.target.value) || 0
                             const impuesto = total * 0.19
+
                             updateFormData({
                               subtotal: total,
                               impuesto: impuesto,
@@ -2578,6 +2645,7 @@ const AddCard = ({
                             onChange={e => {
                               const total = parseFloat(e.target.value) || 0
                               const impuesto = total * 0.19
+
                               updateFormData({
                                 subtotal: total,
                                 impuesto: impuesto,

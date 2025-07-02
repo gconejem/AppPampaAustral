@@ -1,0 +1,22 @@
+{
+    "extends": "next/core-web-vitals",
+    "rules": {
+        "@typescript-eslint/no-unused-vars": "off",
+        "import/no-unresolved": "off",
+        "import/no-named-as-default": "off",
+        "import/no-duplicates": "off",
+        "react/jsx-no-undef": "off",
+        "react/jsx-no-duplicate-props": "off",
+        "import/named": "off",
+        "import/order": "off",
+        "lines-around-comment": "off",
+        "padding-line-between-statements": "off",
+        "newline-before-return": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "@typescript-eslint/consistent-type-imports": "off",
+        "react/jsx-key": "off"
+    },
+    "ignorePatterns": [
+        "**/*"
+    ]
+}

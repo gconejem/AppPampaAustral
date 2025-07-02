@@ -80,7 +80,9 @@ interface EditWorksFormProps {
 
 const validateEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return re.test(email)
+
+  
+return re.test(email)
 }
 
 const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormProps) => {
@@ -153,6 +155,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
         direccionComercial: obraData.direccionComercial ?? '',
         comunaFacturacion: obraData.comunaFacturacion ?? '',
         listaPrecios: obraData.listaPrecios ?? '',
+
         // Convertir explícitamente a booleanos
         informeMandante: Boolean(obraData.informeMandante ?? false),
         acreditacionPersonal: Boolean(obraData.acreditacionPersonal ?? false),
@@ -199,8 +202,10 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
     const fetchListasPrecios = async () => {
       try {
         const response = await fetch('/api/listas-precios')
+
         if (!response.ok) throw new Error('Error al cargar las listas de precios')
         const data = await response.json()
+
         setListasPrecios(data.map((lista: any) => ({
           value: lista.id.toString(),
           label: lista.nombre
@@ -296,13 +301,15 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
       if (correosInvalidos.length > 0) {
         toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       if (mailRecepcionInvalidos.length > 0) {
         toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       const payload = {
@@ -378,6 +385,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
 
     // Agregar el contacto al estado local
     const updatedContactos = [...contactos, contactWithObraId]
+
     console.log('updatedContactos', updatedContactos)
     setContactos(updatedContactos)
 
@@ -388,6 +396,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
   const handleDeleteContact = (contactId: number) => {
     // Filtrar el contacto eliminado del estado local
     const updatedContactos = contactos.filter(c => c.id !== contactId)
+
     setContactos(updatedContactos)
 
     // Actualizar el formulario con los contactos actualizados
@@ -807,6 +816,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
               {contactos.map((contacto, index) => (
                 <TableRow key={index}>
                   {editingContactIndex === index ? (
+
                     // Modo edición
                     <>
                       <TableCell>
@@ -876,6 +886,7 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                       </TableCell>
                     </>
                   ) : (
+
                     // Modo visualización
                     <>
                       <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}</TableCell>
@@ -1141,8 +1152,10 @@ const EditWorksForm = ({ open, handleClose, obraData, setData }: EditWorksFormPr
                   onChange={e => {
                     // Permitir solo números, k, K y el guión
                     const value = e.target.value.replace(/[^0-9kK-]/g, '')
+
                     // Formatear solo si hay suficientes caracteres
                     const formatted = value.length > 1 ? formatRut(value) : value
+
                     field.onChange(formatted)
                   }}
                   value={field.value ?? ''}

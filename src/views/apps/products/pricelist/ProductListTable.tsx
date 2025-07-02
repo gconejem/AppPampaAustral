@@ -28,15 +28,17 @@ import Switch from '@mui/material/Switch'
 import Box from '@mui/material/Box'
 import InputAdornment from '@mui/material/InputAdornment'
 
+import type {
+  SortingState,
+  ColumnFiltersState
+} from '@tanstack/react-table';
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  SortingState,
-  getFilteredRowModel,
-  ColumnFiltersState
+  getFilteredRowModel
 } from '@tanstack/react-table'
 
 interface ListaPrecio {
@@ -105,6 +107,7 @@ const ProductListTable = () => {
       try {
         const response = await fetch('/api/lista-precios')
         const data = await response.json()
+
         setListaPrecios(data)
       } catch (error) {
         console.error('Error al cargar listas de precios:', error)
@@ -172,7 +175,9 @@ const ProductListTable = () => {
               }))
             }
           }
-          return producto
+
+          
+return producto
         })
       )
       setEditingPrice(null)
@@ -221,7 +226,9 @@ const ProductListTable = () => {
               }))
             }
           }
-          return producto
+
+          
+return producto
         })
       )
 
@@ -256,7 +263,9 @@ const ProductListTable = () => {
               }))
             }
           }
-          return producto
+
+          
+return producto
         })
       )
       toast.error('Error al actualizar el estado')
@@ -278,6 +287,7 @@ const ProductListTable = () => {
           value={editingPrice.price}
           onChange={e => {
             const value = e.target.value
+
             if (/^\d*\.?\d*$/.test(value)) {
               setEditingPrice({ id: producto.productoId, price: value })
             }
@@ -407,6 +417,7 @@ const ProductListTable = () => {
                     }
                   ]
                 }
+
                 handleActiveToggle(nuevoProducto.productoId, false)
               } else {
                 handleActiveToggle(row.original.productoId, estaActivo)

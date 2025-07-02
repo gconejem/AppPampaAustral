@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import { Button, Card, CardContent, Typography, Box, Alert, Paper } from '@mui/material'
 import * as XLSX from 'xlsx'
 import axios from 'axios'
@@ -16,9 +17,10 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
+
     if (selectedFile) {
-      if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-          selectedFile.type === 'application/vnd.ms-excel') {
+      if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        selectedFile.type === 'application/vnd.ms-excel') {
         setFile(selectedFile)
         setError(null)
         setSuccess(false)
@@ -38,6 +40,7 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
       setError(null)
 
       const reader = new FileReader()
+
       reader.onload = async (e) => {
         try {
           const data = e.target?.result
@@ -50,14 +53,21 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
           const camposRequeridos = [
             'estado', 'rut', 'razonSocial', 'nombreCliente', 'pais', 'region', 'ciudad', 'comuna', 'direccion'
           ]
+
           const clientes: any[] = []
+
           for (let i = 0; i < jsonData.length; i++) {
             const row: any = jsonData[i]
+
+
             // Verificar si la fila está completamente vacía
             const isEmptyRow = camposRequeridos.every(campo => {
               const valor = row[campo]
+
+
               return valor === undefined || valor === null || String(valor).trim() === ''
             })
+
             if (isEmptyRow) break // Detener procesamiento al encontrar la primera fila vacía
             clientes.push({
               estado: row.estado?.toString().trim() || '',
@@ -74,12 +84,15 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
 
           // Validar datos requeridos y recolectar errores detallados
           const errores: string[] = []
+
           clientes.forEach((cliente, idx) => {
             const filaExcel = idx + 2 // +2 porque la fila 1 es encabezado y el array es 0-based
-            const camposFaltantes = []
+            const camposFaltantes: string[] = []
+
             camposRequeridos.forEach(campo => {
               if (!cliente[campo]) camposFaltantes.push(campo)
             })
+
             if (camposFaltantes.length > 0) {
               errores.push(`Fila ${filaExcel}: falta(n) ${camposFaltantes.join(', ')}`)
             }
@@ -87,14 +100,16 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
 
           if (errores.length > 0) {
             setError('Corrige los siguientes errores en tu archivo Excel:\n' + errores.join('\n'))
+
             return
           }
 
           // Enviar datos al servidor
           const response = await axios.post('/api/clientes/import', { clientes })
-          
+
           toast.success('Clientes importados correctamente')
           setSuccess(true)
+
           if (onSuccess) {
             onSuccess()
           }
@@ -156,7 +171,7 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
             • direccion
           </Typography>
         </Paper>
-        
+
         <Box sx={{ mb: 2 }}>
           <input
             accept=".xlsx,.xls"

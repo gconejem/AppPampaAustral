@@ -205,6 +205,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       formData.sinCantidad === true
 
     let subtotalTotal
+
     if (debeManternerSubtotal || debeManternerSubtotalSinCantidad || debeManternerSubtotalPrecioProducto) {
       // Mantener el subtotal actual del formData (que viene del backend)
       subtotalTotal = Number(formData.subtotal || 0)
@@ -244,11 +245,13 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
         // Obtener el nuevo número de cotización
         const numeroResponse = await fetch('/api/cotizaciones/ultimo-numero')
+
         if (!numeroResponse.ok) throw new Error('Error al obtener el número de cotización')
         const { siguienteNumero } = await numeroResponse.json()
 
         // Cargar la cotización
         const cotizacionResponse = await fetch(`/api/cotizaciones/${id}`)
+
         if (!cotizacionResponse.ok) throw new Error('Error al cargar la cotización')
         const cotizacionData = await cotizacionResponse.json()
 
@@ -256,6 +259,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         cotizacionData.numeroCotizacion = siguienteNumero.toString().padStart(4, '0')
         cotizacionData.contacto = undefined
         cotizacionData.contactId = undefined
+
         // Mantener el tipo de cotización original
         // cotizacionData.tipoCotizacion = 'A' <- Eliminamos esta línea
         // Mantener la lista de precios de la cotización original
@@ -268,6 +272,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         // Actualizar fechas
         const hoy = new Date()
         const fechaVencimiento = new Date()
+
         fechaVencimiento.setDate(hoy.getDate() + 15) // 15 días después de la fecha actual
 
         cotizacionData.fechaCreacion = hoy.toISOString().split('T')[0] // Formato YYYY-MM-DD
@@ -286,16 +291,19 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
         // Cargar productos con límite alto para obtener todas las áreas, tipos y familias
         const productosResponse = await fetch('/api/productos?limit=1000')
+
         if (!productosResponse.ok) throw new Error('Error al cargar productos')
         const productosData = await productosResponse.json()
 
         // Cargar contactos
         const contactosResponse = await fetch('/api/contacts')
+
         if (!contactosResponse.ok) throw new Error('Error al cargar contactos')
         const contactosData = await contactosResponse.json()
 
         // Cargar listas de precios
         const listasPreciosResponse = await fetch('/api/listas-precios')
+
         if (!listasPreciosResponse.ok) throw new Error('Error al cargar listas de precios')
         const listasPreciosData = await listasPreciosResponse.json()
 
@@ -350,6 +358,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         } else {
           // Fallback: verificar si todos los productos tienen cantidad cero
           const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+
           setSinCantidad(todasCero)
         }
 
@@ -383,6 +392,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
           telefono1: contacto.telefono1,
           empresa: contacto.empresa || ''
         }))
+
         setContactos(contactosMapeados)
         console.log('Contactos mapeados:', contactosMapeados)
 
@@ -419,6 +429,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         if (formData?.tipoCotizacion === 'A') {
           return {
             ...row,
+
             // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
             cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
             totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
@@ -433,6 +444,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
         }
       })
     )
+
     // Recalcular totales
     if (formData) calcularTotales()
   }, [sinCantidad, formData?.tipoCotizacion])
@@ -442,10 +454,12 @@ const DuplicateCard = ({ id }: { id: string }) => {
     if (autoOpenRowId) {
       setTimeout(() => {
         const idx = productRows.findIndex(row => row.id === autoOpenRowId);
+
         if (idx !== -1 && servicioAnchorRefs.current[idx]) {
           setActiveRowIndex(idx);
           setAnchorEl(servicioAnchorRefs.current[idx]);
         }
+
         setAutoOpenRowId(null);
       }, 100);
     }
@@ -457,13 +471,17 @@ const DuplicateCard = ({ id }: { id: string }) => {
     const newRows = [...productRows];
     const emptyRowIndex = newRows.findIndex(row => row.productoId === '0');
     let precioFinal = Number(producto.precio || 0);
+
     if (formData?.listaPrecioId && producto.listasPrecios) {
       const listaPrecio = producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId);
+
       if (listaPrecio) {
         precioFinal = Number(listaPrecio.precio);
       }
     }
+
     const nombreServicio = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre || '';
+
     if (emptyRowIndex !== -1 && newRows[emptyRowIndex].esSubProducto) {
       newRows[emptyRowIndex] = {
         ...newRows[emptyRowIndex],
@@ -479,8 +497,10 @@ const DuplicateCard = ({ id }: { id: string }) => {
       setProductRows(newRows);
       handleClosePopover();
       setActiveRowIndex(null);
-      return;
+      
+return;
     }
+
     if (producto.esPaquete && producto.productosEnPaquete && producto.productosEnPaquete.length > 0) {
       const paqueteRow = {
         id: Date.now(),
@@ -494,16 +514,22 @@ const DuplicateCard = ({ id }: { id: string }) => {
         esPaquete: true,
         subproductos: []
       };
+
       const productosRows = (producto.productosEnPaquete || []).map((pp: any) => {
         let precioProducto = Number(pp.producto?.precio || 0);
+
         if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
           const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId);
+
           if (listaPrecio) {
             precioProducto = Number(listaPrecio.precio);
           }
         }
+
         const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || '';
-        return {
+
+        
+return {
           id: Date.now() + Math.random(),
           productoId: pp.producto?.productoId?.toString() || '',
           servicio: nombreSubServicio,
@@ -516,13 +542,18 @@ const DuplicateCard = ({ id }: { id: string }) => {
           subproductos: []
         };
       });
+
       const filteredRows = newRows.filter(row => row.productoId !== '0');
+
       setProductRows([...filteredRows, paqueteRow, ...productosRows]);
       handleClosePopover();
       setActiveRowIndex(null);
-      return;
+      
+return;
     }
+
     const filteredRows = newRows.filter(row => row.productoId !== '0');
+
     const newRow = {
       id: Date.now(),
       productoId: producto.productoId.toString(),
@@ -534,6 +565,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       area: producto.area || '',
       subproductos: []
     };
+
     setProductRows([...filteredRows, newRow]);
     handleClosePopover();
     setActiveRowIndex(null);
@@ -544,6 +576,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       console.log('Nuevo contacto seleccionado:', newValue)
       setFormData(prev => {
         if (!prev) return null
+
         const newData = {
           ...prev,
           contacto: {
@@ -556,20 +589,25 @@ const DuplicateCard = ({ id }: { id: string }) => {
           },
           contactoId: Number(newValue.contactId)
         }
+
         console.log('Nuevo formData después de actualizar contacto:', newData)
-        return newData
+        
+return newData
       })
     } else {
       console.log('Limpiando contacto')
       setFormData(prev => {
         if (!prev) return null
+
         const newData = {
           ...prev,
           contacto: undefined,
           contactoId: undefined
         }
+
         console.log('FormData después de limpiar contacto:', newData)
-        return newData
+        
+return newData
       })
     }
   }
@@ -645,24 +683,30 @@ const DuplicateCard = ({ id }: { id: string }) => {
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let parentIndex = index - 1
+
       while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
         parentIndex--
       }
+
       if (parentIndex >= 0 && index > parentIndex + 1) {
         [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido arriba', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Calcular cuántos elementos hay en el paquete (incluyendo el paquete mismo)
@@ -678,6 +722,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       if (index > 0 && (newRows[index - 1].esPaquete || newRows[index - 1].esSubProducto)) {
         // Encontrar el inicio del paquete anterior
         let prevPackageStartIndex = index - 1;
+
         while (prevPackageStartIndex > 0 && !newRows[prevPackageStartIndex].esPaquete) {
           prevPackageStartIndex--;
         }
@@ -691,13 +736,15 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows)
       console.log('Paquete completo movido arriba', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está precedido por un paquete
     if (index > 0 && newRows[index - 1].esSubProducto) {
       // Encontrar el inicio del paquete
       let packageStartIndex = index - 1
+
       while (packageStartIndex >= 0 && !newRows[packageStartIndex].esPaquete) {
         packageStartIndex--
       }
@@ -713,7 +760,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows);
       console.log('Producto movido antes del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el elemento anterior
@@ -732,24 +780,30 @@ const DuplicateCard = ({ id }: { id: string }) => {
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let nextPackageIndex = index + 1
+
       while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
         nextPackageIndex++
       }
+
       if (index < nextPackageIndex - 1) {
         [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido abajo', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Si no hay elementos abajo para intercambiar, salir
@@ -763,6 +817,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
       if (index < newRows.length && newRows[index].esPaquete) {
         // Encontrar el final del siguiente paquete
         let nextPackageLastIndex = index;
+
         while (nextPackageLastIndex + 1 < newRows.length && newRows[nextPackageLastIndex + 1].esSubProducto) {
           nextPackageLastIndex++;
         }
@@ -776,13 +831,15 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows)
       console.log('Paquete completo movido abajo', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está seguido inmediatamente por un paquete
     if (index + 1 < newRows.length && newRows[index + 1].esPaquete) {
       // Encontrar el fin del paquete
       let paqueteEndIndex = index + 1;
+
       while (paqueteEndIndex + 1 < newRows.length && newRows[paqueteEndIndex + 1].esSubProducto) {
         paqueteEndIndex++;
       }
@@ -798,7 +855,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows);
       console.log('Producto movido después del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el siguiente elemento
@@ -846,6 +904,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
     if (selectedAreaId) {
       const areaNombre = areas.find(a => a.id === selectedAreaId)?.nombre
+
       if (areaNombre) {
         filtered = filtered.filter(product => product.area === areaNombre)
       }
@@ -864,9 +923,11 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       // Obtener el siguiente número de cotización
       const numeroResponse = await fetch('/api/cotizaciones/ultimo-numero')
+
       if (!numeroResponse.ok) {
         throw new Error('Error al obtener el número de cotización')
       }
+
       const { siguienteNumero } = await numeroResponse.json()
 
       const detallesValidos = productRows.map(row => ({
@@ -931,11 +992,13 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
       if (!response.ok) {
         const errorData = await response.json()
+
         console.error('Error response:', errorData)
         throw new Error(errorData.message || 'Error al crear la copia de la cotización')
       }
 
       const responseData = await response.json()
+
       console.log('Respuesta del servidor:', responseData)
 
       toast.success('Copia de cotización creada exitosamente')
@@ -953,6 +1016,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
     // Obtener las fechas actuales
     const hoy = new Date()
     const fechaVencimiento = new Date()
+
     fechaVencimiento.setDate(hoy.getDate() + 15) // 15 días después de la fecha actual
 
     const previewData = {
@@ -972,9 +1036,11 @@ const DuplicateCard = ({ id }: { id: string }) => {
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false
       })),
+
       // Usar los valores booleanos unificados
       precioProducto: formData.precioProducto || false,
       precioTotal: formData.precioTotal || false,
+
       // Asegurarnos de que los totales sean números
       subtotal: Number(formData.subtotal || 0),
       descuento: Number(formData.descuento || 0),
@@ -986,11 +1052,14 @@ const DuplicateCard = ({ id }: { id: string }) => {
       jornadaMensual: formData.jornadaMensual || '',
       antecedentesMensual: formData.antecedentesMensual || '',
       alcanceServicio: formData.alcanceServicio || '',
+
       // Campos para tipo D (Genérica)
       antecedentesGeneral: formData.antecedentesGeneral || '',
       plazoEntregaGeneral: formData.plazoEntregaGeneral || '',
+
       // Agregar campo sinCantidad
       sinCantidad: sinCantidad,
+
       // Agregar bandera para indicar que es una duplicación
       isDuplicacion: true
     }
@@ -1010,15 +1079,19 @@ const DuplicateCard = ({ id }: { id: string }) => {
   useEffect(() => {
     if (anchorEl) { // Solo ejecutar cuando el popover está abierto
       const params = new URLSearchParams()
+
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
       if (searchTerm) params.append('search', searchTerm)
+
       if (selectedAreaId) {
         const areaNombre = areas.find(a => a.id === selectedAreaId)?.nombre
+
         if (areaNombre) {
           params.append('area', areaNombre)
         }
       }
+
       if (selectedTipo) params.append('tipo', selectedTipo)
       if (selectedFamilia) params.append('familia', selectedFamilia)
 
@@ -1027,10 +1100,14 @@ const DuplicateCard = ({ id }: { id: string }) => {
           if (!res.ok) {
             throw new Error('Error al cargar productos')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(response => {
           const data = response.productos || []
+
+
           // Filtrar los productos por nombre, descripción o norma
           const filteredData = searchTerm
             ? data.filter(
@@ -1040,6 +1117,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
                 producto.norma?.toLowerCase().includes(searchTerm.toLowerCase())
             )
             : data
+
           setFilteredProductos(filteredData)
           setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
@@ -1072,6 +1150,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaId = e.target.value ? Number(e.target.value) : null
+
     setSelectedAreaId(areaId)
     setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '')
     setSelectedFamilia('') // Resetear familia cuando cambia el área
@@ -1123,7 +1202,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
         if (!res.ok) {
           throw new Error('Error al cargar áreas')
         }
-        return res.json()
+
+        
+return res.json()
       })
       .then(data => {
         console.log('Áreas cargadas:', data)
@@ -1144,7 +1225,9 @@ const DuplicateCard = ({ id }: { id: string }) => {
           if (!res.ok) {
             throw new Error('Error al cargar familias')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(data => {
           console.log('Familias cargadas:', data)
@@ -1177,6 +1260,7 @@ Costos Adicionales contra evento:
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
     }
+
     if (tipoCotizacion === 'C') {
       return `Notas:
 * Valor Neto (sin IVA incluido)
@@ -1645,6 +1729,7 @@ Consideraciones adicionales y requisitos especiales
                       const value = Number(e.target.value)
                       const impuesto = value * 0.19
                       const total = value + impuesto
+
                       setFormData(prev => prev ? {
                         ...prev,
                         subtotal: isNaN(value) ? 0 : value,
@@ -1688,6 +1773,7 @@ Consideraciones adicionales y requisitos especiales
                       value={formData.precioProducto}
                       onChange={e => {
                         const porProducto = e.target.value === 'true'
+
                         setFormData(prev => prev ? {
                           ...prev,
                           precioProducto: porProducto,
@@ -1832,6 +1918,7 @@ Consideraciones adicionales y requisitos especiales
 
                             // Encontrar el final de los subproductos del paquete actual
                             let insertIndex = index + 1;
+
                             while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
                               insertIndex++;
                             }
@@ -1849,7 +1936,9 @@ Consideraciones adicionales y requisitos especiales
                               esSubProducto: true,
                               subproductos: []
                             };
+
                             const newRows = [...productRows];
+
                             newRows.splice(insertIndex, 0, newProductRow);
                             setProductRows(newRows);
                             setAutoOpenRowId(newProductRow.id);
@@ -1896,9 +1985,11 @@ Consideraciones adicionales y requisitos especiales
                           {formData.tipoCotizacion === 'A' && formData.sinCantidad ? (
                             <Typography>-</Typography>
                           ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
+
                             // Para precio por producto (readonly)
                             <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
                           ) : (
+
                             // Para precio total (editable)
                             <TextField
                               size='small'
@@ -1907,6 +1998,7 @@ Consideraciones adicionales y requisitos especiales
                               onChange={e => {
                                 const total = parseFloat(e.target.value) || 0
                                 const impuesto = total * 0.19
+
                                 setFormData(prev => prev ? { ...prev, subtotal: total, impuesto: impuesto, total: total + impuesto } : null)
                               }}
                               InputProps={{

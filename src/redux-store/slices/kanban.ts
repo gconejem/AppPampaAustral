@@ -65,7 +65,12 @@ export const kanbanSlice = createSlice({
 
       const newTask: TaskType = {
         id: state.tasks[state.tasks.length - 1].id + 1,
-        title
+        title,
+        badgeText: [],
+        attachments: 0,
+        comments: 0,
+        assigned: [],
+        dueDate: new Date()
       }
 
       const column = state.columns.find(column => column.id === columnId)
@@ -74,7 +79,7 @@ export const kanbanSlice = createSlice({
         column.taskIds.push(newTask.id)
       }
 
-      state.tasks.push(newTask)
+      state.tasks.push(newTask as any)
 
       return state
     },

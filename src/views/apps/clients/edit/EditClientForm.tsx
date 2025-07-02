@@ -73,22 +73,29 @@ const getCargoLabel = (value: string) => {
 const formatRut = (value: string) => {
   try {
     let cleaned = value.replace(/[^0-9kK-]/g, '')
+
     if (!cleaned) return ''
     if (cleaned.length <= 8) return cleaned
+
     if (cleaned.includes('-')) {
       const parts = cleaned.split('-')
+
       cleaned = parts[0] + (parts[1] ? parts[1].charAt(0) : '')
     }
+
     const body = cleaned.slice(0, -1)
     const dv = cleaned.slice(-1)
     const reversedBody = body.split('').reverse().join('')
     const chunks = reversedBody.match(/.{1,3}/g) || []
     const formattedBody = chunks.join('.').split('').reverse().join('')
     const digitoVerificador = dv.toUpperCase() === 'K' ? 'K' : dv
-    return formattedBody + '-' + digitoVerificador
+
+    
+return formattedBody + '-' + digitoVerificador
   } catch (error) {
     console.error('Error formateando RUT:', error)
-    return value
+    
+return value
   }
 }
 
@@ -97,7 +104,9 @@ const validateMultipleEmails = (value?: string) => {
   if (!value) return true
   const emails = value.split(',').map(email => email.trim()).filter(email => email.length > 0)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emails.every(email => emailRegex.test(email))
+
+  
+return emails.every(email => emailRegex.test(email))
 }
 
 const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX.Element => {
@@ -292,6 +301,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   const handleSaveEdit = (index: number) => {
     if (editingContact) {
       const newContacts = [...contacts]
+
       newContacts[index] = {
         ...editingContact,
         nombre: editingContact.nombre || '',
@@ -316,6 +326,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       telefono2: newContact.telefono2 || '',
       contactId: newContact.contactId
     };
+
     setContacts([
       ...contacts,
       {
@@ -594,6 +605,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                     placeholder='12.345.678-9'
                     onChange={e => {
                       const formatted = formatRut(e.target.value)
+
                       field.onChange(formatted)
                     }}
                   />
@@ -638,10 +650,13 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                         <ContactSearch
                           onContactSelect={contact => {
                             const exists = contacts.some(c => c.contactId === contact.contactId)
+
                             if (exists) {
                               toast.error('Este contacto ya está en la lista')
-                              return
+                              
+return
                             }
+
                             const newContact = {
                               contactId: contact.contactId,
                               nombre: contact.nombre || '',
@@ -651,6 +666,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                               telefono2: contact.telefono2 || '',
                               isPrincipal: contacts.length === 0
                             }
+
                             setContacts([...contacts, newContact])
                             toast.success('Contacto agregado exitosamente')
                           }}

@@ -15,6 +15,7 @@ interface SidebarMiniCalendarProps {
 
 const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarRef }: SidebarMiniCalendarProps) => {
   const theme = useTheme()
+
   // Usar la fecha actual si currentDate es null o undefined
   const safeDate = currentDate ? new Date(currentDate) : new Date()
   const [selectedDate, setSelectedDate] = useState(safeDate)
@@ -25,6 +26,7 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarR
   useEffect(() => {
     if (currentDate) {
       const safeDate = new Date(currentDate)
+
       setSelectedDate(safeDate)
       setCurrentMonth(safeDate.getMonth())
       setCurrentYear(safeDate.getFullYear())

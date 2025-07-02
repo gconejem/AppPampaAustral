@@ -16,8 +16,10 @@ export async function GET(request: Request) {
         AND: [
           // Filtro de esPaquete si está presente
           esPaquete ? { esPaquete: esPaquete === 'true' } : {},
+
           // Filtro de área si está presente
           area ? { area: area } : {},
+
           // Filtro de búsqueda si hay query
           query ? {
             OR: [

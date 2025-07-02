@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -19,7 +19,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       },
       data: {
         precio,
-        listaPrecioId
+        listasPrecios: {
+          connect: {
+            id: listaPrecioId
+          }
+        }
       }
     })
 

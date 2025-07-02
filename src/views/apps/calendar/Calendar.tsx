@@ -36,7 +36,18 @@ import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
 import CambiarEstadoModal from './modals/CambiarEstadoModal'
 
+// Type Imports
+import type { CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
+import type { Dispatch } from 'redux'
+import type { SetStateAction } from 'react'
+
 type CalenderProps = {
+  dispatch?: Dispatch<any>
+  calendarApi?: any
+  calendarStore?: CalendarType
+  setCalendarApi?: React.Dispatch<SetStateAction<any>>
+  calendarsColor?: CalendarColors
+  handleLeftSidebarToggle?: () => void
   handleAddEventSidebarToggle: () => void
 }
 
@@ -273,10 +284,10 @@ const Calendar = (props: CalenderProps) => {
     const filtered = todosDesactivados
       ? events
       : events.filter(event => {
-          const eventStatus = event.extendedProps?.estado || 'AGENDADA'
+        const eventStatus = event.extendedProps?.estado || 'AGENDADA'
 
-          return filters[eventStatus as StatusType]
-        })
+        return filters[eventStatus as StatusType]
+      })
 
     setFilteredEvents(filtered)
   }
@@ -991,9 +1002,8 @@ const Calendar = (props: CalenderProps) => {
             ">
               ${title}
             </div>
-            ${
-              timeText
-                ? `
+            ${timeText
+            ? `
               <div style="
                 font-size: 0.75rem;
                 color: ${alpha(backgroundColor, 0.8)};
@@ -1003,8 +1013,8 @@ const Calendar = (props: CalenderProps) => {
                 ${timeText}
               </div>
             `
-                : ''
-            }
+            : ''
+          }
           </div>
         `
       }

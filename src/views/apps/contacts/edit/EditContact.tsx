@@ -216,7 +216,8 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                       }
                     }}
                     onChange={e => {
-                      let value = e.target.value.replace(/[^\d+]/g, '')
+                      const value = e.target.value.replace(/[^\d+]/g, '')
+
                       field.onChange(value)
                     }}
                   />
@@ -250,7 +251,8 @@ const EditContact = ({ open, contact, handleClose, setData, setFilteredData }: P
                       }
                     }}
                     onChange={e => {
-                      let value = e.target.value.replace(/[^\d+]/g, '')
+                      const value = e.target.value.replace(/[^\d+]/g, '')
+
                       field.onChange(value)
                     }}
                   />

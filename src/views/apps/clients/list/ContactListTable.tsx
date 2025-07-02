@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from 'react'
 
 import { Box, IconButton } from '@mui/material'
-import { EditIcon, DeleteIcon } from '@mui/icons-material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import type { ColumnDef } from '@tanstack/react-table'
 
 import ContactPreview from '../../contacts/preview/ContactPreview'
+import { ContactType } from '../../../../types/apps/contactTypes'
+
+interface ContactListTableProps {
+  data: ContactType[]
+}
 
 const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -13,6 +19,14 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
   const handlePreviewContact = (contact: ContactType) => {
     setSelectedContactPreview(contact)
     setPreviewOpen(true)
+  }
+
+  const handleEditContact = (contact: ContactType) => {
+    console.log('Editar contacto', contact)
+  }
+
+  const handleClickOpenDialog = (contact: ContactType) => {
+    console.log('Abrir diálogo para eliminar', contact)
   }
 
   const columns = useMemo<ColumnDef<ContactType, any>[]>(

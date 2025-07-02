@@ -38,7 +38,7 @@ import Star from '@mui/icons-material/Star'
 import { useForm, Controller } from 'react-hook-form'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
-import { UseFormSetValue } from 'react-hook-form'
+import type { UseFormSetValue } from 'react-hook-form'
 
 // Utils Imports
 import { validateRut, formatRut } from '@/utils/rut-utils'
@@ -189,9 +189,11 @@ const AddObraDrawer = (props: Props) => {
     try {
       const response = await axios.get('/api/obras')
       const obras: Obra[] = response.data
+
       if (obras && obras.length > 0) {
         const maxNumber = Math.max(...obras.map(obra => parseInt(obra.numeroObra || '0')))
         const nextNumber = (maxNumber + 1).toString()
+
         setLastObraNumber(nextNumber)
         setValue('numeroObra', nextNumber)
       } else {
@@ -216,8 +218,10 @@ const AddObraDrawer = (props: Props) => {
     const fetchListasPrecios = async () => {
       try {
         const response = await fetch('/api/listas-precios')
+
         if (!response.ok) throw new Error('Error al cargar las listas de precios')
         const data = await response.json()
+
         setListasPrecios(data.map((lista: any) => ({
           value: lista.id.toString(),
           label: lista.nombre
@@ -233,6 +237,7 @@ const AddObraDrawer = (props: Props) => {
 
   const onSubmit = async (data: FormValidateType) => {
     setIsSubmitting(true)
+
     try {
       const payload = {
         ...data,
@@ -277,13 +282,15 @@ const AddObraDrawer = (props: Props) => {
       if (correosInvalidos.length > 0) {
         toast.error(`Los siguientes correos son inválidos: ${correosInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       if (mailRecepcionInvalidos.length > 0) {
         toast.error(`Los siguientes correos de recepción son inválidos: ${mailRecepcionInvalidos.join(', ')}`);
         setIsSubmitting(false);
-        return;
+        
+return;
       }
 
       // Agregar los correos validados al payload
@@ -306,6 +313,7 @@ const AddObraDrawer = (props: Props) => {
             color: '#fff'
           }
         })
+
         // Limpiar formulario y estados primero
         resetForm()
         setContactos([contactoVacio])
@@ -318,6 +326,7 @@ const AddObraDrawer = (props: Props) => {
         setValue('textoMandante', '')
         setValue('otrasReferencias', '')
         setValue('otrosRequisitos', '')
+
         // Limpiar campos de facturación
         setValue('telefono', '')
         setValue('giro', '')
@@ -327,6 +336,7 @@ const AddObraDrawer = (props: Props) => {
         setValue('mailRecepcionFactura', '')
         setValue('rutRepresentanteLegal', '')
         setValue('representanteLegal', '')
+
         // Limpiar checkboxes
         setValue('acreditacionPersonal', false)
         setValue('especificacionesTecnicas', false)
@@ -337,6 +347,7 @@ const AddObraDrawer = (props: Props) => {
         setValue('hes', false)
         setValue('oc', false)
         setValue('envioInformes', false)
+
         // Ahora sí, actualizar el número de obra consultando a la base de datos
         await fetchLastObraNumber(setLastObraNumber, setValue)
         props.handleClose()
@@ -650,11 +661,13 @@ const AddObraDrawer = (props: Props) => {
   const handleNewContact = (contact: ContactType) => {
     if (!contact) {
       toast.error('Error al crear el contacto');
-      return;
+      
+return;
     }
 
     if (!contactos[0] || !contactos[0].contacto || contactos[0].contacto.nombre === '') {
       const updatedContactos = [...contactos];
+
       updatedContactos[0] = {
         contacto: {
           nombre: contact.nombre || '',
@@ -682,6 +695,7 @@ const AddObraDrawer = (props: Props) => {
         cargo: contact.cargo || '',
         isPrincipal: false
       };
+
       setContactos(prevContactos => [...prevContactos, newContact]);
       toast.success('Contacto agregado exitosamente');
     }
@@ -1073,9 +1087,12 @@ const AddObraDrawer = (props: Props) => {
                       <ContactSearch
                         onContactSelect={contact => {
                           if (!contact) return;
+
+
                           // Si es el primer contacto (Encargado de Obra)
                           if (contactos[0].contacto.nombre === '') {
                             const updatedContactos = [...contactos]
+
                             updatedContactos[0] = {
                               contacto: {
                                 nombre: contact.nombre || '',
@@ -1104,6 +1121,7 @@ const AddObraDrawer = (props: Props) => {
                               cargo: contact.cargo || '',
                               isPrincipal: false
                             }
+
                             setContactos(prevContactos => [...prevContactos, newContact])
                             toast.success('Contacto agregado exitosamente')
                           }
@@ -1159,6 +1177,7 @@ const AddObraDrawer = (props: Props) => {
                             value={CARGOS_OBRA.find(cargo => cargo.label === contacto.cargo)?.value || contacto.cargo}
                             onChange={e => {
                               const updatedContactos = [...contactos]
+
                               updatedContactos[index] = {
                                 ...contacto,
                                 cargo: e.target.value
@@ -1180,6 +1199,7 @@ const AddObraDrawer = (props: Props) => {
                           value={contacto.contacto.nombre}
                           onChange={e => {
                             const updatedContactos = [...contactos]
+
                             updatedContactos[index] = {
                               ...contacto,
                               contacto: {
@@ -1202,6 +1222,7 @@ const AddObraDrawer = (props: Props) => {
                           value={contacto.contacto.email}
                           onChange={e => {
                             const updatedContactos = [...contactos]
+
                             updatedContactos[index] = {
                               ...contacto,
                               contacto: {
@@ -1225,6 +1246,7 @@ const AddObraDrawer = (props: Props) => {
                           onChange={e => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
+
                             updatedContactos[index] = {
                               ...contacto,
                               contacto: {
@@ -1248,6 +1270,7 @@ const AddObraDrawer = (props: Props) => {
                           onChange={e => {
                             const formatted = formatPhone(e.target.value)
                             const updatedContactos = [...contactos]
+
                             updatedContactos[index] = {
                               ...contacto,
                               contacto: {
@@ -1273,6 +1296,7 @@ const AddObraDrawer = (props: Props) => {
                                 ...c,
                                 isPrincipal: i === index ? !c.isPrincipal : false
                               }))
+
                               setContactos(updatedContactos)
                             }}
                             color={contacto.isPrincipal ? 'primary' : 'default'}
@@ -1565,8 +1589,10 @@ const AddObraDrawer = (props: Props) => {
                       onChange={e => {
                         // Permitir solo números, k, K y el guión
                         const value = e.target.value.replace(/[^0-9kK-]/g, '')
+
                         // Formatear solo si hay suficientes caracteres
                         const formatted = value.length > 1 ? formatRut(value) : value
+
                         field.onChange(formatted)
                       }}
                       value={field.value || ''}

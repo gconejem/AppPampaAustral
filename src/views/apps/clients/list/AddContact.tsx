@@ -1,7 +1,7 @@
 import { useState } from 'react'
+
 import { useForm, Controller } from 'react-hook-form'
-import type { ContactType } from '@/types/apps/contactTypes'
-import type { Contacto } from '@/types/forms/cliente'
+
 import { toast } from 'react-hot-toast'
 
 import Button from '@mui/material/Button'
@@ -11,6 +11,9 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import CircularProgress from '@mui/material/CircularProgress'
+
+import type { Contacto } from '@/types/forms/cliente'
+import type { ContactType } from '@/types/apps/contactTypes'
 
 type Props = {
   open: boolean
@@ -41,6 +44,7 @@ const AddContact = (props: Props) => {
   const onSubmit = async (data: Contacto) => {
     try {
       setIsSubmitting(true)
+
       const contactData = {
         ...data,
         cargo: data.cargo || 'Sin cargo'
@@ -56,6 +60,7 @@ const AddContact = (props: Props) => {
 
       if (!response.ok) {
         const errorData = await response.text()
+
         console.error('Error response:', errorData)
         throw new Error('Error al crear contacto')
       }

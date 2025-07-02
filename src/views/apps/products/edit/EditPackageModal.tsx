@@ -114,6 +114,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   useEffect(() => {
     if (open && paquete && areaOptions.length > 0) {
       const areaObj = areaOptions.find(opt => opt.nombre === paquete.area || opt.id === paquete.area)
+
       setArea(areaObj ? areaObj.id : '')
     }
   }, [open, paquete, areaOptions])
@@ -123,11 +124,13 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
     if (open && paquete && area && familiaOptions.length > 0) {
       const familiaId = paquete.familia?.id ?? paquete.familia
       let familiaObj
+
       if (typeof familiaId === 'number') {
         familiaObj = familiaOptions.find(opt => opt.id === familiaId && String(opt.area?.id) === String(area))
       } else if (typeof familiaId === 'string') {
         familiaObj = familiaOptions.find(opt => opt.nombre === familiaId && String(opt.area?.id) === String(area))
       }
+
       setFamilia(familiaObj ? familiaObj.id : '')
     }
   }, [open, paquete, area, familiaOptions])
@@ -136,6 +139,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   useEffect(() => {
     if (familia && area && familiaOptions.length > 0) {
       const familiaObj = familiaOptions.find(f => f.id === familia)
+
       if (familiaObj && String(familiaObj.area?.id) !== String(area)) {
         setFamilia('')
       }
@@ -145,12 +149,15 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   // Log para depuración de familias y área seleccionada
   useEffect(() => {
     console.log('familiaOptions:', familiaOptions)
+
     if (familiaOptions.length > 0) {
       console.log('Primer objeto de familiaOptions:', familiaOptions[0])
       console.log('Claves del primer objeto:', Object.keys(familiaOptions[0]))
     }
+
     console.log('area seleccionada:', area)
     const familiasFiltradas = familiaOptions.filter(option => String(option.areaId) === String(area))
+
     console.log('familias filtradas:', familiasFiltradas)
   }, [area, familiaOptions])
 
@@ -182,6 +189,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
     try {
       const response = await fetch('/api/areas')
       const data = await response.json()
+
       setAreaOptions(data)
     } catch (error) {
       console.error('Error al cargar áreas:', error)
@@ -193,6 +201,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
     try {
       const response = await fetch('/api/familias')
       const data = await response.json()
+
       setFamiliaOptions(data)
     } catch (error) {
       console.error('Error al cargar familias:', error)

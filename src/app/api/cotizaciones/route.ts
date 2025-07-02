@@ -38,15 +38,19 @@ export async function GET(request: Request) {
 
     if (fechaInicio || fechaFin) {
       whereClause.fechaCreacion = {}
+
       if (fechaInicio) {
         // Establecer la hora de inicio al comienzo del día (00:00:00)
         const inicioDate = new Date(fechaInicio)
+
         inicioDate.setHours(0, 0, 0, 0)
         whereClause.fechaCreacion.gte = inicioDate
       }
+
       if (fechaFin) {
         // Establecer la hora de fin al final del día (23:59:59)
         const finDate = new Date(fechaFin)
+
         finDate.setHours(23, 59, 59, 999)
         whereClause.fechaCreacion.lte = finDate
       }

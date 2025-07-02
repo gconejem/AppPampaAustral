@@ -9,6 +9,7 @@ import IconButton from '@mui/material/IconButton'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import TextField from '@mui/material/TextField'
+import type { SelectChangeEvent } from '@mui/material/Select';
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
@@ -33,7 +34,7 @@ import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Switch from '@mui/material/Switch'
 import Pagination from '@mui/material/Pagination'
-import { SelectChangeEvent } from '@mui/material/Select'
+
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -45,6 +46,8 @@ import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import AddContact from '@/views/apps/contacts/list/AddContact'
 import type { ContactType } from '@/types/apps/contactTypes'
+import type { CalendarType } from '@/types/apps/calendarTypes'
+import type { Dispatch } from 'redux'
 
 // Constantes
 const ROLES_CONTACTO = [
@@ -88,6 +91,9 @@ const formatPhone = (value: string) => {
 
 // Types
 interface AddEventSidebarProps {
+  dispatch?: Dispatch<any>
+  calendarApi?: any
+  calendarStore?: CalendarType
   addEventSidebarOpen: boolean
   handleAddEventSidebarToggle: () => void
 }
@@ -286,19 +292,24 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // Convertir las fechas string a objetos Date para los datepickers
   const [fechaInicio, setFechaInicio] = useState<Date | null>(() => {
     const d = formData.fechaInicio ? new Date(formData.fechaInicio) : new Date();
+
     d.setHours(0, 0, 0, 0);
+
     return d;
   });
 
   const [fechaFin, setFechaFin] = useState<Date | null>(() => {
     const d = formData.fechaFin ? new Date(formData.fechaFin) : new Date();
+
     d.setHours(0, 0, 0, 0);
+
     return d;
   });
 
   // Actualizar formData cuando cambien las fechas
   useEffect(() => {
     console.log('fechaInicio', fechaInicio)
+
     if (fechaInicio) {
       setFormData(prev => ({
         ...prev,
@@ -433,9 +444,11 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
     const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
+
     // Combinar contactos actuales y de la obra, evitando duplicados por email
     const emails = new Set(contactos.map(c => c.email))
     const nuevosContactos = [...contactos]
+
     obraContactos.forEach((c: any) => {
       if (!emails.has(c.email)) {
         nuevosContactos.push({
@@ -480,6 +493,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         if (!res.ok) {
           throw new Error('Error al cargar servicios')
         }
+
+
         return res.json()
       })
       .then(response => {
@@ -513,6 +528,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         if (!res.ok) {
           throw new Error('Error al cargar áreas')
         }
+
+
         return res.json()
       })
       .then(data => {
@@ -534,6 +551,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           if (!res.ok) {
             throw new Error('Error al cargar familias')
           }
+
+
           return res.json()
         })
         .then(data => {
@@ -552,11 +571,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaNombre = e.target.value
+
     setSelectedArea(areaNombre)
     setSelectedFamilia('') // Resetear familia cuando cambia el área
 
     // Encontrar el ID del área seleccionada
     const areaSeleccionada = areas.find(a => a.nombre === areaNombre)
+
     setSelectedAreaId(areaSeleccionada?.id || null)
   }
 
@@ -582,6 +603,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   useEffect(() => {
     if (anchorEl) { // Solo ejecutar cuando el popover está abierto
       const params = new URLSearchParams()
+
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
       if (searchTerm) params.append('search', searchTerm)
@@ -594,10 +616,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           if (!res.ok) {
             throw new Error('Error al cargar servicios')
           }
+
+
           return res.json()
         })
         .then(response => {
           const data = response.productos || []
+
           setFilteredProductos(data)
           setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
@@ -620,6 +645,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // Función para filtrar productos
   const filterProducts = (search: string, area: string, tipo: string, familia: string, onlyPaquetes = showOnlyPaquetes) => {
     const params = new URLSearchParams()
+
     params.append('page', '1')
     params.append('limit', ITEMS_PER_PAGE.toString())
     if (search) params.append('search', search)
@@ -633,10 +659,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         if (!res.ok) {
           throw new Error('Error al cargar servicios')
         }
+
+
         return res.json()
       })
       .then(response => {
         const data = response.productos || []
+
         setFilteredProductos(data)
         setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
       })
@@ -741,6 +770,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       if (!response.ok) {
         const error = await response.json()
+
         throw new Error(error.message || 'Error al crear la agenda')
       }
 
@@ -850,14 +880,16 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // Función para agregar el contacto creado
   const handleAddContact = (contact: ContactType) => {
     if (!contact) return
+
     const newContact: ContactoAgendaForm = {
       nombre: contact.nombre,
-      rol: (contact.rol || contact.cargo || ''),
+      rol: contact.cargo || '',
       email: contact.email,
       telefono1: contact.telefono1,
       telefono2: contact.telefono2,
       isPrincipal: contactos.length === 0
     }
+
     setContactos([...contactos, newContact])
   }
 
@@ -938,6 +970,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               value={formData.tipoVisita}
               onChange={e => {
                 const value = e.target.value
+
                 setFormData(prev => ({
                   ...prev,
                   tipoVisita: value,
@@ -964,9 +997,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 onChange={newDate => {
                   if (newDate) {
                     setFechaInicio(newDate)
+
+
                     // Si la fecha de término está vacía, usamos la misma fecha
                     if (!fechaFin) {
                       const endDate = new Date(newDate)
+
                       endDate.setHours(newDate.getHours() + 1)
                       setFechaFin(endDate)
                     }
@@ -1023,12 +1059,14 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onChange={e => {
                 const [hours, minutes] = e.target.value.split(':').map(Number)
                 const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
+
                 newDate.setHours(hours, minutes)
                 setFechaInicio(newDate)
 
                 // Actualizar fecha fin si es necesario
                 if (!fechaFin || fechaFin <= newDate) {
                   const endDate = new Date(newDate)
+
                   endDate.setHours(newDate.getHours() + 1)
                   setFechaFin(endDate)
                 }
@@ -1053,6 +1091,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onChange={e => {
                 const [hours, minutes] = e.target.value.split(':').map(Number)
                 const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
+
                 newDate.setHours(hours, minutes)
                 setFechaFin(newDate)
               }}
@@ -1334,11 +1373,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onContactSelect={contact => {
                 const newContact = {
                   nombre: contact.nombre,
-                  rol: contact.rol || contact.cargo || '',
+                  rol: contact.cargo || '',
                   email: contact.email,
                   telefono1: contact.telefono1,
                   isPrincipal: contactos.length === 0
                 }
+
                 setContactos([...contactos, newContact])
               }}
             />

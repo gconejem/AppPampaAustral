@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
@@ -64,7 +65,8 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('Error en la importación:', error)
-    return NextResponse.json(
+    
+return NextResponse.json(
       { error: 'Error al procesar la importación' },
       { status: 500 }
     )

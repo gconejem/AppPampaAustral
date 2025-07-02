@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
+
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -48,11 +49,13 @@ const AddEnsayo = () => {
         // Cargar áreas
         const areasResponse = await fetch('/api/areas')
         const areasData = await areasResponse.json()
+
         setAreas(areasData)
 
         // Cargar tipos
         const debugResponse = await fetch('/api/debug')
         const debugData = await debugResponse.json()
+
         if (debugData) {
           setTipos(debugData.tipos || [])
         }
@@ -72,6 +75,7 @@ const AddEnsayo = () => {
         try {
           const response = await fetch(`/api/familias?areaId=${selectedAreaId}`)
           const data = await response.json()
+
           setFamilias(data)
         } catch (error) {
           console.error('Error cargando familias:', error)
@@ -114,6 +118,7 @@ const AddEnsayo = () => {
 
       if (!response.ok) {
         const error = await response.json()
+
         throw new Error(error.message || 'Error al crear el ensayo')
       }
 
@@ -172,6 +177,7 @@ const AddEnsayo = () => {
                       label='Área'
                       onChange={e => {
                         const areaId = e.target.value ? Number(e.target.value) : null
+
                         setSelectedAreaId(areaId)
                         setFormData(prev => ({
                           ...prev,

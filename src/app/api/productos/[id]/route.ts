@@ -121,7 +121,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   } catch (error) {
     console.error('Error al actualizar producto:', error)
 
-    return NextResponse.json({ error: 'Error al actualizar producto: ' + error.message }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+
+    
+return NextResponse.json({ error: 'Error al actualizar producto: ' + errorMessage }, { status: 500 })
   }
 }
 

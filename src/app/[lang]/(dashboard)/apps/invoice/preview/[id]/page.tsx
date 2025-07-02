@@ -32,7 +32,9 @@ const PreviewPage = async ({ params }: { params: { id: string } }) => {
   // Vars
   const data = await getInvoiceData()
 
-  const filteredData = data?.filter((invoice: InvoiceType) => invoice.id === params.id)[0]
+  // Convertir el ID a número para comparar
+  const idNumber = parseInt(params.id, 10)
+  const filteredData = data?.filter(invoice => invoice.id === idNumber)[0]
 
   if (!filteredData) {
     redirect('/not-found')

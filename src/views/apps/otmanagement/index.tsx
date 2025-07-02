@@ -3,27 +3,19 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Component Imports
 import VisitListTable from './VisitListTable'
 import OtListTable from './OtListTable'
 import UserListCards from './UserListCards'
 
-interface OrdenTrabajo {
-  id: string
-  clave: string
-  estado: string
-  tipoOT: string
-  createdAt: string
-  userId: string
-  user?: {
-    name: string
-  }
-}
+// Type Imports
+import type { OrdenTrabajo } from '@/types/otTypes'
 
 interface Agenda {
   id: number
@@ -41,11 +33,39 @@ interface Agenda {
   ordenesTrabajo: OrdenTrabajo[]
 }
 
-const UserList = ({ data }: { data: Agenda[] }) => {
+const UserList = () => {
+  const [data, setData] = useState<Agenda[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [selectedVisit, setSelectedVisit] = useState<Agenda | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/agenda')
+        const agendaData = await response.json()
+
+        setData(agendaData)
+      } catch (error) {
+        console.error('Error cargando datos de agenda:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const handleVisitSelect = (visit: Agenda | null) => {
     setSelectedVisit(visit)
+  }
+
+  if (loading) {
+    return (
+      <div className='flex justify-center items-center h-[400px]'>
+        <CircularProgress />
+      </div>
+    )
   }
 
   return (

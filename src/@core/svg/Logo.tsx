@@ -1,5 +1,4 @@
 // React Imports
-import type { SVGAttributes } from 'react'
 import Image from 'next/image'
 
 const Logo = () => {

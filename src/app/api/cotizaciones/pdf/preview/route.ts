@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
-import puppeteer from 'puppeteer'
 import fs from 'fs'
+
+import { NextResponse } from 'next/server'
+
+import puppeteer from 'puppeteer'
 
 // Mapeo de formas de pago
 const FORMAS_PAGO = {
@@ -351,23 +353,28 @@ Condiciones para terreno y accesos
                 for (let i = 0; i < cotizacion.detalles.length; i++) {
                   const detalle = cotizacion.detalles[i];
                   const area = detalle.producto?.area || detalle.area || 'Sin área';
+
                   if (detalle.esSubProducto) continue;
+
                   if (area !== currentArea && !detalle.esSubProducto) {
                     currentArea = area;
                     html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
                     html += `<td colspan="${mostrarColumnas() ? 6 : 3}">${area}</td></tr>`;
                   }
+
                   if (detalle.esPaquete) {
                     const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
                     const labelPaquete = '<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold;">PAQUETE</span>';
                     let subproductosHtml = '';
                     let j = i + 1;
                     const subproductos = [];
+
                     while (j < cotizacion.detalles.length && cotizacion.detalles[j].esSubProducto) {
                       const sub = cotizacion.detalles[j];
                       const servicio = (sub.servicio || '').trim();
                       const norma = (sub.norma || '').trim();
                       let nombreSub = '';
+
                       if (servicio && norma) {
                         nombreSub = servicio + ' - ' + norma;
                       } else if (servicio) {
@@ -375,14 +382,18 @@ Condiciones para terreno y accesos
                       } else if (norma) {
                         nombreSub = norma;
                       }
+
                       if (nombreSub !== '') {
                         subproductos.push(`<li style="font-size: 0.57rem;">${nombreSub}</li>`);
                       }
+
                       j++;
                     }
+
                     if (subproductos.length > 0) {
                       subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px; font-size: 0.57rem;'>${subproductos.join('')}</ul>`;
                     }
+
                     html += `<tr>`;
                     html += `<td>${area}</td>`;
                     html += `<td>${nombreNorma}${subproductosHtml}</td>`;
@@ -399,7 +410,9 @@ Condiciones para terreno y accesos
                     html += `</tr>`;
                   }
                 }
-                return html;
+
+                
+return html;
               })()}
             </tbody>
           </table>
@@ -412,6 +425,7 @@ Condiciones para terreno y accesos
                 const subtotalConDescuento = subtotal;
                 const iva = subtotalConDescuento * 0.19;
                 const total = subtotalConDescuento + iva;
+
                 if (subtotal === 0) {
                   return `
                     <div><strong>Subtotal:</strong> -</div>
@@ -420,7 +434,9 @@ Condiciones para terreno y accesos
                     <div><strong>Total: -</strong></div>
                   `;
                 }
-                return `
+
+                
+return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF 0.00</div>
                   <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
@@ -439,6 +455,7 @@ Condiciones para terreno y accesos
                 const descuento = Number(cotizacion.descuento || 0);
                 const iva = Number(cotizacion.impuesto || 0);
                 const total = Number(cotizacion.total || 0);
+
                 if (subtotal === 0) {
                   return `
                     <div><strong>Subtotal:</strong> -</div>
@@ -447,7 +464,9 @@ Condiciones para terreno y accesos
                     <div><strong>Total: -</strong></div>
                   `;
                 }
-                return `
+
+                
+return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
                   <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
@@ -555,12 +574,14 @@ export async function POST(request: Request) {
 
     // Cargar logo como base64
     const logoPath = `${process.cwd()}/public/images/logos/PAMPA_MG_2025_017-2.png`;
+
     const logoBase64 = fs.existsSync(logoPath)
       ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
       : '';
 
     // Cargar firma como base64
     const firmaPath = `${process.cwd()}/public/images/logos/firma-cotizaciones-sistema.png`;
+
     const firmaBase64 = fs.existsSync(firmaPath)
       ? 'data:image/png;base64,' + fs.readFileSync(firmaPath).toString('base64')
       : '';
@@ -577,7 +598,9 @@ export async function POST(request: Request) {
     // --- PDF original ---
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
     const page = await browser.newPage()
+
     await page.setContent(html, { waitUntil: 'networkidle0' })
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '25mm', left: '5mm' },
@@ -597,8 +620,10 @@ export async function POST(request: Request) {
         </div>
       `
     })
+
     await browser.close()
-    return new NextResponse(pdfBuffer, {
+    
+return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="cotizacion-preview.pdf"`
@@ -606,6 +631,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error al generar PDF:', error)
-    return new NextResponse('Error al generar el PDF', { status: 500 })
+    
+return new NextResponse('Error al generar el PDF', { status: 500 })
   }
 } 

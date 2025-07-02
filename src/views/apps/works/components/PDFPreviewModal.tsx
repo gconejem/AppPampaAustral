@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
+
 import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import CircularProgress from '@mui/material/CircularProgress'
+
 import type { Obra } from '@/types/forms/obra'
 
 interface PDFPreviewModalProps {
@@ -23,8 +25,10 @@ const PDFPreviewModal = ({ open, onClose, obra }: PDFPreviewModalProps) => {
         try {
           setLoading(true)
           const response = await fetch(`/api/obras/${obra.obraId}/pdf?preview=1`)
+
           if (!response.ok) throw new Error('Error al cargar la previsualización')
           const html = await response.text()
+
           setHtmlContent(html)
         } catch (error) {
           console.error('Error:', error)

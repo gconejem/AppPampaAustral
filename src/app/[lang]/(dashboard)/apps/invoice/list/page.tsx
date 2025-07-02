@@ -5,6 +5,7 @@ import InvoiceList from '@views/apps/invoice/list'
 
 // API Imports
 import { prisma } from '@/lib/prisma'
+import type { InvoiceType } from '@/types/apps/invoiceTypes'
 
 async function getCotizaciones() {
   try {
@@ -28,14 +29,13 @@ async function getCotizaciones() {
       'Ejemplo de datos de contacto:',
       cotizaciones.length > 0
         ? JSON.stringify(
-            {
-              contactoId: cotizaciones[0].contactoId,
-              contactoRelacion: cotizaciones[0].contacto,
-              contactoDatos: cotizaciones[0].contacto?.contacto
-            },
-            null,
-            2
-          )
+          {
+            contactId: cotizaciones[0].contactId,
+            contactoRelacion: cotizaciones[0].contacto
+          },
+          null,
+          2
+        )
         : 'No hay cotizaciones'
     )
 
@@ -45,23 +45,21 @@ async function getCotizaciones() {
       // Obtener el nombre del contacto
       const nombreContacto = cotizacion.contacto?.nombre || 'Sin contacto'
 
-      // Log para diagnóstico de cada contacto
-      if (cotizacion.contacto?.contactId) {
-        console.log(`Cotización ${cotizacion.id} - contactoId: ${cotizacion.contacto?.contactId}, nombre: ${nombreContacto}`)
-      }
-
       return {
         id: cotizacion.id,
         numeroCotizacion: cotizacion.numeroCotizacion,
         fecha: cotizacion.fechaCreacion.toLocaleDateString(),
         empresa: cotizacion.empresa || 'No especificada',
-        comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
+        comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion || 'No especificada',
         tipo: tipoMapeado,
-        contacto: cotizacion.contacto,
+        contacto: nombreContacto,
         estado: cotizacion.estado,
+        cargo: cotizacion.contacto?.cargo || '',
+        email: cotizacion.contacto?.email || '',
+        telefono: cotizacion.contacto?.telefono1 || '',
         total: parseFloat(cotizacion.total.toString()),
-        observacionGestion: cotizacion.observacionGestion
-      }
+        observacionGestion: cotizacion.observacionGestion || ''
+      } as InvoiceType
     })
   } catch (error) {
     console.error('Error al obtener cotizaciones:', error)

@@ -151,6 +151,7 @@ Costos Adicionales contra evento:
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
   }
+
   if (tipoCotizacion === 'C') {
     return `Notas:
 * Valor Neto (sin IVA incluido)
@@ -247,6 +248,7 @@ const EditCard = ({ id }: { id: string }) => {
       formData.sinCantidad === true
 
     let subtotalTotal
+
     if (debeManternerSubtotal || debeManternerSubtotalSinCantidad) {
       // Mantener el subtotal actual del formData (que viene del backend)
       subtotalTotal = Number(formData.subtotal || 0)
@@ -288,21 +290,25 @@ const EditCard = ({ id }: { id: string }) => {
 
         // Cargar la cotización
         const cotizacionResponse = await fetch(`/api/cotizaciones/${id}`)
+
         if (!cotizacionResponse.ok) throw new Error('Error al cargar la cotización')
         const cotizacionData = await cotizacionResponse.json()
 
         // Cargar productos con límite alto para obtener todas las áreas, tipos y familias
         const productosResponse = await fetch('/api/productos?limit=1000')
+
         if (!productosResponse.ok) throw new Error('Error al cargar productos')
         const productosData = await productosResponse.json()
 
         // Cargar contactos
         const contactosResponse = await fetch('/api/contacts')
+
         if (!contactosResponse.ok) throw new Error('Error al cargar contactos')
         const contactosData = await contactosResponse.json()
 
         // Cargar listas de precios
         const listasPreciosResponse = await fetch('/api/listas-precios')
+
         if (!listasPreciosResponse.ok) throw new Error('Error al cargar listas de precios')
         const listasPreciosData = await listasPreciosResponse.json()
 
@@ -353,6 +359,7 @@ const EditCard = ({ id }: { id: string }) => {
         } else {
           // Fallback: verificar si todos los productos tienen cantidad cero
           const todasCero = detallesFormateados.every((detalle: ProductRow) => Number(detalle.cantidad) === 0)
+
           setSinCantidad(todasCero)
         }
 
@@ -380,24 +387,31 @@ const EditCard = ({ id }: { id: string }) => {
           telefono1: contacto.telefono1,
           empresa: contacto.empresa || 'Sin empresa'
         }))
+
         setContactos(contactosMapeados)
         console.log('Contactos mapeados:', contactosMapeados)
 
         // Si existe contacto en la cotización, transformar el cargo a label
         if (cotizacionData.contacto) {
           const cargoLabel = ROLES_CONTACTO.find(c => c.value === cotizacionData.contacto.cargo)?.label || cotizacionData.contacto.cargo
+
           cotizacionData.contacto.cargo = cargoLabel
           cotizacionData.contacto.empresa = cotizacionData.contacto.empresa || 'Sin empresa'
         }
+
+
         // Convertir subtotal, descuento, impuesto y total a número si vienen como string
         cotizacionData.subtotal = Number(cotizacionData.subtotal || 0)
         cotizacionData.descuento = Number(cotizacionData.descuento || 0)
         cotizacionData.impuesto = Number(cotizacionData.impuesto || 0)
         cotizacionData.total = Number(cotizacionData.total || 0)
+
+
         // Si es tipo D y no viene totalNetoGeneral, inicializarlo con el subtotal
         if (cotizacionData.tipoCotizacion === 'D' && (cotizacionData.totalNetoGeneral === undefined || cotizacionData.totalNetoGeneral === null)) {
           cotizacionData.totalNetoGeneral = cotizacionData.subtotal
         }
+
         setFormData(cotizacionData)
 
         // Actualizar estados
@@ -429,7 +443,9 @@ const EditCard = ({ id }: { id: string }) => {
         if (!res.ok) {
           throw new Error('Error al cargar áreas')
         }
-        return res.json()
+
+        
+return res.json()
       })
       .then(data => {
         console.log('Áreas cargadas:', data)
@@ -450,7 +466,9 @@ const EditCard = ({ id }: { id: string }) => {
           if (!res.ok) {
             throw new Error('Error al cargar familias')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(data => {
           console.log('Familias cargadas:', data)
@@ -469,6 +487,7 @@ const EditCard = ({ id }: { id: string }) => {
   // Manejadores de eventos para filtros
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaId = e.target.value ? Number(e.target.value) : null;
+
     setSelectedAreaId(areaId);
     setSelectedArea(areaId ? areas.find(a => a.id === areaId)?.nombre || '' : '');
     setSelectedFamilia('');
@@ -532,6 +551,7 @@ const EditCard = ({ id }: { id: string }) => {
         if (formData?.tipoCotizacion === 'A') {
           return {
             ...row,
+
             // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
             cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
             totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
@@ -555,6 +575,7 @@ const EditCard = ({ id }: { id: string }) => {
         }
       })
     )
+
     // Recalcular totales
     if (formData) calcularTotales()
   }, [sinCantidad, formData?.precioProducto, formData?.precioTotal, formData?.tipoCotizacion])
@@ -564,12 +585,15 @@ const EditCard = ({ id }: { id: string }) => {
     if (activeRowIndex === null) return;
 
     const newRows = [...productRows];
+
     // Obtener el precio de la lista de precios seleccionada si existe
     let precioFinal = producto.precio || 0;
+
     if (formData?.listaPrecioId && producto.listasPrecios) {
       const listaPrecio = producto.listasPrecios.find(
         (lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId
       );
+
       if (listaPrecio) {
         precioFinal = listaPrecio.precio;
       }
@@ -586,6 +610,7 @@ const EditCard = ({ id }: { id: string }) => {
         try {
           const response = await fetch(`/api/productos/${producto.productoId}/productos`);
           const data = await response.json();
+
           productosEnPaquete = data.productos || [];
         } catch (error) {
           console.error('Error al obtener productos del paquete:', error);
@@ -610,19 +635,25 @@ const EditCard = ({ id }: { id: string }) => {
       // Agregar los productos del paquete como subfilas
       const productosRows = (productosEnPaquete || []).map((pp: any) => {
         let precioProducto = pp.producto?.precio || 0;
+
         if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
           const listaPrecio = pp.producto.listasPrecios.find(
             (lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId
           );
+
           if (listaPrecio) {
             precioProducto = listaPrecio.precio;
           }
         }
+
+
         // Armar nombre del subproducto: nombre - norma (si existe)
         const nombreSubServicio = pp.producto?.norma
           ? `${pp.producto?.nombre} - ${pp.producto?.norma}`
           : pp.producto?.nombre || '';
-        return {
+
+        
+return {
           id: Date.now() + Math.random(),
           productoId: pp.producto?.productoId?.toString() || '',
           servicio: nombreSubServicio,
@@ -838,6 +869,7 @@ const EditCard = ({ id }: { id: string }) => {
 
       // Asegurarnos de que el contactoId sea el del contacto seleccionado
       const contactoId = formData.contacto ? formData.contacto.contactId : null
+
       console.log('ContactoId que se enviará:', contactoId)
 
       const dataToSend = {
@@ -846,12 +878,14 @@ const EditCard = ({ id }: { id: string }) => {
         detalles: detallesValidos,
         listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null,
         contactoId: contactoId,
+
         // Asegurarnos de incluir los campos EMS solo si el tipo es B
         ...(formData.tipoCotizacion === 'B' && {
           superficieEMS: formData.superficieEMS || '',
           antecedentesEMS: formData.antecedentesEMS || '',
           plazoEntregaEMS: formData.plazoEntregaEMS || ''
         }),
+
         // Asegurarnos de incluir los campos mensuales solo si el tipo es C
         ...(formData.tipoCotizacion === 'C' && {
           duracionMensual: formData.duracionMensual || '',
@@ -859,6 +893,7 @@ const EditCard = ({ id }: { id: string }) => {
           antecedentesMensual: formData.antecedentesMensual || '',
           alcanceServicio: formData.alcanceServicio || ''
         }),
+
         // Si es tipo D, enviar textoGeneral y usar el subtotal directamente
         ...(formData.tipoCotizacion === 'D' && {
           textoGeneral: formData.textoGeneral || '',
@@ -912,6 +947,7 @@ const EditCard = ({ id }: { id: string }) => {
     const previewData = {
       ...formData,
       detalles: detallesPlanos,
+
       // Usar los valores booleanos unificados
       sinCantidad: sinCantidad,
       subtotal: Number(formData.subtotal || 0),
@@ -936,6 +972,7 @@ const EditCard = ({ id }: { id: string }) => {
   useEffect(() => {
     if (anchorEl) { // Solo ejecutar cuando el popover está abierto
       const params = new URLSearchParams()
+
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
       if (searchTerm) params.append('search', searchTerm)
@@ -948,10 +985,14 @@ const EditCard = ({ id }: { id: string }) => {
           if (!res.ok) {
             throw new Error('Error al cargar productos')
           }
-          return res.json()
+
+          
+return res.json()
         })
         .then(response => {
           const data = response.productos || []
+
+
           // Filtrar los productos por nombre, descripción o norma
           const filteredData = searchTerm
             ? data.filter(
@@ -961,6 +1002,7 @@ const EditCard = ({ id }: { id: string }) => {
                 producto.norma?.toLowerCase().includes(searchTerm.toLowerCase())
             )
             : data
+
           setFilteredProductos(filteredData)
           setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
@@ -988,24 +1030,30 @@ const EditCard = ({ id }: { id: string }) => {
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let parentIndex = index - 1
+
       while (parentIndex >= 0 && !newRows[parentIndex].esPaquete) {
         parentIndex--
       }
+
       if (parentIndex >= 0 && index > parentIndex + 1) {
         [newRows[index], newRows[index - 1]] = [newRows[index - 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido arriba', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Calcular cuántos elementos hay en el paquete (incluyendo el paquete mismo)
@@ -1021,6 +1069,7 @@ const EditCard = ({ id }: { id: string }) => {
       if (index > 0 && (newRows[index - 1].esPaquete || newRows[index - 1].esSubProducto)) {
         // Encontrar el inicio del paquete anterior
         let prevPackageStartIndex = index - 1;
+
         while (prevPackageStartIndex > 0 && !newRows[prevPackageStartIndex].esPaquete) {
           prevPackageStartIndex--;
         }
@@ -1034,13 +1083,15 @@ const EditCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows)
       console.log('Paquete completo movido arriba', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está precedido por un paquete
     if (index > 0 && newRows[index - 1].esSubProducto) {
       // Encontrar el inicio del paquete
       let packageStartIndex = index - 1
+
       while (packageStartIndex >= 0 && !newRows[packageStartIndex].esPaquete) {
         packageStartIndex--
       }
@@ -1056,7 +1107,8 @@ const EditCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows);
       console.log('Producto movido antes del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el elemento anterior
@@ -1075,24 +1127,30 @@ const EditCard = ({ id }: { id: string }) => {
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
       let nextPackageIndex = index + 1
+
       while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
         nextPackageIndex++
       }
+
       if (index < nextPackageIndex - 1) {
         [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
         console.log('Subproducto movido abajo', newRows)
       }
-      return
+
+      
+return
     }
 
     // Si es un paquete, mover todo el bloque (paquete + subproductos)
     if (currentRow.esPaquete) {
       // Encontrar el final del paquete (último subproducto)
       let lastSubproductIndex = index + 1
+
       while (lastSubproductIndex < newRows.length && newRows[lastSubproductIndex].esSubProducto) {
         lastSubproductIndex++
       }
+
       lastSubproductIndex--; // Ajustar al último subproducto real
 
       // Si no hay elementos abajo para intercambiar, salir
@@ -1106,6 +1164,7 @@ const EditCard = ({ id }: { id: string }) => {
       if (index < newRows.length && newRows[index].esPaquete) {
         // Encontrar el final del siguiente paquete
         let nextPackageLastIndex = index;
+
         while (nextPackageLastIndex + 1 < newRows.length && newRows[nextPackageLastIndex + 1].esSubProducto) {
           nextPackageLastIndex++;
         }
@@ -1119,13 +1178,15 @@ const EditCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows)
       console.log('Paquete completo movido abajo', newRows)
-      return
+      
+return
     }
 
     // Caso especial: el producto está seguido inmediatamente por un paquete
     if (index + 1 < newRows.length && newRows[index + 1].esPaquete) {
       // Encontrar el fin del paquete
       let paqueteEndIndex = index + 1;
+
       while (paqueteEndIndex + 1 < newRows.length && newRows[paqueteEndIndex + 1].esSubProducto) {
         paqueteEndIndex++;
       }
@@ -1141,7 +1202,8 @@ const EditCard = ({ id }: { id: string }) => {
 
       setProductRows(newRows);
       console.log('Producto movido después del paquete', newRows);
-      return;
+      
+return;
     }
 
     // Caso normal: intercambiar directamente con el siguiente elemento
@@ -1272,14 +1334,19 @@ const EditCard = ({ id }: { id: string }) => {
               )}
               filterOptions={(options, { inputValue }) => {
                 const searchTerms = inputValue.toLowerCase().split(' ')
-                return options.filter(option => {
+
+                
+return options.filter(option => {
                   const searchableText = `${option.nombre} ${option.cargo} ${option.email} ${option.telefono1} ${option.empresa || ''}`.toLowerCase()
-                  return searchTerms.every(term => searchableText.includes(term))
+
+                  
+return searchTerms.every(term => searchableText.includes(term))
                 })
               }}
               onChange={(_, newValue) => {
                 if (newValue) {
                   console.log('Nuevo valor recibido:', newValue)
+
                   const contactoData = {
                     contactId: Number(newValue.contactId),
                     nombre: newValue.nombre,
@@ -1288,17 +1355,22 @@ const EditCard = ({ id }: { id: string }) => {
                     telefono1: newValue.telefono1 || '',
                     empresa: newValue.empresa || 'Sin empresa'
                   }
+
                   console.log('Nuevo contacto seleccionado:', contactoData)
                   setFormData(prev => {
                     const newData = prev ? { ...prev, contacto: contactoData, contactoId: contactoData.contactId } : prev
+
                     console.log('Nuevo formData después de actualizar contacto:', newData)
-                    return newData
+                    
+return newData
                   })
                 } else {
                   setFormData(prev => {
                     const newData = prev ? { ...prev, contacto: undefined, contactoId: undefined } : prev
+
                     console.log('FormData después de limpiar contacto:', newData)
-                    return newData
+                    
+return newData
                   })
                 }
               }}
@@ -1599,6 +1671,7 @@ const EditCard = ({ id }: { id: string }) => {
                       const value = Number(e.target.value)
                       const impuesto = value * 0.19
                       const total = value + impuesto
+
                       setFormData(prev => prev ? {
                         ...prev,
                         subtotal: isNaN(value) ? 0 : value,
@@ -1643,6 +1716,7 @@ const EditCard = ({ id }: { id: string }) => {
                         value={formData.precioProducto}
                         onChange={e => {
                           const porProducto = e.target.value === 'true'
+
                           setFormData(prev => prev ? {
                             ...prev,
                             precioProducto: porProducto,
@@ -1771,8 +1845,10 @@ const EditCard = ({ id }: { id: string }) => {
                             }}
                             onClick={() => {
                               resetProductFilters();
+
                               // Encontrar el final de los subproductos del paquete actual
                               let insertIndex = index + 1;
+
                               while (insertIndex < productRows.length && productRows[insertIndex].esSubProducto) {
                                 insertIndex++;
                               }
@@ -1790,13 +1866,17 @@ const EditCard = ({ id }: { id: string }) => {
                                 esSubProducto: true,
                                 subproductos: []
                               };
+
                               const newRows = [...productRows];
+
                               newRows.splice(insertIndex, 0, newProductRow);
                               setProductRows(newRows);
                               setTimeout(() => {
                                 setActiveRowIndex(insertIndex);
+
                                 // Simular click en el input para abrir el popover
                                 const inputElement = servicioAnchorRefs.current[insertIndex]?.querySelector('input');
+
                                 if (inputElement) {
                                   inputElement.click();
                                 }
@@ -1846,9 +1926,11 @@ const EditCard = ({ id }: { id: string }) => {
                           {formData.tipoCotizacion === 'A' && formData.sinCantidad ? (
                             <Typography>-</Typography>
                           ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
+
                             // Para precio por producto (readonly)
                             <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
                           ) : (
+
                             // Para precio total (editable)
                             <TextField
                               size='small'
@@ -1857,6 +1939,7 @@ const EditCard = ({ id }: { id: string }) => {
                               onChange={e => {
                                 const total = parseFloat(e.target.value) || 0
                                 const impuesto = total * 0.19
+
                                 setFormData(prev => prev ? { ...prev, subtotal: total, impuesto: impuesto, total: total + impuesto } : null)
                               }}
                               InputProps={{

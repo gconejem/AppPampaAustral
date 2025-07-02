@@ -109,6 +109,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json(updatedContact)
   } catch (error) {
     console.error('Error al actualizar estado del contacto:', error)
-    return NextResponse.json({ error: 'Error al actualizar estado del contacto' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Error al actualizar estado del contacto' }, { status: 500 })
   }
 }

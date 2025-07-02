@@ -78,7 +78,8 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
   useEffect(() => {
     if (!Array.isArray(productData)) {
       setFilteredData([])
-      return
+      
+return
     }
 
     let filteredData = [...productData]
@@ -125,6 +126,7 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
     switch (filterType) {
       case 'area':
         const areaId = value ? Number(value) : null
+
         setSelectedAreaId(areaId)
         setSelectedArea(areaId ? areaOptions.find(a => a.id === areaId)?.nombre || '' : '')
         setSelectedFamilia('') // Resetear familia cuando cambia el área
@@ -138,6 +140,7 @@ const TableFilters = ({ productData, setFilteredData, areas, familias, tipos, re
       default:
         break
     }
+
     resetPage()
   }
 

@@ -31,10 +31,7 @@ const getContactData = async () => {
 }
 
 const ContactListApp = async ({ params: { lang } }: Props) => {
-  // Vars
-  const data = await getContactData()
-
-  return <ContactList contactData={data} />
+  return <ContactList />
 }
 
 export default ContactListApp

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const producto = await prisma.producto.findUnique({
       where: { productoId },
       include: {
-        listaPrecio: true
+        listasPrecios: true
       }
     })
 
@@ -17,15 +17,20 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
     }
 
+    // Obtener la primera lista de precios si existe
+    const primerListaPrecio = producto.listasPrecios && producto.listasPrecios.length > 0 
+      ? producto.listasPrecios[0] 
+      : null;
+
     return NextResponse.json({
       producto: {
         sku: producto.sku,
         nombre: producto.nombre,
         precio: producto.precio,
-        lista: producto.listaPrecio
+        lista: primerListaPrecio
           ? {
-              id: producto.listaPrecio.id,
-              nombre: producto.listaPrecio.nombre
+              id: primerListaPrecio.id,
+              nombre: "Lista de precios" // El nombre de la lista está en otra relación
             }
           : null
       }

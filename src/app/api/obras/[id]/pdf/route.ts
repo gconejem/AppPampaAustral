@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import puppeteer from 'puppeteer'
 import fs from 'fs'
+
+import { NextResponse } from 'next/server'
+
+import puppeteer from 'puppeteer'
+
+import { prisma } from '@/lib/prisma'
 
 const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
@@ -301,7 +304,8 @@ function renderObraHTML(obra: any, logoBase64: string) {
               .sort((a: any, b: any) => {
                 if (a.isPrincipal && !b.isPrincipal) return -1;
                 if (!a.isPrincipal && b.isPrincipal) return 1;
-                return 0;
+                
+return 0;
               })
               .map((contact: any) => `
                 <tr>
@@ -357,6 +361,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Cargar logo como base64
     const logoPath = `${process.cwd()}/public/images/logos/PAMPA_MG_2025_017-2.png`
+
     const logoBase64 = fs.existsSync(logoPath)
       ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
       : ''
@@ -365,6 +370,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Si la URL tiene ?preview=1, devolvemos el HTML en vez del PDF
     const url = new URL(request.url)
+
     if (url.searchParams.get('preview') === '1') {
       return new NextResponse(html, {
         headers: { 'Content-Type': 'text/html' }
@@ -381,7 +387,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         '--disable-gpu'
       ]
     })
+
     const page = await browser.newPage()
+
     await page.setContent(html, { 
       waitUntil: 'networkidle0',
       timeout: 30000
@@ -397,6 +405,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       printBackground: true,
       preferCSSPageSize: true
     })
+
     await browser.close()
 
     return new NextResponse(pdfBuffer, {
@@ -407,6 +416,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     })
   } catch (error) {
     console.error('Error al generar PDF:', error)
-    return new NextResponse('Error al generar el PDF', { status: 500 })
+    
+return new NextResponse('Error al generar el PDF', { status: 500 })
   }
 } 

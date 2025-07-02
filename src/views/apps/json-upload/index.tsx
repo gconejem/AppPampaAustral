@@ -73,6 +73,7 @@ const JsonUpload = ({ agendas }: Props) => {
     setUploadingFile({ type, agendaId })
     const inputId = `${type}-${agendaId}`
     const input = document.getElementById(inputId) as HTMLInputElement
+
     if (input) {
       input.click()
     }
@@ -80,10 +81,12 @@ const JsonUpload = ({ agendas }: Props) => {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, type: 'ots' | 'aceptacion', agendaId: number) => {
     const file = event.target.files?.[0]
+
     if (!file) return
 
     try {
       const reader = new FileReader()
+
       reader.onload = async (e) => {
         try {
           const content = e.target?.result as string
@@ -113,10 +116,12 @@ const JsonUpload = ({ agendas }: Props) => {
 
             if (!response.ok) {
               const errorData = await response.json()
+
               throw new Error(errorData.error || 'Error al enviar los datos')
             }
 
             const result = await response.json()
+
             console.log('Respuesta del servidor:', result)
             
             if (type === 'ots') {
@@ -129,11 +134,13 @@ const JsonUpload = ({ agendas }: Props) => {
           setError(parseError instanceof Error ? parseError.message : 'El archivo no es un JSON válido')
         }
       }
+
       reader.readAsText(file)
     } catch (error) {
       setError('Error al procesar el archivo')
     } finally {
       setUploadingFile(null)
+
       // Limpiar el input
       event.target.value = ''
     }

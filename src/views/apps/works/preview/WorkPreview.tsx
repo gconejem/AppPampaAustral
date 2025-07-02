@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+
 import { Typography, Grid, Card, CardContent, Divider } from '@mui/material'
 import axios from 'axios'
 
@@ -30,6 +31,7 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
     const fetchListasPrecios = async () => {
       try {
         const response = await axios.get('/api/listas-precios')
+
         setListasPrecios(response.data)
       } catch (error) {
         console.error('Error al cargar las listas de precios:', error)
@@ -43,7 +45,9 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
 
   const getListaPrecioNombre = (id: string | number) => {
     const lista = listasPrecios.find(l => String(l.id) === String(id))
-    return lista ? lista.nombre : id
+
+    
+return lista ? lista.nombre : id
   }
 
   return (
@@ -350,7 +354,8 @@ const WorkPreview = ({ obra }: WorkPreviewProps) => {
                   // Primero el contacto principal
                   if (a.isPrincipal && !b.isPrincipal) return -1
                   if (!a.isPrincipal && b.isPrincipal) return 1
-                  return 0
+                  
+return 0
                 })
                 .map((contact: ContactoObra) => (
                   <tr key={contact.id}>

@@ -14,9 +14,9 @@ async function getContactData() {
   try {
     const contacts = await prisma.contacto.findMany({
       include: {
-        ClienteContacto: {
+        clientesContactos: {
           include: {
-            Cliente: true
+            cliente: true
           }
         }
       }
@@ -31,9 +31,7 @@ async function getContactData() {
 }
 
 const ContactListApp = async ({ params }: Props) => {
-  const data = await getContactData()
-
-  return <ContactList contactData={data} />
+  return <ContactList />
 }
 
 export default ContactListApp

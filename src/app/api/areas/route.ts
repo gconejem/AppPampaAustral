@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
@@ -24,12 +25,15 @@ export async function GET() {
     const areasOrdenadas = areas.sort((a, b) => {
       const indexA = ordenPersonalizado.indexOf(a.nombre)
       const indexB = ordenPersonalizado.indexOf(b.nombre)
-      return indexA - indexB
+
+      
+return indexA - indexB
     })
 
     return NextResponse.json(areasOrdenadas)
   } catch (error) {
     console.error('Error al obtener áreas:', error)
-    return NextResponse.json({ error: 'Error al obtener áreas' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Error al obtener áreas' }, { status: 500 })
   }
 }

@@ -40,8 +40,10 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
-import { ROLES_CONTACTO } from '@/constants/roles'
+
 import CircularProgress from '@mui/material/CircularProgress'
+
+import { ROLES_CONTACTO } from '@/constants/roles'
 
 // Type Imports
 // import type { InvoiceType } from '@/types/apps/invoiceTypes'
@@ -67,6 +69,7 @@ interface InvoiceType {
   detalles: any[]
   total: number
   observacionGestion?: string
+
   // ... otros campos necesarios
 }
 
@@ -132,7 +135,9 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     const now = new Date()
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    return { firstDay, lastDay }
+
+    
+return { firstDay, lastDay }
   }
 
   const { firstDay, lastDay } = getFirstAndLastDayOfMonth()
@@ -156,7 +161,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     // Verificamos si la fecha es válida
     if (isNaN(d.getTime())) {
       console.error('Fecha inválida:', date)
-      return 'Fecha inválida'
+      
+return 'Fecha inválida'
     }
 
     // Formateamos la fecha al formato deseado
@@ -177,13 +183,16 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     try {
       setIsLoading(true)
       const params = new URLSearchParams()
+
       if (fechaInicio) params.append('fechaInicio', fechaInicio)
       if (fechaFin) params.append('fechaFin', fechaFin)
 
       const response = await fetch(`/api/cotizaciones?${params.toString()}`)
+
       if (!response.ok) throw new Error('Error al cargar cotizaciones')
 
       const data = await response.json()
+
       setLocalData(data)
     } catch (error) {
       console.error('Error:', error)
@@ -212,12 +221,15 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     if (!date) {
       setFiltroFecha('')
       resetPage()
-      return
+      
+return
     }
+
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const newFecha = `${year}-${month}-${day}`
+
     setFiltroFecha(newFecha)
     resetPage()
     fetchCotizaciones(newFecha, filtroFechaFin)
@@ -227,12 +239,15 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     if (!date) {
       setFiltroFechaFin('')
       resetPage()
-      return
+      
+return
     }
+
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const newFecha = `${year}-${month}-${day}`
+
     setFiltroFechaFin(newFecha)
     resetPage()
     fetchCotizaciones(filtroFecha, newFecha)
@@ -419,10 +434,12 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     if (newEstado === 'GESTIONADA' || newEstado === 'RECHAZADA') {
       // Precargar la observación guardada
       const cotizacion = localData.find(row => row.id === selectedRowId)
+
       setGestionText(cotizacion?.observacionGestion || '')
       setPendingEstado(newEstado)
       setGestionDialogOpen(true)
-      return
+      
+return
     }
 
     await updateEstadoCotizacion(newEstado)
@@ -515,7 +532,9 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     if (!globalFilter) return true
 
     const searchStr = globalFilter.toLowerCase()
-    return (
+
+    
+return (
       row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
       row.comuna?.toLowerCase().includes(searchStr) ||
       row.empresa?.toLowerCase().includes(searchStr) ||
@@ -576,6 +595,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
   const handleDownloadPDF = async (id: number) => {
     try {
       const response = await fetch(`/api/cotizaciones/${id}/pdf`)
+
       if (!response.ok) {
         throw new Error('Error al descargar el PDF')
       }
@@ -583,6 +603,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+
       a.href = url
       a.download = `cotizacion-${id}.pdf`
       document.body.appendChild(a)
@@ -591,6 +612,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error al descargar el PDF:', error)
+
       // Aquí podrías mostrar un mensaje de error al usuario
     }
   }
@@ -599,10 +621,13 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
     try {
       setPdfLoading(true)
       const response = await fetch(`/api/cotizaciones/${id}/pdf?preview=1`)
+
       if (!response.ok) {
         throw new Error('Error al cargar la previsualización')
       }
+
       const html = await response.text()
+
       setPdfHtmlContent(html)
       setSelectedCotizacionForPDF(localData.find(row => row.id === id) || null)
       setPdfPreviewOpen(true)
@@ -655,6 +680,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                 label="Tipo Cotización"
                 onChange={e => {
                   const value = e.target.value
+
                   setFiltroTipo(value)
                 }}
                 displayEmpty
@@ -673,6 +699,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                 label="Estado"
                 onChange={e => {
                   const value = e.target.value
+
                   setFiltroEstado(value)
                 }}
                 displayEmpty
@@ -1145,6 +1172,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === true &&
@@ -1152,6 +1181,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === true) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === true &&
@@ -1159,6 +1190,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === false) {
                                     return '-';
                                   }
+
+
                                   // Para todos los demás casos, mostrar cantidad
                                   return detalle.cantidad;
                                 })()}
@@ -1169,6 +1202,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === false &&
@@ -1176,6 +1211,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === true) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === true &&
@@ -1183,6 +1220,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === true) {
                                     return '-';
                                   }
+
+
                                   // Para todos los demás casos, mostrar precio
                                   return `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`;
                                 })()}
@@ -1193,6 +1232,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === false &&
@@ -1200,6 +1241,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === true) {
                                     return '-';
                                   }
+
+
                                   // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
                                     selectedCotizacion.sinCantidad === true &&
@@ -1207,6 +1250,8 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     selectedCotizacion.precioTotal === true) {
                                     return '-';
                                   }
+
+
                                   // Para todos los demás casos, mostrar total
                                   return `UF ${Number(detalle.subtotal || 0).toFixed(2)}`;
                                 })()}

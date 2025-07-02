@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import puppeteer from 'puppeteer'
 import fs from 'fs'
+
+import { NextResponse } from 'next/server'
+
+import puppeteer from 'puppeteer'
+
+import { prisma } from '@/lib/prisma'
 import { ROLES_CONTACTO } from '@/constants/roles'
 
 // Mapeo de formas de pago
@@ -207,10 +210,13 @@ Condiciones para terreno y accesos
                 // Buscar paquetes y sus subproductos en toda la lista
                 for (let i = 0; i < cotizacion.detalles.length; i++) {
                   const detalle = cotizacion.detalles[i];
+
                   if (detalle.esPaquete) {
                     paquetesConSubproductos[detalle.id] = [];
+
                     // Buscar subproductos que siguen al paquete
                     let j = i + 1;
+
                     while (j < cotizacion.detalles.length && 
                            !cotizacion.detalles[j].esPaquete && 
                            cotizacion.detalles[j].esSubProducto) {
@@ -229,20 +235,24 @@ Condiciones para terreno y accesos
                   if (subproductosProcesados.has(detalle.id)) continue;
                   
                   const area = detalle.producto?.area || 'Sin área';
+
                   if (!detallesPorArea[area]) detallesPorArea[area] = [];
                   detallesPorArea[area].push(detalle);
                 }
                 
                 let html = '';
+
                 for (const area in detallesPorArea) {
                   html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
                   html += `<td colspan="6">${area}</td></tr>`;
                   
                   const detalles = detallesPorArea[area];
+
                   for (const detalle of detalles) {
                     if (detalle.esPaquete) {
                       // Procesar paquete con sus subproductos
                       const subproductos = paquetesConSubproductos[detalle.id] || [];
+
                       const subproductosHTML = subproductos.map((sub: any) => 
                         `<li style="font-size: 0.57rem;">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
                       ).join('');
@@ -265,6 +275,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -272,6 +284,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -279,6 +293,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === false) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar cantidad
                           return detalle.cantidad || '-';
                         })()}</td>
@@ -287,6 +303,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === false && 
@@ -294,6 +312,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -301,6 +321,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar precio
                           return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
                         })()}</td>
@@ -309,6 +331,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === false && 
@@ -316,6 +340,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -323,6 +349,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar total
                           return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
                         })()}</td>
@@ -341,6 +369,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -348,6 +378,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -355,6 +387,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === false) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar cantidad
                           return detalle.cantidad || '-';
                         })()}</td>
@@ -363,6 +397,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === false && 
@@ -370,6 +406,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -377,6 +415,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar precio
                           return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
                         })()}</td>
@@ -385,6 +425,8 @@ Condiciones para terreno y accesos
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === false && 
@@ -392,6 +434,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
                               cotizacion.sinCantidad === true && 
@@ -399,6 +443,8 @@ Condiciones para terreno y accesos
                               cotizacion.precioTotal === true) {
                             return '-';
                           }
+
+
                           // Para todos los demás casos, mostrar total
                           return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
                         })()}</td>
@@ -428,7 +474,9 @@ Condiciones para terreno y accesos
                   <div><strong>Total: -</strong></div>
                 `;
               }
-              return `
+
+              
+return `
                 <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                 <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
                 <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
@@ -534,6 +582,7 @@ Condiciones para terreno y accesos
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
+
     const cotizacion = await prisma.cotizacion.findUnique({
       where: { id },
       include: {
@@ -552,12 +601,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Cargar logo como base64
     const logoPath = `${process.cwd()}/public/images/logos/PAMPA_MG_2025_017-2.png`;
+
     const logoBase64 = fs.existsSync(logoPath)
       ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
       : '';
 
     // Cargar firma como base64
     const firmaPath = `${process.cwd()}/public/images/logos/firma-cotizaciones-sistema.png`;
+
     const firmaBase64 = fs.existsSync(firmaPath)
       ? 'data:image/png;base64,' + fs.readFileSync(firmaPath).toString('base64')
       : '';
@@ -568,6 +619,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Si la URL tiene ?preview=1, devolvemos el HTML en vez del PDF
     const url = new URL(request.url);
+
     if (url.searchParams.get('preview') === '1') {
       return new NextResponse(html, {
         headers: { 'Content-Type': 'text/html' }
@@ -576,7 +628,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
     const page = await browser.newPage()
+
     await page.setContent(html, { waitUntil: 'networkidle0' })
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '25mm', left: '5mm' },
@@ -596,6 +650,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         </div>
       `
     })
+
     await browser.close()
 
     return new NextResponse(pdfBuffer, {
@@ -606,6 +661,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     })
   } catch (error) {
     console.error('Error al generar PDF:', error)
-    return new NextResponse('Error al generar el PDF', { status: 500 })
+    
+return new NextResponse('Error al generar el PDF', { status: 500 })
   }
 } 

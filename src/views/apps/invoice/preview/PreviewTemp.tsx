@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Grid from '@mui/material/Grid'
 import Divider from '@mui/material/Divider'
+
 import Logo from '@components/layout/shared/Logo'
 
 const PreviewTemp = () => {
@@ -14,8 +16,10 @@ const PreviewTemp = () => {
   useEffect(() => {
     try {
       const data = localStorage.getItem('cotizacionPreview')
+
       if (data) {
         const parsedData = JSON.parse(data)
+
         console.log('=== DATOS EN PREVIEW ===')
         console.log('Datos completos:', parsedData)
         console.log('Cliente:', parsedData.cliente)

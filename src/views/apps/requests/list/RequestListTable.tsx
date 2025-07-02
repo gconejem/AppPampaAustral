@@ -63,8 +63,10 @@ type SolicitudType = {
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
+
   addMeta({ itemRank })
-  return itemRank.passed
+  
+return itemRank.passed
 }
 
 const DebouncedInput = ({
@@ -87,7 +89,9 @@ const DebouncedInput = ({
     const timeout = setTimeout(() => {
       onChange(value)
     }, debounce)
-    return () => clearTimeout(timeout)
+
+    
+return () => clearTimeout(timeout)
   }, [value, debounce, onChange])
 
   return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
@@ -178,7 +182,9 @@ function RequestListTable({ tableData }: { tableData?: SolicitudType[] }) {
       'FINALIZADO': 'success',
       'CANCELADO': 'error'
     }
-    return colors[estado] || 'default'
+
+    
+return colors[estado] || 'default'
   }
 
   const getEstadoAdministrativoColor = (estado: string): ThemeColor => {
@@ -188,7 +194,9 @@ function RequestListTable({ tableData }: { tableData?: SolicitudType[] }) {
       'RECHAZADO': 'error',
       'EN_REVISION': 'info'
     }
-    return colors[estado] || 'default'
+
+    
+return colors[estado] || 'default'
   }
 
   const table = useReactTable({

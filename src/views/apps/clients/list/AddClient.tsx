@@ -276,7 +276,9 @@ const AddClienteDrawer = (props: Props) => {
     if (!value) return true
     const emails = value.split(',').map(email => email.trim()).filter(email => email.length > 0)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emails.every(email => emailRegex.test(email))
+
+    
+return emails.every(email => emailRegex.test(email))
   }
 
   // Hooks
@@ -564,13 +566,18 @@ const AddClienteDrawer = (props: Props) => {
   // Modificar handleAddContact para aceptar ContactType o Contacto
   const handleAddContact = (contact: ContactType | Contacto) => {
     const isPrincipal = contactos.length === 0;
+
     // Buscar el value correspondiente si el cargo es un label
     let cargoValue = contact.cargo;
+
+
     // Si el cargo no es un value válido, buscar por label
     if (!CARGOS_OBRA.some(c => c.value === cargoValue)) {
       const found = CARGOS_OBRA.find(c => c.label === cargoValue);
+
       cargoValue = found ? found.value : CARGOS_OBRA[0].value;
     }
+
     const contactoNormalizado: Contacto = {
       nombre: contact.nombre || '',
       cargo: cargoValue || '',
@@ -579,6 +586,7 @@ const AddClienteDrawer = (props: Props) => {
       telefono2: contact.telefono2 || '',
       contactId: (contact as any).contactId
     };
+
     setContactos([
       ...contactos,
       {
@@ -736,6 +744,7 @@ const AddClienteDrawer = (props: Props) => {
   // Función para manejar el copiado de razón social
   const handleCopyRazonSocial = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked
+
     setCopyRazonSocial(isChecked)
 
     if (isChecked) {
@@ -759,6 +768,8 @@ const AddClienteDrawer = (props: Props) => {
   const handleNewContact = (data: ContactType[] | ((prevData: ContactType[]) => ContactType[])) => {
     if (Array.isArray(data)) {
       const newContact = data[0];
+
+
       // Normaliza el contacto para que tenga cargo a nivel raíz
       handleAddContact({
         nombre: newContact.nombre,
@@ -777,6 +788,7 @@ const AddClienteDrawer = (props: Props) => {
   const fetchContactos = async () => {
     const response = await fetch('/api/contacts');
     const data = await response.json();
+
     console.log('Datos de contactos:', data);
     setContactos(
       (data as any[]).map((c: any) => ({
@@ -1250,6 +1262,7 @@ const AddClienteDrawer = (props: Props) => {
                           value={contacto.cargo}
                           onChange={(e) => {
                             const updatedContactos = [...contactos];
+
                             updatedContactos[index] = {
                               ...updatedContactos[index],
                               cargo: e.target.value

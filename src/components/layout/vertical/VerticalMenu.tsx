@@ -32,12 +32,12 @@ import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 // Modificar el tipo Dictionary para hacerlo más seguro
 type Dictionary =
   | {
-      navigation: {
-        formsAndTables: string
-        appsPages: string
-        [key: string]: string
-      }
+    navigation: {
+      formsAndTables: string
+      appsPages: string
+      [key: string]: string
     }
+  }
   | undefined
 
 type RenderExpandIconProps = {
@@ -56,7 +56,7 @@ const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) =
   </StyledVerticalNavExpandIcon>
 )
 
-const VerticalMenu = () => {
+const VerticalMenu = ({ scrollMenu }: { scrollMenu: (container: any, isPerfectScrollbar: boolean) => void }) => {
   // Hooks
   const theme = useTheme()
   const verticalNavOptions = useVerticalNav()
@@ -72,7 +72,10 @@ const VerticalMenu = () => {
   const labels = defaultLabels
 
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
-  const { lang: locale } = params
+
+  // Convertir params a un tipo más seguro
+  const paramsObj = params as { lang?: string } | null
+  const locale = paramsObj?.lang || 'es'
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
@@ -82,13 +85,13 @@ const VerticalMenu = () => {
         <ScrollWrapper
           {...(isBreakpointReached
             ? {
-                className: 'bs-full overflow-y-auto overflow-x-hidden',
-                onScroll: container => scrollMenu(container, false)
-              }
+              className: 'bs-full overflow-y-auto overflow-x-hidden',
+              onScroll: container => scrollMenu(container, false)
+            }
             : {
-                options: { wheelPropagation: false, suppressScrollX: true },
-                onScrollY: container => scrollMenu(container, true)
-              })}
+              options: { wheelPropagation: false, suppressScrollX: true },
+              onScrollY: container => scrollMenu(container, true)
+            })}
         >
           {/* Vertical Menu */}
           <Menu
@@ -130,7 +133,7 @@ const VerticalMenu = () => {
               </MenuItem> */}
 
               <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
-              App
+                App
               </MenuItem>
 
             </MenuSection>

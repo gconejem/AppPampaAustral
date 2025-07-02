@@ -142,11 +142,13 @@ const PreviewActions = () => {
         sinCantidad: previewData.sinCantidad || false,
         precioProducto: previewData.precioProducto || false,
         precioTotal: previewData.precioTotal || false,
+
         // Enviar siempre los totales
         subtotal: parseFloat(previewData.subtotal || 0),
         descuento: parseFloat(previewData.descuento || 0),
         impuesto: parseFloat(previewData.impuesto || 0),
         total: parseFloat(previewData.total || 0),
+
         // Campos específicos para tipo D
         ...(tipoCotizacionValue === 'D' && {
           textoGeneral: previewData.textoGeneral || '',
@@ -160,6 +162,7 @@ const PreviewActions = () => {
         superficieEMS: previewData.superficieEMS || '',
         antecedentesEMS: previewData.antecedentesEMS || '',
         plazoEntregaEMS: previewData.plazoEntregaEMS || '',
+
         //FIN EMS
 
         //Mensual
@@ -167,6 +170,7 @@ const PreviewActions = () => {
         jornadaMensual: previewData.jornadaMensual || '',
         antecedentesMensual: previewData.antecedentesMensual || '',
         alcanceServicio: previewData.alcanceServicio || '',
+
         //FIN Mensual
 
         detalles: {
@@ -202,6 +206,7 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
+
       /* setTimeout(() => {
         window.close()
         if (window.opener) {
@@ -237,6 +242,7 @@ const PreviewActions = () => {
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+
       a.href = url
       a.download = `cotizacion-preview.pdf`
       document.body.appendChild(a)

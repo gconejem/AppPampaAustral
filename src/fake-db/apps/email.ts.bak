@@ -340,7 +340,7 @@ export const db: EmailType = {
       cc: [],
       bcc: [],
       message:
-        '<p>Hello John, </p><p>Whenever you read a good book, you are making efforts to open a new door to let more light come in.</p><p>May you are blessed with more and more books. Happy National Book Lover’s Day to you.</p><p>Regards</p><p>Eugenie Finessy</p>',
+        '<p>Hello John, </p><p>Whenever you read a good book, you are making efforts to open a new door to let more light come in.</p><p>May you are blessed with more and more books. Happy National Book Lover's Day to you.</p><p>Regards</p><p>Eugenie Finessy</p>',
       attachments: [],
       isStarred: false,
       labels: ['personal'],
@@ -392,7 +392,7 @@ export const db: EmailType = {
       cc: [],
       bcc: [],
       message:
-        '<p>Hello John, </p><p>We have released the update 8.6.1 for the app</p><p>Update your application. Don’t miss our new Feature</p><p>Regards</p><p>Eb Begg</p>',
+        '<p>Hello John, </p><p>We have released the update 8.6.1 for the app</p><p>Update your application. Don't miss our new Feature</p><p>Regards</p><p>Eb Begg</p>',
       attachments: [],
       isStarred: false,
       labels: ['company'],
@@ -496,7 +496,7 @@ export const db: EmailType = {
       cc: [],
       bcc: [],
       message:
-        "<p>Happy Teacher's Day John, </p><p>Teachers have to lead by example, and you have always been an excellent example to follow. As a student, I feel very grateful to have such a great mentor in my life. Happy Teacher’s Day!</p><p>Especially for Teacher's Day, we held a postcard competition for students. We invite you to enjoy this creativity. The kids tried very hard!</p><p>Regards</p><p>Robin Genn</p>",
+        "<p>Happy Teacher's Day John, </p><p>Teachers have to lead by example, and you have always been an excellent example to follow. As a student, I feel very grateful to have such a great mentor in my life. Happy Teacher's Day!</p><p>Especially for Teacher's Day, we held a postcard competition for students. We invite you to enjoy this creativity. The kids tried very hard!</p><p>Regards</p><p>Robin Genn</p>",
       attachments: [],
       isStarred: true,
       labels: ['personal'],
@@ -600,7 +600,7 @@ export const db: EmailType = {
               email: 'johndoe@mail.com'
             }
           ],
-          subject: 'I’m a living furnace.',
+          subject: 'I'm a living furnace.',
           cc: [],
           bcc: [],
           message:
@@ -638,7 +638,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: true,
       labels: ['company'],
-      time: new Date(new Date().getTime() - 7 * 60 * 60 * 1000),
+      time: new Date(new Date().getTime() - 7 * 60 * 60 * 1000).toString(),
       replies: [],
       folder: 'inbox',
       isRead: false
@@ -664,7 +664,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['company'],
-      time: new Date(new Date().getTime() - 5 * 20 * 60 * 1000),
+      time: new Date(new Date().getTime() - 5 * 20 * 60 * 1000).toString(),
       replies: [],
       folder: 'draft',
       isRead: false
@@ -690,7 +690,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['private'],
-      time: new Date(new Date().getTime() - 2 * 60 * 60 * 1000),
+      time: new Date(new Date().getTime() - 2 * 60 * 60 * 1000).toString(),
       replies: [],
       folder: 'trash',
       isRead: false
@@ -723,7 +723,7 @@ export const db: EmailType = {
       ],
       isStarred: false,
       labels: ['personal'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [
         {
           id: 103,
@@ -802,7 +802,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['private'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [],
       folder: 'inbox',
       isRead: true
@@ -828,7 +828,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['important'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [
         {
           id: 105,
@@ -869,7 +869,7 @@ export const db: EmailType = {
               email: 'johndoe@mail.com'
             }
           ],
-          subject: 'I’m a living furnace.',
+          subject: 'I'm a living furnace.',
           cc: [],
           bcc: [],
           message:
@@ -907,7 +907,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['personal'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [],
       folder: 'inbox',
       isRead: true
@@ -933,7 +933,7 @@ export const db: EmailType = {
       attachments: [],
       isStarred: false,
       labels: ['company'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [],
       folder: 'inbox',
       isRead: true
@@ -955,11 +955,11 @@ export const db: EmailType = {
       cc: [],
       bcc: [],
       message:
-        '<p>Hey John, </p><p>The Best Movies on April Fool’s Day</p><p>Finding any genuine April Fool’s moments in movies is kind of like trying to peek through a wheat field to find individual stalks, but at the very least there are a few movies that seem to have the spirit of April Fool’s Day down when it comes to their sense of humor.</p><p>So instead of finding individual scenes about the day in question it seems like more fun to go ahead and treat the reader to a few films that might be great to watch this coming Sunday when the day of fools is upon us.</p><p>Regards</p><p>Temple Olrenshaw</p>',
+        '<p>Hey John, </p><p>The Best Movies on April Fool's Day</p><p>Finding any genuine April Fool's moments in movies is kind of like trying to peek through a wheat field to find individual stalks, but at the very least there are a few movies that seem to have the spirit of April Fool's Day down when it comes to their sense of humor.</p><p>So instead of finding individual scenes about the day in question it seems like more fun to go ahead and treat the reader to a few films that might be great to watch this coming Sunday when the day of fools is upon us.</p><p>Regards</p><p>Temple Olrenshaw</p>',
       attachments: [],
       isStarred: false,
       labels: ['company'],
-      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000),
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
       replies: [
         {
           id: 107,
@@ -1042,6 +1042,240 @@ export const db: EmailType = {
       replies: [],
       folder: 'inbox',
       isRead: true
+    },
+    {
+      id: 31,
+      from: {
+        email: 'buckland8m@dagondesign.com',
+        name: 'Bill Emia',
+        avatar: '/images/avatars/2.png'
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@newyorker.com'
+        }
+      ],
+      subject: 'Vacation',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello John, </p><p>How are you?</p><p>Can we discuss about our vacation plans?</p><p>John</p>',
+      attachments: [],
+      isStarred: true,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 7 * 60 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'inbox',
+      isRead: false
+    },
+    {
+      id: 32,
+      from: {
+        email: 'vcasarili8n@bigcartel.com',
+        name: 'Victor Casarili',
+        avatar: '/images/avatars/3.png'
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@apple.com'
+        }
+      ],
+      subject: 'Grocery List',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello, I am sending you the grocery list for this week.The total is $32.50.</p><p>1. Milk $2.50</p><p>2. Eggs $3.00</p><p>3. Bread $2.00</p><p>4. Butter $3.00</p><p>5. Salt $1.00</p><p>6. Sugar $2.00</p><p>7. Oil $5.00</p><p>8. Pepper $4.00</p><p>9. Cheese $10.00</p><p>Total: $32.50</p><p>Regards,</p><p>Victor Casarili</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 5 * 20 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'draft',
+      isRead: false
+    },
+    {
+      id: 33,
+      from: {
+        email: 'cathyparks8o@cbsnews.com',
+        name: 'Cathy Parks',
+        avatar: '/images/avatars/5.png'
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Electricity Bill',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hi John, </p><p>This is the reminder to pay your electricity bill.</p><p>The due date is 25th of this month.</p><p>Regards,</p><p>Cathy Parks</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 2 * 60 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'inbox',
+      isRead: false
+    },
+    {
+      id: 34,
+      from: {
+        email: 'newsfeed@farmo.com',
+        name: 'Farmo News',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Top 10 Vegetables for a Healthy Body',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Here is the list of top 10 vegetables for a healthy body</p><p>1. Spinach</p><p>2. Carrots</p><p>3. Broccoli</p><p>4. Garlic</p><p>5. Brussels sprouts</p><p>6. Kale</p><p>7. Ginger</p><p>8. Asparagus</p><p>9. Sweet potatoes</p><p>10. Beets</p><p>Regards,</p><p>Farmo News</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'spam',
+      isRead: false
+    },
+    {
+      id: 35,
+      from: {
+        email: 'butter@sweer.com',
+        name: 'Butter Sweet',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Cake Recipe',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Here is the recipe for chocolate cake:</p><p>1. 1/2 cup (1 stick) unsalted butter, at room temperature, plus more for the pans</p><p>2. 2 cups granulated sugar</p><p>3. 3 large eggs, at room temperature</p><p>4. 2 teaspoons pure vanilla extract</p><p>5. 2-1/2 cups all-purpose flour, plus more for the pans</p><p>6. 1 cup unsweetened natural cocoa powder (not Dutch processed)</p><p>7. 1-1/2 teaspoons baking powder</p><p>8. 1 teaspoon baking soda</p><p>9. 1 teaspoon salt</p><p>10. 1-1/2 cups buttermilk</p><p>Regards,</p><p>Butter Sweet</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'draft',
+      isRead: false
+    },
+    {
+      id: 36,
+      from: {
+        email: 'onlinepiano@instrument.com',
+        name: 'Online Piano Instrument',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Top 10 Pianos In The World',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Here is the list of top 10 pianos in the world</p><p>1. Steinway & Sons (New York)</p><p>2. YAMAHA</p><p>3. Bösendorfer</p><p>4. Fazioli</p><p>5. Blüthner</p><p>6. KAWAI</p><p>7. Bechstein</p><p>8. Mason & Hamlin</p><p>9. Shigeru Kawai</p><p>10. Stuart and Sons</p><p>Regards,</p><p>Online Piano Instrument</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'inbox',
+      isRead: false
+    },
+    {
+      id: 37,
+      from: {
+        email: 'coursera@edu.com',
+        name: 'Coursera Education',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Top 10 Machine Learning Courses',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Here is the list of top 10 machine learning courses</p><p>1. Machine Learning by Stanford University</p><p>2. Deep Learning Specialization by Andrew Ng</p><p>3. Machine Learning with Python by IBM</p><p>4. Advanced Machine Learning Specialization by Higher School of Economics</p><p>5. Machine Learning by University of Washington</p><p>6. Machine Learning for Data Analysis by Wesleyan University</p><p>7. Machine Learning With Big Data by University of California San Diego</p><p>8. Machine Learning for Data Science and Analytics by Columbia University</p><p>9. Machine Learning Crash Course by Google</p><p>10. Machine Learning A-Z: Hands-On Python & R In Data Science by Udemy</p><p>Regards,</p><p>Coursera Education</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'spam',
+      isRead: false
+    },
+    {
+      id: 38,
+      from: {
+        email: 'udemy@edu.com',
+        name: 'Udemy Education',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Top 10 Web Development Courses',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Here is the list of top 10 web development courses</p><p>1. The Web Developer Bootcamp by Colt Steele</p><p>2. The Complete 2020 Web Development Bootcamp by Angela Yu</p><p>3. JavaScript: Understanding the Weird Parts by Anthony Alicea</p><p>4. The Complete JavaScript Course 2020: Build Real Projects! by Jonas Schmedtmann</p><p>5. Modern React with Redux by Stephen Grider</p><p>6. The Complete Node.js Developer Course (3rd Edition) by Andrew Mead</p><p>7. Angular - The Complete Guide (2020 Edition) by Maximilian Schwarzmüller</p><p>8. React - The Complete Guide (incl Hooks, React Router, Redux) by Maximilian Schwarzmüller</p><p>9. Vue JS 2 - The Complete Guide (incl. Vue Router & Vuex) by Maximilian Schwarzmüller</p><p>10. Complete Python Bootcamp: Go from zero to hero in Python 3 by Jose Portilla</p><p>Regards,</p><p>Udemy Education</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'inbox',
+      isRead: false
+    },
+    {
+      id: 39,
+      from: {
+        email: 'amazon@shop.com',
+        name: 'Amazon Shop',
+        avatar: ''
+      },
+      to: [
+        {
+          name: 'me',
+          email: 'johndoe@altervista.org'
+        }
+      ],
+      subject: 'Amazon Order #086-5563256-5646564',
+      cc: [],
+      bcc: [],
+      message:
+        '<p>Hello there, </p><p>Your Amazon order #086-5563256-5646564 has been shipped.</p><p>Details:</p><p>1. 2 x Apple iPhone 12 Pro Max (128GB, Graphite)</p><p>2. 1 x Apple MacBook Pro (16-inch, 16GB RAM, 1TB Storage, 2.3GHz Intel Core i9) - Silver</p><p>Total: $4,500</p><p>Regards,</p><p>Amazon Shop</p>',
+      attachments: [],
+      isStarred: false,
+      labels: ['company'],
+      time: new Date(new Date().getTime() - 1 * 30 * 60 * 1000).toString(),
+      replies: [],
+      folder: 'draft',
+      isRead: false
     }
   ]
 }

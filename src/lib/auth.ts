@@ -1,5 +1,4 @@
 import type { NextAuthConfig } from 'next-auth'
-import type { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 
@@ -31,15 +30,15 @@ export const authOptions: NextAuthConfig = {
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email
+            email: credentials.email as string
           }
         })
 
-        if (!user) {
+        if (!user || !user.password) {
           throw new Error('Usuario no encontrado')
         }
 
-        const isValid = await compare(credentials.password, user.password || '')
+        const isValid = await compare(credentials.password as string, user.password)
 
         if (!isValid) {
           throw new Error('Contraseña incorrecta')

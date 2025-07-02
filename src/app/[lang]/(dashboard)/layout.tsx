@@ -2,6 +2,8 @@
 import Button from '@mui/material/Button'
 
 // Type Imports
+import { Toaster } from 'react-hot-toast'
+
 import type { ChildrenType } from '@core/types'
 
 // Layout Imports
@@ -17,7 +19,6 @@ import Navbar from '@components/layout/vertical/Navbar'
 import VerticalFooter from '@components/layout/vertical/Footer'
 import HorizontalFooter from '@components/layout/horizontal/Footer'
 import ScrollToTop from '@core/components/scroll-to-top'
-import { Toaster } from 'react-hot-toast'
 
 // Util Imports
 import { getMode, getSystemMode } from '@core/utils/serverHelpers'

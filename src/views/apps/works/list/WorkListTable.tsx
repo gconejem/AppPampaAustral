@@ -240,7 +240,9 @@ const WorkListTable = () => {
           const obrasOrdenadas = [...responseData].sort((a, b) => {
             const numA = parseInt(a.numeroObra)
             const numB = parseInt(b.numeroObra)
-            return numB - numA
+
+            
+return numB - numA
           })
 
           setData(obrasOrdenadas)
@@ -556,6 +558,7 @@ const WorkListTable = () => {
   const handleExportPDF = async (obra: Obra) => {
     try {
       const response = await fetch(`/api/obras/${obra.obraId}/pdf`)
+
       if (!response.ok) {
         throw new Error('Error al descargar el PDF')
       }
@@ -563,6 +566,7 @@ const WorkListTable = () => {
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+
       a.href = url
       a.download = `obra_${obra.numeroObra}.pdf`
       document.body.appendChild(a)
@@ -873,7 +877,9 @@ const WorkListTable = () => {
         const obrasOrdenadas = [...responseData].sort((a, b) => {
           const numA = parseInt(a.numeroObra)
           const numB = parseInt(b.numeroObra)
-          return numB - numA
+
+          
+return numB - numA
         })
 
         setData(obrasOrdenadas)

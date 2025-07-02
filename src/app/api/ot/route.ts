@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/prisma'
 import { TipoOrdenTrabajo } from '@prisma/client'
+
+import { prisma } from '@/lib/prisma'
 
 // Función para obtener el tipo de OT basado en el código de documento
 const getTipoOTFromDocCode = (fklbdocver: string): TipoOrdenTrabajo => {
@@ -16,6 +17,7 @@ const getTipoOTFromDocCode = (fklbdocver: string): TipoOrdenTrabajo => {
     'R-12-03': TipoOrdenTrabajo.DENSIDADES,
     'R-12-27': TipoOrdenTrabajo.MUESTREO_MATERIAL,
     'R-12-31': TipoOrdenTrabajo.EXTRACCION_ASFALTICA,
+
     //'R-12-34': TipoOrdenTrabajo.GENERAL,            Se debe agregar al enum
     'R-12-39': TipoOrdenTrabajo.HORMIGON_FRESCO,
     'R-12-58': TipoOrdenTrabajo.TESTIGOS,
@@ -80,9 +82,11 @@ export async function POST(request: Request) {
 
     //temporal para tener un id de usuario existente en la base de datos
     const user = await prisma.user.findFirst()
+
     if (!user) {
       throw new Error('No se encontró ningún laboratorista')
     }
+
     //fin temporal
 
     // Verificar si es un JSON de tipo aceptación de visita
@@ -90,6 +94,8 @@ export async function POST(request: Request) {
 
     if (esAceptacionVisita) {
       console.log('Es aceptación de visita')
+
+
       // Procesar cada item de aceptación de visita
       for (const item of data.data) {
         if (item.ACEPVISITA) {
@@ -109,6 +115,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ message: 'Aceptación de visita procesada correctamente' })
     }
+
     console.log('No es aceptación de visita')
 
     // Procesar todas las órdenes de trabajo normales

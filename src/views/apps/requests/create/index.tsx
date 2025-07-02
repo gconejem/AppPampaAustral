@@ -2,7 +2,9 @@
 
 // React Imports
 import { useState, useEffect } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import debounce from 'lodash/debounce'
 
 // MUI Imports
@@ -47,6 +49,7 @@ function CreateRequest() {
   const [obras, setObras] = useState<Obra[]>([])
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
   const [selectedObra, setSelectedObra] = useState<Obra | null>(null)
+
   const [loading, setLoading] = useState({
     clientes: false,
     obras: false
@@ -57,15 +60,19 @@ function CreateRequest() {
     const loadClientes = async () => {
       try {
         setLoading(prev => ({ ...prev, clientes: true }))
+
         const url = clienteSearch
           ? `/api/clientes?search=${encodeURIComponent(clienteSearch)}`
           : '/api/clientes'
 
         const response = await fetch(url)
+
         if (!response.ok) {
           throw new Error('Error al cargar clientes')
         }
+
         const data = await response.json()
+
         setClientes(data)
       } catch (error) {
         console.error('Error al cargar clientes:', error)
@@ -75,7 +82,9 @@ function CreateRequest() {
     }
 
     const timeoutId = setTimeout(loadClientes, clienteSearch ? 300 : 0)
-    return () => clearTimeout(timeoutId)
+
+    
+return () => clearTimeout(timeoutId)
   }, [clienteSearch]) // Se ejecuta al montar y cuando cambia la búsqueda
 
   // Cargar obras al montar el componente y cuando se busca
@@ -83,15 +92,19 @@ function CreateRequest() {
     const loadObras = async () => {
       try {
         setLoading(prev => ({ ...prev, obras: true }))
+
         const url = obraSearch
           ? `/api/obras?search=${encodeURIComponent(obraSearch)}`
           : '/api/obras'
 
         const response = await fetch(url)
+
         if (!response.ok) {
           throw new Error('Error al cargar obras')
         }
+
         const data = await response.json()
+
         setObras(data)
       } catch (error) {
         console.error('Error al cargar obras:', error)
@@ -101,7 +114,9 @@ function CreateRequest() {
     }
 
     const timeoutId = setTimeout(loadObras, obraSearch ? 300 : 0)
-    return () => clearTimeout(timeoutId)
+
+    
+return () => clearTimeout(timeoutId)
   }, [obraSearch]) // Se ejecuta al montar y cuando cambia la búsqueda
 
   const handleSave = async () => {
@@ -118,11 +133,13 @@ function CreateRequest() {
       }
 
       const data = await response.json()
+
       console.log('Solicitud creada:', data)
 
       router.push('/en/apps/requests') // Redirigir a la lista de solicitudes
     } catch (error) {
       console.error('Error:', error)
+
       // Aquí podrías agregar un toast o notificación de error
     }
   }

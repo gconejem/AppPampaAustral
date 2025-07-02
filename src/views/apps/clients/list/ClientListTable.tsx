@@ -53,7 +53,10 @@ import {
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import { toast } from 'react-hot-toast'
-import type { Table, Row } from '@tanstack/react-table'
+import type {
+  Table, Row,
+  SortingState
+} from '@tanstack/react-table'
 import {
   createColumnHelper,
   flexRender,
@@ -64,8 +67,7 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   getPaginationRowModel,
-  getSortedRowModel,
-  SortingState
+  getSortedRowModel
 } from '@tanstack/react-table'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -149,7 +151,8 @@ const ROLES_CONTACTO = [
   { value: 'otro', label: 'Otro' }
 ]
 
-const getCargoLabel = (value: string) => {
+const getCargoLabel = (value: string | undefined) => {
+  if (!value) return '';
   return ROLES_CONTACTO.find(r => r.value === value)?.label || value
 }
 
@@ -251,7 +254,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [localData, setLocalData] = useState<Cliente[]>(safeUserData)
 
   // Solo necesitamos regiones y comunas del hook
-  const { regiones, comunas, loading } = useRegionesYComunas()
+  const { regiones, comunas } = useRegionesYComunas()
 
   // Manejadores para los filtros
   const handleGlobalFilter = (value: string) => {
@@ -298,6 +301,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         results = results.filter(cliente => {
           const searchStr = globalFilter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           const fechaIngreso = new Date(cliente.fechaCreacion)
+
           const fechaFormateada = fechaIngreso.toLocaleDateString('es-CL', {
             year: 'numeric',
             month: '2-digit',
@@ -306,11 +310,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
           // Buscar en los contactos del cliente
           const contactoPrincipal = cliente.clientesContactos?.find(c => c.isPrincipal)
+
           const nombreContactoPrincipal = (
             contactoPrincipal?.contacto?.nombre ||
             contactoPrincipal?.nombre ||
             ''
           ).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
           const tieneContactoCoincidente = !!searchStr && !!nombreContactoPrincipal && nombreContactoPrincipal.includes(searchStr)
 
 
@@ -328,6 +334,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
             tieneContactoCoincidente
           )
         })
+
         // Agregar la propiedad 'contacto' al objeto cliente para el modelo de la tabla
         results = results.map(cliente => ({
           ...cliente,
@@ -393,7 +400,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
     event.stopPropagation()
     setAnchorEl(prev => ({
       ...prev,
-      [cliente.clienteId]: event.currentTarget
+      [cliente.clienteId?.toString() || 'temp']: event.currentTarget
     }))
     setSelectedClientForMenu(cliente)
   }
@@ -592,7 +599,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         const regiones = await regResponse.json()
 
         // Para cada región, obtener sus comunas
-        const comunasPromises = regiones.map(region =>
+        const comunasPromises = regiones.map((region: { codigo: string; nombre: string }) =>
           fetch(`/api/ubicacion/comunas/${region.codigo}`).then(res => res.json())
         )
 

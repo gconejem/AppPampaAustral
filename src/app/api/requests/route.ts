@@ -44,7 +44,7 @@ export async function GET() {
 // POST - Crear una nueva solicitud
 export async function POST(req: Request) {
   try {
-    const solicitud = await prisma.Solicitud.create({
+    const solicitud = await prisma.solicitud.create({
       data: {
         // Solo los campos mínimos necesarios
         // El resto de campos tienen valores por defecto o son opcionales
@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json()
     const { id, ...data } = body
 
-    const solicitud = await prisma.Solicitud.update({
+    const solicitud = await prisma.solicitud.update({
       where: { id },
       data,
       include: {
@@ -106,7 +106,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID de la solicitud es requerido' }, { status: 400 })
     }
 
-    await prisma.Solicitud.delete({
+    await prisma.solicitud.delete({
       where: { id: parseInt(id) }
     })
 
