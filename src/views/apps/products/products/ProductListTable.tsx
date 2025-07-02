@@ -60,8 +60,6 @@ import { Toaster, toast } from 'react-hot-toast'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
-import type { Locale } from '@configs/i18n'
-import type { ProductType } from '@/types/apps/ecommerceTypes'
 
 // Component Imports
 import TableFilters from './TableFilters'
@@ -72,9 +70,6 @@ import CreatePackageModal from './CreatePackageModal'
 import EditPackageModal from '../edit/EditPackageModal'
 import PreviewProductForm from '../preview/PreviewProductForm'
 import PreviewPackageForm from '../preview/PreviewPackageForm'
-
-// Util Imports
-import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -186,13 +181,15 @@ export interface Producto {
   category?: string
   status?: string
   stock?: boolean
-  listasPrecios: {
+  precio?: number // Añadir para compatibilidad con EditProductForm
+  listasPrecios?: {
     precio: number
     listaPrecio: {
       id: number
       nombre: string
     }
   }[]
+  productosEnPaquete?: Producto[]
 }
 
 interface ProductoListItem {
@@ -268,7 +265,7 @@ const ProductListTable = () => {
         if (data) {
           setProductos(data.productos || [])
           setAllProductos(data.productos || []) // Guardar todos los productos
-          setFilteredProductos(data.productos || [])
+          // No establecer filteredProductos aquí - dejar que el useEffect maneje el filtrado
           setTipos(data.tipos || [])
         }
 
@@ -308,7 +305,7 @@ const ProductListTable = () => {
 
         setProductos(productosFormateados)
         setAllProductos(productosFormateados) // Guardar todos los productos
-        setFilteredProductos(productosFormateados)
+        // No establecer filteredProductos aquí - dejar que el useEffect maneje el filtrado
         setTotalProductos(productosFormateados.length)
       }
     } catch (error) {
@@ -497,11 +494,21 @@ const ProductListTable = () => {
     cargarProductos()
   }, []) // Ahora solo se cargan los productos al inicio
 
+  // Efecto principal para manejar filtrado
   useEffect(() => {
-    if (globalFilter) {
+    console.log('🔍 Aplicando filtros:', {
+      globalFilter,
+      allProductosLength: allProductos.length,
+      filteredProductosLength: filteredProductos.length
+    })
+
+    if (globalFilter && allProductos.length > 0) {
+      console.log('📝 Aplicando búsqueda global...')
       buscarProducto(globalFilter)
-    } else {
+    } else if (!globalFilter && allProductos.length > 0) {
+      console.log('🔄 Sin filtro global, mostrando todos los productos')
       setFilteredProductos(allProductos)
+      setPage(0)
     }
   }, [globalFilter, allProductos])
 
@@ -577,10 +584,21 @@ const ProductListTable = () => {
   }
 
   // Agregar función para guardar los cambios
-  const handleEditSave = (updatedProduct: Producto) => {
-    // Actualizar el estado local con el producto actualizado
+  const handleEditSave = (updatedProduct: any) => {
+    console.log('💾 Guardando producto editado:', updatedProduct)
+
+    // Actualizar allProductos (fuente principal) con el producto actualizado
+    setAllProductos(prevProductos =>
+      prevProductos.map(producto =>
+        producto.productoId === updatedProduct.productoId ? updatedProduct : producto
+      )
+    )
+
+    // También actualizar productos para compatibilidad
     setProductos(prevProductos =>
-      prevProductos.map(producto => (producto.productoId === updatedProduct.productoId ? updatedProduct : producto))
+      prevProductos.map(producto =>
+        producto.productoId === updatedProduct.productoId ? updatedProduct : producto
+      )
     )
 
     // Cerrar el modal
@@ -590,8 +608,9 @@ const ProductListTable = () => {
       setEditModalOpen(false)
     }
 
-    // Recargar los productos para asegurar sincronización
-    cargarProductos()
+    // NO llamar cargarProductos() aquí para preservar el filtrado
+    // Los useEffect se encargarán de actualizar filteredProductos automáticamente
+    console.log('✅ Producto actualizado, filtros se mantendrán')
   }
 
   // Función para duplicar producto
