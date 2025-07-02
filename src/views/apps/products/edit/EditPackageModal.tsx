@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 import { toast } from 'react-hot-toast'
 
@@ -36,6 +36,26 @@ const style = {
   p: 4
 }
 
+const paginatorHeaderStyle = {
+  bgcolor: '#f5f5f5',
+  padding: '10px',
+  borderRadius: '4px',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: '10px',
+  border: '1px solid #e0e0e0'
+}
+
+const paginatorFooterStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '8px',
+  borderTop: '1px solid #e0e0e0',
+  marginTop: '8px'
+}
+
 interface EditPackageModalProps {
   open: boolean
   onClose: () => void
@@ -58,7 +78,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [cantidades, setCantidades] = useState<{ [key: number]: number }>({})
 
   // Estados para productos
-  const [productos, setProductos] = useState<any[]>([])
   const [productosSeleccionados, setProductosSeleccionados] = useState<any[]>([])
   const [listaPreciosOptions, setListaPreciosOptions] = useState([])
 
@@ -74,6 +93,117 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [areaOptions, setAreaOptions] = useState<any[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<any[]>([])
 
+  // Estados para paginación
+  const [paginaProductos, setPaginaProductos] = useState(1)
+  const [paginaSeleccionados, setPaginaSeleccionados] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
+  // Nuevos estados para manejo local
+  const [todosProductos, setTodosProductos] = useState<any[]>([])
+  const [cargandoProductos, setCargandoProductos] = useState(false)
+
+  // Manejar cambio en la búsqueda con delay
+  const handleBuscarProductoChange = (valor: string) => {
+    // Actualizar el valor del campo de búsqueda inmediatamente
+    setBuscarProducto(valor);
+    setPaginaProductos(1); // Reiniciar página al buscar
+  };
+
+  // Función para filtrar resultados de búsqueda que podría contener SKUs incorrectos
+  const filtrarResultadosPorSku = (productos: any[], terminoBusqueda: string) => {
+    // Si parece ser un SKU (sólo números sin espacios), aplicar filtrado estricto
+    const esNumeroPuro = /^\d+$/.test(terminoBusqueda);
+
+    if (esNumeroPuro) {
+      console.log(`Término "${terminoBusqueda}" parece ser un SKU - aplicando filtro estricto`);
+
+      // Filtrar para mostrar solo productos cuyo SKU coincida exactamente o comience con el término
+      return productos.filter(producto =>
+        producto.sku === terminoBusqueda ||
+        producto.sku.startsWith(terminoBusqueda)
+      );
+    }
+
+    // Si no parece un SKU, devolver todos los resultados
+    return productos;
+  };
+
+  // Cargar todos los productos disponibles una sola vez
+  const cargarTodosProductos = async () => {
+    try {
+      setCargandoProductos(true);
+      console.log('Cargando todos los productos disponibles...');
+
+      const params = new URLSearchParams();
+      params.append('esPaquete', 'false');
+      params.append('limit', '1000'); // Intentar cargar todos los productos de una vez
+
+      const response = await fetch(`/api/productos?${params.toString()}`);
+      const data = await response.json();
+
+      let productosDisponibles = [];
+
+      if (data && data.productos && Array.isArray(data.productos)) {
+        productosDisponibles = data.productos;
+      } else if (Array.isArray(data)) {
+        productosDisponibles = data;
+      }
+
+      console.log(`Total de productos cargados: ${productosDisponibles.length}`);
+
+      // Guardar todos los productos disponibles
+      setTodosProductos(productosDisponibles);
+    } catch (error) {
+      console.error('Error al cargar todos los productos:', error);
+      toast.error('Error al cargar los productos');
+    } finally {
+      setCargandoProductos(false);
+    }
+  };
+
+  // Filtrar productos por área si es necesario
+  const productosPorArea = useMemo(() => {
+    if (!area || todosProductos.length === 0) return todosProductos;
+
+    const areaNombre = areaOptions.find(a => a.id === area)?.nombre;
+    if (!areaNombre) return todosProductos;
+
+    return todosProductos.filter(p => p.area === areaNombre);
+  }, [todosProductos, area, areaOptions]);
+
+  // Filtrar productos por búsqueda
+  const productosFiltrados = useMemo(() => {
+    // Primero filtramos para excluir los productos que ya están seleccionados
+    const productosNoSeleccionados = productosPorArea.filter(p =>
+      !productosSeleccionados.some(ps => ps.productoId === p.productoId)
+    );
+
+    // Si no hay término de búsqueda, devolvemos todos
+    if (!buscarProducto) return productosNoSeleccionados;
+
+    // Aplicar búsqueda general
+    const termino = buscarProducto.toLowerCase();
+    const resultadosBusqueda = productosNoSeleccionados.filter(p =>
+      p.nombre.toLowerCase().includes(termino) ||
+      p.sku.toLowerCase().includes(termino) ||
+      (p.norma && p.norma.toLowerCase().includes(termino))
+    );
+
+    // Aplicar filtro adicional para SKUs numéricos
+    return filtrarResultadosPorSku(resultadosBusqueda, buscarProducto);
+  }, [productosPorArea, productosSeleccionados, buscarProducto]);
+
+  // Calcular productos para la página actual
+  const productosPaginados = useMemo(() => {
+    const startIndex = (paginaProductos - 1) * ITEMS_PER_PAGE;
+    return productosFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [productosFiltrados, paginaProductos]);
+
+  // Calcular total de páginas
+  const totalPaginasProductos = useMemo(() => {
+    return Math.max(1, Math.ceil(productosFiltrados.length / ITEMS_PER_PAGE));
+  }, [productosFiltrados]);
+
   // Cargar datos iniciales cuando se abre el modal
   useEffect(() => {
     if (open && paquete) {
@@ -82,7 +212,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setSku(paquete.sku)
       setNorma(paquete.norma || '')
       setDescripcion(paquete.descripcion || '')
-      setCantidad(paquete.productosEnPaquete.length > 0 ? paquete.productosEnPaquete[0].cantidad : 1)
+      setCantidad(paquete.productosEnPaquete?.length > 0 ? paquete.productosEnPaquete[0].cantidad : 1)
       setPrecio(paquete.precio || 0)
 
       // Cargar cantidades si existen
@@ -95,18 +225,24 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
         setCantidades(cantidadesIniciales)
       }
 
-      // Cargar productos y listas de precios
-      fetchProductos()
-      fetchListasPrecios()
+      // Cargar áreas y familias
       fetchAreas()
       fetchFamilias()
 
       console.log('paquete:', paquete)
 
-      setProductosSeleccionados(paquete.productosEnPaquete)
+      setProductosSeleccionados(paquete.productosEnPaquete || [])
 
-      // Cargar los productos del paquete
-      //fetchProductosDelPaquete()
+      // Cargar todos los productos disponibles
+      cargarTodosProductos();
+
+      // Resetear paginación
+      setPaginaProductos(1)
+      setPaginaSeleccionados(1)
+
+      // Limpiar búsquedas
+      setBuscarProducto('');
+      setBuscarSeleccionados('');
     }
   }, [open, paquete])
 
@@ -114,7 +250,13 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   useEffect(() => {
     if (open && paquete && areaOptions.length > 0) {
       const areaObj = areaOptions.find(opt => opt.nombre === paquete.area || opt.id === paquete.area)
-      setArea(areaObj ? areaObj.id : '')
+      if (areaObj) {
+        setArea(areaObj.id)
+        // Ya se filtran automáticamente por área con useMemo
+      } else {
+        setArea('')
+        // Ya se filtran automáticamente por área con useMemo
+      }
     }
   }, [open, paquete, areaOptions])
 
@@ -134,38 +276,23 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 
   // Cuando cambia el área, limpiar la familia si ya no corresponde
   useEffect(() => {
-    if (familia && area && familiaOptions.length > 0) {
-      const familiaObj = familiaOptions.find(f => f.id === familia)
-      if (familiaObj && String(familiaObj.area?.id) !== String(area)) {
-        setFamilia('')
+    if (open) {
+      if (familia && area && familiaOptions.length > 0) {
+        const familiaObj = familiaOptions.find(f => f.id === familia)
+        if (familiaObj && String(familiaObj.area?.id) !== String(area)) {
+          setFamilia('')
+        }
       }
-    }
-  }, [area, familia, familiaOptions])
 
-  // Log para depuración de familias y área seleccionada
+      // Resetear página al cambiar el área
+      setPaginaProductos(1)
+    }
+  }, [area, familia, familiaOptions, open])
+
+  // Para depuración: Loguear productos cada vez que cambian
   useEffect(() => {
-    console.log('familiaOptions:', familiaOptions)
-    if (familiaOptions.length > 0) {
-      console.log('Primer objeto de familiaOptions:', familiaOptions[0])
-      console.log('Claves del primer objeto:', Object.keys(familiaOptions[0]))
-    }
-    console.log('area seleccionada:', area)
-    const familiasFiltradas = familiaOptions.filter(option => String(option.areaId) === String(area))
-    console.log('familias filtradas:', familiasFiltradas)
-  }, [area, familiaOptions])
-
-  const fetchProductos = async () => {
-    try {
-      // Usar el endpoint de búsqueda que no tiene paginación por defecto
-      const response = await fetch('/api/productos/search?esPaquete=false')
-      const data = await response.json()
-
-      setProductos(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error al cargar productos:', error)
-      setProductos([])
-    }
-  }
+    console.log(`Estado de productos filtrados actualizado: ${productosFiltrados.length} productos`)
+  }, [productosFiltrados])
 
   const fetchListasPrecios = async () => {
     try {
@@ -200,19 +327,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
     }
   }
 
-  const fetchProductosDelPaquete = async () => {
-    try {
-      const response = await fetch(`/api/productos/${paquete.productoId}/productos`)
-      const data = await response.json()
-
-      if (data.productos) {
-        setProductosSeleccionados(data.productos)
-      }
-    } catch (error) {
-      console.error('Error al cargar productos del paquete:', error)
-    }
-  }
-
   const handleSave = async () => {
     try {
       const response = await fetch(`/api/productos/${paquete.productoId}`, {
@@ -243,6 +357,59 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al actualizar el paquete')
+    }
+  }
+
+  // Filtrar productos seleccionados por búsqueda
+  const seleccionadosFiltrados = useMemo(() => {
+    if (!buscarSeleccionados) return productosSeleccionados;
+
+    const termino = buscarSeleccionados.toLowerCase();
+    return productosSeleccionados.filter(p =>
+      p?.nombre?.toLowerCase().includes(termino) ||
+      p?.sku?.toLowerCase().includes(termino) ||
+      (p?.norma && p?.norma.toLowerCase().includes(termino))
+    );
+  }, [productosSeleccionados, buscarSeleccionados]);
+
+  // Paginación de productos seleccionados en el cliente
+  const startIndexSeleccionados = (paginaSeleccionados - 1) * ITEMS_PER_PAGE;
+  const seleccionadosActuales = seleccionadosFiltrados.slice(
+    startIndexSeleccionados,
+    startIndexSeleccionados + ITEMS_PER_PAGE
+  );
+
+  const totalPaginasSeleccionados = Math.max(1, Math.ceil(seleccionadosFiltrados.length / ITEMS_PER_PAGE));
+
+  // Efecto para resetear la página de seleccionados si cambia el total
+  useEffect(() => {
+    if (paginaSeleccionados > totalPaginasSeleccionados && totalPaginasSeleccionados > 0) {
+      setPaginaSeleccionados(totalPaginasSeleccionados)
+    }
+  }, [totalPaginasSeleccionados, paginaSeleccionados])
+
+  // Navegación de paginación
+  const handlePrevPage = (tipo: 'productos' | 'seleccionados') => {
+    if (tipo === 'productos' && paginaProductos > 1) {
+      const nuevaPagina = paginaProductos - 1;
+      console.log(`Cambiando a página anterior de productos: ${nuevaPagina}`);
+      setPaginaProductos(nuevaPagina);
+    } else if (tipo === 'seleccionados' && paginaSeleccionados > 1) {
+      const nuevaPagina = paginaSeleccionados - 1;
+      console.log(`Cambiando a página anterior de seleccionados: ${nuevaPagina}`);
+      setPaginaSeleccionados(nuevaPagina);
+    }
+  }
+
+  const handleNextPage = (tipo: 'productos' | 'seleccionados') => {
+    if (tipo === 'productos' && paginaProductos < totalPaginasProductos) {
+      const nuevaPagina = paginaProductos + 1;
+      console.log(`Cambiando a página siguiente de productos: ${nuevaPagina}`);
+      setPaginaProductos(nuevaPagina);
+    } else if (tipo === 'seleccionados' && paginaSeleccionados < totalPaginasSeleccionados) {
+      const nuevaPagina = paginaSeleccionados + 1;
+      console.log(`Cambiando a página siguiente de seleccionados: ${nuevaPagina}`);
+      setPaginaSeleccionados(nuevaPagina);
     }
   }
 
@@ -332,39 +499,76 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                 size='small'
                 placeholder='Buscar productos'
                 value={buscarProducto}
-                onChange={e => setBuscarProducto(e.target.value)}
+                onChange={e => handleBuscarProductoChange(e.target.value)}
                 sx={{ mb: 2 }}
               />
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
+
+              {/* Encabezado del paginador de productos */}
+              <Box sx={paginatorHeaderStyle}>
+                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                  PRODUCTOS ({productosFiltrados.length}) - Página {paginaProductos} de {totalPaginasProductos || 1}
+                </Typography>
+              </Box>
+
+              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
                 <List sx={{ height: 300, overflow: 'auto' }}>
-                  {Array.isArray(productos) &&
-                    productos
-                      .filter(p => !productosSeleccionados.some(ps => ps.productoId === p.productoId))
-                      .filter(p =>
-                        p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()) ||
-                        p.sku.toLowerCase().includes(buscarProducto.toLowerCase())
-                      )
-                      .map(producto => (
-                        <ListItem
-                          key={producto.productoId}
-                          dense
-                          button
-                          onClick={() => {
-                            if (selectedProducts.includes(producto.productoId)) {
-                              setSelectedProducts(prev => prev.filter(id => id !== producto.productoId))
-                            } else {
-                              setSelectedProducts(prev => [...prev, producto.productoId])
-                            }
-                          }}
-                        >
-                          <ListItemText
-                            primary={producto.sku}
-                            secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'}`}
-                          />
-                          <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} />
-                        </ListItem>
-                      ))}
+                  {cargandoProductos ? (
+                    <ListItem>
+                      <ListItemText primary="Cargando productos..." />
+                    </ListItem>
+                  ) : productosPaginados.length === 0 ? (
+                    <ListItem>
+                      <ListItemText primary={buscarProducto
+                        ? `No se encontraron productos para "${buscarProducto}"`
+                        : "No hay productos disponibles"}
+                      />
+                    </ListItem>
+                  ) : productosPaginados.map(producto => (
+                    <ListItem
+                      key={producto.productoId}
+                      dense
+                      button
+                      onClick={() => {
+                        if (selectedProducts.includes(producto.productoId)) {
+                          setSelectedProducts(prev => prev.filter(id => id !== producto.productoId))
+                        } else {
+                          setSelectedProducts(prev => [...prev, producto.productoId])
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={producto.sku}
+                        secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'} (${producto.area || 'Sin área'})`}
+                      />
+                      <Checkbox edge='end' checked={selectedProducts.includes(producto.productoId)} />
+                    </ListItem>
+                  ))}
                 </List>
+
+                {/* Paginador inferior de productos */}
+                <Box sx={paginatorFooterStyle}>
+                  <Button
+                    onClick={() => handlePrevPage('productos')}
+                    disabled={paginaProductos <= 1}
+                    color="primary"
+                    variant="text"
+                    sx={{ fontWeight: 'medium' }}
+                  >
+                    Anterior
+                  </Button>
+                  <Typography variant="body2">
+                    Página {paginaProductos} de {totalPaginasProductos || 1}
+                  </Typography>
+                  <Button
+                    onClick={() => handleNextPage('productos')}
+                    disabled={paginaProductos >= totalPaginasProductos}
+                    color="primary"
+                    variant="text"
+                    sx={{ fontWeight: 'medium' }}
+                  >
+                    Siguiente
+                  </Button>
+                </Box>
               </Box>
             </Grid>
 
@@ -375,7 +579,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                   variant='contained'
                   size='small'
                   onClick={() => {
-                    const productsToAdd = productos.filter(p => selectedProducts.includes(p.productoId))
+                    const productsToAdd = productosPaginados.filter(p => selectedProducts.includes(p.productoId))
 
                     setProductosSeleccionados(prev => [...prev, ...productsToAdd])
                     setSelectedProducts([])
@@ -405,37 +609,73 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                 size='small'
                 placeholder='Buscar en paquete'
                 value={buscarSeleccionados}
-                onChange={e => setBuscarSeleccionados(e.target.value)}
+                onChange={e => {
+                  setBuscarSeleccionados(e.target.value)
+                  setPaginaSeleccionados(1) // Resetear página al buscar
+                }}
                 sx={{ mb: 2 }}
               />
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
+
+              {/* Encabezado del paginador de productos seleccionados */}
+              <Box sx={paginatorHeaderStyle}>
+                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                  PAQUETE ({seleccionadosFiltrados.length}) - Página {paginaSeleccionados} de {totalPaginasSeleccionados}
+                </Typography>
+              </Box>
+
+              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
                 <List sx={{ height: 300, overflow: 'auto' }}>
-                  {productosSeleccionados
-                    .filter(p =>
-                      p.nombre.toLowerCase().includes(buscarSeleccionados.toLowerCase()) ||
-                      p.sku.toLowerCase().includes(buscarSeleccionados.toLowerCase())
-                    )
-                    .map(producto => (
-                      <ListItem
-                        key={producto.productoId}
-                        dense
-                        button
-                        onClick={() => {
-                          if (selectedInPackage.includes(producto.productoId)) {
-                            setSelectedInPackage(prev => prev.filter(id => id !== producto.productoId))
-                          } else {
-                            setSelectedInPackage(prev => [...prev, producto.productoId])
-                          }
-                        }}
-                      >
-                        <ListItemText
-                          primary={producto.sku}
-                          secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'}`}
-                        />
-                        <Checkbox edge='end' checked={selectedInPackage.includes(producto.productoId)} />
-                      </ListItem>
-                    ))}
+                  {seleccionadosActuales.map(producto => (
+                    <ListItem
+                      key={producto.productoId}
+                      dense
+                      button
+                      onClick={() => {
+                        if (selectedInPackage.includes(producto.productoId)) {
+                          setSelectedInPackage(prev => prev.filter(id => id !== producto.productoId))
+                        } else {
+                          setSelectedInPackage(prev => [...prev, producto.productoId])
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={producto.sku}
+                        secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'} (${producto.area || 'Sin área'})`}
+                      />
+                      <Checkbox edge='end' checked={selectedInPackage.includes(producto.productoId)} />
+                    </ListItem>
+                  ))}
+                  {seleccionadosActuales.length === 0 && (
+                    <ListItem>
+                      <ListItemText primary="No hay productos en el paquete" />
+                    </ListItem>
+                  )}
                 </List>
+
+                {/* Paginador inferior de productos seleccionados */}
+                <Box sx={paginatorFooterStyle}>
+                  <Button
+                    onClick={() => handlePrevPage('seleccionados')}
+                    disabled={paginaSeleccionados <= 1}
+                    color="primary"
+                    variant="text"
+                    sx={{ fontWeight: 'medium' }}
+                  >
+                    Anterior
+                  </Button>
+                  <Typography variant="body2">
+                    Página {paginaSeleccionados} de {totalPaginasSeleccionados}
+                  </Typography>
+                  <Button
+                    onClick={() => handleNextPage('seleccionados')}
+                    disabled={paginaSeleccionados >= totalPaginasSeleccionados}
+                    color="primary"
+                    variant="text"
+                    sx={{ fontWeight: 'medium' }}
+                  >
+                    Siguiente
+                  </Button>
+                </Box>
               </Box>
             </Grid>
           </Grid>
@@ -456,3 +696,4 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 }
 
 export default EditPackageModal
+
