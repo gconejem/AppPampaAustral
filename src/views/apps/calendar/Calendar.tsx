@@ -1199,7 +1199,7 @@ const Calendar = (props: CalenderProps) => {
       <Card>
         <CardContent>
           <Box sx={{
-            height: 'calc(100vh - 16rem)',
+            height: '100%',
             overflow: 'auto',
             '& .fc-view-harness': {
               width: '100%',
