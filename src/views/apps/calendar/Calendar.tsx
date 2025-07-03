@@ -786,7 +786,9 @@ const Calendar = (props: CalenderProps) => {
             actionContainer.style.cssText = `
               display: flex;
               align-items: center;
+              justify-content: center;
               gap: 8px;
+              width: 100%;
             `
             actionContainer.appendChild(viewButton)
             actionContainer.appendChild(editButton)
@@ -798,10 +800,6 @@ const Calendar = (props: CalenderProps) => {
 
             checkboxCell.className = 'fc-list-event-checkbox'
             checkboxCell.style.cssText = `
-              width: 48px;
-              min-width: 48px;
-              padding: 16px 8px;
-              vertical-align: middle;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -822,7 +820,6 @@ const Calendar = (props: CalenderProps) => {
             })
 
             checkboxCell.appendChild(checkbox)
-            //row.insertBefore(checkboxCell, row.firstChild)
 
             // Obtener referencias a las columnas
             const timeCol = row.querySelector('.fc-list-event-time')
@@ -853,9 +850,8 @@ const Calendar = (props: CalenderProps) => {
                 padding: 16px 8px;
                 vertical-align: middle;
                 display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 16px;
+                flex-direction: column;
+                gap: 12px;
               `
 
               // Obtener los datos del evento
@@ -882,36 +878,52 @@ const Calendar = (props: CalenderProps) => {
                 display: flex;
                 align-items: center;
                 gap: 24px;
-                flex-grow: 1;
+                width: 100%;
                 min-width: 0;
-                
               `
 
-              // Agregar el nuevo contenido
-              infoContainer.innerHTML = `
+              // Crear el contenedor de fecha y checkbox
+              const dateCheckboxContainer = document.createElement('div')
+              dateCheckboxContainer.style.cssText = `
+                min-width: 150px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              `
+
+              // Agregar el checkbox al contenedor de fecha
+              dateCheckboxContainer.appendChild(checkboxCell)
+
+              // Crear el contenedor de fecha
+              const dateContainer = document.createElement('div')
+              dateContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+              `
+              dateContainer.innerHTML = `
                 <div style="
-                  min-width: 150px;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 4px;
-                ">
-                  <div style="
-                    font-size: 0.875rem;
-                    color: #666;
-                    font-weight: 500;
-                  ">${dayName} ${dayNumber}</div>
-                  <div style="
-                    font-size: 0.875rem;
-                    color: #333;
-                  ">${timeRange}</div>
-                </div>
+                  font-size: 0.875rem;
+                  color: #666;
+                  font-weight: 500;
+                ">${dayName} ${dayNumber}</div>
+                <div style="
+                  font-size: 0.875rem;
+                  color: #333;
+                ">${timeRange}</div>
+              `
+              dateCheckboxContainer.appendChild(dateContainer)
+
+              // Agregar el nuevo contenido
+              infoContainer.innerHTML = ``
+              infoContainer.appendChild(dateCheckboxContainer)
+              infoContainer.innerHTML += `
                 <div style="
                   flex: 1;
                   display: flex;
                   flex-direction: column;
                   gap: 4px;
                   min-width: 0;
-                  max-width: calc(100% - 260px);
                 ">
                   <div style="
                     font-size: 0.875rem;
@@ -948,7 +960,7 @@ const Calendar = (props: CalenderProps) => {
                   </div>
                 </div>
               `
-              titleCol.appendChild(checkboxCell)
+              //titleCol.appendChild(checkboxCell)
               titleCol.appendChild(infoContainer)
               titleCol.appendChild(actionContainer)
 
