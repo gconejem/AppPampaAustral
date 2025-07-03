@@ -884,6 +884,7 @@ const Calendar = (props: CalenderProps) => {
                 gap: 24px;
                 flex-grow: 1;
                 min-width: 0;
+                
               `
 
               // Agregar el nuevo contenido
@@ -910,6 +911,7 @@ const Calendar = (props: CalenderProps) => {
                   flex-direction: column;
                   gap: 4px;
                   min-width: 0;
+                  max-width: calc(100% - 260px);
                 ">
                   <div style="
                     font-size: 0.875rem;
