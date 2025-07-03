@@ -273,10 +273,10 @@ const Calendar = (props: CalenderProps) => {
     const filtered = todosDesactivados
       ? events
       : events.filter(event => {
-          const eventStatus = event.extendedProps?.estado || 'AGENDADA'
+        const eventStatus = event.extendedProps?.estado || 'AGENDADA'
 
-          return filters[eventStatus as StatusType]
-        })
+        return filters[eventStatus as StatusType]
+      })
 
     setFilteredEvents(filtered)
   }
@@ -573,6 +573,14 @@ const Calendar = (props: CalenderProps) => {
             row.classList.remove('fc-event-clickable')
             row.classList.remove('fc-list-event-hoverable')
 
+            row.addEventListener('mouseover', () => {
+              row.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
+            })
+
+            row.addEventListener('mouseout', () => {
+              row.style.backgroundColor = 'transparent'
+            })
+
             // Remover cualquier evento de hover existente
             const cells = row.querySelectorAll('td')
 
@@ -735,8 +743,21 @@ const Calendar = (props: CalenderProps) => {
               setEventMenuAnchorEl(e.currentTarget as HTMLElement)
             })
 
+            const actionContainer = document.createElement('div')
+
+            actionContainer.className = 'fc-list-event-actions'
+            actionContainer.style.cssText = `
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            `
+            actionContainer.appendChild(viewButton)
+            actionContainer.appendChild(editButton)
+            actionContainer.appendChild(personButton)
+            actionContainer.appendChild(menuButton)
+
             // Crear la columna de checkbox
-            const checkboxCell = document.createElement('td')
+            const checkboxCell = document.createElement('div')
 
             checkboxCell.className = 'fc-list-event-checkbox'
             checkboxCell.style.cssText = `
@@ -764,28 +785,7 @@ const Calendar = (props: CalenderProps) => {
             })
 
             checkboxCell.appendChild(checkbox)
-            row.insertBefore(checkboxCell, row.firstChild)
-
-            // Crear la columna de acción
-            const actionCell = document.createElement('td')
-
-            actionCell.className = 'fc-list-event-action'
-            actionCell.style.cssText = `
-              width: auto;
-              padding: 16px 8px;
-              vertical-align: middle;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              justify-content: center;
-              min-width: 120px;
-            `
-
-            // Agregar los botones a la columna de acción
-            actionCell.appendChild(viewButton)
-            actionCell.appendChild(editButton)
-            actionCell.appendChild(personButton)
-            actionCell.appendChild(menuButton)
+            //row.insertBefore(checkboxCell, row.firstChild)
 
             // Obtener referencias a las columnas
             const timeCol = row.querySelector('.fc-list-event-time')
@@ -806,24 +806,19 @@ const Calendar = (props: CalenderProps) => {
             }
 
             if (dotCol instanceof HTMLElement) {
-              dotCol.style.cssText = `
-                width: 40px;
-                min-width: 40px;
-                padding: 16px 0px;
-                vertical-align: middle;
-              `
+              dotCol.style.display = 'none'
             }
 
             if (titleCol instanceof HTMLElement) {
               titleCol.style.cssText = `
-                width: auto;
+                width: 100%;
                 position: relative;
-                padding: 16px 0px;
+                padding: 16px 8px;
                 vertical-align: middle;
                 display: flex;
-                flex-direction: row;
                 align-items: center;
-                gap: 24px;
+                justify-content: space-between;
+                gap: 16px;
               `
 
               // Obtener los datos del evento
@@ -844,8 +839,18 @@ const Calendar = (props: CalenderProps) => {
               // Limpiar el contenido original
               titleCol.textContent = ''
 
+              const infoContainer = document.createElement('div')
+
+              infoContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 24px;
+                flex-grow: 1;
+                min-width: 0;
+              `
+
               // Agregar el nuevo contenido
-              titleCol.innerHTML = `
+              infoContainer.innerHTML = `
                 <div style="
                   min-width: 150px;
                   display: flex;
@@ -867,15 +872,22 @@ const Calendar = (props: CalenderProps) => {
                   display: flex;
                   flex-direction: column;
                   gap: 4px;
+                  min-width: 0;
                 ">
                   <div style="
                     font-size: 0.875rem;
                     color: #333;
                     font-weight: 500;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                   ">${cliente}</div>
                   <div style="
                     font-size: 0.875rem;
                     color: #666;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                   ">${obra}</div>
                 </div>
                 <div style="
@@ -897,11 +909,9 @@ const Calendar = (props: CalenderProps) => {
                   </div>
                 </div>
               `
-
-              // Agregar la columna de acción después del título
-              if (titleCol.parentNode) {
-                titleCol.parentNode.insertBefore(actionCell, titleCol.nextSibling)
-              }
+              titleCol.appendChild(checkboxCell)
+              titleCol.appendChild(infoContainer)
+              titleCol.appendChild(actionContainer)
 
               // Agregar el ID del evento al título para referencia
               titleCol.setAttribute('data-event-id', String(info.event.id))
@@ -911,9 +921,6 @@ const Calendar = (props: CalenderProps) => {
             if (timeCol instanceof HTMLElement) {
               timeCol.style.display = 'none'
             }
-
-            // Agregar la columna de acción al final
-            row.appendChild(actionCell)
           }
         },
         headerDidMount: (info: HeaderInfo) => {
@@ -991,9 +998,8 @@ const Calendar = (props: CalenderProps) => {
             ">
               ${title}
             </div>
-            ${
-              timeText
-                ? `
+            ${timeText
+            ? `
               <div style="
                 font-size: 0.75rem;
                 color: ${alpha(backgroundColor, 0.8)};
@@ -1003,8 +1009,8 @@ const Calendar = (props: CalenderProps) => {
                 ${timeText}
               </div>
             `
-                : ''
-            }
+            : ''
+          }
           </div>
         `
       }
@@ -1155,7 +1161,22 @@ const Calendar = (props: CalenderProps) => {
     <>
       <Card>
         <CardContent>
-          <Box sx={{ height: 'calc(100vh - 16rem)', overflow: 'auto' }}>
+          <Box sx={{
+            height: 'calc(100vh - 16rem)',
+            overflow: 'auto',
+            '& .fc-view-harness': {
+              width: '100%',
+              maxWidth: '100%', // Cambia este valor según necesites
+              margin: '0 auto',
+              marginLeft: '0px !important'
+            },
+            '& .fc-listMonth-view': {
+              width: '100%'
+            },
+            '& .fc-list-table': {
+              width: '100%'
+            }
+          }}>
             {/* Contenedor principal de los filtros */}
             <Box sx={{ borderBottom: theme => `1px solid ${theme.palette.divider}` }}>
               {/* Fila de selección y edición */}
