@@ -290,18 +290,40 @@ const Calendar = (props: CalenderProps) => {
       const newSelectAll = !prev
 
       if (newSelectAll) {
-        const visibleEvents = filteredEvents.map(event => ({
-          id: event.id as string,
-          title: event.title as string,
-          start: event.start as string,
-          end: event.end as string,
-          laboratoristas: event.laboratoristas as string[]
-        }))
+        // Solo seleccionar los eventos que están siendo mostrados actualmente en el DOM
+        const visibleEventRows = document.querySelectorAll('.fc-list-event')
+        const visibleEvents: SelectedEvent[] = []
+
+        visibleEventRows.forEach(row => {
+          const eventId = row.querySelector('.fc-list-event-title')?.getAttribute('data-event-id')
+          if (eventId) {
+            const event = filteredEvents.find(e => String(e.id) === eventId)
+            if (event) {
+              visibleEvents.push({
+                id: eventId,
+                title: event.title as string,
+                start: event.start as string,
+                end: event.end as string,
+                laboratoristas: event.extendedProps?.asignados || []
+              })
+            }
+          }
+        })
 
         setSelectedEvents(visibleEvents)
       } else {
         setSelectedEvents([])
       }
+
+      // Actualizar inmediatamente todos los checkboxes visibles
+      setTimeout(() => {
+        const checkboxes = document.querySelectorAll('.fc-list-event-checkbox input[type="checkbox"]')
+        checkboxes.forEach((checkbox: Element) => {
+          if (checkbox instanceof HTMLInputElement) {
+            checkbox.checked = newSelectAll
+          }
+        })
+      }, 0)
 
       return newSelectAll
     })
@@ -355,7 +377,22 @@ const Calendar = (props: CalenderProps) => {
         }
       }
     })
-  }, [selectedEvents])
+
+    // También actualizar el checkbox de "Seleccionar Todo"
+    const selectAllCheckbox = document.querySelector('.fc-list-day-checkbox input[type="checkbox"]')
+    if (selectAllCheckbox instanceof HTMLInputElement) {
+      // Verificar si todos los eventos visibles en el DOM están seleccionados
+      const visibleEventRows = document.querySelectorAll('.fc-list-event')
+      const visibleEventIds = Array.from(visibleEventRows).map(row =>
+        row.querySelector('.fc-list-event-title')?.getAttribute('data-event-id')
+      ).filter(Boolean)
+
+      const allVisibleSelected = visibleEventIds.length > 0 &&
+        visibleEventIds.every(eventId => selectedEvents.some(event => event.id === eventId))
+
+      selectAllCheckbox.checked = allVisibleSelected
+    }
+  }, [selectedEvents, selectAll, filteredEvents])
 
   const handleEditSelected = (event: React.MouseEvent<HTMLElement>) => {
     if (selectedEvents.length === 0) return
