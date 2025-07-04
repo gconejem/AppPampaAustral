@@ -197,8 +197,7 @@ Condiciones para terreno y accesos
 • Podrán generarse costos adicionales en las prospecciones solicitadas si: Los accesos no están expeditos o se generan retrasos por falta de autorizaciones u otras condiciones externas al laboratorio.`
   }
   if (tipoCotizacion === 'C') {
-    return `Notas:
-* Valor Neto (sin IVA incluido)
+    return `* Valor Neto (sin IVA incluido)
 * Adicionales contra evento:
   • Copia digital adicional tiene un costo de 0.15 UF neto.
   • Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
