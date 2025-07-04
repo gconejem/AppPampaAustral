@@ -170,7 +170,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       setIsLoading(true)
 
       // Por ahora solo obtenemos contactos
-      const contactosResponse = await fetch('/api/contacts')
+      const contactosResponse = await fetch('/api/contacts?incluirInactivos=true')
 
       if (!contactosResponse.ok) {
         console.error('Status contactos:', contactosResponse.status)
