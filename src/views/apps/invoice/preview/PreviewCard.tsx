@@ -131,6 +131,21 @@ const PreviewCard = () => {
             <Typography>Nombre: Sociedad Laboratorio Pampa Austral Ltda.</Typography>
             <Typography>Rut: 77.390.460-K</Typography>
             <Typography>Cuenta Corriente: 220-02813-03, Banco de Chile</Typography>
+            <Typography>
+              <strong>Forma de Pago:</strong>{' '}
+              {previewData.formaPago === 'CONTADO'
+                ? 'Contado'
+                : previewData.formaPago === 'CREDITO_30'
+                  ? 'Crédito 30 días'
+                  : previewData.formaPago === 'CREDITO_60'
+                    ? 'Crédito 60 días'
+                    : previewData.formaPago === 'CREDITO_90'
+                      ? 'Crédito 90 días'
+                      : 'No especificada'}
+            </Typography>
+            <Typography>
+              <strong>Métodos de pago:</strong> Transferencia, Tarjetas vía flow.cl, solicitar link.
+            </Typography>
           </Grid>
         </Grid>
 
@@ -160,18 +175,7 @@ const PreviewCard = () => {
           <Typography>
             <strong>Ubicación:</strong> {previewData.ubicacion || 'No especificada'}
           </Typography>
-          <Typography>
-            <strong>Forma de Pago:</strong>{' '}
-            {previewData.formaPago === 'CONTADO'
-              ? 'Contado'
-              : previewData.formaPago === 'CREDITO_30'
-                ? 'Crédito 30 días'
-                : previewData.formaPago === 'CREDITO_60'
-                  ? 'Crédito 60 días'
-                  : previewData.formaPago === 'CREDITO_90'
-                    ? 'Crédito 90 días'
-                    : 'No especificada'}
-          </Typography>
+
           {previewData.tipoCotizacion === 'C' && (
             <>
               <Typography sx={{ whiteSpace: 'pre-wrap' }}>

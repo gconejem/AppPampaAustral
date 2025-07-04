@@ -130,7 +130,7 @@ Condiciones para terreno y accesos
               <div class="value">Rut: 77.390.460-K</div>
               <div class="value">Dirección: Calle Santa Blanca N° 51, Chillán. Región de Ñuble, Chile</div>
               <div class="value">Cuenta Corriente: 220-02813-03, Banco de Chile</div>
-              <div class="value">Forma de pago: ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
+              <div class="value"><b>Forma de pago:</b> ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
               <div class="value"><b>Métodos de pago:</b> Transferencia, Tarjetas vía flow.cl, solicitar link.</div>
             </div>
           </div>
@@ -141,7 +141,6 @@ Condiciones para terreno y accesos
               <div class="value"><b>Proyecto:</b> ${cotizacion.nombreProyecto || '-'}</div>
               <div class="value"><b>Empresa:</b> ${cotizacion.empresa || '-'}</div>
               <div class="value"><b>Ubicación:</b> ${cotizacion.ubicacion || '-'}</div>
-              <div class="value"><b>Forma de Pago:</b> ${formatearFormaPago(cotizacion.formaPago || '-')}</div>
               ${cotizacion.tipoCotizacion === 'C' ? `
               <div class="value"><b>Duración Mensual:</b><br>${(cotizacion.duracionMensual || '-').replace(/\r?\n/g, '<br>')}</div>
               <div class="value"><b>Jornada Mensual:</b><br>${(cotizacion.jornadaMensual || '-').replace(/\r?\n/g, '<br>')}</div>
