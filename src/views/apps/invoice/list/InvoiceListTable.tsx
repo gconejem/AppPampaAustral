@@ -1167,7 +1167,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                 {(() => {
                                   // Tipo A con sinCantidad true - mostrar guión
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
-                                    return '-';
+                                    return `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`;
                                   }
                                   // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&

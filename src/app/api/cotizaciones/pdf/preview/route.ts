@@ -303,7 +303,7 @@ Condiciones para terreno y accesos
                   if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
                     return `
                       <td style='text-align:right;'>-</td>
-                      <td style='text-align:right;'>-</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
                       <td style='text-align:right;'>-</td>
                     `;
                   }

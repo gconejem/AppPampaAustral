@@ -744,6 +744,15 @@ const AddCard = ({
       return
     }
 
+    if (sinCantidad && formData.tipoCotizacion === 'A') {
+      // Para tipo A con sinCantidad, no calcular totales automáticamente
+      if (subtotal !== 0) setSubtotal(0)
+      if (descuentoTotal !== 0) setDescuentoTotal(0)
+      if (impuesto !== 0) setImpuesto(0)
+      if (total !== 0) setTotal(0)
+      return
+    }
+
     let subtotalTotal;
 
     if (calcularPorPreciosUnitarios) {

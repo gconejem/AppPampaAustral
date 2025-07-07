@@ -284,7 +284,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                           // Tipo A con sinCantidad true - mostrar guión
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
+                             return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
                           }
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
@@ -360,7 +360,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                           // Tipo A con sinCantidad true - mostrar guión
                           if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
+                            return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
                           }
                           // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                           if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 

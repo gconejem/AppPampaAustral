@@ -1674,7 +1674,11 @@ Consideraciones adicionales y requisitos especiales
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant='h6'>Detalle de Servicios</Typography>
                 <FormControlLabel
-                  control={<Switch checked={sinCantidad} onChange={e => setSinCantidad(e.target.checked)} size='small' />}
+                  control={<Switch checked={sinCantidad} onChange={e => {
+                    setSinCantidad(e.target.checked)
+                    setFormData(prev => prev ? { ...prev, sinCantidad: e.target.checked } : prev)
+                  }}
+                    size='small' />}
                   label='Sin cantidad'
                 />
               </Box>

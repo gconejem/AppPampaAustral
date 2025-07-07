@@ -257,11 +257,12 @@ const EditCard = ({ id }: { id: string }) => {
       subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
     }
 
+
+
     const descuentoTotal = Number(formData.descuento || 0)
     const baseImponible = Number(subtotalTotal - descuentoTotal)
     const impuesto = Number(baseImponible * 0.19)
     const total = Number(baseImponible + impuesto)
-
     // Solo actualizar si los valores han cambiado
     if (
       formData.subtotal !== subtotalTotal ||
@@ -1629,7 +1630,10 @@ const EditCard = ({ id }: { id: string }) => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant='h6'>Detalle de Servicios</Typography>
                   <FormControlLabel
-                    control={<Switch checked={sinCantidad} onChange={e => setSinCantidad(e.target.checked)} size='small' />}
+                    control={<Switch checked={sinCantidad} onChange={e => {
+                      setSinCantidad(e.target.checked)
+                      setFormData(prev => prev ? { ...prev, sinCantidad: e.target.checked } : prev)
+                    }} size='small' />}
                     label='Sin cantidad'
                   />
                 </Box>

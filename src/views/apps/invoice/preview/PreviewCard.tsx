@@ -308,7 +308,7 @@ const PreviewCard = () => {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
-                        <TableCell align='right'>-</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
                         <TableCell align='right'>-</TableCell>
                       </>
                     );
