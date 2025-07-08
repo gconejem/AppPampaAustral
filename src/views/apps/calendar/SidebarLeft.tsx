@@ -19,6 +19,7 @@ import type { SidebarLeftProps } from '@/types/apps/calendarTypes'
 
 // Component Imports
 import SidebarMiniCalendar from './SidebarMiniCalendar'
+import PickersRange from './RangeCalendar'
 
 // Slice Imports
 import { filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
@@ -291,6 +292,14 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           currentDate={memoizedCurrentDate}
           calendarRef={{ current: calendarApi }}
         />
+      </Box>
+
+      {/* <Divider className='is-full' /> */}
+      <Box sx={{ px: 5, pb: 5 }}>
+        <div className='flex flex-col p-5 is-full'>
+          <PickersRange />
+
+        </div>
       </Box>
 
       <Divider className='is-full' />
