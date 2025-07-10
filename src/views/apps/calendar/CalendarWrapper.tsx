@@ -33,6 +33,7 @@ const AppCalendar = () => {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(false)
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null)
 
   // Hooks
   const dispatch = useDispatch()
@@ -45,6 +46,14 @@ const AppCalendar = () => {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
+    // Limpiar el rango cuando se selecciona una fecha específica
+    setSelectedDateRange(null)
+  }
+
+  const handleRangeSelect = (startDate: Date | null, endDate: Date | null) => {
+    setSelectedDateRange({ start: startDate, end: endDate })
+    // Limpiar la fecha específica cuando se selecciona un rango
+    setSelectedDate(null)
   }
 
   return (
@@ -59,6 +68,7 @@ const AppCalendar = () => {
         handleLeftSidebarToggle={handleLeftSidebarToggle}
         handleAddEventSidebarToggle={handleAddEventSidebarToggle}
         onDateSelect={handleDateSelect}
+        onRangeSelect={handleRangeSelect}
       />
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
@@ -70,6 +80,7 @@ const AppCalendar = () => {
           handleLeftSidebarToggle={handleLeftSidebarToggle}
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
           selectedDate={selectedDate}
+          selectedDateRange={selectedDateRange}
         />
       </div>
       <AddEventSidebar

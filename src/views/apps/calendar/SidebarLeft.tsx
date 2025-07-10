@@ -64,7 +64,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     dispatch,
     handleLeftSidebarToggle,
     handleAddEventSidebarToggle,
-    onDateSelect
+    onDateSelect,
+    onRangeSelect
   } = props
 
   // Estados para los filtros
@@ -296,7 +297,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       {/* <Divider className='is-full' /> */}
       <Box sx={{ px: 5, pb: 5 }}>
         <div className='flex flex-col p-5 is-full'>
-          <PickersRange />
+          <PickersRange onRangeChange={onRangeSelect} />
 
         </div>
       </Box>

@@ -34,11 +34,13 @@ export type SidebarLeftProps = {
   handleLeftSidebarToggle: () => void
   handleAddEventSidebarToggle: () => void
   onDateSelect?: (date: Date) => void
+  onRangeSelect?: (startDate: Date | null, endDate: Date | null) => void
 }
 
 export type CalendarProps = {
   handleAddEventSidebarToggle: () => void
   selectedDate?: Date | null
+  selectedDateRange?: { start: Date | null; end: Date | null } | null
 }
 
 export type AddEventSidebarType = {

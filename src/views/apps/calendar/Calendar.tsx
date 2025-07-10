@@ -284,7 +284,22 @@ const Calendar = (props: CalenderProps) => {
 
   // Agregar filtro por fecha cuando selectedDate esté presente
   useEffect(() => {
-    if (props.selectedDate) {
+    if (props.selectedDateRange && props.selectedDateRange.start && props.selectedDateRange.end) {
+      // Filtrar por rango de fechas
+      const rangeStart = new Date(props.selectedDateRange.start)
+      rangeStart.setHours(0, 0, 0, 0)
+
+      const rangeEnd = new Date(props.selectedDateRange.end)
+      rangeEnd.setHours(23, 59, 59, 999)
+
+      const eventsInRange = events.filter(event => {
+        const eventStart = new Date(event.start as string)
+        return eventStart >= rangeStart && eventStart <= rangeEnd
+      })
+
+      setFilteredEvents(eventsInRange)
+    } else if (props.selectedDate) {
+      // Filtrar por fecha específica
       const selectedDateStart = new Date(props.selectedDate)
       selectedDateStart.setHours(0, 0, 0, 0)
 
@@ -301,7 +316,7 @@ const Calendar = (props: CalenderProps) => {
       // Si no hay fecha seleccionada, aplicar filtros normales de estado
       handleFilterStatus(statusFilters)
     }
-  }, [props.selectedDate, events])
+  }, [props.selectedDate, props.selectedDateRange, events])
 
   const handleSelectAll = () => {
     setSelectAll(prev => {

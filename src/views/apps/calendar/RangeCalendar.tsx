@@ -20,7 +20,11 @@ type CustomInputProps = TextFieldProps & {
     start: Date | number
 }
 
-const PickersRange = () => {
+interface PickersRangeProps {
+    onRangeChange?: (startDate: Date | null, endDate: Date | null) => void
+}
+
+const PickersRange = ({ onRangeChange }: PickersRangeProps) => {
     // States
     const [startDate, setStartDate] = useState<Date | null | undefined>(new Date())
     const [endDate, setEndDate] = useState<Date | null | undefined>(addDays(new Date(), 15))
@@ -32,6 +36,11 @@ const PickersRange = () => {
 
         setStartDate(start)
         setEndDate(end)
+
+        // Comunicar el cambio al componente padre
+        if (onRangeChange) {
+            onRangeChange(start, end)
+        }
     }
 
     const handleOnChangeRange = (dates: any) => {
