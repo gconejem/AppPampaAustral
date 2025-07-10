@@ -24,6 +24,7 @@ import PickersRange from './RangeCalendar'
 // Slice Imports
 import { filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
 import { SECTORES_COMERCIALES } from '@/constants/sectoresComerciales'
+import { REGIONES_CHILE } from '@/data/clientData'
 
 // Interfaces
 interface Cliente {
@@ -81,6 +82,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [loadingObras, setLoadingObras] = useState(true)
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
+
+  // Estado para la región seleccionada
+  const [regionFilter, setRegionFilter] = useState<string | null>(null)
 
   // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
   const memoizedCurrentDate = useMemo(() => {
@@ -166,6 +170,16 @@ const SidebarLeft = (props: SidebarLeftProps) => {
 
     fetchComunas()
   }, [])
+
+  // Actualizar comunas según la región seleccionada
+  useEffect(() => {
+    if (regionFilter && (REGIONES_CHILE as Record<string, { comunas: string[] }>)[regionFilter]) {
+      setComunas((REGIONES_CHILE as Record<string, { comunas: string[] }>)[regionFilter].comunas)
+    } else {
+      setComunas([])
+    }
+    setComunaFilter(null)
+  }, [regionFilter])
 
   const handleFilterChange = (filterType: string, value: any) => {
     switch (filterType) {
@@ -411,6 +425,30 @@ const SidebarLeft = (props: SidebarLeftProps) => {
                 {...params}
                 variant='outlined'
                 placeholder='Sector Comercial'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+          />
+        </FormControl>
+
+        {/* Campo Región con Autocomplete */}
+        <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
+          <Autocomplete
+            options={Object.keys(REGIONES_CHILE)}
+            value={regionFilter}
+            onChange={(_, newValue) => setRegionFilter(newValue)}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Región'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
