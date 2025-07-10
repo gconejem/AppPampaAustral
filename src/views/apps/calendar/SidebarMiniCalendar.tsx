@@ -31,7 +31,7 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarR
     }
   }, [currentDate])
 
-  const daysOfWeek = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa']
+  const daysOfWeek = ['lu', 'ma', 'mi', 'ju', 'vi', 'sa', 'do']
 
   const monthNames = [
     'Enero',
@@ -53,7 +53,10 @@ const SidebarMiniCalendar = ({ onDateSelect, currentDate = new Date(), calendarR
   }
 
   const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay()
+    // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    // Queremos que 0 = lunes, ..., 6 = domingo
+    const day = new Date(year, month, 1).getDay()
+    return (day === 0 ? 6 : day - 1)
   }
 
   const handleDateClick = (day: number) => {
