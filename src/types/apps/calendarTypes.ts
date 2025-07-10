@@ -33,6 +33,12 @@ export type SidebarLeftProps = {
   calendarsColor: CalendarColors
   handleLeftSidebarToggle: () => void
   handleAddEventSidebarToggle: () => void
+  onDateSelect?: (date: Date) => void
+}
+
+export type CalendarProps = {
+  handleAddEventSidebarToggle: () => void
+  selectedDate?: Date | null
 }
 
 export type AddEventSidebarType = {

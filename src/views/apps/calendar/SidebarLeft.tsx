@@ -63,7 +63,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     calendarApi,
     dispatch,
     handleLeftSidebarToggle,
-    handleAddEventSidebarToggle
+    handleAddEventSidebarToggle,
+    onDateSelect
   } = props
 
   // Estados para los filtros
@@ -281,6 +282,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           onDateSelect={date => {
             if (calendarApi) {
               calendarApi.gotoDate(date)
+            }
+            // Llamar también al callback del padre si existe
+            if (onDateSelect) {
+              onDateSelect(date)
             }
           }}
           currentDate={memoizedCurrentDate}

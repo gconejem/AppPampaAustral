@@ -32,6 +32,7 @@ const AppCalendar = () => {
   const [calendarApi, setCalendarApi] = useState<null | any>(null)
   const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(false)
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   // Hooks
   const dispatch = useDispatch()
@@ -41,6 +42,10 @@ const AppCalendar = () => {
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen)
 
   const handleAddEventSidebarToggle = () => setAddEventSidebarOpen(!addEventSidebarOpen)
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date)
+  }
 
   return (
     <>
@@ -53,6 +58,7 @@ const AppCalendar = () => {
         leftSidebarOpen={leftSidebarOpen}
         handleLeftSidebarToggle={handleLeftSidebarToggle}
         handleAddEventSidebarToggle={handleAddEventSidebarToggle}
+        onDateSelect={handleDateSelect}
       />
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
@@ -63,6 +69,7 @@ const AppCalendar = () => {
           calendarsColor={calendarsColor}
           handleLeftSidebarToggle={handleLeftSidebarToggle}
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
+          selectedDate={selectedDate}
         />
       </div>
       <AddEventSidebar

@@ -35,8 +35,9 @@ import EditEventSidebar from './edit/EditEventSidebar'
 import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
 import CambiarEstadoModal from './modals/CambiarEstadoModal'
+import type { CalendarProps } from '@/types/apps/calendarTypes'
 
-type CalenderProps = {
+type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
 }
 
@@ -281,9 +282,26 @@ const Calendar = (props: CalenderProps) => {
     setFilteredEvents(filtered)
   }
 
+  // Agregar filtro por fecha cuando selectedDate esté presente
   useEffect(() => {
-    handleFilterStatus(statusFilters)
-  }, [events])
+    if (props.selectedDate) {
+      const selectedDateStart = new Date(props.selectedDate)
+      selectedDateStart.setHours(0, 0, 0, 0)
+
+      const selectedDateEnd = new Date(props.selectedDate)
+      selectedDateEnd.setHours(23, 59, 59, 999)
+
+      const eventsForDate = events.filter(event => {
+        const eventStart = new Date(event.start as string)
+        return eventStart >= selectedDateStart && eventStart <= selectedDateEnd
+      })
+
+      setFilteredEvents(eventsForDate)
+    } else {
+      // Si no hay fecha seleccionada, aplicar filtros normales de estado
+      handleFilterStatus(statusFilters)
+    }
+  }, [props.selectedDate, events])
 
   const handleSelectAll = () => {
     setSelectAll(prev => {
