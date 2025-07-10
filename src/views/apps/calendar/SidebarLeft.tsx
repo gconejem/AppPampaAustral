@@ -71,7 +71,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [obraFilter, setObraFilter] = useState<Obra | null>(null)
   const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista | null>(null)
   const [sectorComercialFilter, setSectorComercialFilter] = useState<string | null>(null)
-  const [comunaFilter, setComunaFilter] = useState<string | null>(null)
+  // Cambiar el estado de comunaFilter a un array para soportar selección múltiple
+  const [comunaFilter, setComunaFilter] = useState<string[]>([])
 
   // Estado para la lista de clientes y obras
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -178,7 +179,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     } else {
       setComunas([])
     }
-    setComunaFilter(null)
+    setComunaFilter([])
   }, [regionFilter])
 
   const handleFilterChange = (filterType: string, value: any) => {
@@ -465,15 +466,15 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Comuna con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
           <Autocomplete
+            multiple
             options={comunas}
             value={comunaFilter}
-            onChange={(_, newValue) => handleFilterChange('Comuna', newValue)}
-            loading={loadingComunas}
+            onChange={(_, newValue) => setComunaFilter(newValue)}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Comuna'
+                placeholder='Comunas'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
