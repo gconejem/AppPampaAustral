@@ -45,6 +45,7 @@ import { useUbicacion } from '@/hooks/useUbicacion'
 import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import AddContact from '@/views/apps/contacts/list/AddContact'
 import type { ContactType } from '@/types/apps/contactTypes'
+import { SECTORES_COMERCIALES } from '@/constants/sectoresComerciales'
 
 // Constantes
 const ROLES_CONTACTO = [
@@ -60,17 +61,6 @@ const ROLES_CONTACTO = [
   { value: 'laboratorista', label: 'Laboratorista' },
   { value: 'ejecutivo_comercial', label: 'Ejecutivo Comercial y Administración' },
   { value: 'otro', label: 'Otro' }
-] as const
-
-const SECTORES_COMERCIALES = [
-  { value: '1', label: 'Chillán y Alrededores' },
-  { value: '2', label: 'Concepción Metropolitano' },
-  { value: '3', label: 'Arauco y Alrededores' },
-  { value: '4', label: 'Los Ángeles y Alrededores' },
-  { value: '5', label: 'Norte' },
-  { value: '6', label: 'Centro' },
-  { value: '7', label: 'Sur' },
-  { value: '8', label: 'Otro' }
 ] as const
 
 // Funciones de utilidad

@@ -23,6 +23,7 @@ import PickersRange from './RangeCalendar'
 
 // Slice Imports
 import { filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calendar'
+import { SECTORES_COMERCIALES } from '@/constants/sectoresComerciales'
 
 // Interfaces
 interface Cliente {
@@ -75,12 +76,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [obras, setObras] = useState<Obra[]>([])
   const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
-  const [sectoresComerciales, setSectoresComerciales] = useState<string[]>([])
   const [comunas, setComunas] = useState<string[]>([])
   const [loadingClientes, setLoadingClientes] = useState(true)
   const [loadingObras, setLoadingObras] = useState(true)
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
-  const [loadingSectores, setLoadingSectores] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
 
   // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
@@ -146,26 +145,6 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     }
 
     fetchLaboratoristas()
-  }, [])
-
-  // Cargar sectores comerciales al montar el componente
-  useEffect(() => {
-    const fetchSectoresComerciales = async () => {
-      try {
-        const response = await fetch('/api/agenda/sectores')
-
-        if (!response.ok) throw new Error('Error al cargar sectores comerciales')
-        const data = await response.json()
-
-        setSectoresComerciales(data)
-      } catch (error) {
-        console.error('Error cargando sectores comerciales:', error)
-      } finally {
-        setLoadingSectores(false)
-      }
-    }
-
-    fetchSectoresComerciales()
   }, [])
 
   // Cargar comunas al montar el componente
@@ -424,10 +403,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Sector Comercial con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
           <Autocomplete
-            options={sectoresComerciales}
+            options={SECTORES_COMERCIALES.map(s => s.label)}
             value={sectorComercialFilter}
             onChange={(_, newValue) => handleFilterChange('SectorComercial', newValue)}
-            loading={loadingSectores}
             renderInput={params => (
               <TextField
                 {...params}
