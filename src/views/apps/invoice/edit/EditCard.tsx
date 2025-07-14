@@ -750,22 +750,24 @@ const EditCard = ({ id }: { id: string }) => {
   }
 
   const handleDeleteRow = (index: number) => {
-    setProductRows(prevRows => {
-      const newRows = [...prevRows]
-      const rowToDelete = newRows[index]
+    console.log('handleDeleteRow', { index, row: productRows[index] })
+    const newRows = [...productRows]
+    const rowToDelete = newRows[index]
 
-      if (rowToDelete && rowToDelete.esSubProducto) {
-        // Si es un subproducto, solo eliminar esta fila
-        newRows.splice(index, 1)
-      } else {
-        // Si es un producto principal, eliminar también sus subproductos
-        const subproductosCount = rowToDelete?.subproductos?.length || 0
-
-        newRows.splice(index, 1 + subproductosCount)
+    if (rowToDelete.esPaquete) {
+      // Si es un paquete, eliminar el paquete y todos sus subproductos
+      let nextIndex = index + 1
+      while (nextIndex < newRows.length && newRows[nextIndex].esSubProducto) {
+        nextIndex++
       }
-
-      return newRows
-    })
+      newRows.splice(index, nextIndex - index)
+      console.log('Paquete y subproductos eliminados', newRows)
+    } else {
+      // Si es un producto normal o subproducto, solo eliminar esta fila
+      newRows.splice(index, 1)
+      console.log('Producto/subproducto eliminado', newRows)
+    }
+    setProductRows(newRows)
   }
 
   // Funciones para el manejo del popover
