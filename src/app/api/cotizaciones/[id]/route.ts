@@ -146,22 +146,36 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // Insertar nuevos detalles si existen
     if (detallesArray.length > 0) {
-      const detallesCreados = await prisma.detalleCotizacion.createMany({
-        data: detallesArray.map((detalle: any) => ({
-          cotizacionId: id,
-          productoId: detalle.productoId,
-          cantidad: detalle.cantidad,
-          precioUnitario: detalle.precioUnitario,
-          descuento: detalle.descuento || 0,
-          subtotal: detalle.subtotal,
-          esPaquete: detalle.esPaquete || false,
-          esSubProducto: detalle.esSubProducto || false,
-          paqueteId: detalle.paqueteId || null,
-          descripcionPersonalizada: detalle.descripcionPersonalizada || null
-        }))
-      })
-
-      console.log('Detalles creados:', detallesCreados)
+      console.log('Insertando detalles en la BD (orden original):', detallesArray)
+      // Mapeo temporal para traducir productoId a id real del paquete
+      const mapProductoIdToDetalleId: Record<number, number> = {}
+      
+      for (const detalle of detallesArray) {
+        let paqueteIdReal = null
+        if (detalle.paqueteId) {
+          paqueteIdReal = mapProductoIdToDetalleId[detalle.paqueteId] || null
+        }
+        
+        const detalleCreado = await prisma.detalleCotizacion.create({
+          data: {
+            cotizacionId: id,
+            productoId: detalle.productoId,
+            cantidad: detalle.cantidad,
+            precioUnitario: detalle.precioUnitario,
+            descuento: detalle.descuento || 0,
+            subtotal: detalle.subtotal,
+            esPaquete: detalle.esPaquete || false,
+            esSubProducto: detalle.esSubProducto || false,
+            paqueteId: paqueteIdReal,
+            descripcionPersonalizada: detalle.descripcionPersonalizada || null
+          }
+        })
+        
+        // Si es paquete, guardar el id generado para los subproductos siguientes
+        if (detalle.esPaquete) {
+          mapProductoIdToDetalleId[detalle.productoId] = detalleCreado.id
+        }
+      }
     }
 
     // Traer la cotización actualizada con detalles y relaciones

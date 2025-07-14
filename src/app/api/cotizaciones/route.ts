@@ -215,11 +215,16 @@ export async function POST(request: Request) {
           : []
 
       if (detallesArray.length > 0) {
-        console.log('Insertando detalles en la BD:', detallesArray)
-
-        try {
-          await prisma.detalleCotizacion.createMany({
-            data: detallesArray.map((detalle: any) => ({
+        console.log('Insertando detalles en la BD (orden original):', detallesArray)
+        // Mapeo temporal para traducir productoId a id real del paquete
+        const mapProductoIdToDetalleId: Record<number, number> = {}
+        for (const detalle of detallesArray) {
+          let paqueteIdReal = null
+          if (detalle.paqueteId) {
+            paqueteIdReal = mapProductoIdToDetalleId[detalle.paqueteId] || null
+          }
+          const detalleCreado = await prisma.detalleCotizacion.create({
+            data: {
               cotizacionId: cotizacion.id,
               productoId: detalle.productoId,
               cantidad: detalle.cantidad,
@@ -228,12 +233,14 @@ export async function POST(request: Request) {
               subtotal: detalle.subtotal,
               esPaquete: detalle.esPaquete || false,
               esSubProducto: detalle.esSubProducto || false,
-              paqueteId: detalle.paqueteId || null,
+              paqueteId: paqueteIdReal,
               descripcionPersonalizada: detalle.descripcionPersonalizada || null
-            }))
+            }
           })
-        } catch (error) {
-          console.error('Error al insertar detalles:', error)
+          // Si es paquete, guardar el id generado para los subproductos siguientes
+          if (detalle.esPaquete) {
+            mapProductoIdToDetalleId[detalle.productoId] = detalleCreado.id
+          }
         }
       } else {
         console.log('No se insertaron detalles: condición no cumplida o array vacío')

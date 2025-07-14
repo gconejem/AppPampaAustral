@@ -93,7 +93,8 @@ const PreviewActions = () => {
             subtotal: parseFloat(detalle.totalNetoUF || 0),
             esPaquete: detalle.esPaquete || false,
             esSubProducto: detalle.esSubProducto || false,
-            descripcionPersonalizada: detalle.descripcion || null
+            descripcionPersonalizada: detalle.descripcion || null,
+            paqueteId: detalle.paqueteId || null
           }))
 
         // Debug: ver los detalles válidos
@@ -202,12 +203,12 @@ const PreviewActions = () => {
       }
 
       setShowSuccess(true)
-      setTimeout(() => {
+      /* setTimeout(() => {
         window.close()
         if (window.opener) {
           window.opener.location.href = '/es/apps/invoice/list'
         }
-      }, 1000)
+      }, 1000) */
     } catch (error: any) {
       console.error('Error:', error)
       setError(error.message || 'Error al guardar la cotización')

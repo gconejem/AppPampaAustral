@@ -118,7 +118,8 @@ interface ProductRow {
   esPaquete?: boolean
   servicio?: string
   precioEditado?: boolean
-  norma?: string
+  norma?: string,
+  paqueteId?: number
 }
 
 interface ValidationErrors {
@@ -895,7 +896,7 @@ const AddCard = ({
         }
 
         // Agregar los productos del paquete como subfilas
-        const productosRows = productosEnPaquete.map((pp: any, i: number) => ({
+        const productosRows = productosEnPaquete?.map((pp: any, i: number) => ({
           id: generateUniqueId(),
           productoId: (pp.productoId || pp.producto?.productoId || '').toString(),
           servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
@@ -905,7 +906,8 @@ const AddCard = ({
           totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
-          subproductos: []
+          subproductos: [],
+          paqueteId: producto.productoId
         }))
 
         // Reemplazar la fila actual con el paquete y sus productos
@@ -1012,7 +1014,8 @@ const AddCard = ({
         precioUnitarioUF: parseFloat(row.precioUnitarioUF?.toString() || '0'),
         totalNetoUF: parseFloat(row.totalNetoUF?.toString() || '0'),
         esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false
+        esSubProducto: row.esSubProducto || false,
+        paqueteId: row.paqueteId || null
       })),
       // Usar valores del formulario si es el caso especial, sino usar valores calculados
       subtotal: usarValoresFormulario ? Number(formData.subtotal || 0) : subtotal,
@@ -2500,6 +2503,9 @@ const AddCard = ({
                                   insertIndex++;
                                 }
 
+                                // Obtener el paqueteId del paquete padre
+                                const paqueteId = Number(row.productoId);
+
                                 // Agregar una fila vacía como subproducto al final del paquete
                                 const newProductRow = {
                                   id: generateUniqueId(),
@@ -2511,7 +2517,8 @@ const AddCard = ({
                                   totalNetoUF: 0,
                                   area: '',
                                   esSubProducto: true,
-                                  subproductos: []
+                                  subproductos: [],
+                                  paqueteId // Asignar el paqueteId correctamente (como number)
                                 }
                                 const newRows = [...productRows]
                                 newRows.splice(insertIndex, 0, newProductRow)

@@ -71,6 +71,7 @@ interface ProductRow {
   esSubProducto?: boolean
   esPaquete?: boolean
   servicio?: string
+  paqueteId?: number | null
 }
 
 interface ProductoType {
@@ -332,21 +333,33 @@ const EditCard = ({ id }: { id: string }) => {
           .sort()
 
         // Convertir detalles a formato de filas de productos
-        const detallesFormateados = cotizacionData.detalles.map((detalle: any) => ({
-          id: detalle.id,
-          productoId: detalle.productoId.toString(),
-          cantidad: detalle.cantidad,
-          precioUnitarioUF: detalle.precioUnitario,
-          totalNetoUF: detalle.subtotal,
-          area: detalle.producto?.area || '',
-          descripcion: detalle.descripcionPersonalizada || detalle.producto?.descripcion || '',
-          servicio: detalle.producto?.norma
-            ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
-            : detalle.producto?.nombre,
-          esPaquete: detalle.esPaquete || false,
-          esSubProducto: detalle.esSubProducto || false,
-          subproductos: []
-        }))
+        const detallesFormateados = cotizacionData.detalles.map((detalle: any) => {
+          // Si este detalle tiene paqueteId, buscar el productoId del paquete padre
+          let paqueteIdCorregido = null
+          if (detalle.paqueteId) {
+            const paquetePadre = cotizacionData.detalles.find((d: any) => d.id === detalle.paqueteId)
+            if (paquetePadre) {
+              paqueteIdCorregido = paquetePadre.productoId
+            }
+          }
+
+          return {
+            id: detalle.id,
+            productoId: detalle.productoId.toString(),
+            cantidad: detalle.cantidad,
+            precioUnitarioUF: detalle.precioUnitario,
+            totalNetoUF: detalle.subtotal,
+            area: detalle.producto?.area || '',
+            descripcion: detalle.descripcionPersonalizada || detalle.producto?.descripcion || '',
+            servicio: detalle.producto?.norma
+              ? `${detalle.producto?.nombre} - ${detalle.producto?.norma}`
+              : detalle.producto?.nombre,
+            esPaquete: detalle.esPaquete || false,
+            esSubProducto: detalle.esSubProducto || false,
+            paqueteId: paqueteIdCorregido,
+            subproductos: []
+          }
+        })
 
         // Usar el valor sinCantidad del backend si está disponible, sino calcular basado en cantidades
         if (cotizacionData.sinCantidad !== undefined && cotizacionData.sinCantidad !== null) {
@@ -633,6 +646,7 @@ const EditCard = ({ id }: { id: string }) => {
           totalNetoUF: precioProducto * (pp.cantidad || 1),
           area: pp.producto?.area || '',
           esSubProducto: true,
+          paqueteId: producto.productoId,
           subproductos: []
         };
       });
@@ -834,6 +848,7 @@ const EditCard = ({ id }: { id: string }) => {
         subtotal: row.totalNetoUF === null || row.totalNetoUF === undefined ? 0 : Number(row.totalNetoUF),
         esPaquete: row.esPaquete || false,
         esSubProducto: row.esSubProducto || false,
+        paqueteId: row.paqueteId || null,
         descripcionPersonalizada: row.descripcion || null
       }))
 
@@ -1792,6 +1807,7 @@ const EditCard = ({ id }: { id: string }) => {
                                 totalNetoUF: 0,
                                 area: '',
                                 esSubProducto: true,
+                                paqueteId: parseInt(row.productoId),
                                 subproductos: []
                               };
                               const newRows = [...productRows];
