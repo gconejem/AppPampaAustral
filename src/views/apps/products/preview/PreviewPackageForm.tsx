@@ -144,7 +144,7 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
               previewPaquete.productosEnPaquete.map(producto => (
                 <ListItem key={producto.productoId}>
                   <ListItemText
-                    primary={`${producto.nombre} (SKU: ${producto.sku})`}
+                    primary={`${producto.nombre} - ${producto.norma} (SKU: ${producto.sku})`}
                     secondary={`Cantidad: ${producto.cantidad || 1}${producto.tipo ? ' | Tipo: ' + producto.tipo : ''}`}
                   />
                 </ListItem>
