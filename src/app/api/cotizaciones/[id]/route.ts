@@ -15,7 +15,18 @@ export async function GET(request: Request, { params }: { params: { id: string }
         obra: true,
         contacto: true,
         detalles: {
-          include: {
+          select: {
+            id: true,
+            cotizacionId: true,
+            productoId: true,
+            cantidad: true,
+            precioUnitario: true,
+            descuento: true,
+            subtotal: true,
+            esPaquete: true,
+            esSubProducto: true,
+            paqueteId: true,
+            descripcionPersonalizada: true,
             producto: {
               select: {
                 productoId: true,
@@ -50,21 +61,44 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
     }
 
-    // Agregar logs detallados
-    console.log('Cotización completa:', JSON.stringify(cotizacion, null, 2))
-    console.log('Detalles de la cotización:', JSON.stringify(cotizacion.detalles, null, 2))
+    // Procesar detalles para asociar subproductos con sus paquetes
+    const detallesConSubproductos = cotizacion.detalles.map(detalle => {
+      if (detalle.esPaquete) {
+        // Buscar los subproductos que pertenecen a este paquete
+        const subproductos = cotizacion.detalles.filter(d => d.paqueteId === detalle.id)
+        return {
+          ...detalle,
+          subproductos: subproductos
+        }
+      }
+      return detalle
+    })
 
-    if (cotizacion.detalles?.length > 0) {
-      cotizacion.detalles.forEach((detalle, index) => {
+    // Crear la respuesta con los detalles procesados
+    const cotizacionProcesada = {
+      ...cotizacion,
+      detalles: detallesConSubproductos
+    }
+
+    // Agregar logs detallados
+    console.log('Cotización completa:', JSON.stringify(cotizacionProcesada, null, 2))
+    console.log('Detalles de la cotización:', JSON.stringify(cotizacionProcesada.detalles, null, 2))
+
+    if (cotizacionProcesada.detalles?.length > 0) {
+      cotizacionProcesada.detalles.forEach((detalle, index) => {
         console.log(`Detalle ${index + 1}:`, {
           productoId: detalle.productoId,
+          paqueteId: detalle.paqueteId,
+          esPaquete: detalle.esPaquete,
+          esSubProducto: detalle.esSubProducto,
           producto: detalle.producto,
-          productosEnPaquete: detalle.producto?.productosEnPaquete
+          productosEnPaquete: detalle.producto?.productosEnPaquete,
+          subproductos: (detalle as any).subproductos?.length || 0
         })
       })
     }
 
-    return NextResponse.json(cotizacion)
+    return NextResponse.json(cotizacionProcesada)
   } catch (error) {
     console.error('Error al obtener la cotización:', error)
 
@@ -147,13 +181,22 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     // Insertar nuevos detalles si existen
     if (detallesArray.length > 0) {
       console.log('Insertando detalles en la BD (orden original):', detallesArray)
-      // Mapeo temporal para traducir productoId a id real del paquete
+      // Mapeo temporal para traducir productoId del paquete a id real del detalle del paquete
       const mapProductoIdToDetalleId: Record<number, number> = {}
       
       for (const detalle of detallesArray) {
+        console.log('Procesando detalle:', {
+          productoId: detalle.productoId,
+          esPaquete: detalle.esPaquete,
+          esSubProducto: detalle.esSubProducto,
+          paqueteId: detalle.paqueteId,
+          mapeoActual: mapProductoIdToDetalleId
+        })
+        
         let paqueteIdReal = null
         if (detalle.paqueteId) {
           paqueteIdReal = mapProductoIdToDetalleId[detalle.paqueteId] || null
+          console.log(`Buscando paqueteId ${detalle.paqueteId} en mapeo: ${paqueteIdReal}`)
         }
         
         const detalleCreado = await prisma.detalleCotizacion.create({
@@ -171,9 +214,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           }
         })
         
+        console.log('Detalle creado:', {
+          id: detalleCreado.id,
+          productoId: detalleCreado.productoId,
+          esPaquete: detalleCreado.esPaquete,
+          paqueteId: detalleCreado.paqueteId
+        })
+        
         // Si es paquete, guardar el id generado para los subproductos siguientes
         if (detalle.esPaquete) {
           mapProductoIdToDetalleId[detalle.productoId] = detalleCreado.id
+          console.log(`Guardando en mapeo: productoId ${detalle.productoId} -> detalleId ${detalleCreado.id}`)
         }
       }
     }

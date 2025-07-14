@@ -1124,9 +1124,9 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                 )}
                                 {detalle.esPaquete && (
                                   <Box sx={{ mt: 1, pl: 2 }}>
-                                    {/* Mostrar subproductos del paquete */}
-                                    {selectedCotizacion.detalles
-                                      .filter((d: any) => d.esSubProducto)
+                                    {/* Mostrar subproductos específicos del paquete */}
+                                    {(detalle.subproductos || selectedCotizacion.detalles
+                                      .filter((d: any) => d.esSubProducto && d.paqueteId === detalle.id))
                                       .map((subProducto: any, subIndex: number) => (
                                         <Typography key={`subproducto-${subIndex}`} variant='body2' sx={{ mb: 0.5 }}>
                                           • {subProducto.producto.nombre}
