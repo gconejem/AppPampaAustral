@@ -118,8 +118,8 @@ export async function POST(request: Request) {
 
     console.log('Body recibido:', body)
 
-    const fechaInicio = body.fechaInicio ? new Date(body.fechaInicio) : new Date()
-    const fechaFin = body.fechaFin ? new Date(body.fechaFin) : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+    const fechaInicio = body.fechaEmision ? new Date(body.fechaEmision) : new Date()
+    const fechaFin = body.fechaVencimiento ? new Date(body.fechaVencimiento) : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
 
     if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
       return NextResponse.json({ error: 'Fechas inválidas proporcionadas' }, { status: 400 })

@@ -21,13 +21,32 @@ import './print.css'
 
 // Función auxiliar para formatear fechas
 const formatearFecha = (fecha: string) => {
-  const options: Intl.DateTimeFormatOptions = {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  }
+  if (!fecha) return 'No especificada'
 
-  return new Date(fecha).toLocaleDateString('es-CL', options)
+  try {
+    // Si la fecha viene en formato ISO (YYYY-MM-DDTHH:mm:ss.sssZ), extraer solo la parte de la fecha
+    let fechaStr = fecha
+    if (fecha.includes('T')) {
+      fechaStr = fecha.split('T')[0] // Obtener solo YYYY-MM-DD
+    }
+
+    // Crear fecha usando los componentes individuales para evitar problemas de zona horaria
+    const [año, mes, dia] = fechaStr.split('-').map(Number)
+
+    // Verificar que los componentes sean válidos
+    if (!año || !mes || !dia || mes < 1 || mes > 12 || dia < 1 || dia > 31) {
+      return 'Fecha inválida'
+    }
+
+    // Formatear como DD/MM/YYYY
+    const diaFormateado = dia.toString().padStart(2, '0')
+    const mesFormateado = mes.toString().padStart(2, '0')
+
+    return `${diaFormateado}-${mesFormateado}-${año}`
+  } catch (error) {
+    console.error('Error al formatear fecha:', error)
+    return 'Error en fecha'
+  }
 }
 
 const PreviewCard = () => {
@@ -54,8 +73,10 @@ const PreviewCard = () => {
           console.error('El contacto no tiene el formato esperado:', parsedData.contacto)
           parsedData.contacto = null
         }
+        console.log('AAAAA', parsedData.fechaEmision, parsedData.fechaVencimiento)
 
         setPreviewData(parsedData)
+
       } else {
         console.error('No se encontraron datos en localStorage')
       }
@@ -88,8 +109,8 @@ const PreviewCard = () => {
           </Grid>
           <Grid item xs={6} sx={{ textAlign: 'right' }}>
             <Typography sx={{ mt: 2 }}>N° COTIZACIÓN {previewData.numeroCotizacion}-{previewData.version || '00'}</Typography>
-            <Typography>Fecha Emisión: {formatearFecha(previewData.fechaInicio)}</Typography>
-            <Typography>Fecha Vencimiento: {formatearFecha(previewData.fechaFin)}</Typography>
+            <Typography>Fecha Emisión: {formatearFecha(previewData.fechaEmision)}</Typography>
+            <Typography>Fecha Vencimiento: {formatearFecha(previewData.fechaVencimiento)}</Typography>
           </Grid>
         </Grid>
 

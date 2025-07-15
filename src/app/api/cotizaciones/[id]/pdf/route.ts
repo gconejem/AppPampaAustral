@@ -17,6 +17,44 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
+const formatearFecha = (fecha: string | Date) => {
+  if (!fecha) return 'No especificada'
+
+  try {
+    let fechaStr: string
+
+    // Convertir a string ISO si es un objeto Date
+    if (typeof fecha === 'string') {
+      fechaStr = fecha
+    } else {
+      // Si es un objeto Date, convertir a ISO string
+      fechaStr = fecha.toISOString()
+    }
+
+    // Extraer solo la parte de la fecha (YYYY-MM-DD) del string ISO
+    if (fechaStr.includes('T')) {
+      fechaStr = fechaStr.split('T')[0] // Obtener solo YYYY-MM-DD
+    }
+
+    // Crear fecha usando los componentes individuales para evitar problemas de zona horaria
+    const [año, mes, dia] = fechaStr.split('-').map(Number)
+
+    // Verificar que los componentes sean válidos
+    if (!año || !mes || !dia || mes < 1 || mes > 12 || dia < 1 || dia > 31) {
+      return 'Fecha inválida'
+    }
+
+    // Formatear como DD-MM-YYYY
+    const diaFormateado = dia.toString().padStart(2, '0')
+    const mesFormateado = mes.toString().padStart(2, '0')
+
+    return `${diaFormateado}-${mesFormateado}-${año}`
+  } catch (error) {
+    console.error('Error al formatear fecha:', error)
+    return 'Error en fecha'
+  }
+}
+
 function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: string) {
   // Notas desde la base de datos
   const notasTipoB = `Relacionado al valor del servicio cotizado:
@@ -110,8 +148,8 @@ Condiciones para terreno y accesos
           </div>
           <div class="header-right">
             <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}</div>
-            <div><span class="label">Fecha Emisión:</span> ${new Date(cotizacion.fechaInicio || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
-            <div><span class="label">Fecha Vencimiento:</span> ${new Date(cotizacion.fechaFin || cotizacion.fechaCreacion).toLocaleDateString('es-CL')}</div>
+            <div><span class="label">Fecha Emisión:</span> ${formatearFecha(cotizacion.fechaInicio)}</div>
+            <div><span class="label">Fecha Vencimiento:</span> ${formatearFecha(cotizacion.fechaFin)}</div>
             <div>RPG-05-02 Rev. N° 4</div>
           </div>
         </div>

@@ -1004,6 +1004,8 @@ const AddCard = ({
     // Preparar los datos para la previsualización
     const previewData = {
       ...formData,
+      fechaEmision: fechaEmision.toISOString(),
+      fechaVencimiento: fechaVencimiento.toISOString(),
       detalles: formData.tipoCotizacion === 'D' ? [] : productRows.map(row => ({
         productoId: parseInt(row.productoId),
         servicio: row.servicio || '',

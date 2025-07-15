@@ -143,6 +143,35 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
 
+  const formatearFecha = (fecha: string) => {
+    if (!fecha) return 'No especificada'
+
+    try {
+      // Si la fecha viene en formato ISO (YYYY-MM-DDTHH:mm:ss.sssZ), extraer solo la parte de la fecha
+      let fechaStr = fecha
+      if (fecha.includes('T')) {
+        fechaStr = fecha.split('T')[0] // Obtener solo YYYY-MM-DD
+      }
+
+      // Crear fecha usando los componentes individuales para evitar problemas de zona horaria
+      const [año, mes, dia] = fechaStr.split('-').map(Number)
+
+      // Verificar que los componentes sean válidos
+      if (!año || !mes || !dia || mes < 1 || mes > 12 || dia < 1 || dia > 31) {
+        return 'Fecha inválida'
+      }
+
+      // Formatear como DD/MM/YYYY
+      const diaFormateado = dia.toString().padStart(2, '0')
+      const mesFormateado = mes.toString().padStart(2, '0')
+
+      return `${diaFormateado}-${mesFormateado}-${año}`
+    } catch (error) {
+      console.error('Error al formatear fecha:', error)
+      return 'Error en fecha'
+    }
+  }
+
   // Función auxiliar para formatear fechas
   const formatDate = (date: Date | string) => {
     // Si la fecha ya está en formato dd-mm-aaaa, la retornamos directamente
@@ -903,10 +932,10 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                     <Grid item xs={12} md={6} sx={{ textAlign: 'right' }}>
                       <Typography variant='h6'>N° Cotización: #{selectedCotizacion.numeroCotizacion}-{selectedCotizacion.version || '00'}</Typography>
                       <Typography>
-                        Fecha Emisión: {formatDate(selectedCotizacion.fechaCreacion)}
+                        Fecha Emisión: {formatearFecha(selectedCotizacion.fechaInicio)}
                       </Typography>
                       <Typography>
-                        Fecha Vencimiento: {formatDate(selectedCotizacion.fechaFin || selectedCotizacion.fechaCreacion)}
+                        Fecha Vencimiento: {formatearFecha(selectedCotizacion.fechaFin || selectedCotizacion.fechaCreacion)}
                       </Typography>
                     </Grid>
                   </Grid>

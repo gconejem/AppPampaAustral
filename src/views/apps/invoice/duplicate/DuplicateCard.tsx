@@ -165,6 +165,12 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // 1. Estado sinCantidad
   const [sinCantidad, setSinCantidad] = useState(false)
 
+  // Estados para fechas
+  const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
+  const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
+    new Date(new Date().setDate(new Date().getDate() + 15))
+  )
+
   // 2. Estados unificados ya están en formData
 
   // Estado para abrir automáticamente el popover en una fila nueva
@@ -907,6 +913,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         obraId: null,
         contactId: formData.contacto ? Number(formData.contacto.contactId) : null,
         listaPrecioId: formData.listaPrecioId ? Number(formData.listaPrecioId) : null,
+        fechaEmision: fechaEmision.toISOString(),
+        fechaVencimiento: fechaVencimiento.toISOString(),
         fechaInicio: new Date().toISOString(),
         fechaFin: formData.fechaFin,
         nombreProyecto: formData.nombreProyecto || '',
@@ -967,16 +975,13 @@ const DuplicateCard = ({ id }: { id: string }) => {
   const handlePreview = () => {
     if (!formData) return
 
-    // Obtener las fechas actuales
-    const hoy = new Date()
-    const fechaVencimiento = new Date()
-    fechaVencimiento.setDate(hoy.getDate() + 15) // 15 días después de la fecha actual
-
     const previewData = {
       ...formData,
       numeroCotizacion: formData.numeroCotizacion.padStart(4, '0'), // Formatear número con ceros a la izquierda
       version: '00', // Forzar versión '00' para la vista previa en duplicación
-      fechaInicio: hoy.toISOString(), // Formato que espera PreviewCard
+      fechaEmision: fechaEmision.toISOString(),
+      fechaVencimiento: fechaVencimiento.toISOString(),
+      fechaInicio: fechaEmision.toISOString(), // Formato que espera PreviewCard
       fechaFin: fechaVencimiento.toISOString().split('T')[0], // Formato YYYY-MM-DD
       detalles: productRows.map(row => ({
         productoId: parseInt(row.productoId),
@@ -1303,6 +1308,36 @@ Consideraciones adicionales y requisitos especiales
                           readOnly: true
                         }}
                         sx={{ width: '60px' }}
+                      />
+                    </div>
+                  </div>
+                  <div className='flex flex-col gap-2 mt-4'>
+                    <div className='flex items-center gap-2 mb-4'>
+                      <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
+                        Fecha Emisión:
+                      </Typography>
+                      <TextField
+                        label='Fecha Emisión'
+                        type='date'
+                        value={fechaEmision.toISOString().slice(0, 10)}
+                        onChange={e => setFechaEmision(new Date(e.target.value))}
+                        InputLabelProps={{ shrink: true }}
+                        size='small'
+                        sx={{ minWidth: 150 }}
+                      />
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <Typography sx={{ minWidth: '120px', fontWeight: 500 }} color='text.primary'>
+                        Fecha Vencimiento:
+                      </Typography>
+                      <TextField
+                        label='Fecha Vencimiento'
+                        type='date'
+                        value={fechaVencimiento.toISOString().slice(0, 10)}
+                        onChange={e => setFechaVencimiento(new Date(e.target.value))}
+                        InputLabelProps={{ shrink: true }}
+                        size='small'
+                        sx={{ minWidth: 150 }}
                       />
                     </div>
                   </div>
