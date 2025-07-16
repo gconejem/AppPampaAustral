@@ -192,7 +192,7 @@ Condiciones para terreno y accesos
               <img src="${logoBase64}" class="logo" />
               <span class="title">Laboratorio Pampa Austral</span>
             </div>
-            <div class="subtitle">Laboratorio acreditado de acuerdo con la Norma NCh-ISO/IEC 17025:2017</div>
+            <div class="subtitle">Laboratorio Acreditado INN - Chile ISO/IEC 17025-2017</div>
           </div>
           <div class="header-right">
             <div><span class="label">N° Cotización:</span> ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}</div>

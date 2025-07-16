@@ -104,7 +104,7 @@ const PreviewCard = () => {
                 fontSize: '0.875rem'
               }}
             >
-              Laboratorio acreditado de acuerdo con la Norma NCh-ISO/IEC 17025:2017
+              Laboratorio Acreditado INN - Chile ISO/IEC 17025-2017
             </Typography>
           </Grid>
           <Grid item xs={6} sx={{ textAlign: 'right' }}>
