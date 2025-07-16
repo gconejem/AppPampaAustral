@@ -290,7 +290,7 @@ const AddCard = ({
   const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
 
   const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
-    new Date(new Date().setDate(new Date().getDate() + 15))
+    new Date(new Date().setDate(new Date().getDate() + 30))
   )
 
   // Función para actualizar el formulario

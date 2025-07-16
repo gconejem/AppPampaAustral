@@ -168,7 +168,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
   // Estados para fechas
   const [fechaEmision, setFechaEmision] = useState<Date>(new Date())
   const [fechaVencimiento, setFechaVencimiento] = useState<Date>(
-    new Date(new Date().setDate(new Date().getDate() + 15))
+    new Date(new Date().setDate(new Date().getDate() + 30))
   )
 
   // 2. Estados unificados ya están en formData
