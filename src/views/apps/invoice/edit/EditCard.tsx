@@ -1092,14 +1092,11 @@ const EditCard = ({ id }: { id: string }) => {
 
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
-      let nextPackageIndex = index + 1
-      while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
-        nextPackageIndex++
-      }
-      if (index < nextPackageIndex - 1) {
+      // Verificar que el siguiente elemento también sea un subproducto del mismo paquete
+      if (index + 1 < newRows.length && newRows[index + 1].esSubProducto) {
         [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
-        console.log('Subproducto movido abajo', newRows)
+        console.log('Subproducto movido abajo dentro del paquete', newRows)
       }
       return
     }

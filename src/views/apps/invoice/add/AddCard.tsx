@@ -1392,14 +1392,11 @@ const AddCard = ({
 
     // Si es un subproducto, solo permitir moverlo dentro de su paquete
     if (currentRow.esSubProducto) {
-      let nextPackageIndex = index + 1
-      while (nextPackageIndex < newRows.length && !newRows[nextPackageIndex].esPaquete) {
-        nextPackageIndex++
-      }
-      if (index < nextPackageIndex - 1) {
+      // Verificar que el siguiente elemento también sea un subproducto del mismo paquete
+      if (index + 1 < newRows.length && newRows[index + 1].esSubProducto) {
         [newRows[index], newRows[index + 1]] = [newRows[index + 1], newRows[index]]
         setProductRows(newRows)
-        console.log('Subproducto movido abajo', newRows)
+        console.log('Subproducto movido abajo dentro del paquete', newRows)
       }
       return
     }
@@ -1491,14 +1488,9 @@ const AddCard = ({
     const currentRow = productRows[index]
     const nextRow = productRows[index + 1]
 
-    // Si es un subproducto, solo puede moverse dentro de su paquete
+    // Si es un subproducto, solo puede moverse si el siguiente también es un subproducto
     if (currentRow.esSubProducto) {
-      // Buscar el siguiente paquete o el final de la lista
-      let nextPackageIndex = index + 1
-      while (nextPackageIndex < productRows.length && !productRows[nextPackageIndex].esPaquete) {
-        nextPackageIndex++
-      }
-      return index < nextPackageIndex - 1
+      return nextRow && nextRow.esSubProducto
     }
 
     return true
