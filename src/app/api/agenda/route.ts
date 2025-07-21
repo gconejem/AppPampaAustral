@@ -73,9 +73,46 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const fechaInicio = searchParams.get('fechaInicio')
+    const fechaFin = searchParams.get('fechaFin')
+
+    // Construir el filtro de fechas
+    const dateFilter: any = {}
+
+    console.log('Query params:', { fechaInicio, fechaFin })
+
+    if (fechaInicio && fechaFin) {
+      // Crear fechas en UTC para incluir todo el día
+      const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+      const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+
+      console.log('Date range filter:', { startDate, endDate })
+
+      dateFilter.fechaInicio = {
+        gte: startDate,
+        lte: endDate
+      }
+    } else if (fechaInicio) {
+      const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+      console.log('Start date filter:', { startDate })
+      dateFilter.fechaInicio = {
+        gte: startDate
+      }
+    } else if (fechaFin) {
+      const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+      console.log('End date filter:', { endDate })
+      dateFilter.fechaInicio = {
+        lte: endDate
+      }
+    }
+
+    console.log('Final dateFilter:', dateFilter)
+
     const agendas = await prisma.agenda.findMany({
+      where: dateFilter,
       include: {
         cliente: true,
         servicios: true,
@@ -103,6 +140,9 @@ export async function GET() {
             contacto: true
           }
         }
+      },
+      orderBy: {
+        fechaInicio: 'asc'
       }
     })
 

@@ -1113,7 +1113,30 @@ const Calendar = (props: CalenderProps) => {
     console.log('Iniciando fetchEvents')
 
     try {
-      const response = await fetch('/api/agenda')
+      // Construir URL con parámetros de fecha si están disponibles
+      let url = '/api/agenda'
+      const params = new URLSearchParams()
+
+      if (props.selectedDateRange?.start && props.selectedDateRange?.end) {
+        params.append('fechaInicio', props.selectedDateRange.start.toISOString().split('T')[0])
+        params.append('fechaFin', props.selectedDateRange.end.toISOString().split('T')[0])
+      } else if (props.selectedDate) {
+        const selectedDateStr = props.selectedDate.toISOString().split('T')[0]
+        params.append('fechaInicio', selectedDateStr)
+        params.append('fechaFin', selectedDateStr)
+      } else {
+        // Si no hay fecha seleccionada, cargar eventos del día actual
+        const today = new Date().toISOString().split('T')[0]
+        params.append('fechaInicio', today)
+        params.append('fechaFin', today)
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`
+      }
+
+      console.log('Fetching events from:', url)
+      const response = await fetch(url)
 
       if (!response.ok) throw new Error('Error al obtener eventos')
       const data = await response.json()
@@ -1236,10 +1259,10 @@ const Calendar = (props: CalenderProps) => {
     }
   }, [])
 
-  // Agregar useEffect para cargar eventos al inicio
+  // Agregar useEffect para cargar eventos al inicio y cuando cambien las fechas
   useEffect(() => {
     fetchEvents()
-  }, [])
+  }, [props.selectedDate, props.selectedDateRange])
 
   return (
     <>
