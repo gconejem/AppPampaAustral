@@ -447,25 +447,25 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   // efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
-    const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
-    // Combinar contactos actuales y de la obra, evitando duplicados por email
-    const emails = new Set(contactos.map(c => c.email))
-    const nuevosContactos = [...contactos]
-    obraContactos.forEach((c: any) => {
-      if (!emails.has(c.email)) {
-        nuevosContactos.push({
-          nombre: c.nombre,
-          rol: c.rol || c.cargo || '',
-          email: c.email,
-          telefono1: c.telefono1,
-          telefono2: c.telefono2,
-          isPrincipal: c.isPrincipal === true
-        })
-      }
-    })
-    setContactos(nuevosContactos)
-    setSelectedReferencia(obras.find(obra => obra.obraId === formData.obraId)?.referencia || '')
-  }, [formData.obraId])
+    if (formData.obraId) {
+      const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
+      // Reemplazar todos los contactos con los de la nueva obra
+      const nuevosContactos = obraContactos.map((c: any) => ({
+        nombre: c.nombre,
+        rol: c.rol || c.cargo || '',
+        email: c.email,
+        telefono1: c.telefono1,
+        telefono2: c.telefono2,
+        isPrincipal: c.isPrincipal === true
+      }))
+      setContactos(nuevosContactos)
+      setSelectedReferencia(obras.find(obra => obra.obraId === formData.obraId)?.referencia || '')
+    } else {
+      // Si no hay obra seleccionada, limpiar contactos
+      setContactos([])
+      setSelectedReferencia('')
+    }
+  }, [formData.obraId, obras])
 
   // Estados para el buscador de servicios
   const [selectedArea, setSelectedArea] = useState('')
