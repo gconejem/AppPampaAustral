@@ -205,22 +205,22 @@ Condiciones para terreno y accesos
               ${cotizacion.plazoEntregaGeneral ? `<div class="value"><b>Plazo de Entrega:</b><br>${cotizacion.plazoEntregaGeneral.replace(/\r?\n/g, '<br>')}</div>` : ''}
               
               ${(() => {
-                const textoGeneral = cotizacion.textoGeneral || 'No especificado';
-                const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
-                
-                if (esTextoLargo) {
-                  // Si el texto es muy largo, ponerlo en una nueva página
-                  return `
+        const textoGeneral = cotizacion.textoGeneral || 'No especificado';
+        const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
+
+        if (esTextoLargo) {
+          // Si el texto es muy largo, ponerlo en una nueva página
+          return `
                     <div style="page-break-before: always; margin-top: 24px;">
                       <div class="label">Texto General</div>
                       <div class="value"><b>Texto General:</b><br>${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
                     </div>
                   `;
-                } else {
-                  // Si el texto es corto, mantenerlo en la misma página
-                  return `<div class="value"><b>Texto General:</b><br>${textoGeneral.replace(/\r?\n/g, '<br>')}</div>`;
-                }
-              })()}
+        } else {
+          // Si el texto es corto, mantenerlo en la misma página
+          return `<div class="value"><b>Texto General:</b><br>${textoGeneral.replace(/\r?\n/g, '<br>')}</div>`;
+        }
+      })()}
             </div>
           </div>
           ` : `
@@ -237,136 +237,136 @@ Condiciones para terreno y accesos
             </thead>
             <tbody>
               ${(() => {
-                // Primero, crear un mapa de paquetes con sus subproductos basado en posición
-                const paquetesConSubproductos: Record<number, any[]> = {};
-                const subproductosProcesados = new Set();
-                
-                // Buscar paquetes y sus subproductos en toda la lista
-                for (let i = 0; i < cotizacion.detalles.length; i++) {
-                  const detalle = cotizacion.detalles[i];
-                  if (detalle.esPaquete) {
-                    paquetesConSubproductos[detalle.id] = [];
-                    // Buscar subproductos que siguen al paquete
-                    let j = i + 1;
-                    while (j < cotizacion.detalles.length && 
-                           !cotizacion.detalles[j].esPaquete && 
-                           cotizacion.detalles[j].esSubProducto) {
-                      paquetesConSubproductos[detalle.id].push(cotizacion.detalles[j]);
-                      subproductosProcesados.add(cotizacion.detalles[j].id);
-                      j++;
-                    }
-                  }
-                }
-                
-                // Agrupar detalles por área (excluyendo subproductos ya procesados)
-                const detallesPorArea: Record<string, any[]> = {};
-                
-                for (const detalle of cotizacion.detalles) {
-                  // Saltar subproductos que ya están asociados a paquetes
-                  if (subproductosProcesados.has(detalle.id)) continue;
-                  
-                  const area = detalle.producto?.area || 'Sin área';
-                  if (!detallesPorArea[area]) detallesPorArea[area] = [];
-                  detallesPorArea[area].push(detalle);
-                }
-                
-                let html = '';
-                for (const area in detallesPorArea) {
-                  html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
-                  html += `<td colspan="6">${area}</td></tr>`;
-                  
-                  const detalles = detallesPorArea[area];
-                  for (const detalle of detalles) {
-                    if (detalle.esPaquete) {
-                      // Procesar paquete con sus subproductos
-                      const subproductos = paquetesConSubproductos[detalle.id] || [];
-                      const subproductosHTML = subproductos.map((sub: any) => 
-                        `<li style="font-size: 0.57rem;">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
-                      ).join('');
-                      
-                      html += `<tr>
+      // Primero, crear un mapa de paquetes con sus subproductos basado en posición
+      const paquetesConSubproductos: Record<number, any[]> = {};
+      const subproductosProcesados = new Set();
+
+      // Buscar paquetes y sus subproductos en toda la lista
+      for (let i = 0; i < cotizacion.detalles.length; i++) {
+        const detalle = cotizacion.detalles[i];
+        if (detalle.esPaquete) {
+          paquetesConSubproductos[detalle.id] = [];
+          // Buscar subproductos que siguen al paquete
+          let j = i + 1;
+          while (j < cotizacion.detalles.length &&
+            !cotizacion.detalles[j].esPaquete &&
+            cotizacion.detalles[j].esSubProducto) {
+            paquetesConSubproductos[detalle.id].push(cotizacion.detalles[j]);
+            subproductosProcesados.add(cotizacion.detalles[j].id);
+            j++;
+          }
+        }
+      }
+
+      // Agrupar detalles por área (excluyendo subproductos ya procesados)
+      const detallesPorArea: Record<string, any[]> = {};
+
+      for (const detalle of cotizacion.detalles) {
+        // Saltar subproductos que ya están asociados a paquetes
+        if (subproductosProcesados.has(detalle.id)) continue;
+
+        const area = detalle.producto?.area || 'Sin área';
+        if (!detallesPorArea[area]) detallesPorArea[area] = [];
+        detallesPorArea[area].push(detalle);
+      }
+
+      let html = '';
+      for (const area in detallesPorArea) {
+        html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
+        html += `<td colspan="6">${area}</td></tr>`;
+
+        const detalles = detallesPorArea[area];
+        for (const detalle of detalles) {
+          if (detalle.esPaquete) {
+            // Procesar paquete con sus subproductos
+            const subproductos = paquetesConSubproductos[detalle.id] || [];
+            const subproductosHTML = subproductos.map((sub: any) =>
+              `<li style="font-size: 0.57rem;">${sub.producto?.nombre || '-'}${sub.producto?.norma ? ` - ${sub.producto.norma}` : ''}</li>`
+            ).join('');
+
+            html += `<tr>
                         <td>${detalle.producto?.area || '-'}</td>
                         <td>
                           <div style="font-weight: bold; margin-bottom: 4px;">
                             ${detalle.producto?.nombre || '-'}${detalle.producto?.norma ? ` - ${detalle.producto.norma}` : ''}
                           </div>
-                          ${subproductosHTML ? 
-                            '<ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.57rem;">' +
-                            subproductosHTML +
-                            '</ul>'
-                            : ''}
+                          ${subproductosHTML ?
+                '<ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.57rem;">' +
+                subproductosHTML +
+                '</ul>'
+                : ''}
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === true && 
-                              cotizacion.precioTotal === false) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar cantidad
-                          return detalle.cantidad || '-';
-                        })()}</td>
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === true &&
+                  cotizacion.precioTotal === false) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar cantidad
+                return detalle.cantidad || '-';
+              })()}</td>
                         <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                             return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
-                          }
-                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === false && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar precio
-                          return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
-                        })()}</td>
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                }
+                // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === false &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar precio
+                return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+              })()}</td>
                         <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === false && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar total
-                          return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
-                        })()}</td>
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === false &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar total
+                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+              })()}</td>
                       </tr>`;
-                    } else if (!detalle.esSubProducto) {
-                      // Producto individual (no paquete ni subproducto)
-                      html += `<tr>
+          } else if (!detalle.esSubProducto) {
+            // Producto individual (no paquete ni subproducto)
+            html += `<tr>
                         <td>${detalle.producto?.area || '-'}</td>
                         <td>
                           ${detalle.producto?.nombre || '-'}
@@ -374,104 +374,104 @@ Condiciones para terreno y accesos
                         </td>
                         <td style="font-size: 0.57rem; white-space: pre-wrap;">${detalle.descripcionPersonalizada || detalle.producto?.descripcion || '-'}</td>
                         <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === true && 
-                              cotizacion.precioTotal === false) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar cantidad
-                          return detalle.cantidad || '-';
-                        })()}</td>
-                        <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
-                          }
-                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === false && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar precio
-                          return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
-                        })()}</td>
-                        <td style="text-align:right;">${(() => {
-                          // Tipo A con sinCantidad true - mostrar guión
-                          if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === false && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
-                          if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) && 
-                              cotizacion.sinCantidad === true && 
-                              cotizacion.precioProducto === false && 
-                              cotizacion.precioTotal === true) {
-                            return '-';
-                          }
-                          // Para todos los demás casos, mostrar total
-                          return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
-                        })()}</td>
-                      </tr>`;
-                    }
-                  }
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return '-';
                 }
-                
-                return html;
-              })()}
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto true, precioTotal false - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === true &&
+                  cotizacion.precioTotal === false) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar cantidad
+                return detalle.cantidad || '-';
+              })()}</td>
+                        <td style="text-align:right;">${(() => {
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                }
+                // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === false &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar precio
+                return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+              })()}</td>
+                        <td style="text-align:right;">${(() => {
+                // Tipo A con sinCantidad true - mostrar guión
+                if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === false &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Tipos B, C, D con sinCantidad true, precioProducto false, precioTotal true - mostrar guión
+                if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
+                  cotizacion.sinCantidad === true &&
+                  cotizacion.precioProducto === false &&
+                  cotizacion.precioTotal === true) {
+                  return '-';
+                }
+                // Para todos los demás casos, mostrar total
+                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+              })()}</td>
+                      </tr>`;
+          }
+        }
+      }
+
+      return html;
+    })()}
             </tbody>
           </table>
           `}
           <div class="totales">
             ${(() => {
-              const subtotal = Number(cotizacion.subtotal);
-              const descuento = Number(cotizacion.descuento);
-              const iva = Number(cotizacion.impuesto);
-              const total = Number(cotizacion.total);
-              
-              // Mostrar guiones si es tipo A con sinCantidad true o si el subtotal es 0
-              if ((cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) || subtotal === 0) {
-                return `
+      const subtotal = Number(cotizacion.subtotal);
+      const descuento = Number(cotizacion.descuento);
+      const iva = Number(cotizacion.impuesto);
+      const total = Number(cotizacion.total);
+
+      // Mostrar guiones si es tipo A con sinCantidad true o si el subtotal es 0
+      if ((cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) || subtotal === 0) {
+        return `
                   <div><strong>Subtotal:</strong> -</div>
                   <div><strong>Descuento:</strong> -</div>
                   <div><strong>IVA (19%):</strong> -</div>
                   <div><strong>Total: -</strong></div>
                 `;
-              }
-              return `
+      }
+      return `
                 <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                 <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
                 <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
                 <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
               `;
-            })()}
+    })()}
           </div>
           ${observacionesYNotasHTML}
 
@@ -611,16 +611,25 @@ export async function GET(request: Request, { params }: { params: { id: string }
       });
     }
 
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+    })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
+
+    // Esperar a que las fuentes se carguen completamente
+    await page.evaluateHandle('document.fonts.ready')
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Esperar 1 segundo adicional para asegurar carga de fuentes
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '25mm', left: '5mm' },
       displayHeaderFooter: true,
       headerTemplate: '<div></div>',
       footerTemplate: `
-        <div style="width:100%;font-family:'Inter',sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
+        <div style="width:100%;font-family:'Segoe UI','Trebuchet MS','Lucida Grande','Lucida Sans Unicode','Lucida Sans',Tahoma,sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
+          <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Descubrir</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Proyectar</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Concretar</span><br>
           Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
           Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h<br>
           <span style="font-weight:bold;">contacto@pampaustral.cl</span>

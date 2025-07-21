@@ -47,7 +47,7 @@ const formatearFecha = (fecha: string) => {
 
 function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: string) {
 
-    console.log('cotizacionn', cotizacion)
+  console.log('cotizacionn', cotizacion)
 
   // Notas para tipo A (Valores Unitarios)
   const notasTipoA = `
@@ -142,6 +142,16 @@ Condiciones para terreno y accesos
     <head>
       <meta charset="utf-8" />
       <link href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,800,900&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=block" rel="stylesheet">
+      <style>
+        @font-face {
+          font-family: 'Poppins';
+          font-style: normal;
+          font-weight: 700;
+          font-display: block;
+          src: url(https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCz7Z1xlFd2JQEk.woff2) format('woff2');
+        }
+      </style>
       <style>
         body { font-family: 'Inter', sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; margin: 0; padding: 0; color: #736e7d; font-size: 0.9375rem; }
         .header, .header-left, .logo-title, .logo, .title, .subtitle, .header-right, .header-right .label { font-size: initial; }
@@ -264,27 +274,27 @@ Condiciones para terreno y accesos
               ` : ''}
               
               ${(() => {
-                const textoGeneral = cotizacion.textoGeneral || 'No especificado';
-                const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
-                
-                if (esTextoLargo) {
-                  // Si el texto es muy largo, ponerlo en una nueva página
-                  return `
+        const textoGeneral = cotizacion.textoGeneral || 'No especificado';
+        const esTextoLargo = textoGeneral.length > 1500 || (textoGeneral.match(/\n/g) || []).length > 20;
+
+        if (esTextoLargo) {
+          // Si el texto es muy largo, ponerlo en una nueva página
+          return `
                     <div style="page-break-before: always; margin-top: 24px;">
                       <div class="label">Texto General:</div>
                       <div class="value" style="white-space: pre-wrap;">${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
                     </div>
                   `;
-                } else {
-                  // Si el texto es corto, mantenerlo en la misma página
-                  return `
+        } else {
+          // Si el texto es corto, mantenerlo en la misma página
+          return `
                     <div style="margin-bottom: 16px;">
                       <div class="label">Texto General:</div>
                       <div class="value" style="white-space: pre-wrap;">${textoGeneral.replace(/\r?\n/g, '<br>')}</div>
                     </div>
                   `;
-                }
-              })()}
+        }
+      })()}
             </div>
           ` : `
           <table class="table">
@@ -294,196 +304,196 @@ Condiciones para terreno y accesos
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO</th>
                 <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
                 ${(() => {
-                  // Mostrar columnas cuando:
-                  // 1. No es sinCantidad y es precio por producto (caso normal)
-                  // 2. Es sinCantidad y es precio total (mostrar columnas vacías)
-                  // 3. NO es sinCantidad y es precio total (mostrar cantidades pero precio/total vacíos)
-                  // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
-                  const mostrarColumnas = 
-                    (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
-                    (cotizacion.sinCantidad && cotizacion.precioTotal) ||
-                    (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
-                    (cotizacion.sinCantidad && cotizacion.precioProducto) ||
-                    cotizacion.tipoCotizacion === 'A';
+      // Mostrar columnas cuando:
+      // 1. No es sinCantidad y es precio por producto (caso normal)
+      // 2. Es sinCantidad y es precio total (mostrar columnas vacías)
+      // 3. NO es sinCantidad y es precio total (mostrar cantidades pero precio/total vacíos)
+      // 4. Es sinCantidad y es precio por producto (mostrar guión en cantidad, precio normal, total igual al precio)
+      const mostrarColumnas =
+        (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
+        (cotizacion.sinCantidad && cotizacion.precioTotal) ||
+        (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
+        (cotizacion.sinCantidad && cotizacion.precioProducto) ||
+        cotizacion.tipoCotizacion === 'A';
 
-                  return mostrarColumnas ? `
+      return mostrarColumnas ? `
                     <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">CANTIDAD</th>
                     <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
                     <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
                   ` : '';
-                })()}
+    })()}
               </tr>
             </thead>
             <tbody>
               ${(() => {
-                // Función auxiliar para determinar si mostrar columnas
-                const mostrarColumnas = () => {
-                  return (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
-                    (cotizacion.sinCantidad && cotizacion.precioTotal) ||
-                    (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
-                    (cotizacion.sinCantidad && cotizacion.precioProducto) ||
-                    cotizacion.tipoCotizacion === 'A';
-                };
+      // Función auxiliar para determinar si mostrar columnas
+      const mostrarColumnas = () => {
+        return (!cotizacion.sinCantidad && cotizacion.precioProducto) ||
+          (cotizacion.sinCantidad && cotizacion.precioTotal) ||
+          (!cotizacion.sinCantidad && cotizacion.precioTotal) ||
+          (cotizacion.sinCantidad && cotizacion.precioProducto) ||
+          cotizacion.tipoCotizacion === 'A';
+      };
 
-                // Función auxiliar para renderizar las celdas de cantidad/precio/total
-                const renderizarCeldasPrecio = (detalle: any) => {
-                  if (!mostrarColumnas()) return '';
-                  
-                  // Si es tipo A con sinCantidad = true, mostrar guiones en todas las columnas
-                  if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                    return `
+      // Función auxiliar para renderizar las celdas de cantidad/precio/total
+      const renderizarCeldasPrecio = (detalle: any) => {
+        if (!mostrarColumnas()) return '';
+
+        // Si es tipo A con sinCantidad = true, mostrar guiones en todas las columnas
+        if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+          return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
                       <td style='text-align:right;'>-</td>
                     `;
-                  }
-                  
-                  // Si es sinCantidad y precio total, mostrar columnas vacías
-                  if (cotizacion.sinCantidad && cotizacion.precioTotal) {
-                    return `
+        }
+
+        // Si es sinCantidad y precio total, mostrar columnas vacías
+        if (cotizacion.sinCantidad && cotizacion.precioTotal) {
+          return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>-</td>
                     `;
-                  }
-                  
-                  // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
-                  if (cotizacion.sinCantidad && cotizacion.precioProducto) {
-                    return `
+        }
+
+        // Si es sinCantidad y precio por producto, mostrar guión en cantidad, precio normal y total igual al precio
+        if (cotizacion.sinCantidad && cotizacion.precioProducto) {
+          return `
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
                       <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
                     `;
-                  }
-                  
-                  // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
-                  if (!cotizacion.sinCantidad && cotizacion.precioTotal) {
-                    return `
+        }
+
+        // Si NO es sinCantidad y precio total, mostrar cantidades pero precio y total vacíos
+        if (!cotizacion.sinCantidad && cotizacion.precioTotal) {
+          return `
                       <td style='text-align:right;'>${detalle.cantidad || 0}</td>
                       <td style='text-align:right;'>-</td>
                       <td style='text-align:right;'>-</td>
                     `;
-                  }
-                  
-                  // Caso normal: mostrar valores
-                  return `
+        }
+
+        // Caso normal: mostrar valores
+        return `
                     <td style='text-align:right;'>${detalle.cantidad || 0}</td>
                     <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
                     <td style='text-align:right;'>UF ${Number(detalle.totalNetoUF || 0).toFixed(2)}</td>
                   `;
-                };
+      };
 
-                let html = '';
-                let currentArea = '';
+      let html = '';
+      let currentArea = '';
 
-                // Recorrer los detalles secuencialmente
-                for (let i = 0; i < cotizacion.detalles.length; i++) {
-                  const detalle = cotizacion.detalles[i];
-                  const area = detalle.producto?.area || detalle.area || 'Sin área';
-                  if (detalle.esSubProducto) continue;
-                  if (area !== currentArea && !detalle.esSubProducto) {
-                    currentArea = area;
-                    html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
-                    html += `<td colspan="${mostrarColumnas() ? 6 : 3}">${area}</td></tr>`;
-                  }
-                  if (detalle.esPaquete) {
-                    const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
-                    const labelPaquete = '<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold;">PAQUETE</span>';
-                    let subproductosHtml = '';
-                    let j = i + 1;
-                    const subproductos = [];
-                    while (j < cotizacion.detalles.length && cotizacion.detalles[j].esSubProducto) {
-                      const sub = cotizacion.detalles[j];
-                      const servicio = (sub.servicio || '').trim();
-                      const norma = (sub.norma || '').trim();
-                      let nombreSub = '';
-                      if (servicio && norma) {
-                        nombreSub = servicio + ' - ' + norma;
-                      } else if (servicio) {
-                        nombreSub = servicio;
-                      } else if (norma) {
-                        nombreSub = norma;
-                      }
-                      if (nombreSub !== '') {
-                        subproductos.push(`<li style="font-size: 0.57rem;">${nombreSub}</li>`);
-                      }
-                      j++;
-                    }
-                    if (subproductos.length > 0) {
-                      subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px; font-size: 0.57rem;'>${subproductos.join('')}</ul>`;
-                    }
-                    html += `<tr>`;
-                    html += `<td>${area}</td>`;
-                    html += `<td>${nombreNorma}${subproductosHtml}</td>`;
-                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
-                    html += renderizarCeldasPrecio(detalle);
-                    html += `</tr>`;
-                    i = j - 1;
-                  } else {
-                    html += `<tr>`;
-                    html += `<td>${area}</td>`;
-                    html += `<td>${detalle.servicio || '-'}</td>`;
-                    html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
-                    html += renderizarCeldasPrecio(detalle);
-                    html += `</tr>`;
-                  }
-                }
-                return html;
-              })()}
+      // Recorrer los detalles secuencialmente
+      for (let i = 0; i < cotizacion.detalles.length; i++) {
+        const detalle = cotizacion.detalles[i];
+        const area = detalle.producto?.area || detalle.area || 'Sin área';
+        if (detalle.esSubProducto) continue;
+        if (area !== currentArea && !detalle.esSubProducto) {
+          currentArea = area;
+          html += `<tr class="area-row" style="box-shadow: 0 0 0 1000px #f5f5f5 inset; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif;">`;
+          html += `<td colspan="${mostrarColumnas() ? 6 : 3}">${area}</td></tr>`;
+        }
+        if (detalle.esPaquete) {
+          const nombreNorma = `<b>${detalle.servicio || '-'}</b>`;
+          const labelPaquete = '<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold;">PAQUETE</span>';
+          let subproductosHtml = '';
+          let j = i + 1;
+          const subproductos = [];
+          while (j < cotizacion.detalles.length && cotizacion.detalles[j].esSubProducto) {
+            const sub = cotizacion.detalles[j];
+            const servicio = (sub.servicio || '').trim();
+            const norma = (sub.norma || '').trim();
+            let nombreSub = '';
+            if (servicio && norma) {
+              nombreSub = servicio + ' - ' + norma;
+            } else if (servicio) {
+              nombreSub = servicio;
+            } else if (norma) {
+              nombreSub = norma;
+            }
+            if (nombreSub !== '') {
+              subproductos.push(`<li style="font-size: 0.57rem;">${nombreSub}</li>`);
+            }
+            j++;
+          }
+          if (subproductos.length > 0) {
+            subproductosHtml = `<ul style='margin: 8px 0 0 0; padding-left: 32px; font-size: 0.57rem;'>${subproductos.join('')}</ul>`;
+          }
+          html += `<tr>`;
+          html += `<td>${area}</td>`;
+          html += `<td>${nombreNorma}${subproductosHtml}</td>`;
+          html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
+          html += renderizarCeldasPrecio(detalle);
+          html += `</tr>`;
+          i = j - 1;
+        } else {
+          html += `<tr>`;
+          html += `<td>${area}</td>`;
+          html += `<td>${detalle.servicio || '-'}</td>`;
+          html += `<td style="font-size: 0.57rem; white-space: pre-wrap;">${(detalle.descripcion || '-').replace(/\r?\n/g, '<br>')}</td>`;
+          html += renderizarCeldasPrecio(detalle);
+          html += `</tr>`;
+        }
+      }
+      return html;
+    })()}
             </tbody>
           </table>
           `}
           <div class="totales">
             ${(() => {
-              if (cotizacion.tipoCotizacion === 'D') {
-                const subtotal = Number(cotizacion.subtotal || 0);
-                const descuento = 0;
-                const subtotalConDescuento = subtotal;
-                const iva = subtotalConDescuento * 0.19;
-                const total = subtotalConDescuento + iva;
-                if (subtotal === 0) {
-                  return `
+      if (cotizacion.tipoCotizacion === 'D') {
+        const subtotal = Number(cotizacion.subtotal || 0);
+        const descuento = 0;
+        const subtotalConDescuento = subtotal;
+        const iva = subtotalConDescuento * 0.19;
+        const total = subtotalConDescuento + iva;
+        if (subtotal === 0) {
+          return `
                     <div><strong>Subtotal:</strong> -</div>
                     <div><strong>Descuento:</strong> -</div>
                     <div><strong>IVA (19%):</strong> -</div>
                     <div><strong>Total: -</strong></div>
                   `;
-                }
-                return `
+        }
+        return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF 0.00</div>
                   <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
                   <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
                 `;
-              } else if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
-                return `
+      } else if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
+        // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
+        return `
                   <div><strong>Subtotal:</strong> -</div>
                   <div><strong>Descuento:</strong> -</div>
                   <div><strong>IVA (19%):</strong> -</div>
                   <div><strong>Total: -</strong></div>
                 `;
-              } else {
-                const subtotal = Number(cotizacion.subtotal || 0);
-                const descuento = Number(cotizacion.descuento || 0);
-                const iva = Number(cotizacion.impuesto || 0);
-                const total = Number(cotizacion.total || 0);
-                if (subtotal === 0) {
-                  return `
+      } else {
+        const subtotal = Number(cotizacion.subtotal || 0);
+        const descuento = Number(cotizacion.descuento || 0);
+        const iva = Number(cotizacion.impuesto || 0);
+        const total = Number(cotizacion.total || 0);
+        if (subtotal === 0) {
+          return `
                     <div><strong>Subtotal:</strong> -</div>
                     <div><strong>Descuento:</strong> -</div>
                     <div><strong>IVA (19%):</strong> -</div>
                     <div><strong>Total: -</strong></div>
                   `;
-                }
-                return `
+        }
+        return `
                   <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
                   <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
                   <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
                   <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
                 `;
-              }
-            })()}
+      }
+    })()}
           </div>
           ${observacionesYNotasHTML}
 
@@ -604,16 +614,25 @@ export async function POST(request: Request) {
     }) */
 
     // --- PDF original ---
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+    })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })
+
+    // Esperar a que las fuentes se carguen completamente
+    await page.evaluateHandle('document.fonts.ready')
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Esperar 1 segundo adicional para asegurar carga de fuentes
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '25mm', left: '5mm' },
       displayHeaderFooter: true,
       headerTemplate: '<div></div>',
       footerTemplate: `
-        <div style="width:100%;font-family:'Inter',sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
+        <div style="width:100%;font-family:'Segoe UI','Trebuchet MS','Lucida Grande','Lucida Sans Unicode','Lucida Sans',Tahoma,sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
+          <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Descubrir</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Proyectar</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Concretar</span><br>
           Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
           Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h<br>
           <span style="font-weight:bold;">contacto@pampaustral.cl</span>
