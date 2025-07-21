@@ -448,18 +448,34 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // efecto para cargar los contactos cuando se selecciona una obra
   useEffect(() => {
     if (formData.obraId) {
-      const obraContactos = obras.find(obra => obra.obraId === formData.obraId)?.contactos || []
-      // Reemplazar todos los contactos con los de la nueva obra
-      const nuevosContactos = obraContactos.map((c: any) => ({
-        nombre: c.nombre,
-        rol: c.rol || c.cargo || '',
-        email: c.email,
-        telefono1: c.telefono1,
-        telefono2: c.telefono2,
-        isPrincipal: c.isPrincipal === true
-      }))
-      setContactos(nuevosContactos)
-      setSelectedReferencia(obras.find(obra => obra.obraId === formData.obraId)?.referencia || '')
+      const obraSeleccionada = obras.find(obra => obra.obraId === formData.obraId)
+      if (obraSeleccionada) {
+        const obraContactos = obraSeleccionada.contactos || []
+        // Reemplazar todos los contactos con los de la nueva obra
+        const nuevosContactos = obraContactos.map((c: any) => ({
+          nombre: c.nombre,
+          rol: c.rol || c.cargo || '',
+          email: c.email,
+          telefono1: c.telefono1,
+          telefono2: c.telefono2,
+          isPrincipal: c.isPrincipal === true
+        }))
+        setContactos(nuevosContactos)
+        setSelectedReferencia(obraSeleccionada.referencia || '')
+
+        // Llenar región, comuna y dirección con la información de la obra
+        setFormData(prev => ({
+          ...prev,
+          region: obraSeleccionada.region || '',
+          comuna: obraSeleccionada.comuna || '',
+          direccion: obraSeleccionada.direccion || ''
+        }))
+
+        // Actualizar el estado de región seleccionada para que se carguen las comunas
+        if (obraSeleccionada.region) {
+          setSelectedRegion(obraSeleccionada.region)
+        }
+      }
     } else {
       // Si no hay obra seleccionada, limpiar contactos
       setContactos([])
