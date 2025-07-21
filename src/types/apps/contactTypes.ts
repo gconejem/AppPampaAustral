@@ -13,6 +13,7 @@ export interface ContactType {
   estado: 'ACTIVO' | 'INACTIVO'
   createdAt: string
   updatedAt: string
+  rol: string
 }
 
 export interface ContactoWithRelations extends ContactType {

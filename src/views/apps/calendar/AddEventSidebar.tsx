@@ -324,12 +324,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         setClientes(clientesData)
         console.log('Clientes guardados en el estado:', clientesData)
 
-        // Cargar obras
-        const obrasRes = await fetch('/api/obras')
-        const obrasData = await obrasRes.json()
-
-        setObras(obrasData)
-
         // Cargar solicitudes
         console.log('Intentando cargar solicitudes...')
         const solicitudesRes = await fetch('/api/requests')
@@ -356,6 +350,37 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       fetchData()
     }
   }, [addEventSidebarOpen])
+
+  // Cargar obras cuando se selecciona un cliente
+  useEffect(() => {
+    const fetchObras = async () => {
+      if (!formData.clienteId) {
+        setObras([])
+        return
+      }
+
+      // Encontrar el RUT del cliente seleccionado
+      const clienteSeleccionado = clientes.find(c => c.clienteId === formData.clienteId)
+      if (!clienteSeleccionado) {
+        setObras([])
+        return
+      }
+
+      try {
+        console.log('Cargando obras para cliente RUT:', clienteSeleccionado.rut)
+        const obrasRes = await fetch(`/api/obras?rut=${clienteSeleccionado.rut}`)
+        const obrasData = await obrasRes.json()
+
+        console.log('Obras cargadas:', obrasData)
+        setObras(obrasData)
+      } catch (error) {
+        console.error('Error al cargar obras:', error)
+        setObras([])
+      }
+    }
+
+    fetchObras()
+  }, [formData.clienteId, clientes])
 
   useEffect(() => {
     const fetchServicios = async () => {
@@ -1064,8 +1089,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               onChange={(_, newValue) => {
                 setFormData(prev => ({
                   ...prev,
-                  clienteId: newValue?.clienteId
+                  clienteId: newValue?.clienteId,
+                  obraId: undefined, // Limpiar obra cuando cambia el cliente
+                  direccion: '' // Limpiar dirección
                 }))
+                setContactos([]) // Limpiar contactos
+                setSelectedReferencia('') // Limpiar referencia
               }}
               renderInput={params => (
                 <TextField
@@ -1091,6 +1120,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               options={obras}
               getOptionLabel={option => `${option.nombreObra}`}
               value={obras.find(o => o.obraId === formData.obraId) || null}
+              disabled={!formData.clienteId}
               onChange={(_, newValue) => {
                 setFormData(prev => ({
                   ...prev,
@@ -1102,6 +1132,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <TextField
                   {...params}
                   label='Obra'
+                  helperText={!formData.clienteId ? 'Seleccione un cliente primero' : ''}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (

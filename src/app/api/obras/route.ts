@@ -9,8 +9,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
 
     // Asegurar que mailRecepcionFactura sea un array
-    const mailRecepcionFactura = Array.isArray(body.mailRecepcionFactura) 
-      ? body.mailRecepcionFactura 
+    const mailRecepcionFactura = Array.isArray(body.mailRecepcionFactura)
+      ? body.mailRecepcionFactura
       : typeof body.mailRecepcionFactura === 'string'
         ? body.mailRecepcionFactura.split(',').map((email: string) => email.trim()).filter((email: string) => email !== '')
         : []
@@ -132,21 +132,63 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     console.log('Iniciando consulta de obras...')
 
+    const { searchParams } = new URL(req.url)
+    const rut = searchParams.get('rut')
+    const search = searchParams.get('search')
+    const clienteId = searchParams.get('clienteId')
+
+    // Construir el filtro where dinámicamente
+    const whereClause: any = {}
+
+    if (rut) {
+      whereClause.rut = rut
+      console.log('Filtrando obras por RUT:', rut)
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { nombreObra: { contains: search, mode: 'insensitive' } },
+        { numeroObra: { contains: search, mode: 'insensitive' } },
+        { nombreCliente: { contains: search, mode: 'insensitive' } },
+        { direccion: { contains: search, mode: 'insensitive' } }
+      ]
+      console.log('Filtrando obras por búsqueda:', search)
+    }
+
+    // Si se proporciona clienteId, necesitamos buscar el RUT del cliente primero
+    if (clienteId && !rut) {
+      const cliente = await prisma.cliente.findUnique({
+        where: { clienteId: parseInt(clienteId) },
+        select: { rut: true }
+      })
+
+      if (cliente) {
+        whereClause.rut = cliente.rut
+        console.log('Filtrando obras por clienteId convertido a RUT:', cliente.rut)
+      }
+    }
+
     const obras = await prisma.obra.findMany({
+      where: whereClause,
       include: {
         contactos: true,
         cotizaciones: true,
         solicitudes: true
-      },
-      orderBy: {
-        numeroObra: 'desc'
       }
     })
 
+    // Ordenar las obras por número de obra de forma numérica
+    obras.sort((a, b) => {
+      const numA = parseInt(a.numeroObra) || 0
+      const numB = parseInt(b.numeroObra) || 0
+      return numA - numB
+    })
+
+    console.log(`Encontradas ${obras.length} obras`)
     return NextResponse.json(obras)
   } catch (error) {
     console.error('Error al obtener obras:', error)
