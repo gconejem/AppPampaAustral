@@ -631,7 +631,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         <div style="width:100%;font-family:'Segoe UI','Trebuchet MS','Lucida Grande','Lucida Sans Unicode','Lucida Sans',Tahoma,sans-serif;font-size:9px;color:#736e7d;text-align:center;line-height:1.2;position:relative;">
           <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Descubrir</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Proyectar</span> <span style="color:#ff0295; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px; font-family:'Segoe UI','Trebuchet MS','Lucida Grande',sans-serif;">Concretar</span><br>
           Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
-          Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención 8:00h a 18:00h<br>
+          Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención: 8:00h a 18:00h (viernes hasta 17:00h)<br>
           <span style="font-weight:bold;">contacto@pampaustral.cl</span>
           <div style="position:absolute;left:20px;bottom:0;font-size:12px;color:#736e7d;">
             N° Cotización ${cotizacion.numeroCotizacion}-${cotizacion.version || '00'}
