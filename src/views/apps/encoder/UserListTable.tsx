@@ -168,7 +168,8 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   const [selectedUser, setSelectedUser] = useState<UsersTypeWithAction | null>(null)
 
   // Hooks
-  const { lang: locale } = useParams()
+  const params = useParams()
+  const locale = params?.lang as Locale
 
   const handleClickOpenDialog = (user: UsersTypeWithAction) => {
     setSelectedUser(user)
