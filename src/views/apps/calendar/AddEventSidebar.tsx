@@ -249,6 +249,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null)
   const [equiposAgendados, setEquiposAgendados] = useState<EquipoAgendado[]>([])
 
+  // Estados para edición de servicios en la tabla
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null)
+  const [editingServiceData, setEditingServiceData] = useState<{
+    cantidad: string
+    observacion: string
+  }>({ cantidad: '', observacion: '' })
+
   // Nuevo estado para los contactos de la obra
   const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
 
@@ -797,9 +804,41 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
     setServiciosAgendados(prev => [...prev, nuevoServicio])
     setServicioSeleccionado(null)
-    setCantidad('')
+    setCantidad('1')
     setObservacion('')
     setEsSegundaVisita(false)
+  }
+
+  // Funciones para editar servicios en la tabla
+  const handleEditService = (index: number) => {
+    setEditingServiceIndex(index)
+    setEditingServiceData({
+      cantidad: serviciosAgendados[index].cantidad.toString(),
+      observacion: serviciosAgendados[index].observacion || ''
+    })
+  }
+
+  const handleSaveService = () => {
+    if (editingServiceIndex !== null && editingServiceData.cantidad) {
+      const nuevaCantidad = parseInt(editingServiceData.cantidad)
+      if (nuevaCantidad > 0) {
+        const updatedServicios = serviciosAgendados.map((servicio, index) =>
+          index === editingServiceIndex ? {
+            ...servicio,
+            cantidad: nuevaCantidad,
+            observacion: editingServiceData.observacion || undefined
+          } : servicio
+        )
+        setServiciosAgendados(updatedServicios)
+      }
+    }
+    setEditingServiceIndex(null)
+    setEditingServiceData({ cantidad: '', observacion: '' })
+  }
+
+  const handleCancelServiceEdit = () => {
+    setEditingServiceIndex(null)
+    setEditingServiceData({ cantidad: '', observacion: '' })
   }
 
   const handleAgregarLaboratorista = () => {
@@ -1807,16 +1846,76 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <TableRow key={index}>
                   <TableCell>{servicio.codigo}</TableCell>
                   <TableCell>{servicio.servicio}</TableCell>
-                  <TableCell>{servicio.cantidad}</TableCell>
-                  <TableCell>{servicio.observacion}</TableCell>
+                  <TableCell>
+                    {editingServiceIndex === index ? (
+                      <TextField
+                        size='small'
+                        type='number'
+                        value={editingServiceData.cantidad}
+                        onChange={(e) => setEditingServiceData(prev => ({ ...prev, cantidad: e.target.value }))}
+                        inputProps={{ min: 1 }}
+                        sx={{ width: '80px' }}
+                      />
+                    ) : (
+                      <span>{servicio.cantidad}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingServiceIndex === index ? (
+                      <TextField
+                        size='small'
+                        multiline
+                        maxRows={3}
+                        value={editingServiceData.observacion}
+                        onChange={(e) => setEditingServiceData(prev => ({ ...prev, observacion: e.target.value }))}
+                        placeholder='Agregar observación...'
+                        sx={{ minWidth: '200px' }}
+                      />
+                    ) : (
+                      <span style={{
+                        wordBreak: 'break-word',
+                        maxWidth: '200px',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {servicio.observacion || 'Sin observación'}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{servicio.esSegundaVisita ? 'Sí' : 'No'}</TableCell>
                   <TableCell>
-                    <IconButton
-                      color='error'
-                      onClick={() => setServiciosAgendados(prev => prev.filter((_, i) => i !== index))}
-                    >
-                      <i className='ri-delete-bin-line' />
-                    </IconButton>
+                    {editingServiceIndex === index ? (
+                      <Box display='flex' alignItems='center' gap={1}>
+                        <IconButton
+                          size='small'
+                          color='primary'
+                          onClick={handleSaveService}
+                        >
+                          <i className='ri-check-line' />
+                        </IconButton>
+                        <IconButton
+                          size='small'
+                          color='secondary'
+                          onClick={handleCancelServiceEdit}
+                        >
+                          <i className='ri-close-line' />
+                        </IconButton>
+                      </Box>
+                    ) : (
+                      <Box display='flex' alignItems='center' gap={1}>
+                        <IconButton
+                          size='small'
+                          onClick={() => handleEditService(index)}
+                        >
+                          <EditIcon fontSize='small' />
+                        </IconButton>
+                        <IconButton
+                          color='error'
+                          onClick={() => setServiciosAgendados(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <i className='ri-delete-bin-line' />
+                        </IconButton>
+                      </Box>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
