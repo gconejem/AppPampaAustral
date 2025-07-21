@@ -23,7 +23,7 @@ const UserListApp = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const result = await getUserData()
+        const result: any = await getUserData()
 
         setData(result)
         setIsLoading(false)

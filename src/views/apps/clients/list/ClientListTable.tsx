@@ -246,12 +246,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
   const [filterStatus, setFilterStatus] = useState('')
   const [motivoBloqueo, setMotivoBloqueo] = useState('')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [selectedRegion, setSelectedRegion] = useState('')
 
   // Mantener una copia local de los datos
   const [localData, setLocalData] = useState<Cliente[]>(safeUserData)
 
   // Solo necesitamos regiones y comunas del hook
-  const { regiones, comunas, loading } = useRegionesYComunas()
+  useRegionesYComunas()
 
   // Manejadores para los filtros
   const handleGlobalFilter = (value: string) => {
@@ -268,6 +269,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
   const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
     setDateRange(dates)
+  }
+
+  const handleRegionChange = (value: string) => {
+    setSelectedRegion(value)
   }
 
   // Efecto para aplicar filtros
@@ -391,11 +396,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, cliente: Cliente) => {
     event.stopPropagation()
-    setAnchorEl(prev => ({
-      ...prev,
-      [cliente.clienteId]: event.currentTarget
-    }))
-    setSelectedClientForMenu(cliente)
+    if (cliente.clienteId) {
+      setAnchorEl(prev => ({
+        ...prev,
+        [cliente.clienteId!]: event.currentTarget
+      }))
+      setSelectedClientForMenu(cliente)
+    }
   }
 
   const handleMenuClose = () => {
@@ -541,10 +548,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
           escapeField(cliente.estado),
           escapeField(new Date(cliente.fechaCreacion).toLocaleDateString()),
           escapeField(getNombreContactoPrincipal(contactoPrincipal)),
-          escapeField(getCargoLabel(contactoPrincipal?.cargo)),
-          escapeField(contactoPrincipal?.email),
-          escapeField(contactoPrincipal?.telefono1),
-          escapeField(contactoPrincipal?.telefono2),
+          escapeField(getCargoLabel(contactoPrincipal?.cargo || '')),
+          escapeField(contactoPrincipal?.email || ''),
+          escapeField(contactoPrincipal?.telefono1 || ''),
+          escapeField(contactoPrincipal?.telefono2 || ''),
           escapeField(cliente.condicionesComerciales?.vendedor),
           escapeField(cliente.condicionesComerciales?.condicionVenta),
           escapeField(cliente.condicionesComerciales?.observaciones)
@@ -592,7 +599,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         const regiones = await regResponse.json()
 
         // Para cada región, obtener sus comunas
-        const comunasPromises = regiones.map(region =>
+        const comunasPromises = regiones.map((region: any) =>
           fetch(`/api/ubicacion/comunas/${region.codigo}`).then(res => res.json())
         )
 
@@ -1007,10 +1014,12 @@ const ClientListTable = ({ userData, setData }: Props) => {
           value={globalFilter ?? ''}
           selectedEstado={filterStatus}
           selectedSegmento={selectedSegmento}
+          selectedRegion={selectedRegion}
           dateRange={dateRange}
           handleFilter={handleGlobalFilter}
           handleEstadoChange={handleEstadoChange}
           handleSegmentoChange={handleSegmentoChange}
+          handleRegionChange={handleRegionChange}
           handleDateRangeChange={handleDateRangeChange}
         />
 
@@ -1120,7 +1129,6 @@ const ClientListTable = ({ userData, setData }: Props) => {
           <EditClientForm
             open={editUserOpen}
             handleClose={handleEditClose}
-            userData={safeUserData}
             setData={setData}
             currentUser={selectedUser}
           />

@@ -116,6 +116,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       return currentUser.clientesContactos.map(cc => ({
         contactId: cc.contacto?.contactId,
         nombre: cc.nombre || cc.contacto?.nombre || '',
+        rol: cc.cargo || '',
         cargo: cc.cargo || '',
         email: cc.email || cc.contacto?.email || '',
         telefono1: cc.telefono1 || cc.contacto?.telefono1 || '',
@@ -209,6 +210,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         const mappedContacts = currentUser.clientesContactos.map(cc => ({
           contactId: cc.contacto?.contactId,
           nombre: cc.nombre || cc.contacto?.nombre || '',
+          rol: cc.cargo || '',
           cargo: cc.cargo || '',
           email: cc.email || cc.contacto?.email || '',
           telefono1: cc.telefono1 || cc.contacto?.telefono1 || '',
@@ -298,6 +300,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
         email: editingContact.email || '',
         telefono1: editingContact.telefono1 || '',
         telefono2: editingContact.telefono2 || '',
+        rol: editingContact.cargo || '',
         cargo: editingContact.cargo || ''
       }
       setContacts(newContacts)
@@ -310,6 +313,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
   const handleNewContact = (newContact: ContactType) => {
     const contactoNormalizado: Contacto = {
       nombre: newContact.nombre || '',
+      rol: newContact.cargo || '',
       cargo: newContact.cargo || '',
       email: newContact.email || '',
       telefono1: newContact.telefono1 || '',
@@ -321,6 +325,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
       {
         contactId: contactoNormalizado.contactId,
         nombre: contactoNormalizado.nombre,
+        rol: contactoNormalizado.cargo,
         cargo: contactoNormalizado.cargo,
         email: contactoNormalizado.email,
         telefono1: contactoNormalizado.telefono1,
@@ -645,6 +650,7 @@ const EditClientForm = ({ open, handleClose, setData, currentUser }: Props): JSX
                             const newContact = {
                               contactId: contact.contactId,
                               nombre: contact.nombre || '',
+                              rol: contact.cargo || ROLES_CONTACTO[0].label,
                               cargo: contact.cargo || ROLES_CONTACTO[0].label,
                               email: contact.email || '',
                               telefono1: contact.telefono1 || '',

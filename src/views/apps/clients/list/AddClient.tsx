@@ -96,6 +96,7 @@ const AddClienteDrawer = (props: Props) => {
 
   const [nuevoContacto, setNuevoContacto] = useState<Contacto>({
     nombre: '',
+    rol: '',
     cargo: '',
     email: '',
     telefono1: '',
@@ -131,6 +132,7 @@ const AddClienteDrawer = (props: Props) => {
 
   const [editingContact, setEditingContact] = useState<Contacto>({
     nombre: '',
+    rol: '',
     cargo: '',
     email: '',
     telefono1: '',
@@ -507,6 +509,7 @@ const AddClienteDrawer = (props: Props) => {
     setContactos([...contactos, newContact])
     setNuevoContacto({
       nombre: '',
+      rol: '',
       cargo: '',
       email: '',
       telefono1: '',
@@ -573,6 +576,7 @@ const AddClienteDrawer = (props: Props) => {
     }
     const contactoNormalizado: Contacto = {
       nombre: contact.nombre || '',
+      rol: cargoValue || '',
       cargo: cargoValue || '',
       email: contact.email || '',
       telefono1: contact.telefono1,
@@ -639,6 +643,7 @@ const AddClienteDrawer = (props: Props) => {
     {
       contacto: {
         nombre: 'Juan Pérez',
+        rol: 'Gerente General',
         cargo: 'Gerente General',
         email: 'jperez@empresaprueba.cl',
         telefono1: '+56 9 8765 4321',
@@ -649,6 +654,7 @@ const AddClienteDrawer = (props: Props) => {
     {
       contacto: {
         nombre: 'María González',
+        rol: 'Jefe de Compras',
         cargo: 'Jefe de Compras',
         email: 'mgonzalez@empresaprueba.cl',
         telefono1: '+56 9 8765 4322',
@@ -673,6 +679,7 @@ const AddClienteDrawer = (props: Props) => {
     // Corregir el acceso a las propiedades del contacto
     setEditingContact({
       nombre: contactos[index].contacto.nombre,
+      rol: contactos[index].cargo,
       cargo: contactos[index].cargo,
       email: contactos[index].contacto.email,
       telefono1: contactos[index].contacto.telefono1,
@@ -684,6 +691,7 @@ const AddClienteDrawer = (props: Props) => {
     setEditingContactIndex(null)
     setEditingContact({
       nombre: '',
+      rol: '',
       cargo: '',
       email: '',
       telefono1: '',
@@ -708,6 +716,7 @@ const AddClienteDrawer = (props: Props) => {
       contacto: {
         nombre: editingContact.nombre,
         cargo: editingContact.cargo,
+        rol: editingContact.cargo,
         email: editingContact.email,
         telefono1: editingContact.telefono1,
         telefono2: editingContact.telefono2
@@ -720,6 +729,7 @@ const AddClienteDrawer = (props: Props) => {
     setEditingContactIndex(null)
     setEditingContact({
       nombre: '',
+      rol: '',
       cargo: '',
       email: '',
       telefono1: '',
@@ -762,6 +772,7 @@ const AddClienteDrawer = (props: Props) => {
       // Normaliza el contacto para que tenga cargo a nivel raíz
       handleAddContact({
         nombre: newContact.nombre,
+        rol: newContact.cargo || '',
         cargo: newContact.cargo || '',
         email: newContact.email,
         telefono1: newContact.telefono1,

@@ -17,8 +17,8 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
     if (selectedFile) {
-      if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-          selectedFile.type === 'application/vnd.ms-excel') {
+      if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        selectedFile.type === 'application/vnd.ms-excel') {
         setFile(selectedFile)
         setError(null)
         setSuccess(false)
@@ -76,7 +76,7 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
           const errores: string[] = []
           clientes.forEach((cliente, idx) => {
             const filaExcel = idx + 2 // +2 porque la fila 1 es encabezado y el array es 0-based
-            const camposFaltantes = []
+            const camposFaltantes: string[] = []
             camposRequeridos.forEach(campo => {
               if (!cliente[campo]) camposFaltantes.push(campo)
             })
@@ -92,7 +92,7 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
 
           // Enviar datos al servidor
           const response = await axios.post('/api/clientes/import', { clientes })
-          
+
           toast.success('Clientes importados correctamente')
           setSuccess(true)
           if (onSuccess) {
@@ -156,7 +156,7 @@ const ImportClientsExcel = ({ onSuccess }: ImportClientsExcelProps) => {
             • direccion
           </Typography>
         </Paper>
-        
+
         <Box sx={{ mb: 2 }}>
           <input
             accept=".xlsx,.xls"
