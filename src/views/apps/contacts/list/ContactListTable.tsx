@@ -120,7 +120,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       if (!selectedContact) return
       setIsDeleteLoading(true)
 
-      const newStatus = selectedContact.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+      const newStatus: 'ACTIVO' | 'INACTIVO' = selectedContact.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
 
       const response = await fetch(`/api/contacts/${selectedContact.contactId}`, {
         method: 'PATCH',
@@ -548,9 +548,11 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
       <AddContact
         open={addUserOpen}
         handleClose={() => setAddUserOpen(!addUserOpen)}
-        userData={data}
-        setData={setData}
-        setFilteredData={setFilteredData}
+        onContactCreated={(newContact) => {
+          const updatedData = [...data, newContact]
+          setData(updatedData)
+          setFilteredData(updatedData)
+        }}
       />
       <Dialog
         open={openDialog}
