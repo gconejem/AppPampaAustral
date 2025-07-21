@@ -110,6 +110,8 @@ interface Cliente {
 }
 
 interface Obra {
+  region: string
+  comuna: string
   obraId: number
   nombreObra: string
   direccion: string

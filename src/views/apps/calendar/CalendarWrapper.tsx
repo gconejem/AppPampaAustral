@@ -72,21 +72,12 @@ const AppCalendar = () => {
       />
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
-          dispatch={dispatch}
-          calendarApi={calendarApi}
-          calendarStore={calendarStore}
-          setCalendarApi={setCalendarApi}
-          calendarsColor={calendarsColor}
-          handleLeftSidebarToggle={handleLeftSidebarToggle}
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
           selectedDate={selectedDate}
           selectedDateRange={selectedDateRange}
         />
       </div>
       <AddEventSidebar
-        dispatch={dispatch}
-        calendarApi={calendarApi}
-        calendarStore={calendarStore}
         addEventSidebarOpen={addEventSidebarOpen}
         handleAddEventSidebarToggle={handleAddEventSidebarToggle}
       />

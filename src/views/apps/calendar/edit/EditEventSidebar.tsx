@@ -534,7 +534,7 @@ const EditEventSidebar = ({
     const updatedContactos = contactos.filter((_, i) => i !== index)
     setContactos(updatedContactos)
   }
-  const handleAddContact = (contact) => {
+  const handleAddContact = (contact: any) => {
     if (!contact) return
     const newContact = {
       nombre: contact.nombre,
@@ -560,10 +560,12 @@ const EditEventSidebar = ({
   }
   const handleAgregarEquipo = () => {
     if (!equipoSeleccionado) return
-    const nuevoEquipo = {
+    const nuevoEquipo: EquipoAgendado = {
       id: equipoSeleccionado.id,
       codigo: equipoSeleccionado.codigo,
-      nombre: equipoSeleccionado.nombre
+      nombre: equipoSeleccionado.nombre,
+      cantidad: 1,
+      observacion: ''
     }
     setEquiposAgendados(prev => [...prev, nuevoEquipo])
     setEquipoSeleccionado(null)

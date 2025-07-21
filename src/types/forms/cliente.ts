@@ -105,6 +105,7 @@ export interface Cliente {
 }
 
 export interface Contacto {
+  rol: string
   contactId?: number
   nombre: string
   cargo: string
