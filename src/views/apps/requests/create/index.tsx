@@ -78,14 +78,22 @@ function CreateRequest() {
     return () => clearTimeout(timeoutId)
   }, [clienteSearch]) // Se ejecuta al montar y cuando cambia la búsqueda
 
-  // Cargar obras al montar el componente y cuando se busca
+  // Cargar obras cuando se selecciona un cliente o se busca
   useEffect(() => {
     const loadObras = async () => {
+      // Solo cargar obras si hay un cliente seleccionado
+      if (!selectedCliente) {
+        setObras([])
+        return
+      }
+
       try {
         setLoading(prev => ({ ...prev, obras: true }))
-        const url = obraSearch
-          ? `/api/obras?search=${encodeURIComponent(obraSearch)}`
-          : '/api/obras'
+        let url = `/api/obras?rut=${encodeURIComponent(selectedCliente.rut)}`
+
+        if (obraSearch) {
+          url += `&search=${encodeURIComponent(obraSearch)}`
+        }
 
         const response = await fetch(url)
         if (!response.ok) {
@@ -95,6 +103,7 @@ function CreateRequest() {
         setObras(data)
       } catch (error) {
         console.error('Error al cargar obras:', error)
+        setObras([])
       } finally {
         setLoading(prev => ({ ...prev, obras: false }))
       }
@@ -102,15 +111,21 @@ function CreateRequest() {
 
     const timeoutId = setTimeout(loadObras, obraSearch ? 300 : 0)
     return () => clearTimeout(timeoutId)
-  }, [obraSearch]) // Se ejecuta al montar y cuando cambia la búsqueda
+  }, [selectedCliente, obraSearch]) // Se ejecuta cuando cambia el cliente seleccionado o la búsqueda
 
   const handleSave = async () => {
     try {
+      const requestData = {
+        clienteId: selectedCliente?.clienteId || null,
+        obraId: selectedObra?.obraId || null
+      }
+
       const response = await fetch('/api/requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify(requestData)
       })
 
       if (!response.ok) {
@@ -155,6 +170,9 @@ function CreateRequest() {
                   value={selectedCliente}
                   onChange={(_, newValue) => {
                     setSelectedCliente(newValue)
+                    // Limpiar la obra seleccionada cuando cambie el cliente
+                    setSelectedObra(null)
+                    setObraSearch('')
                   }}
                   onInputChange={(_, value) => setClienteSearch(value)}
                   loading={loading.clientes}
@@ -187,13 +205,14 @@ function CreateRequest() {
                   onChange={(_, newValue) => setSelectedObra(newValue)}
                   onInputChange={(_, value) => setObraSearch(value)}
                   loading={loading.obras}
+                  disabled={!selectedCliente}
                   sx={{ width: 300 }}
-                  noOptionsText="No hay obras"
+                  noOptionsText={!selectedCliente ? "Selecciona un cliente primero" : "No hay obras para este cliente"}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label='Obra'
-                      placeholder='Buscar obra'
+                      placeholder={!selectedCliente ? 'Selecciona un cliente primero' : 'Buscar obra'}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
