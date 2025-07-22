@@ -273,10 +273,10 @@ const EditCard = ({ id }: { id: string }) => {
     ) {
       setFormData(prev => ({
         ...prev!,
-        subtotal: Number(subtotalTotal.toFixed(2)),
-        descuento: Number(descuentoTotal.toFixed(2)),
-        impuesto: Number(impuesto.toFixed(2)),
-        total: Number(total.toFixed(2))
+        subtotal: Number(subtotalTotal.toFixed(3)),
+        descuento: Number(descuentoTotal.toFixed(3)),
+        impuesto: Number(impuesto.toFixed(3)),
+        total: Number(total.toFixed(3))
       }))
     }
   }, [productRows, formData])
@@ -1629,10 +1629,10 @@ const EditCard = ({ id }: { id: string }) => {
                   {/* Mostrar IVA y Total con IVA */}
                   <Box sx={{ mt: 2, textAlign: 'right' }}>
                     <Typography>
-                      <strong>IVA (19%):</strong> UF {((formData.subtotal || 0) * 0.19).toFixed(2)}
+                      <strong>IVA (19%):</strong> UF {((formData.subtotal || 0) * 0.19).toFixed(3)}
                     </Typography>
                     <Typography variant='h6'>
-                      <strong>Total con IVA:</strong> UF {((formData.subtotal || 0) * 1.19).toFixed(2)}
+                      <strong>Total con IVA:</strong> UF {((formData.subtotal || 0) * 1.19).toFixed(3)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1866,7 +1866,7 @@ const EditCard = ({ id }: { id: string }) => {
                             <Typography>-</Typography>
                           ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
                             // Para precio por producto (readonly)
-                            <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                            <Typography>UF {Number(formData.subtotal || 0).toFixed(3)}</Typography>
                           ) : (
                             // Para precio total (editable)
                             <TextField
@@ -1887,16 +1887,16 @@ const EditCard = ({ id }: { id: string }) => {
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.descuento || 0).toFixed(2)}`}</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.descuento || 0).toFixed(3)}`}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
-                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.impuesto || 0).toFixed(2)}`}</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.impuesto || 0).toFixed(3)}`}</Typography>
                         </div>
                         <Divider className='my-2' />
                         <div className='flex justify-between'>
                           <Typography variant='h6'>Total:</Typography>
-                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.total || 0).toFixed(2)}`}</Typography>
+                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.total || 0).toFixed(3)}`}</Typography>
                         </div>
                       </div>
                     </div>
@@ -1910,20 +1910,20 @@ const EditCard = ({ id }: { id: string }) => {
                     <div className='min-w-[300px]'>
                       <div className='flex justify-between mb-2'>
                         <Typography>Total Neto:</Typography>
-                        <Typography>UF {Number(formData.subtotal || 0).toFixed(2)}</Typography>
+                        <Typography>UF {Number(formData.subtotal || 0).toFixed(3)}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>Descuento:</Typography>
-                        <Typography>UF {Number(formData.descuento || 0).toFixed(2)}</Typography>
+                        <Typography>UF {Number(formData.descuento || 0).toFixed(3)}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>IVA (19%):</Typography>
-                        <Typography>UF {Number(formData.impuesto || 0).toFixed(2)}</Typography>
+                        <Typography>UF {Number(formData.impuesto || 0).toFixed(3)}</Typography>
                       </div>
                       <Divider className='my-2' />
                       <div className='flex justify-between'>
                         <Typography variant='h6'>Total:</Typography>
-                        <Typography variant='h6'>UF {Number(formData.total || 0).toFixed(2)}</Typography>
+                        <Typography variant='h6'>UF {Number(formData.total || 0).toFixed(3)}</Typography>
                       </div>
                     </div>
                   </div>

@@ -826,7 +826,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
                 <TableCell align='right'>
-                  <Typography>UF {Number(row.total || 0).toFixed(3)}</Typography>
+                  <Typography>UF {parseFloat(Number(row.total || 0).toFixed(3))}</Typography>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
