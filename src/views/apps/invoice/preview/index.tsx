@@ -23,10 +23,10 @@ const Preview = ({ invoiceData, id }: { invoiceData?: InvoiceType; id: string })
         <PreviewHeader />
       </Grid>
       <Grid item xs={12} md={9}>
-        <PreviewCard invoiceData={invoiceData} id={id} />
+        <PreviewCard />
       </Grid>
       <Grid item xs={12} md={3}>
-        <PreviewActions id={id} onButtonClick={handleButtonClick} />
+        <PreviewActions />
       </Grid>
     </Grid>
   )

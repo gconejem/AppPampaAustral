@@ -13,15 +13,25 @@ export type InvoiceClientType = {
   companyEmail: string
 }
 
+interface Contacto {
+  nombre: string
+  cargo?: string
+  email?: string
+  telefono1?: string
+}
+
 export interface InvoiceType {
   id: number
   numeroCotizacion: string
+  tipoCotizacion: string
   fecha: string
   empresa: string
   comuna: string
   tipo: 'VALORES_UNITARIOS' | 'EMS' | 'MENSUAL' | string
-  contacto: string
+  contacto: Contacto | null
   estado: 'BORRADOR' | 'COTIZADA' | 'GESTIONADA' | 'ACEPTADA' | 'SIN_RESPUESTA' | 'RECHAZADA'
+  detalles: any[]
+  total: number
   cargo?: string
   email?: string
   telefono?: string

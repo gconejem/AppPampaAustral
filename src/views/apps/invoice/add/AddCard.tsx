@@ -428,7 +428,8 @@ const AddCard = ({
       router.push('/apps/invoice/list')
     } catch (error) {
       console.error('Error al guardar:', error)
-      toast.error(error.message || 'Error al guardar la cotización')
+      const errorMessage = error instanceof Error ? error.message : 'Error al guardar la cotización'
+      toast.error(errorMessage)
     }
   }
 
@@ -597,7 +598,7 @@ const AddCard = ({
           .sort()
 
         setTipos(uniqueTipos as string[])
-        setFamilias(uniqueFamilias as string[])
+        setFamilias(uniqueFamilias as { id: number; nombre: string; areaId: number }[])
         setProductos(data)
       })
       .catch(error => {
@@ -782,7 +783,7 @@ const AddCard = ({
   }, [productRows, calcularTotales]) */
 
   // Función para manejar el cambio de producto
-  const handleProductoChange = async (e: SelectChangeEvent<string>, index: number) => {
+  /* const handleProductoChange = async (e: SelectChangeEvent<string>, index: number) => {
     const selectedProductId = e.target.value
     const selectedProduct = productos.find(p => p.productoId?.toString() === selectedProductId)
 
@@ -845,7 +846,7 @@ const AddCard = ({
 
     setProductRows(newRows)
     // calcularTotales()
-  }
+  } */
 
   // Modificar el handleSelectProduct para incluir el cálculo inicial
   const handleSelectProduct = async (producto: ProductoType) => {
@@ -909,7 +910,7 @@ const AddCard = ({
           esSubProducto: true,
           subproductos: [],
           paqueteId: producto.productoId
-        }))
+        })) || []
 
         // Reemplazar la fila actual con el paquete y sus productos
         newRows.splice(activeRowIndex, 1, paqueteRow, ...productosRows)
@@ -1049,7 +1050,7 @@ const AddCard = ({
     window.open('/es/apps/invoice/preview', '_blank');
   };
 
-  const handleAddDetalle = () => {
+  /* const handleAddDetalle = () => {
     if (!selectData || !count) return
 
     const precio = Number(selectData.precio)
@@ -1094,7 +1095,7 @@ const AddCard = ({
     setSelectData(null)
     setCount(1)
     setDescuento(0)
-  }
+  } */
 
   // Función para agregar una nueva fila
   const handleAddRow = () => {
@@ -1484,7 +1485,7 @@ const AddCard = ({
     return true
   }
 
-  const canMoveDown = (index: number): boolean => {
+  /* const canMoveDown = (index: number): boolean => {
     if (index === productRows.length - 1) return false
     const currentRow = productRows[index]
     const nextRow = productRows[index + 1]
@@ -1495,7 +1496,7 @@ const AddCard = ({
     }
 
     return true
-  }
+  } */
 
   // Agregar después de los otros useEffect
   useEffect(() => {
@@ -1657,8 +1658,7 @@ const AddCard = ({
         const targetElement = document.querySelector(`[data-row-id="${autoOpenRowId}"] input`)
         if (targetElement) {
           (targetElement as HTMLElement).focus()
-            // Simular click para abrir el popover
-            (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+            ; (targetElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }))
           setAutoOpenRowId(null)
         }
       }, 100)
@@ -1673,8 +1673,8 @@ const AddCard = ({
     const autoNotas = getNotasDefault(formData.tipoCotizacion)
     // Solo actualiza si el valor actual de notas coincide con el último valor generado automáticamente
     if (formData.notas === lastAutoNotas) {
-      setFormData(prev => ({ ...prev, notas: autoNotas }))
-      setLastAutoNotas(autoNotas)
+      setFormData(prev => ({ ...prev, notas: autoNotas || '' }))
+      setLastAutoNotas(autoNotas || '')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.tipoCotizacion])
