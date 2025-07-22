@@ -329,7 +329,7 @@ const PreviewCard = () => {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
                         <TableCell align='right'>-</TableCell>
                       </>
                     );
@@ -351,8 +351,8 @@ const PreviewCard = () => {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
+                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
                       </>
                     );
                   }
@@ -372,8 +372,8 @@ const PreviewCard = () => {
                   return (
                     <>
                       <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                      <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(2)}</TableCell>
-                      <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(2)}</TableCell>
+                      <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
+                      <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(3)}</TableCell>
                     </>
                   );
                 };
@@ -464,16 +464,16 @@ const PreviewCard = () => {
             return (
               <>
                 <Typography>
-                  <strong>Subtotal:</strong> UF {subtotal.toFixed(2)}
+                  <strong>Subtotal:</strong> UF {subtotal.toFixed(3)}
                 </Typography>
                 <Typography>
-                  <strong>Descuento:</strong> UF {descuento.toFixed(2)}
+                  <strong>Descuento:</strong> UF {descuento.toFixed(3)}
                 </Typography>
                 <Typography>
-                  <strong>IVA (19%):</strong> UF {iva.toFixed(2)}
+                  <strong>IVA (19%):</strong> UF {iva.toFixed(3)}
                 </Typography>
                 <Typography variant='h6'>
-                  <strong>Total:</strong> UF {total.toFixed(2)}
+                  <strong>Total:</strong> UF {total.toFixed(3)}
                 </Typography>
               </>
             )

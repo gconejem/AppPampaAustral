@@ -134,7 +134,7 @@ model Producto {
   familia               String?
   esPaquete             Boolean               @default(false)
   tipo                  String
-  precio                Decimal?              @db.Decimal(10, 2)
+  precio                Decimal?              @db.Decimal(10, 3)
   estado                EstadoProducto        @default(ACTIVO)
   norma                 String?
   aplicaImpuesto        Boolean               @default(true)
@@ -159,7 +159,7 @@ model ProductoPaquete {
   productoId     Int
   cantidad       Int      @default(1)
   descripcion    String?
-  precioUnitario Decimal? @db.Decimal(10, 2)
+  precioUnitario Decimal? @db.Decimal(10, 3)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   paquete        Producto @relation("PaqueteProductos", fields: [paqueteId], references: [productoId])
@@ -262,11 +262,11 @@ model Comuna {
 }
 
 model ListaPrecio {
-  id        Int                   @id @default(autoincrement())
-  nombre    String
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  productos ProductoListaPrecio[]
+  id           Int                   @id @default(autoincrement())
+  nombre       String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  productos    ProductoListaPrecio[]
   cotizaciones Cotizacion[]
 }
 
@@ -274,7 +274,7 @@ model ProductoListaPrecio {
   id            Int         @id @default(autoincrement())
   productoId    Int
   listaPrecioId Int
-  precio        Decimal?    @db.Decimal(10, 2)
+  precio        Decimal?    @db.Decimal(10, 3)
   activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -285,74 +285,74 @@ model ProductoListaPrecio {
 }
 
 model Cotizacion {
-  id               Int                 @id @default(autoincrement())
-  numeroCotizacion String
-  tipoCotizacion   TipoCotizacion      @default(A)
-  fechaCreacion    DateTime            @default(now())
-  fechaInicio      DateTime
-  fechaFin         DateTime
-  estado           EstadoCotizacion    @default(BORRADOR)
-  nombreProyecto   String?
-  empresa          String?
-  ubicacion        String?
-  clienteId        Int?
-  obraId           Int?
-  vendedorId       String?
-  observaciones    String?
-  observacionGestion String?
-  notas            String?
-  textoGeneral     String?
-  version          String?
-  subtotal         Decimal             @db.Decimal(10, 2)
-  descuento        Decimal             @db.Decimal(10, 2)
-  impuesto         Decimal             @db.Decimal(10, 2)
-  total            Decimal             @db.Decimal(10, 2)
-  contactId        Int?
-  listaPrecioId    Int?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  formaPago        String?
-  superficieEMS    String?
-  antecedentesEMS  String?
-  plazoEntregaEMS  String?
-  duracionMensual  String?
-  jornadaMensual   String?
+  id                  Int                 @id @default(autoincrement())
+  numeroCotizacion    String
+  tipoCotizacion      TipoCotizacion      @default(A)
+  fechaCreacion       DateTime            @default(now())
+  fechaInicio         DateTime
+  fechaFin            DateTime
+  estado              EstadoCotizacion    @default(BORRADOR)
+  nombreProyecto      String?
+  empresa             String?
+  ubicacion           String?
+  clienteId           Int?
+  obraId              Int?
+  vendedorId          String?
+  observaciones       String?
+  observacionGestion  String?
+  notas               String?
+  textoGeneral        String?
+  version             String?
+  subtotal            Decimal             @db.Decimal(10, 3)
+  descuento           Decimal             @db.Decimal(10, 3)
+  impuesto            Decimal             @db.Decimal(10, 3)
+  total               Decimal             @db.Decimal(10, 3)
+  contactId           Int?
+  listaPrecioId       Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  formaPago           String?
+  superficieEMS       String?
+  antecedentesEMS     String?
+  plazoEntregaEMS     String?
+  duracionMensual     String?
+  jornadaMensual      String?
   antecedentesMensual String?
-  alcanceServicio  String?
+  alcanceServicio     String?
   antecedentesGeneral String?
   plazoEntregaGeneral String?
-  sinCantidad      Boolean?
-  precioProducto   Boolean?
-  precioTotal      Boolean?
-  cliente          Cliente?            @relation(fields: [clienteId], references: [clienteId])
-  contacto         Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
-  obra             Obra?               @relation(fields: [obraId], references: [obraId])
-  listaPrecio      ListaPrecio?        @relation(fields: [listaPrecioId], references: [id])
-  detalles         DetalleCotizacion[]
-  solicitudes      Solicitud[]
+  sinCantidad         Boolean?
+  precioProducto      Boolean?
+  precioTotal         Boolean?
+  cliente             Cliente?            @relation(fields: [clienteId], references: [clienteId])
+  contacto            Contacto?           @relation(fields: [contactId], references: [contactId], map: "Cotizacion_contactoId_fkey")
+  obra                Obra?               @relation(fields: [obraId], references: [obraId])
+  listaPrecio         ListaPrecio?        @relation(fields: [listaPrecioId], references: [id])
+  detalles            DetalleCotizacion[]
+  solicitudes         Solicitud[]
 
   @@index([contactId], map: "Cotizacion_contactoId_idx")
   @@index([listaPrecioId])
 }
 
 model DetalleCotizacion {
-  id                      Int                 @id @default(autoincrement())
-  cotizacionId            Int
-  productoId              Int
-  cantidad                Int
-  precioUnitario          Decimal             @db.Decimal(10, 2)
-  descuento               Decimal             @db.Decimal(10, 2)
-  subtotal                Decimal             @db.Decimal(10, 2)
-  esPaquete               Boolean             @default(false)
-  esSubProducto           Boolean             @default(false)
-  paqueteId               Int?
+  id                       Int                 @id @default(autoincrement())
+  cotizacionId             Int
+  productoId               Int
+  cantidad                 Int
+  precioUnitario           Decimal             @db.Decimal(10, 3)
+  descuento                Decimal             @db.Decimal(10, 3)
+  subtotal                 Decimal             @db.Decimal(10, 3)
+  esPaquete                Boolean             @default(false)
+  esSubProducto            Boolean             @default(false)
+  paqueteId                Int?
   descripcionPersonalizada String?
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
-  cotizacion              Cotizacion          @relation(fields: [cotizacionId], references: [id])
-  detallePaquete          DetalleCotizacion?  @relation("DetallesPaquete", fields: [paqueteId], references: [id])
-  subDetalles             DetalleCotizacion[] @relation("DetallesPaquete")
-  producto                Producto            @relation(fields: [productoId], references: [productoId])
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  cotizacion               Cotizacion          @relation(fields: [cotizacionId], references: [id])
+  detallePaquete           DetalleCotizacion?  @relation("DetallesPaquete", fields: [paqueteId], references: [id])
+  subDetalles              DetalleCotizacion[] @relation("DetallesPaquete")
+  producto                 Producto            @relation(fields: [productoId], references: [productoId])
 
   @@index([cotizacionId])
   @@index([productoId])
@@ -708,20 +708,20 @@ model Probeta {
 }
 
 model Area {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  familias    Familia[]
+  id        Int       @id @default(autoincrement())
+  nombre    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  familias  Familia[]
 }
 
 model Familia {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @unique
-  areaId      Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  area        Area      @relation(fields: [areaId], references: [id])
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  areaId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  area      Area     @relation(fields: [areaId], references: [id])
 
   @@index([areaId])
 }

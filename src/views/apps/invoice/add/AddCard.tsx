@@ -769,10 +769,11 @@ const AddCard = ({
     const iva = baseImponible * 0.19
     const totalFinal = baseImponible + iva
 
-    if (subtotal !== subtotalTotal) setSubtotal(parseFloat(subtotalTotal.toFixed(2)))
-    if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(2)))
-    if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(2)))
-    if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(2)))
+    // Usar 4 decimales para mayor precisión en UF
+    if (subtotal !== subtotalTotal) setSubtotal(parseFloat(subtotalTotal.toFixed(3)))
+    if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(3)))
+    if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(3)))
+    if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(3)))
   }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioProducto, formData.precioTotal])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
@@ -2620,20 +2621,20 @@ const AddCard = ({
                       <>
                         <div className='flex justify-between mb-2'>
                           <Typography>Subtotal:</Typography>
-                          <Typography>UF {subtotal?.toFixed(2) || '0.00'}</Typography>
+                          <Typography>UF {subtotal?.toFixed(3) || '0.000'}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>UF {descuentoTotal?.toFixed(2) || '0.00'}</Typography>
+                          <Typography>UF {descuentoTotal?.toFixed(3) || '0.000'}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
-                          <Typography>UF {impuesto?.toFixed(2) || '0.00'}</Typography>
+                          <Typography>UF {impuesto?.toFixed(3) || '0.000'}</Typography>
                         </div>
                         <Divider className='my-2' />
                         <div className='flex justify-between'>
                           <Typography variant='h6'>Total:</Typography>
-                          <Typography variant='h6'>UF {total?.toFixed(2) || '0.00'}</Typography>
+                          <Typography variant='h6'>UF {total?.toFixed(3) || '0.000'}</Typography>
                         </div>
                       </>
                     ))}

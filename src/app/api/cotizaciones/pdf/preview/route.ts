@@ -343,7 +343,7 @@ Condiciones para terreno y accesos
         if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
           return `
                       <td style='text-align:right;'>-</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
                       <td style='text-align:right;'>-</td>
                     `;
         }
@@ -361,8 +361,8 @@ Condiciones para terreno y accesos
         if (cotizacion.sinCantidad && cotizacion.precioProducto) {
           return `
                       <td style='text-align:right;'>-</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
+                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
                     `;
         }
 
@@ -378,8 +378,8 @@ Condiciones para terreno y accesos
         // Caso normal: mostrar valores
         return `
                     <td style='text-align:right;'>${detalle.cantidad || 0}</td>
-                    <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(2)}</td>
-                    <td style='text-align:right;'>UF ${Number(detalle.totalNetoUF || 0).toFixed(2)}</td>
+                    <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
+                    <td style='text-align:right;'>UF ${Number(detalle.totalNetoUF || 0).toFixed(3)}</td>
                   `;
       };
 
@@ -460,10 +460,10 @@ Condiciones para terreno y accesos
                   `;
         }
         return `
-                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
-                  <div><strong>Descuento:</strong> UF 0.00</div>
-                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
-                  <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
+                  <div><strong>Descuento:</strong> UF 0.0000</div>
+                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
+                  <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
                 `;
       } else if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
         // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
@@ -487,10 +487,10 @@ Condiciones para terreno y accesos
                   `;
         }
         return `
-                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
-                  <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
-                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
-                  <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
+                  <div><strong>Descuento:</strong> UF ${descuento.toFixed(3)}</div>
+                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
+                  <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
                 `;
       }
     })()}

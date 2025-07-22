@@ -322,7 +322,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
                 if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                  return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                  return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
                 }
                 // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                 if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
@@ -339,7 +339,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar precio
-                return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
               })()}</td>
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
@@ -361,7 +361,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(3);
               })()}</td>
                       </tr>`;
           } else if (!detalle.esSubProducto) {
@@ -398,7 +398,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
                 if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                  return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                  return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
                 }
                 // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                 if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
@@ -415,7 +415,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar precio
-                return 'UF ' + Number(detalle.precioUnitario).toFixed(2);
+                return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
               })()}</td>
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
@@ -437,7 +437,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(2);
+                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(3)
               })()}</td>
                       </tr>`;
           }
@@ -466,10 +466,10 @@ Condiciones para terreno y accesos
                 `;
       }
       return `
-                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(2)}</div>
-                <div><strong>Descuento:</strong> UF ${descuento.toFixed(2)}</div>
-                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(2)}</div>
-                <div><strong>Total: UF ${total.toFixed(2)}</strong></div>
+                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
+                <div><strong>Descuento:</strong> UF ${descuento.toFixed(3)}</div>
+                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
+                <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
               `;
     })()}
           </div>
