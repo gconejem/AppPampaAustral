@@ -826,7 +826,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
                 <TableCell align='right'>
-                  <Typography>UF {Number(row.total || 0).toFixed(2)}</Typography>
+                  <Typography>UF {Number(row.total || 0).toFixed(3)}</Typography>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
@@ -1196,7 +1196,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                 {(() => {
                                   // Tipo A con sinCantidad true - mostrar guión
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
-                                    return `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`;
+                                    return `UF ${Number(detalle.precioUnitario || 0).toFixed(3)}`;
                                   }
                                   // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
@@ -1213,7 +1213,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     return '-';
                                   }
                                   // Para todos los demás casos, mostrar precio
-                                  return `UF ${Number(detalle.precioUnitario || 0).toFixed(2)}`;
+                                  return `UF ${Number(detalle.precioUnitario || 0).toFixed(3)}`;
                                 })()}
                               </TableCell>
                               <TableCell align='right'>
@@ -1237,7 +1237,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     return '-';
                                   }
                                   // Para todos los demás casos, mostrar total
-                                  return `UF ${Number(detalle.subtotal || 0).toFixed(2)}`;
+                                  return `UF ${Number(detalle.subtotal || 0).toFixed(3)}`;
                                 })()}
                               </TableCell>
                             </TableRow>
