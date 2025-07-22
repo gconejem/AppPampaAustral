@@ -41,6 +41,17 @@ import { toast } from 'react-hot-toast'
 // Component Imports
 import Logo from '@components/layout/shared/Logo'
 
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
+
 // Agregar ROLES_CONTACTO para mapeo de cargos
 const ROLES_CONTACTO = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
@@ -1709,10 +1720,10 @@ Consideraciones adicionales y requisitos especiales
                   {/* Mostrar IVA y Total con IVA */}
                   <Box sx={{ mt: 2, textAlign: 'right' }}>
                     <Typography>
-                      <strong>IVA (19%):</strong> UF {((formData.subtotal || 0) * 0.19).toFixed(3)}
+                      <strong>IVA (19%):</strong> UF {formatUF((formData.subtotal || 0) * 0.19)}
                     </Typography>
                     <Typography variant='h6'>
-                      <strong>Total con IVA:</strong> UF {((formData.subtotal || 0) * 1.19).toFixed(3)}
+                      <strong>Total con IVA:</strong> UF {formatUF((formData.subtotal || 0) * 1.19)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -1951,7 +1962,7 @@ Consideraciones adicionales y requisitos especiales
                             <Typography>-</Typography>
                           ) : (['B', 'C', 'D'].includes(formData.tipoCotizacion) && formData.precioProducto && !formData.precioTotal) ? (
                             // Para precio por producto (readonly)
-                            <Typography>UF {Number(formData.subtotal || 0).toFixed(3)}</Typography>
+                            <Typography>UF {formatUF(formData.subtotal)}</Typography>
                           ) : (
                             // Para precio total (editable)
                             <TextField
@@ -1972,16 +1983,16 @@ Consideraciones adicionales y requisitos especiales
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.descuento || 0).toFixed(3)}`}</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${formatUF(formData.descuento)}`}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
-                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.impuesto || 0).toFixed(3)}`}</Typography>
+                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${formatUF(formData.impuesto)}`}</Typography>
                         </div>
                         <Divider className='my-2' />
                         <div className='flex justify-between'>
                           <Typography variant='h6'>Total:</Typography>
-                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${Number(formData.total || 0).toFixed(3)}`}</Typography>
+                          <Typography variant='h6'>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${formatUF(formData.total)}`}</Typography>
                         </div>
                       </div>
                     </div>
@@ -1995,20 +2006,20 @@ Consideraciones adicionales y requisitos especiales
                     <div className='min-w-[300px]'>
                       <div className='flex justify-between mb-2'>
                         <Typography>Total Neto:</Typography>
-                        <Typography>UF {Number(formData.subtotal || 0).toFixed(3)}</Typography>
+                        <Typography>UF {formatUF(formData.subtotal)}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>Descuento:</Typography>
-                        <Typography>UF {Number(formData.descuento || 0).toFixed(3)}</Typography>
+                        <Typography>UF {formatUF(formData.descuento)}</Typography>
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>IVA (19%):</Typography>
-                        <Typography>UF {Number(formData.impuesto || 0).toFixed(3)}</Typography>
+                        <Typography>UF {formatUF(formData.impuesto)}</Typography>
                       </div>
                       <Divider className='my-2' />
                       <div className='flex justify-between'>
                         <Typography variant='h6'>Total:</Typography>
-                        <Typography variant='h6'>UF {Number(formData.total || 0).toFixed(3)}</Typography>
+                        <Typography variant='h6'>UF {formatUF(formData.total)}</Typography>
                       </div>
                     </div>
                   </div>

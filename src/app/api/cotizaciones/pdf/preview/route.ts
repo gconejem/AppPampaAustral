@@ -15,6 +15,17 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
+
 // Función auxiliar para formatear fechas
 const formatearFecha = (fecha: string) => {
   if (!fecha) return 'No especificada'
@@ -343,7 +354,7 @@ Condiciones para terreno y accesos
         if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
           return `
                       <td style='text-align:right;'>-</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
+                      <td style='text-align:right;'>UF ${formatUF(detalle.precioUnitarioUF)}</td>
                       <td style='text-align:right;'>-</td>
                     `;
         }
@@ -361,8 +372,8 @@ Condiciones para terreno y accesos
         if (cotizacion.sinCantidad && cotizacion.precioProducto) {
           return `
                       <td style='text-align:right;'>-</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
-                      <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
+                      <td style='text-align:right;'>UF ${formatUF(detalle.precioUnitarioUF)}</td>
+                      <td style='text-align:right;'>UF ${formatUF(detalle.precioUnitarioUF)}</td>
                     `;
         }
 
@@ -378,8 +389,8 @@ Condiciones para terreno y accesos
         // Caso normal: mostrar valores
         return `
                     <td style='text-align:right;'>${detalle.cantidad || 0}</td>
-                    <td style='text-align:right;'>UF ${Number(detalle.precioUnitarioUF || 0).toFixed(3)}</td>
-                    <td style='text-align:right;'>UF ${Number(detalle.totalNetoUF || 0).toFixed(3)}</td>
+                    <td style='text-align:right;'>UF ${formatUF(detalle.precioUnitarioUF)}</td>
+                    <td style='text-align:right;'>UF ${formatUF(detalle.totalNetoUF)}</td>
                   `;
       };
 
@@ -460,10 +471,10 @@ Condiciones para terreno y accesos
                   `;
         }
         return `
-                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
-                  <div><strong>Descuento:</strong> UF 0.0000</div>
-                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
-                  <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
+                  <div><strong>Subtotal:</strong> UF ${formatUF(subtotal)}</div>
+                  <div><strong>Descuento:</strong> UF 0,000</div>
+                  <div><strong>IVA (19%):</strong> UF ${formatUF(iva)}</div>
+                  <div><strong>Total: UF ${formatUF(total)}</strong></div>
                 `;
       } else if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
         // Cotización tipo A (Valores Unitarios) con sinCantidad true - mostrar guiones
@@ -487,10 +498,10 @@ Condiciones para terreno y accesos
                   `;
         }
         return `
-                  <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
-                  <div><strong>Descuento:</strong> UF ${descuento.toFixed(3)}</div>
-                  <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
-                  <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
+                  <div><strong>Subtotal:</strong> UF ${formatUF(subtotal)}</div>
+                  <div><strong>Descuento:</strong> UF ${formatUF(descuento)}</div>
+                  <div><strong>IVA (19%):</strong> UF ${formatUF(iva)}</div>
+                  <div><strong>Total: UF ${formatUF(total)}</strong></div>
                 `;
       }
     })()}

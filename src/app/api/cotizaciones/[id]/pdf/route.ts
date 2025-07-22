@@ -17,6 +17,17 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
+
 const formatearFecha = (fecha: string | Date) => {
   if (!fecha) return 'No especificada'
 
@@ -322,7 +333,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
                 if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                  return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
+                  return 'UF ' + formatUF(detalle.precioUnitario);
                 }
                 // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                 if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
@@ -339,7 +350,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar precio
-                return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
+                return 'UF ' + formatUF(detalle.precioUnitario);
               })()}</td>
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
@@ -361,7 +372,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(3);
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal);
               })()}</td>
                       </tr>`;
           } else if (!detalle.esSubProducto) {
@@ -398,7 +409,7 @@ Condiciones para terreno y accesos
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
                 if (cotizacion.tipoCotizacion === 'A' && cotizacion.sinCantidad) {
-                  return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
+                  return 'UF ' + formatUF(detalle.precioUnitario);
                 }
                 // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                 if (['B', 'C', 'D'].includes(cotizacion.tipoCotizacion) &&
@@ -415,7 +426,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar precio
-                return 'UF ' + Number(detalle.precioUnitario).toFixed(3);
+                return 'UF ' + formatUF(detalle.precioUnitario);
               })()}</td>
                         <td style="text-align:right;">${(() => {
                 // Tipo A con sinCantidad true - mostrar guión
@@ -437,7 +448,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + Number(detalle.subtotal).toFixed(3)
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal)
               })()}</td>
                       </tr>`;
           }
@@ -466,10 +477,10 @@ Condiciones para terreno y accesos
                 `;
       }
       return `
-                <div><strong>Subtotal:</strong> UF ${subtotal.toFixed(3)}</div>
-                <div><strong>Descuento:</strong> UF ${descuento.toFixed(3)}</div>
-                <div><strong>IVA (19%):</strong> UF ${iva.toFixed(3)}</div>
-                <div><strong>Total: UF ${total.toFixed(3)}</strong></div>
+                <div><strong>Subtotal:</strong> UF ${formatUF(subtotal)}</div>
+                <div><strong>Descuento:</strong> UF ${formatUF(descuento)}</div>
+                <div><strong>IVA (19%):</strong> UF ${formatUF(iva)}</div>
+                <div><strong>Total: UF ${formatUF(total)}</strong></div>
               `;
     })()}
           </div>

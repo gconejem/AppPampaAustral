@@ -19,6 +19,17 @@ import Logo from '@components/layout/shared/Logo'
 // Style Imports
 import './print.css'
 
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
+
 // Función auxiliar para formatear fechas
 const formatearFecha = (fecha: string) => {
   if (!fecha) return 'No especificada'
@@ -329,7 +340,7 @@ const PreviewCard = () => {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
+                        <TableCell align='right'>UF {formatUF(item.precioUnitarioUF)}</TableCell>
                         <TableCell align='right'>-</TableCell>
                       </>
                     );
@@ -351,8 +362,8 @@ const PreviewCard = () => {
                     return (
                       <>
                         <TableCell align='right'>-</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
-                        <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
+                        <TableCell align='right'>UF {formatUF(item.precioUnitarioUF)}</TableCell>
+                        <TableCell align='right'>UF {formatUF(item.precioUnitarioUF)}</TableCell>
                       </>
                     );
                   }
@@ -372,8 +383,8 @@ const PreviewCard = () => {
                   return (
                     <>
                       <TableCell align='right'>{item.cantidad || 0}</TableCell>
-                      <TableCell align='right'>UF {Number(item.precioUnitarioUF || 0).toFixed(3)}</TableCell>
-                      <TableCell align='right'>UF {Number(item.totalNetoUF || 0).toFixed(3)}</TableCell>
+                      <TableCell align='right'>UF {formatUF(item.precioUnitarioUF)}</TableCell>
+                      <TableCell align='right'>UF {formatUF(item.totalNetoUF)}</TableCell>
                     </>
                   );
                 };
@@ -464,16 +475,16 @@ const PreviewCard = () => {
             return (
               <>
                 <Typography>
-                  <strong>Subtotal:</strong> UF {subtotal.toFixed(3)}
+                  <strong>Subtotal:</strong> UF {formatUF(subtotal)}
                 </Typography>
                 <Typography>
-                  <strong>Descuento:</strong> UF {descuento.toFixed(3)}
+                  <strong>Descuento:</strong> UF {formatUF(descuento)}
                 </Typography>
                 <Typography>
-                  <strong>IVA (19%):</strong> UF {iva.toFixed(3)}
+                  <strong>IVA (19%):</strong> UF {formatUF(iva)}
                 </Typography>
                 <Typography variant='h6'>
-                  <strong>Total:</strong> UF {total.toFixed(3)}
+                  <strong>Total:</strong> UF {formatUF(total)}
                 </Typography>
               </>
             )

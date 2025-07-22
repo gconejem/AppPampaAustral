@@ -55,6 +55,17 @@ const generateUniqueId = () => {
   return Date.now() + idCounter + Math.random() * 1000;
 };
 
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
+
 // Interfaces locales
 interface InvoiceType {
   id: number
@@ -762,7 +773,14 @@ const AddCard = ({
       subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.precioUnitarioUF || 0), 0)
     } else {
       // Calcular el subtotal sumando todos los totales netos (caso normal)
+      console.log('ProductRows para cálculo de subtotal:', productRows.map(row => ({
+        id: row.id,
+        precioUnitarioUF: row.precioUnitarioUF,
+        totalNetoUF: row.totalNetoUF,
+        cantidad: row.cantidad
+      })))
       subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.totalNetoUF || 0), 0)
+      console.log('Subtotal calculado:', subtotalTotal)
     }
 
     const descuento = Number(formData.descuento || 0)
@@ -771,10 +789,10 @@ const AddCard = ({
     const totalFinal = baseImponible + iva
 
     // Usar 4 decimales para mayor precisión en UF
-    if (subtotal !== subtotalTotal) setSubtotal(parseFloat(subtotalTotal.toFixed(3)))
-    if (descuentoTotal !== descuento) setDescuentoTotal(parseFloat(descuento.toFixed(3)))
-    if (impuesto !== iva) setImpuesto(parseFloat(iva.toFixed(3)))
-    if (total !== totalFinal) setTotal(parseFloat(totalFinal.toFixed(3)))
+    if (subtotal !== subtotalTotal) setSubtotal(Number(subtotalTotal.toFixed(3)))
+    if (descuentoTotal !== descuento) setDescuentoTotal(Number(descuento.toFixed(3)))
+    if (impuesto !== iva) setImpuesto(Number(iva.toFixed(3)))
+    if (total !== totalFinal) setTotal(Number(totalFinal.toFixed(3)))
   }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioProducto, formData.precioTotal])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
@@ -808,8 +826,8 @@ const AddCard = ({
           servicio: pp.nombre || pp.producto?.nombre || '',
           descripcion: pp.descripcion || pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          precioUnitarioUF: Number((pp.precio || pp.producto?.precio || 0).toFixed(3)),
+          totalNetoUF: Number(((pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1)).toFixed(3)),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
@@ -858,7 +876,7 @@ const AddCard = ({
       (lp: ProductoListaPrecio) => lp.listaPrecioId === selectedListaPrecio
     )
 
-    const precioFinal = precioEnLista?.precio || producto.precio || 0
+    const precioFinal = Number(precioEnLista?.precio || producto.precio || 0)
 
     if (activeRowIndex !== null) {
       const newRows = [...productRows]
@@ -890,8 +908,8 @@ const AddCard = ({
           servicio: nombreCompleto,
           descripcion: producto.descripcion || '',
           cantidad: 1,
-          precioUnitarioUF: precioFinal,
-          totalNetoUF: precioFinal,
+          precioUnitarioUF: Number(precioFinal.toFixed(3)),
+          totalNetoUF: Number(precioFinal.toFixed(3)),
           area: producto.area || '',
           esPaquete: true,
           subproductos: []
@@ -904,8 +922,8 @@ const AddCard = ({
           servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
           descripcion: pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: pp.precio || pp.producto?.precio || 0,
-          totalNetoUF: (pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1),
+          precioUnitarioUF: Number(Number(pp.precio || pp.producto?.precio || 0).toFixed(3)),
+          totalNetoUF: Number((Number(pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1)).toFixed(3)),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: [],
@@ -923,8 +941,8 @@ const AddCard = ({
           servicio: nombreCompleto,
           descripcion: producto.descripcion || '',
           area: producto.area || '',
-          precioUnitarioUF: precioFinal,
-          totalNetoUF: precioFinal * (newRows[activeRowIndex].cantidad || 1)
+          precioUnitarioUF: Number(precioFinal.toFixed(3)),
+          totalNetoUF: Number((precioFinal * (newRows[activeRowIndex].cantidad || 1)).toFixed(3))
         }
       }
 
@@ -937,17 +955,21 @@ const AddCard = ({
 
   // Modificar los manejadores de cambio de precio y cantidad
   const handlePrecioChange = (index: number, precioUF: number) => {
+    console.log('handlePrecioChange - Input:', { index, precioUF, type: typeof precioUF })
     const newRows = [...productRows]
     const cantidad = Number(newRows[index].cantidad || 1)
     const precio = Number(precioUF)
 
+    console.log('handlePrecioChange - Valores:', { cantidad, precio, total: precio * cantidad })
+
     newRows[index] = {
       ...newRows[index],
       precioUnitarioUF: precio,
-      totalNetoUF: precio * cantidad, // Mantener el cálculo normal, sinCantidad solo deshabilita en UI
+      totalNetoUF: Number((precio * cantidad).toFixed(3)), // Redondear a 3 decimales para UF
       precioEditado: true // Marca como editado manualmente
     }
 
+    console.log('handlePrecioChange - Nueva fila:', newRows[index])
     setProductRows(newRows)
   }
 
@@ -959,7 +981,7 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       cantidad: cantidadNum,
-      totalNetoUF: precioUF * cantidadNum // Mantener el cálculo normal, sinCantidad solo deshabilita en UI
+      totalNetoUF: Number((precioUF * cantidadNum).toFixed(3)) // Redondear a 3 decimales para UF
     }
 
     setProductRows(newRows)
@@ -1529,14 +1551,14 @@ const AddCard = ({
           (lp: ProductoListaPrecio) => lp.listaPrecioId === selectedListaPrecio
         )
 
-        const precioFinal = precioEnLista?.precio || producto.precio || 0
+        const precioFinal = Number(precioEnLista?.precio || producto.precio || 0)
 
         // Solo actualiza si el precio NO ha sido editado manualmente
         if (!row.precioEditado && row.precioUnitarioUF !== precioFinal) {
           return {
             ...row,
-            precioUnitarioUF: precioFinal,
-            totalNetoUF: precioFinal * (row.cantidad || 1)
+            precioUnitarioUF: Number(precioFinal.toFixed(3)),
+            totalNetoUF: Number((precioFinal * (row.cantidad || 1)).toFixed(3))
           }
         }
 
@@ -1600,7 +1622,7 @@ const AddCard = ({
         ...row,
         // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
         cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
-        totalNetoUF: sinCantidad ? row.totalNetoUF : Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)
+        totalNetoUF: sinCantidad ? row.totalNetoUF : Number((Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)).toFixed(3))
       }))
     )
   }, [sinCantidad])
@@ -2621,20 +2643,20 @@ const AddCard = ({
                       <>
                         <div className='flex justify-between mb-2'>
                           <Typography>Subtotal:</Typography>
-                          <Typography>UF {subtotal?.toFixed(3) || '0.000'}</Typography>
+                          <Typography>UF {formatUF(subtotal)}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>UF {descuentoTotal?.toFixed(3) || '0.000'}</Typography>
+                          <Typography>UF {formatUF(descuentoTotal)}</Typography>
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
-                          <Typography>UF {impuesto?.toFixed(3) || '0.000'}</Typography>
+                          <Typography>UF {formatUF(impuesto)}</Typography>
                         </div>
                         <Divider className='my-2' />
                         <div className='flex justify-between'>
                           <Typography variant='h6'>Total:</Typography>
-                          <Typography variant='h6'>UF {total?.toFixed(3) || '0.000'}</Typography>
+                          <Typography variant='h6'>UF {formatUF(total)}</Typography>
                         </div>
                       </>
                     ))}

@@ -5,6 +5,17 @@ import { useState, useEffect, Fragment } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
+
+// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+const formatUF = (value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,000';
+
+  // Usar toFixed(3) para asegurar exactamente 3 decimales
+  const formatted = Number(value).toFixed(3);
+
+  // Reemplazar punto por coma para formato español
+  return formatted.replace('.', ',');
+};
 import TableContainer from '@mui/material/TableContainer'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
@@ -826,7 +837,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   <Chip label={row.estado} color={getEstadoColor(row.estado)} variant='outlined' />
                 </TableCell>
                 <TableCell align='right'>
-                  <Typography>UF {parseFloat(Number(row.total || 0).toFixed(3))}</Typography>
+                  <Typography>UF {formatUF(row.total)}</Typography>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
@@ -1196,7 +1207,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                 {(() => {
                                   // Tipo A con sinCantidad true - mostrar guión
                                   if (selectedCotizacion.tipoCotizacion === 'A' && selectedCotizacion.sinCantidad) {
-                                    return `UF ${Number(detalle.precioUnitario || 0).toFixed(3)}`;
+                                    return `UF ${formatUF(detalle.precioUnitario)}`;
                                   }
                                   // Tipos B, C, D con sinCantidad false, precioProducto false, precioTotal true - mostrar guión
                                   if (['B', 'C', 'D'].includes(selectedCotizacion.tipoCotizacion) &&
@@ -1213,7 +1224,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     return '-';
                                   }
                                   // Para todos los demás casos, mostrar precio
-                                  return `UF ${Number(detalle.precioUnitario || 0).toFixed(3)}`;
+                                  return `UF ${formatUF(detalle.precioUnitario)}`;
                                 })()}
                               </TableCell>
                               <TableCell align='right'>
@@ -1237,7 +1248,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                                     return '-';
                                   }
                                   // Para todos los demás casos, mostrar total
-                                  return `UF ${Number(detalle.subtotal || 0).toFixed(3)}`;
+                                  return `UF ${formatUF(detalle.subtotal)}`;
                                 })()}
                               </TableCell>
                             </TableRow>
@@ -1270,16 +1281,16 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   ) : (
                     <>
                       <Typography>
-                        <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(3)}
+                        <strong>Subtotal:</strong> UF {formatUF(selectedCotizacion.subtotal)}
                       </Typography>
                       <Typography>
-                        <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(3)}
+                        <strong>Descuento:</strong> UF {formatUF(selectedCotizacion.descuento)}
                       </Typography>
                       <Typography>
-                        <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(3)}
+                        <strong>IVA (19%):</strong> UF {formatUF(selectedCotizacion.impuesto)}
                       </Typography>
                       <Typography variant='h6' sx={{ mt: 1 }}>
-                        <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(3)}
+                        <strong>Total:</strong> UF {formatUF(selectedCotizacion.total)}
                       </Typography>
                     </>
                   )}
