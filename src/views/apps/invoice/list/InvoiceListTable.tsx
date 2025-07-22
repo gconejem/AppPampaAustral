@@ -1270,16 +1270,16 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
                   ) : (
                     <>
                       <Typography>
-                        <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(2)}
+                        <strong>Subtotal:</strong> UF {Number(selectedCotizacion.subtotal || 0).toFixed(3)}
                       </Typography>
                       <Typography>
-                        <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(2)}
+                        <strong>Descuento:</strong> UF {Number(selectedCotizacion.descuento || 0).toFixed(3)}
                       </Typography>
                       <Typography>
-                        <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(2)}
+                        <strong>IVA (19%):</strong> UF {Number(selectedCotizacion.impuesto || 0).toFixed(3)}
                       </Typography>
                       <Typography variant='h6' sx={{ mt: 1 }}>
-                        <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(2)}
+                        <strong>Total:</strong> UF {Number(selectedCotizacion.total || 0).toFixed(3)}
                       </Typography>
                     </>
                   )}
