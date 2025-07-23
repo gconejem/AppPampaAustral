@@ -992,13 +992,13 @@ const ClientListTable = ({ userData, setData }: Props) => {
           title={<Typography variant='h5'>Clientes</Typography>}
           action={
             <div className='flex gap-2'>
-              <Button
+              {/* <Button
                 variant='outlined'
                 onClick={() => setImportDialogOpen(true)}
                 startIcon={<i className='ri-upload-2-line' />}
               >
                 Importar
-              </Button>
+              </Button> */}
               <Button
                 variant='contained'
                 onClick={() => setAddUserOpen(true)}
