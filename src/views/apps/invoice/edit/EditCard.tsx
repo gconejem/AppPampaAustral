@@ -266,7 +266,13 @@ const EditCard = ({ id }: { id: string }) => {
       // Calcular el subtotal sumando los totales netos de las filas
       // Esto incluye el caso de sinCantidad: true, precioProducto: true, precioTotal: false
       // donde SÍ queremos recalcular cuando el usuario cambia cantidades/precios
-      subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+      // Excluir subproductos del cálculo
+      subtotalTotal = productRows.reduce((acc, row) => {
+        if (row.esSubProducto) {
+          return acc // No sumar subproductos al subtotal
+        }
+        return acc + (Number(row.totalNetoUF) || 0)
+      }, 0)
     }
 
 
@@ -634,15 +640,6 @@ const EditCard = ({ id }: { id: string }) => {
 
       // Agregar los productos del paquete como subfilas
       const productosRows = (productosEnPaquete || []).map((pp: any) => {
-        let precioProducto = pp.producto?.precio || 0;
-        if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
-          const listaPrecio = pp.producto.listasPrecios.find(
-            (lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId
-          );
-          if (listaPrecio) {
-            precioProducto = listaPrecio.precio;
-          }
-        }
         // Armar nombre del subproducto: nombre - norma (si existe)
         const nombreSubServicio = pp.producto?.norma
           ? `${pp.producto?.nombre} - ${pp.producto?.norma}`
@@ -653,8 +650,8 @@ const EditCard = ({ id }: { id: string }) => {
           servicio: nombreSubServicio,
           descripcion: pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: precioProducto,
-          totalNetoUF: precioProducto * (pp.cantidad || 1),
+          precioUnitarioUF: 0, // Precio unitario siempre 0 para subproductos
+          totalNetoUF: 0, // Total neto siempre 0 para subproductos
           area: pp.producto?.area || '',
           esSubProducto: true,
           paqueteId: producto.productoId,
@@ -666,14 +663,18 @@ const EditCard = ({ id }: { id: string }) => {
       newRows.splice(activeRowIndex + 1, 0, ...productosRows);
     } else {
       // Actualizar la fila actual con el producto seleccionado
+      const isSubProducto = newRows[activeRowIndex].esSubProducto;
+      const precioUnitario = isSubProducto ? 0 : precioFinal;
+      const totalNeto = isSubProducto ? 0 : precioFinal;
+
       newRows[activeRowIndex] = {
         ...newRows[activeRowIndex],
         productoId: producto.productoId.toString(),
         servicio: nombreServicio,
         descripcion: producto.descripcion || '',
         cantidad: 1,
-        precioUnitarioUF: precioFinal,
-        totalNetoUF: precioFinal,
+        precioUnitarioUF: precioUnitario,
+        totalNetoUF: totalNeto,
         area: producto.area || '',
         esSubProducto: newRows[activeRowIndex].esSubProducto // Mantener el estado de subproducto
       };

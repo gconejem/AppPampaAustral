@@ -228,7 +228,13 @@ const DuplicateCard = ({ id }: { id: string }) => {
       subtotalTotal = Number(formData.subtotal || 0)
     } else {
       // Calcular el subtotal sumando los totales netos de las filas
-      subtotalTotal = productRows.reduce((acc, row) => acc + (Number(row.totalNetoUF) || 0), 0)
+      // Excluir subproductos del cálculo
+      subtotalTotal = productRows.reduce((acc, row) => {
+        if (row.esSubProducto) {
+          return acc // No sumar subproductos al subtotal
+        }
+        return acc + (Number(row.totalNetoUF) || 0)
+      }, 0)
     }
 
     const descuentoTotal = Number(formData.descuento || 0)
@@ -501,8 +507,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         servicio: nombreServicio,
         descripcion: producto.descripcion || '',
         cantidad: 1,
-        precioUnitarioUF: precioFinal,
-        totalNetoUF: precioFinal,
+        precioUnitarioUF: 0, // Precio unitario siempre 0 para subproductos
+        totalNetoUF: 0, // Total neto siempre 0 para subproductos
         area: producto.area || '',
         esSubProducto: true
       };
@@ -525,13 +531,6 @@ const DuplicateCard = ({ id }: { id: string }) => {
         subproductos: []
       };
       const productosRows = (producto.productosEnPaquete || []).map((pp: any) => {
-        let precioProducto = Number(pp.producto?.precio || 0);
-        if (formData?.listaPrecioId && pp.producto?.listasPrecios) {
-          const listaPrecio = pp.producto.listasPrecios.find((lp: { listaPrecioId: number; precio: number }) => lp.listaPrecioId === formData.listaPrecioId);
-          if (listaPrecio) {
-            precioProducto = Number(listaPrecio.precio);
-          }
-        }
         const nombreSubServicio = pp.producto?.norma ? `${pp.producto?.nombre} - ${pp.producto?.norma}` : pp.producto?.nombre || '';
         return {
           id: Date.now() + Math.random(),
@@ -539,8 +538,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
           servicio: nombreSubServicio,
           descripcion: pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: precioProducto,
-          totalNetoUF: precioProducto * (pp.cantidad || 1),
+          precioUnitarioUF: 0, // Precio unitario siempre 0 para subproductos
+          totalNetoUF: 0, // Total neto siempre 0 para subproductos
           area: pp.producto?.area || '',
           esSubProducto: true,
           paqueteId: producto.productoId,

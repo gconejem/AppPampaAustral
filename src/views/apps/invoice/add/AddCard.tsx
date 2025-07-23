@@ -770,16 +770,29 @@ const AddCard = ({
 
     if (calcularPorPreciosUnitarios) {
       // Calcular subtotal sumando los precios unitarios (no los totales netos)
-      subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.precioUnitarioUF || 0), 0)
+      // Excluir subproductos del cálculo
+      subtotalTotal = productRows.reduce((acc, row) => {
+        if (row.esSubProducto) {
+          return acc // No sumar subproductos al subtotal
+        }
+        return acc + Number(row.precioUnitarioUF || 0)
+      }, 0)
     } else {
       // Calcular el subtotal sumando todos los totales netos (caso normal)
+      // Excluir subproductos del cálculo
       console.log('ProductRows para cálculo de subtotal:', productRows.map(row => ({
         id: row.id,
         precioUnitarioUF: row.precioUnitarioUF,
         totalNetoUF: row.totalNetoUF,
-        cantidad: row.cantidad
+        cantidad: row.cantidad,
+        esSubProducto: row.esSubProducto
       })))
-      subtotalTotal = productRows.reduce((acc, row) => acc + Number(row.totalNetoUF || 0), 0)
+      subtotalTotal = productRows.reduce((acc, row) => {
+        if (row.esSubProducto) {
+          return acc // No sumar subproductos al subtotal
+        }
+        return acc + Number(row.totalNetoUF || 0)
+      }, 0)
       console.log('Subtotal calculado:', subtotalTotal)
     }
 
@@ -922,8 +935,8 @@ const AddCard = ({
           servicio: pp.producto.nombre + ' - ' + pp.producto.norma,
           descripcion: pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: Number(Number(pp.precio || pp.producto?.precio || 0).toFixed(3)),
-          totalNetoUF: Number((Number(pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1)).toFixed(3)),
+          precioUnitarioUF: 0, // Precio unitario siempre 0 para subproductos
+          totalNetoUF: 0, // Total neto siempre 0 para subproductos
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: [],
@@ -935,14 +948,20 @@ const AddCard = ({
       } else {
         // Si no es un paquete, actualizar la fila normal o subproducto
         const nombreCompleto = producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre
+
+        // Si es un subproducto, mantener precio en 0
+        const isSubProducto = newRows[activeRowIndex].esSubProducto
+        const precioUnitario = isSubProducto ? 0 : Number(precioFinal.toFixed(3))
+        const totalNeto = isSubProducto ? 0 : Number((precioFinal * (newRows[activeRowIndex].cantidad || 1)).toFixed(3))
+
         newRows[activeRowIndex] = {
           ...newRows[activeRowIndex],
           productoId: producto.productoId.toString(),
           servicio: nombreCompleto,
           descripcion: producto.descripcion || '',
           area: producto.area || '',
-          precioUnitarioUF: Number(precioFinal.toFixed(3)),
-          totalNetoUF: Number((precioFinal * (newRows[activeRowIndex].cantidad || 1)).toFixed(3))
+          precioUnitarioUF: precioUnitario,
+          totalNetoUF: totalNeto
         }
       }
 
