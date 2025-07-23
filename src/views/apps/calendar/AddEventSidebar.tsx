@@ -230,6 +230,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [obras, setObras] = useState<Obra[]>([])
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
+  const [solicitudesFiltradas, setSolicitudesFiltradas] = useState<Solicitud[]>([])
+  const [todasLasSolicitudes, setTodasLasSolicitudes] = useState<Solicitud[]>([]) // Para mantener todas las solicitudes
 
   // Estados para los servicios
   const [servicios, setServicios] = useState<Servicio[]>([])
@@ -245,11 +247,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
   const [laboratoristaSeleccionado, setLaboratoristaSeleccionado] = useState<Laboratorista | null>(null)
   const [laboratoristasAgendados, setLaboratoristasAgendados] = useState<LaboratoristaAgendado[]>([])
+  const [laboratoristaInputValue, setLaboratoristaInputValue] = useState<string>('')
+  const [laboratoristaKey, setLaboratoristaKey] = useState<number>(0) // Para forzar re-render
 
   // Estados para equipos
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null)
   const [equiposAgendados, setEquiposAgendados] = useState<EquipoAgendado[]>([])
+  const [equipoInputValue, setEquipoInputValue] = useState<string>('')
+  const [equipoKey, setEquipoKey] = useState<number>(0) // Para forzar re-render
 
   // Estados para edición de servicios en la tabla
   const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null)
@@ -346,6 +352,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         if (Array.isArray(solicitudesData)) {
           console.log('Número de solicitudes:', solicitudesData.length)
           setSolicitudes(solicitudesData)
+          setTodasLasSolicitudes(solicitudesData) // Guardar todas las solicitudes
+          setSolicitudesFiltradas(solicitudesData) // Inicialmente mostrar todas
         } else {
           console.error('Los datos no son un array:', solicitudesData)
         }
@@ -484,13 +492,21 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         if (obraSeleccionada.region) {
           setSelectedRegion(obraSeleccionada.region)
         }
+
+        // Filtrar solicitudes por obra seleccionada
+        const solicitudesDeObra = todasLasSolicitudes.filter(solicitud =>
+          solicitud.obra && solicitud.obra.obraId === formData.obraId
+        )
+        setSolicitudesFiltradas(solicitudesDeObra)
+        console.log('Solicitudes filtradas para obra:', solicitudesDeObra)
       }
     } else {
-      // Si no hay obra seleccionada, limpiar contactos
+      // Si no hay obra seleccionada, limpiar contactos y mostrar todas las solicitudes
       setContactos([])
       setSelectedReferencia('')
+      setSolicitudesFiltradas(todasLasSolicitudes)
     }
-  }, [formData.obraId, obras])
+  }, [formData.obraId, obras, todasLasSolicitudes])
 
   // Estados para el buscador de servicios
   const [selectedArea, setSelectedArea] = useState('')
@@ -785,7 +801,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       }
 
       // Cerrar sidebar y mostrar mensaje de éxito
-      handleAddEventSidebarToggle()
+      handleCloseSidebar()
       toast.success('Visita agendada exitosamente')
     } catch (error: any) {
       console.error('Error:', error)
@@ -843,31 +859,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setEditingServiceData({ cantidad: '', observacion: '' })
   }
 
-  const handleAgregarLaboratorista = () => {
-    if (!laboratoristaSeleccionado) return
 
-    const nuevoLaboratorista: LaboratoristaAgendado = {
-      id: laboratoristaSeleccionado.id,
-      nombre: laboratoristaSeleccionado.name,
-      email: laboratoristaSeleccionado.email
-    }
 
-    setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
-    setLaboratoristaSeleccionado(null)
-  }
 
-  const handleAgregarEquipo = () => {
-    if (!equipoSeleccionado) return
-
-    const nuevoEquipo: EquipoAgendado = {
-      id: equipoSeleccionado.id,
-      codigo: equipoSeleccionado.codigo,
-      nombre: equipoSeleccionado.nombre
-    }
-
-    setEquiposAgendados(prev => [...prev, nuevoEquipo])
-    setEquipoSeleccionado(null)
-  }
 
   const handleEditClick = (index: number) => {
     setEditingContactIndex(index)
@@ -933,11 +927,88 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setContactos([...contactos, newContact])
   }
 
+  // Función para resetear todos los datos del formulario
+  const resetFormData = () => {
+    setFormData(initialData)
+    setEstado('AGENDADA')
+    setEditandoEstado(false)
+
+    // Resetear fechas
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    setFechaInicio(now)
+    setFechaFin(now)
+
+    // Resetear servicios
+    setServiciosAgendados([])
+    setServicioSeleccionado(null)
+    setCantidad('1')
+    setObservacion('')
+    setEsSegundaVisita(false)
+
+    // Resetear laboratoristas
+    setLaboratoristasAgendados([])
+    setLaboratoristaSeleccionado(null)
+    setLaboratoristaInputValue('')
+    setLaboratoristaKey(prev => prev + 1)
+
+    // Resetear equipos
+    setEquiposAgendados([])
+    setEquipoSeleccionado(null)
+    setEquipoInputValue('')
+    setEquipoKey(prev => prev + 1)
+
+    // Resetear contactos
+    setContactos([])
+    setNuevoContacto({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      isPrincipal: false
+    })
+    setEditingContactIndex(null)
+    setEditingContact({
+      rol: '',
+      nombre: '',
+      email: '',
+      telefono1: '',
+      isPrincipal: false
+    })
+
+    // Resetear ubicación
+    setSelectedRegion('')
+    setSelectedSectorComercial('')
+    setSelectedReferencia('')
+
+    // Resetear solicitudes filtradas - mostrar todas
+    setSolicitudesFiltradas(todasLasSolicitudes)
+
+    // Resetear filtros de servicios
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('Terreno')
+    setSelectedFamilia('')
+    setSearchTerm('')
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+
+    // Cerrar popovers
+    setAnchorEl(null)
+    setAddContactOpen(false)
+  }
+
+  // Función personalizada para cerrar el sidebar
+  const handleCloseSidebar = () => {
+    resetFormData()
+    handleAddEventSidebarToggle()
+  }
+
   return (
     <Drawer
       anchor='right'
       open={addEventSidebarOpen}
-      onClose={handleAddEventSidebarToggle}
+      onClose={handleCloseSidebar}
       sx={{
         '& .MuiDrawer-paper': {
           width: '80%',
@@ -992,7 +1063,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
 
           <Grid item xs={1} display='flex' justifyContent='flex-end'>
-            <Button variant='outlined' color='error' onClick={handleAddEventSidebarToggle}>
+            <Button variant='outlined' color='error' onClick={handleCloseSidebar}>
               Cancelar
             </Button>
           </Grid>
@@ -1176,14 +1247,38 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               fullWidth
               options={obras}
               getOptionLabel={option => `${option.nombreObra}`}
+              filterOptions={(options, { inputValue }) => {
+                if (!inputValue) return options
+
+                const searchTerm = inputValue.toLowerCase()
+                return options.filter(option =>
+                  option.nombreObra.toLowerCase().includes(searchTerm) ||
+                  option.direccion?.toLowerCase().includes(searchTerm) ||
+                  option.numeroObra?.toLowerCase().includes(searchTerm)
+                )
+              }}
               value={obras.find(o => o.obraId === formData.obraId) || null}
               disabled={!formData.clienteId}
               onChange={(_, newValue) => {
-                setFormData(prev => ({
-                  ...prev,
-                  obraId: newValue?.obraId || undefined,
-                  direccion: newValue?.direccion || ''
-                }))
+                if (newValue) {
+                  // Si se selecciona una obra, llenar los campos con su información
+                  setFormData(prev => ({
+                    ...prev,
+                    obraId: newValue.obraId,
+                    direccion: newValue.direccion || ''
+                  }))
+                } else {
+                  // Si se limpia la obra, limpiar también región, comuna y dirección
+                  setFormData(prev => ({
+                    ...prev,
+                    obraId: undefined,
+                    direccion: '',
+                    region: '',
+                    comuna: ''
+                  }))
+                  // También limpiar el estado de región seleccionada
+                  setSelectedRegion('')
+                }
               }}
               renderInput={params => (
                 <TextField
@@ -1217,14 +1312,14 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={12} sm={4}>
             <Autocomplete
               fullWidth
-              options={solicitudes}
+              options={solicitudesFiltradas}
               getOptionLabel={option => {
                 const clienteInfo = option.cliente ? ` - ${option.cliente.razonSocial}` : ''
                 const obraInfo = option.obra ? ` - ${option.obra.nombreObra}` : ''
 
                 return `Solicitud #${option.numeroSolicitud}${clienteInfo}${obraInfo}`
               }}
-              value={solicitudes.find(s => s.id === formData.solicitudId) || null}
+              value={solicitudesFiltradas.find(s => s.id === formData.solicitudId) || null}
               onChange={(_, newValue) => {
                 if (newValue) {
                   setFormData(prev => ({
@@ -1244,6 +1339,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <TextField
                   {...params}
                   label='Solicitud'
+                  helperText={formData.obraId ? `Mostrando ${solicitudesFiltradas.length} solicitudes de la obra seleccionada` : `Mostrando ${solicitudesFiltradas.length} solicitudes disponibles`}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (
@@ -1255,7 +1351,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 />
               )}
               renderOption={(props, option) => (
-                <li {...props}>
+                <li {...props} key={option.id}>
                   <Box>
                     <Typography variant='body1'>Solicitud #{option.numeroSolicitud}</Typography>
                     {option.cliente && (
@@ -1932,36 +2028,50 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             <Typography variant='h5' sx={{ mb: 2 }}>
               Laboratoristas
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={10}>
-                <Autocomplete
-                  fullWidth
-                  options={laboratoristas}
-                  getOptionLabel={option => `${option.name} (${option.rol})`}
-                  value={laboratoristaSeleccionado}
-                  onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
-                  renderInput={params => (
-                    <TextField
-                      {...params}
-                      label='Laboratorista'
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <InputAdornment position='start'>
-                            <SearchIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  )}
+            <Autocomplete
+              key={laboratoristaKey}
+              fullWidth
+              options={laboratoristas}
+              getOptionLabel={option => `${option.name} (${option.rol})`}
+              value={laboratoristaSeleccionado}
+              inputValue={laboratoristaInputValue}
+              onInputChange={(_, newInputValue) => {
+                setLaboratoristaInputValue(newInputValue)
+              }}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  // Verificar si el laboratorista ya está agregado
+                  const yaExiste = laboratoristasAgendados.some(lab => lab.id === newValue.id)
+                  if (!yaExiste) {
+                    const nuevoLaboratorista: LaboratoristaAgendado = {
+                      id: newValue.id,
+                      nombre: newValue.name,
+                      email: newValue.email
+                    }
+                    setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
+                  }
+                  // Limpiar la selección y el campo de búsqueda forzando re-render
+                  setLaboratoristaSeleccionado(null)
+                  setLaboratoristaInputValue('')
+                  setLaboratoristaKey(prev => prev + 1) // Forzar re-render del componente
+                }
+              }}
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label='Laboratorista'
+                  placeholder='Seleccione un laboratorista para agregarlo automáticamente'
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
                 />
-              </Grid>
-              <Grid item xs={2}>
-                <Button variant='contained' color='primary' fullWidth onClick={handleAgregarLaboratorista}>
-                  Agregar
-                </Button>
-              </Grid>
-            </Grid>
+              )}
+            />
 
             {/* Lista de laboratoristas agregados */}
             <TableContainer sx={{ mt: 2 }}>
@@ -1998,36 +2108,50 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             <Typography variant='h5' sx={{ mb: 2 }}>
               Equipos
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={10}>
-                <Autocomplete
-                  fullWidth
-                  options={equipos}
-                  getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-                  value={equipoSeleccionado}
-                  onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
-                  renderInput={params => (
-                    <TextField
-                      {...params}
-                      label='Equipo'
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <InputAdornment position='start'>
-                            <SearchIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  )}
+            <Autocomplete
+              key={equipoKey}
+              fullWidth
+              options={equipos}
+              getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+              value={equipoSeleccionado}
+              inputValue={equipoInputValue}
+              onInputChange={(_, newInputValue) => {
+                setEquipoInputValue(newInputValue)
+              }}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  // Verificar si el equipo ya está agregado
+                  const yaExiste = equiposAgendados.some(equipo => equipo.id === newValue.id)
+                  if (!yaExiste) {
+                    const nuevoEquipo: EquipoAgendado = {
+                      id: newValue.id,
+                      codigo: newValue.codigo,
+                      nombre: newValue.nombre
+                    }
+                    setEquiposAgendados(prev => [...prev, nuevoEquipo])
+                  }
+                  // Limpiar la selección y el campo de búsqueda forzando re-render
+                  setEquipoSeleccionado(null)
+                  setEquipoInputValue('')
+                  setEquipoKey(prev => prev + 1) // Forzar re-render del componente
+                }
+              }}
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label='Equipo'
+                  placeholder='Seleccione un equipo para agregarlo automáticamente'
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
                 />
-              </Grid>
-              <Grid item xs={2}>
-                <Button variant='contained' color='primary' fullWidth onClick={handleAgregarEquipo}>
-                  Agregar
-                </Button>
-              </Grid>
-            </Grid>
+              )}
+            />
 
             {/* Lista de equipos agregados */}
             <TableContainer sx={{ mt: 2 }}>
