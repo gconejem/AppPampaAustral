@@ -183,7 +183,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       console.log('Insertando detalles en la BD (orden original):', detallesArray)
       // Mapeo temporal para traducir productoId del paquete a id real del detalle del paquete
       const mapProductoIdToDetalleId: Record<number, number> = {}
-      
+
+      console.log('Detalles a procesar:', detallesArray.map((d: any) => ({
+        productoId: d.productoId,
+        esPaquete: d.esPaquete,
+        esSubProducto: d.esSubProducto,
+        paqueteId: d.paqueteId
+      })))
+
       for (const detalle of detallesArray) {
         console.log('Procesando detalle:', {
           productoId: detalle.productoId,
@@ -192,13 +199,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           paqueteId: detalle.paqueteId,
           mapeoActual: mapProductoIdToDetalleId
         })
-        
+
         let paqueteIdReal = null
         if (detalle.paqueteId) {
           paqueteIdReal = mapProductoIdToDetalleId[detalle.paqueteId] || null
           console.log(`Buscando paqueteId ${detalle.paqueteId} en mapeo: ${paqueteIdReal}`)
         }
-        
+
         const detalleCreado = await prisma.detalleCotizacion.create({
           data: {
             cotizacionId: id,
@@ -213,18 +220,25 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             descripcionPersonalizada: detalle.descripcionPersonalizada || null
           }
         })
-        
+
         console.log('Detalle creado:', {
           id: detalleCreado.id,
           productoId: detalleCreado.productoId,
           esPaquete: detalleCreado.esPaquete,
+          esSubProducto: detalleCreado.esSubProducto,
           paqueteId: detalleCreado.paqueteId
         })
-        
+
         // Si es paquete, guardar el id generado para los subproductos siguientes
         if (detalle.esPaquete) {
           mapProductoIdToDetalleId[detalle.productoId] = detalleCreado.id
           console.log(`Guardando en mapeo: productoId ${detalle.productoId} -> detalleId ${detalleCreado.id}`)
+          console.log('Mapeo actual:', mapProductoIdToDetalleId)
+        }
+
+        // Si es subproducto, mostrar el paqueteId asignado
+        if (detalle.esSubProducto) {
+          console.log(`Subproducto creado: productoId ${detalle.productoId} -> paqueteId ${paqueteIdReal}`)
         }
       }
     }

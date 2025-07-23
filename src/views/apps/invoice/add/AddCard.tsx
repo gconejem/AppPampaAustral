@@ -359,15 +359,18 @@ const AddCard = ({
         return
       }
 
-      // Filtrar solo las filas que tienen un producto seleccionado y no son subproductos
+      // Incluir todas las filas válidas (paquetes y subproductos)
       const detallesValidos = productRows
-        .filter(row => row.productoId && row.productoId !== '0' && !row.esSubProducto)
+        .filter(row => row.productoId && row.productoId !== '0')
         .map(row => ({
           productoId: parseInt(row.productoId),
           cantidad: row.cantidad,
           precioUnitario: row.precioUnitarioUF,
           descuento: row.descuento || 0,
           subtotal: row.totalNetoUF,
+          esPaquete: row.esPaquete || false,
+          esSubProducto: row.esSubProducto || false,
+          paqueteId: row.paqueteId || null,
           descripcionPersonalizada: row.descripcion || null
         }))
 

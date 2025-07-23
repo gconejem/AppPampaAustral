@@ -89,12 +89,12 @@ export async function GET(request: Request) {
         tipo: normalizeTipoCotizacion(cotizacion.tipoCotizacion as string),
         contacto: cotizacion.contacto
           ? {
-              contactId: cotizacion.contacto.contactId,
-              nombre: cotizacion.contacto.nombre,
-              cargo: cotizacion.contacto.cargo,
-              email: cotizacion.contacto.email,
-              telefono1: cotizacion.contacto.telefono1
-            }
+            contactId: cotizacion.contacto.contactId,
+            nombre: cotizacion.contacto.nombre,
+            cargo: cotizacion.contacto.cargo,
+            email: cotizacion.contacto.email,
+            telefono1: cotizacion.contacto.telefono1
+          }
           : null,
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
         empresa: cotizacion.empresa || 'No especificada',
@@ -218,11 +218,20 @@ export async function POST(request: Request) {
         console.log('Insertando detalles en la BD (orden original):', detallesArray)
         // Mapeo temporal para traducir productoId a id real del paquete
         const mapProductoIdToDetalleId: Record<number, number> = {}
+        console.log('Detalles a procesar:', detallesArray.map((d: any) => ({
+          productoId: d.productoId,
+          esPaquete: d.esPaquete,
+          esSubProducto: d.esSubProducto,
+          paqueteId: d.paqueteId
+        })))
+
         for (const detalle of detallesArray) {
           let paqueteIdReal = null
           if (detalle.paqueteId) {
             paqueteIdReal = mapProductoIdToDetalleId[detalle.paqueteId] || null
+            console.log(`Buscando paqueteId ${detalle.paqueteId} en mapeo: ${paqueteIdReal}`)
           }
+
           const detalleCreado = await prisma.detalleCotizacion.create({
             data: {
               cotizacionId: cotizacion.id,
@@ -237,9 +246,24 @@ export async function POST(request: Request) {
               descripcionPersonalizada: detalle.descripcionPersonalizada || null
             }
           })
+
+          console.log('Detalle creado:', {
+            id: detalleCreado.id,
+            productoId: detalleCreado.productoId,
+            esPaquete: detalleCreado.esPaquete,
+            esSubProducto: detalleCreado.esSubProducto,
+            paqueteId: detalleCreado.paqueteId
+          })
+
           // Si es paquete, guardar el id generado para los subproductos siguientes
           if (detalle.esPaquete) {
             mapProductoIdToDetalleId[detalle.productoId] = detalleCreado.id
+            console.log(`Guardando en mapeo: productoId ${detalle.productoId} -> detalleId ${detalleCreado.id}`)
+            console.log('Mapeo actual:', mapProductoIdToDetalleId)
+          }
+          // Si es subproducto, mostrar el paqueteId asignado
+          if (detalle.esSubProducto) {
+            console.log(`Subproducto creado: productoId ${detalle.productoId} -> paqueteId ${paqueteIdReal}`)
           }
         }
       } else {

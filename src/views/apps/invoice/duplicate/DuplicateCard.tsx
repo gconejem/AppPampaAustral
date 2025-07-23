@@ -999,7 +999,8 @@ const DuplicateCard = ({ id }: { id: string }) => {
         precioUnitarioUF: row.precioUnitarioUF,
         totalNetoUF: row.totalNetoUF,
         esPaquete: row.esPaquete || false,
-        esSubProducto: row.esSubProducto || false
+        esSubProducto: row.esSubProducto || false,
+        paqueteId: row.paqueteId || null
       })),
       // Usar los valores booleanos unificados
       precioProducto: formData.precioProducto || false,
