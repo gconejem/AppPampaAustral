@@ -187,12 +187,23 @@ const EditEventSidebar = ({
   const [fechaInicio, setFechaInicio] = useState<Date | null>(null);
   const [fechaFin, setFechaFin] = useState<Date | null>(null);
 
+  // Función helper para formatear fecha manteniendo zona horaria local
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
   // Actualizar formData cuando cambien las fechas (solo si no estamos cargando datos del evento)
   useEffect(() => {
     if (fechaInicio && editEventSidebarOpen) {
       setFormData(prev => ({
         ...prev,
-        fechaInicio: fechaInicio.toISOString().slice(0, 16)
+        fechaInicio: formatDateLocal(fechaInicio)
       }))
     }
   }, [fechaInicio, editEventSidebarOpen])
@@ -201,7 +212,7 @@ const EditEventSidebar = ({
     if (fechaFin && editEventSidebarOpen) {
       setFormData(prev => ({
         ...prev,
-        fechaFin: fechaFin.toISOString().slice(0, 16)
+        fechaFin: formatDateLocal(fechaFin)
       }))
     }
   }, [fechaFin, editEventSidebarOpen])
@@ -288,12 +299,20 @@ const EditEventSidebar = ({
       const getValue = (field: string) =>
         selectedEvent[field] ?? selectedEvent.extendedProps?.[field] ?? ''
 
-      // Formatear fecha y hora a formato ISO para los inputs de tipo datetime-local
+      // Formatear fecha y hora a formato local para los inputs de tipo datetime-local
       const formatDate = (date: any) => {
         if (!date) return ''
         const d = new Date(date)
         if (isNaN(d.getTime())) return ''
-        return d.toISOString().slice(0, 16)
+
+        // Formatear manteniendo la zona horaria local
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        const hours = String(d.getHours()).padStart(2, '0')
+        const minutes = String(d.getMinutes()).padStart(2, '0')
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`
       }
 
       // Buscar referencia de la obra si no viene en el evento
