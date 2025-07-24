@@ -93,12 +93,19 @@ interface EquipoAgendado {
 interface Cliente {
   clienteId: number
   razonSocial: string
+  rut?: string
 }
 
 interface Obra {
   obraId: number
   nombreObra: string
   clienteId: number
+  rut?: string
+  direccion?: string
+  region?: string
+  comuna?: string
+  referencia?: string
+  cliente?: Cliente
 }
 
 interface Solicitud {
@@ -447,8 +454,7 @@ const EditEventSidebar = ({
                 // Fallback: intentar otros métodos de filtrado
                 obrasFiltradas = obras.filter(obra =>
                   obra.clienteId === eventData.clienteId ||
-                  obra.cliente?.clienteId === eventData.clienteId ||
-                  obra.cliente?.id === eventData.clienteId
+                  obra.cliente?.clienteId === eventData.clienteId
                 )
                 console.log('Filtrado por clienteId, obras encontradas:', obrasFiltradas.length)
               }
@@ -578,8 +584,7 @@ const EditEventSidebar = ({
         // Fallback: intentar otros métodos de filtrado
         obrasFiltradas = obras.filter(obra =>
           obra.clienteId === formData.clienteId ||
-          obra.cliente?.clienteId === formData.clienteId ||
-          obra.cliente?.id === formData.clienteId
+          obra.cliente?.clienteId === formData.clienteId
         )
       }
 
@@ -955,8 +960,8 @@ const EditEventSidebar = ({
                       }
 
                       // Si solo hay una obra, preseleccionarla
-                      let obraPreseleccionada = undefined
-                      let solicitudPreseleccionada = undefined
+                      let obraPreseleccionada: number | undefined = undefined
+                      let solicitudPreseleccionada: number | undefined = undefined
 
                       if (obrasDelCliente.length === 1) {
                         const obraSeleccionada = obrasDelCliente[0]
