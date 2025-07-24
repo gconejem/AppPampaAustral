@@ -106,6 +106,7 @@ interface Obra {
   comuna?: string
   referencia?: string
   cliente?: Cliente
+  contactos?: any[]
 }
 
 interface Solicitud {
@@ -489,6 +490,11 @@ const EditEventSidebar = ({
               setSolicitudesFiltradas(todasLasSolicitudes)
             }
 
+            // Cargar contactos de la obra si existe
+            if (eventData.obraId) {
+              cargarContactosDeObra(eventData.obraId)
+            }
+
             // Finalizar la carga de datos del evento
             setIsLoadingEventData(false)
           }
@@ -538,6 +544,25 @@ const EditEventSidebar = ({
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<any | null>(null)
   const [equipoInputValue, setEquipoInputValue] = useState<string>('')
   const [equipoKey, setEquipoKey] = useState<number>(0)
+
+  // Función para cargar contactos de una obra (basada en AddEventSidebar)
+  const cargarContactosDeObra = (obraId: number) => {
+    const obraSeleccionada = obras.find(obra => obra.obraId === obraId)
+    if (obraSeleccionada) {
+      const obraContactos = obraSeleccionada.contactos || []
+      // Reemplazar todos los contactos con los de la nueva obra (igual que en AddEventSidebar)
+      const nuevosContactos = obraContactos.map((c: any) => ({
+        nombre: c.nombre,
+        rol: c.rol || c.cargo || '',
+        email: c.email,
+        telefono1: c.telefono1,
+        telefono2: c.telefono2,
+        isPrincipal: c.isPrincipal === true
+      }))
+      setContactos(nuevosContactos)
+      console.log('Contactos de obra cargados:', nuevosContactos)
+    }
+  }
 
   // Cargar laboratoristas y equipos disponibles al montar
   useEffect(() => {
@@ -593,9 +618,17 @@ const EditEventSidebar = ({
       // Solo limpiar la obra si no estamos cargando datos del evento y la obra no pertenece al cliente
       if (!isLoadingEventData && formData.obraId && !obrasFiltradas.some(obra => obra.obraId === formData.obraId)) {
         setFormData(prev => ({ ...prev, obraId: undefined }))
+        // Limpiar contactos cuando se limpia la obra automáticamente
+        setContactos([])
+        setSelectedReferencia('')
       }
     } else {
       setObrasFiltradas(obras)
+      // Si no hay cliente seleccionado, limpiar contactos
+      if (!isLoadingEventData) {
+        setContactos([])
+        setSelectedReferencia('')
+      }
     }
   }, [formData.clienteId, obras, isLoadingEventData])
 
@@ -621,6 +654,16 @@ const EditEventSidebar = ({
       setSolicitudesFiltradas(todasLasSolicitudes)
     }
   }, [formData.obraId, formData.clienteId, todasLasSolicitudes, isLoadingEventData])
+
+  // Efecto para cargar los contactos cuando se selecciona una obra (igual que en AddEventSidebar)
+  useEffect(() => {
+    if (formData.obraId && !isLoadingEventData) {
+      cargarContactosDeObra(formData.obraId)
+    } else if (!formData.obraId && !isLoadingEventData) {
+      // Limpiar contactos cuando no hay obra seleccionada
+      setContactos([])
+    }
+  }, [formData.obraId, obras, isLoadingEventData])
 
   const handleSubmit = async () => {
     try {
@@ -989,6 +1032,11 @@ const EditEventSidebar = ({
                           region: obraSeleccionada.region,
                           comuna: obraSeleccionada.comuna
                         })
+
+                        // Cargar contactos de la obra preseleccionada
+                        if (obraPreseleccionada) {
+                          cargarContactosDeObra(obraPreseleccionada)
+                        }
                       } else {
                         // Si hay múltiples obras, limpiar región seleccionada
                         setSelectedRegion('')
@@ -1033,6 +1081,10 @@ const EditEventSidebar = ({
                         comuna: '',
                         referencia: ''
                       }))
+
+                      // Limpiar contactos cuando se quita el cliente
+                      setContactos([])
+                      setSelectedReferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Cliente' required />}
@@ -1087,6 +1139,9 @@ const EditEventSidebar = ({
                         comuna: newValue.comuna || prev.comuna,
                         referencia: newValue.referencia || prev.referencia
                       }))
+
+                      // Cargar contactos de la obra seleccionada
+                      cargarContactosDeObra(newValue.obraId)
                     } else {
                       // Limpiar región seleccionada
                       setSelectedRegion('')
@@ -1101,6 +1156,10 @@ const EditEventSidebar = ({
                         comuna: '',
                         referencia: ''
                       }))
+
+                      // Limpiar contactos cuando se quita la obra
+                      setContactos([])
+                      setSelectedReferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Obra' />}
