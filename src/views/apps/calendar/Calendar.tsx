@@ -105,6 +105,11 @@ const Calendar = (props: CalenderProps) => {
 
   const { enqueueSnackbar } = useSnackbar()
 
+  // Helper function to format date to YYYY-MM-DD in local timezone
+  const formatDateToString = (date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
   const handleViewEvent = (eventId: string) => {
     const eventToView = events.find(event => String(event.id) === String(eventId))
 
@@ -1118,17 +1123,26 @@ const Calendar = (props: CalenderProps) => {
       const params = new URLSearchParams()
 
       if (props.selectedDateRange?.start && props.selectedDateRange?.end) {
-        params.append('fechaInicio', props.selectedDateRange.start.toISOString().split('T')[0])
-        params.append('fechaFin', props.selectedDateRange.end.toISOString().split('T')[0])
+        // Usar directamente los métodos de fecha local para evitar problemas de zona horaria
+        const startDate = new Date(props.selectedDateRange.start)
+        const endDate = new Date(props.selectedDateRange.end)
+
+        const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`
+        const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+
+        params.append('fechaInicio', startStr)
+        params.append('fechaFin', endStr)
       } else if (props.selectedDate) {
-        const selectedDateStr = props.selectedDate.toISOString().split('T')[0]
+        const selectedDate = new Date(props.selectedDate)
+        const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
         params.append('fechaInicio', selectedDateStr)
         params.append('fechaFin', selectedDateStr)
       } else {
         // Si no hay fecha seleccionada, cargar eventos del día actual
-        const today = new Date().toISOString().split('T')[0]
-        params.append('fechaInicio', today)
-        params.append('fechaFin', today)
+        const today = new Date()
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        params.append('fechaInicio', todayStr)
+        params.append('fechaFin', todayStr)
       }
 
       if (params.toString()) {
