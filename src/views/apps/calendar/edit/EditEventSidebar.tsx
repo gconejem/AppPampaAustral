@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
@@ -19,6 +19,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import SaveIcon from '@mui/icons-material/Save'
 import CloseIcon from '@mui/icons-material/Close'
+import AddIcon from '@mui/icons-material/Add'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -34,6 +35,11 @@ import TableCell from '@mui/material/TableCell'
 import TableBody from '@mui/material/TableBody'
 import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/Search'
+import Popover from '@mui/material/Popover'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
+import Switch from '@mui/material/Switch'
 
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
@@ -196,6 +202,32 @@ const EditEventSidebar = ({
   const [editingIndex, setEditingIndex] = useState<number>(-1)
   const [editingService, setEditingService] = useState<ServicioAgendado | null>(null)
 
+  // Debug: Monitorear cambios en serviciosAgendados
+  useEffect(() => {
+    console.log('serviciosAgendados cambió:', serviciosAgendados)
+  }, [serviciosAgendados])
+
+  // Estados para el buscador de servicios (igual que en AddEventSidebar)
+  const [servicios, setServicios] = useState<any[]>([])
+  const [servicioSeleccionado, setServicioSeleccionado] = useState<any | null>(null)
+  const [cantidad, setCantidad] = useState('1')
+  const [observacion, setObservacion] = useState('')
+  const [esSegundaVisita, setEsSegundaVisita] = useState(false)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedArea, setSelectedArea] = useState('')
+  const [selectedTipo, setSelectedTipo] = useState('')
+  const [selectedFamilia, setSelectedFamilia] = useState('')
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+  const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+  const [productsPage, setProductsPage] = useState(0)
+  const [areas, setAreas] = useState<any[]>([])
+  const [tipos, setTipos] = useState<string[]>([])
+  const [familias, setFamilias] = useState<any[]>([])
+  const [filteredProductos, setFilteredProductos] = useState<any[]>([])
+  const [totalProductos, setTotalProductos] = useState(0)
+  const servicioAnchorRef = useRef<HTMLDivElement>(null)
+
   // Convertir las fechas string a objetos Date para los datepickers
   const [fechaInicio, setFechaInicio] = useState<Date | null>(null);
   const [fechaFin, setFechaFin] = useState<Date | null>(null);
@@ -229,6 +261,16 @@ const EditEventSidebar = ({
       }))
     }
   }, [fechaFin, editEventSidebarOpen])
+
+  // Sincronizar fechaFin del formData con el estado fechaFin para el DatePicker
+  useEffect(() => {
+    if (formData.fechaFin && !isLoadingEventData) {
+      const fechaFinDate = new Date(formData.fechaFin)
+      if (!isNaN(fechaFinDate.getTime())) {
+        setFechaFin(fechaFinDate)
+      }
+    }
+  }, [formData.fechaFin, isLoadingEventData])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -275,6 +317,8 @@ const EditEventSidebar = ({
         const equiposData = await equiposRes.json()
 
         setEquipos(equiposData)
+
+        // Los servicios se cargan dinámicamente en el popover, no aquí
 
         console.log('Carga inicial de datos completada')
       } catch (error) {
@@ -395,32 +439,48 @@ const EditEventSidebar = ({
           setSelectedReferencia(eventData.referencia || '')
 
           // Procesar servicios
-          const formattedServicios = (eventData.servicios || []).map((s: any) => ({
-            codigo: s.codigo || s.servicio?.codigo || '',
-            servicio: s.servicio?.nombre || s.nombre || '',
-            cantidad: s.cantidad || 1,
-            observacion: s.observacion || '',
-            esSegundaVisita: s.esSegundaVisita || false
-          }))
+          console.log('Servicios recibidos del backend:', eventData.servicios)
+          const formattedServicios = (eventData.servicios || []).map((s: any) => {
+            console.log('Procesando servicio:', s)
+            return {
+              codigo: s.codigo || '',
+              servicio: s.servicio || '', // El campo servicio ya es un string, no un objeto
+              cantidad: s.cantidad || 1,
+              observacion: s.observacion || '',
+              esSegundaVisita: s.esSegundaVisita || false
+            }
+          })
+          console.log('Servicios formateados:', formattedServicios)
           setServiciosAgendados(formattedServicios)
+          console.log('Estado serviciosAgendados después de setServiciosAgendados:', formattedServicios)
 
           // Procesar laboratoristas
-          const formattedLaboratoristas = (eventData.asignados || []).map((a: any) => ({
-            id: a.userId || a.user?.id || a.id,
-            nombre: a.user?.name || a.nombre || 'No especificado',
-            email: a.user?.email || a.email || '',
-            esPrincipal: a.esPrincipal || false
-          }))
+          console.log('Laboratoristas recibidos del backend:', eventData.asignados)
+          const formattedLaboratoristas = (eventData.asignados || []).map((a: any) => {
+            console.log('Procesando laboratorista:', a)
+            return {
+              id: a.userId || a.user?.id || a.id,
+              nombre: a.user?.name || a.nombre || 'No especificado',
+              email: a.user?.email || a.email || '',
+              esPrincipal: a.esPrincipal || false
+            }
+          })
+          console.log('Laboratoristas formateados:', formattedLaboratoristas)
           setLaboratoristasAgendados(formattedLaboratoristas)
 
           // Procesar equipos
-          const formattedEquipos = (eventData.equipos || []).map((e: any) => ({
-            id: e.equipo?.id || e.equipoId || e.id,
-            codigo: e.equipo?.codigo || e.codigo || '',
-            nombre: e.equipo?.nombre || e.nombre || '',
-            cantidad: e.cantidad || 1,
-            observacion: e.observacion || ''
-          }))
+          console.log('Equipos recibidos del backend:', eventData.equipos)
+          const formattedEquipos = (eventData.equipos || []).map((e: any) => {
+            console.log('Procesando equipo:', e)
+            return {
+              id: e.equipo?.id || e.equipoId || e.id,
+              codigo: e.equipo?.codigo || e.codigo || '',
+              nombre: e.equipo?.nombre || e.nombre || '',
+              cantidad: e.cantidad || 1,
+              observacion: e.observacion || ''
+            }
+          })
+          console.log('Equipos formateados:', formattedEquipos)
           setEquiposAgendados(formattedEquipos)
 
           // Procesar contactos
@@ -823,6 +883,224 @@ const EditEventSidebar = ({
     }
   }
 
+  // Funciones para el buscador de servicios
+  const handleOpenPopover = (anchor: HTMLElement | null) => {
+    setAnchorEl(anchor)
+  }
+
+  const handleClosePopover = () => {
+    setAnchorEl(null)
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setSelectedAreaId(null)
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+  }
+
+  const handleSelectProduct = (producto: any) => {
+    setServicioSeleccionado(producto)
+    handleClosePopover()
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
+  const handleAreaChange = (e: any) => {
+    const areaNombre = e.target.value
+    setSelectedArea(areaNombre)
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
+
+    // Encontrar el ID del área seleccionada
+    const areaSeleccionada = areas.find(a => a.nombre === areaNombre)
+    setSelectedAreaId(areaSeleccionada?.id || null)
+  }
+
+  const handleTipoChange = (e: any) => {
+    setSelectedTipo(e.target.value)
+  }
+
+  const handleFamiliaChange = (e: any) => {
+    setSelectedFamilia(e.target.value)
+  }
+
+  const handleShowOnlyPaquetesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(e.target.checked)
+  }
+
+  const handleAgregarServicio = () => {
+    if (!servicioSeleccionado || !cantidad) return
+
+    const nuevoServicio: ServicioAgendado = {
+      codigo: servicioSeleccionado.sku,
+      servicio: servicioSeleccionado.norma ? `${servicioSeleccionado.nombre} - ${servicioSeleccionado.norma}` : servicioSeleccionado.nombre,
+      cantidad: parseInt(cantidad),
+      observacion: observacion || undefined,
+      esSegundaVisita
+    }
+
+    setServiciosAgendados(prev => [...prev, nuevoServicio])
+    setServicioSeleccionado(null)
+    setCantidad('1')
+    setObservacion('')
+    setEsSegundaVisita(false)
+  }
+
+  // Lógica de filtrado de servicios (igual que AddEventSidebar)
+  const ITEMS_PER_PAGE = 10
+
+  // Cargar áreas al montar el componente
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => res.json())
+      .then(data => {
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+      })
+  }, [])
+
+  // Cargar familias cuando cambia el área seleccionada
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/areas/${selectedAreaId}/familias`)
+        .then(res => res.json())
+        .then(data => {
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
+
+  // Carga dinámica de productos cuando cambian los filtros
+  useEffect(() => {
+    if (anchorEl) { // Solo ejecutar cuando el popover está abierto
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+      if (showOnlyPaquetes) params.append('esPaquete', 'true')
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar servicios')
+          }
+          return res.json()
+        })
+        .then(response => {
+          const data = response.productos || []
+          setFilteredProductos(data)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+          console.log('Productos cargados:', data.length, 'de', response.total)
+        })
+        .catch(error => {
+          console.error('Error al cargar servicios paginados:', error)
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
+    }
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes, anchorEl])
+
+  // Resetear la página cuando cambien los filtros
+  useEffect(() => {
+    if (anchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm, showOnlyPaquetes])
+
+  // Lógica de filtrado de servicios local (para cuando no se usa la API)
+  const filteredProductosLocal = servicios.filter(producto => {
+    const matchesSearch = !searchTerm ||
+      producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      producto.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesArea = !selectedArea || producto.area === selectedArea
+    const matchesTipo = !selectedTipo || producto.tipo === selectedTipo
+    const matchesFamilia = !selectedFamilia || producto.familia === selectedFamilia
+    const matchesPaquete = !showOnlyPaquetes || producto.esPaquete
+
+    return matchesSearch && matchesArea && matchesTipo && matchesFamilia && matchesPaquete
+  }).slice(productsPage * ITEMS_PER_PAGE, (productsPage + 1) * ITEMS_PER_PAGE)
+
+  const totalProductosLocal = servicios.filter(producto => {
+    const matchesSearch = !searchTerm ||
+      producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      producto.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesArea = !selectedArea || producto.area === selectedArea
+    const matchesTipo = !selectedTipo || producto.tipo === selectedTipo
+    const matchesFamilia = !selectedFamilia || producto.familia === selectedFamilia
+    const matchesPaquete = !showOnlyPaquetes || producto.esPaquete
+
+    return matchesSearch && matchesArea && matchesTipo && matchesFamilia && matchesPaquete
+  }).length
+
+  console.log('Servicios totales:', servicios.length)
+  console.log('Servicios filtrados:', filteredProductosLocal.length)
+  console.log('Filtros activos:', { searchTerm, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes })
+
+  // Extraer áreas y tipos únicos de los servicios
+  useEffect(() => {
+    if (servicios.length > 0) {
+      console.log('Procesando áreas y tipos de servicios:', servicios[0])
+      const uniqueAreas = Array.from(new Set(servicios.map(s => s.area))).map(area => {
+        const serviciosDeArea = servicios.filter(s => s.area === area)
+        const familias = Array.from(new Set(serviciosDeArea.map(s => s.familia))).map(familia => ({
+          id: familia,
+          nombre: familia
+        }))
+        return {
+          id: area,
+          nombre: area,
+          familias
+        }
+      })
+      setAreas(uniqueAreas)
+
+      const uniqueTipos = Array.from(new Set(servicios.map(s => s.tipo)))
+      setTipos(uniqueTipos)
+
+      console.log('Áreas procesadas:', uniqueAreas)
+      console.log('Tipos procesados:', uniqueTipos)
+    }
+  }, [servicios])
+
+  // Extraer áreas y tipos únicos de los servicios
+  useEffect(() => {
+    if (servicios.length > 0) {
+      const uniqueAreas = Array.from(new Set(servicios.map(s => s.area))).map(area => {
+        const serviciosDeArea = servicios.filter(s => s.area === area)
+        const familias = Array.from(new Set(serviciosDeArea.map(s => s.familia))).map(familia => ({
+          id: familia,
+          nombre: familia
+        }))
+        return {
+          id: area,
+          nombre: area,
+          familias
+        }
+      })
+      setAreas(uniqueAreas)
+
+      const uniqueTipos = Array.from(new Set(servicios.map(s => s.tipo)))
+      setTipos(uniqueTipos)
+    }
+  }, [servicios])
+
   return (
     <>
       <Drawer
@@ -955,7 +1233,26 @@ const EditEventSidebar = ({
                   value={formData.fechaInicio.split('T')[1] || ''}
                   onChange={e => {
                     const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
-                    handleInputChange('fechaInicio', `${date}T${e.target.value}`)
+                    const horaInicio = e.target.value
+
+                    // Calcular hora fin (una hora después)
+                    if (horaInicio) {
+                      const [horas, minutos] = horaInicio.split(':').map(Number)
+
+                      // Crear una fecha base para calcular la hora fin
+                      const fechaBase = new Date(`${date}T${horaInicio}`)
+                      fechaBase.setHours(fechaBase.getHours() + 1)
+
+                      // Formatear la hora fin
+                      const horaFinString = fechaBase.toTimeString().slice(0, 5)
+
+                      // Actualizar fecha inicio
+                      handleInputChange('fechaInicio', `${date}T${horaInicio}`)
+                      // Actualizar fecha fin automáticamente
+                      handleInputChange('fechaFin', `${date}T${horaFinString}`)
+                    } else {
+                      handleInputChange('fechaInicio', `${date}T${horaInicio}`)
+                    }
                   }}
                   InputLabelProps={{
                     shrink: true
@@ -1455,163 +1752,392 @@ const EditEventSidebar = ({
 
               {/* Sección de Servicios */}
               <Grid item xs={12}>
-                <Typography variant='subtitle1' sx={{ mb: 2, fontWeight: 'bold' }}>
-                  Servicios
+                <Typography variant='h5' sx={{ mb: 2 }}>
+                  Detalles
                 </Typography>
 
-                {/* Tabla de servicios */}
-                <Box sx={{ backgroundColor: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
-                  <Grid container>
-                    <Grid item xs={2}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                        CÓDIGO
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                        SERVICIOS
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={1}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                        CANT.
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                        DESCRIPCIÓN
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold' }}>
-                        2DA VISITA
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant='body2' sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                        ACCIÓN
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                {serviciosAgendados.length > 0 ? (
-                  serviciosAgendados.map((servicio, index) => {
-                    const isEditing = editingIndex === index
-                    const tempData = editingService && editingIndex === index ? editingService : servicio
-
-                    return (
-                      <Grid
-                        container
-                        key={index}
-                        sx={{ borderBottom: '1px solid #e0e0e0', padding: '8px 0', alignItems: 'center' }}
-                      >
-                        <Grid item xs={2}>
-                          <Typography>{servicio.codigo}</Typography>
-                        </Grid>
-                        <Grid item xs={2}>
-                          <Typography>{servicio.servicio}</Typography>
-                        </Grid>
-                        <Grid item xs={1}>
-                          {isEditing ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={tempData.cantidad}
-                              onChange={e => {
-                                const newService = { ...tempData, cantidad: parseInt(e.target.value) }
-
-                                setEditingService(newService)
-                              }}
-                              inputProps={{ min: 1, style: { padding: '4px 8px' } }}
-                              fullWidth
-                            />
-                          ) : (
-                            <Typography>{servicio.cantidad}</Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={3}>
-                          {isEditing ? (
-                            <TextField
-                              size='small'
-                              value={tempData.observacion || ''}
-                              onChange={e => {
-                                const newService = { ...tempData, observacion: e.target.value }
-
-                                setEditingService(newService)
-                              }}
-                              fullWidth
-                            />
-                          ) : (
-                            <Typography>{servicio.observacion}</Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={2}>
-                          {isEditing ? (
-                            <Checkbox
-                              checked={tempData.esSegundaVisita}
-                              onChange={e => {
-                                const newService = { ...tempData, esSegundaVisita: e.target.checked }
-
-                                setEditingService(newService)
-                              }}
-                              size='small'
-                            />
-                          ) : (
-                            <Typography>{servicio.esSegundaVisita ? 'Sí' : 'No'}</Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={2}>
-                          <Box display='flex' gap={1} justifyContent='center'>
-                            {isEditing ? (
-                              <>
-                                <IconButton
-                                  size='small'
-                                  color='primary'
-                                  onClick={() => {
-                                    const updatedServices = [...serviciosAgendados]
-
-                                    updatedServices[index] = editingService!
-                                    setServiciosAgendados(updatedServices)
-                                    setEditingIndex(-1)
-                                    setEditingService(null)
-                                  }}
-                                >
-                                  <SaveIcon fontSize='small' />
-                                </IconButton>
-                                <IconButton
-                                  size='small'
-                                  color='error'
-                                  onClick={() => {
-                                    setEditingIndex(-1)
-                                    setEditingService(null)
-                                  }}
-                                >
-                                  <CloseIcon fontSize='small' />
-                                </IconButton>
-                              </>
-                            ) : (
+                {/* Buscador de servicios */}
+                <Grid container spacing={2}>
+                  {/* Servicio (con Autocomplete) */}
+                  <Grid item xs={12} sm={3}>
+                    <div ref={servicioAnchorRef} style={{ width: '100%' }}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label='Servicio Terreno'
+                        value={servicioSeleccionado ? `${servicioSeleccionado.nombre}${servicioSeleccionado.norma ? ` - ${servicioSeleccionado.norma}` : ''}` : ''}
+                        onClick={() => handleOpenPopover(servicioAnchorRef.current)}
+                        InputProps={{
+                          readOnly: true,
+                          endAdornment: (
+                            <InputAdornment position='end'>
                               <IconButton
                                 size='small'
-                                color='primary'
-                                onClick={() => {
-                                  setEditingIndex(index)
-                                  setEditingService({ ...servicio })
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenPopover(servicioAnchorRef.current)
                                 }}
                               >
-                                <EditIcon fontSize='small' />
+                                <i className='ri-search-line' />
                               </IconButton>
-                            )}
-                          </Box>
-                        </Grid>
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    </div>
+                  </Grid>
+
+                  {/* Cantidad */}
+                  <Grid item xs={12} sm={2}>
+                    <TextField
+                      fullWidth
+                      label='Cantidad'
+                      type='number'
+                      value={cantidad}
+                      onChange={e => setCantidad(e.target.value)}
+                    />
+                  </Grid>
+
+                  {/* Observación */}
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label='Observación'
+                      value={observacion}
+                      onChange={e => setObservacion(e.target.value)}
+                    />
+                  </Grid>
+
+                  {/* Segunda visita */}
+                  <Grid item xs={12} sm={1}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={esSegundaVisita}
+                          onChange={e => setEsSegundaVisita(e.target.checked)}
+                        />
+                      }
+                      label='2da visita'
+                    />
+                  </Grid>
+
+                  {/* Botón agregar */}
+                  <Grid item xs={12} sm={2}>
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      onClick={handleAgregarServicio}
+                      disabled={!servicioSeleccionado}
+                      fullWidth
+                      startIcon={<AddIcon />}
+                    >
+                      Agregar Servicio
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                <Popover
+                  open={Boolean(anchorEl)}
+                  anchorEl={anchorEl}
+                  onClose={handleClosePopover}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  PaperProps={{
+                    sx: {
+                      width: '100%',
+                      maxWidth: '500px',
+                      maxHeight: '400px',
+                      overflow: 'auto',
+                      zIndex: 1
+                    }
+                  }}
+                >
+                  <Box sx={{ p: 2 }}>
+                    <TextField
+                      fullWidth
+                      size='small'
+                      placeholder='Buscar por nombre, descripción o código...'
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position='start'>
+                            <SearchIcon />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+
+                    <Grid container spacing={2} sx={{ mt: 2 }}>
+                      <Grid item xs={12} sm={4}>
+                        <FormControl fullWidth size='small'>
+                          <InputLabel>Área</InputLabel>
+                          <Select
+                            value={selectedArea}
+                            label='Área'
+                            onChange={handleAreaChange}
+                          >
+                            <MenuItem value=''>Todas</MenuItem>
+                            {areas.map(area => (
+                              <MenuItem key={area.id} value={area.nombre}>
+                                {area.nombre}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
                       </Grid>
-                    )
-                  })
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-                    <Typography variant='body2'>No hay servicios agregados</Typography>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormControl fullWidth size='small'>
+                          <InputLabel>Tipo</InputLabel>
+                          <Select
+                            value={selectedTipo}
+                            label='Tipo'
+                            onChange={handleTipoChange}
+                          >
+                            <MenuItem value=''>Todos</MenuItem>
+                            {tipos.map(tipo => (
+                              <MenuItem key={tipo} value={tipo}>
+                                {tipo}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormControl size='small' fullWidth>
+                          <InputLabel shrink>Familia</InputLabel>
+                          <Select
+                            value={selectedFamilia}
+                            label='Familia'
+                            onChange={handleFamiliaChange}
+                            displayEmpty
+                            renderValue={selected => selected === '' ? 'Todas' : selected}
+                            disabled={!selectedAreaId}
+                          >
+                            <MenuItem value=''>Todas</MenuItem>
+                            {familias.map(familia => (
+                              <MenuItem key={familia.id} value={familia.nombre}>
+                                {familia.nombre}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={showOnlyPaquetes}
+                          onChange={handleShowOnlyPaquetesChange}
+                          size='small'
+                        />
+                      }
+                      label='Solo paquetes'
+                      sx={{ mt: 2 }}
+                    />
+
+                    <List sx={{ pt: 2 }}>
+                      {filteredProductos.map(producto => (
+                        <ListItem
+                          key={producto.id}
+                          onClick={() => handleSelectProduct(producto)}
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'action.hover'
+                            },
+                            flexDirection: 'column',
+                            alignItems: 'flex-start'
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant='body1'>
+                                  {producto.nombre}
+                                  {producto.norma && (
+                                    <Typography component='span' color='text.secondary'>
+                                      {' '}- {producto.norma}
+                                    </Typography>
+                                  )}
+                                </Typography>
+                                {producto.esPaquete && (
+                                  <Typography
+                                    variant='caption'
+                                    sx={{
+                                      backgroundColor: 'primary.main',
+                                      color: 'white',
+                                      px: 1,
+                                      py: 0.5,
+                                      borderRadius: 1,
+                                      ml: 1
+                                    }}
+                                  >
+                                    Paquete
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Box>
+                                <Typography variant='caption' color='text.secondary'>
+                                  {producto.area} - {producto.tipo} - {producto.familia}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                    {totalProductos > ITEMS_PER_PAGE && (
+                      <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                        <Button
+                          size='small'
+                          onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                          disabled={productsPage === 0}
+                        >
+                          Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                          Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                          size='small'
+                          onClick={() =>
+                            setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                          }
+                          disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                        >
+                          Siguiente
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
-                )}
+                </Popover>
+
+
+
+                {/* Tabla de servicios agregados */}
+                <TableContainer sx={{ mt: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Código</TableCell>
+                        <TableCell>Servicio</TableCell>
+                        <TableCell>Cantidad</TableCell>
+                        <TableCell>Observación</TableCell>
+                        <TableCell>2a Visita</TableCell>
+                        <TableCell>Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {serviciosAgendados.map((servicio, index) => {
+                        console.log('Renderizando servicio:', servicio)
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>{servicio.codigo}</TableCell>
+                            <TableCell>{servicio.servicio}</TableCell>
+                            <TableCell>
+                              {editingIndex === index ? (
+                                <TextField
+                                  size='small'
+                                  type='number'
+                                  value={editingService?.cantidad || servicio.cantidad}
+                                  onChange={e => {
+                                    const newService = { ...editingService!, cantidad: parseInt(e.target.value) }
+                                    setEditingService(newService)
+                                  }}
+                                  inputProps={{ min: 1 }}
+                                  sx={{ width: '80px' }}
+                                />
+                              ) : (
+                                <span>{servicio.cantidad}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {editingIndex === index ? (
+                                <TextField
+                                  size='small'
+                                  multiline
+                                  maxRows={3}
+                                  value={editingService?.observacion || servicio.observacion || ''}
+                                  onChange={e => {
+                                    const newService = { ...editingService!, observacion: e.target.value }
+                                    setEditingService(newService)
+                                  }}
+                                  placeholder='Agregar observación...'
+                                  sx={{ minWidth: '200px' }}
+                                />
+                              ) : (
+                                <span style={{
+                                  wordBreak: 'break-word',
+                                  maxWidth: '200px',
+                                  whiteSpace: 'pre-wrap'
+                                }}>
+                                  {servicio.observacion || ''}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>{servicio.esSegundaVisita ? 'Sí' : 'No'}</TableCell>
+                            <TableCell>
+                              {editingIndex === index ? (
+                                <Box display='flex' alignItems='center' gap={1}>
+                                  <IconButton
+                                    size='small'
+                                    color='primary'
+                                    onClick={() => {
+                                      const updatedServices = [...serviciosAgendados]
+                                      updatedServices[index] = editingService!
+                                      setServiciosAgendados(updatedServices)
+                                      setEditingIndex(-1)
+                                      setEditingService(null)
+                                    }}
+                                  >
+                                    <SaveIcon fontSize='small' />
+                                  </IconButton>
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={() => {
+                                      setEditingIndex(-1)
+                                      setEditingService(null)
+                                    }}
+                                  >
+                                    <CloseIcon fontSize='small' />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                <Box display='flex' alignItems='center' gap={1}>
+                                  <IconButton
+                                    size='small'
+                                    onClick={() => {
+                                      setEditingIndex(index)
+                                      setEditingService({ ...servicio })
+                                    }}
+                                  >
+                                    <EditIcon fontSize='small' />
+                                  </IconButton>
+                                  <IconButton
+                                    color='error'
+                                    onClick={() => {
+                                      const updatedServices = serviciosAgendados.filter((_, i) => i !== index)
+                                      setServiciosAgendados(updatedServices)
+                                    }}
+                                  >
+                                    <i className='ri-delete-bin-line' />
+                                  </IconButton>
+                                </Box>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Grid>
 
               {/* Sección de Laboratoristas y Equipos */}
@@ -1748,6 +2274,7 @@ const EditEventSidebar = ({
                 <TextField
                   fullWidth
                   multiline
+                  rows={4}
                   label='Observaciones'
                   value={formData.observaciones}
                   onChange={e => handleInputChange('observaciones', e.target.value)}
@@ -1772,7 +2299,7 @@ const EditEventSidebar = ({
             onContactCreated={handleAddContact}
           />
         </Box>
-      </Drawer>
+      </Drawer >
     </>
   )
 }
