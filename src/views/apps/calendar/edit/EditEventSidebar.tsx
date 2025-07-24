@@ -98,6 +98,7 @@ interface Cliente {
 interface Obra {
   obraId: number
   nombreObra: string
+  clienteId: number
 }
 
 interface Solicitud {
@@ -161,11 +162,15 @@ const EditEventSidebar = ({
   const [estado, setEstado] = useState('AGENDADA')
   const [editandoEstado, setEditandoEstado] = useState(false)
   const [selectedReferencia, setSelectedReferencia] = useState('')
+  const [isLoadingEventData, setIsLoadingEventData] = useState(false)
 
   // Estados para los datos de las listas desplegables
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [obras, setObras] = useState<Obra[]>([])
+  const [obrasFiltradas, setObrasFiltradas] = useState<Obra[]>([])
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
+  const [solicitudesFiltradas, setSolicitudesFiltradas] = useState<Solicitud[]>([])
+  const [todasLasSolicitudes, setTodasLasSolicitudes] = useState<Solicitud[]>([])
 
   // Estados para los servicios
   const [serviciosAgendados, setServiciosAgendados] = useState<ServicioAgendado[]>([])
@@ -234,39 +239,34 @@ const EditEventSidebar = ({
         const obrasData = await obrasRes.json()
 
         setObras(obrasData)
+        setObrasFiltradas(obrasData)
 
         // Cargar solicitudes
         const solicitudesRes = await fetch('/api/requests')
         const solicitudesData = await solicitudesRes.json()
 
         setSolicitudes(solicitudesData)
+        setTodasLasSolicitudes(solicitudesData)
+        setSolicitudesFiltradas(solicitudesData)
 
-        // Cargar laboratoristas (usuarios con rol específico)
-        const laboratoristasRes = await fetch('/api/users?role=laboratorista')
+        // Cargar laboratoristas disponibles (para el dropdown)
+        const laboratoristasRes = await fetch('/api/users/laboratoristas')
         const laboratoristasData = await laboratoristasRes.json()
 
         const formattedLaboratoristas = laboratoristasData.map((lab: any) => ({
           id: lab.id,
-          nombre: lab.name,
+          name: lab.name,
           email: lab.email,
-          esPrincipal: false
+          rol: lab.roles?.[0]?.rol?.nombre || 'Sin rol asignado'
         }))
 
-        setLaboratoristasAgendados(formattedLaboratoristas)
+        setLaboratoristas(formattedLaboratoristas)
 
-        // Cargar equipos disponibles
+        // Cargar equipos disponibles (para el dropdown)
         const equiposRes = await fetch('/api/agenda/equipos')
         const equiposData = await equiposRes.json()
 
-        const formattedEquipos = equiposData.map((eq: any) => ({
-          id: eq.id,
-          codigo: eq.codigo,
-          nombre: eq.nombre,
-          cantidad: 1,
-          observacion: ''
-        }))
-
-        setEquiposAgendados(formattedEquipos)
+        setEquipos(equiposData)
 
         console.log('Carga inicial de datos completada')
       } catch (error) {
@@ -288,130 +288,229 @@ const EditEventSidebar = ({
       endDate.setHours(10, 0, 0, 0) // Hora por defecto 10:00 AM
       setFechaFin(endDate)
     }
+
+    // Resetear flag de carga cuando se cierre el sidebar
+    if (!editEventSidebarOpen) {
+      setIsLoadingEventData(false)
+    }
   }, [editEventSidebarOpen, selectedEvent])
 
-  // Cargar datos del evento cuando esté disponible
+  // Cargar datos completos del evento desde el backend
   useEffect(() => {
-    if (selectedEvent && editEventSidebarOpen) {
-      console.log('Cargando datos del evento seleccionado:', selectedEvent)
+    const fetchEventData = async () => {
+      if (selectedEvent && editEventSidebarOpen) {
+        setIsLoadingEventData(true)
+        console.log('Cargando datos completos del evento desde el backend:', selectedEvent.id)
 
-      // Helper para obtener el valor desde el nivel principal o extendedProps
-      const getValue = (field: string) =>
-        selectedEvent[field] ?? selectedEvent.extendedProps?.[field] ?? ''
+        try {
+          // Hacer llamada al backend para obtener datos completos
+          const response = await fetch(`/api/agenda/${selectedEvent.id}`)
+          if (!response.ok) {
+            throw new Error('Error al cargar los datos del evento')
+          }
 
-      // Formatear fecha y hora a formato local para los inputs de tipo datetime-local
-      const formatDate = (date: any) => {
-        if (!date) return ''
-        const d = new Date(date)
-        if (isNaN(d.getTime())) return ''
+          const eventData = await response.json()
+          console.log('Datos completos del evento desde backend:', eventData)
 
-        // Formatear manteniendo la zona horaria local
-        const year = d.getFullYear()
-        const month = String(d.getMonth() + 1).padStart(2, '0')
-        const day = String(d.getDate()).padStart(2, '0')
-        const hours = String(d.getHours()).padStart(2, '0')
-        const minutes = String(d.getMinutes()).padStart(2, '0')
+          // Formatear fecha y hora a formato local para los inputs de tipo datetime-local
+          const formatDate = (date: any) => {
+            if (!date) return ''
+            const d = new Date(date)
+            if (isNaN(d.getTime())) return ''
 
-        return `${year}-${month}-${day}T${hours}:${minutes}`
-      }
+            // Formatear manteniendo la zona horaria local
+            const year = d.getFullYear()
+            const month = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            const hours = String(d.getHours()).padStart(2, '0')
+            const minutes = String(d.getMinutes()).padStart(2, '0')
 
-      // Buscar referencia de la obra si no viene en el evento
-      let referenciaFinal = getValue('referencia')
-      if (!referenciaFinal && (selectedEvent.obra || selectedEvent.extendedProps?.obra)) {
-        const obra = selectedEvent.obra || selectedEvent.extendedProps?.obra
-        referenciaFinal = obra.referencia || ''
-      }
+            return `${year}-${month}-${day}T${hours}:${minutes}`
+          }
 
-      // Convertir servicios del formato del evento al formato del formulario
-      const formattedServicios =
-        (selectedEvent.servicios || selectedEvent.extendedProps?.servicios)?.map((s: any) => ({
-          codigo: s.codigo,
-          servicio: s.servicio || s.nombre,
-          cantidad: s.cantidad,
-          observacion: s.observacion || '',
-          esSegundaVisita: s.esSegundaVisita || false
-        })) || []
+          // Establecer estado
+          setEstado(eventData.estado || 'AGENDADA')
 
-      // Convertir laboratoristas del formato del evento al formato del formulario
-      const formattedLaboratoristas =
-        (selectedEvent.asignados || selectedEvent.extendedProps?.asignados)?.map((a: any) => ({
-          id: a?.userId || a?.id || a?.user?.id,
-          nombre: a?.user?.name || a?.name || 'No especificado',
-          email: a?.user?.email || a?.email || '',
-          esPrincipal: a?.esPrincipal || false
-        })) || []
+          // Formatear fechas
+          const fechaInicioFormatted = formatDate(eventData.fechaInicio)
+          const fechaFinFormatted = formatDate(eventData.fechaFin)
 
-      // Convertir equipos del formato del evento al formato del formulario
-      const formattedEquipos =
-        (selectedEvent.equipos || selectedEvent.extendedProps?.equipos)?.map((e: any) => ({
-          id: e.equipo?.id || e.equipoId || e.id,
-          codigo: e.equipo?.codigo || e.codigo || '',
-          nombre: e.equipo?.nombre || e.nombre || '',
-          cantidad: e.cantidad || 1,
-          observacion: e.observacion || ''
-        })) || []
+          // Debug: Verificar los IDs extraídos
+          console.log('IDs extraídos del backend:', {
+            clienteId: eventData.clienteId,
+            obraId: eventData.obraId,
+            solicitudId: eventData.solicitudId
+          })
 
-      // Establecer estado inicial
-      setEstado(getValue('estado') || 'AGENDADA')
+          // Establecer datos del formulario
+          setFormData({
+            titulo: eventData.titulo || '',
+            tipoVisita: eventData.tipoVisita || 'VISITA',
+            esRecurrente: eventData.esRecurrente || false,
+            fechaInicio: fechaInicioFormatted,
+            fechaFin: fechaFinFormatted,
+            clienteId: eventData.clienteId,
+            obraId: eventData.obraId,
+            solicitudId: eventData.solicitudId,
+            sectorComercial: eventData.sectorComercial || '',
+            region: eventData.region || '',
+            comuna: eventData.comuna || '',
+            direccion: eventData.direccion || '',
+            referencia: eventData.referencia || '',
+            observaciones: eventData.observaciones || '',
+            servicios: [],
+            laboratoristas: [],
+            equipos: []
+          })
 
-      // Establecer la referencia seleccionada y en formData
-      setSelectedReferencia(referenciaFinal)
+          // Establecer fechas para DatePicker
+          if (fechaInicioFormatted) {
+            const fechaInicioDate = new Date(fechaInicioFormatted)
+            if (!isNaN(fechaInicioDate.getTime())) {
+              setFechaInicio(fechaInicioDate)
+            }
+          }
 
-      const fechaInicioFormatted = formatDate(getValue('fechaInicio') || getValue('start'))
-      const fechaFinFormatted = formatDate(getValue('fechaFin') || getValue('end'))
+          if (fechaFinFormatted) {
+            const fechaFinDate = new Date(fechaFinFormatted)
+            if (!isNaN(fechaFinDate.getTime())) {
+              setFechaFin(fechaFinDate)
+            }
+          }
 
-      setFormData({
-        titulo: getValue('titulo') || getValue('title'),
-        tipoVisita: getValue('tipoVisita') || 'VISITA',
-        esRecurrente: getValue('esRecurrente') || false,
-        fechaInicio: fechaInicioFormatted,
-        fechaFin: fechaFinFormatted,
-        clienteId: getValue('clienteId') || getValue('cliente')?.id,
-        obraId: getValue('obraId') || getValue('obra')?.id,
-        solicitudId: getValue('solicitudId') || getValue('solicitud')?.id,
-        sectorComercial: getValue('sectorComercial'),
-        region: getValue('region'),
-        comuna: getValue('comuna'),
-        direccion: getValue('direccion'),
-        referencia: referenciaFinal,
-        observaciones: getValue('observaciones'),
-        servicios: [],
-        laboratoristas: [],
-        equipos: []
-      })
+          // Establecer región para cargar comunas
+          if (eventData.region) {
+            setSelectedRegion(eventData.region)
+          }
 
-      // Actualizar también los estados de fecha para el DatePicker
-      if (fechaInicioFormatted) {
-        const fechaInicioDate = new Date(fechaInicioFormatted)
-        if (!isNaN(fechaInicioDate.getTime())) {
-          setFechaInicio(fechaInicioDate)
+          // Establecer referencia
+          setSelectedReferencia(eventData.referencia || '')
+
+          // Procesar servicios
+          const formattedServicios = (eventData.servicios || []).map((s: any) => ({
+            codigo: s.codigo || s.servicio?.codigo || '',
+            servicio: s.servicio?.nombre || s.nombre || '',
+            cantidad: s.cantidad || 1,
+            observacion: s.observacion || '',
+            esSegundaVisita: s.esSegundaVisita || false
+          }))
+          setServiciosAgendados(formattedServicios)
+
+          // Procesar laboratoristas
+          const formattedLaboratoristas = (eventData.asignados || []).map((a: any) => ({
+            id: a.userId || a.user?.id || a.id,
+            nombre: a.user?.name || a.nombre || 'No especificado',
+            email: a.user?.email || a.email || '',
+            esPrincipal: a.esPrincipal || false
+          }))
+          setLaboratoristasAgendados(formattedLaboratoristas)
+
+          // Procesar equipos
+          const formattedEquipos = (eventData.equipos || []).map((e: any) => ({
+            id: e.equipo?.id || e.equipoId || e.id,
+            codigo: e.equipo?.codigo || e.codigo || '',
+            nombre: e.equipo?.nombre || e.nombre || '',
+            cantidad: e.cantidad || 1,
+            observacion: e.observacion || ''
+          }))
+          setEquiposAgendados(formattedEquipos)
+
+          // Procesar contactos
+          const contactosEvento = eventData.contactos || []
+          setContactos(contactosEvento)
+
+          // Aplicar filtros después de cargar los datos
+          const applyFilters = () => {
+            console.log('Aplicando filtros con datos:', {
+              clienteId: eventData.clienteId,
+              obraId: eventData.obraId,
+              obrasDisponibles: obras.length,
+              solicitudesDisponibles: todasLasSolicitudes.length
+            })
+
+            // Aplicar filtro de obras si hay cliente
+            if (eventData.clienteId && obras.length > 0) {
+              console.log('Estructura de la primera obra:', obras[0])
+              console.log('Buscando obras para clienteId:', eventData.clienteId)
+
+              // Filtrar obras por RUT del cliente (según la estructura del backend)
+              const cliente = eventData.cliente || clientes.find(c => c.clienteId === eventData.clienteId)
+              console.log('Cliente encontrado:', cliente)
+
+              let obrasFiltradas = []
+
+              if (cliente && cliente.rut) {
+                // Filtrar por RUT que es la relación entre cliente y obra
+                obrasFiltradas = obras.filter(obra => obra.rut === cliente.rut)
+                console.log('Filtrado por RUT del cliente:', cliente.rut, 'obras encontradas:', obrasFiltradas.length)
+              } else {
+                // Fallback: intentar otros métodos de filtrado
+                obrasFiltradas = obras.filter(obra =>
+                  obra.clienteId === eventData.clienteId ||
+                  obra.cliente?.clienteId === eventData.clienteId ||
+                  obra.cliente?.id === eventData.clienteId
+                )
+                console.log('Filtrado por clienteId, obras encontradas:', obrasFiltradas.length)
+              }
+
+              // Si no encuentra obras, no mostrar ninguna (no todas)
+              if (obrasFiltradas.length === 0) {
+                console.log('No se encontraron obras para este cliente')
+              }
+
+              console.log('Obras filtradas:', obrasFiltradas)
+              setObrasFiltradas(obrasFiltradas)
+            } else {
+              console.log('No se aplicó filtro de obras - clienteId:', eventData.clienteId, 'obras:', obras.length)
+              setObrasFiltradas(obras)
+            }
+
+            // Aplicar filtro de solicitudes si hay obra o cliente
+            if (eventData.obraId && todasLasSolicitudes.length > 0) {
+              const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+                solicitud.obra && solicitud.obra.obraId === eventData.obraId
+              )
+              console.log('Solicitudes filtradas por obra:', solicitudesFiltradas)
+              setSolicitudesFiltradas(solicitudesFiltradas)
+            } else if (eventData.clienteId && todasLasSolicitudes.length > 0) {
+              const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+                solicitud.cliente && solicitud.cliente.clienteId === eventData.clienteId
+              )
+              console.log('Solicitudes filtradas por cliente:', solicitudesFiltradas)
+              setSolicitudesFiltradas(solicitudesFiltradas)
+            } else {
+              console.log('No se aplicó filtro de solicitudes')
+              setSolicitudesFiltradas(todasLasSolicitudes)
+            }
+
+            // Finalizar la carga de datos del evento
+            setIsLoadingEventData(false)
+          }
+
+          // Esperar a que se carguen las obras y solicitudes antes de aplicar filtros
+          if (obras.length > 0 && todasLasSolicitudes.length > 0) {
+            setTimeout(applyFilters, 200)
+          } else {
+            // Si no hay datos aún, intentar de nuevo en un momento
+            setTimeout(() => {
+              if (obras.length > 0 || todasLasSolicitudes.length > 0) {
+                applyFilters()
+              } else {
+                console.log('No se pudieron cargar obras y solicitudes, finalizando carga')
+                setIsLoadingEventData(false)
+              }
+            }, 500)
+          }
+
+        } catch (error) {
+          console.error('Error al cargar datos del evento:', error)
+          setIsLoadingEventData(false)
         }
       }
-
-      if (fechaFinFormatted) {
-        const fechaFinDate = new Date(fechaFinFormatted)
-        if (!isNaN(fechaFinDate.getTime())) {
-          setFechaFin(fechaFinDate)
-        }
-      }
-
-      // Establecer la región seleccionada para cargar las comunas
-      if (getValue('region')) {
-        setSelectedRegion(getValue('region'))
-      }
-
-      // Para debugging
-      console.log('Cliente ID:', getValue('clienteId') || getValue('cliente')?.id)
-      console.log('Obra ID:', getValue('obraId') || getValue('obra')?.id)
-      console.log('Solicitud ID:', getValue('solicitudId') || getValue('solicitud')?.id)
-      console.log('Referencia precargada:', referenciaFinal)
-
-      // Establecer servicios, laboratoristas y equipos agendados
-      setServiciosAgendados(formattedServicios)
-      setLaboratoristasAgendados(formattedLaboratoristas)
-      setEquiposAgendados(formattedEquipos)
     }
-  }, [selectedEvent, editEventSidebarOpen])
+
+    fetchEventData()
+  }, [selectedEvent, editEventSidebarOpen, obras, todasLasSolicitudes])
 
   // Estado para contactos
   const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
@@ -421,19 +520,18 @@ const EditEventSidebar = ({
   })
   const [addContactOpen, setAddContactOpen] = useState(false)
 
-  // Cargar contactos del evento al abrir
-  useEffect(() => {
-    if (selectedEvent && editEventSidebarOpen) {
-      const contactosEvento = selectedEvent.contactos || selectedEvent.extendedProps?.contactos || []
-      setContactos(contactosEvento)
-    }
-  }, [selectedEvent, editEventSidebarOpen])
+
 
   // Estados para laboratoristas y equipos disponibles y seleccionados
   const [laboratoristas, setLaboratoristas] = useState<any[]>([])
   const [laboratoristaSeleccionado, setLaboratoristaSeleccionado] = useState<any | null>(null)
+  const [laboratoristaInputValue, setLaboratoristaInputValue] = useState<string>('')
+  const [laboratoristaKey, setLaboratoristaKey] = useState<number>(0)
+
   const [equipos, setEquipos] = useState<any[]>([])
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<any | null>(null)
+  const [equipoInputValue, setEquipoInputValue] = useState<string>('')
+  const [equipoKey, setEquipoKey] = useState<number>(0)
 
   // Cargar laboratoristas y equipos disponibles al montar
   useEffect(() => {
@@ -464,6 +562,60 @@ const EditEventSidebar = ({
     fetchLaboratoristas()
     fetchEquipos()
   }, [])
+
+  // Filtrar obras cuando cambia el cliente seleccionado
+  useEffect(() => {
+    if (formData.clienteId) {
+      // Intentar diferentes formas de filtrar según la estructura de datos
+      // Filtrar obras por RUT del cliente
+      const cliente = clientes.find(c => c.clienteId === formData.clienteId)
+      let obrasFiltradas = []
+
+      if (cliente && cliente.rut) {
+        // Filtrar por RUT que es la relación entre cliente y obra
+        obrasFiltradas = obras.filter(obra => obra.rut === cliente.rut)
+      } else {
+        // Fallback: intentar otros métodos de filtrado
+        obrasFiltradas = obras.filter(obra =>
+          obra.clienteId === formData.clienteId ||
+          obra.cliente?.clienteId === formData.clienteId ||
+          obra.cliente?.id === formData.clienteId
+        )
+      }
+
+      setObrasFiltradas(obrasFiltradas)
+
+      // Solo limpiar la obra si no estamos cargando datos del evento y la obra no pertenece al cliente
+      if (!isLoadingEventData && formData.obraId && !obrasFiltradas.some(obra => obra.obraId === formData.obraId)) {
+        setFormData(prev => ({ ...prev, obraId: undefined }))
+      }
+    } else {
+      setObrasFiltradas(obras)
+    }
+  }, [formData.clienteId, obras, isLoadingEventData])
+
+  // Filtrar solicitudes cuando cambia la obra seleccionada
+  useEffect(() => {
+    if (formData.obraId) {
+      const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+        solicitud.obra && solicitud.obra.obraId === formData.obraId
+      )
+      setSolicitudesFiltradas(solicitudesFiltradas)
+
+      // Solo limpiar la solicitud si no estamos cargando datos del evento y la solicitud no pertenece a la obra
+      if (!isLoadingEventData && formData.solicitudId && !solicitudesFiltradas.some(sol => sol.id === formData.solicitudId)) {
+        setFormData(prev => ({ ...prev, solicitudId: undefined }))
+      }
+    } else if (formData.clienteId) {
+      // Si hay cliente pero no obra, filtrar por cliente
+      const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+        solicitud.cliente && solicitud.cliente.clienteId === formData.clienteId
+      )
+      setSolicitudesFiltradas(solicitudesFiltradas)
+    } else {
+      setSolicitudesFiltradas(todasLasSolicitudes)
+    }
+  }, [formData.obraId, formData.clienteId, todasLasSolicitudes, isLoadingEventData])
 
   const handleSubmit = async () => {
     try {
@@ -540,13 +692,7 @@ const EditEventSidebar = ({
     }
   }
 
-  const handleRemoverLaboratorista = (index: number) => {
-    setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))
-  }
 
-  const handleRemoverEquipo = (index: number) => {
-    setEquiposAgendados(prev => prev.filter((_, i) => i !== index))
-  }
 
   // Manejadores de cambio de datos
   const handleInputChange = (field: keyof FormData, value: any) => {
@@ -588,28 +734,45 @@ const EditEventSidebar = ({
     setContactos([...contactos, newContact])
   }
 
-  // Métodos para agregar laboratorista y equipo
-  const handleAgregarLaboratorista = () => {
-    if (!laboratoristaSeleccionado) return
-    const nuevoLaboratorista = {
-      id: laboratoristaSeleccionado.id,
-      nombre: laboratoristaSeleccionado.name,
-      email: laboratoristaSeleccionado.email
+  // Métodos para agregar laboratorista y equipo (similar a AddEventSidebar)
+  const handleAgregarLaboratorista = (newValue: any) => {
+    if (newValue) {
+      // Verificar si el laboratorista ya está agregado
+      const yaExiste = laboratoristasAgendados.some(lab => lab.id === newValue.id)
+      if (!yaExiste) {
+        const nuevoLaboratorista: LaboratoristaAgendado = {
+          id: newValue.id,
+          nombre: newValue.name,
+          email: newValue.email
+        }
+        setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
+      }
+      // Limpiar la selección y el campo de búsqueda forzando re-render
+      setLaboratoristaSeleccionado(null)
+      setLaboratoristaInputValue('')
+      setLaboratoristaKey(prev => prev + 1)
     }
-    setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
-    setLaboratoristaSeleccionado(null)
   }
-  const handleAgregarEquipo = () => {
-    if (!equipoSeleccionado) return
-    const nuevoEquipo: EquipoAgendado = {
-      id: equipoSeleccionado.id,
-      codigo: equipoSeleccionado.codigo,
-      nombre: equipoSeleccionado.nombre,
-      cantidad: 1,
-      observacion: ''
+
+  const handleAgregarEquipo = (newValue: any) => {
+    if (newValue) {
+      // Verificar si el equipo ya está agregado
+      const yaExiste = equiposAgendados.some(equipo => equipo.id === newValue.id)
+      if (!yaExiste) {
+        const nuevoEquipo: EquipoAgendado = {
+          id: newValue.id,
+          codigo: newValue.codigo,
+          nombre: newValue.nombre,
+          cantidad: 1,
+          observacion: ''
+        }
+        setEquiposAgendados(prev => [...prev, nuevoEquipo])
+      }
+      // Limpiar la selección y el campo de búsqueda forzando re-render
+      setEquipoSeleccionado(null)
+      setEquipoInputValue('')
+      setEquipoKey(prev => prev + 1)
     }
-    setEquiposAgendados(prev => [...prev, nuevoEquipo])
-    setEquipoSeleccionado(null)
   }
 
   return (
@@ -778,7 +941,95 @@ const EditEventSidebar = ({
                   options={clientes}
                   getOptionLabel={option => option.razonSocial}
                   value={clientes.find(c => c.clienteId === formData.clienteId) || null}
-                  onChange={(_, newValue) => handleInputChange('clienteId', newValue?.clienteId)}
+                  onChange={(_, newValue) => {
+                    if (newValue) {
+                      // Filtrar obras del cliente seleccionado
+                      let obrasDelCliente = []
+                      if (newValue.rut) {
+                        obrasDelCliente = obras.filter(obra => obra.rut === newValue.rut)
+                      } else {
+                        obrasDelCliente = obras.filter(obra =>
+                          obra.clienteId === newValue.clienteId ||
+                          obra.cliente?.clienteId === newValue.clienteId
+                        )
+                      }
+
+                      // Si solo hay una obra, preseleccionarla
+                      let obraPreseleccionada = undefined
+                      let solicitudPreseleccionada = undefined
+
+                      if (obrasDelCliente.length === 1) {
+                        const obraSeleccionada = obrasDelCliente[0]
+                        obraPreseleccionada = obraSeleccionada.obraId
+
+                        // Si hay una obra preseleccionada, buscar su solicitud
+                        const solicitudRelacionada = todasLasSolicitudes.find(solicitud =>
+                          solicitud.obra && solicitud.obra.obraId === obraPreseleccionada
+                        )
+
+                        if (solicitudRelacionada) {
+                          solicitudPreseleccionada = solicitudRelacionada.id
+                        }
+
+                        // Actualizar región seleccionada para cargar comunas
+                        if (obraSeleccionada.region) {
+                          setSelectedRegion(obraSeleccionada.region)
+                        }
+
+                        console.log('Cliente con una sola obra - Preseleccionando:', {
+                          cliente: newValue.clienteId,
+                          obra: obraPreseleccionada,
+                          solicitud: solicitudPreseleccionada,
+                          direccion: obraSeleccionada.direccion,
+                          region: obraSeleccionada.region,
+                          comuna: obraSeleccionada.comuna
+                        })
+                      } else {
+                        // Si hay múltiples obras, limpiar región seleccionada
+                        setSelectedRegion('')
+
+                        console.log('Cliente con múltiples obras - Limpiando campos de ubicación:', {
+                          cliente: newValue.clienteId,
+                          obrasDisponibles: obrasDelCliente.length
+                        })
+                      }
+
+                      setFormData(prev => ({
+                        ...prev,
+                        clienteId: newValue.clienteId,
+                        obraId: obraPreseleccionada,
+                        solicitudId: solicitudPreseleccionada,
+                        // Si se preselecciona una obra, llenar datos de ubicación
+                        // Si no se preselecciona (múltiples obras), limpiar datos de ubicación
+                        ...(obrasDelCliente.length === 1 ? {
+                          direccion: obrasDelCliente[0].direccion || prev.direccion,
+                          region: obrasDelCliente[0].region || prev.region,
+                          comuna: obrasDelCliente[0].comuna || prev.comuna,
+                          referencia: obrasDelCliente[0].referencia || prev.referencia
+                        } : {
+                          direccion: '',
+                          region: '',
+                          comuna: '',
+                          referencia: ''
+                        })
+                      }))
+                    } else {
+                      // Limpiar región seleccionada
+                      setSelectedRegion('')
+
+                      setFormData(prev => ({
+                        ...prev,
+                        clienteId: undefined,
+                        obraId: undefined,
+                        solicitudId: undefined,
+                        // Limpiar datos de ubicación cuando se quita el cliente
+                        direccion: '',
+                        region: '',
+                        comuna: '',
+                        referencia: ''
+                      }))
+                    }
+                  }}
                   renderInput={params => <TextField {...params} label='Cliente' required />}
                 />
               </Grid>
@@ -786,25 +1037,87 @@ const EditEventSidebar = ({
               {/* Obra */}
               <Grid item xs={4}>
                 <Autocomplete
-                  options={obras}
+                  options={obrasFiltradas}
                   getOptionLabel={option => option.nombreObra}
-                  value={obras.find(o => o.obraId === formData.obraId) || null}
-                  onChange={(_, newValue) => handleInputChange('obraId', newValue?.obraId)}
+                  value={(() => {
+                    const obraEncontrada = obrasFiltradas.find(o => o.obraId === formData.obraId) ||
+                      obras.find(o => o.obraId === formData.obraId) ||
+                      null
+                    console.log('Obra buscada:', {
+                      obraId: formData.obraId,
+                      obrasFiltradas: obrasFiltradas.length,
+                      obrasTotal: obras.length,
+                      obraEncontrada: obraEncontrada
+                    })
+                    return obraEncontrada
+                  })()}
+                  onChange={(_, newValue) => {
+                    if (newValue) {
+                      // Buscar solicitud relacionada a esta obra
+                      const solicitudRelacionada = todasLasSolicitudes.find(solicitud =>
+                        solicitud.obra && solicitud.obra.obraId === newValue.obraId
+                      )
+
+                      console.log('Obra seleccionada:', {
+                        obraId: newValue.obraId,
+                        solicitud: solicitudRelacionada?.id,
+                        direccion: newValue.direccion,
+                        region: newValue.region,
+                        comuna: newValue.comuna,
+                        referencia: newValue.referencia
+                      })
+
+                      // Actualizar región seleccionada para cargar comunas
+                      if (newValue.region) {
+                        setSelectedRegion(newValue.region)
+                      }
+
+                      setFormData(prev => ({
+                        ...prev,
+                        obraId: newValue.obraId,
+                        solicitudId: solicitudRelacionada?.id || undefined,
+                        // Llenar datos de ubicación desde la obra
+                        direccion: newValue.direccion || prev.direccion,
+                        region: newValue.region || prev.region,
+                        comuna: newValue.comuna || prev.comuna,
+                        referencia: newValue.referencia || prev.referencia
+                      }))
+                    } else {
+                      // Limpiar región seleccionada
+                      setSelectedRegion('')
+
+                      setFormData(prev => ({
+                        ...prev,
+                        obraId: undefined,
+                        solicitudId: undefined,
+                        // Limpiar datos de ubicación cuando se quita la obra
+                        direccion: '',
+                        region: '',
+                        comuna: '',
+                        referencia: ''
+                      }))
+                    }
+                  }}
                   renderInput={params => <TextField {...params} label='Obra' />}
+                  disabled={!formData.clienteId}
                 />
               </Grid>
 
               {/* Solicitud */}
               <Grid item xs={4}>
                 <Autocomplete
-                  options={solicitudes}
+                  options={solicitudesFiltradas}
                   getOptionLabel={option => {
                     const clienteInfo = option.cliente ? ` - ${option.cliente.razonSocial}` : ''
                     const obraInfo = option.obra ? ` - ${option.obra.nombreObra}` : ''
 
                     return `Solicitud #${option.numeroSolicitud}${clienteInfo}${obraInfo}`
                   }}
-                  value={solicitudes.find(s => s.id === formData.solicitudId) || null}
+                  value={
+                    solicitudesFiltradas.find(s => s.id === formData.solicitudId) ||
+                    todasLasSolicitudes.find(s => s.id === formData.solicitudId) ||
+                    null
+                  }
                   onChange={(_, newValue) => {
                     if (newValue) {
                       setFormData(prev => ({
@@ -821,6 +1134,7 @@ const EditEventSidebar = ({
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Solicitud' />}
+                  disabled={!formData.clienteId}
                   renderOption={(props, option) => (
                     <li {...props}>
                       <Box>
@@ -1243,62 +1557,62 @@ const EditEventSidebar = ({
                   <Typography variant='h5' sx={{ mb: 2 }}>
                     Laboratoristas
                   </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={10}>
-                      <Autocomplete
-                        fullWidth
-                        options={laboratoristas}
-                        getOptionLabel={option => `${option.name} (${option.rol || ''})`}
-                        value={laboratoristaSeleccionado}
-                        onChange={(_, newValue) => setLaboratoristaSeleccionado(newValue)}
-                        renderInput={params => (
-                          <TextField
-                            {...params}
-                            label='Laboratorista'
-                            InputProps={{
-                              ...params.InputProps,
-                              startAdornment: (
-                                <InputAdornment position='start'>
-                                  <SearchIcon />
-                                </InputAdornment>
-                              )
-                            }}
-                          />
-                        )}
+                  <Autocomplete
+                    key={laboratoristaKey}
+                    fullWidth
+                    options={laboratoristas}
+                    getOptionLabel={option => `${option.name} (${option.rol})`}
+                    value={laboratoristaSeleccionado}
+                    inputValue={laboratoristaInputValue}
+                    onInputChange={(_, newInputValue) => {
+                      setLaboratoristaInputValue(newInputValue)
+                    }}
+                    onChange={(_, newValue) => handleAgregarLaboratorista(newValue)}
+                    renderInput={params => (
+                      <TextField
+                        {...params}
+                        label='Laboratorista'
+                        placeholder='Seleccione un laboratorista para agregarlo automáticamente'
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <InputAdornment position='start'>
+                              <SearchIcon />
+                            </InputAdornment>
+                          )
+                        }}
                       />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Button variant='contained' color='primary' fullWidth onClick={handleAgregarLaboratorista}>
-                        Agregar
-                      </Button>
-                    </Grid>
-                  </Grid>
-                  {/* Lista de laboratoristas agendados */}
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Nombre</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Acciones</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {laboratoristasAgendados.map((laboratorista, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{laboratorista.nombre}</TableCell>
-                          <TableCell>{laboratorista.email}</TableCell>
-                          <TableCell>
-                            <IconButton
-                              color='error'
-                              onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
-                            >
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                          </TableCell>
+                    )}
+                  />
+
+                  {/* Lista de laboratoristas agregados */}
+                  <TableContainer sx={{ mt: 2 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Nombre</TableCell>
+                          <TableCell>Email</TableCell>
+                          <TableCell>Acciones</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHead>
+                      <TableBody>
+                        {laboratoristasAgendados.map((laboratorista, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{laboratorista.nombre}</TableCell>
+                            <TableCell>{laboratorista.email}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                color='error'
+                                onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
+                              >
+                                <i className='ri-delete-bin-line' />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </Grid>
 
                 {/* Equipos */}
@@ -1306,62 +1620,62 @@ const EditEventSidebar = ({
                   <Typography variant='h5' sx={{ mb: 2 }}>
                     Equipos
                   </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={10}>
-                      <Autocomplete
-                        fullWidth
-                        options={equipos}
-                        getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
-                        value={equipoSeleccionado}
-                        onChange={(_, newValue) => setEquipoSeleccionado(newValue)}
-                        renderInput={params => (
-                          <TextField
-                            {...params}
-                            label='Equipo'
-                            InputProps={{
-                              ...params.InputProps,
-                              startAdornment: (
-                                <InputAdornment position='start'>
-                                  <SearchIcon />
-                                </InputAdornment>
-                              )
-                            }}
-                          />
-                        )}
+                  <Autocomplete
+                    key={equipoKey}
+                    fullWidth
+                    options={equipos}
+                    getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+                    value={equipoSeleccionado}
+                    inputValue={equipoInputValue}
+                    onInputChange={(_, newInputValue) => {
+                      setEquipoInputValue(newInputValue)
+                    }}
+                    onChange={(_, newValue) => handleAgregarEquipo(newValue)}
+                    renderInput={params => (
+                      <TextField
+                        {...params}
+                        label='Equipo'
+                        placeholder='Seleccione un equipo para agregarlo automáticamente'
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <InputAdornment position='start'>
+                              <SearchIcon />
+                            </InputAdornment>
+                          )
+                        }}
                       />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Button variant='contained' color='primary' fullWidth onClick={handleAgregarEquipo}>
-                        Agregar
-                      </Button>
-                    </Grid>
-                  </Grid>
-                  {/* Lista de equipos agendados */}
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Código</TableCell>
-                        <TableCell>Nombre</TableCell>
-                        <TableCell>Acciones</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {equiposAgendados.map((equipo, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{equipo.codigo}</TableCell>
-                          <TableCell>{equipo.nombre}</TableCell>
-                          <TableCell>
-                            <IconButton
-                              color='error'
-                              onClick={() => setEquiposAgendados(prev => prev.filter((_, i) => i !== index))}
-                            >
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                          </TableCell>
+                    )}
+                  />
+
+                  {/* Lista de equipos agregados */}
+                  <TableContainer sx={{ mt: 2 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Código</TableCell>
+                          <TableCell>Nombre</TableCell>
+                          <TableCell>Acciones</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHead>
+                      <TableBody>
+                        {equiposAgendados.map((equipo, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{equipo.codigo}</TableCell>
+                            <TableCell>{equipo.nombre}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                color='error'
+                                onClick={() => setEquiposAgendados(prev => prev.filter((_, i) => i !== index))}
+                              >
+                                <i className='ri-delete-bin-line' />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </Grid>
               </Grid>
 
