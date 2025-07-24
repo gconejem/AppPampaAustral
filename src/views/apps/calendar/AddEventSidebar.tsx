@@ -1142,7 +1142,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     fullWidth: true,
                     error: !!(formData.tipoVisita === 'RECURRENTE' && fechaFin && fechaInicio && fechaFin < fechaInicio),
                     helperText: formData.tipoVisita !== 'RECURRENTE'
-                      ? 'Activar "Recurrente" para seleccionar fecha de fin'
+                      ? ''
                       : fechaFin && fechaInicio && fechaFin < fechaInicio
                         ? 'La fecha de fin no puede ser anterior a la de inicio'
                         : ''
