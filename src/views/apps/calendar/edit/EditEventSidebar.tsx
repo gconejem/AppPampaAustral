@@ -184,36 +184,27 @@ const EditEventSidebar = ({
   const [editingService, setEditingService] = useState<ServicioAgendado | null>(null)
 
   // Convertir las fechas string a objetos Date para los datepickers
-  const [fechaInicio, setFechaInicio] = useState<Date | null>(() => {
-    const d = formData.fechaInicio ? new Date(formData.fechaInicio) : new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
+  const [fechaInicio, setFechaInicio] = useState<Date | null>(null);
+  const [fechaFin, setFechaFin] = useState<Date | null>(null);
 
-  const [fechaFin, setFechaFin] = useState<Date | null>(() => {
-    const d = formData.fechaFin ? new Date(formData.fechaFin) : new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-
-  // Actualizar formData cuando cambien las fechas
+  // Actualizar formData cuando cambien las fechas (solo si no estamos cargando datos del evento)
   useEffect(() => {
-    if (fechaInicio) {
+    if (fechaInicio && editEventSidebarOpen) {
       setFormData(prev => ({
         ...prev,
-        fechaInicio: fechaInicio.toISOString()
+        fechaInicio: fechaInicio.toISOString().slice(0, 16)
       }))
     }
-  }, [fechaInicio])
+  }, [fechaInicio, editEventSidebarOpen])
 
   useEffect(() => {
-    if (fechaFin) {
+    if (fechaFin && editEventSidebarOpen) {
       setFormData(prev => ({
         ...prev,
-        fechaFin: fechaFin.toISOString()
+        fechaFin: fechaFin.toISOString().slice(0, 16)
       }))
     }
-  }, [fechaFin])
+  }, [fechaFin, editEventSidebarOpen])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -275,6 +266,19 @@ const EditEventSidebar = ({
     fetchData()
   }, [])
 
+  // Inicializar fechas cuando se abre el sidebar sin evento seleccionado
+  useEffect(() => {
+    if (editEventSidebarOpen && !selectedEvent) {
+      const now = new Date()
+      now.setHours(9, 0, 0, 0) // Hora por defecto 9:00 AM
+      setFechaInicio(now)
+
+      const endDate = new Date(now)
+      endDate.setHours(10, 0, 0, 0) // Hora por defecto 10:00 AM
+      setFechaFin(endDate)
+    }
+  }, [editEventSidebarOpen, selectedEvent])
+
   // Cargar datos del evento cuando esté disponible
   useEffect(() => {
     if (selectedEvent && editEventSidebarOpen) {
@@ -334,12 +338,15 @@ const EditEventSidebar = ({
       // Establecer la referencia seleccionada y en formData
       setSelectedReferencia(referenciaFinal)
 
+      const fechaInicioFormatted = formatDate(getValue('fechaInicio') || getValue('start'))
+      const fechaFinFormatted = formatDate(getValue('fechaFin') || getValue('end'))
+
       setFormData({
         titulo: getValue('titulo') || getValue('title'),
         tipoVisita: getValue('tipoVisita') || 'VISITA',
         esRecurrente: getValue('esRecurrente') || false,
-        fechaInicio: formatDate(getValue('fechaInicio') || getValue('start')),
-        fechaFin: formatDate(getValue('fechaFin') || getValue('end')),
+        fechaInicio: fechaInicioFormatted,
+        fechaFin: fechaFinFormatted,
         clienteId: getValue('clienteId') || getValue('cliente')?.id,
         obraId: getValue('obraId') || getValue('obra')?.id,
         solicitudId: getValue('solicitudId') || getValue('solicitud')?.id,
@@ -353,6 +360,21 @@ const EditEventSidebar = ({
         laboratoristas: [],
         equipos: []
       })
+
+      // Actualizar también los estados de fecha para el DatePicker
+      if (fechaInicioFormatted) {
+        const fechaInicioDate = new Date(fechaInicioFormatted)
+        if (!isNaN(fechaInicioDate.getTime())) {
+          setFechaInicio(fechaInicioDate)
+        }
+      }
+
+      if (fechaFinFormatted) {
+        const fechaFinDate = new Date(fechaFinFormatted)
+        if (!isNaN(fechaFinDate.getTime())) {
+          setFechaFin(fechaFinDate)
+        }
+      }
 
       // Establecer la región seleccionada para cargar las comunas
       if (getValue('region')) {
