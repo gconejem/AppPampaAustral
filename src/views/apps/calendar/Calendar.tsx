@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 import { alpha } from '@mui/material/styles'
 import Box from '@mui/material/Box'
@@ -353,12 +353,12 @@ const Calendar = (props: CalenderProps) => {
         setSelectedEvents([])
       }
 
-      // Actualizar inmediatamente todos los checkboxes visibles
+      // Actualizar inmediatamente todos los botones de checkbox visibles
       setTimeout(() => {
-        const checkboxes = document.querySelectorAll('.fc-list-event-checkbox input[type="checkbox"]')
-        checkboxes.forEach((checkbox: Element) => {
-          if (checkbox instanceof HTMLInputElement) {
-            checkbox.checked = newSelectAll
+        const checkboxButtons = document.querySelectorAll('.event-checkbox-button')
+        checkboxButtons.forEach((button: Element) => {
+          if (button instanceof HTMLElement) {
+            button.innerHTML = newSelectAll ? '☑️' : '☐'
           }
         })
       }, 0)
@@ -367,7 +367,7 @@ const Calendar = (props: CalenderProps) => {
     })
   }
 
-  const handleSelectEvent = (eventId: string) => {
+  const handleSelectEvent = useCallback((eventId: string) => {
     setSelectedEvents(prevSelection => {
       const event = events.find(e => String(e.id) === String(eventId))
 
@@ -393,24 +393,53 @@ const Calendar = (props: CalenderProps) => {
           laboratoristas: event.extendedProps?.asignados || []
         }
 
-        return [...prevSelection, newEvent]
+        const newSelection = [...prevSelection, newEvent]
+
+        // Verificar si todos los eventos visibles están seleccionados para activar "Seleccionar Todo"
+        setTimeout(() => {
+          const visibleEventRows = document.querySelectorAll('.fc-list-event')
+          const visibleEventIds = Array.from(visibleEventRows).map(row =>
+            row.querySelector('.fc-list-event-title')?.getAttribute('data-event-id')
+          ).filter(Boolean)
+
+          const allVisibleSelected = visibleEventIds.length > 0 &&
+            visibleEventIds.every(eventId => newSelection.some(event => event.id === eventId))
+
+          if (allVisibleSelected && !selectAll) {
+            setSelectAll(true)
+          }
+        }, 0)
+
+        return newSelection
       }
     })
-  }
+  }, [events, selectAll])
 
-  // Actualizar los checkboxes cuando cambia selectedEvents
+  // Hacer la función accesible globalmente para FullCalendar
+  // Hacer la función accesible para los checkboxes
   useEffect(() => {
-    const checkboxes = document.querySelectorAll('.fc-list-event-checkbox input[type="checkbox"]')
+    (window as any).toggleEventSelection = (eventId: string) => {
+      handleSelectEvent(eventId)
+    }
+    return () => {
+      delete (window as any).toggleEventSelection
+    }
+  }, [handleSelectEvent])
 
-    checkboxes.forEach((checkbox: Element) => {
-      if (checkbox instanceof HTMLInputElement) {
-        const row = checkbox.closest('.fc-list-event')
+  // Actualizar los botones de checkbox cuando cambia selectedEvents
+  useEffect(() => {
+    const checkboxButtons = document.querySelectorAll('.event-checkbox-button')
+
+    checkboxButtons.forEach((button: Element) => {
+      if (button instanceof HTMLElement) {
+        const row = button.closest('.fc-list-event')
 
         if (row instanceof HTMLElement) {
           const eventId = row.querySelector('.fc-list-event-title')?.getAttribute('data-event-id')
 
           if (eventId) {
-            checkbox.checked = selectedEvents.some(event => event.id === eventId)
+            const isSelected = selectedEvents.some(event => event.id === eventId)
+            button.innerHTML = isSelected ? '☑️' : '☐'
           }
         }
       }
@@ -644,17 +673,12 @@ const Calendar = (props: CalenderProps) => {
               cursor: default !important;
               background-color: transparent !important;
               height: 60px !important;
+              pointer-events: none !important;
             `
             row.classList.remove('fc-event-clickable')
             row.classList.remove('fc-list-event-hoverable')
 
-            row.addEventListener('mouseover', () => {
-              row.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
-            })
-
-            row.addEventListener('mouseout', () => {
-              row.style.backgroundColor = 'transparent'
-            })
+            // Removidos los event listeners de hover para evitar conflictos
 
             // Remover cualquier evento de hover existente
             const cells = row.querySelectorAll('td')
@@ -690,7 +714,7 @@ const Calendar = (props: CalenderProps) => {
               transition: background-color 0.2s;
               min-width: 32px;
               height: 32px;
-              pointer-events: auto;
+              pointer-events: auto !important;
             `
             viewButton.addEventListener('mouseover', () => {
               viewButton.style.backgroundColor = 'rgba(0,0,0,0.04)'
@@ -726,7 +750,7 @@ const Calendar = (props: CalenderProps) => {
               transition: background-color 0.2s;
               min-width: 32px;
               height: 32px;
-              pointer-events: auto;
+              pointer-events: auto !important;
             `
             editButton.addEventListener('mouseover', () => {
               editButton.style.backgroundColor = 'rgba(0,0,0,0.04)'
@@ -767,7 +791,7 @@ const Calendar = (props: CalenderProps) => {
               transition: background-color 0.2s;
               min-width: 32px;
               height: 32px;
-              pointer-events: auto;
+              pointer-events: auto !important;
             `
             personButton.addEventListener('mouseover', () => {
               personButton.style.backgroundColor = 'rgba(0,0,0,0.04)'
@@ -804,6 +828,7 @@ const Calendar = (props: CalenderProps) => {
               width: 32px;
               height: 32px;
               transition: background-color 0.2s;
+              pointer-events: auto !important;
             `
             menuButton.addEventListener('mouseover', () => {
               menuButton.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
@@ -827,37 +852,60 @@ const Calendar = (props: CalenderProps) => {
               justify-content: center;
               gap: 8px;
               width: 100%;
+              pointer-events: auto !important;
             `
             actionContainer.appendChild(viewButton)
             actionContainer.appendChild(editButton)
             actionContainer.appendChild(personButton)
             actionContainer.appendChild(menuButton)
 
-            // Crear la columna de checkbox
+            // Crear la columna de checkbox como botón simple
             const checkboxCell = document.createElement('div')
-
             checkboxCell.className = 'fc-list-event-checkbox'
             checkboxCell.style.cssText = `
               display: flex;
               align-items: center;
               justify-content: center;
+              pointer-events: auto !important;
+              z-index: 999;
             `
 
-            const checkbox = document.createElement('input')
+            const eventId = String(info.event.id)
+            const isSelected = selectedEvents.some(event => String(event.id) === eventId)
 
-            checkbox.type = 'checkbox'
-            checkbox.checked = selectedEvents.some(event => String(event.id) === String(info.event.id))
-            checkbox.className = 'event-checkbox'
-            checkbox.style.cssText = `
-              width: 18px;
-              height: 18px;
+            // Crear un botón que simule un checkbox
+            const checkboxButton = document.createElement('button')
+            checkboxButton.className = 'event-checkbox-button'
+            checkboxButton.innerHTML = isSelected ? '☑️' : '☐'
+            checkboxButton.style.cssText = `
+              background: none;
+              border: none;
               cursor: pointer;
+              font-size: 16px;
+              padding: 2px;
+              pointer-events: auto !important;
+              z-index: 1000;
+              position: relative;
             `
-            checkbox.addEventListener('change', () => {
-              handleSelectEvent(String(info.event.id))
-            })
 
-            checkboxCell.appendChild(checkbox)
+            checkboxButton.onclick = (e) => {
+              e.stopPropagation()
+              e.preventDefault()
+
+              // Cambiar visualmente el estado
+              const currentlySelected = checkboxButton.innerHTML === '☑️'
+              checkboxButton.innerHTML = currentlySelected ? '☐' : '☑️'
+
+              // Llamar a la función de selección
+              const toggleFn = (window as any).toggleEventSelection
+              if (toggleFn) {
+                toggleFn(eventId)
+              }
+
+              return false
+            }
+
+            checkboxCell.appendChild(checkboxButton)
 
             // Obtener referencias a las columnas
             const timeCol = row.querySelector('.fc-list-event-time')
@@ -952,52 +1000,60 @@ const Calendar = (props: CalenderProps) => {
               `
               dateCheckboxContainer.appendChild(dateContainer)
 
-              // Agregar el nuevo contenido
-              infoContainer.innerHTML = ``
-              infoContainer.appendChild(dateCheckboxContainer)
-              infoContainer.innerHTML += `
+              // Crear el contenedor de información del cliente/obra
+              const clienteObraContainer = document.createElement('div')
+              clienteObraContainer.style.cssText = `
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                min-width: 0;
+              `
+              clienteObraContainer.innerHTML = `
                 <div style="
-                  flex: 1;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 4px;
-                  min-width: 0;
-                ">
-                  <div style="
-                    font-size: 0.875rem;
-                    color: #333;
-                    font-weight: 500;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  ">${cliente}</div>
-                  <div style="
-                    font-size: 0.875rem;
-                    color: #666;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  ">${obra}</div>
-                </div>
+                  font-size: 0.875rem;
+                  color: #333;
+                  font-weight: 500;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                ">${cliente}</div>
                 <div style="
-                  display: flex;
-                  align-items: center;
-                  gap: 16px;
-                  pointer-events: auto;
+                  font-size: 0.875rem;
+                  color: #666;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                ">${obra}</div>
+              `
+
+              // Crear el contenedor del estado
+              const estadoContainer = document.createElement('div')
+              estadoContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                pointer-events: auto;
+              `
+              estadoContainer.innerHTML = `
+                <div style="
+                  padding: 4px 12px;
+                  border-radius: 16px;
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  background-color: ${alpha(statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA, 0.1)};
+                  color: ${statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA};
+                  text-align: center;
                 ">
-                  <div style="
-                    padding: 4px 12px;
-                    border-radius: 16px;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    background-color: ${alpha(statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA, 0.1)};
-                    color: ${statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA};
-                    text-align: center;
-                  ">
-                    ${info.event.extendedProps?.estado || 'AGENDADA'}
-                  </div>
+                  ${info.event.extendedProps?.estado || 'AGENDADA'}
                 </div>
               `
+
+              // Agregar todo al contenedor principal usando appendChild
+              infoContainer.innerHTML = ''
+              infoContainer.appendChild(dateCheckboxContainer)
+              infoContainer.appendChild(clienteObraContainer)
+              infoContainer.appendChild(estadoContainer)
               //titleCol.appendChild(checkboxCell)
               titleCol.appendChild(infoContainer)
               titleCol.appendChild(actionContainer)
@@ -1327,7 +1383,7 @@ const Calendar = (props: CalenderProps) => {
                   )}
                 </Box>
 
-                {selectedEvents.length > 0 && (
+                {selectedEvents.length > 1 && (
                   <Button
                     variant='contained'
                     color='primary'
