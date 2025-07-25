@@ -8,6 +8,7 @@ import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import FormControl from '@mui/material/FormControl'
 import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
 import { TextField, InputAdornment, Autocomplete } from '@mui/material'
 import Box from '@mui/material/Box'
 
@@ -258,6 +259,16 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     handleAddEventSidebarToggle()
   }
 
+  const handleClearAllFilters = () => {
+    setClienteFilter(null)
+    setObraFilter([])
+    setLaboratoristaFilter([])
+    setSectorComercialFilter([])
+    setRegionFilter([])
+    setComunaFilter([])
+    dispatch(filterCalendarLabel(''))
+  }
+
   return (
     <Drawer
       open={leftSidebarOpen}
@@ -328,9 +339,20 @@ const SidebarLeft = (props: SidebarLeftProps) => {
 
       {/* Sección de Filtros */}
       <div className='flex flex-col p-5 is-full'>
-        <Typography variant='h6' sx={{ mb: 3 }}>
-          Filtros
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant='h6'>
+            Filtros
+          </Typography>
+          <Button
+            variant='outlined'
+            size='small'
+            startIcon={<ClearIcon />}
+            onClick={handleClearAllFilters}
+            sx={{ minWidth: 'auto', px: 2 }}
+          >
+            Limpiar
+          </Button>
+        </Box>
 
         {/* Campo Cliente con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
