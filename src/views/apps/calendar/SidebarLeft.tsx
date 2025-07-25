@@ -72,7 +72,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
   const [obraFilter, setObraFilter] = useState<Obra[]>([])
   const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista[]>([])
-  const [sectorComercialFilter, setSectorComercialFilter] = useState<string | null>(null)
+  const [sectorComercialFilter, setSectorComercialFilter] = useState<string[]>([])
   // Cambiar el estado de comunaFilter a un array para soportar selección múltiple
   const [comunaFilter, setComunaFilter] = useState<string[]>([])
 
@@ -223,11 +223,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         break
       case 'SectorComercial':
         setSectorComercialFilter(value)
-
-        if (value) {
-          dispatch(filterCalendarLabel(value))
+        if (value && value.length > 0) {
+          // Si hay sectores seleccionados, usar el primero como filtro
+          dispatch(filterCalendarLabel(value[0]))
         }
-
         break
       case 'Comuna':
         setComunaFilter(value)
@@ -473,14 +472,19 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Sector Comercial con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
           <Autocomplete
+            multiple
             options={SECTORES_COMERCIALES.map(s => s.label)}
             value={sectorComercialFilter}
             onChange={(_, newValue) => handleFilterChange('SectorComercial', newValue)}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option => option.toLowerCase().includes(searchTerm))
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Sector Comercial'
+                placeholder='Selecciona uno o más sectores comerciales'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -492,6 +496,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
+          {SECTORES_COMERCIALES.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {SECTORES_COMERCIALES.length} sector{SECTORES_COMERCIALES.length !== 1 ? 'es' : ''} disponible{SECTORES_COMERCIALES.length !== 1 ? 's' : ''}
+              {sectorComercialFilter.length > 0 && ` - ${sectorComercialFilter.length} seleccionado${sectorComercialFilter.length !== 1 ? 's' : ''}`}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Región con Autocomplete */}
