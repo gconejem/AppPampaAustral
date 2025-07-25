@@ -1975,7 +1975,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                         maxWidth: '200px',
                         whiteSpace: 'pre-wrap'
                       }}>
-                        {servicio.observacion || 'Sin observación'}
+                        {servicio.observacion || ''}
                       </span>
                     )}
                   </TableCell>
