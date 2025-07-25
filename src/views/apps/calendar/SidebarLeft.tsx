@@ -71,7 +71,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   // Estados para los filtros
   const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
   const [obraFilter, setObraFilter] = useState<Obra[]>([])
-  const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista | null>(null)
+  const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista[]>([])
   const [sectorComercialFilter, setSectorComercialFilter] = useState<string | null>(null)
   // Cambiar el estado de comunaFilter a un array para soportar selección múltiple
   const [comunaFilter, setComunaFilter] = useState<string[]>([])
@@ -215,8 +215,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       case 'Laboratorista':
         setLaboratoristaFilter(value)
 
-        if (value) {
-          dispatch(filterCalendarLabel(value.id))
+        if (value && value.length > 0) {
+          // Si hay laboratoristas seleccionados, usar el nombre del primero como filtro
+          dispatch(filterCalendarLabel(value[0].name))
         }
 
         break
@@ -422,16 +423,24 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Laboratorista con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
           <Autocomplete
+            multiple
             options={laboratoristas}
             getOptionLabel={option => option.name}
             value={laboratoristaFilter}
             onChange={(_, newValue) => handleFilterChange('Laboratorista', newValue)}
             loading={loadingLaboratoristas}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option =>
+                option.name.toLowerCase().includes(searchTerm) ||
+                option.email.toLowerCase().includes(searchTerm)
+              )
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Laboratorista'
+                placeholder='Selecciona uno o más laboratoristas'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -453,6 +462,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
+          {!loadingLaboratoristas && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {laboratoristas.length} laboratorista{laboratoristas.length !== 1 ? 's' : ''} disponible{laboratoristas.length !== 1 ? 's' : ''}
+              {laboratoristaFilter.length > 0 && ` - ${laboratoristaFilter.length} seleccionado${laboratoristaFilter.length !== 1 ? 's' : ''}`}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Sector Comercial con Autocomplete */}
