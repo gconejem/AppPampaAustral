@@ -114,11 +114,18 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     fetchClientes()
   }, [])
 
-  // Cargar obras al montar el componente
+  // Cargar obras al montar el componente o cuando cambie el cliente seleccionado
   useEffect(() => {
     const fetchObras = async () => {
       try {
-        const response = await fetch('/api/obras')
+        setLoadingObras(true)
+
+        let url = '/api/obras'
+        if (clienteFilter) {
+          url += `?clienteId=${clienteFilter.clienteId}`
+        }
+
+        const response = await fetch(url)
 
         if (!response.ok) throw new Error('Error al cargar obras')
         const data = await response.json()
@@ -132,7 +139,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     }
 
     fetchObras()
-  }, [])
+  }, [clienteFilter])
 
   // Cargar laboratoristas al montar el componente
   useEffect(() => {
@@ -188,6 +195,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     switch (filterType) {
       case 'Cliente':
         setClienteFilter(value)
+        // Limpiar el filtro de obra cuando se selecciona un cliente
+        setObraFilter(null)
 
         if (value) {
           dispatch(filterCalendarLabel(value.razonSocial))
@@ -354,11 +363,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             value={obraFilter}
             onChange={(_, newValue) => handleFilterChange('Obra', newValue)}
             loading={loadingObras}
+            disabled={!clienteFilter}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Obra'
+                placeholder={clienteFilter ? 'Obras del cliente seleccionado' : 'Selecciona un cliente primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -383,6 +393,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
+          {clienteFilter && !loadingObras && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {obras.length} obra{obras.length !== 1 ? 's' : ''} encontrada{obras.length !== 1 ? 's' : ''} para {clienteFilter.razonSocial}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Laboratorista con Autocomplete */}
