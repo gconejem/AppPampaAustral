@@ -70,7 +70,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
 
   // Estados para los filtros
   const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
-  const [obraFilter, setObraFilter] = useState<Obra | null>(null)
+  const [obraFilter, setObraFilter] = useState<Obra[]>([])
   const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista | null>(null)
   const [sectorComercialFilter, setSectorComercialFilter] = useState<string | null>(null)
   // Cambiar el estado de comunaFilter a un array para soportar selección múltiple
@@ -196,7 +196,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       case 'Cliente':
         setClienteFilter(value)
         // Limpiar el filtro de obra cuando se selecciona un cliente
-        setObraFilter(null)
+        setObraFilter([])
 
         if (value) {
           dispatch(filterCalendarLabel(value.razonSocial))
@@ -206,8 +206,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       case 'Obra':
         setObraFilter(value)
 
-        if (value) {
-          dispatch(filterCalendarLabel(value.nombreObra))
+        if (value && value.length > 0) {
+          // Si hay obras seleccionadas, usar el nombre de la primera obra como filtro
+          dispatch(filterCalendarLabel(value[0].nombreObra))
         }
 
         break
@@ -358,6 +359,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Obra con Autocomplete */}
         <FormControl fullWidth variant='outlined' className='mbe-2'>
           <Autocomplete
+            multiple
             options={obras}
             getOptionLabel={option => `${option.nombreObra} (${option.numeroObra})`}
             value={obraFilter}
@@ -368,7 +370,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder={clienteFilter ? 'Obras del cliente seleccionado' : 'Selecciona un cliente primero'}
+                placeholder={clienteFilter ? 'Selecciona una o más obras' : 'Selecciona un cliente primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -395,7 +397,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           />
           {clienteFilter && !loadingObras && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {obras.length} obra{obras.length !== 1 ? 's' : ''} encontrada{obras.length !== 1 ? 's' : ''} para {clienteFilter.razonSocial}
+              {obras.length} obra{obras.length !== 1 ? 's' : ''} disponible{obras.length !== 1 ? 's' : ''} para {clienteFilter.razonSocial}
+              {obraFilter.length > 0 && ` - ${obraFilter.length} seleccionada${obraFilter.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>
