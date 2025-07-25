@@ -328,11 +328,19 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             value={clienteFilter}
             onChange={(_, newValue) => handleFilterChange('Cliente', newValue)}
             loading={loadingClientes}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option =>
+                option.razonSocial.toLowerCase().includes(searchTerm) ||
+                option.rut.toLowerCase().includes(searchTerm) ||
+                option.nombreCliente.toLowerCase().includes(searchTerm)
+              )
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Cliente'
+                placeholder='Busca por nombre de cliente o RUT'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
