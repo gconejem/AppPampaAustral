@@ -366,11 +366,19 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             onChange={(_, newValue) => handleFilterChange('Obra', newValue)}
             loading={loadingObras}
             disabled={!clienteFilter}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option =>
+                option.nombreObra.toLowerCase().includes(searchTerm) ||
+                option.numeroObra.toLowerCase().includes(searchTerm) ||
+                option.direccion.toLowerCase().includes(searchTerm)
+              )
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder={clienteFilter ? 'Selecciona una o más obras' : 'Selecciona un cliente primero'}
+                placeholder={clienteFilter ? 'Busca por nombre, número o dirección de obra' : 'Selecciona un cliente primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
