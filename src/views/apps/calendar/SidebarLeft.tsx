@@ -352,7 +352,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Busca por nombre de cliente o RUT'
+                placeholder='Clientes'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -398,7 +398,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder={clienteFilter ? 'Busca por nombre, número o dirección de obra' : 'Selecciona un cliente primero'}
+                placeholder={clienteFilter ? 'Obras' : 'Selecciona un cliente primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -451,7 +451,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Selecciona uno o más laboratoristas'
+                placeholder='Laboratoristas'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -496,7 +496,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Selecciona uno o más sectores comerciales'
+                placeholder='Sectores comerciales'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -531,7 +531,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Selecciona una o más regiones'
+                placeholder='Regiones'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -545,7 +545,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           />
           {Object.keys(REGIONES_CHILE).length > 0 && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {Object.keys(REGIONES_CHILE).length} región{Object.keys(REGIONES_CHILE).length !== 1 ? 'es' : ''} disponible{Object.keys(REGIONES_CHILE).length !== 1 ? 's' : ''}
+              {Object.keys(REGIONES_CHILE).length} region{Object.keys(REGIONES_CHILE).length !== 1 ? 'es' : ''} disponible{Object.keys(REGIONES_CHILE).length !== 1 ? 's' : ''}
               {regionFilter.length > 0 && ` - ${regionFilter.length} seleccionada${regionFilter.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
