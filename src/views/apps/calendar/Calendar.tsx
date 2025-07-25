@@ -358,7 +358,17 @@ const Calendar = (props: CalenderProps) => {
         const checkboxButtons = document.querySelectorAll('.event-checkbox-button')
         checkboxButtons.forEach((button: Element) => {
           if (button instanceof HTMLElement) {
-            button.innerHTML = newSelectAll ? '☑️' : '☐'
+            if (newSelectAll) {
+              button.style.backgroundColor = '#1976d2'
+              button.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/>
+                </svg>
+              `
+            } else {
+              button.style.backgroundColor = 'transparent'
+              button.innerHTML = ''
+            }
           }
         })
       }, 0)
@@ -439,7 +449,17 @@ const Calendar = (props: CalenderProps) => {
 
           if (eventId) {
             const isSelected = selectedEvents.some(event => event.id === eventId)
-            button.innerHTML = isSelected ? '☑️' : '☐'
+            if (isSelected) {
+              button.style.backgroundColor = '#1976d2'
+              button.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/>
+                </svg>
+              `
+            } else {
+              button.style.backgroundColor = 'transparent'
+              button.innerHTML = ''
+            }
           }
         }
       }
@@ -873,28 +893,56 @@ const Calendar = (props: CalenderProps) => {
             const eventId = String(info.event.id)
             const isSelected = selectedEvents.some(event => String(event.id) === eventId)
 
-            // Crear un botón que simule un checkbox
+            // Crear un checkbox personalizado con CSS
             const checkboxButton = document.createElement('button')
             checkboxButton.className = 'event-checkbox-button'
-            checkboxButton.innerHTML = isSelected ? '☑️' : '☐'
             checkboxButton.style.cssText = `
-              background: none;
-              border: none;
+              background: ${isSelected ? '#1976d2' : 'transparent'};
+              border: 2px solid #1976d2;
+              border-radius: 3px;
               cursor: pointer;
-              font-size: 16px;
-              padding: 2px;
+              padding: 0;
               pointer-events: auto !important;
               z-index: 1000;
               position: relative;
+              width: 18px;
+              height: 18px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-width: 18px;
+              transition: all 0.2s ease;
             `
+
+            // Agregar el ícono de check si está seleccionado
+            if (isSelected) {
+              checkboxButton.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/>
+                </svg>
+              `
+            }
 
             checkboxButton.onclick = (e) => {
               e.stopPropagation()
               e.preventDefault()
 
               // Cambiar visualmente el estado
-              const currentlySelected = checkboxButton.innerHTML === '☑️'
-              checkboxButton.innerHTML = currentlySelected ? '☐' : '☑️'
+              const currentlySelected = checkboxButton.style.backgroundColor === 'rgb(25, 118, 210)' // #1976d2 en rgb
+
+              if (currentlySelected) {
+                // Deseleccionar
+                checkboxButton.style.backgroundColor = 'transparent'
+                checkboxButton.innerHTML = ''
+              } else {
+                // Seleccionar
+                checkboxButton.style.backgroundColor = '#1976d2'
+                checkboxButton.innerHTML = `
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/>
+                  </svg>
+                `
+              }
 
               // Llamar a la función de selección
               const toggleFn = (window as any).toggleEventSelection
