@@ -86,8 +86,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
 
-  // Estado para la región seleccionada
-  const [regionFilter, setRegionFilter] = useState<string | null>(null)
+  // Estado para las regiones seleccionadas
+  const [regionFilter, setRegionFilter] = useState<string[]>([])
 
   // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
   const memoizedCurrentDate = useMemo(() => {
@@ -181,10 +181,16 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     fetchComunas()
   }, [])
 
-  // Actualizar comunas según la región seleccionada
+  // Actualizar comunas según las regiones seleccionadas
   useEffect(() => {
-    if (regionFilter && (REGIONES_CHILE as Record<string, { comunas: string[] }>)[regionFilter]) {
-      setComunas((REGIONES_CHILE as Record<string, { comunas: string[] }>)[regionFilter].comunas)
+    if (regionFilter.length > 0) {
+      const todasLasComunas: string[] = []
+      regionFilter.forEach(region => {
+        if ((REGIONES_CHILE as Record<string, { comunas: string[] }>)[region]) {
+          todasLasComunas.push(...(REGIONES_CHILE as Record<string, { comunas: string[] }>)[region].comunas)
+        }
+      })
+      setComunas(todasLasComunas)
     } else {
       setComunas([])
     }
@@ -228,11 +234,17 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           dispatch(filterCalendarLabel(value[0]))
         }
         break
+      case 'Region':
+        setRegionFilter(value)
+        // Limpiar el filtro de comuna cuando cambian las regiones
+        setComunaFilter([])
+        break
       case 'Comuna':
         setComunaFilter(value)
 
-        if (value) {
-          dispatch(filterCalendarLabel(value))
+        if (value && value.length > 0) {
+          // Si hay comunas seleccionadas, usar la primera como filtro
+          dispatch(filterCalendarLabel(value[0]))
         }
 
         break
@@ -498,7 +510,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           />
           {SECTORES_COMERCIALES.length > 0 && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {SECTORES_COMERCIALES.length} sector{SECTORES_COMERCIALES.length !== 1 ? 'es' : ''} disponible{SECTORES_COMERCIALES.length !== 1 ? 's' : ''}
+              {SECTORES_COMERCIALES.length} sector{(SECTORES_COMERCIALES.length as number) !== 1 ? 'es' : ''} disponible{(SECTORES_COMERCIALES.length as number) !== 1 ? 's' : ''}
               {sectorComercialFilter.length > 0 && ` - ${sectorComercialFilter.length} seleccionado${sectorComercialFilter.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
@@ -507,14 +519,19 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         {/* Campo Región con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
           <Autocomplete
+            multiple
             options={Object.keys(REGIONES_CHILE)}
             value={regionFilter}
-            onChange={(_, newValue) => setRegionFilter(newValue)}
+            onChange={(_, newValue) => handleFilterChange('Region', newValue)}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option => option.toLowerCase().includes(searchTerm))
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Región'
+                placeholder='Selecciona una o más regiones'
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -526,6 +543,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
+          {Object.keys(REGIONES_CHILE).length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {Object.keys(REGIONES_CHILE).length} región{Object.keys(REGIONES_CHILE).length !== 1 ? 'es' : ''} disponible{Object.keys(REGIONES_CHILE).length !== 1 ? 's' : ''}
+              {regionFilter.length > 0 && ` - ${regionFilter.length} seleccionada${regionFilter.length !== 1 ? 's' : ''}`}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Comuna con Autocomplete */}
@@ -534,12 +557,17 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             multiple
             options={comunas}
             value={comunaFilter}
-            onChange={(_, newValue) => setComunaFilter(newValue)}
+            onChange={(_, newValue) => handleFilterChange('Comuna', newValue)}
+            disabled={regionFilter.length === 0}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option => option.toLowerCase().includes(searchTerm))
+            }}
             renderInput={params => (
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder='Comunas'
+                placeholder={regionFilter.length > 0 ? 'Selecciona una o más comunas' : 'Selecciona una región primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -551,6 +579,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
+          {regionFilter.length > 0 && !loadingComunas && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {comunas.length} comuna{comunas.length !== 1 ? 's' : ''} disponible{comunas.length !== 1 ? 's' : ''} de {regionFilter.length} región{regionFilter.length !== 1 ? 'es' : ''}
+              {comunaFilter.length > 0 && ` - ${comunaFilter.length} seleccionada${comunaFilter.length !== 1 ? 's' : ''}`}
+            </Typography>
+          )}
         </FormControl>
       </div>
     </Drawer>
