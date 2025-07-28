@@ -1309,12 +1309,10 @@ const EditEventSidebar = ({
                     console.log('Cambiando hora inicio:', newHoraInicio, 'Nueva fecha:', newDate)
                     setFechaInicio(newDate)
 
-                    // Actualizar fecha fin si es necesario
-                    if (!fechaFin || fechaFin <= newDate) {
-                      const endDate = new Date(newDate)
-                      endDate.setHours(newDate.getHours() + 1, newDate.getMinutes(), 0, 0)
-                      setFechaFin(endDate)
-                    }
+                    // Siempre actualizar fecha fin para mantener al menos 1 hora de diferencia
+                    const endDate = new Date(newDate)
+                    endDate.setHours(newDate.getHours() + 1, newDate.getMinutes(), 0, 0)
+                    setFechaFin(endDate)
                   }}
                   InputLabelProps={{
                     shrink: true
