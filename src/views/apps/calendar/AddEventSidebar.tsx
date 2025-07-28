@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
@@ -46,6 +46,7 @@ import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import AddContact from '@/views/apps/contacts/list/AddContact'
 import type { ContactType } from '@/types/apps/contactTypes'
 import { SECTORES_COMERCIALES } from '@/constants/sectoresComerciales'
+import { formatDateForBackend } from '@/utils/dateUtils'
 
 // Constantes
 const ROLES_CONTACTO = [
@@ -301,23 +302,38 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     return d;
   });
 
+
+
   // Actualizar formData cuando cambien las fechas
   useEffect(() => {
-    console.log('fechaInicio', fechaInicio)
     if (fechaInicio) {
-      setFormData(prev => ({
-        ...prev,
-        fechaInicio: fechaInicio.toISOString()
-      }))
+      const newFormattedDate = formatDateForBackend(fechaInicio)
+      setFormData(prev => {
+        // Solo actualizar si es diferente para evitar loops
+        if (prev.fechaInicio !== newFormattedDate) {
+          return {
+            ...prev,
+            fechaInicio: newFormattedDate
+          }
+        }
+        return prev
+      })
     }
   }, [fechaInicio])
 
   useEffect(() => {
     if (fechaFin) {
-      setFormData(prev => ({
-        ...prev,
-        fechaFin: fechaFin.toISOString()
-      }))
+      const newFormattedDate = formatDateForBackend(fechaFin)
+      setFormData(prev => {
+        // Solo actualizar si es diferente para evitar loops
+        if (prev.fechaFin !== newFormattedDate) {
+          return {
+            ...prev,
+            fechaFin: newFormattedDate
+          }
+        }
+        return prev
+      })
     }
   }, [fechaFin])
 
@@ -331,7 +347,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       } else {
         endDate.setHours(fechaInicio.getHours() + 1)
       }
-      setFechaFin(endDate)
+      // Solo actualizar si la fecha es diferente para evitar loops
+      if (!fechaFin || fechaFin.getTime() !== endDate.getTime()) {
+        setFechaFin(endDate)
+      }
     }
   }, [formData.tipoVisita, fechaInicio])
 
@@ -476,13 +495,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     console.log('contactos actualizados:', contactos)
   }, [contactos])
 
-  // efecto para cargar los contactos cuando se selecciona una obra
+  // efecto combinado para cargar los contactos y actualizar formData cuando se selecciona una obra
   useEffect(() => {
     if (formData.obraId) {
       const obraSeleccionada = obras.find(obra => obra.obraId === formData.obraId)
       if (obraSeleccionada) {
+        // Actualizar contactos
         const obraContactos = obraSeleccionada.contactos || []
-        // Reemplazar todos los contactos con los de la nueva obra
         const nuevosContactos = obraContactos.map((c: any) => ({
           nombre: c.nombre,
           rol: c.rol || c.cargo || '',
@@ -494,7 +513,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         setContactos(nuevosContactos)
         setSelectedReferencia(obraSeleccionada.referencia || '')
 
-        // Llenar región, comuna y dirección con la información de la obra
+        // Actualizar formData con los datos de la obra
         setFormData(prev => ({
           ...prev,
           region: obraSeleccionada.region || '',
@@ -942,7 +961,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   }
 
   // Función para resetear todos los datos del formulario
-  const resetFormData = () => {
+  const resetFormData = useCallback(() => {
     setFormData(initialData)
     setEstado('AGENDADA')
     setEditandoEstado(false)
@@ -1010,13 +1029,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     // Cerrar popovers
     setAnchorEl(null)
     setAddContactOpen(false)
-  }
+  }, [todasLasSolicitudes])
 
   // Función personalizada para cerrar el sidebar
-  const handleCloseSidebar = () => {
+  const handleCloseSidebar = useCallback(() => {
     resetFormData()
     handleAddEventSidebarToggle()
-  }
+  }, [handleAddEventSidebarToggle])
 
   return (
     <Drawer

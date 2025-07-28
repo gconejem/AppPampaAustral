@@ -29,6 +29,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       prisma.contactoAgenda.deleteMany({ where: { agendaId: id } })
     ])
 
+    // Función helper para parsear fechas que vienen del frontend
+    const parseLocalDate = (dateString: string) => {
+      // La fecha viene ya ajustada desde el frontend para compensar la zona horaria
+      return new Date(dateString)
+    }
+
     // Actualizar el evento con los nuevos datos
     const agendaActualizada = await prisma.agenda.update({
       where: { id },
@@ -36,8 +42,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         titulo: data.titulo,
         tipoVisita: data.tipoVisita,
         esRecurrente: data.esRecurrente,
-        fechaInicio: new Date(data.fechaInicio),
-        fechaFin: new Date(data.fechaFin),
+        fechaInicio: parseLocalDate(data.fechaInicio),
+        fechaFin: parseLocalDate(data.fechaFin),
         clienteId: data.clienteId,
         obraId: data.obraId,
         solicitudId: data.solicitudId,

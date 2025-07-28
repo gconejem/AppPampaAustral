@@ -74,5 +74,8 @@ export const authOptions: NextAuthConfig = {
 
       return session
     }
-  }
+  },
+  // Configuración adicional para evitar errores
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key',
+  debug: process.env.NODE_ENV === 'development'
 }

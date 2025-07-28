@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
@@ -43,6 +43,7 @@ import Switch from '@mui/material/Switch'
 
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
+import { formatDateForBackend, formatBackendDateForInput, parseDateFromBackend } from '@/utils/dateUtils'
 
 // Types
 interface EditEventSidebarProps {
@@ -181,9 +182,7 @@ const EditEventSidebar = ({
   // Estados para los datos de las listas desplegables
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [obras, setObras] = useState<Obra[]>([])
-  const [obrasFiltradas, setObrasFiltradas] = useState<Obra[]>([])
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
-  const [solicitudesFiltradas, setSolicitudesFiltradas] = useState<Solicitud[]>([])
   const [todasLasSolicitudes, setTodasLasSolicitudes] = useState<Solicitud[]>([])
 
   // Estados para los servicios
@@ -205,7 +204,7 @@ const EditEventSidebar = ({
   // Debug: Monitorear cambios en serviciosAgendados
   useEffect(() => {
     console.log('serviciosAgendados cambió:', serviciosAgendados)
-  }, [serviciosAgendados])
+  }, [serviciosAgendados.length])
 
   // Estados para el buscador de servicios (igual que en AddEventSidebar)
   const [servicios, setServicios] = useState<any[]>([])
@@ -247,48 +246,42 @@ const EditEventSidebar = ({
     return `${year}-${month}-${day}T${hours}:${minutes}`
   }
 
+
+
   // Actualizar formData cuando cambien las fechas (solo si no estamos cargando datos del evento)
   useEffect(() => {
     if (fechaInicio && editEventSidebarOpen && !isLoadingEventData) {
-      const newFormattedDate = formatDateLocal(fechaInicio)
-      // Solo actualizar si es diferente para evitar loops
-      if (formData.fechaInicio !== newFormattedDate) {
-        setFormData(prev => ({
-          ...prev,
-          fechaInicio: newFormattedDate
-        }))
-      }
+      const newFormattedDate = formatDateForBackend(fechaInicio)
+      setFormData(prev => {
+        // Solo actualizar si es diferente para evitar loops
+        if (prev.fechaInicio !== newFormattedDate) {
+          return {
+            ...prev,
+            fechaInicio: newFormattedDate
+          }
+        }
+        return prev
+      })
     }
   }, [fechaInicio, editEventSidebarOpen, isLoadingEventData])
 
   useEffect(() => {
     if (fechaFin && editEventSidebarOpen && !isLoadingEventData) {
-      const newFormattedDate = formatDateLocal(fechaFin)
-      // Solo actualizar si es diferente para evitar loops
-      if (formData.fechaFin !== newFormattedDate) {
-        setFormData(prev => ({
-          ...prev,
-          fechaFin: newFormattedDate
-        }))
-      }
+      const newFormattedDate = formatDateForBackend(fechaFin)
+      setFormData(prev => {
+        // Solo actualizar si es diferente para evitar loops
+        if (prev.fechaFin !== newFormattedDate) {
+          return {
+            ...prev,
+            fechaFin: newFormattedDate
+          }
+        }
+        return prev
+      })
     }
   }, [fechaFin, editEventSidebarOpen, isLoadingEventData])
 
-  // Sincronizar fechaFin del formData con el estado fechaFin para el DatePicker
-  // Solo cuando se está cargando datos del evento, no durante cambios manuales
-  useEffect(() => {
-    if (formData.fechaFin && !isLoadingEventData && selectedEvent) {
-      const fechaFinDate = new Date(formData.fechaFin)
-      if (!isNaN(fechaFinDate.getTime())) {
-        // Solo actualizar si la diferencia es significativa (más de 1 minuto)
-        const currentTime = fechaFin?.getTime() || 0
-        const newTime = fechaFinDate.getTime()
-        if (Math.abs(currentTime - newTime) > 60000) { // 60000ms = 1 minuto
-          setFechaFin(fechaFinDate)
-        }
-      }
-    }
-  }, [formData.fechaFin, isLoadingEventData, selectedEvent])
+
 
   // Sincronizar horaInicio con fechaInicio
   useEffect(() => {
@@ -298,7 +291,7 @@ const EditEventSidebar = ({
         setHoraInicio(newHoraInicio)
       }
     }
-  }, [fechaInicio])
+  }, [fechaInicio]) // Removido horaInicio de las dependencias
 
   // Sincronizar horaFin con fechaFin
   useEffect(() => {
@@ -308,7 +301,7 @@ const EditEventSidebar = ({
         setHoraFin(newHoraFin)
       }
     }
-  }, [fechaFin])
+  }, [fechaFin]) // Removido horaFin de las dependencias
 
   // Sincronizar fechaFin con fechaInicio cuando el tipo de visita es EVENTO
   useEffect(() => {
@@ -320,7 +313,10 @@ const EditEventSidebar = ({
       } else {
         endDate.setHours(fechaInicio.getHours() + 1)
       }
-      setFechaFin(endDate)
+      // Solo actualizar si la fecha es diferente para evitar loops
+      if (!fechaFin || fechaFin.getTime() !== endDate.getTime()) {
+        setFechaFin(endDate)
+      }
     }
   }, [formData.tipoVisita, fechaInicio, isLoadingEventData])
 
@@ -341,7 +337,6 @@ const EditEventSidebar = ({
         const obrasData = await obrasRes.json()
 
         setObras(obrasData)
-        setObrasFiltradas(obrasData)
 
         // Cargar solicitudes
         const solicitudesRes = await fetch('/api/requests')
@@ -349,7 +344,6 @@ const EditEventSidebar = ({
 
         setSolicitudes(solicitudesData)
         setTodasLasSolicitudes(solicitudesData)
-        setSolicitudesFiltradas(solicitudesData)
 
         // Cargar laboratoristas disponibles (para el dropdown)
         const laboratoristasRes = await fetch('/api/users/laboratoristas')
@@ -416,28 +410,14 @@ const EditEventSidebar = ({
           const eventData = await response.json()
           console.log('Datos completos del evento desde backend:', eventData)
 
-          // Formatear fecha y hora a formato local para los inputs de tipo datetime-local
-          const formatDate = (date: any) => {
-            if (!date) return ''
-            const d = new Date(date)
-            if (isNaN(d.getTime())) return ''
-
-            // Formatear manteniendo la zona horaria local
-            const year = d.getFullYear()
-            const month = String(d.getMonth() + 1).padStart(2, '0')
-            const day = String(d.getDate()).padStart(2, '0')
-            const hours = String(d.getHours()).padStart(2, '0')
-            const minutes = String(d.getMinutes()).padStart(2, '0')
-
-            return `${year}-${month}-${day}T${hours}:${minutes}`
-          }
+          // Usar la función de utilidades para formatear fechas
 
           // Establecer estado
           setEstado(eventData.estado || 'AGENDADA')
 
           // Formatear fechas
-          const fechaInicioFormatted = formatDate(eventData.fechaInicio)
-          const fechaFinFormatted = formatDate(eventData.fechaFin)
+          const fechaInicioFormatted = formatBackendDateForInput(eventData.fechaInicio)
+          const fechaFinFormatted = formatBackendDateForInput(eventData.fechaFin)
 
           // Debug: Verificar los IDs extraídos
           console.log('IDs extraídos del backend:', {
@@ -468,15 +448,15 @@ const EditEventSidebar = ({
           })
 
           // Establecer fechas para DatePicker
-          if (fechaInicioFormatted) {
-            const fechaInicioDate = new Date(fechaInicioFormatted)
+          if (eventData.fechaInicio) {
+            const fechaInicioDate = parseDateFromBackend(eventData.fechaInicio)
             if (!isNaN(fechaInicioDate.getTime())) {
               setFechaInicio(fechaInicioDate)
             }
           }
 
-          if (fechaFinFormatted) {
-            const fechaFinDate = new Date(fechaFinFormatted)
+          if (eventData.fechaFin) {
+            const fechaFinDate = parseDateFromBackend(eventData.fechaFin)
             if (!isNaN(fechaFinDate.getTime())) {
               setFechaFin(fechaFinDate)
             }
@@ -539,92 +519,13 @@ const EditEventSidebar = ({
           const contactosEvento = eventData.contactos || []
           setContactos(contactosEvento)
 
-          // Aplicar filtros después de cargar los datos
-          const applyFilters = () => {
-            console.log('Aplicando filtros con datos:', {
-              clienteId: eventData.clienteId,
-              obraId: eventData.obraId,
-              obrasDisponibles: obras.length,
-              solicitudesDisponibles: todasLasSolicitudes.length
-            })
-
-            // Aplicar filtro de obras si hay cliente
-            if (eventData.clienteId && obras.length > 0) {
-              console.log('Estructura de la primera obra:', obras[0])
-              console.log('Buscando obras para clienteId:', eventData.clienteId)
-
-              // Filtrar obras por RUT del cliente (según la estructura del backend)
-              const cliente = eventData.cliente || clientes.find(c => c.clienteId === eventData.clienteId)
-              console.log('Cliente encontrado:', cliente)
-
-              let obrasFiltradas = []
-
-              if (cliente && cliente.rut) {
-                // Filtrar por RUT que es la relación entre cliente y obra
-                obrasFiltradas = obras.filter(obra => obra.rut === cliente.rut)
-                console.log('Filtrado por RUT del cliente:', cliente.rut, 'obras encontradas:', obrasFiltradas.length)
-              } else {
-                // Fallback: intentar otros métodos de filtrado
-                obrasFiltradas = obras.filter(obra =>
-                  obra.clienteId === eventData.clienteId ||
-                  obra.cliente?.clienteId === eventData.clienteId
-                )
-                console.log('Filtrado por clienteId, obras encontradas:', obrasFiltradas.length)
-              }
-
-              // Si no encuentra obras, no mostrar ninguna (no todas)
-              if (obrasFiltradas.length === 0) {
-                console.log('No se encontraron obras para este cliente')
-              }
-
-              console.log('Obras filtradas:', obrasFiltradas)
-              setObrasFiltradas(obrasFiltradas)
-            } else {
-              console.log('No se aplicó filtro de obras - clienteId:', eventData.clienteId, 'obras:', obras.length)
-              setObrasFiltradas(obras)
-            }
-
-            // Aplicar filtro de solicitudes si hay obra o cliente
-            if (eventData.obraId && todasLasSolicitudes.length > 0) {
-              const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
-                solicitud.obra && solicitud.obra.obraId === eventData.obraId
-              )
-              console.log('Solicitudes filtradas por obra:', solicitudesFiltradas)
-              setSolicitudesFiltradas(solicitudesFiltradas)
-            } else if (eventData.clienteId && todasLasSolicitudes.length > 0) {
-              const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
-                solicitud.cliente && solicitud.cliente.clienteId === eventData.clienteId
-              )
-              console.log('Solicitudes filtradas por cliente:', solicitudesFiltradas)
-              setSolicitudesFiltradas(solicitudesFiltradas)
-            } else {
-              console.log('No se aplicó filtro de solicitudes')
-              setSolicitudesFiltradas(todasLasSolicitudes)
-            }
-
-            // Cargar contactos de la obra si existe
-            if (eventData.obraId) {
-              cargarContactosDeObra(eventData.obraId)
-            }
-
-            // Finalizar la carga de datos del evento
-            setIsLoadingEventData(false)
+          // Cargar contactos de la obra si existe
+          if (eventData.obraId) {
+            cargarContactosDeObra(eventData.obraId)
           }
 
-          // Esperar a que se carguen las obras y solicitudes antes de aplicar filtros
-          if (obras.length > 0 && todasLasSolicitudes.length > 0) {
-            setTimeout(applyFilters, 200)
-          } else {
-            // Si no hay datos aún, intentar de nuevo en un momento
-            setTimeout(() => {
-              if (obras.length > 0 || todasLasSolicitudes.length > 0) {
-                applyFilters()
-              } else {
-                console.log('No se pudieron cargar obras y solicitudes, finalizando carga')
-                setIsLoadingEventData(false)
-              }
-            }, 500)
-          }
+          // Finalizar la carga de datos del evento
+          setIsLoadingEventData(false)
 
         } catch (error) {
           console.error('Error al cargar datos del evento:', error)
@@ -634,7 +535,7 @@ const EditEventSidebar = ({
     }
 
     fetchEventData()
-  }, [selectedEvent, editEventSidebarOpen, obras, todasLasSolicitudes])
+  }, [selectedEvent, editEventSidebarOpen])
 
   // Estado para contactos
   const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
@@ -706,66 +607,49 @@ const EditEventSidebar = ({
     fetchEquipos()
   }, [])
 
-  // Filtrar obras cuando cambia el cliente seleccionado
-  useEffect(() => {
+  // Filtrar obras cuando cambia el cliente seleccionado usando useMemo
+  const obrasFiltradas = useMemo(() => {
     if (formData.clienteId) {
       // Intentar diferentes formas de filtrar según la estructura de datos
       // Filtrar obras por RUT del cliente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
-      let obrasFiltradas = []
+      let filtered = []
 
       if (cliente && cliente.rut) {
         // Filtrar por RUT que es la relación entre cliente y obra
-        obrasFiltradas = obras.filter(obra => obra.rut === cliente.rut)
+        filtered = obras.filter(obra => obra.rut === cliente.rut)
       } else {
         // Fallback: intentar otros métodos de filtrado
-        obrasFiltradas = obras.filter(obra =>
+        filtered = obras.filter(obra =>
           obra.clienteId === formData.clienteId ||
           obra.cliente?.clienteId === formData.clienteId
         )
       }
 
-      setObrasFiltradas(obrasFiltradas)
-
-      // Solo limpiar la obra si no estamos cargando datos del evento y la obra no pertenece al cliente
-      if (!isLoadingEventData && formData.obraId && !obrasFiltradas.some(obra => obra.obraId === formData.obraId)) {
-        setFormData(prev => ({ ...prev, obraId: undefined }))
-        // Limpiar contactos cuando se limpia la obra automáticamente
-        setContactos([])
-        setSelectedReferencia('')
-      }
+      return filtered
     } else {
-      setObrasFiltradas(obras)
-      // Si no hay cliente seleccionado, limpiar contactos
-      if (!isLoadingEventData) {
-        setContactos([])
-        setSelectedReferencia('')
-      }
+      return obras
     }
-  }, [formData.clienteId, obras, isLoadingEventData])
+  }, [formData.clienteId, obras, clientes])
 
-  // Filtrar solicitudes cuando cambia la obra seleccionada
-  useEffect(() => {
+
+
+  // Filtrar solicitudes usando useMemo
+  const solicitudesFiltradas = useMemo(() => {
     if (formData.obraId) {
-      const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+      return todasLasSolicitudes.filter(solicitud =>
         solicitud.obra && solicitud.obra.obraId === formData.obraId
       )
-      setSolicitudesFiltradas(solicitudesFiltradas)
-
-      // Solo limpiar la solicitud si no estamos cargando datos del evento y la solicitud no pertenece a la obra
-      if (!isLoadingEventData && formData.solicitudId && !solicitudesFiltradas.some(sol => sol.id === formData.solicitudId)) {
-        setFormData(prev => ({ ...prev, solicitudId: undefined }))
-      }
     } else if (formData.clienteId) {
-      // Si hay cliente pero no obra, filtrar por cliente
-      const solicitudesFiltradas = todasLasSolicitudes.filter(solicitud =>
+      return todasLasSolicitudes.filter(solicitud =>
         solicitud.cliente && solicitud.cliente.clienteId === formData.clienteId
       )
-      setSolicitudesFiltradas(solicitudesFiltradas)
     } else {
-      setSolicitudesFiltradas(todasLasSolicitudes)
+      return todasLasSolicitudes
     }
-  }, [formData.obraId, formData.clienteId, todasLasSolicitudes, isLoadingEventData])
+  }, [formData.obraId, formData.clienteId, todasLasSolicitudes])
+
+
 
   // Efecto para cargar los contactos cuando se selecciona una obra (igual que en AddEventSidebar)
   useEffect(() => {
@@ -775,7 +659,7 @@ const EditEventSidebar = ({
       // Limpiar contactos cuando no hay obra seleccionada
       setContactos([])
     }
-  }, [formData.obraId, obras, isLoadingEventData])
+  }, [formData.obraId, obras.length, isLoadingEventData])
 
   const handleSubmit = async () => {
     try {
@@ -856,10 +740,10 @@ const EditEventSidebar = ({
 
   // Manejadores de cambio de datos
   const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [field]: value
-    })
+    }))
   }
 
   // Funciones de edición/eliminación de contactos
@@ -1129,29 +1013,9 @@ const EditEventSidebar = ({
       console.log('Áreas procesadas:', uniqueAreas)
       console.log('Tipos procesados:', uniqueTipos)
     }
-  }, [servicios])
+  }, [servicios.length])
 
-  // Extraer áreas y tipos únicos de los servicios
-  useEffect(() => {
-    if (servicios.length > 0) {
-      const uniqueAreas = Array.from(new Set(servicios.map(s => s.area))).map(area => {
-        const serviciosDeArea = servicios.filter(s => s.area === area)
-        const familias = Array.from(new Set(serviciosDeArea.map(s => s.familia))).map(familia => ({
-          id: familia,
-          nombre: familia
-        }))
-        return {
-          id: area,
-          nombre: area,
-          familias
-        }
-      })
-      setAreas(uniqueAreas)
 
-      const uniqueTipos = Array.from(new Set(servicios.map(s => s.tipo)))
-      setTipos(uniqueTipos)
-    }
-  }, [servicios])
 
   return (
     <>
@@ -2106,7 +1970,6 @@ const EditEventSidebar = ({
                     </TableHead>
                     <TableBody>
                       {serviciosAgendados.map((servicio, index) => {
-                        console.log('Renderizando servicio:', servicio)
                         return (
                           <TableRow key={index}>
                             <TableCell>{servicio.codigo}</TableCell>

@@ -36,6 +36,7 @@ import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
 import CambiarEstadoModal from './modals/CambiarEstadoModal'
 import type { CalendarProps } from '@/types/apps/calendarTypes'
+import { parseDateFromBackend } from '@/utils/dateUtils'
 
 type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
@@ -299,7 +300,7 @@ const Calendar = (props: CalenderProps) => {
       rangeEnd.setHours(23, 59, 59, 999)
 
       const eventsInRange = events.filter(event => {
-        const eventStart = new Date(event.start as string)
+        const eventStart = event.start instanceof Date ? event.start : new Date(event.start as string)
         return eventStart >= rangeStart && eventStart <= rangeEnd
       })
 
@@ -313,7 +314,7 @@ const Calendar = (props: CalenderProps) => {
       selectedDateEnd.setHours(23, 59, 59, 999)
 
       const eventsForDate = events.filter(event => {
-        const eventStart = new Date(event.start as string)
+        const eventStart = event.start instanceof Date ? event.start : new Date(event.start as string)
         return eventStart >= selectedDateStart && eventStart <= selectedDateEnd
       })
 
@@ -1272,8 +1273,8 @@ const Calendar = (props: CalenderProps) => {
       const formattedEvents = data.map((event: any) => ({
         id: event.id,
         title: `${event.tipoVisita} - ${event.cliente?.nombreCliente || 'Sin Cliente'}`,
-        start: new Date(event.fechaInicio).toISOString(),
-        end: new Date(event.fechaFin).toISOString(),
+        start: parseDateFromBackend(event.fechaInicio),
+        end: parseDateFromBackend(event.fechaFin),
         extendedProps: {
           estado: event.estado,
           cliente: event.cliente,
@@ -1295,7 +1296,6 @@ const Calendar = (props: CalenderProps) => {
         }
       }))
 
-      console.log('Eventos formateados:', formattedEvents)
       setEvents(formattedEvents)
     } catch (error) {
       console.error('Error al cargar eventos:', error)
