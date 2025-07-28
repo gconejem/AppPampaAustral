@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 
 import { alpha } from '@mui/material/styles'
 import Box from '@mui/material/Box'
@@ -71,6 +71,7 @@ interface SelectedEvent {
 }
 
 const Calendar = (props: CalenderProps) => {
+  const calendarRef = useRef<FullCalendar>(null)
   const [eventMenuAnchorEl, setEventMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [bulkEditMenuAnchorEl, setBulkEditMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [events, setEvents] = useState<EventInput[]>([])
@@ -322,6 +323,14 @@ const Calendar = (props: CalenderProps) => {
       handleFilterStatus(statusFilters)
     }
   }, [props.selectedDate, props.selectedDateRange, events])
+
+  // Navegar el calendario cuando cambie la fecha seleccionada
+  useEffect(() => {
+    if (props.selectedDate && calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi()
+      calendarApi.gotoDate(props.selectedDate)
+    }
+  }, [props.selectedDate])
 
   const handleSelectAll = () => {
     setSelectAll(prev => {
@@ -1495,6 +1504,7 @@ const Calendar = (props: CalenderProps) => {
               </Box>
             </Box>
             <FullCalendar
+              ref={calendarRef}
               {...calendarOptions}
               customButtons={{
                 addEventButton: {
