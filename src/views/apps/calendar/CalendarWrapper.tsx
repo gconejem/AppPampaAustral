@@ -34,6 +34,7 @@ const AppCalendar = () => {
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null)
+  const [dateRangeEnabled, setDateRangeEnabled] = useState<boolean>(false)
 
   // Hooks
   const dispatch = useDispatch()
@@ -51,9 +52,22 @@ const AppCalendar = () => {
   }
 
   const handleRangeSelect = (startDate: Date | null, endDate: Date | null) => {
-    setSelectedDateRange({ start: startDate, end: endDate })
-    // Limpiar la fecha específica cuando se selecciona un rango
-    setSelectedDate(null)
+    if (dateRangeEnabled) {
+      setSelectedDateRange({ start: startDate, end: endDate })
+      // Limpiar la fecha específica cuando se selecciona un rango
+      setSelectedDate(null)
+    }
+  }
+
+  const handleDateRangeToggle = (enabled: boolean) => {
+    setDateRangeEnabled(enabled)
+    if (!enabled) {
+      // Si se desactiva el rango, limpiar la selección de rango
+      setSelectedDateRange(null)
+    } else {
+      // Si se activa el rango, limpiar la fecha específica
+      setSelectedDate(null)
+    }
   }
 
   return (
@@ -69,12 +83,14 @@ const AppCalendar = () => {
         handleAddEventSidebarToggle={handleAddEventSidebarToggle}
         onDateSelect={handleDateSelect}
         onRangeSelect={handleRangeSelect}
+        dateRangeEnabled={dateRangeEnabled}
+        onDateRangeToggle={handleDateRangeToggle}
       />
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
-          selectedDate={selectedDate}
-          selectedDateRange={selectedDateRange}
+          selectedDate={dateRangeEnabled ? null : selectedDate}
+          selectedDateRange={dateRangeEnabled ? selectedDateRange : null}
         />
       </div>
       <AddEventSidebar

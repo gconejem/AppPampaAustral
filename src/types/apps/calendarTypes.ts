@@ -35,6 +35,8 @@ export type SidebarLeftProps = {
   handleAddEventSidebarToggle: () => void
   onDateSelect?: (date: Date) => void
   onRangeSelect?: (startDate: Date | null, endDate: Date | null) => void
+  dateRangeEnabled?: boolean
+  onDateRangeToggle?: (enabled: boolean) => void
 }
 
 export type CalendarProps = {

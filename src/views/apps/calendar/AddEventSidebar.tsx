@@ -321,6 +321,20 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     }
   }, [fechaFin])
 
+  // Sincronizar fechaFin con fechaInicio cuando el tipo de visita es EVENTO
+  useEffect(() => {
+    if (formData.tipoVisita === 'EVENTO' && fechaInicio) {
+      const endDate = new Date(fechaInicio)
+      // Mantener la hora de fin actual si existe, sino usar hora de inicio + 1
+      if (fechaFin) {
+        endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
+      } else {
+        endDate.setHours(fechaInicio.getHours() + 1)
+      }
+      setFechaFin(endDate)
+    }
+  }, [formData.tipoVisita, fechaInicio])
+
   // Cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
@@ -1111,6 +1125,17 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     if (!fechaFin) {
                       const endDate = new Date(newDate)
                       endDate.setHours(newDate.getHours() + 1)
+                      setFechaFin(endDate)
+                    }
+                    // Si el tipo de visita es EVENTO, sincronizar fechaFin con fechaInicio
+                    else if (formData.tipoVisita === 'EVENTO') {
+                      const endDate = new Date(newDate)
+                      // Mantener la hora de fin actual si existe
+                      if (fechaFin) {
+                        endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
+                      } else {
+                        endDate.setHours(newDate.getHours() + 1)
+                      }
                       setFechaFin(endDate)
                     }
                   }

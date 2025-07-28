@@ -232,6 +232,10 @@ const EditEventSidebar = ({
   const [fechaInicio, setFechaInicio] = useState<Date | null>(null);
   const [fechaFin, setFechaFin] = useState<Date | null>(null);
 
+  // Estados separados para las horas para evitar conflictos con useEffect
+  const [horaInicio, setHoraInicio] = useState<string>('');
+  const [horaFin, setHoraFin] = useState<string>('');
+
   // Función helper para formatear fecha manteniendo zona horaria local
   const formatDateLocal = (date: Date) => {
     const year = date.getFullYear()
@@ -245,32 +249,80 @@ const EditEventSidebar = ({
 
   // Actualizar formData cuando cambien las fechas (solo si no estamos cargando datos del evento)
   useEffect(() => {
-    if (fechaInicio && editEventSidebarOpen) {
-      setFormData(prev => ({
-        ...prev,
-        fechaInicio: formatDateLocal(fechaInicio)
-      }))
-    }
-  }, [fechaInicio, editEventSidebarOpen])
-
-  useEffect(() => {
-    if (fechaFin && editEventSidebarOpen) {
-      setFormData(prev => ({
-        ...prev,
-        fechaFin: formatDateLocal(fechaFin)
-      }))
-    }
-  }, [fechaFin, editEventSidebarOpen])
-
-  // Sincronizar fechaFin del formData con el estado fechaFin para el DatePicker
-  useEffect(() => {
-    if (formData.fechaFin && !isLoadingEventData) {
-      const fechaFinDate = new Date(formData.fechaFin)
-      if (!isNaN(fechaFinDate.getTime())) {
-        setFechaFin(fechaFinDate)
+    if (fechaInicio && editEventSidebarOpen && !isLoadingEventData) {
+      const newFormattedDate = formatDateLocal(fechaInicio)
+      // Solo actualizar si es diferente para evitar loops
+      if (formData.fechaInicio !== newFormattedDate) {
+        setFormData(prev => ({
+          ...prev,
+          fechaInicio: newFormattedDate
+        }))
       }
     }
-  }, [formData.fechaFin, isLoadingEventData])
+  }, [fechaInicio, editEventSidebarOpen, isLoadingEventData])
+
+  useEffect(() => {
+    if (fechaFin && editEventSidebarOpen && !isLoadingEventData) {
+      const newFormattedDate = formatDateLocal(fechaFin)
+      // Solo actualizar si es diferente para evitar loops
+      if (formData.fechaFin !== newFormattedDate) {
+        setFormData(prev => ({
+          ...prev,
+          fechaFin: newFormattedDate
+        }))
+      }
+    }
+  }, [fechaFin, editEventSidebarOpen, isLoadingEventData])
+
+  // Sincronizar fechaFin del formData con el estado fechaFin para el DatePicker
+  // Solo cuando se está cargando datos del evento, no durante cambios manuales
+  useEffect(() => {
+    if (formData.fechaFin && !isLoadingEventData && selectedEvent) {
+      const fechaFinDate = new Date(formData.fechaFin)
+      if (!isNaN(fechaFinDate.getTime())) {
+        // Solo actualizar si la diferencia es significativa (más de 1 minuto)
+        const currentTime = fechaFin?.getTime() || 0
+        const newTime = fechaFinDate.getTime()
+        if (Math.abs(currentTime - newTime) > 60000) { // 60000ms = 1 minuto
+          setFechaFin(fechaFinDate)
+        }
+      }
+    }
+  }, [formData.fechaFin, isLoadingEventData, selectedEvent])
+
+  // Sincronizar horaInicio con fechaInicio
+  useEffect(() => {
+    if (fechaInicio) {
+      const newHoraInicio = `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
+      if (horaInicio !== newHoraInicio) {
+        setHoraInicio(newHoraInicio)
+      }
+    }
+  }, [fechaInicio])
+
+  // Sincronizar horaFin con fechaFin
+  useEffect(() => {
+    if (fechaFin) {
+      const newHoraFin = `${fechaFin.getHours().toString().padStart(2, '0')}:${fechaFin.getMinutes().toString().padStart(2, '0')}`
+      if (horaFin !== newHoraFin) {
+        setHoraFin(newHoraFin)
+      }
+    }
+  }, [fechaFin])
+
+  // Sincronizar fechaFin con fechaInicio cuando el tipo de visita es EVENTO
+  useEffect(() => {
+    if (formData.tipoVisita === 'EVENTO' && fechaInicio && !isLoadingEventData) {
+      const endDate = new Date(fechaInicio)
+      // Mantener la hora de fin actual si existe, sino usar hora de inicio + 1
+      if (fechaFin) {
+        endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
+      } else {
+        endDate.setHours(fechaInicio.getHours() + 1)
+      }
+      setFechaFin(endDate)
+    }
+  }, [formData.tipoVisita, fechaInicio, isLoadingEventData])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -1213,6 +1265,17 @@ const EditEventSidebar = ({
                           endDate.setHours(newDate.getHours() + 1)
                           setFechaFin(endDate)
                         }
+                        // Si el tipo de visita es EVENTO, sincronizar fechaFin con fechaInicio
+                        else if (formData.tipoVisita === 'EVENTO') {
+                          const endDate = new Date(newDate)
+                          // Mantener la hora de fin actual si existe
+                          if (fechaFin) {
+                            endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
+                          } else {
+                            endDate.setHours(newDate.getHours() + 1)
+                          }
+                          setFechaFin(endDate)
+                        }
                       }
                     }}
                     slotProps={{
@@ -1230,28 +1293,27 @@ const EditEventSidebar = ({
                   fullWidth
                   label='Hora inicio'
                   type='time'
-                  value={formData.fechaInicio.split('T')[1] || ''}
+                  value={horaInicio}
                   onChange={e => {
-                    const date = formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
-                    const horaInicio = e.target.value
+                    const newHoraInicio = e.target.value
+                    setHoraInicio(newHoraInicio)
 
-                    // Calcular hora fin (una hora después)
-                    if (horaInicio) {
-                      const [horas, minutos] = horaInicio.split(':').map(Number)
+                    if (!newHoraInicio) return
 
-                      // Crear una fecha base para calcular la hora fin
-                      const fechaBase = new Date(`${date}T${horaInicio}`)
-                      fechaBase.setHours(fechaBase.getHours() + 1)
+                    const [hours, minutes] = newHoraInicio.split(':').map(Number)
+                    if (isNaN(hours) || isNaN(minutes)) return
 
-                      // Formatear la hora fin
-                      const horaFinString = fechaBase.toTimeString().slice(0, 5)
+                    const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
+                    newDate.setHours(hours, minutes, 0, 0)
 
-                      // Actualizar fecha inicio
-                      handleInputChange('fechaInicio', `${date}T${horaInicio}`)
-                      // Actualizar fecha fin automáticamente
-                      handleInputChange('fechaFin', `${date}T${horaFinString}`)
-                    } else {
-                      handleInputChange('fechaInicio', `${date}T${horaInicio}`)
+                    console.log('Cambiando hora inicio:', newHoraInicio, 'Nueva fecha:', newDate)
+                    setFechaInicio(newDate)
+
+                    // Actualizar fecha fin si es necesario
+                    if (!fechaFin || fechaFin <= newDate) {
+                      const endDate = new Date(newDate)
+                      endDate.setHours(newDate.getHours() + 1, newDate.getMinutes(), 0, 0)
+                      setFechaFin(endDate)
                     }
                   }}
                   InputLabelProps={{
@@ -1267,10 +1329,21 @@ const EditEventSidebar = ({
                   fullWidth
                   label='Hora término'
                   type='time'
-                  value={formData.fechaFin.split('T')[1] || ''}
+                  value={horaFin}
                   onChange={e => {
-                    const date = formData.fechaFin.split('T')[0] || formData.fechaInicio.split('T')[0] || new Date().toISOString().split('T')[0]
-                    handleInputChange('fechaFin', `${date}T${e.target.value}`)
+                    const newHoraFin = e.target.value
+                    setHoraFin(newHoraFin)
+
+                    if (!newHoraFin) return
+
+                    const [hours, minutes] = newHoraFin.split(':').map(Number)
+                    if (isNaN(hours) || isNaN(minutes)) return
+
+                    const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
+                    newDate.setHours(hours, minutes, 0, 0)
+
+                    console.log('Cambiando hora fin:', newHoraFin, 'Nueva fecha:', newDate)
+                    setFechaFin(newDate)
                   }}
                   InputLabelProps={{
                     shrink: true

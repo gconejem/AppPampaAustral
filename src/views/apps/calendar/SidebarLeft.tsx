@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography'
 import FormControl from '@mui/material/FormControl'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
-import { TextField, InputAdornment, Autocomplete } from '@mui/material'
+import { TextField, InputAdornment, Autocomplete, FormControlLabel, Checkbox } from '@mui/material'
 import Box from '@mui/material/Box'
 
 // Third-party imports
@@ -66,7 +66,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     handleLeftSidebarToggle,
     handleAddEventSidebarToggle,
     onDateSelect,
-    onRangeSelect
+    onRangeSelect,
+    dateRangeEnabled = false,
+    onDateRangeToggle
   } = props
 
   // Estados para los filtros
@@ -327,11 +329,30 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         />
       </Box>
 
-      {/* <Divider className='is-full' /> */}
-      <Box sx={{ px: 5, pb: 5 }}>
+      {/* Sección de Rango de Fechas */}
+      <Box sx={{ px: 5 }}>
         <div className='flex flex-col p-5 is-full'>
-          <PickersRange onRangeChange={onRangeSelect} />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={dateRangeEnabled}
+                onChange={(e) => onDateRangeToggle?.(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Buscar por rango de fechas"
+            sx={{ mb: 2 }}
+          />
 
+
+        </div>
+      </Box>
+
+      <Box sx={{ px: 5 }}>
+        <div className='flex flex-col p-5 is-full'>
+          {dateRangeEnabled && (
+            <PickersRange onRangeChange={onRangeSelect} />
+          )}
         </div>
       </Box>
 
