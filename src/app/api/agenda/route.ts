@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         direccion: data.direccion || '',
         referencia: data.referencia || '',
         observaciones: data.observaciones,
-        estado: 'AGENDADA',
+        estado: data.estado || 'CREADA',
 
         // Crear servicios relacionados
         servicios: {

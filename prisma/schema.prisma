@@ -405,7 +405,7 @@ model Agenda {
   esRecurrente    Boolean          @default(false)
   fechaInicio     DateTime
   fechaFin        DateTime
-  estado          EstadoAgenda     @default(AGENDADA)
+  estado          EstadoAgenda     @default(CREADA)
   clienteId       Int?
   obraId          Int?
   solicitudId     Int?
@@ -762,6 +762,7 @@ enum EstadoAdministrativo {
 }
 
 enum EstadoAgenda {
+  CREADA
   AGENDADA
   COMPLETADA
   SUSPENDIDA
