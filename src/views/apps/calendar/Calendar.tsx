@@ -1101,9 +1101,23 @@ const Calendar = (props: CalenderProps) => {
               obraDiv.textContent = obra
               clienteObraContainer.appendChild(obraDiv)
 
-              // Crear elementos de servicios (cada uno en su línea)
+              // Crear elementos de servicios (máximo 4, con tooltip si hay más)
               if (servicios.length > 0) {
-                servicios.forEach((servicio: any) => {
+                const maxServiciosVisibles = 4
+                const serviciosVisibles = servicios.slice(0, maxServiciosVisibles)
+                const serviciosRestantes = servicios.slice(maxServiciosVisibles)
+
+                // Crear contenedor para los servicios
+                const serviciosContainer = document.createElement('div')
+                serviciosContainer.style.cssText = `
+                  display: flex;
+                  flex-direction: column;
+                  gap: 2px;
+                  margin-top: 2px;
+                `
+
+                // Mostrar los primeros 4 servicios
+                serviciosVisibles.forEach((servicio: any) => {
                   const servicioDiv = document.createElement('div')
                   servicioDiv.style.cssText = `
                     font-size: 0.75rem;
@@ -1112,14 +1126,120 @@ const Calendar = (props: CalenderProps) => {
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
-                    margin-top: 2px;
                   `
                   const servicioText = typeof servicio === 'string'
                     ? servicio
                     : servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
                   servicioDiv.textContent = servicioText
-                  clienteObraContainer.appendChild(servicioDiv)
+                  serviciosContainer.appendChild(servicioDiv)
                 })
+
+                // Si hay más de 4 servicios, mostrar indicador con tooltip
+                if (serviciosRestantes.length > 0) {
+                  const masServiciosDiv = document.createElement('div')
+                  masServiciosDiv.style.cssText = `
+                    font-size: 0.75rem;
+                    color: #666;
+                    font-weight: 500;
+                    cursor: help;
+                    position: relative;
+                    display: inline-block;
+                    pointer-events: auto !important;
+                  `
+                  masServiciosDiv.textContent = `+${serviciosRestantes.length} más...`
+
+                  // Crear contenido del tooltip con TODOS los servicios
+                  const todosLosServicios = servicios.map((servicio: any) => {
+                    return typeof servicio === 'string'
+                      ? servicio
+                      : servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+                  })
+
+                  // Crear tooltip con todos los servicios
+                  const tooltip = document.createElement('div')
+                  tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 6px;
+                    font-size: 0.75rem;
+                    z-index: 9999;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: opacity 0.3s ease, visibility 0.3s ease;
+                    pointer-events: none;
+                    max-width: 400px;
+                    white-space: normal;
+                    line-height: 1.5;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                    word-wrap: break-word;
+                  `
+
+                  // Crear lista con bullet points
+                  const serviciosList = document.createElement('ul')
+                  serviciosList.style.cssText = `
+                    margin: 0;
+                    padding-left: 16px;
+                    list-style-type: disc;
+                  `
+
+                  todosLosServicios.forEach((servicioText: string) => {
+                    const listItem = document.createElement('li')
+                    listItem.style.cssText = `
+                      margin-bottom: 4px;
+                      line-height: 1.4;
+                    `
+                    listItem.textContent = servicioText
+                    serviciosList.appendChild(listItem)
+                  })
+
+                  // Agregar título al tooltip
+                  const tooltipTitle = document.createElement('div')
+                  tooltipTitle.style.cssText = `
+                    font-weight: 600;
+                    margin-bottom: 8px;
+                    color: #fff;
+                  `
+                  tooltipTitle.textContent = 'Servicios de la visita:'
+
+                  tooltip.appendChild(tooltipTitle)
+                  tooltip.appendChild(serviciosList)
+
+                  // Agregar tooltip al body para evitar problemas de overflow
+                  document.body.appendChild(tooltip)
+
+                  // Agregar eventos para mostrar/ocultar tooltip
+                  masServiciosDiv.addEventListener('mouseenter', (e) => {
+                    const rect = masServiciosDiv.getBoundingClientRect()
+                    tooltip.style.left = `${rect.left}px`
+                    tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`
+                    tooltip.style.opacity = '1'
+                    tooltip.style.visibility = 'visible'
+                  })
+
+                  masServiciosDiv.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = '0'
+                    tooltip.style.visibility = 'hidden'
+                  })
+
+                  // Limpiar tooltip cuando se destruya el elemento
+                  const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                      mutation.removedNodes.forEach((node) => {
+                        if (node === masServiciosDiv || (node instanceof Element && node.contains(masServiciosDiv))) {
+                          tooltip.remove()
+                          observer.disconnect()
+                        }
+                      })
+                    })
+                  })
+                  observer.observe(document.body, { childList: true, subtree: true })
+
+                  serviciosContainer.appendChild(masServiciosDiv)
+                }
+
+                clienteObraContainer.appendChild(serviciosContainer)
               } else {
                 const noServiciosDiv = document.createElement('div')
                 noServiciosDiv.style.cssText = `
