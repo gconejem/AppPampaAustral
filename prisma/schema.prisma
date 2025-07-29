@@ -762,7 +762,6 @@ enum EstadoAdministrativo {
 }
 
 enum EstadoAgenda {
-  CREADA
   AGENDADA
   COMPLETADA
   SUSPENDIDA
