@@ -398,6 +398,21 @@ const EditEventSidebar = ({
     const fetchEventData = async () => {
       if (selectedEvent && editEventSidebarOpen) {
         setIsLoadingEventData(true)
+
+        // Limpiar datos anteriores inmediatamente cuando cambia el evento seleccionado
+        setFormData(initialData)
+        setEstado('AGENDADA')
+        setFechaInicio(null)
+        setFechaFin(null)
+        setHoraInicio('')
+        setHoraFin('')
+        setServiciosAgendados([])
+        setLaboratoristasAgendados([])
+        setEquiposAgendados([])
+        setContactos([])
+        setSelectedReferencia('')
+        setSelectedRegion('')
+
         console.log('Cargando datos completos del evento desde el backend:', selectedEvent.id)
 
         try {
