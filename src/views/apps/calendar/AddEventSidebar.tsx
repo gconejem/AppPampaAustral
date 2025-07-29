@@ -206,7 +206,7 @@ interface ContactoAgendaForm {
 
 const initialData: FormData = {
   titulo: '',
-  tipoVisita: '',
+  tipoVisita: 'EVENTO',
   esRecurrente: false,
   fechaInicio: '',
   fechaFin: '',
