@@ -18,10 +18,22 @@ export const formatDateForBackend = (date: Date): string => {
  * para mostrar la hora correcta en el frontend
  */
 export const parseDateFromBackend = (dateString: string): Date => {
+    if (!dateString) {
+        return new Date()
+    }
+    
     const date = new Date(dateString)
+    
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida recibida del backend:', dateString)
+        return new Date()
+    }
+    
     // Ajustar por zona horaria local para mostrar la hora correcta
     const offset = date.getTimezoneOffset()
     const localDate = new Date(date.getTime() + (offset * 60 * 1000))
+    
     return localDate
 }
 

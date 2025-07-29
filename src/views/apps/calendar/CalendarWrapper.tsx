@@ -32,7 +32,8 @@ const AppCalendar = () => {
   const [calendarApi, setCalendarApi] = useState<null | any>(null)
   const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(false)
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  // Cambiar aquí: inicializar con la fecha de hoy
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null)
   const [dateRangeEnabled, setDateRangeEnabled] = useState<boolean>(false)
 

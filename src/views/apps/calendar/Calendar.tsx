@@ -321,8 +321,8 @@ const Calendar = (props: CalenderProps) => {
 
       setFilteredEvents(eventsForDate)
     } else {
-      // Si no hay fecha seleccionada, aplicar filtros normales de estado
-      handleFilterStatus(statusFilters)
+      // Si no hay fecha seleccionada, mostrar todos los eventos cargados
+      setFilteredEvents(events)
     }
   }, [props.selectedDate, props.selectedDateRange, events])
 
@@ -1004,10 +1004,30 @@ const Calendar = (props: CalenderProps) => {
               const dayName = eventDate?.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '')
               const dayNumber = eventDate?.getDate()
 
-              const timeRange =
-                info.event.start && info.event.end
-                  ? `${info.event.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })} - ${info.event.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })}`
-                  : ''
+              // Función auxiliar para formatear hora de manera segura
+              const formatTime = (date: Date): string => {
+                if (!date || isNaN(date.getTime())) return ''
+                return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })
+              }
+
+              // Función para formatear rango de tiempo con manejo especial para 00:00
+              const formatTimeRange = (start: Date, end: Date): string => {
+                const startTime = formatTime(start)
+                const endTime = formatTime(end)
+
+                // Si alguna de las horas está vacía, no mostrar el rango
+                if (!startTime || !endTime) return ''
+
+                return `${startTime} - ${endTime}`
+              }
+
+              const timeRange = info.event.start && info.event.end
+                ? formatTimeRange(info.event.start, info.event.end)
+                : ''
+
+
+
+
 
               const cliente = info.event.extendedProps?.cliente?.nombreCliente || 'Sin Cliente'
 
@@ -1398,7 +1418,6 @@ const Calendar = (props: CalenderProps) => {
   }
 
   const fetchEvents = async () => {
-    console.log('Iniciando fetchEvents')
 
     try {
       // Construir URL con parámetros de fecha si están disponibles
@@ -1432,38 +1451,48 @@ const Calendar = (props: CalenderProps) => {
         url += `?${params.toString()}`
       }
 
-      console.log('Fetching events from:', url)
+
       const response = await fetch(url)
 
       if (!response.ok) throw new Error('Error al obtener eventos')
       const data = await response.json()
 
+
+
       // Formatear los eventos para FullCalendar
-      const formattedEvents = data.map((event: any) => ({
-        id: event.id,
-        title: `${event.tipoVisita} - ${event.cliente?.nombreCliente || 'Sin Cliente'}`,
-        start: parseDateFromBackend(event.fechaInicio),
-        end: parseDateFromBackend(event.fechaFin),
-        extendedProps: {
-          estado: event.estado,
-          cliente: event.cliente,
-          clienteId: event.cliente?.clienteId,
-          tipoVisita: event.tipoVisita,
-          servicios: event.servicios,
-          asignados: event.asignados,
-          equipos: event.equipos,
-          obra: event.obra,
-          obraId: event.obra?.obraId,
-          solicitud: event.solicitud,
-          solicitudId: event.solicitud?.id || event.solicitudId,
-          direccion: event.direccion,
-          comuna: event.comuna,
-          region: event.region,
-          sectorComercial: event.sectorComercial,
-          observaciones: event.observaciones,
-          contactos: event.contactos
+      const formattedEvents = data.map((event: any) => {
+        const startDate = parseDateFromBackend(event.fechaInicio)
+        const endDate = parseDateFromBackend(event.fechaFin)
+
+
+
+        return {
+          id: event.id,
+          title: `${event.tipoVisita} - ${event.cliente?.nombreCliente || 'Sin Cliente'}`,
+          start: startDate,
+          end: endDate,
+          extendedProps: {
+            estado: event.estado,
+            cliente: event.cliente,
+            clienteId: event.cliente?.clienteId,
+            tipoVisita: event.tipoVisita,
+            servicios: event.servicios,
+            asignados: event.asignados,
+            equipos: event.equipos,
+            obra: event.obra,
+            obraId: event.obra?.obraId,
+            solicitud: event.solicitud,
+            solicitudId: event.solicitud?.id || event.solicitudId,
+            direccion: event.direccion,
+            comuna: event.comuna,
+            region: event.region,
+            sectorComercial: event.sectorComercial,
+            observaciones: event.observaciones,
+            contactos: event.contactos
+          }
         }
-      }))
+      })
+
 
       setEvents(formattedEvents)
     } catch (error) {
