@@ -119,7 +119,8 @@ interface Obra {
   clienteId: number,
   contactos: ContactoObraForm[],
   referencia: string,
-  numeroObra: string
+  numeroObra: string,
+  estadoObra: string
 }
 
 interface Solicitud {
@@ -422,7 +423,17 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const obrasData = await obrasRes.json()
 
         console.log('Obras cargadas:', obrasData)
-        setObras(obrasData)
+
+        // Filtrar solo obras activas y ordenar por número de obra descendente
+        const obrasActivas = obrasData
+          .filter((obra: any) => obra.estadoObra === 'activa')
+          .sort((a: any, b: any) => {
+            const numeroA = parseInt(a.numeroObra) || 0
+            const numeroB = parseInt(b.numeroObra) || 0
+            return numeroB - numeroA // Orden descendente (más reciente primero)
+          })
+
+        setObras(obrasActivas)
       } catch (error) {
         console.error('Error al cargar obras:', error)
         setObras([])
@@ -1287,8 +1298,22 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={12} sm={4}>
             <Autocomplete
               fullWidth
-              options={obras}
-              getOptionLabel={option => `${option.nombreObra}`}
+              options={obras
+                .filter(obra => obra.estadoObra === 'activa')
+                .sort((a, b) => {
+                  const numeroA = parseInt(a.numeroObra) || 0
+                  const numeroB = parseInt(b.numeroObra) || 0
+                  return numeroB - numeroA // Orden descendente (más reciente primero)
+                })
+              }
+              getOptionLabel={option => {
+                const numeroObra = option.numeroObra || option.obraId || 'S/N'
+                const comuna = option.comuna || 'Sin comuna'
+                const nombreTruncado = option.nombreObra && option.nombreObra.length > 50
+                  ? `${option.nombreObra.substring(0, 50)}...`
+                  : option.nombreObra || 'Sin nombre'
+                return `${numeroObra} - ${comuna} - ${nombreTruncado}`
+              }}
               filterOptions={(options, { inputValue }) => {
                 if (!inputValue) return options
 
@@ -1340,7 +1365,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               renderOption={(props, option) => (
                 <li {...props} key={option.obraId}>
                   <Box>
-                    <Typography variant='body1'>{option.numeroObra} - {option.nombreObra.slice(0, 50)}</Typography>
+                    <Typography variant='body1'>
+                      {option.numeroObra || option.obraId || 'S/N'} - {option.comuna || 'Sin comuna'} - {
+                        option.nombreObra && option.nombreObra.length > 50
+                          ? `${option.nombreObra.substring(0, 50)}...`
+                          : option.nombreObra || 'Sin nombre'
+                      }
+                    </Typography>
                     <Typography variant='caption' color='textSecondary'>
                       {option.direccion}
                     </Typography>

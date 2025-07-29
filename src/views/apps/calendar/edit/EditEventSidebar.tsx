@@ -114,6 +114,8 @@ interface Obra {
   referencia?: string
   cliente?: Cliente
   contactos?: any[]
+  numeroObra?: string
+  estadoObra?: string
 }
 
 interface Solicitud {
@@ -336,7 +338,16 @@ const EditEventSidebar = ({
         const obrasRes = await fetch('/api/obras')
         const obrasData = await obrasRes.json()
 
-        setObras(obrasData)
+        // Filtrar solo obras activas y ordenar por número de obra descendente
+        const obrasActivas = obrasData
+          .filter((obra: any) => obra.estadoObra === 'activa')
+          .sort((a: any, b: any) => {
+            const numeroA = parseInt(a.numeroObra) || 0
+            const numeroB = parseInt(b.numeroObra) || 0
+            return numeroB - numeroA // Orden descendente (más reciente primero)
+          })
+
+        setObras(obrasActivas)
 
         // Cargar solicitudes
         const solicitudesRes = await fetch('/api/requests')
@@ -624,11 +635,12 @@ const EditEventSidebar = ({
 
   // Filtrar obras cuando cambia el cliente seleccionado usando useMemo
   const obrasFiltradas = useMemo(() => {
+    let filtered = []
+
     if (formData.clienteId) {
       // Intentar diferentes formas de filtrar según la estructura de datos
       // Filtrar obras por RUT del cliente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
-      let filtered = []
 
       if (cliente && cliente.rut) {
         // Filtrar por RUT que es la relación entre cliente y obra
@@ -640,11 +652,18 @@ const EditEventSidebar = ({
           obra.cliente?.clienteId === formData.clienteId
         )
       }
-
-      return filtered
     } else {
-      return obras
+      filtered = obras
     }
+
+    // Filtrar solo obras activas y ordenar por número de obra descendente
+    return filtered
+      .filter(obra => obra.estadoObra === 'activa')
+      .sort((a, b) => {
+        const numeroA = parseInt(a.numeroObra || '0') || 0
+        const numeroB = parseInt(b.numeroObra || '0') || 0
+        return numeroB - numeroA // Orden descendente (más reciente primero)
+      })
   }, [formData.clienteId, obras, clientes])
 
 
@@ -1342,7 +1361,14 @@ const EditEventSidebar = ({
               <Grid item xs={4}>
                 <Autocomplete
                   options={obrasFiltradas}
-                  getOptionLabel={option => option.nombreObra}
+                  getOptionLabel={option => {
+                    const numeroObra = option.numeroObra || option.obraId || 'S/N'
+                    const comuna = option.comuna || 'Sin comuna'
+                    const nombreTruncado = option.nombreObra && option.nombreObra.length > 50
+                      ? `${option.nombreObra.substring(0, 50)}...`
+                      : option.nombreObra || 'Sin nombre'
+                    return `${numeroObra} - ${comuna} - ${nombreTruncado}`
+                  }}
                   value={(() => {
                     const obraEncontrada = obrasFiltradas.find(o => o.obraId === formData.obraId) ||
                       obras.find(o => o.obraId === formData.obraId) ||
