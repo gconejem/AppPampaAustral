@@ -1013,6 +1013,14 @@ const Calendar = (props: CalenderProps) => {
               const obra =
                 info.event.extendedProps?.obra?.nombreObra || info.event.extendedProps?.direccion || 'Sin ubicación'
 
+              const servicios = info.event.extendedProps?.servicios || []
+              const serviciosText = servicios.length > 0
+                ? servicios.map((servicio: any) => {
+                  if (typeof servicio === 'string') return servicio
+                  return servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+                }).join(', ')
+                : 'Sin servicios'
+
               // Limpiar el contenido original
               titleCol.textContent = ''
 
@@ -1058,7 +1066,7 @@ const Calendar = (props: CalenderProps) => {
               `
               dateCheckboxContainer.appendChild(dateContainer)
 
-              // Crear el contenedor de información del cliente/obra
+              // Crear el contenedor de información del cliente/obra/servicios
               const clienteObraContainer = document.createElement('div')
               clienteObraContainer.style.cssText = `
                 flex: 1;
@@ -1067,23 +1075,62 @@ const Calendar = (props: CalenderProps) => {
                 gap: 4px;
                 min-width: 0;
               `
-              clienteObraContainer.innerHTML = `
-                <div style="
-                  font-size: 0.875rem;
-                  color: #333;
-                  font-weight: 500;
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                ">${cliente}</div>
-                <div style="
-                  font-size: 0.875rem;
-                  color: #666;
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                ">${obra}</div>
+
+              // Crear elemento del cliente
+              const clienteDiv = document.createElement('div')
+              clienteDiv.style.cssText = `
+                font-size: 0.875rem;
+                color: #333;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
               `
+              clienteDiv.textContent = cliente
+              clienteObraContainer.appendChild(clienteDiv)
+
+              // Crear elemento de la obra
+              const obraDiv = document.createElement('div')
+              obraDiv.style.cssText = `
+                font-size: 0.875rem;
+                color: #666;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              `
+              obraDiv.textContent = obra
+              clienteObraContainer.appendChild(obraDiv)
+
+              // Crear elementos de servicios (cada uno en su línea)
+              if (servicios.length > 0) {
+                servicios.forEach((servicio: any) => {
+                  const servicioDiv = document.createElement('div')
+                  servicioDiv.style.cssText = `
+                    font-size: 0.75rem;
+                    color: #1976d2;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    margin-top: 2px;
+                  `
+                  const servicioText = typeof servicio === 'string'
+                    ? servicio
+                    : servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+                  servicioDiv.textContent = servicioText
+                  clienteObraContainer.appendChild(servicioDiv)
+                })
+              } else {
+                const noServiciosDiv = document.createElement('div')
+                noServiciosDiv.style.cssText = `
+                  font-size: 0.75rem;
+                  color: #999;
+                  font-style: italic;
+                  margin-top: 2px;
+                `
+                noServiciosDiv.textContent = 'Sin servicios'
+                clienteObraContainer.appendChild(noServiciosDiv)
+              }
 
               // Crear el contenedor del estado
               const estadoContainer = document.createElement('div')
