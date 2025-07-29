@@ -721,6 +721,34 @@ const EditEventSidebar = ({
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
       }
 
+      // Lógica para cambiar estado de CREADA a AGENDADA
+      let nuevoEstado = estado
+
+      // Si el estado actual es CREADA, verificar si se cumplen las condiciones para cambiar a AGENDADA
+      if (estado === 'CREADA') {
+        const tieneFechaInicio = !!formData.fechaInicio
+        const tieneFechaFin = !!formData.fechaFin
+        const tieneHoraInicio = !!horaInicio
+        const tieneHoraFin = !!horaFin
+        const tieneLaboratoristas = laboratoristasAgendados.length > 0
+        const tieneEquipos = equiposAgendados.length > 0
+
+        // Si se cumplen todas las condiciones, cambiar a AGENDADA
+        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas && tieneEquipos) {
+          nuevoEstado = 'AGENDADA'
+          console.log('Cambiando estado de CREADA a AGENDADA - se cumplen todas las condiciones')
+        } else {
+          console.log('Estado permanece CREADA - no se cumplen todas las condiciones:', {
+            tieneFechaInicio,
+            tieneFechaFin,
+            tieneHoraInicio,
+            tieneHoraFin,
+            tieneLaboratoristas,
+            tieneEquipos
+          })
+        }
+      }
+
       // Generar título automáticamente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
       const serviciosPrincipales = serviciosAgendados.map(s => s.servicio).join(', ')
@@ -731,7 +759,7 @@ const EditEventSidebar = ({
       const visitaData = {
         ...formData,
         titulo: tituloGenerado, // Usar el título generado
-        estado: estado,
+        estado: nuevoEstado, // Usar el nuevo estado calculado
         servicios: serviciosAgendados.map(servicio => ({
           ...servicio,
           id: parseInt(servicio.codigo)
