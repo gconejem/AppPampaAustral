@@ -1816,12 +1816,12 @@ const Calendar = (props: CalenderProps) => {
           </ListItemIcon>
           <ListItemText>Cambiar Estado</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleBulkMenuAction('eliminar')} sx={{ color: 'error.main' }}>
+        {/* <MenuItem onClick={() => handleBulkMenuAction('eliminar')} sx={{ color: 'error.main' }}>
           <ListItemIcon>
             <i className='ri-delete-bin-line' style={{ fontSize: '1.25rem', color: 'error.main' }}></i>
           </ListItemIcon>
           <ListItemText>Eliminar Eventos</ListItemText>
-        </MenuItem>
+        </MenuItem> */}
       </Menu>
 
       <Snackbar
