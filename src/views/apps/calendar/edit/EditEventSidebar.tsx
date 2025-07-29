@@ -176,7 +176,7 @@ const EditEventSidebar = ({
   selectedEvent
 }: EditEventSidebarProps) => {
   const [formData, setFormData] = useState<FormData>(initialData)
-  const [estado, setEstado] = useState('AGENDADA')
+  const [estado, setEstado] = useState('CREADA')
   const [editandoEstado, setEditandoEstado] = useState(false)
   const [selectedReferencia, setSelectedReferencia] = useState('')
   const [isLoadingEventData, setIsLoadingEventData] = useState(false)
@@ -412,7 +412,7 @@ const EditEventSidebar = ({
 
         // Limpiar datos anteriores inmediatamente cuando cambia el evento seleccionado
         setFormData(initialData)
-        setEstado('AGENDADA')
+        setEstado('CREADA')
         setFechaInicio(null)
         setFechaFin(null)
         setHoraInicio('')
@@ -439,7 +439,7 @@ const EditEventSidebar = ({
           // Usar la función de utilidades para formatear fechas
 
           // Establecer estado
-          setEstado(eventData.estado || 'AGENDADA')
+          setEstado(eventData.estado || 'CREADA')
 
           // Formatear fechas
           const fechaInicioFormatted = formatBackendDateForInput(eventData.fechaInicio)
@@ -697,22 +697,25 @@ const EditEventSidebar = ({
 
   const handleSubmit = async () => {
     try {
-      // Validación detallada de campos requeridos
+      // Validación detallada de campos requeridos para estado CREADA
       const camposFaltantes = []
 
+      // Campos requeridos para estado CREADA
       if (!formData.fechaInicio) camposFaltantes.push('Fecha y Hora de Inicio')
       if (!formData.fechaFin) camposFaltantes.push('Fecha y Hora de Término')
       if (!formData.clienteId) camposFaltantes.push('Cliente')
+      if (!formData.obraId) camposFaltantes.push('Obra')
+      if (!formData.solicitudId) camposFaltantes.push('Solicitud')
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
 
+      // Validar que haya al menos un contacto
+      if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
+
       // Validar que haya al menos un servicio
       if (serviciosAgendados.length === 0) camposFaltantes.push('Al menos un Servicio')
-
-      // Validar que haya al menos un laboratorista
-      if (laboratoristasAgendados.length === 0) camposFaltantes.push('Al menos un Laboratorista')
 
       if (camposFaltantes.length > 0) {
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
@@ -751,7 +754,7 @@ const EditEventSidebar = ({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.message || 'Error al actualizar la agenda')
+        throw new Error(error.message || 'Error al actualizar la visita')
       }
 
       // Cerrar sidebar y mostrar mensaje de éxito
@@ -1092,6 +1095,7 @@ const EditEventSidebar = ({
                       autoFocus
                       onBlur={() => setEditandoEstado(false)}
                     >
+                      <MenuItem value='CREADA'>Creada</MenuItem>
                       <MenuItem value='AGENDADA'>Agendada</MenuItem>
                       <MenuItem value='COMPLETADA'>Completada</MenuItem>
                       <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>

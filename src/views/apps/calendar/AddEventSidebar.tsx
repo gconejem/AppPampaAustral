@@ -220,12 +220,12 @@ const initialData: FormData = {
   servicios: [],
   laboratoristas: [],
   equipos: [],
-  estado: 'AGENDADA'
+  estado: 'CREADA'
 }
 
 const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: AddEventSidebarProps) => {
   const [formData, setFormData] = useState<FormData>(initialData)
-  const [estado, setEstado] = useState('AGENDADA')
+  const [estado, setEstado] = useState('CREADA')
   const [editandoEstado, setEditandoEstado] = useState(false)
 
   // Estados para los datos de las listas desplegables
@@ -783,24 +783,25 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
   const handleSubmit = async () => {
     try {
-      // Validación detallada de campos requeridos
+      // Validación detallada de campos requeridos para estado CREADA
       const camposFaltantes = []
 
-      // Remover validación de título ya que se generará automáticamente
-      // if (!formData.titulo) camposFaltantes.push('Título')
+      // Campos requeridos para estado CREADA
       if (!formData.fechaInicio) camposFaltantes.push('Fecha y Hora de Inicio')
       if (!formData.fechaFin) camposFaltantes.push('Fecha y Hora de Término')
       if (!formData.clienteId) camposFaltantes.push('Cliente')
+      if (!formData.obraId) camposFaltantes.push('Obra')
+      if (!formData.solicitudId) camposFaltantes.push('Solicitud')
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
 
+      // Validar que haya al menos un contacto
+      if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
+
       // Validar que haya al menos un servicio
       if (serviciosAgendados.length === 0) camposFaltantes.push('Al menos un Servicio')
-
-      // Validar que haya al menos un laboratorista
-      if (laboratoristasAgendados.length === 0) camposFaltantes.push('Al menos un Laboratorista')
 
       if (camposFaltantes.length > 0) {
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
@@ -846,10 +847,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
       // Cerrar sidebar y mostrar mensaje de éxito
       handleCloseSidebar()
-      toast.success('Visita agendada exitosamente')
+      toast.success('Visita creada exitosamente')
     } catch (error: any) {
       console.error('Error:', error)
-      toast.error(error?.message || 'Error al agendar la visita')
+      toast.error(error?.message || 'Error al crear la visita')
     }
   }
 
@@ -974,7 +975,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   // Función para resetear todos los datos del formulario
   const resetFormData = useCallback(() => {
     setFormData(initialData)
-    setEstado('AGENDADA')
+    setEstado('CREADA')
     setEditandoEstado(false)
 
     // Resetear fechas
@@ -1067,7 +1068,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         <Grid container alignItems='center' justifyContent='space-between' spacing={2}>
           <Grid item xs={9}>
             <Box display='flex' alignItems='center' gap={1}>
-              <Typography variant='h5'>Agendar Una Visita</Typography>
+              <Typography variant='h5'>Crear Una Visita</Typography>
               <Typography variant='body2' color='textSecondary'>
                 * Campo obligatorio
               </Typography>
@@ -1077,7 +1078,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={2}>
             <Box display='flex' alignItems='center' gap={1}>
               <Typography variant='body2'>Estado</Typography>
-              {editandoEstado ? (
+              {/* {editandoEstado ? (
                 <FormControl size='small'>
                   <Select
                     value={estado}
@@ -1088,6 +1089,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     autoFocus
                     onBlur={() => setEditandoEstado(false)}
                   >
+                    <MenuItem value='CREADA'>Creada</MenuItem>
                     <MenuItem value='AGENDADA'>Agendada</MenuItem>
                     <MenuItem value='COMPLETADA'>Completada</MenuItem>
                     <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
@@ -1102,7 +1104,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     <EditIcon fontSize='small' />
                   </IconButton>
                 </>
-              )}
+              )} */}
+              <>
+                <Typography variant='body2'>{estado}</Typography>
+              </>
             </Box>
           </Grid>
 
@@ -2279,7 +2284,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           <Grid item xs={12}>
             <Box display='flex' justifyContent='flex-start'>
               <Button variant='contained' color='primary' onClick={handleSubmit}>
-                Agendar
+                Crear
               </Button>
             </Box>
           </Grid>
