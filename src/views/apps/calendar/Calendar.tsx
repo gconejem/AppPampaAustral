@@ -42,7 +42,7 @@ type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
 }
 
-type StatusType = 'AGENDADA' | 'COMPLETADA' | 'SUSPENDIDA' | 'REPROGRAMADA'
+type StatusType = 'CREADA' | 'AGENDADA' | 'COMPLETADA' | 'SUSPENDIDA' | 'REPROGRAMADA'
 type StatusFiltersType = Record<StatusType, boolean>
 
 interface EventInfo {
@@ -97,6 +97,7 @@ const Calendar = (props: CalenderProps) => {
   })
 
   const [statusFilters, setStatusFilters] = useState<StatusFiltersType>({
+    CREADA: false,
     AGENDADA: true,
     COMPLETADA: false,
     SUSPENDIDA: false,
@@ -1389,6 +1390,7 @@ const Calendar = (props: CalenderProps) => {
 
   // Definir colores por estado
   const statusColors: Record<StatusType, string> = {
+    CREADA: '#9C27B0', // Púrpura
     AGENDADA: '#4CAF50', // Verde
     COMPLETADA: '#2196F3', // Azul
     SUSPENDIDA: '#F44336', // Rojo
