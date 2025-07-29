@@ -800,16 +800,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
 
-      // Validar que haya al menos un servicio
-      if (serviciosAgendados.length === 0) camposFaltantes.push('Al menos un Servicio')
-
       if (camposFaltantes.length > 0) {
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
       }
 
       // Generar título automáticamente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
-      const serviciosPrincipales = serviciosAgendados.map(s => s.servicio).join(', ')
+      const serviciosPrincipales = serviciosAgendados.length > 0
+        ? serviciosAgendados.map(s => s.servicio).join(', ')
+        : 'Sin servicios especificados'
       const fechaFormateada = new Date(formData.fechaInicio).toLocaleDateString('es-ES')
 
       const tituloGenerado = `Visita ${cliente?.razonSocial} - ${serviciosPrincipales} (${fechaFormateada})`
