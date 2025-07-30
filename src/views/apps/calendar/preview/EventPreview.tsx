@@ -1,6 +1,7 @@
 import { Dialog, Typography, Box, IconButton, Button, Checkbox, FormControlLabel, Grid, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { ROLES_CONTACTO } from '@/constants/roles'
+import { parseDateFromBackend } from '@/utils/dateUtils'
 import { useState, useEffect } from 'react'
 
 interface EventPreviewProps {
@@ -128,7 +129,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   Fecha
                 </Typography>
                 <Typography variant='body1'>
-                  {new Date(displayData.fechaInicio || displayData.start).toLocaleDateString('es-ES', {
+                  {parseDateFromBackend(displayData.fechaInicio || displayData.start).toLocaleDateString('es-ES', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -144,9 +145,9 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   Hora
                 </Typography>
                 <Typography variant='body1'>
-                  {new Date(displayData.fechaInicio || displayData.start).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} -{' '}
+                  {parseDateFromBackend(displayData.fechaInicio || displayData.start).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} -{' '}
                   {displayData.fechaFin || displayData.end
-                    ? new Date(displayData.fechaFin || displayData.end).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                    ? parseDateFromBackend(displayData.fechaFin || displayData.end).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
                     : 'No especificado'}
                 </Typography>
               </Box>
