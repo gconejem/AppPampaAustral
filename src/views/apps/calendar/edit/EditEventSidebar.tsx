@@ -224,7 +224,7 @@ const EditEventSidebar = ({
   const [productsPage, setProductsPage] = useState(0)
   const [areas, setAreas] = useState<any[]>([])
   const [tipos, setTipos] = useState<string[]>([])
-  const [familias, setFamilias] = useState<any[]>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
   const [filteredProductos, setFilteredProductos] = useState<any[]>([])
   const [totalProductos, setTotalProductos] = useState(0)
   const servicioAnchorRef = useRef<HTMLDivElement>(null)
@@ -384,6 +384,33 @@ const EditEventSidebar = ({
     }
 
     fetchData()
+  }, [])
+
+  // Cargar tipos y familias al montar el componente
+  useEffect(() => {
+    // Cargar todos los servicios para obtener tipos únicos
+    fetch('/api/productos?limit=1000')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar servicios')
+        }
+        return res.json()
+      })
+      .then(response => {
+        const data = response.productos || []
+
+        // Obtener tipos únicos
+        const uniqueTipos = Array.from(new Set(data.map((s: any) => s.tipo || 'Sin tipo')))
+          .filter(tipo => tipo)
+          .sort()
+
+        setTipos(uniqueTipos as string[])
+        setServicios(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar servicios:', error)
+        setServicios([])
+      })
   }, [])
 
   // Inicializar fechas cuando se abre el sidebar sin evento seleccionado
@@ -919,12 +946,12 @@ const EditEventSidebar = ({
     setSelectedAreaId(areaSeleccionada?.id || null)
   }
 
-  const handleTipoChange = (e: any) => {
-    setSelectedTipo(e.target.value)
-  }
-
   const handleFamiliaChange = (e: any) => {
     setSelectedFamilia(e.target.value)
+  }
+
+  const handleTipoChange = (e: any) => {
+    setSelectedTipo(e.target.value)
   }
 
   const handleShowOnlyPaquetesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -967,9 +994,15 @@ const EditEventSidebar = ({
   // Cargar familias cuando cambia el área seleccionada
   useEffect(() => {
     if (selectedAreaId) {
-      fetch(`/api/areas/${selectedAreaId}/familias`)
-        .then(res => res.json())
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
         .then(data => {
+          console.log('Familias cargadas:', data)
           setFamilias(data)
         })
         .catch(error => {
