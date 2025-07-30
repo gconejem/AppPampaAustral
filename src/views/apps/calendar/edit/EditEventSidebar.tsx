@@ -1415,8 +1415,11 @@ const EditEventSidebar = ({
                           setSelectedGeorreferencia(obraSeleccionada.georreferencia || '')
                         }
                       } else {
-                        // Si hay múltiples obras, limpiar región seleccionada
+                        // Si hay múltiples obras, limpiar región seleccionada y contactos
                         setSelectedRegion('')
+                        setContactos([])
+                        setSelectedReferencia('')
+                        setSelectedGeorreferencia('')
 
                         console.log('Cliente con múltiples obras - Limpiando campos de ubicación:', {
                           cliente: newValue.clienteId,
@@ -1429,6 +1432,7 @@ const EditEventSidebar = ({
                         clienteId: newValue.clienteId,
                         obraId: obraPreseleccionada,
                         solicitudId: solicitudPreseleccionada,
+                        sectorComercial: obrasDelCliente.length === 1 ? prev.sectorComercial : '',
                         // Si se preselecciona una obra, llenar datos de ubicación
                         // Si no se preselecciona (múltiples obras), limpiar datos de ubicación
                         ...(obrasDelCliente.length === 1 ? {
@@ -1446,26 +1450,24 @@ const EditEventSidebar = ({
                         })
                       }))
                     } else {
-                      // Limpiar región seleccionada
+                      // Si se limpia el cliente, limpiar todos los campos relacionados
                       setSelectedRegion('')
+                      setContactos([])
+                      setSelectedReferencia('')
+                      setSelectedGeorreferencia('')
 
                       setFormData(prev => ({
                         ...prev,
                         clienteId: undefined,
                         obraId: undefined,
                         solicitudId: undefined,
-                        // Limpiar datos de ubicación cuando se quita el cliente
-                        direccion: '',
+                        sectorComercial: '',
                         region: '',
                         comuna: '',
+                        direccion: '',
                         referencia: '',
                         georreferencia: ''
                       }))
-
-                      // Limpiar contactos cuando se quita el cliente
-                      setContactos([])
-                      setSelectedReferencia('')
-                      setSelectedGeorreferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Cliente' required />}
@@ -1537,25 +1539,23 @@ const EditEventSidebar = ({
                       // Cargar contactos de la obra seleccionada
                       cargarContactosDeObra(newValue.obraId)
                     } else {
-                      // Limpiar región seleccionada
+                      // Si se limpia la obra, limpiar todos los campos relacionados
                       setSelectedRegion('')
+                      setContactos([])
+                      setSelectedReferencia('')
+                      setSelectedGeorreferencia('')
 
                       setFormData(prev => ({
                         ...prev,
                         obraId: undefined,
                         solicitudId: undefined,
-                        // Limpiar datos de ubicación cuando se quita la obra
-                        direccion: '',
+                        sectorComercial: '',
                         region: '',
                         comuna: '',
+                        direccion: '',
                         referencia: '',
                         georreferencia: ''
                       }))
-
-                      // Limpiar contactos cuando se quita la obra
-                      setContactos([])
-                      setSelectedReferencia('')
-                      setSelectedGeorreferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Obra' />}
