@@ -270,7 +270,51 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            {/* Cuarta fila: Servicios */}
+            {/* Cuarta fila: Dirección - Referencia - Georreferencia */}
+            <Grid item xs={4}>
+              <Box>
+                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                  Dirección
+                </Typography>
+                <Typography variant='body1'>
+                  {displayData.obra?.direccion || displayData.extendedProps?.obra?.direccion || 'No especificada'}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={4}>
+              <Box>
+                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                  Referencia
+                </Typography>
+                <Typography variant='body1'>
+                  {displayData.obra?.referencia || displayData.extendedProps?.obra?.referencia || 'No especificada'}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={4}>
+              <Box>
+                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                  Georreferencia
+                </Typography>
+                <Typography variant='body1'>
+                  {(() => {
+                    const obra = displayData.obra || displayData.extendedProps?.obra;
+                    const latitud = obra?.latitud || obra?.lat;
+                    const longitud = obra?.longitud || obra?.lng || obra?.lon;
+
+                    if (latitud && longitud) {
+                      return `${latitud}, ${longitud}`;
+                    } else {
+                      return 'No especificada';
+                    }
+                  })()}
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* Quinta fila: Servicios */}
 
             {/* Contactos */}
             <Grid item xs={12}>
