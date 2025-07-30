@@ -90,6 +90,7 @@ export async function GET(request: Request) {
     const sectoresComerciales = searchParams.get('sectoresComerciales')
     const regiones = searchParams.get('regiones')
     const comunas = searchParams.get('comunas')
+    const tiposEvento = searchParams.get('tiposEvento')
 
     // Construir el filtro base
     const whereFilter: any = {}
@@ -102,7 +103,8 @@ export async function GET(request: Request) {
       laboratoristaIds,
       sectoresComerciales,
       regiones,
-      comunas
+      comunas,
+      tiposEvento
     })
 
     // Filtro de fechas
@@ -165,6 +167,22 @@ export async function GET(request: Request) {
       whereFilter.comuna = {
         in: comunasArray
       }
+    }
+
+    // Filtro por tipo de evento
+    if (tiposEvento) {
+      const tiposArray = tiposEvento.split(',')
+      // Para campos booleanos, solo podemos usar equals, no in
+      // Si hay múltiples tipos seleccionados, no aplicamos filtro (mostrar todos)
+      if (tiposArray.length === 1) {
+        const tipo = tiposArray[0]
+        if (tipo === 'Evento') {
+          whereFilter.esRecurrente = false
+        } else if (tipo === 'Recurrente') {
+          whereFilter.esRecurrente = true
+        }
+      }
+      // Si hay múltiples tipos seleccionados, no aplicamos filtro (mostrar todos)
     }
 
     console.log('Final whereFilter:', whereFilter)

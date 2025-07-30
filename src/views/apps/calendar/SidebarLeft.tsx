@@ -193,6 +193,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
 
   const handleFilterChange = (filterType: string, value: any) => {
     switch (filterType) {
+      case 'TipoEvento':
+        onFilterChange('TipoEvento', value)
+        if (value && value.length > 0) {
+          dispatch(filterCalendarLabel(value[0]))
+        }
+        break
       case 'Cliente':
         onFilterChange('Cliente', value)
         if (value) {
@@ -342,6 +348,39 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             Limpiar
           </Button>
         </Box>
+
+        {/* Campo Tipo de Evento con Autocomplete */}
+        <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>
+          <Autocomplete
+            options={['Evento', 'Recurrente']}
+            value={filters.tiposEvento.length > 0 ? filters.tiposEvento[0] : null}
+            onChange={(_, newValue) => handleFilterChange('TipoEvento', newValue ? [newValue] : [])}
+            filterOptions={(options, { inputValue }) => {
+              const searchTerm = inputValue.toLowerCase()
+              return options.filter(option => option.toLowerCase().includes(searchTerm))
+            }}
+            renderInput={params => (
+              <TextField
+                {...params}
+                variant='outlined'
+                placeholder='Tipo de Evento'
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+          />
+          {filters.tiposEvento.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              Tipo seleccionado: {filters.tiposEvento[0]}
+            </Typography>
+          )}
+        </FormControl>
 
         {/* Campo Cliente con Autocomplete */}
         <FormControl fullWidth variant='outlined' sx={{ mb: 2 }}>

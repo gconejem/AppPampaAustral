@@ -34,6 +34,7 @@ export interface CalendarFilters {
   sectoresComerciales: string[]
   regiones: string[]
   comunas: string[]
+  tiposEvento: string[]
 }
 
 // Types

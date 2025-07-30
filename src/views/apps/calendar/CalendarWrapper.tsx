@@ -57,6 +57,7 @@ interface CalendarFilters {
   sectoresComerciales: string[]
   regiones: string[]
   comunas: string[]
+  tiposEvento: string[]
 }
 
 const AppCalendar = () => {
@@ -76,7 +77,8 @@ const AppCalendar = () => {
     laboratoristas: [],
     sectoresComerciales: [],
     regiones: [],
-    comunas: []
+    comunas: [],
+    tiposEvento: []
   })
 
   // Hooks
@@ -148,6 +150,11 @@ const AppCalendar = () => {
             ...prev,
             comunas: value
           }
+        case 'TipoEvento':
+          return {
+            ...prev,
+            tiposEvento: value
+          }
         default:
           return prev
       }
@@ -161,7 +168,8 @@ const AppCalendar = () => {
       laboratoristas: [],
       sectoresComerciales: [],
       regiones: [],
-      comunas: []
+      comunas: [],
+      tiposEvento: []
     })
   }
 

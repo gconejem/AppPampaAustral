@@ -327,6 +327,15 @@ const Calendar = (props: CalenderProps) => {
       })
     }
 
+    // Filtrar por tipo de evento
+    if (props.filters.tiposEvento.length > 0) {
+      const tipoSeleccionado = props.filters.tiposEvento[0]
+      filtered = filtered.filter(event => {
+        const eventTipo = event.extendedProps?.esRecurrente ? 'Recurrente' : 'Evento'
+        return eventTipo === tipoSeleccionado
+      })
+    }
+
     // Filtrar por obras
     if (props.filters.obras.length > 0) {
       const obraIds = props.filters.obras.map(obra => obra.obraId)
@@ -1539,6 +1548,10 @@ const Calendar = (props: CalenderProps) => {
         params.append('comunas', props.filters.comunas.join(','))
       }
 
+      if (props.filters.tiposEvento.length > 0) {
+        params.append('tiposEvento', props.filters.tiposEvento.join(','))
+      }
+
       if (params.toString()) {
         url += `?${params.toString()}`
       }
@@ -1579,7 +1592,8 @@ const Calendar = (props: CalenderProps) => {
             region: event.region,
             sectorComercial: event.sectorComercial,
             observaciones: event.observaciones,
-            contactos: event.contactos
+            contactos: event.contactos,
+            esRecurrente: event.esRecurrente
           }
         }
       })
