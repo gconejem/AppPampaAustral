@@ -98,6 +98,7 @@ interface FormData {
   observaciones?: string
   direccion: string
   referencia?: string
+  georreferencia?: string
   servicios: ServicioAgendado[]
   laboratoristas: LaboratoristaAgendado[]
   equipos: EquipoAgendado[]
@@ -119,6 +120,7 @@ interface Obra {
   clienteId: number,
   contactos: ContactoObraForm[],
   referencia: string,
+  georreferencia?: string,
   numeroObra: string,
   estadoObra: string
 }
@@ -217,6 +219,7 @@ const initialData: FormData = {
   observaciones: '',
   direccion: '',
   referencia: '',
+  georreferencia: '',
   servicios: [],
   laboratoristas: [],
   equipos: [],
@@ -244,6 +247,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [esSegundaVisita, setEsSegundaVisita] = useState<boolean>(false)
   const [selectedSectorComercial, setSelectedSectorComercial] = useState<string>('')
   const [selectedReferencia, setSelectedReferencia] = useState<string>('')
+  const [selectedGeorreferencia, setSelectedGeorreferencia] = useState<string>('')
 
   // Estados para laboratoristas
   const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
@@ -523,13 +527,16 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         }))
         setContactos(nuevosContactos)
         setSelectedReferencia(obraSeleccionada.referencia || '')
+        setSelectedGeorreferencia(obraSeleccionada.georreferencia || '')
 
         // Actualizar formData con los datos de la obra
         setFormData(prev => ({
           ...prev,
           region: obraSeleccionada.region || '',
           comuna: obraSeleccionada.comuna || '',
-          direccion: obraSeleccionada.direccion || ''
+          direccion: obraSeleccionada.direccion || '',
+          referencia: obraSeleccionada.referencia || '',
+          georreferencia: obraSeleccionada.georreferencia || ''
         }))
 
         // Actualizar el estado de región seleccionada para que se carguen las comunas
@@ -548,6 +555,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       // Si no hay obra seleccionada, limpiar contactos y mostrar todas las solicitudes
       setContactos([])
       setSelectedReferencia('')
+      setSelectedGeorreferencia('')
       setSolicitudesFiltradas(todasLasSolicitudes)
     }
   }, [formData.obraId, obras, todasLasSolicitudes])
@@ -820,6 +828,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         titulo: tituloGenerado,
         estado: estado,
         referencia: selectedReferencia,
+        georreferencia: selectedGeorreferencia,
         servicios: serviciosAgendados.map(servicio => ({
           ...servicio,
           id: parseInt(servicio.codigo)
@@ -1025,6 +1034,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setSelectedRegion('')
     setSelectedSectorComercial('')
     setSelectedReferencia('')
+    setSelectedGeorreferencia('')
 
     // Resetear solicitudes filtradas - mostrar todas
     setSolicitudesFiltradas(todasLasSolicitudes)
@@ -1277,9 +1287,13 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   ...prev,
                   clienteId: newValue?.clienteId,
                   obraId: undefined, // Limpiar obra cuando cambia el cliente
-                  direccion: '' // Limpiar dirección
+                  direccion: '', // Limpiar dirección
+                  referencia: '', // Limpiar referencia
+                  georreferencia: '' // Limpiar georreferencia
                 }))
                 setContactos([]) // Limpiar contactos
+                setSelectedReferencia('') // Limpiar referencia seleccionada
+                setSelectedGeorreferencia('') // Limpiar georreferencia seleccionada
                 setSelectedReferencia('') // Limpiar referencia
               }}
               renderInput={params => (
@@ -1519,7 +1533,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         </Grid>
         <Grid container spacing={2} mt={2}>
           {/* Dirección */}
-          <Grid item xs={12} sm={6} display='flex' alignItems='center'>
+          <Grid item xs={12} sm={4} display='flex' alignItems='center'>
             <TextField
               fullWidth
               label='Dirección *'
@@ -1534,7 +1548,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
 
           {/* Referencia */}
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               label='Referencia'
@@ -1545,6 +1559,23 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 setFormData(prev => ({
                   ...prev,
                   referencia: e.target.value
+                }))
+              }}
+            />
+          </Grid>
+
+          {/* Georreferencia */}
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label='Georreferencia'
+              value={selectedGeorreferencia}
+              placeholder='Ej: -33.4489, -70.6693'
+              onChange={e => {
+                setSelectedGeorreferencia(e.target.value)
+                setFormData(prev => ({
+                  ...prev,
+                  georreferencia: e.target.value
                 }))
               }}
             />
