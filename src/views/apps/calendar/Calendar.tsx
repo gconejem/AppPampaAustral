@@ -1206,7 +1206,7 @@ const Calendar = (props: CalenderProps) => {
               `
               dateCheckboxContainer.appendChild(dateContainer)
 
-              // Crear el contenedor de información del cliente/obra/servicios
+              // Crear el contenedor de información del cliente/obra
               const clienteObraContainer = document.createElement('div')
               clienteObraContainer.style.cssText = `
                 flex: 1;
@@ -1243,20 +1243,49 @@ const Calendar = (props: CalenderProps) => {
               obraDiv.textContent = obraTruncada
               clienteObraContainer.appendChild(obraDiv)
 
+
+
+              // Crear el contenedor del estado
+              const estadoContainer = document.createElement('div')
+              estadoContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                pointer-events: auto;
+              `
+              estadoContainer.innerHTML = `
+                <div style="
+                  padding: 4px 12px;
+                  border-radius: 16px;
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  background-color: ${alpha(statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA, 0.1)};
+                  color: ${statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA};
+                  text-align: center;
+                ">
+                  ${info.event.extendedProps?.estado || 'AGENDADA'}
+                </div>
+              `
+
+              // Crear contenedor para servicios (a la derecha de cliente/obra)
+              const serviciosContainer = document.createElement('div')
+              serviciosContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-width: 150px;
+                max-width: 200px;
+                margin-left: 16px;
+                align-items: flex-start;
+                justify-content: flex-start;
+                width: 100%;
+              `
+
               // Crear elementos de servicios (máximo 2, con tooltip si hay más)
               if (servicios.length > 0) {
                 const maxServiciosVisibles = 2
                 const serviciosVisibles = servicios.slice(0, maxServiciosVisibles)
                 const serviciosRestantes = servicios.slice(maxServiciosVisibles)
-
-                // Crear contenedor para los servicios
-                const serviciosContainer = document.createElement('div')
-                serviciosContainer.style.cssText = `
-                  display: flex;
-                  flex-direction: column;
-                  gap: 2px;
-                  margin-top: 2px;
-                `
 
                 // Mostrar los primeros 2 servicios
                 serviciosVisibles.forEach((servicio: any) => {
@@ -1268,6 +1297,10 @@ const Calendar = (props: CalenderProps) => {
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    text-align: left;
+                    width: 100%;
+                    padding-left: 0;
+                    margin-left: 0;
                   `
                   const servicioText = typeof servicio === 'string'
                     ? servicio
@@ -1287,8 +1320,12 @@ const Calendar = (props: CalenderProps) => {
                     font-weight: 500;
                     cursor: help;
                     position: relative;
-                    display: inline-block;
+                    display: block;
                     pointer-events: auto !important;
+                    text-align: left;
+                    width: 100%;
+                    padding-left: 0;
+                    margin-left: 0;
                   `
                   masServiciosDiv.textContent = `+${serviciosRestantes.length} más...`
 
@@ -1383,46 +1420,26 @@ const Calendar = (props: CalenderProps) => {
 
                   serviciosContainer.appendChild(masServiciosDiv)
                 }
-
-                clienteObraContainer.appendChild(serviciosContainer)
               } else {
                 const noServiciosDiv = document.createElement('div')
                 noServiciosDiv.style.cssText = `
                   font-size: 0.75rem;
                   color: #999;
                   font-style: italic;
-                  margin-top: 2px;
+                  text-align: left;
+                  width: 100%;
+                  padding-left: 0;
+                  margin-left: 0;
                 `
                 noServiciosDiv.textContent = 'Sin servicios'
-                clienteObraContainer.appendChild(noServiciosDiv)
+                serviciosContainer.appendChild(noServiciosDiv)
               }
-
-              // Crear el contenedor del estado
-              const estadoContainer = document.createElement('div')
-              estadoContainer.style.cssText = `
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                pointer-events: auto;
-              `
-              estadoContainer.innerHTML = `
-                <div style="
-                  padding: 4px 12px;
-                  border-radius: 16px;
-                  font-size: 0.75rem;
-                  font-weight: 500;
-                  background-color: ${alpha(statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA, 0.1)};
-                  color: ${statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA};
-                  text-align: center;
-                ">
-                  ${info.event.extendedProps?.estado || 'AGENDADA'}
-                </div>
-              `
 
               // Agregar todo al contenedor principal usando appendChild
               infoContainer.innerHTML = ''
               infoContainer.appendChild(dateCheckboxContainer)
               infoContainer.appendChild(clienteObraContainer)
+              infoContainer.appendChild(serviciosContainer)
               infoContainer.appendChild(estadoContainer)
               //titleCol.appendChild(checkboxCell)
               titleCol.appendChild(infoContainer)
