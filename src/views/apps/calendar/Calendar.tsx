@@ -954,15 +954,60 @@ const Calendar = (props: CalenderProps) => {
             actionContainer.style.cssText = `
               display: flex;
               align-items: center;
-              justify-content: center;
-              gap: 8px;
+              justify-content: space-between;
               width: 100%;
               pointer-events: auto !important;
             `
-            actionContainer.appendChild(viewButton)
-            actionContainer.appendChild(editButton)
-            actionContainer.appendChild(personButton)
-            actionContainer.appendChild(menuButton)
+
+            // Contenedor para las acciones (centrado)
+            const actionsCenterContainer = document.createElement('div')
+            actionsCenterContainer.style.cssText = `
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              flex: 1;
+              justify-content: center;
+            `
+            actionsCenterContainer.appendChild(viewButton)
+            actionsCenterContainer.appendChild(editButton)
+            actionsCenterContainer.appendChild(personButton)
+            actionsCenterContainer.appendChild(menuButton)
+
+            // Contenedor para el nombre del laboratorista (derecha)
+            const laboratoristaContainer = document.createElement('div')
+            laboratoristaContainer.style.cssText = `
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              min-width: 120px;
+              margin-left: 16px;
+            `
+
+            // Obtener el primer laboratorista asignado
+            const asignados = info.event.extendedProps?.asignados || []
+            if (asignados.length > 0) {
+              const primerLaboratorista = asignados[0]
+              const nombreLaboratorista = primerLaboratorista.user?.name ||
+                primerLaboratorista.user?.nombre ||
+                primerLaboratorista.nombre ||
+                'Laboratorista'
+
+              const laboratoristaText = document.createElement('div')
+              laboratoristaText.style.cssText = `
+                font-size: 0.75rem;
+                color: #666;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100px;
+              `
+              laboratoristaText.textContent = nombreLaboratorista
+              laboratoristaContainer.appendChild(laboratoristaText)
+            }
+
+            actionContainer.appendChild(actionsCenterContainer)
+            actionContainer.appendChild(laboratoristaContainer)
 
             // Crear la columna de checkbox como botón simple
             const checkboxCell = document.createElement('div')
