@@ -1209,7 +1209,7 @@ const Calendar = (props: CalenderProps) => {
               // Crear el contenedor de información del cliente/obra
               const clienteObraContainer = document.createElement('div')
               clienteObraContainer.style.cssText = `
-                flex: 1;
+                flex: 0.9;
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
