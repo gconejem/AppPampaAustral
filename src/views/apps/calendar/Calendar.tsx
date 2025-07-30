@@ -1248,11 +1248,15 @@ const Calendar = (props: CalenderProps) => {
               // Crear el contenedor del estado
               const estadoContainer = document.createElement('div')
               estadoContainer.style.cssText = `
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                pointer-events: auto;
-              `
+                  display: flex;
+                  align-items: center;
+                  justify-content: flex-end;
+                  gap: 16px;
+                  pointer-events: auto;
+                  min-width: 120px;
+                  max-width: 120px;
+                  width: 120px;
+                `
               estadoContainer.innerHTML = `
                 <div style="
                   padding: 4px 12px;
