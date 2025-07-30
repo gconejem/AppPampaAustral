@@ -208,13 +208,21 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   Obra
                 </Typography>
                 <Typography variant='body1'>
-                  {displayData.obra?.nombreObra ||
-                    displayData.obra?.nombreCliente ||
-                    displayData.obra?.direccion ||
-                    displayData.extendedProps?.obra?.nombreObra ||
-                    displayData.extendedProps?.obra?.nombreCliente ||
-                    displayData.extendedProps?.obra?.direccion ||
-                    'No especificada'}
+                  {(() => {
+                    const obra = displayData.obra || displayData.extendedProps?.obra;
+                    const numeroObra = obra?.numeroObra || obra?.numero;
+                    const nombreObra = obra?.nombreObra || obra?.nombreCliente || obra?.direccion;
+
+                    if (numeroObra && nombreObra) {
+                      return `${numeroObra} - ${nombreObra}`;
+                    } else if (nombreObra) {
+                      return nombreObra;
+                    } else if (numeroObra) {
+                      return numeroObra;
+                    } else {
+                      return 'No especificada';
+                    }
+                  })()}
                 </Typography>
               </Box>
             </Grid>
