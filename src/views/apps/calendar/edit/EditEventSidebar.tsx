@@ -67,6 +67,7 @@ interface FormData {
   observaciones?: string
   direccion: string
   referencia?: string
+  georreferencia?: string
   servicios: ServicioAgendado[]
   laboratoristas: LaboratoristaAgendado[]
   equipos: EquipoAgendado[]
@@ -112,6 +113,7 @@ interface Obra {
   region?: string
   comuna?: string
   referencia?: string
+  georreferencia?: string
   cliente?: Cliente
   contactos?: any[]
   numeroObra?: string
@@ -164,6 +166,7 @@ const initialData: FormData = {
   comuna: '',
   direccion: '',
   referencia: '',
+  georreferencia: '',
   observaciones: '',
   servicios: [],
   laboratoristas: [],
@@ -179,6 +182,7 @@ const EditEventSidebar = ({
   const [estado, setEstado] = useState('CREADA')
   const [editandoEstado, setEditandoEstado] = useState(false)
   const [selectedReferencia, setSelectedReferencia] = useState('')
+  const [selectedGeorreferencia, setSelectedGeorreferencia] = useState('')
   const [isLoadingEventData, setIsLoadingEventData] = useState(false)
 
   // Estados para los datos de las listas desplegables
@@ -449,6 +453,7 @@ const EditEventSidebar = ({
         setEquiposAgendados([])
         setContactos([])
         setSelectedReferencia('')
+        setSelectedGeorreferencia('')
         setSelectedRegion('')
 
         console.log('Cargando datos completos del evento desde el backend:', selectedEvent.id)
@@ -462,6 +467,13 @@ const EditEventSidebar = ({
 
           const eventData = await response.json()
           console.log('Datos completos del evento desde backend:', eventData)
+          console.log('Campos específicos de ubicación:', {
+            direccion: eventData.direccion,
+            referencia: eventData.referencia,
+            georreferencia: eventData.georreferencia,
+            region: eventData.region,
+            comuna: eventData.comuna
+          })
 
           // Usar la función de utilidades para formatear fechas
 
@@ -494,6 +506,7 @@ const EditEventSidebar = ({
             comuna: eventData.comuna || '',
             direccion: eventData.direccion || '',
             referencia: eventData.referencia || '',
+            georreferencia: eventData.georreferencia || '',
             observaciones: eventData.observaciones || '',
             servicios: [],
             laboratoristas: [],
@@ -520,8 +533,13 @@ const EditEventSidebar = ({
             setSelectedRegion(eventData.region)
           }
 
-          // Establecer referencia
+          // Establecer referencia y georreferencia
+          console.log('Estableciendo referencia y georreferencia:', {
+            referencia: eventData.referencia,
+            georreferencia: eventData.georreferencia
+          })
           setSelectedReferencia(eventData.referencia || '')
+          setSelectedGeorreferencia(eventData.georreferencia || '')
 
           // Procesar servicios
           console.log('Servicios recibidos del backend:', eventData.servicios)
@@ -626,6 +644,29 @@ const EditEventSidebar = ({
         isPrincipal: c.isPrincipal === true
       }))
       setContactos(nuevosContactos)
+
+      // También actualizar referencia y georreferencia cuando se selecciona una obra
+      if (!isLoadingEventData) {
+        setSelectedReferencia(obraSeleccionada.referencia || '')
+        setSelectedGeorreferencia(obraSeleccionada.georreferencia || '')
+
+        // Actualizar formData también
+        setFormData(prev => ({
+          ...prev,
+          referencia: obraSeleccionada.referencia || '',
+          georreferencia: obraSeleccionada.georreferencia || '',
+          direccion: obraSeleccionada.direccion || prev.direccion,
+          region: obraSeleccionada.region || prev.region,
+          comuna: obraSeleccionada.comuna || prev.comuna
+        }))
+
+        console.log('Datos de obra actualizados:', {
+          referencia: obraSeleccionada.referencia,
+          georreferencia: obraSeleccionada.georreferencia,
+          direccion: obraSeleccionada.direccion
+        })
+      }
+
       console.log('Contactos de obra cargados:', nuevosContactos)
     }
   }
@@ -787,6 +828,8 @@ const EditEventSidebar = ({
         ...formData,
         titulo: tituloGenerado, // Usar el título generado
         estado: nuevoEstado, // Usar el nuevo estado calculado
+        referencia: selectedReferencia,
+        georreferencia: selectedGeorreferencia,
         servicios: serviciosAgendados.map(servicio => ({
           ...servicio,
           id: parseInt(servicio.codigo)
@@ -1364,9 +1407,12 @@ const EditEventSidebar = ({
                           comuna: obraSeleccionada.comuna
                         })
 
-                        // Cargar contactos de la obra preseleccionada
+                        // Cargar contactos de la obra preseleccionada y actualizar estados
                         if (obraPreseleccionada) {
                           cargarContactosDeObra(obraPreseleccionada)
+                          // También actualizar los estados separados
+                          setSelectedReferencia(obraSeleccionada.referencia || '')
+                          setSelectedGeorreferencia(obraSeleccionada.georreferencia || '')
                         }
                       } else {
                         // Si hay múltiples obras, limpiar región seleccionada
@@ -1389,12 +1435,14 @@ const EditEventSidebar = ({
                           direccion: obrasDelCliente[0].direccion || prev.direccion,
                           region: obrasDelCliente[0].region || prev.region,
                           comuna: obrasDelCliente[0].comuna || prev.comuna,
-                          referencia: obrasDelCliente[0].referencia || prev.referencia
+                          referencia: obrasDelCliente[0].referencia || prev.referencia,
+                          georreferencia: obrasDelCliente[0].georreferencia || prev.georreferencia
                         } : {
                           direccion: '',
                           region: '',
                           comuna: '',
-                          referencia: ''
+                          referencia: '',
+                          georreferencia: ''
                         })
                       }))
                     } else {
@@ -1410,12 +1458,14 @@ const EditEventSidebar = ({
                         direccion: '',
                         region: '',
                         comuna: '',
-                        referencia: ''
+                        referencia: '',
+                        georreferencia: ''
                       }))
 
                       // Limpiar contactos cuando se quita el cliente
                       setContactos([])
                       setSelectedReferencia('')
+                      setSelectedGeorreferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Cliente' required />}
@@ -1459,7 +1509,8 @@ const EditEventSidebar = ({
                         direccion: newValue.direccion,
                         region: newValue.region,
                         comuna: newValue.comuna,
-                        referencia: newValue.referencia
+                        referencia: newValue.referencia,
+                        georreferencia: newValue.georreferencia
                       })
 
                       // Actualizar región seleccionada para cargar comunas
@@ -1475,8 +1526,13 @@ const EditEventSidebar = ({
                         direccion: newValue.direccion || prev.direccion,
                         region: newValue.region || prev.region,
                         comuna: newValue.comuna || prev.comuna,
-                        referencia: newValue.referencia || prev.referencia
+                        referencia: newValue.referencia || prev.referencia,
+                        georreferencia: newValue.georreferencia || prev.georreferencia
                       }))
+
+                      // Actualizar estados de referencia y georreferencia
+                      setSelectedReferencia(newValue.referencia || '')
+                      setSelectedGeorreferencia(newValue.georreferencia || '')
 
                       // Cargar contactos de la obra seleccionada
                       cargarContactosDeObra(newValue.obraId)
@@ -1492,12 +1548,14 @@ const EditEventSidebar = ({
                         direccion: '',
                         region: '',
                         comuna: '',
-                        referencia: ''
+                        referencia: '',
+                        georreferencia: ''
                       }))
 
                       // Limpiar contactos cuando se quita la obra
                       setContactos([])
                       setSelectedReferencia('')
+                      setSelectedGeorreferencia('')
                     }
                   }}
                   renderInput={params => <TextField {...params} label='Obra' />}
@@ -1611,12 +1669,12 @@ const EditEventSidebar = ({
                 </FormControl>
               </Grid>
 
-              {/* Dirección y Referencia en la misma fila 6-6 */}
-              <Grid item xs={6}>
+              {/* Dirección, Referencia y Georreferencia en la misma fila 4-4-4 */}
+              <Grid item xs={12} sm={4}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <TextField
                     fullWidth
-                    label='Dirección'
+                    label='Dirección *'
                     value={formData.direccion}
                     onChange={e => handleInputChange('direccion', e.target.value)}
                     required
@@ -1624,7 +1682,7 @@ const EditEventSidebar = ({
                 </Box>
               </Grid>
 
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   label='Referencia'
@@ -1633,6 +1691,19 @@ const EditEventSidebar = ({
                   onChange={e => {
                     setSelectedReferencia(e.target.value)
                     handleInputChange('referencia', e.target.value)
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label='Georreferencia'
+                  value={selectedGeorreferencia}
+                  placeholder='Ej: -33.4489, -70.6693'
+                  onChange={e => {
+                    setSelectedGeorreferencia(e.target.value)
+                    handleInputChange('georreferencia', e.target.value)
                   }}
                 />
               </Grid>
