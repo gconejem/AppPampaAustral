@@ -1104,7 +1104,7 @@ const Calendar = (props: CalenderProps) => {
 
 
               const cliente = info.event.extendedProps?.cliente?.nombreCliente || 'Sin Cliente'
-
+              const comuna = info.event.extendedProps?.comuna || 'Sin comuna'
               const obra =
                 info.event.extendedProps?.obra?.nombreObra || info.event.extendedProps?.direccion || 'Sin ubicación'
 
@@ -1171,7 +1171,7 @@ const Calendar = (props: CalenderProps) => {
                 min-width: 0;
               `
 
-              // Crear elemento del cliente
+              // Crear elemento del cliente con comuna
               const clienteDiv = document.createElement('div')
               clienteDiv.style.cssText = `
                 font-size: 0.875rem;
@@ -1181,7 +1181,7 @@ const Calendar = (props: CalenderProps) => {
                 overflow: hidden;
                 text-overflow: ellipsis;
               `
-              clienteDiv.textContent = cliente
+              clienteDiv.textContent = `${comuna} - ${cliente}`
               clienteObraContainer.appendChild(clienteDiv)
 
               // Crear elemento de la obra
@@ -1193,7 +1193,9 @@ const Calendar = (props: CalenderProps) => {
                 overflow: hidden;
                 text-overflow: ellipsis;
               `
-              obraDiv.textContent = obra
+              // Truncar el nombre de la obra a 50 caracteres máximo
+              const obraTruncada = obra.length > 50 ? obra.substring(0, 50) + '...' : obra
+              obraDiv.textContent = obraTruncada
               clienteObraContainer.appendChild(obraDiv)
 
               // Crear elementos de servicios (máximo 4, con tooltip si hay más)
