@@ -322,115 +322,63 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Contactos
               </Typography>
               {Array.isArray(displayData.contactos) && displayData.contactos.length > 0 ? (
-                displayData.contactos.map((contacto: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Nombre
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.nombre}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Rol
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Email
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.email}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Teléfono 1
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.telefono1}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Teléfono 2
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.telefono2 || 'No especificado'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Principal
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {contacto.isPrincipal ? 'Sí' : 'No'}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Cargo</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Teléfono 1</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Teléfono 2</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Principal</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.contactos.map((contacto: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.nombre}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.email}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.telefono1}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.telefono2 || 'No especificado'}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.isPrincipal ? 'Sí' : 'No'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.contactos) && displayData.extendedProps.contactos.length > 0 ? (
-                displayData.extendedProps.contactos.map((contacto: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Nombre
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.nombre}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Rol
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Email
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.email}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Teléfono 1
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.telefono1}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Teléfono 2
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {contacto.telefono2 || 'No especificado'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={2}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Principal
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {contacto.isPrincipal ? 'Sí' : 'No'}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Cargo</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Teléfono 1</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Teléfono 2</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Principal</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.extendedProps.contactos.map((contacto: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.nombre}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.email}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.telefono1}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.telefono2 || 'No especificado'}</TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>{contacto.isPrincipal ? 'Sí' : 'No'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : (
                 <Typography color='text.secondary'>No hay contactos asignados</Typography>
               )}

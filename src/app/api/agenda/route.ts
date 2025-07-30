@@ -211,11 +211,7 @@ export async function GET(request: Request) {
           }
         },
         obra: true,
-        contactos: {
-          include: {
-            contacto: true
-          }
-        }
+        contactos: true
       },
       orderBy: {
         fechaInicio: 'asc'

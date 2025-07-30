@@ -148,7 +148,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
             equipo: true
           }
         },
-        obra: true
+        obra: true,
+        contactos: true
       }
     })
 
