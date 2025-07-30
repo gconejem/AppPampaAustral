@@ -1,4 +1,5 @@
 import { Dialog, Typography, Box, IconButton, Button, Checkbox, FormControlLabel, Grid, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import CloseIcon from '@mui/icons-material/Close'
 import { ROLES_CONTACTO } from '@/constants/roles'
 import { parseDateFromBackend } from '@/utils/dateUtils'
@@ -8,6 +9,17 @@ interface EventPreviewProps {
   open: boolean
   onClose: () => void
   event: any | null
+}
+
+type StatusType = 'CREADA' | 'AGENDADA' | 'COMPLETADA' | 'SUSPENDIDA' | 'REPROGRAMADA'
+
+// Definir colores por estado (mismos que en Calendar.tsx)
+const statusColors: Record<StatusType, string> = {
+  CREADA: '#9C27B0', // Púrpura
+  AGENDADA: '#4CAF50', // Verde
+  COMPLETADA: '#2196F3', // Azul
+  SUSPENDIDA: '#F44336', // Rojo
+  REPROGRAMADA: '#FF9800' // Naranja
 }
 
 const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
@@ -104,8 +116,8 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
 
         {!loading && !error && (
           <Grid container spacing={4}>
-            {/* Primera fila: Tipo - Fecha - Hora */}
-            <Grid item xs={4}>
+            {/* Primera fila: Tipo - Fecha - Hora - Estado */}
+            <Grid item xs={3}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Tipo de
@@ -123,7 +135,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Fecha
@@ -139,7 +151,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Hora
@@ -150,6 +162,31 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     ? parseDateFromBackend(displayData.fechaFin || displayData.end).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
                     : 'No especificado'}
                 </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                  Estado
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'inline-block',
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: alpha(statusColors[(displayData.estado || displayData.extendedProps?.estado || 'AGENDADA') as StatusType], 0.1),
+                    color: statusColors[(displayData.estado || displayData.extendedProps?.estado || 'AGENDADA') as StatusType],
+                    border: `1px solid ${statusColors[(displayData.estado || displayData.extendedProps?.estado || 'AGENDADA') as StatusType]}`,
+                    minWidth: '80px',
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography variant='body2' sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                    {displayData.estado || displayData.extendedProps?.estado || 'AGENDADA'}
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
 
@@ -225,28 +262,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            {/* Cuarta fila: Estado - Servicios */}
-            <Grid item xs={4}>
-              <Box>
-                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
-                  Estado
-                </Typography>
-                <Box
-                  sx={{
-                    display: 'inline-block',
-                    px: 2,
-                    py: 0.5,
-                    borderRadius: 1,
-                    bgcolor: (displayData.backgroundColor || event.backgroundColor) + '20',
-                    color: displayData.backgroundColor || event.backgroundColor
-                  }}
-                >
-                  <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                    {displayData.estado || displayData.extendedProps?.estado}
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
+            {/* Cuarta fila: Servicios */}
 
             {/* Contactos */}
             <Grid item xs={12}>
