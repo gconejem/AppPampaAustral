@@ -1464,7 +1464,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <TextField
                   {...params}
                   label='Solicitud'
-                  helperText={formData.obraId ? `Mostrando ${solicitudesFiltradas.length} solicitudes de la obra seleccionada` : `Mostrando ${solicitudesFiltradas.length} solicitudes disponibles`}
+                  helperText={formData.obraId ? `Mostrando ${solicitudesFiltradas.length} solicitudes de la obra seleccionada` : `Seleccione una obra primero`}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (
