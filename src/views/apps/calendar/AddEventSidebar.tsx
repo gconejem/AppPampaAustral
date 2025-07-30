@@ -1283,18 +1283,42 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               getOptionLabel={option => `${option.razonSocial} (${option.rut})`}
               value={clientes.find(c => c.clienteId === formData.clienteId) || null}
               onChange={(_, newValue) => {
-                setFormData(prev => ({
-                  ...prev,
-                  clienteId: newValue?.clienteId,
-                  obraId: undefined, // Limpiar obra cuando cambia el cliente
-                  direccion: '', // Limpiar dirección
-                  referencia: '', // Limpiar referencia
-                  georreferencia: '' // Limpiar georreferencia
-                }))
-                setContactos([]) // Limpiar contactos
-                setSelectedReferencia('') // Limpiar referencia seleccionada
-                setSelectedGeorreferencia('') // Limpiar georreferencia seleccionada
-                setSelectedReferencia('') // Limpiar referencia
+                if (newValue) {
+                  // Si se selecciona un cliente, solo actualizar clienteId y limpiar obra
+                  setFormData(prev => ({
+                    ...prev,
+                    clienteId: newValue.clienteId,
+                    obraId: undefined,
+                    solicitudId: undefined,
+                    sectorComercial: '',
+                    region: '',
+                    comuna: '',
+                    direccion: '',
+                    referencia: '',
+                    georreferencia: ''
+                  }))
+                } else {
+                  // Si se limpia el cliente, limpiar todos los campos relacionados
+                  setFormData(prev => ({
+                    ...prev,
+                    clienteId: undefined,
+                    obraId: undefined,
+                    solicitudId: undefined,
+                    sectorComercial: '',
+                    region: '',
+                    comuna: '',
+                    direccion: '',
+                    referencia: '',
+                    georreferencia: ''
+                  }))
+                }
+                // Limpiar estados relacionados
+                setContactos([])
+                setSelectedSectorComercial('')
+                setSelectedReferencia('')
+                setSelectedGeorreferencia('')
+                setSelectedRegion('')
+                setSolicitudesFiltradas(todasLasSolicitudes)
               }}
               renderInput={params => (
                 <TextField
@@ -1354,16 +1378,25 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     direccion: newValue.direccion || ''
                   }))
                 } else {
-                  // Si se limpia la obra, limpiar también región, comuna y dirección
+                  // Si se limpia la obra, limpiar todos los campos relacionados
                   setFormData(prev => ({
                     ...prev,
                     obraId: undefined,
-                    direccion: '',
+                    solicitudId: undefined,
+                    sectorComercial: '',
                     region: '',
-                    comuna: ''
+                    comuna: '',
+                    direccion: '',
+                    referencia: '',
+                    georreferencia: ''
                   }))
-                  // También limpiar el estado de región seleccionada
+                  // Limpiar estados relacionados
+                  setContactos([])
+                  setSelectedSectorComercial('')
+                  setSelectedReferencia('')
+                  setSelectedGeorreferencia('')
                   setSelectedRegion('')
+                  setSolicitudesFiltradas(todasLasSolicitudes)
                 }
               }}
               renderInput={params => (
