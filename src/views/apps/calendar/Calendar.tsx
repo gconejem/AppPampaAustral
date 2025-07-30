@@ -1198,9 +1198,9 @@ const Calendar = (props: CalenderProps) => {
               obraDiv.textContent = obraTruncada
               clienteObraContainer.appendChild(obraDiv)
 
-              // Crear elementos de servicios (máximo 4, con tooltip si hay más)
+              // Crear elementos de servicios (máximo 2, con tooltip si hay más)
               if (servicios.length > 0) {
-                const maxServiciosVisibles = 4
+                const maxServiciosVisibles = 2
                 const serviciosVisibles = servicios.slice(0, maxServiciosVisibles)
                 const serviciosRestantes = servicios.slice(maxServiciosVisibles)
 
@@ -1213,7 +1213,7 @@ const Calendar = (props: CalenderProps) => {
                   margin-top: 2px;
                 `
 
-                // Mostrar los primeros 4 servicios
+                // Mostrar los primeros 2 servicios
                 serviciosVisibles.forEach((servicio: any) => {
                   const servicioDiv = document.createElement('div')
                   servicioDiv.style.cssText = `
@@ -1231,7 +1231,7 @@ const Calendar = (props: CalenderProps) => {
                   serviciosContainer.appendChild(servicioDiv)
                 })
 
-                // Si hay más de 4 servicios, mostrar indicador con tooltip
+                // Si hay más de 2 servicios, mostrar indicador con tooltip
                 if (serviciosRestantes.length > 0) {
                   const masServiciosDiv = document.createElement('div')
                   masServiciosDiv.style.cssText = `
