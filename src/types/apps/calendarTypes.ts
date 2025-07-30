@@ -1,25 +1,50 @@
+// React Imports
+import type { Dispatch } from 'react'
+
 // Third-party Imports
-import type { Dispatch } from '@reduxjs/toolkit'
 import type { EventInput } from '@fullcalendar/core'
 
-// Type Imports
-import type { ThemeColor } from '@core/types'
-
-export type CalendarFiltersType = 'Personal' | 'Business' | 'Family' | 'Holiday' | 'ETC'
-
-export type CalendarColors = {
-  ETC: ThemeColor
-  Family: ThemeColor
-  Holiday: ThemeColor
-  Personal: ThemeColor
-  Business: ThemeColor
+// Interfaces para los filtros
+export interface Cliente {
+  clienteId: number
+  razonSocial: string
+  rut: string
+  nombreCliente: string
 }
 
+export interface Obra {
+  obraId: number
+  numeroObra: string
+  nombreObra: string
+  direccion: string
+  comuna: string
+  region: string
+}
+
+export interface Laboratorista {
+  id: string
+  name: string
+  email: string
+}
+
+export interface CalendarFilters {
+  cliente: Cliente | null
+  obras: Obra[]
+  laboratoristas: Laboratorista[]
+  sectoresComerciales: string[]
+  regiones: string[]
+  comunas: string[]
+}
+
+// Types
 export type CalendarType = {
   events: EventInput[]
-  filteredEvents: EventInput[]
-  selectedEvent: null | any
-  selectedCalendars: CalendarFiltersType[]
+  selectedEvent: EventInput | null
+  selectedCalendars: string[]
+}
+
+export type CalendarColors = {
+  [key: string]: string
 }
 
 export type AddEventType = Omit<EventInput, 'id'>
@@ -37,18 +62,20 @@ export type SidebarLeftProps = {
   onRangeSelect?: (startDate: Date | null, endDate: Date | null) => void
   dateRangeEnabled?: boolean
   onDateRangeToggle?: (enabled: boolean) => void
+  filters: CalendarFilters
+  onFilterChange: (filterType: string, value: any) => void
+  onClearAllFilters: () => void
 }
 
 export type CalendarProps = {
   handleAddEventSidebarToggle: () => void
   selectedDate?: Date | null
   selectedDateRange?: { start: Date | null; end: Date | null } | null
+  filters: CalendarFilters
 }
 
 export type AddEventSidebarType = {
   calendarStore: CalendarType
-  calendarApi: any
-  dispatch: Dispatch
   addEventSidebarOpen: boolean
   handleAddEventSidebarToggle: () => void
 }

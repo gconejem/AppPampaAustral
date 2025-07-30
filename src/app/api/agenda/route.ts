@@ -84,41 +84,93 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const fechaInicio = searchParams.get('fechaInicio')
     const fechaFin = searchParams.get('fechaFin')
+    const clienteId = searchParams.get('clienteId')
+    const obraIds = searchParams.get('obraIds')
+    const laboratoristaIds = searchParams.get('laboratoristaIds')
+    const sectoresComerciales = searchParams.get('sectoresComerciales')
+    const regiones = searchParams.get('regiones')
+    const comunas = searchParams.get('comunas')
 
-    // Construir el filtro de fechas
-    const dateFilter: any = {}
+    // Construir el filtro base
+    const whereFilter: any = {}
 
-    console.log('Query params:', { fechaInicio, fechaFin })
+    console.log('Query params:', {
+      fechaInicio,
+      fechaFin,
+      clienteId,
+      obraIds,
+      laboratoristaIds,
+      sectoresComerciales,
+      regiones,
+      comunas
+    })
 
+    // Filtro de fechas
     if (fechaInicio && fechaFin) {
-      // Crear fechas en UTC para incluir todo el día
       const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
       const endDate = new Date(fechaFin + 'T23:59:59.999Z')
 
       console.log('Date range filter:', { startDate, endDate })
 
-      dateFilter.fechaInicio = {
+      whereFilter.fechaInicio = {
         gte: startDate,
         lte: endDate
       }
     } else if (fechaInicio) {
       const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
       console.log('Start date filter:', { startDate })
-      dateFilter.fechaInicio = {
+      whereFilter.fechaInicio = {
         gte: startDate
       }
     } else if (fechaFin) {
       const endDate = new Date(fechaFin + 'T23:59:59.999Z')
       console.log('End date filter:', { endDate })
-      dateFilter.fechaInicio = {
+      whereFilter.fechaInicio = {
         lte: endDate
       }
     }
 
-    console.log('Final dateFilter:', dateFilter)
+    // Filtro por cliente
+    if (clienteId) {
+      whereFilter.clienteId = parseInt(clienteId)
+    }
+
+    // Filtro por obras
+    if (obraIds) {
+      const obraIdsArray = obraIds.split(',').map(id => parseInt(id))
+      whereFilter.obraId = {
+        in: obraIdsArray
+      }
+    }
+
+    // Filtro por sectores comerciales
+    if (sectoresComerciales) {
+      const sectoresArray = sectoresComerciales.split(',')
+      whereFilter.sectorComercial = {
+        in: sectoresArray
+      }
+    }
+
+    // Filtro por regiones
+    if (regiones) {
+      const regionesArray = regiones.split(',')
+      whereFilter.region = {
+        in: regionesArray
+      }
+    }
+
+    // Filtro por comunas
+    if (comunas) {
+      const comunasArray = comunas.split(',')
+      whereFilter.comuna = {
+        in: comunasArray
+      }
+    }
+
+    console.log('Final whereFilter:', whereFilter)
 
     const agendas = await prisma.agenda.findMany({
-      where: dateFilter,
+      where: whereFilter,
       include: {
         cliente: true,
         servicios: true,
@@ -152,7 +204,23 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(agendas)
+    // Filtrar por laboratoristas si se especifica (esto se hace en memoria porque requiere join complejo)
+    let filteredAgendas = agendas
+    if (laboratoristaIds) {
+      const laboratoristaIdsArray = laboratoristaIds.split(',')
+      console.log('Filtrando por laboratoristas:', laboratoristaIdsArray)
+      filteredAgendas = agendas.filter(agenda => {
+        const agendaLaboratoristaIds = agenda.asignados.map(asignado => asignado.user.id)
+        console.log('Agenda laboratoristas:', agendaLaboratoristaIds)
+        const hasMatch = agendaLaboratoristaIds.some(id =>
+          laboratoristaIdsArray.includes(String(id))
+        )
+        console.log('Tiene coincidencia:', hasMatch)
+        return hasMatch
+      })
+    }
+
+    return NextResponse.json(filteredAgendas)
   } catch (error) {
     console.error('Error al obtener agendas:', error)
 

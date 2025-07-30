@@ -27,6 +27,38 @@ const calendarsColor: CalendarColors = {
   ETC: 'info'
 }
 
+// Interfaces para los filtros
+interface Cliente {
+  clienteId: number
+  razonSocial: string
+  rut: string
+  nombreCliente: string
+}
+
+interface Obra {
+  obraId: number
+  numeroObra: string
+  nombreObra: string
+  direccion: string
+  comuna: string
+  region: string
+}
+
+interface Laboratorista {
+  id: string
+  name: string
+  email: string
+}
+
+interface CalendarFilters {
+  cliente: Cliente | null
+  obras: Obra[]
+  laboratoristas: Laboratorista[]
+  sectoresComerciales: string[]
+  regiones: string[]
+  comunas: string[]
+}
+
 const AppCalendar = () => {
   // States
   const [calendarApi, setCalendarApi] = useState<null | any>(null)
@@ -36,6 +68,16 @@ const AppCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null)
   const [dateRangeEnabled, setDateRangeEnabled] = useState<boolean>(false)
+
+  // Estados para los filtros
+  const [filters, setFilters] = useState<CalendarFilters>({
+    cliente: null,
+    obras: [],
+    laboratoristas: [],
+    sectoresComerciales: [],
+    regiones: [],
+    comunas: []
+  })
 
   // Hooks
   const dispatch = useDispatch()
@@ -71,6 +113,58 @@ const AppCalendar = () => {
     }
   }
 
+  const handleFilterChange = (filterType: string, value: any) => {
+    setFilters(prev => {
+      switch (filterType) {
+        case 'Cliente':
+          return {
+            ...prev,
+            cliente: value,
+            obras: [] // Limpiar obras cuando cambia el cliente
+          }
+        case 'Obra':
+          return {
+            ...prev,
+            obras: value
+          }
+        case 'Laboratorista':
+          return {
+            ...prev,
+            laboratoristas: value
+          }
+        case 'SectorComercial':
+          return {
+            ...prev,
+            sectoresComerciales: value
+          }
+        case 'Region':
+          return {
+            ...prev,
+            regiones: value,
+            comunas: [] // Limpiar comunas cuando cambian las regiones
+          }
+        case 'Comuna':
+          return {
+            ...prev,
+            comunas: value
+          }
+        default:
+          return prev
+      }
+    })
+  }
+
+  const handleClearAllFilters = () => {
+    setFilters({
+      cliente: null,
+      obras: [],
+      laboratoristas: [],
+      sectoresComerciales: [],
+      regiones: [],
+      comunas: []
+    })
+  }
+
   return (
     <>
       <SidebarLeft
@@ -86,12 +180,16 @@ const AppCalendar = () => {
         onRangeSelect={handleRangeSelect}
         dateRangeEnabled={dateRangeEnabled}
         onDateRangeToggle={handleDateRangeToggle}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClearAllFilters={handleClearAllFilters}
       />
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
           selectedDate={dateRangeEnabled ? null : selectedDate}
           selectedDateRange={dateRangeEnabled ? selectedDateRange : null}
+          filters={filters}
         />
       </div>
       <AddEventSidebar

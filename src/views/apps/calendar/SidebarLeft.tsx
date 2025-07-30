@@ -68,16 +68,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     onDateSelect,
     onRangeSelect,
     dateRangeEnabled = false,
-    onDateRangeToggle
+    onDateRangeToggle,
+    filters,
+    onFilterChange,
+    onClearAllFilters
   } = props
-
-  // Estados para los filtros
-  const [clienteFilter, setClienteFilter] = useState<Cliente | null>(null)
-  const [obraFilter, setObraFilter] = useState<Obra[]>([])
-  const [laboratoristaFilter, setLaboratoristaFilter] = useState<Laboratorista[]>([])
-  const [sectorComercialFilter, setSectorComercialFilter] = useState<string[]>([])
-  // Cambiar el estado de comunaFilter a un array para soportar selección múltiple
-  const [comunaFilter, setComunaFilter] = useState<string[]>([])
 
   // Estado para la lista de clientes y obras
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -88,9 +83,6 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [loadingObras, setLoadingObras] = useState(true)
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
-
-  // Estado para las regiones seleccionadas
-  const [regionFilter, setRegionFilter] = useState<string[]>([])
 
   // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
   const memoizedCurrentDate = useMemo(() => {
@@ -124,8 +116,8 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         setLoadingObras(true)
 
         let url = '/api/obras'
-        if (clienteFilter) {
-          url += `?clienteId=${clienteFilter.clienteId}`
+        if (filters.cliente) {
+          url += `?clienteId=${filters.cliente.clienteId}`
         }
 
         const response = await fetch(url)
@@ -142,7 +134,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     }
 
     fetchObras()
-  }, [clienteFilter])
+  }, [filters.cliente])
 
   // Cargar laboratoristas al montar el componente
   useEffect(() => {
@@ -186,9 +178,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
 
   // Actualizar comunas según las regiones seleccionadas
   useEffect(() => {
-    if (regionFilter.length > 0) {
+    if (filters.regiones.length > 0) {
       const todasLasComunas: string[] = []
-      regionFilter.forEach(region => {
+      filters.regiones.forEach(region => {
         if ((REGIONES_CHILE as Record<string, { comunas: string[] }>)[region]) {
           todasLasComunas.push(...(REGIONES_CHILE as Record<string, { comunas: string[] }>)[region].comunas)
         }
@@ -197,59 +189,42 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     } else {
       setComunas([])
     }
-    setComunaFilter([])
-  }, [regionFilter])
+  }, [filters.regiones])
 
   const handleFilterChange = (filterType: string, value: any) => {
     switch (filterType) {
       case 'Cliente':
-        setClienteFilter(value)
-        // Limpiar el filtro de obra cuando se selecciona un cliente
-        setObraFilter([])
-
+        onFilterChange('Cliente', value)
         if (value) {
           dispatch(filterCalendarLabel(value.razonSocial))
         }
-
         break
       case 'Obra':
-        setObraFilter(value)
-
+        onFilterChange('Obra', value)
         if (value && value.length > 0) {
-          // Si hay obras seleccionadas, usar el nombre de la primera obra como filtro
           dispatch(filterCalendarLabel(value[0].nombreObra))
         }
-
         break
       case 'Laboratorista':
-        setLaboratoristaFilter(value)
-
+        onFilterChange('Laboratorista', value)
         if (value && value.length > 0) {
-          // Si hay laboratoristas seleccionados, usar el nombre del primero como filtro
           dispatch(filterCalendarLabel(value[0].name))
         }
-
         break
       case 'SectorComercial':
-        setSectorComercialFilter(value)
+        onFilterChange('SectorComercial', value)
         if (value && value.length > 0) {
-          // Si hay sectores seleccionados, usar el primero como filtro
           dispatch(filterCalendarLabel(value[0]))
         }
         break
       case 'Region':
-        setRegionFilter(value)
-        // Limpiar el filtro de comuna cuando cambian las regiones
-        setComunaFilter([])
+        onFilterChange('Region', value)
         break
       case 'Comuna':
-        setComunaFilter(value)
-
+        onFilterChange('Comuna', value)
         if (value && value.length > 0) {
-          // Si hay comunas seleccionadas, usar la primera como filtro
           dispatch(filterCalendarLabel(value[0]))
         }
-
         break
       default:
         break
@@ -262,12 +237,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   }
 
   const handleClearAllFilters = () => {
-    setClienteFilter(null)
-    setObraFilter([])
-    setLaboratoristaFilter([])
-    setSectorComercialFilter([])
-    setRegionFilter([])
-    setComunaFilter([])
+    onClearAllFilters()
     dispatch(filterCalendarLabel(''))
   }
 
@@ -343,8 +313,6 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             label="Buscar por rango de fechas"
             sx={{ mb: 2 }}
           />
-
-
         </div>
       </Box>
 
@@ -380,7 +348,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           <Autocomplete
             options={clientes}
             getOptionLabel={option => `${option.razonSocial} (${option.rut})`}
-            value={clienteFilter}
+            value={filters.cliente}
             onChange={(_, newValue) => handleFilterChange('Cliente', newValue)}
             loading={loadingClientes}
             filterOptions={(options, { inputValue }) => {
@@ -425,10 +393,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             multiple
             options={obras}
             getOptionLabel={option => `${option.nombreObra} (${option.numeroObra})`}
-            value={obraFilter}
+            value={filters.obras}
             onChange={(_, newValue) => handleFilterChange('Obra', newValue)}
             loading={loadingObras}
-            disabled={!clienteFilter}
+            disabled={!filters.cliente}
             filterOptions={(options, { inputValue }) => {
               const searchTerm = inputValue.toLowerCase()
               return options.filter(option =>
@@ -441,7 +409,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder={clienteFilter ? 'Obras' : 'Selecciona un cliente primero'}
+                placeholder={filters.cliente ? 'Obras' : 'Selecciona un cliente primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -466,10 +434,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
-          {clienteFilter && !loadingObras && (
+          {filters.cliente && !loadingObras && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {obras.length} obra{obras.length !== 1 ? 's' : ''} disponible{obras.length !== 1 ? 's' : ''} para {clienteFilter.razonSocial}
-              {obraFilter.length > 0 && ` - ${obraFilter.length} seleccionada${obraFilter.length !== 1 ? 's' : ''}`}
+              {obras.length} obra{obras.length !== 1 ? 's' : ''} disponible{obras.length !== 1 ? 's' : ''} para {filters.cliente.razonSocial}
+              {filters.obras.length > 0 && ` - ${filters.obras.length} seleccionada${filters.obras.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>
@@ -480,7 +448,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             multiple
             options={laboratoristas}
             getOptionLabel={option => option.name}
-            value={laboratoristaFilter}
+            value={filters.laboratoristas}
             onChange={(_, newValue) => handleFilterChange('Laboratorista', newValue)}
             loading={loadingLaboratoristas}
             filterOptions={(options, { inputValue }) => {
@@ -519,7 +487,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           {!loadingLaboratoristas && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
               {laboratoristas.length} laboratorista{laboratoristas.length !== 1 ? 's' : ''} disponible{laboratoristas.length !== 1 ? 's' : ''}
-              {laboratoristaFilter.length > 0 && ` - ${laboratoristaFilter.length} seleccionado${laboratoristaFilter.length !== 1 ? 's' : ''}`}
+              {filters.laboratoristas.length > 0 && ` - ${filters.laboratoristas.length} seleccionado${filters.laboratoristas.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>
@@ -529,7 +497,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           <Autocomplete
             multiple
             options={SECTORES_COMERCIALES.map(s => s.label)}
-            value={sectorComercialFilter}
+            value={filters.sectoresComerciales}
             onChange={(_, newValue) => handleFilterChange('SectorComercial', newValue)}
             filterOptions={(options, { inputValue }) => {
               const searchTerm = inputValue.toLowerCase()
@@ -554,7 +522,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           {SECTORES_COMERCIALES.length > 0 && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
               {SECTORES_COMERCIALES.length} sector{(SECTORES_COMERCIALES.length as number) !== 1 ? 'es' : ''} disponible{(SECTORES_COMERCIALES.length as number) !== 1 ? 's' : ''}
-              {sectorComercialFilter.length > 0 && ` - ${sectorComercialFilter.length} seleccionado${sectorComercialFilter.length !== 1 ? 's' : ''}`}
+              {filters.sectoresComerciales.length > 0 && ` - ${filters.sectoresComerciales.length} seleccionado${filters.sectoresComerciales.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>
@@ -564,7 +532,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           <Autocomplete
             multiple
             options={Object.keys(REGIONES_CHILE)}
-            value={regionFilter}
+            value={filters.regiones}
             onChange={(_, newValue) => handleFilterChange('Region', newValue)}
             filterOptions={(options, { inputValue }) => {
               const searchTerm = inputValue.toLowerCase()
@@ -589,7 +557,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           {Object.keys(REGIONES_CHILE).length > 0 && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
               {Object.keys(REGIONES_CHILE).length} region{Object.keys(REGIONES_CHILE).length !== 1 ? 'es' : ''} disponible{Object.keys(REGIONES_CHILE).length !== 1 ? 's' : ''}
-              {regionFilter.length > 0 && ` - ${regionFilter.length} seleccionada${regionFilter.length !== 1 ? 's' : ''}`}
+              {filters.regiones.length > 0 && ` - ${filters.regiones.length} seleccionada${filters.regiones.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>
@@ -599,9 +567,9 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           <Autocomplete
             multiple
             options={comunas}
-            value={comunaFilter}
+            value={filters.comunas}
             onChange={(_, newValue) => handleFilterChange('Comuna', newValue)}
-            disabled={regionFilter.length === 0}
+            disabled={filters.regiones.length === 0}
             filterOptions={(options, { inputValue }) => {
               const searchTerm = inputValue.toLowerCase()
               return options.filter(option => option.toLowerCase().includes(searchTerm))
@@ -610,7 +578,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               <TextField
                 {...params}
                 variant='outlined'
-                placeholder={regionFilter.length > 0 ? 'Selecciona una o más comunas' : 'Selecciona una región primero'}
+                placeholder={filters.regiones.length > 0 ? 'Selecciona una o más comunas' : 'Selecciona una región primero'}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -622,10 +590,10 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-          {regionFilter.length > 0 && !loadingComunas && (
+          {filters.regiones.length > 0 && !loadingComunas && (
             <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {comunas.length} comuna{comunas.length !== 1 ? 's' : ''} disponible{comunas.length !== 1 ? 's' : ''} de {regionFilter.length} región{regionFilter.length !== 1 ? 'es' : ''}
-              {comunaFilter.length > 0 && ` - ${comunaFilter.length} seleccionada${comunaFilter.length !== 1 ? 's' : ''}`}
+              {comunas.length} comuna{comunas.length !== 1 ? 's' : ''} disponible{comunas.length !== 1 ? 's' : ''} de {filters.regiones.length} región{filters.regiones.length !== 1 ? 'es' : ''}
+              {filters.comunas.length > 0 && ` - ${filters.comunas.length} seleccionada${filters.comunas.length !== 1 ? 's' : ''}`}
             </Typography>
           )}
         </FormControl>

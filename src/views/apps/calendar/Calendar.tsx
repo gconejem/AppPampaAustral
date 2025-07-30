@@ -290,41 +290,106 @@ const Calendar = (props: CalenderProps) => {
     setFilteredEvents(filtered)
   }
 
-  // Agregar filtro por fecha cuando selectedDate esté presente
+  // Aplicar filtros cuando cambien los eventos o los filtros
   useEffect(() => {
+    let filtered = [...events]
+
+    // Filtrar por fecha
     if (props.selectedDateRange && props.selectedDateRange.start && props.selectedDateRange.end) {
-      // Filtrar por rango de fechas
       const rangeStart = new Date(props.selectedDateRange.start)
       rangeStart.setHours(0, 0, 0, 0)
 
       const rangeEnd = new Date(props.selectedDateRange.end)
       rangeEnd.setHours(23, 59, 59, 999)
 
-      const eventsInRange = events.filter(event => {
+      filtered = filtered.filter(event => {
         const eventStart = event.start instanceof Date ? event.start : new Date(event.start as string)
         return eventStart >= rangeStart && eventStart <= rangeEnd
       })
-
-      setFilteredEvents(eventsInRange)
     } else if (props.selectedDate) {
-      // Filtrar por fecha específica
       const selectedDateStart = new Date(props.selectedDate)
       selectedDateStart.setHours(0, 0, 0, 0)
 
       const selectedDateEnd = new Date(props.selectedDate)
       selectedDateEnd.setHours(23, 59, 59, 999)
 
-      const eventsForDate = events.filter(event => {
+      filtered = filtered.filter(event => {
         const eventStart = event.start instanceof Date ? event.start : new Date(event.start as string)
         return eventStart >= selectedDateStart && eventStart <= selectedDateEnd
       })
-
-      setFilteredEvents(eventsForDate)
-    } else {
-      // Si no hay fecha seleccionada, mostrar todos los eventos cargados
-      setFilteredEvents(events)
     }
-  }, [props.selectedDate, props.selectedDateRange, events])
+
+    // Filtrar por cliente
+    if (props.filters.cliente) {
+      filtered = filtered.filter(event => {
+        const eventClienteId = event.extendedProps?.clienteId
+        return eventClienteId === props.filters.cliente?.clienteId
+      })
+    }
+
+    // Filtrar por obras
+    if (props.filters.obras.length > 0) {
+      const obraIds = props.filters.obras.map(obra => obra.obraId)
+      filtered = filtered.filter(event => {
+        const eventObraId = event.extendedProps?.obraId
+        return eventObraId && obraIds.includes(eventObraId)
+      })
+    }
+
+    // Filtrar por laboratoristas
+    if (props.filters.laboratoristas.length > 0) {
+      const laboratoristaIds = props.filters.laboratoristas.map(lab => lab.id)
+      console.log('Filtros de laboratoristas (frontend):', laboratoristaIds)
+      filtered = filtered.filter(event => {
+        const eventAsignados = event.extendedProps?.asignados || []
+        console.log('Evento asignados:', eventAsignados)
+        const hasMatch = eventAsignados.some((asignado: any) => {
+          // Los asignados vienen con estructura { user: { id: string } }
+          const asignadoId = asignado.user?.id || asignado.id || asignado
+          console.log('Comparando:', asignadoId, 'con:', laboratoristaIds)
+          // Convertir ambos a string para comparación consistente
+          return laboratoristaIds.includes(String(asignadoId))
+        })
+        console.log('Evento tiene coincidencia:', hasMatch)
+        return hasMatch
+      })
+    }
+
+    // Filtrar por sectores comerciales
+    if (props.filters.sectoresComerciales.length > 0) {
+      filtered = filtered.filter(event => {
+        const eventSector = event.extendedProps?.sectorComercial
+        return eventSector && props.filters.sectoresComerciales.includes(eventSector)
+      })
+    }
+
+    // Filtrar por regiones
+    if (props.filters.regiones.length > 0) {
+      filtered = filtered.filter(event => {
+        const eventRegion = event.extendedProps?.region
+        return eventRegion && props.filters.regiones.includes(eventRegion)
+      })
+    }
+
+    // Filtrar por comunas
+    if (props.filters.comunas.length > 0) {
+      filtered = filtered.filter(event => {
+        const eventComuna = event.extendedProps?.comuna
+        return eventComuna && props.filters.comunas.includes(eventComuna)
+      })
+    }
+
+    // Aplicar filtros de estado
+    const todosDesactivados = Object.values(statusFilters).every(value => !value)
+    if (!todosDesactivados) {
+      filtered = filtered.filter(event => {
+        const eventStatus = event.extendedProps?.estado || 'AGENDADA'
+        return statusFilters[eventStatus as StatusType]
+      })
+    }
+
+    setFilteredEvents(filtered)
+  }, [props.selectedDate, props.selectedDateRange, props.filters, events, statusFilters])
 
   // Navegar el calendario cuando cambie la fecha seleccionada
   useEffect(() => {
@@ -1447,10 +1512,36 @@ const Calendar = (props: CalenderProps) => {
         params.append('fechaFin', todayStr)
       }
 
+      // Agregar parámetros de filtro
+      if (props.filters.cliente) {
+        params.append('clienteId', props.filters.cliente.clienteId.toString())
+      }
+
+      if (props.filters.obras.length > 0) {
+        const obraIds = props.filters.obras.map(obra => obra.obraId)
+        params.append('obraIds', obraIds.join(','))
+      }
+
+      if (props.filters.laboratoristas.length > 0) {
+        const laboratoristaIds = props.filters.laboratoristas.map(lab => lab.id)
+        params.append('laboratoristaIds', laboratoristaIds.join(','))
+      }
+
+      if (props.filters.sectoresComerciales.length > 0) {
+        params.append('sectoresComerciales', props.filters.sectoresComerciales.join(','))
+      }
+
+      if (props.filters.regiones.length > 0) {
+        params.append('regiones', props.filters.regiones.join(','))
+      }
+
+      if (props.filters.comunas.length > 0) {
+        params.append('comunas', props.filters.comunas.join(','))
+      }
+
       if (params.toString()) {
         url += `?${params.toString()}`
       }
-
 
       const response = await fetch(url)
 
@@ -1584,10 +1675,10 @@ const Calendar = (props: CalenderProps) => {
     }
   }, [])
 
-  // Agregar useEffect para cargar eventos al inicio y cuando cambien las fechas
+  // Agregar useEffect para cargar eventos al inicio y cuando cambien las fechas o filtros
   useEffect(() => {
     fetchEvents()
-  }, [props.selectedDate, props.selectedDateRange])
+  }, [props.selectedDate, props.selectedDateRange, props.filters])
 
   return (
     <>
