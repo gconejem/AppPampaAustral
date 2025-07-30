@@ -1254,9 +1254,10 @@ const Calendar = (props: CalenderProps) => {
                   justify-content: flex-end;
                   gap: 16px;
                   pointer-events: auto;
-                  min-width: 120px;
-                  max-width: 120px;
+                  flex-shrink: 0;
+                  margin-left: auto;
                   width: 120px;
+                  min-width: 120px;
                 `
               estadoContainer.innerHTML = `
                 <div style="
