@@ -97,7 +97,7 @@ const Calendar = (props: CalenderProps) => {
   })
 
   const [statusFilters, setStatusFilters] = useState<StatusFiltersType>({
-    CREADA: false,
+    CREADA: true,
     AGENDADA: true,
     COMPLETADA: false,
     SUSPENDIDA: false,
