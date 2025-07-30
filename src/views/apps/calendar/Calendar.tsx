@@ -1227,7 +1227,9 @@ const Calendar = (props: CalenderProps) => {
                   const servicioText = typeof servicio === 'string'
                     ? servicio
                     : servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
-                  servicioDiv.textContent = servicioText
+                  // Truncar el nombre del servicio a 50 caracteres máximo
+                  const servicioTruncado = servicioText.length > 50 ? servicioText.substring(0, 50) + '...' : servicioText
+                  servicioDiv.textContent = servicioTruncado
                   serviciosContainer.appendChild(servicioDiv)
                 })
 
@@ -1287,6 +1289,7 @@ const Calendar = (props: CalenderProps) => {
                       margin-bottom: 4px;
                       line-height: 1.4;
                     `
+                    // En el tooltip mostrar los servicios completos sin truncar
                     listItem.textContent = servicioText
                     serviciosList.appendChild(listItem)
                   })
