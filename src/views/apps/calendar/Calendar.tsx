@@ -1172,6 +1172,7 @@ const Calendar = (props: CalenderProps) => {
                 gap: 24px;
                 width: 100%;
                 min-width: 0;
+                justify-content: space-between;
               `
 
               // Crear el contenedor de fecha y checkbox
