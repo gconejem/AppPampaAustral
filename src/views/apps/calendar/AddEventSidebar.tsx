@@ -1531,25 +1531,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 }))
               }
             />
-            <IconButton
-              size='small'
-              sx={{ marginLeft: '8px' }}
-              onClick={() => {
-                // Aquí puedes agregar la lógica para copiar la dirección de la obra si existe
-                if (formData.obraId && obras.length) {
-                  const obraSeleccionada = obras.find(o => o.obraId === formData.obraId)
-
-                  if (obraSeleccionada) {
-                    setFormData(prev => ({
-                      ...prev,
-                      direccion: obraSeleccionada.direccion
-                    }))
-                  }
-                }
-              }}
-            >
-              <ContentCopyIcon />
-            </IconButton>
           </Grid>
 
           {/* Referencia */}

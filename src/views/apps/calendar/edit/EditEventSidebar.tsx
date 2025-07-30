@@ -1621,14 +1621,6 @@ const EditEventSidebar = ({
                     onChange={e => handleInputChange('direccion', e.target.value)}
                     required
                   />
-                  <IconButton
-                    size='small'
-                    sx={{ ml: 1 }}
-                    onClick={() => handleInputChange('referencia', formData.direccion)}
-                    disabled={!formData.direccion}
-                  >
-                    <ContentCopyIcon />
-                  </IconButton>
                 </Box>
               </Grid>
 
