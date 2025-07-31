@@ -454,67 +454,67 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Laboratoristas Asignados
               </Typography>
               {Array.isArray(displayData.asignados) && displayData.asignados.length > 0 ? (
-                displayData.asignados.map((asignado: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Nombre
-                        </Typography>
-                        <Typography>{asignado?.user?.name || asignado?.name || 'No especificado'}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Email
-                        </Typography>
-                        <Typography>{asignado?.user?.email || asignado?.email || 'No especificado'}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Roles
-                        </Typography>
-                        <Box>
-                          {(asignado?.user?.roles || asignado?.roles || []).map((userRol: any, rolIndex: number) => (
-                            <Typography key={rolIndex} component='div'>
-                              {userRol?.rol?.nombre || userRol?.nombre || 'Rol no especificado'}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Roles</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.asignados.map((asignado: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {asignado?.user?.name || asignado?.name || 'No especificado'}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {asignado?.user?.email || asignado?.email || 'No especificado'}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {(asignado?.user?.roles || asignado?.roles || []).map((userRol: any, rolIndex: number) => (
+                              <Typography key={rolIndex} component='div' sx={{ fontSize: '0.875rem' }}>
+                                {userRol?.rol?.nombre || userRol?.nombre || 'Rol no especificado'}
+                              </Typography>
+                            ))}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.asignados) && displayData.extendedProps.asignados.length > 0 ? (
-                displayData.extendedProps.asignados.map((asignado: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Nombre
-                        </Typography>
-                        <Typography>{asignado?.name || asignado?.user?.name || 'No especificado'}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Email
-                        </Typography>
-                        <Typography>{asignado?.email || asignado?.user?.email || 'No especificado'}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                          Roles
-                        </Typography>
-                        <Box>
-                          {(asignado?.roles || asignado?.user?.roles || []).map((userRol: any, rolIndex: number) => (
-                            <Typography key={rolIndex} component='div'>
-                              {userRol?.rol?.nombre || userRol?.nombre || 'Rol no especificado'}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Roles</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.extendedProps.asignados.map((asignado: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {asignado?.name || asignado?.user?.name || 'No especificado'}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {asignado?.email || asignado?.user?.email || 'No especificado'}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {(asignado?.roles || asignado?.user?.roles || []).map((userRol: any, rolIndex: number) => (
+                              <Typography key={rolIndex} component='div' sx={{ fontSize: '0.875rem' }}>
+                                {userRol?.rol?.nombre || userRol?.nombre || 'Rol no especificado'}
+                              </Typography>
+                            ))}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : (
                 <Typography color='text.secondary'>No hay laboratoristas asignados</Typography>
               )}
