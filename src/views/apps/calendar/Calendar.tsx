@@ -602,18 +602,23 @@ const Calendar = (props: CalenderProps) => {
 
   const handleBulkReprogramar = async (fechaInicio: Date, fechaFin: Date) => {
     try {
-      // Realizar todas las reprogramaciones en paralelo
-      await Promise.all(
-        selectedEvents.map(event =>
-          fetch(`/api/agenda/${event.id}/reprogramar`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ fechaInicio, fechaFin })
-          })
-        )
-      )
+      // Usar el endpoint de reprogramación masiva
+      const response = await fetch(`/api/agenda/7/reprogramar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ids: selectedEvents.map(event => parseInt(event.id)),
+          fechaInicio: fechaInicio.toISOString(),
+          fechaFin: fechaFin.toISOString()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al reprogramar los eventos')
+      }
 
       await fetchEvents()
       setSnackbarMessage('¡Eventos reprogramados exitosamente!')
@@ -638,10 +643,16 @@ const Calendar = (props: CalenderProps) => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ fechaInicio, fechaFin })
+        body: JSON.stringify({
+          fechaInicio: fechaInicio.toISOString(),
+          fechaFin: fechaFin.toISOString()
+        })
       })
 
-      if (!response.ok) throw new Error('Error al reprogramar el evento')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al reprogramar el evento')
+      }
 
       // Recargar los eventos para mostrar los cambios
       await fetchEvents()
