@@ -40,14 +40,24 @@ const ReprogramarEventoModal = ({
   useEffect(() => {
     if (open) {
       if (fechaInicioActual && fechaFinActual) {
-        setFechaInicio(new Date(fechaInicioActual))
-        setFechaFin(new Date(fechaFinActual))
+        const startDate = new Date(fechaInicioActual)
+        const endDate = new Date(fechaFinActual)
+
+        // Establecer horas y minutos a 00:00
+        startDate.setHours(0, 0, 0, 0)
+        endDate.setHours(0, 0, 0, 0)
+
+        setFechaInicio(startDate)
+        setFechaFin(endDate)
       } else {
-        // Si no hay fechas actuales, establecer fechas por defecto (hoy)
+        // Si no hay fechas actuales, establecer fechas por defecto (hoy) con horas 00:00
         const now = new Date()
         const defaultStart = new Date(now)
         const defaultEnd = new Date(now)
-        defaultEnd.setHours(defaultEnd.getHours() + 1)
+
+        // Establecer horas y minutos a 00:00
+        defaultStart.setHours(0, 0, 0, 0)
+        defaultEnd.setHours(0, 0, 0, 0)
 
         setFechaInicio(defaultStart)
         setFechaFin(defaultEnd)
