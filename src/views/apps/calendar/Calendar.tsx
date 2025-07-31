@@ -1150,6 +1150,7 @@ const Calendar = (props: CalenderProps) => {
 
               const cliente = info.event.extendedProps?.cliente?.nombreCliente || 'Sin Cliente'
               const comuna = info.event.extendedProps?.comuna || 'Sin comuna'
+              const numeroObra = info.event.extendedProps?.obra?.numeroObra || '';
               const obra =
                 info.event.extendedProps?.obra?.nombreObra || info.event.extendedProps?.direccion || 'Sin ubicación'
 
@@ -1227,7 +1228,7 @@ const Calendar = (props: CalenderProps) => {
                 overflow: hidden;
                 text-overflow: ellipsis;
               `
-              clienteDiv.textContent = `${comuna} - ${cliente}`
+              clienteDiv.textContent = `${numeroObra} - ${comuna} - ${cliente}`
               clienteObraContainer.appendChild(clienteDiv)
 
               // Crear elemento de la obra
