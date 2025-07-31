@@ -586,14 +586,22 @@ const EditEventSidebar = ({
           console.log('Equipos formateados:', formattedEquipos)
           setEquiposAgendados(formattedEquipos)
 
-          // Procesar contactos
-          const contactosEvento = eventData.contactos || []
+          // Procesar contactos del evento (no de la obra)
+          console.log('Contactos recibidos del backend:', eventData.contactos)
+          const contactosEvento = (eventData.contactos || []).map((c: any) => ({
+            id: c.id,
+            rol: c.rol || c.cargo || '',
+            nombre: c.nombre || '',
+            email: c.email || '',
+            telefono1: c.telefono1 || '',
+            telefono2: c.telefono2 || '',
+            isPrincipal: c.isPrincipal || false
+          }))
+          console.log('Contactos formateados del evento:', contactosEvento)
           setContactos(contactosEvento)
 
-          // Cargar contactos de la obra si existe
-          if (eventData.obraId) {
-            cargarContactosDeObra(eventData.obraId)
-          }
+          // NO cargar contactos de la obra automáticamente al editar
+          // Los contactos del evento ya están cargados arriba
 
           // Finalizar la carga de datos del evento
           setIsLoadingEventData(false)
@@ -629,21 +637,27 @@ const EditEventSidebar = ({
   const [equipoInputValue, setEquipoInputValue] = useState<string>('')
   const [equipoKey, setEquipoKey] = useState<number>(0)
 
-  // Función para cargar contactos de una obra (basada en AddEventSidebar)
+  // Función para cargar contactos de una obra (solo para casos automáticos, no cambios manuales)
   const cargarContactosDeObra = (obraId: number) => {
     const obraSeleccionada = obras.find(obra => obra.obraId === obraId)
     if (obraSeleccionada) {
       const obraContactos = obraSeleccionada.contactos || []
-      // Reemplazar todos los contactos con los de la nueva obra (igual que en AddEventSidebar)
-      const nuevosContactos = obraContactos.map((c: any) => ({
-        nombre: c.nombre,
-        rol: c.rol || c.cargo || '',
-        email: c.email,
-        telefono1: c.telefono1,
-        telefono2: c.telefono2,
-        isPrincipal: c.isPrincipal === true
-      }))
-      setContactos(nuevosContactos)
+
+      // Solo reemplazar contactos si no estamos editando un evento existente
+      if (!selectedEvent) {
+        const nuevosContactos = obraContactos.map((c: any) => ({
+          nombre: c.nombre,
+          rol: c.rol || c.cargo || '',
+          email: c.email,
+          telefono1: c.telefono1,
+          telefono2: c.telefono2,
+          isPrincipal: c.isPrincipal === true
+        }))
+        setContactos(nuevosContactos)
+        console.log('Contactos de obra cargados (nuevo evento automático):', nuevosContactos)
+      } else {
+        console.log('No se cargan contactos de obra automáticamente porque estamos editando un evento existente')
+      }
 
       // También actualizar referencia y georreferencia cuando se selecciona una obra
       if (!isLoadingEventData) {
@@ -666,8 +680,6 @@ const EditEventSidebar = ({
           direccion: obraSeleccionada.direccion
         })
       }
-
-      console.log('Contactos de obra cargados:', nuevosContactos)
     }
   }
 
@@ -753,15 +765,16 @@ const EditEventSidebar = ({
 
 
 
-  // Efecto para cargar los contactos cuando se selecciona una obra (igual que en AddEventSidebar)
+  // Efecto para cargar los contactos cuando se selecciona una obra (solo si no estamos cargando datos del evento)
   useEffect(() => {
-    if (formData.obraId && !isLoadingEventData) {
+    // Solo cargar contactos de obra si no estamos cargando datos del evento y no hay evento seleccionado
+    if (formData.obraId && !isLoadingEventData && !selectedEvent) {
       cargarContactosDeObra(formData.obraId)
-    } else if (!formData.obraId && !isLoadingEventData) {
-      // Limpiar contactos cuando no hay obra seleccionada
+    } else if (!formData.obraId && !isLoadingEventData && !selectedEvent) {
+      // Limpiar contactos cuando no hay obra seleccionada (solo si no hay evento seleccionado)
       setContactos([])
     }
-  }, [formData.obraId, obras.length, isLoadingEventData])
+  }, [formData.obraId, obras.length, isLoadingEventData, selectedEvent])
 
   const handleSubmit = async () => {
     try {
@@ -1409,7 +1422,19 @@ const EditEventSidebar = ({
 
                         // Cargar contactos de la obra preseleccionada y actualizar estados
                         if (obraPreseleccionada) {
-                          cargarContactosDeObra(obraPreseleccionada)
+                          // Cargar contactos de la obra directamente (forzar carga durante cambio manual)
+                          const obraContactos = obraSeleccionada.contactos || []
+                          const nuevosContactos = obraContactos.map((c: any) => ({
+                            nombre: c.nombre,
+                            rol: c.rol || c.cargo || '',
+                            email: c.email,
+                            telefono1: c.telefono1,
+                            telefono2: c.telefono2,
+                            isPrincipal: c.isPrincipal === true
+                          }))
+                          setContactos(nuevosContactos)
+                          console.log('Contactos de obra cargados (cambio de cliente):', nuevosContactos)
+
                           // También actualizar los estados separados
                           setSelectedReferencia(obraSeleccionada.referencia || '')
                           setSelectedGeorreferencia(obraSeleccionada.georreferencia || '')
@@ -1536,8 +1561,18 @@ const EditEventSidebar = ({
                       setSelectedReferencia(newValue.referencia || '')
                       setSelectedGeorreferencia(newValue.georreferencia || '')
 
-                      // Cargar contactos de la obra seleccionada
-                      cargarContactosDeObra(newValue.obraId)
+                      // Cargar contactos de la obra seleccionada (forzar carga durante cambio manual)
+                      const obraContactos = newValue.contactos || []
+                      const nuevosContactos = obraContactos.map((c: any) => ({
+                        nombre: c.nombre,
+                        rol: c.rol || c.cargo || '',
+                        email: c.email,
+                        telefono1: c.telefono1,
+                        telefono2: c.telefono2,
+                        isPrincipal: c.isPrincipal === true
+                      }))
+                      setContactos(nuevosContactos)
+                      console.log('Contactos de obra cargados (cambio de obra):', nuevosContactos)
                     } else {
                       // Si se limpia la obra, limpiar todos los campos relacionados
                       setSelectedRegion('')
