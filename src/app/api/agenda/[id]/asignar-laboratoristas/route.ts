@@ -19,18 +19,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Agenda no encontrada' }, { status: 404 })
     }
 
-    // Obtener el rol LABORATORISTA
-    const rolLaboratorista = await prisma.rol.findUnique({
+    // Obtener los roles de laboratorista
+    const rolesLaboratorista = await prisma.rol.findMany({
       where: {
-        nombre: 'LABORATORISTA'
+        nombre: {
+          in: ['Laboratorista', 'Laboratorista / E. de Área Sala']
+        }
       }
     })
 
-    if (!rolLaboratorista) {
-      return NextResponse.json({ error: 'Rol LABORATORISTA no encontrado' }, { status: 404 })
+    if (rolesLaboratorista.length === 0) {
+      return NextResponse.json({ error: 'Roles de laboratorista no encontrados' }, { status: 404 })
     }
 
-    // Verificar que todos los usuarios existen y son laboratoristas
+    // Verificar que todos los usuarios existen y tienen alguno de los roles de laboratorista
     const usuarios = await prisma.user.findMany({
       where: {
         id: {
@@ -38,14 +40,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
         },
         roles: {
           some: {
-            rolId: rolLaboratorista.id
+            rolId: {
+              in: rolesLaboratorista.map(rol => rol.id)
+            }
           }
         }
       }
     })
 
     if (usuarios.length !== laboratoristas.length) {
-      return NextResponse.json({ error: 'Uno o más usuarios no existen o no son laboratoristas' }, { status: 400 })
+      return NextResponse.json({ error: 'Uno o más usuarios no existen o no tienen rol de laboratorista' }, { status: 400 })
     }
 
     // Eliminar asignaciones existentes

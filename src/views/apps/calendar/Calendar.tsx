@@ -649,7 +649,7 @@ const Calendar = (props: CalenderProps) => {
     try {
       await Promise.all(
         selectedEvents.map(event =>
-          axios.post(`/api/eventos/${event.id}/asignar-laboratorista`, {
+          axios.post(`/api/agenda/${event.id}/asignar-laboratoristas`, {
             laboratoristas
           })
         )
