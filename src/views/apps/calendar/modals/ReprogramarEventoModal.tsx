@@ -38,9 +38,26 @@ const ReprogramarEventoModal = ({
   const [openSnackbar, setOpenSnackbar] = useState(false)
 
   useEffect(() => {
-    if (open && fechaInicioActual && fechaFinActual) {
-      setFechaInicio(new Date(fechaInicioActual))
-      setFechaFin(new Date(fechaFinActual))
+    if (open) {
+      if (fechaInicioActual && fechaFinActual) {
+        setFechaInicio(new Date(fechaInicioActual))
+        setFechaFin(new Date(fechaFinActual))
+      } else {
+        // Si no hay fechas actuales, establecer fechas por defecto (hoy)
+        const now = new Date()
+        const defaultStart = new Date(now)
+        const defaultEnd = new Date(now)
+        defaultEnd.setHours(defaultEnd.getHours() + 1)
+
+        setFechaInicio(defaultStart)
+        setFechaFin(defaultEnd)
+      }
+      setError('')
+    } else {
+      // Limpiar valores cuando el modal se cierra
+      setFechaInicio(null)
+      setFechaFin(null)
+      setError('')
     }
   }, [open, fechaInicioActual, fechaFinActual])
 
@@ -116,6 +133,10 @@ const ReprogramarEventoModal = ({
     try {
       await onReprogramar(fechaInicio, fechaFin)
       setOpenSnackbar(true)
+      // Limpiar valores después de una reprogramación exitosa
+      setFechaInicio(null)
+      setFechaFin(null)
+      setError('')
       setTimeout(() => {
         onClose()
       }, 1000)
@@ -129,9 +150,17 @@ const ReprogramarEventoModal = ({
     setOpenSnackbar(false)
   }
 
+  const handleClose = () => {
+    // Limpiar valores al cerrar el modal
+    setFechaInicio(null)
+    setFechaFin(null)
+    setError('')
+    onClose()
+  }
+
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
         <DialogTitle>{isBulkEdit ? 'Reprogramar Eventos Seleccionados' : 'Reprogramar Evento'}</DialogTitle>
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
@@ -181,7 +210,7 @@ const ReprogramarEventoModal = ({
           </LocalizationProvider>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSubmit} variant='contained' color='primary'>
             {isBulkEdit ? 'Reprogramar Eventos' : 'Reprogramar'}
           </Button>
