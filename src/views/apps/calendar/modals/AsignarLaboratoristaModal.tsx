@@ -15,12 +15,15 @@ import {
   CircularProgress,
   Box,
   Snackbar,
-  Alert
+  Alert,
+  TextField,
+  InputAdornment
 } from '@mui/material'
+import { Search } from '@mui/icons-material'
 
 interface Laboratorista {
   id: string
-  nombre: string
+  name: string
   email: string
   rol: string
 }
@@ -44,6 +47,7 @@ const AsignarLaboratoristaModal = ({
   const [selectedLaboratoristas, setSelectedLaboratoristas] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [searchText, setSearchText] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -92,53 +96,79 @@ const AsignarLaboratoristaModal = ({
     setShowSuccess(false)
   }
 
+  const filteredLaboratoristas = laboratoristas.filter(laboratorista =>
+    laboratorista.name.toLowerCase().includes(searchText.toLowerCase())
+  )
+
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
         <DialogTitle>
           {isBulkEdit ? 'Asignar Laboratoristas a Eventos Seleccionados' : 'Asignar Laboratorista'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
           {isBulkEdit && (
             <Alert severity='info' sx={{ mb: 2 }}>
               Los laboratoristas seleccionados serán asignados a todos los eventos seleccionados
             </Alert>
           )}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : laboratoristas.length > 0 ? (
-            <List>
-              {laboratoristas.map(laboratorista => (
-                <ListItem key={laboratorista.id} divider>
-                  <ListItemText
-                    primary={laboratorista.nombre}
-                    secondary={
-                      <>
-                        <Typography component='span' variant='body2' color='text.primary'>
-                          {laboratorista.email}
-                        </Typography>
-                        <br />
-                        {laboratorista.rol}
-                      </>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Checkbox
-                      edge='end'
-                      onChange={() => handleToggle(laboratorista.id)}
-                      checked={selectedLaboratoristas.includes(laboratorista.id)}
+
+          <TextField
+            fullWidth
+            placeholder='Buscar laboratorista...'
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <Search />
+                </InputAdornment>
+              )
+            }}
+          />
+
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : filteredLaboratoristas.length > 0 ? (
+              <List>
+                {filteredLaboratoristas.map(laboratorista => (
+                  <ListItem key={laboratorista.id} divider>
+                    <ListItemText
+                      primary={laboratorista.name}
+                      secondary={
+                        <>
+                          <Typography component='span' variant='body2' color='text.primary'>
+                            {laboratorista.email}
+                          </Typography>
+                          <br />
+                          {laboratorista.rol}
+                        </>
+                      }
                     />
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography color='text.secondary' sx={{ p: 2, textAlign: 'center' }}>
-              No hay laboratoristas disponibles
-            </Typography>
-          )}
+                    <ListItemSecondaryAction>
+                      <Checkbox
+                        edge='end'
+                        onChange={() => handleToggle(laboratorista.id)}
+                        checked={selectedLaboratoristas.includes(laboratorista.id)}
+                      />
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            ) : laboratoristas.length > 0 ? (
+              <Typography color='text.secondary' sx={{ p: 2, textAlign: 'center' }}>
+                No se encontraron laboratoristas que coincidan con la búsqueda
+              </Typography>
+            ) : (
+              <Typography color='text.secondary' sx={{ p: 2, textAlign: 'center' }}>
+                No hay laboratoristas disponibles
+              </Typography>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
