@@ -398,6 +398,12 @@ const Calendar = (props: CalenderProps) => {
     }
 
     setFilteredEvents(filtered)
+
+    // Limpiar eventos seleccionados cuando cambian las fechas
+    if (props.selectedDate || (props.selectedDateRange && props.selectedDateRange.start && props.selectedDateRange.end)) {
+      setSelectedEvents([])
+      setSelectAll(false)
+    }
   }, [props.selectedDate, props.selectedDateRange, props.filters, events, statusFilters])
 
   // Navegar el calendario cuando cambie la fecha seleccionada
@@ -405,6 +411,10 @@ const Calendar = (props: CalenderProps) => {
     if (props.selectedDate && calendarRef.current) {
       const calendarApi = calendarRef.current.getApi()
       calendarApi.gotoDate(props.selectedDate)
+
+      // Limpiar eventos seleccionados cuando cambia la fecha
+      setSelectedEvents([])
+      setSelectAll(false)
     }
   }, [props.selectedDate])
 
