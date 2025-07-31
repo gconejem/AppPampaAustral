@@ -1946,8 +1946,8 @@ const Calendar = (props: CalenderProps) => {
           setSelectedEventId(null)
         }}
         eventId={selectedEventId}
-        onAssign={selectedEvents.length > 1 ? handleBulkAssignLaboratoristas : handleAssignLaboratoristas}
-        isBulkEdit={selectedEvents.length > 1}
+        onAssign={selectedEventId ? handleAssignLaboratoristas : handleBulkAssignLaboratoristas}
+        isBulkEdit={!selectedEventId && selectedEvents.length > 1}
       />
       <ReprogramarEventoModal
         open={reprogramarModalOpen}
@@ -1956,10 +1956,10 @@ const Calendar = (props: CalenderProps) => {
           setSelectedEventId(null)
         }}
         eventId={selectedEventId}
-        onReprogramar={selectedEvents.length > 1 ? handleBulkReprogramar : handleReprogramarEvento}
+        onReprogramar={selectedEventId ? handleReprogramarEvento : handleBulkReprogramar}
         fechaInicioActual={selectedEventDates.start || undefined}
         fechaFinActual={selectedEventDates.end || undefined}
-        isBulkEdit={selectedEvents.length > 1}
+        isBulkEdit={!selectedEventId && selectedEvents.length > 1}
       />
       <CambiarEstadoModal
         open={cambiarEstadoModalOpen}
@@ -1969,8 +1969,8 @@ const Calendar = (props: CalenderProps) => {
         }}
         eventId={selectedEventId}
         estadoActual={selectedEventEstado}
-        onCambiarEstado={selectedEvents.length > 1 ? handleBulkCambiarEstado : handleCambiarEstado}
-        isBulkEdit={selectedEvents.length > 1}
+        onCambiarEstado={selectedEventId ? handleCambiarEstado : handleBulkCambiarEstado}
+        isBulkEdit={!selectedEventId && selectedEvents.length > 1}
       />
 
       <Dialog
@@ -1980,19 +1980,21 @@ const Calendar = (props: CalenderProps) => {
         aria-describedby='alert-dialog-description'
       >
         <DialogTitle id='alert-dialog-title'>
-          {selectedEvents.length > 1 ? '¿Eliminar eventos seleccionados?' : '¿Eliminar evento?'}
+          {selectedEventId ? '¿Eliminar evento?' : (selectedEvents.length > 1 ? '¿Eliminar eventos seleccionados?' : '¿Eliminar evento?')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText id='alert-dialog-description'>
-            {selectedEvents.length > 1
-              ? `¿Estás seguro de que deseas eliminar los ${selectedEvents.length} eventos seleccionados? Esta acción no se puede deshacer.`
-              : '¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.'}
+            {selectedEventId
+              ? '¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.'
+              : (selectedEvents.length > 1
+                ? `¿Estás seguro de que deseas eliminar los ${selectedEvents.length} eventos seleccionados? Esta acción no se puede deshacer.`
+                : '¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
           <Button
-            onClick={selectedEvents.length > 1 ? handleBulkEliminar : handleEliminarEvento}
+            onClick={selectedEventId ? handleEliminarEvento : (selectedEvents.length > 1 ? handleBulkEliminar : handleEliminarEvento)}
             color='error'
             variant='contained'
             autoFocus
