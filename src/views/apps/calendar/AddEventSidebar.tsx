@@ -922,7 +922,6 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setEditingContact({
       ...contactos[index]
     })
-    console.log('contactos[index]', contactos[index])
   }
 
   const handleSaveEdit = () => {
@@ -1752,7 +1751,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     </>
                   ) : (
                     <>
-                      <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label}</TableCell>
+                      <TableCell>{ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol || 'Sin rol'}</TableCell>
                       <TableCell>{contacto.nombre}</TableCell>
                       <TableCell>{contacto.email}</TableCell>
                       <TableCell>{contacto.telefono1}</TableCell>
