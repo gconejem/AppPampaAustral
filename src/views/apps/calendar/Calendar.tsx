@@ -682,6 +682,45 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
+  const handleAssignLaboratoristas = async (laboratoristas: string[]) => {
+    try {
+      if (!selectedEventId) {
+        enqueueSnackbar('No se ha seleccionado ningún evento', {
+          variant: 'error'
+        })
+        return
+      }
+
+      await axios.post(`/api/agenda/${selectedEventId}/asignar-laboratoristas`, {
+        laboratoristas
+      })
+
+      // Actualizar eventos en el calendario
+      const updatedEvents = events.map(event => {
+        if (event.id === selectedEventId) {
+          return {
+            ...event,
+            laboratoristas
+          }
+        }
+        return event
+      })
+
+      setEvents(updatedEvents)
+      setAsignarLaboratoristaOpen(false)
+      setSelectedEventId(null)
+
+      enqueueSnackbar('Laboratoristas asignados correctamente al evento', {
+        variant: 'success'
+      })
+    } catch (error) {
+      console.error('Error al asignar laboratoristas:', error)
+      enqueueSnackbar('Error al asignar laboratoristas al evento', {
+        variant: 'error'
+      })
+    }
+  }
+
   const handleBulkCambiarEstado = async (nuevoEstado: string) => {
     try {
       await Promise.all(
@@ -1907,7 +1946,7 @@ const Calendar = (props: CalenderProps) => {
           setSelectedEventId(null)
         }}
         eventId={selectedEventId}
-        onAssign={selectedEvents.length > 1 ? handleBulkAssignLaboratoristas : handleBulkAssignLaboratoristas}
+        onAssign={selectedEvents.length > 1 ? handleBulkAssignLaboratoristas : handleAssignLaboratoristas}
         isBulkEdit={selectedEvents.length > 1}
       />
       <ReprogramarEventoModal
