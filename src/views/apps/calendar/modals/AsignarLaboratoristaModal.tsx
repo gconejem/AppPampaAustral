@@ -52,6 +52,8 @@ const AsignarLaboratoristaModal = ({
   useEffect(() => {
     if (open) {
       fetchLaboratoristas()
+      setSelectedLaboratoristas([])
+      setSearchText('')
     }
   }, [open])
 
