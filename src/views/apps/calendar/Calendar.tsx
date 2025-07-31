@@ -34,6 +34,7 @@ import EventPreview from './preview/EventPreview'
 import EditEventSidebar from './edit/EditEventSidebar'
 import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
+import { formatDateForBackend } from '@/utils/dateUtils'
 import CambiarEstadoModal from './modals/CambiarEstadoModal'
 import type { CalendarProps } from '@/types/apps/calendarTypes'
 import { parseDateFromBackend } from '@/utils/dateUtils'
@@ -610,8 +611,8 @@ const Calendar = (props: CalenderProps) => {
         },
         body: JSON.stringify({
           ids: selectedEvents.map(event => parseInt(event.id)),
-          fechaInicio: fechaInicio.toISOString(),
-          fechaFin: fechaFin.toISOString()
+          fechaInicio: formatDateForBackend(fechaInicio),
+          fechaFin: formatDateForBackend(fechaFin)
         })
       })
 
@@ -644,8 +645,8 @@ const Calendar = (props: CalenderProps) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          fechaInicio: fechaInicio.toISOString(),
-          fechaFin: fechaFin.toISOString()
+          fechaInicio: formatDateForBackend(fechaInicio),
+          fechaFin: formatDateForBackend(fechaFin)
         })
       })
 
