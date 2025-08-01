@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
+import Tooltip from '@mui/material/Tooltip'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -420,14 +421,10 @@ const DuplicateEventSidebar = ({
   // Resetear estado cuando se abre/cierra el sidebar
   useEffect(() => {
     if (duplicateEventSidebarOpen && !selectedEvent) {
-      // Si se abre sin evento seleccionado, inicializar con fechas por defecto
-      const now = new Date()
-      now.setHours(9, 0, 0, 0) // Hora por defecto 9:00 AM
-      setFechaInicio(now)
-
-      const endDate = new Date(now)
-      endDate.setHours(10, 0, 0, 0) // Hora por defecto 10:00 AM
-      setFechaFin(endDate)
+      // Si se abre sin evento seleccionado, NO inicializar fechas - dejar vacías
+      // Para duplicación, las fechas siempre deben ser establecidas manualmente por el usuario
+      setFechaInicio(null)
+      setFechaFin(null)
     }
 
     // Resetear flag de carga cuando se cierre el sidebar
@@ -456,6 +453,7 @@ const DuplicateEventSidebar = ({
         setIsLoadingEventData(true)
 
         // Limpiar datos anteriores inmediatamente cuando cambia el evento seleccionado
+        // Para duplicación, mantener fechas, horas y laboratoristas vacíos
         setFormData(initialData)
         setEstado('CREADA')
         setFechaInicio(null)
@@ -463,7 +461,7 @@ const DuplicateEventSidebar = ({
         setHoraInicio('')
         setHoraFin('')
         setServiciosAgendados([])
-        setLaboratoristasAgendados([])
+        setLaboratoristasAgendados([]) // Mantener vacío para duplicación
         setEquiposAgendados([])
         setContactos([])
         setSelectedReferencia('')
@@ -494,9 +492,9 @@ const DuplicateEventSidebar = ({
           // Establecer estado
           setEstado(eventData.estado || 'CREADA')
 
-          // Formatear fechas
-          const fechaInicioFormatted = formatBackendDateForInput(eventData.fechaInicio)
-          const fechaFinFormatted = formatBackendDateForInput(eventData.fechaFin)
+          // Para duplicación, NO precargar fechas en formData
+          const fechaInicioFormatted = ''
+          const fechaFinFormatted = ''
 
           // Debug: Verificar los IDs extraídos
           console.log('IDs extraídos del backend:', {
@@ -527,20 +525,8 @@ const DuplicateEventSidebar = ({
             equipos: []
           })
 
-          // Establecer fechas para DatePicker
-          if (eventData.fechaInicio) {
-            const fechaInicioDate = parseDateFromBackend(eventData.fechaInicio)
-            if (!isNaN(fechaInicioDate.getTime())) {
-              setFechaInicio(fechaInicioDate)
-            }
-          }
-
-          if (eventData.fechaFin) {
-            const fechaFinDate = parseDateFromBackend(eventData.fechaFin)
-            if (!isNaN(fechaFinDate.getTime())) {
-              setFechaFin(fechaFinDate)
-            }
-          }
+          // Para duplicación, NO precargar fechas - dejar vacías para que el usuario las establezca
+          // setFechaInicio y setFechaFin se mantienen null
 
           // Establecer región para cargar comunas
           if (eventData.region) {
@@ -571,19 +557,9 @@ const DuplicateEventSidebar = ({
           setServiciosAgendados(formattedServicios)
           console.log('Estado serviciosAgendados después de setServiciosAgendados:', formattedServicios)
 
-          // Procesar laboratoristas
-          console.log('Laboratoristas recibidos del backend:', eventData.asignados)
-          const formattedLaboratoristas = (eventData.asignados || []).map((a: any) => {
-            console.log('Procesando laboratorista:', a)
-            return {
-              id: a.userId || a.user?.id || a.id,
-              nombre: a.user?.name || a.nombre || 'No especificado',
-              email: a.user?.email || a.email || '',
-              esPrincipal: a.esPrincipal || false
-            }
-          })
-          console.log('Laboratoristas formateados:', formattedLaboratoristas)
-          setLaboratoristasAgendados(formattedLaboratoristas)
+          // Para duplicación, NO precargar laboratoristas - dejar vacío para que el usuario los asigne
+          console.log('Laboratoristas del evento original (no se precargan en duplicación):', eventData.asignados)
+          setLaboratoristasAgendados([])
 
           // Procesar equipos
           console.log('Equipos recibidos del backend:', eventData.equipos)
@@ -790,14 +766,47 @@ const DuplicateEventSidebar = ({
     }
   }, [formData.obraId, obras.length, isLoadingEventData, selectedEvent])
 
+  // Función para validar si el formulario está completo
+  const isFormValid = useMemo(() => {
+    return (
+      formData.clienteId &&
+      formData.obraId &&
+      formData.solicitudId &&
+      formData.sectorComercial &&
+      formData.region &&
+      formData.comuna &&
+      formData.direccion &&
+      fechaInicio &&
+      fechaFin &&
+      horaInicio &&
+      horaFin &&
+      laboratoristasAgendados.length > 0 &&
+      contactos.length > 0 &&
+      serviciosAgendados.length > 0
+    )
+  }, [
+    formData.clienteId,
+    formData.obraId,
+    formData.solicitudId,
+    formData.sectorComercial,
+    formData.region,
+    formData.comuna,
+    formData.direccion,
+    fechaInicio,
+    fechaFin,
+    horaInicio,
+    horaFin,
+    laboratoristasAgendados.length,
+    contactos.length,
+    serviciosAgendados.length
+  ])
+
   const handleSubmit = async () => {
     try {
-      // Validación detallada de campos requeridos para estado CREADA
+      // Validación detallada de campos requeridos
       const camposFaltantes = []
 
-      // Campos requeridos para estado CREADA
-      if (!formData.fechaInicio) camposFaltantes.push('Fecha y Hora de Inicio')
-      if (!formData.fechaFin) camposFaltantes.push('Fecha y Hora de Término')
+      // Campos requeridos básicos
       if (!formData.clienteId) camposFaltantes.push('Cliente')
       if (!formData.obraId) camposFaltantes.push('Obra')
       if (!formData.solicitudId) camposFaltantes.push('Solicitud')
@@ -805,6 +814,15 @@ const DuplicateEventSidebar = ({
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
+
+      // Validaciones obligatorias para fechas y horas
+      if (!fechaInicio) camposFaltantes.push('Fecha de Inicio')
+      if (!fechaFin) camposFaltantes.push('Fecha de Término')
+      if (!horaInicio || horaInicio === '') camposFaltantes.push('Hora de Inicio')
+      if (!horaFin || horaFin === '') camposFaltantes.push('Hora de Término')
+
+      // Validar que haya al menos un laboratorista asignado
+      if (laboratoristasAgendados.length === 0) camposFaltantes.push('Al menos un Laboratorista')
 
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
@@ -816,36 +834,19 @@ const DuplicateEventSidebar = ({
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
       }
 
-      // Para duplicación, siempre crear con estado CREADA
-      let nuevoEstado = 'CREADA'
-
-      // Verificar si se cumplen las condiciones para cambiar a AGENDADA
-      const tieneFechaInicio = !!formData.fechaInicio
-      const tieneFechaFin = !!formData.fechaFin
-      const tieneHoraInicio = !!horaInicio
-      const tieneHoraFin = !!horaFin
-      const tieneLaboratoristas = laboratoristasAgendados.length > 0
-      const tieneEquipos = equiposAgendados.length > 0
-
-      // Si se cumplen todas las condiciones, cambiar a AGENDADA
-      if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas && tieneEquipos) {
-        nuevoEstado = 'AGENDADA'
-        console.log('Creando evento duplicado con estado AGENDADA - se cumplen todas las condiciones')
-      } else {
-        console.log('Creando evento duplicado con estado CREADA - no se cumplen todas las condiciones:', {
-          tieneFechaInicio,
-          tieneFechaFin,
-          tieneHoraInicio,
-          tieneHoraFin,
-          tieneLaboratoristas,
-          tieneEquipos
-        })
-      }
+      // Para duplicación, SIEMPRE crear con estado CREADA (sin importar las condiciones)
+      const nuevoEstado = 'CREADA'
+      console.log('Creando evento duplicado con estado CREADA (fijo para duplicaciones)')
 
       // Generar título automáticamente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
       const serviciosPrincipales = serviciosAgendados.map(s => s.servicio).join(', ')
-      const fechaFormateada = new Date(formData.fechaInicio).toLocaleDateString('es-ES')
+
+      // Manejar el caso cuando no hay fecha de inicio
+      let fechaFormateada = 'Sin fecha'
+      if (formData.fechaInicio) {
+        fechaFormateada = new Date(formData.fechaInicio).toLocaleDateString('es-ES')
+      }
 
       const tituloGenerado = `Visita ${cliente?.razonSocial} - ${serviciosPrincipales} (${fechaFormateada}) - DUPLICADA`
 
@@ -889,7 +890,7 @@ const DuplicateEventSidebar = ({
       }
 
       // Mostrar mensaje de éxito (se podría implementar un toast o snackbar)
-      console.log('Visita duplicada exitosamente')
+      console.log('Visita duplicada exitosamente con estado CREADA')
     } catch (error: any) {
       console.error('Error:', error)
       alert(error?.message || 'Error al duplicar la visita')
@@ -1205,7 +1206,7 @@ const DuplicateEventSidebar = ({
               <Box display='flex' alignItems='center' gap={1}>
                 <Typography variant='h5'>Duplicar Visita</Typography>
                 <Typography variant='body2' color='textSecondary'>
-                  * Campo obligatorio
+                  * Campo obligatorio - Debe completar fechas, horas y asignar laboratoristas
                 </Typography>
               </Box>
             </Grid>
@@ -1311,7 +1312,9 @@ const DuplicateEventSidebar = ({
                     }}
                     slotProps={{
                       textField: {
-                        fullWidth: true
+                        fullWidth: true,
+                        error: !fechaInicio,
+                        helperText: !fechaInicio ? 'Campo obligatorio' : ''
                       }
                     }}
                   />
@@ -1322,9 +1325,11 @@ const DuplicateEventSidebar = ({
               <Grid item xs={3}>
                 <TextField
                   fullWidth
-                  label='Hora inicio'
+                  label='Hora inicio *'
                   type='time'
                   value={horaInicio}
+                  error={!horaInicio}
+                  helperText={!horaInicio ? 'Campo obligatorio' : ''}
                   onChange={e => {
                     const newHoraInicio = e.target.value
                     setHoraInicio(newHoraInicio)
@@ -1356,9 +1361,11 @@ const DuplicateEventSidebar = ({
               <Grid item xs={3}>
                 <TextField
                   fullWidth
-                  label='Hora término'
+                  label='Hora término *'
                   type='time'
                   value={horaFin}
+                  error={!horaFin}
+                  helperText={!horaFin ? 'Campo obligatorio' : ''}
                   onChange={e => {
                     const newHoraFin = e.target.value
                     setHoraFin(newHoraFin)
@@ -2295,7 +2302,7 @@ const DuplicateEventSidebar = ({
                 {/* Laboratoristas */}
                 <Grid item xs={6}>
                   <Typography variant='h5' sx={{ mb: 2 }}>
-                    Laboratoristas
+                    Laboratoristas *
                   </Typography>
                   <Autocomplete
                     key={laboratoristaKey}
@@ -2311,8 +2318,10 @@ const DuplicateEventSidebar = ({
                     renderInput={params => (
                       <TextField
                         {...params}
-                        label='Laboratorista'
+                        label='Laboratorista *'
                         placeholder='Seleccione un laboratorista para agregarlo automáticamente'
+                        error={laboratoristasAgendados.length === 0}
+                        helperText={laboratoristasAgendados.length === 0 ? 'Debe asignar al menos un laboratorista' : ''}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
@@ -2336,20 +2345,30 @@ const DuplicateEventSidebar = ({
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {laboratoristasAgendados.map((laboratorista, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{laboratorista.nombre}</TableCell>
-                            <TableCell>{laboratorista.email}</TableCell>
-                            <TableCell>
-                              <IconButton
-                                color='error'
-                                onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
-                              >
-                                <i className='ri-delete-bin-line' />
-                              </IconButton>
+                        {laboratoristasAgendados.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center">
+                              <Typography variant="body2" color="error">
+                                Debe asignar al menos un laboratorista
+                              </Typography>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          laboratoristasAgendados.map((laboratorista, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{laboratorista.nombre}</TableCell>
+                              <TableCell>{laboratorista.email}</TableCell>
+                              <TableCell>
+                                <IconButton
+                                  color='error'
+                                  onClick={() => setLaboratoristasAgendados(prev => prev.filter((_, i) => i !== index))}
+                                >
+                                  <i className='ri-delete-bin-line' />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </TableContainer>
@@ -2436,10 +2455,22 @@ const DuplicateEventSidebar = ({
           {/* Botón Duplicar */}
           <Grid container spacing={2} mt={2} mb={2}>
             <Grid item xs={12} display='flex' justifyContent='flex-start'>
-              <Button variant='contained' color='primary' onClick={handleSubmit}>
-                <ContentCopyIcon sx={{ mr: 1 }} />
-                Duplicar Visita
-              </Button>
+              <Tooltip
+                title={!isFormValid ? 'Complete todos los campos obligatorios: fechas, horas y laboratoristas' : ''}
+                arrow
+              >
+                <span>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    onClick={handleSubmit}
+                    disabled={!isFormValid}
+                  >
+                    <ContentCopyIcon sx={{ mr: 1 }} />
+                    Duplicar Visita
+                  </Button>
+                </span>
+              </Tooltip>
             </Grid>
           </Grid>
 
