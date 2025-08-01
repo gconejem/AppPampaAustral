@@ -794,16 +794,20 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       // Validación detallada de campos requeridos para estado CREADA
       const camposFaltantes = []
 
-      // Campos requeridos para estado CREADA
+      // Campos siempre requeridos
       if (!formData.fechaInicio) camposFaltantes.push('Fecha y Hora de Inicio')
       if (!formData.fechaFin) camposFaltantes.push('Fecha y Hora de Término')
       if (!formData.clienteId) camposFaltantes.push('Cliente')
       if (!formData.obraId) camposFaltantes.push('Obra')
-      if (!formData.solicitudId) camposFaltantes.push('Solicitud')
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
+
+      // Solicitud es obligatoria solo para estado AGENDADO
+      if (estado === 'AGENDADA' && !formData.solicitudId) {
+        camposFaltantes.push('Solicitud')
+      }
 
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
@@ -1462,8 +1466,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               renderInput={params => (
                 <TextField
                   {...params}
-                  label='Solicitud'
-                  helperText={formData.obraId ? `Mostrando ${solicitudesFiltradas.length} solicitudes de la obra seleccionada` : `Seleccione una obra primero`}
+                  label={estado === 'AGENDADA' ? 'Solicitud *' : 'Solicitud'}
+                  error={estado === 'AGENDADA' && !formData.solicitudId}
+                  helperText={
+                    estado === 'AGENDADA' && !formData.solicitudId
+                      ? 'Campo obligatorio para eventos agendados'
+                      : formData.obraId
+                        ? `Mostrando ${solicitudesFiltradas.length} solicitudes de la obra seleccionada`
+                        : `Seleccione una obra primero`
+                  }
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (

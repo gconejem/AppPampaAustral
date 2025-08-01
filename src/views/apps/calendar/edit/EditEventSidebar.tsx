@@ -778,19 +778,23 @@ const EditEventSidebar = ({
 
   const handleSubmit = async () => {
     try {
-      // Validación detallada de campos requeridos para estado CREADA
+      // Validación detallada de campos requeridos
       const camposFaltantes = []
 
-      // Campos requeridos para estado CREADA
+      // Campos siempre requeridos
       if (!formData.fechaInicio) camposFaltantes.push('Fecha y Hora de Inicio')
       if (!formData.fechaFin) camposFaltantes.push('Fecha y Hora de Término')
       if (!formData.clienteId) camposFaltantes.push('Cliente')
       if (!formData.obraId) camposFaltantes.push('Obra')
-      if (!formData.solicitudId) camposFaltantes.push('Solicitud')
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
+
+      // Solicitud es obligatoria solo para estado AGENDADO
+      if (estado === 'AGENDADA' && !formData.solicitudId) {
+        camposFaltantes.push('Solicitud')
+      }
 
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
@@ -1628,7 +1632,14 @@ const EditEventSidebar = ({
                       }))
                     }
                   }}
-                  renderInput={params => <TextField {...params} label='Solicitud' />}
+                  renderInput={params => (
+                    <TextField
+                      {...params}
+                      label={estado === 'AGENDADA' ? 'Solicitud *' : 'Solicitud'}
+                      error={estado === 'AGENDADA' && !formData.solicitudId}
+                      helperText={estado === 'AGENDADA' && !formData.solicitudId ? 'Campo obligatorio para eventos agendados' : ''}
+                    />
+                  )}
                   disabled={!formData.clienteId}
                   renderOption={(props, option) => (
                     <li {...props}>

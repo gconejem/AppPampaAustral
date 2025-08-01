@@ -809,7 +809,11 @@ const DuplicateEventSidebar = ({
       // Campos requeridos básicos
       if (!formData.clienteId) camposFaltantes.push('Cliente')
       if (!formData.obraId) camposFaltantes.push('Obra')
-      if (!formData.solicitudId) camposFaltantes.push('Solicitud')
+
+      // Solicitud es obligatoria solo para estado AGENDADO
+      if (estado === 'AGENDADA' && !formData.solicitudId) {
+        camposFaltantes.push('Solicitud')
+      }
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
@@ -1647,7 +1651,14 @@ const DuplicateEventSidebar = ({
                       }))
                     }
                   }}
-                  renderInput={params => <TextField {...params} label='Solicitud' />}
+                  renderInput={params => (
+                    <TextField
+                      {...params}
+                      label={estado === 'AGENDADA' ? 'Solicitud *' : 'Solicitud'}
+                      error={estado === 'AGENDADA' && !formData.solicitudId}
+                      helperText={estado === 'AGENDADA' && !formData.solicitudId ? 'Campo obligatorio para eventos agendados' : ''}
+                    />
+                  )}
                   disabled={!formData.clienteId}
                   renderOption={(props, option) => (
                     <li {...props}>
