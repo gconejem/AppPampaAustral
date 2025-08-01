@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 
-import { EstadoAgenda } from '@prisma/client'
+import { EstadoAgenda, MotivoSuspension } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const agendaId = parseInt(params.id)
-    const { estado, observacionEliminada } = await request.json()
+    const { estado, observacionEliminada, motivoSuspension, observacionSuspendida } = await request.json()
 
     // Verificar que el estado sea válido
     if (!Object.values(EstadoAgenda).includes(estado)) {
@@ -17,6 +17,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     // Verificar que si el estado es ELIMINADA, se proporcione una observación
     if (estado === EstadoAgenda.ELIMINADA && !observacionEliminada?.trim()) {
       return NextResponse.json({ error: 'Debe proporcionar un motivo para eliminar el evento' }, { status: 400 })
+    }
+
+    // Verificar que si el estado es SUSPENDIDA, se proporcione un motivo
+    if (estado === EstadoAgenda.SUSPENDIDA && !motivoSuspension) {
+      return NextResponse.json({ error: 'Debe proporcionar un motivo de suspensión' }, { status: 400 })
+    }
+
+    // Verificar que si el motivo es OTRO, se proporcione una observación
+    if (estado === EstadoAgenda.SUSPENDIDA && motivoSuspension === 'OTRO' && !observacionSuspendida?.trim()) {
+      return NextResponse.json({ error: 'Debe especificar el motivo de suspensión' }, { status: 400 })
     }
 
     // Verificar que la agenda existe
@@ -29,14 +39,27 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     // Preparar los datos para actualizar
-    const updateData: { estado: EstadoAgenda; observacionEliminada?: string | null } = { estado }
+    const updateData: {
+      estado: EstadoAgenda;
+      observacionEliminada?: string | null;
+      motivoSuspension?: MotivoSuspension | null;
+      observacionSuspendida?: string | null;
+    } = { estado }
 
-    // Solo incluir observacionEliminada si el estado es ELIMINADA
+    // Manejar campos específicos según el estado
     if (estado === EstadoAgenda.ELIMINADA) {
       updateData.observacionEliminada = observacionEliminada
-    } else {
-      // Limpiar observacionEliminada si el estado no es ELIMINADA
+      updateData.motivoSuspension = null
+      updateData.observacionSuspendida = null
+    } else if (estado === EstadoAgenda.SUSPENDIDA) {
+      updateData.motivoSuspension = motivoSuspension as MotivoSuspension
+      updateData.observacionSuspendida = motivoSuspension === 'OTRO' ? observacionSuspendida : null
       updateData.observacionEliminada = null
+    } else {
+      // Limpiar todos los campos de observación para otros estados
+      updateData.observacionEliminada = null
+      updateData.motivoSuspension = null
+      updateData.observacionSuspendida = null
     }
 
     // Actualizar el estado de la agenda

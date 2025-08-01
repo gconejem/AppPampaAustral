@@ -218,14 +218,28 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string) => {
+  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
     if (!selectedEventId) return
 
     try {
-      const requestBody: { estado: string; observacionEliminada?: string } = { estado: nuevoEstado }
+      const requestBody: {
+        estado: string;
+        observacionEliminada?: string;
+        motivoSuspension?: string;
+        observacionSuspendida?: string;
+      } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
         requestBody.observacionEliminada = observacionEliminada
+      }
+
+      if (nuevoEstado === 'SUSPENDIDA') {
+        if (motivoSuspension) {
+          requestBody.motivoSuspension = motivoSuspension
+        }
+        if (motivoSuspension === 'OTRO' && observacionSuspendida) {
+          requestBody.observacionSuspendida = observacionSuspendida
+        }
       }
 
       const response = await fetch(`/api/agenda/${selectedEventId}/cambiar-estado`, {
@@ -758,12 +772,26 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string) => {
+  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
     try {
-      const requestBody: { estado: string; observacionEliminada?: string } = { estado: nuevoEstado }
+      const requestBody: {
+        estado: string;
+        observacionEliminada?: string;
+        motivoSuspension?: string;
+        observacionSuspendida?: string;
+      } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
         requestBody.observacionEliminada = observacionEliminada
+      }
+
+      if (nuevoEstado === 'SUSPENDIDA') {
+        if (motivoSuspension) {
+          requestBody.motivoSuspension = motivoSuspension
+        }
+        if (motivoSuspension === 'OTRO' && observacionSuspendida) {
+          requestBody.observacionSuspendida = observacionSuspendida
+        }
       }
 
       const responses = await Promise.all(

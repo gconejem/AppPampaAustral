@@ -17,7 +17,7 @@ interface CambiarEstadoModalProps {
   onClose: () => void
   eventId: string | null
   estadoActual: string
-  onCambiarEstado: (nuevoEstado: string, observacionEliminada?: string) => Promise<void>
+  onCambiarEstado: (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => Promise<void>
   isBulkEdit?: boolean
 }
 
@@ -35,6 +35,16 @@ const ESTADOS_AGENDA = {
   CODIFICADA: 'Codificada'
 }
 
+// Motivos de suspensión del enum MotivoSuspension
+const MOTIVOS_SUSPENSION = {
+  CLIMA: 'Clima',
+  TERRENO_NO_PREPARADO: 'Terreno No Preparado',
+  PROBLEMA_PLANTA: 'Problema Planta',
+  PROBLEMA_INTERNO_PA: 'Problema Interno PA',
+  ACREDITACION_PERSONAL: 'Acreditación Personal',
+  OTRO: 'Otro (Especificar)'
+}
+
 const CambiarEstadoModal = ({
   open,
   onClose,
@@ -44,6 +54,8 @@ const CambiarEstadoModal = ({
 }: CambiarEstadoModalProps) => {
   const [selectedEstado, setSelectedEstado] = useState<string>(estadoActual)
   const [observacionEliminada, setObservacionEliminada] = useState<string>('')
+  const [motivoSuspension, setMotivoSuspension] = useState<string>('')
+  const [observacionSuspendida, setObservacionSuspendida] = useState<string>('')
   const [error, setError] = useState<string>('')
 
   const handleSubmit = async () => {
@@ -54,10 +66,29 @@ const CambiarEstadoModal = ({
         return
       }
 
-      await onCambiarEstado(selectedEstado, selectedEstado === 'ELIMINADA' ? observacionEliminada : undefined)
+      // Validar que si el estado es SUSPENDIDA, se haya seleccionado un motivo
+      if (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) {
+        setError('Debe seleccionar un motivo de suspensión')
+        return
+      }
+
+      // Validar que si el motivo es OTRO, se haya ingresado una observación
+      if (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim()) {
+        setError('Debe especificar el motivo de suspensión')
+        return
+      }
+
+      await onCambiarEstado(
+        selectedEstado,
+        selectedEstado === 'ELIMINADA' ? observacionEliminada : undefined,
+        selectedEstado === 'SUSPENDIDA' ? motivoSuspension : undefined,
+        selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' ? observacionSuspendida : undefined
+      )
       onClose()
       // Limpiar campos al cerrar
       setObservacionEliminada('')
+      setMotivoSuspension('')
+      setObservacionSuspendida('')
       setError('')
     } catch (error) {
       if (error instanceof Error) {
@@ -72,6 +103,8 @@ const CambiarEstadoModal = ({
     // Limpiar campos al cerrar
     setSelectedEstado(estadoActual)
     setObservacionEliminada('')
+    setMotivoSuspension('')
+    setObservacionSuspendida('')
     setError('')
     onClose()
   }
@@ -115,6 +148,41 @@ const CambiarEstadoModal = ({
           />
         )}
 
+        {selectedEstado === 'SUSPENDIDA' && (
+          <>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id='motivo-suspension-label'>Motivo de suspensión</InputLabel>
+              <Select
+                labelId='motivo-suspension-label'
+                value={motivoSuspension}
+                label='Motivo de suspensión'
+                onChange={e => setMotivoSuspension(e.target.value)}
+                required
+              >
+                {Object.entries(MOTIVOS_SUSPENSION).map(([key, label]) => (
+                  <MenuItem key={key} value={key}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {motivoSuspension === 'OTRO' && (
+              <TextField
+                fullWidth
+                label='Especificar motivo'
+                multiline
+                rows={3}
+                value={observacionSuspendida}
+                onChange={e => setObservacionSuspendida(e.target.value)}
+                placeholder='Ingrese el motivo específico de suspensión'
+                required
+                sx={{ mb: 2 }}
+              />
+            )}
+          </>
+        )}
+
         {error && (
           <Alert severity='error' sx={{ mt: 2 }}>
             {error}
@@ -126,7 +194,12 @@ const CambiarEstadoModal = ({
         <Button
           onClick={handleSubmit}
           variant='contained'
-          disabled={selectedEstado === estadoActual || (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim())}
+          disabled={
+            selectedEstado === estadoActual ||
+            (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
+            (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
+            (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
+          }
         >
           {isBulkEdit ? 'Cambiar Estado de Eventos' : 'Cambiar Estado'}
         </Button>
