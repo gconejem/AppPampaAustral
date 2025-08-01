@@ -32,6 +32,7 @@ import { useSnackbar } from 'notistack'
 // Component Imports
 import EventPreview from './preview/EventPreview'
 import EditEventSidebar from './edit/EditEventSidebar'
+import DuplicateEventSidebar from './duplicate/DuplicateEventSidebar'
 import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
 import { formatDateForBackend } from '@/utils/dateUtils'
@@ -82,6 +83,7 @@ const Calendar = (props: CalenderProps) => {
   const [selectedEventForView, setSelectedEventForView] = useState<null | any>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [editEventSidebarOpen, setEditEventSidebarOpen] = useState(false)
+  const [duplicateEventSidebarOpen, setDuplicateEventSidebarOpen] = useState(false)
   const [asignarLaboratoristaOpen, setAsignarLaboratoristaOpen] = useState(false)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [reprogramarModalOpen, setReprogramarModalOpen] = useState(false)
@@ -166,6 +168,14 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
+  const handleDuplicateEventSidebarToggle = () => {
+    setDuplicateEventSidebarOpen(!duplicateEventSidebarOpen)
+
+    if (duplicateEventSidebarOpen) {
+      fetchEvents()
+    }
+  }
+
   const handleEventMenuClose = () => {
     setEventMenuAnchorEl(null)
   }
@@ -173,26 +183,10 @@ const Calendar = (props: CalenderProps) => {
   const handleDuplicarEvento = async () => {
     if (!selectedEventId) return
 
-    try {
-      const response = await fetch(`/api/agenda/${selectedEventId}/duplicar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) throw new Error('Error al duplicar el evento')
-
-      await fetchEvents()
-      setSnackbarMessage('¡Evento duplicado exitosamente!')
-      setSnackbarSeverity('success')
-      setOpenSnackbar(true)
-    } catch (error) {
-      console.error('Error:', error)
-      setSnackbarMessage('Error al duplicar el evento')
-      setSnackbarSeverity('error')
-      setOpenSnackbar(true)
-    }
+    // Para duplicación, solo necesitamos pasar el ID del evento
+    // El DuplicateEventSidebar se encargará de cargar los datos desde el backend
+    setSelectedEventForView({ id: selectedEventId })
+    setDuplicateEventSidebarOpen(true)
   }
 
   const handleEliminarEvento = async () => {
@@ -2079,6 +2073,11 @@ const Calendar = (props: CalenderProps) => {
       <EditEventSidebar
         editEventSidebarOpen={editEventSidebarOpen}
         handleEditEventSidebarToggle={handleEditEventSidebarToggle}
+        selectedEvent={selectedEventForView}
+      />
+      <DuplicateEventSidebar
+        duplicateEventSidebarOpen={duplicateEventSidebarOpen}
+        handleDuplicateEventSidebarToggle={handleDuplicateEventSidebarToggle}
         selectedEvent={selectedEventForView}
       />
       <AsignarLaboratoristaModal
