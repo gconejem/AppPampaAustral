@@ -399,19 +399,19 @@ model Equipo {
 }
 
 model Agenda {
-  id                    Int              @id @default(autoincrement())
+  id                    Int               @id @default(autoincrement())
   titulo                String
   tipoVisita            String
-  esRecurrente          Boolean          @default(false)
+  esRecurrente          Boolean           @default(false)
   fechaInicio           DateTime
   fechaFin              DateTime
-  estado                EstadoAgenda     @default(CREADA)
+  estado                EstadoAgenda      @default(CREADA)
   clienteId             Int?
   obraId                Int?
   solicitudId           Int?
   observaciones         String?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   comuna                String?
   direccion             String?
   referencia            String?
@@ -426,9 +426,10 @@ model Agenda {
   observacionEnRevision String?
   observacionAnulada    String?
   observacionRecibidaOK String?
-  cliente               Cliente?         @relation(fields: [clienteId], references: [clienteId])
-  obra                  Obra?            @relation(fields: [obraId], references: [obraId])
-  solicitud             Solicitud?       @relation(fields: [solicitudId], references: [id])
+  motivoSuspension      MotivoSuspension?
+  cliente               Cliente?          @relation(fields: [clienteId], references: [clienteId])
+  obra                  Obra?             @relation(fields: [obraId], references: [obraId])
+  solicitud             Solicitud?        @relation(fields: [solicitudId], references: [id])
   asignados             AgendaAsignado[]
   equipos               AgendaEquipo[]
   servicios             AgendaServicio[]
