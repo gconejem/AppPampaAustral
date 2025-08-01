@@ -212,19 +212,28 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleCambiarEstado = async (nuevoEstado: string) => {
+  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string) => {
     if (!selectedEventId) return
 
     try {
+      const requestBody: { estado: string; observacionEliminada?: string } = { estado: nuevoEstado }
+
+      if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
+        requestBody.observacionEliminada = observacionEliminada
+      }
+
       const response = await fetch(`/api/agenda/${selectedEventId}/cambiar-estado`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ estado: nuevoEstado })
+        body: JSON.stringify(requestBody)
       })
 
-      if (!response.ok) throw new Error('Error al cambiar el estado del evento')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al cambiar el estado del evento')
+      }
 
       await fetchEvents()
       setSnackbarMessage('¡Estado actualizado exitosamente!')
@@ -232,7 +241,7 @@ const Calendar = (props: CalenderProps) => {
       setOpenSnackbar(true)
     } catch (error) {
       console.error('Error:', error)
-      setSnackbarMessage('Error al cambiar el estado del evento')
+      setSnackbarMessage(error instanceof Error ? error.message : 'Error al cambiar el estado del evento')
       setSnackbarSeverity('error')
       setOpenSnackbar(true)
       throw error
@@ -743,19 +752,32 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleBulkCambiarEstado = async (nuevoEstado: string) => {
+  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string) => {
     try {
-      await Promise.all(
+      const requestBody: { estado: string; observacionEliminada?: string } = { estado: nuevoEstado }
+
+      if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
+        requestBody.observacionEliminada = observacionEliminada
+      }
+
+      const responses = await Promise.all(
         selectedEvents.map(event =>
           fetch(`/api/agenda/${event.id}/cambiar-estado`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ estado: nuevoEstado })
+            body: JSON.stringify(requestBody)
           })
         )
       )
+
+      // Verificar si alguna respuesta falló
+      const failedResponses = responses.filter(response => !response.ok)
+      if (failedResponses.length > 0) {
+        const errorData = await failedResponses[0].json()
+        throw new Error(errorData.error || 'Error al cambiar el estado de algunos eventos')
+      }
 
       await fetchEvents()
       setSelectedEvents([])
@@ -765,7 +787,7 @@ const Calendar = (props: CalenderProps) => {
       })
     } catch (error) {
       console.error('Error:', error)
-      enqueueSnackbar('Error al cambiar el estado de los eventos', {
+      enqueueSnackbar(error instanceof Error ? error.message : 'Error al cambiar el estado de los eventos', {
         variant: 'error'
       })
     }
