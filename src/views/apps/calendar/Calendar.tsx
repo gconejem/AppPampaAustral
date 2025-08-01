@@ -43,8 +43,8 @@ type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
 }
 
-type StatusType = 'CREADA' | 'AGENDADA' | 'COMPLETADA' | 'SUSPENDIDA' | 'REPROGRAMADA'
-type StatusFiltersType = Record<StatusType, boolean>
+type StatusType = 'CREADA' | 'ELIMINADA' | 'AGENDADA' | 'SUSPENDIDA' | 'SUSPENDIDA_TERRENO' | 'COMPLETADA' | 'EN_REVISION' | 'ANULADA' | 'RECIBIDA_OK' | 'CODIFICADA'
+type StatusFiltersType = Record<StatusType, boolean> & { TODOS: boolean }
 
 interface EventInfo {
   event: {
@@ -98,11 +98,17 @@ const Calendar = (props: CalenderProps) => {
   })
 
   const [statusFilters, setStatusFilters] = useState<StatusFiltersType>({
+    TODOS: false,
     CREADA: true,
+    ELIMINADA: false,
     AGENDADA: true,
-    COMPLETADA: false,
     SUSPENDIDA: false,
-    REPROGRAMADA: false
+    SUSPENDIDA_TERRENO: false,
+    COMPLETADA: false,
+    EN_REVISION: false,
+    ANULADA: false,
+    RECIBIDA_OK: false,
+    CODIFICADA: false
   })
 
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
@@ -284,20 +290,6 @@ const Calendar = (props: CalenderProps) => {
 
   const handleFilterStatus = (filters: StatusFiltersType) => {
     setStatusFilters(filters)
-
-    // Verificar si todos los filtros están desactivados
-    const todosDesactivados = Object.values(filters).every(value => !value)
-
-    // Si todos están desactivados, mostrar todos los eventos
-    const filtered = todosDesactivados
-      ? events
-      : events.filter(event => {
-        const eventStatus = event.extendedProps?.estado || 'AGENDADA'
-
-        return filters[eventStatus as StatusType]
-      })
-
-    setFilteredEvents(filtered)
   }
 
   // Aplicar filtros cuando cambien los eventos o los filtros
@@ -399,10 +391,24 @@ const Calendar = (props: CalenderProps) => {
     }
 
     // Aplicar filtros de estado
-    const todosDesactivados = Object.values(statusFilters).every(value => !value)
-    if (!todosDesactivados) {
+    if (statusFilters.TODOS) {
+      // Si "TODOS" está seleccionado, mostrar todos los eventos incluyendo eliminados
+      // No aplicar ningún filtro de estado
+    } else {
+      // Aplicar filtros de estado
       filtered = filtered.filter(event => {
         const eventStatus = event.extendedProps?.estado || 'AGENDADA'
+
+        // Verificar si algún filtro de estado está activo (excluyendo TODOS)
+        const { TODOS, ...otherFilters } = statusFilters
+        const algunFiltroActivo = Object.values(otherFilters).some(value => value)
+
+        // Si no hay filtros activos, mostrar todos los eventos excepto eliminados
+        if (!algunFiltroActivo) {
+          return eventStatus !== 'ELIMINADA'
+        }
+
+        // Si hay filtros activos, aplicarlos (incluyendo ELIMINADA si está seleccionado)
         return statusFilters[eventStatus as StatusType]
       })
     }
@@ -1642,10 +1648,15 @@ const Calendar = (props: CalenderProps) => {
   // Definir colores por estado
   const statusColors: Record<StatusType, string> = {
     CREADA: '#9C27B0', // Púrpura
+    ELIMINADA: '#424242', // Gris oscuro
     AGENDADA: '#4CAF50', // Verde
-    COMPLETADA: '#2196F3', // Azul
     SUSPENDIDA: '#F44336', // Rojo
-    REPROGRAMADA: '#FF9800' // Naranja
+    SUSPENDIDA_TERRENO: '#D32F2F', // Rojo más oscuro
+    COMPLETADA: '#2196F3', // Azul
+    EN_REVISION: '#FF9800', // Naranja
+    ANULADA: '#795548', // Marrón
+    RECIBIDA_OK: '#8BC34A', // Verde claro
+    CODIFICADA: '#607D8B' // Azul gris
   }
 
   const fetchEvents = async () => {
@@ -1922,15 +1933,73 @@ const Calendar = (props: CalenderProps) => {
                   justifyContent: 'center'
                 }}
               >
+                {/* Pastilla TODOS */}
+                <Box
+                  onClick={() => {
+                    const newFilters = { ...statusFilters }
+                    if (statusFilters.TODOS) {
+                      // Si TODOS está activo, desactivarlo y activar los filtros por defecto
+                      newFilters.TODOS = false
+                      newFilters.CREADA = true
+                      newFilters.AGENDADA = true
+                      Object.keys(newFilters).forEach(key => {
+                        if (key !== 'TODOS' && key !== 'CREADA' && key !== 'AGENDADA') {
+                          newFilters[key as keyof StatusFiltersType] = false
+                        }
+                      })
+                    } else {
+                      // Si TODOS no está activo, activarlo y desactivar todos los demás
+                      Object.keys(newFilters).forEach(key => {
+                        newFilters[key as keyof StatusFiltersType] = key === 'TODOS'
+                      })
+                    }
+                    handleFilterStatus(newFilters)
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 3,
+                    py: 1,
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    backgroundColor: statusFilters.TODOS ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    border: '1px solid #757575',
+                    color: statusFilters.TODOS ? '#1976d2' : '#757575',
+                    transition: 'all 0.2s',
+                    fontWeight: statusFilters.TODOS ? 'bold' : 'normal',
+                    '&:hover': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                      color: '#1976d2'
+                    }
+                  }}
+                >
+                  <Box
+                    component='span'
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: statusFilters.TODOS ? '#1976d2' : '#757575'
+                    }}
+                  />
+                  TODOS
+                </Box>
+
+                {/* Pastillas de estado */}
                 {Object.entries(statusColors).map(([status]) => (
                   <Box
                     key={status}
-                    onClick={() =>
+                    onClick={() => {
+                      if (statusFilters.TODOS) {
+                        // Si TODOS está activo, no permitir cambios individuales
+                        return
+                      }
                       handleFilterStatus({
                         ...statusFilters,
                         [status as StatusType]: !statusFilters[status as StatusType]
                       })
-                    }
+                    }}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -1938,12 +2007,13 @@ const Calendar = (props: CalenderProps) => {
                       px: 3,
                       py: 1,
                       borderRadius: 2,
-                      cursor: 'pointer',
+                      cursor: statusFilters.TODOS ? 'not-allowed' : 'pointer',
                       backgroundColor: statusFilters[status as StatusType] ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
                       border: '1px solid #757575',
                       color: statusFilters[status as StatusType] ? '#1976d2' : '#757575',
+                      opacity: statusFilters.TODOS ? 0.5 : 1,
                       transition: 'all 0.2s',
-                      '&:hover': {
+                      '&:hover': statusFilters.TODOS ? {} : {
                         backgroundColor: 'rgba(25, 118, 210, 0.12)',
                         color: '#1976d2'
                       }
@@ -1955,10 +2025,10 @@ const Calendar = (props: CalenderProps) => {
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        backgroundColor: statusFilters[status as StatusType] ? '#1976d2' : '#757575'
+                        backgroundColor: statusFilters[status as StatusType] ? '#1976d2' : statusColors[status as StatusType]
                       }}
                     />
-                    {status}
+                    {status.replace('_', ' ')}
                   </Box>
                 ))}
               </Box>
