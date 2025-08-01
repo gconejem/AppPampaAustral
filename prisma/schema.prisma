@@ -399,36 +399,37 @@ model Equipo {
 }
 
 model Agenda {
-  id              Int              @id @default(autoincrement())
-  titulo          String
-  tipoVisita      String
-  esRecurrente    Boolean          @default(false)
-  fechaInicio     DateTime
-  fechaFin        DateTime
-  estado          EstadoAgenda     @default(CREADA)
-  clienteId       Int?
-  obraId          Int?
-  solicitudId     Int?
-  observaciones   String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  comuna          String?
-  direccion       String?
-  referencia      String?
-  region          String?
-  sectorComercial String?
-  horaLlegada     String?
-  horaSalida      String?
-  kmAdicionales   String?
-  movilizacion    String?
-  cliente         Cliente?         @relation(fields: [clienteId], references: [clienteId])
-  obra            Obra?            @relation(fields: [obraId], references: [obraId])
-  solicitud       Solicitud?       @relation(fields: [solicitudId], references: [id])
-  asignados       AgendaAsignado[]
-  equipos         AgendaEquipo[]
-  servicios       AgendaServicio[]
-  ordenesTrabajo  OrdenTrabajo[]
-  contactos       ContactoAgenda[]
+  id                   Int              @id @default(autoincrement())
+  titulo               String
+  tipoVisita           String
+  esRecurrente         Boolean          @default(false)
+  fechaInicio          DateTime
+  fechaFin             DateTime
+  estado               EstadoAgenda     @default(CREADA)
+  clienteId            Int?
+  obraId               Int?
+  solicitudId          Int?
+  observaciones        String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  comuna               String?
+  direccion            String?
+  referencia           String?
+  region               String?
+  sectorComercial      String?
+  horaLlegada          String?
+  horaSalida           String?
+  kmAdicionales        String?
+  movilizacion         String?
+  observacionEliminada String?
+  cliente              Cliente?         @relation(fields: [clienteId], references: [clienteId])
+  obra                 Obra?            @relation(fields: [obraId], references: [obraId])
+  solicitud            Solicitud?       @relation(fields: [solicitudId], references: [id])
+  asignados            AgendaAsignado[]
+  equipos              AgendaEquipo[]
+  servicios            AgendaServicio[]
+  ordenesTrabajo       OrdenTrabajo[]
+  contactos            ContactoAgenda[]
 }
 
 model ContactoAgenda {
@@ -763,11 +764,15 @@ enum EstadoAdministrativo {
 
 enum EstadoAgenda {
   CREADA
+  ELIMINADA
   AGENDADA
-  COMPLETADA
   SUSPENDIDA
-  CANCELADA
-  EN_PROCESO
+  SUSPENDIDA_TERRENO
+  COMPLETADA
+  EN_REVISION
+  ANULADA
+  RECIBIDA_OK
+  CODIFICADA
 }
 
 enum TipoOrdenTrabajo {
