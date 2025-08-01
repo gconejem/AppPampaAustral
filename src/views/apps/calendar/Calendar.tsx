@@ -47,6 +47,10 @@ type CalenderProps = CalendarProps & {
 type StatusType = 'CREADA' | 'ELIMINADA' | 'AGENDADA' | 'SUSPENDIDA' | 'SUSPENDIDA_TERRENO' | 'COMPLETADA' | 'EN_REVISION' | 'ANULADA' | 'RECIBIDA_OK' | 'CODIFICADA'
 type StatusFiltersType = Record<StatusType, boolean> & { TODOS: boolean }
 
+// Tipos para los filtros visibles
+type VisibleStatusType = 'CREADA' | 'AGENDADA' | 'ELIMINADA' | 'COMPLETADA' | 'SUSPENDIDA'
+type VisibleStatusFiltersType = Record<VisibleStatusType, boolean> & { TODOS: boolean }
+
 interface EventInfo {
   event: {
     id: string | number
@@ -111,6 +115,16 @@ const Calendar = (props: CalenderProps) => {
     ANULADA: false,
     RECIBIDA_OK: false,
     CODIFICADA: false
+  })
+
+  // Filtros visibles para las pastillas
+  const [visibleStatusFilters, setVisibleStatusFilters] = useState<VisibleStatusFiltersType>({
+    TODOS: false,
+    CREADA: true,
+    AGENDADA: true,
+    ELIMINADA: false,
+    COMPLETADA: false,
+    SUSPENDIDA: false
   })
 
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
@@ -298,6 +312,27 @@ const Calendar = (props: CalenderProps) => {
 
   const handleFilterStatus = (filters: StatusFiltersType) => {
     setStatusFilters(filters)
+  }
+
+  const handleVisibleFilterStatus = (filters: VisibleStatusFiltersType) => {
+    setVisibleStatusFilters(filters)
+
+    // Mapear los filtros visibles a los filtros completos
+    const newStatusFilters: StatusFiltersType = {
+      TODOS: filters.TODOS,
+      CREADA: filters.CREADA,
+      ELIMINADA: filters.ELIMINADA,
+      AGENDADA: filters.AGENDADA,
+      SUSPENDIDA: filters.SUSPENDIDA,
+      SUSPENDIDA_TERRENO: filters.SUSPENDIDA, // Mapear SUSPENDIDA a ambos tipos de suspensión
+      COMPLETADA: filters.COMPLETADA,
+      EN_REVISION: false, // Estados no visibles se mantienen en false
+      ANULADA: false,
+      RECIBIDA_OK: false,
+      CODIFICADA: false
+    }
+
+    setStatusFilters(newStatusFilters)
   }
 
   // Aplicar filtros cuando cambien los eventos o los filtros
@@ -1955,27 +1990,25 @@ const Calendar = (props: CalenderProps) => {
                   justifyContent: 'center'
                 }}
               >
-                {/* Pastilla TODOS */}
+                {/* Pastilla TODAS */}
                 <Box
                   onClick={() => {
-                    const newFilters = { ...statusFilters }
-                    if (statusFilters.TODOS) {
-                      // Si TODOS está activo, desactivarlo y activar los filtros por defecto
+                    const newFilters = { ...visibleStatusFilters }
+                    if (visibleStatusFilters.TODOS) {
+                      // Si TODAS está activo, desactivarlo y activar los filtros por defecto
                       newFilters.TODOS = false
                       newFilters.CREADA = true
                       newFilters.AGENDADA = true
-                      Object.keys(newFilters).forEach(key => {
-                        if (key !== 'TODOS' && key !== 'CREADA' && key !== 'AGENDADA') {
-                          newFilters[key as keyof StatusFiltersType] = false
-                        }
-                      })
+                      newFilters.ELIMINADA = false
+                      newFilters.COMPLETADA = false
+                      newFilters.SUSPENDIDA = false
                     } else {
-                      // Si TODOS no está activo, activarlo y desactivar todos los demás
+                      // Si TODAS no está activo, activarlo y desactivar todos los demás
                       Object.keys(newFilters).forEach(key => {
-                        newFilters[key as keyof StatusFiltersType] = key === 'TODOS'
+                        newFilters[key as keyof VisibleStatusFiltersType] = key === 'TODOS'
                       })
                     }
-                    handleFilterStatus(newFilters)
+                    handleVisibleFilterStatus(newFilters)
                   }}
                   sx={{
                     display: 'flex',
@@ -1985,11 +2018,11 @@ const Calendar = (props: CalenderProps) => {
                     py: 1,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    backgroundColor: statusFilters.TODOS ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    backgroundColor: visibleStatusFilters.TODOS ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
                     border: '1px solid #757575',
-                    color: statusFilters.TODOS ? '#1976d2' : '#757575',
+                    color: visibleStatusFilters.TODOS ? '#1976d2' : '#757575',
                     transition: 'all 0.2s',
-                    fontWeight: statusFilters.TODOS ? 'bold' : 'normal',
+                    fontWeight: visibleStatusFilters.TODOS ? 'bold' : 'normal',
                     '&:hover': {
                       backgroundColor: 'rgba(25, 118, 210, 0.12)',
                       color: '#1976d2'
@@ -2002,57 +2035,67 @@ const Calendar = (props: CalenderProps) => {
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor: statusFilters.TODOS ? '#1976d2' : '#757575'
+                      backgroundColor: visibleStatusFilters.TODOS ? '#1976d2' : '#757575'
                     }}
                   />
-                  TODOS
+                  Todas
                 </Box>
 
-                {/* Pastillas de estado */}
-                {Object.entries(statusColors).map(([status]) => (
-                  <Box
-                    key={status}
-                    onClick={() => {
-                      if (statusFilters.TODOS) {
-                        // Si TODOS está activo, no permitir cambios individuales
-                        return
-                      }
-                      handleFilterStatus({
-                        ...statusFilters,
-                        [status as StatusType]: !statusFilters[status as StatusType]
-                      })
-                    }}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 3,
-                      py: 1,
-                      borderRadius: 2,
-                      cursor: statusFilters.TODOS ? 'not-allowed' : 'pointer',
-                      backgroundColor: statusFilters[status as StatusType] ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                      border: '1px solid #757575',
-                      color: statusFilters[status as StatusType] ? '#1976d2' : '#757575',
-                      opacity: statusFilters.TODOS ? 0.5 : 1,
-                      transition: 'all 0.2s',
-                      '&:hover': statusFilters.TODOS ? {} : {
-                        backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                        color: '#1976d2'
-                      }
-                    }}
-                  >
+                {/* Pastillas de estado visibles */}
+                {(['CREADA', 'AGENDADA', 'ELIMINADA', 'COMPLETADA', 'SUSPENDIDA'] as VisibleStatusType[]).map((status) => {
+                  const statusLabels = {
+                    CREADA: 'Creada',
+                    AGENDADA: 'Agendada',
+                    ELIMINADA: 'Eliminada',
+                    COMPLETADA: 'Completadas',
+                    SUSPENDIDA: 'Suspendidas'
+                  }
+
+                  return (
                     <Box
-                      component='span'
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: statusFilters[status as StatusType] ? '#1976d2' : statusColors[status as StatusType]
+                      key={status}
+                      onClick={() => {
+                        if (visibleStatusFilters.TODOS) {
+                          // Si TODAS está activo, no permitir cambios individuales
+                          return
+                        }
+                        handleVisibleFilterStatus({
+                          ...visibleStatusFilters,
+                          [status]: !visibleStatusFilters[status]
+                        })
                       }}
-                    />
-                    {status.replace('_', ' ')}
-                  </Box>
-                ))}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        px: 3,
+                        py: 1,
+                        borderRadius: 2,
+                        cursor: visibleStatusFilters.TODOS ? 'not-allowed' : 'pointer',
+                        backgroundColor: visibleStatusFilters[status] ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                        border: '1px solid #757575',
+                        color: visibleStatusFilters[status] ? '#1976d2' : '#757575',
+                        opacity: visibleStatusFilters.TODOS ? 0.5 : 1,
+                        transition: 'all 0.2s',
+                        '&:hover': visibleStatusFilters.TODOS ? {} : {
+                          backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                          color: '#1976d2'
+                        }
+                      }}
+                    >
+                      <Box
+                        component='span'
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: visibleStatusFilters[status] ? '#1976d2' : statusColors[status as StatusType]
+                        }}
+                      />
+                      {statusLabels[status]}
+                    </Box>
+                  )
+                })}
               </Box>
             </Box>
             <FullCalendar
