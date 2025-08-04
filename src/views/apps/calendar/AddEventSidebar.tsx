@@ -858,9 +858,64 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         throw new Error(error.message || 'Error al crear la agenda')
       }
 
-      // Cerrar sidebar y mostrar mensaje de éxito
+      // Verificar si algún servicio tiene SKU 2002 para crear evento automático
+      const tieneSKU2002 = serviciosAgendados.some(servicio => servicio.codigo === '2002')
+
+      if (tieneSKU2002) {
+        try {
+          // Buscar el servicio con SKU 2003
+          const servicio2003 = servicios.find(s => s.sku === '2003')
+
+          if (servicio2003) {
+            // Calcular fecha 7 días en el futuro
+            const fechaSeguimiento = new Date(fechaInicio!)
+            fechaSeguimiento.setDate(fechaSeguimiento.getDate() + 7)
+
+            const fechaFinSeguimiento = new Date(fechaSeguimiento)
+            fechaFinSeguimiento.setHours(fechaSeguimiento.getHours() + 1)
+
+            // Preparar datos para el evento de seguimiento
+            const eventoSeguimiento = {
+              ...visitaData,
+              titulo: `Seguimiento ${cliente?.razonSocial} - ${servicio2003.nombre} (${fechaSeguimiento.toLocaleDateString('es-ES')})`,
+              fechaInicio: formatDateForBackend(fechaSeguimiento),
+              fechaFin: formatDateForBackend(fechaFinSeguimiento),
+              servicios: [{
+                codigo: servicio2003.sku,
+                servicio: servicio2003.norma ? `${servicio2003.nombre} - ${servicio2003.norma}` : servicio2003.nombre,
+                cantidad: 1,
+                esSegundaVisita: true
+              }],
+              observaciones: `Evento de seguimiento automático generado por servicio SKU 2002. ${visitaData.observaciones || ''}`.trim()
+            }
+
+            // Crear el evento de seguimiento
+            const seguimientoResponse = await fetch('/api/agenda', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(eventoSeguimiento)
+            })
+
+            if (seguimientoResponse.ok) {
+              toast.success('Visita creada exitosamente. Se ha programado automáticamente una visita de seguimiento para 7 días después.')
+            } else {
+              toast.success('Visita creada exitosamente. Error al crear la visita de seguimiento automática.')
+            }
+          } else {
+            toast.success('Visita creada exitosamente. No se pudo encontrar el servicio SKU 2003 para el seguimiento automático.')
+          }
+        } catch (error) {
+          console.error('Error al crear evento de seguimiento:', error)
+          toast.success('Visita creada exitosamente. Error al crear la visita de seguimiento automática.')
+        }
+      } else {
+        toast.success('Visita creada exitosamente')
+      }
+
+      // Cerrar sidebar
       handleCloseSidebar()
-      toast.success('Visita creada exitosamente')
     } catch (error: any) {
       console.error('Error:', error)
       toast.error(error?.message || 'Error al crear la visita')
