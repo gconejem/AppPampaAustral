@@ -415,6 +415,7 @@ model Agenda {
   comuna                String?
   direccion             String?
   referencia            String?
+  georreferencia        String?
   region                String?
   sectorComercial       String?
   horaLlegada           String?

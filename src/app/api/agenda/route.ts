@@ -27,6 +27,7 @@ export async function POST(request: Request) {
         comuna: data.comuna || '',
         direccion: data.direccion || '',
         referencia: data.referencia || '',
+        georreferencia: data.georreferencia || '',
         observaciones: data.observaciones,
         estado: data.estado || 'CREADA',
 
