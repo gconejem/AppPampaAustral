@@ -1354,20 +1354,26 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           </Grid>
         </Grid>
 
-        {/* Selección de tipo de visita - PRIMERA SECCIÓN */}
-        <Grid container spacing={2} mt={3} justifyContent='center'>
+        {/* Sección de fechas, horarios y tipo de visita */}
+        <Grid container spacing={2} mt={3} alignItems='center'>
           <Grid item xs={12}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Fechas, Horarios y Tipo de Visita
+            </Typography>
+          </Grid>
+
+          {/* Selección de tipo de visita */}
+          <Grid item xs={3}>
             <Box
               sx={{
-                p: 3,
-                border: '2px solid #e0e0e0',
-                borderRadius: 2,
-                backgroundColor: '#fafafa',
-                textAlign: 'center'
+                p: 2,
+                border: '1px solid #e0e0e0',
+                borderRadius: 1,
+                backgroundColor: '#fafafa'
               }}
             >
-              <Typography variant='h6' sx={{ color: 'primary.main', mb: 2 }}>
-                Seleccione el Tipo de Visita
+              <Typography variant='body2' sx={{ color: 'primary.main', mb: 1, fontWeight: 500 }}>
+                Tipo de Visita *
               </Typography>
               <RadioGroup
                 row
@@ -1388,161 +1394,125 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     setRecurringModalOpen(false)
                   }
                 }}
-                sx={{ justifyContent: 'center' }}
+                sx={{ justifyContent: 'flex-start' }}
               >
                 <FormControlLabel
                   value='EVENTO'
-                  control={<Radio />}
+                  control={<Radio size='small' />}
                   label='Evento Único'
-                  sx={{ mr: 4 }}
+                  sx={{ mr: 2 }}
                 />
                 <FormControlLabel
                   value='RECURRENTE'
-                  control={<Radio />}
+                  control={<Radio size='small' />}
                   label='Evento Recurrente'
                 />
               </RadioGroup>
               {!formData.tipoVisita && (
-                <Typography variant='caption' color='error' sx={{ mt: 1, display: 'block' }}>
+                <Typography variant='caption' color='error' sx={{ mt: 0.5, display: 'block' }}>
                   Debe seleccionar un tipo de visita
                 </Typography>
               )}
               {formData.tipoVisita === 'RECURRENTE' && (
-                <Typography variant='caption' color='info.main' sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                  Configure primero las fechas de recurrencia en el modal, luego complete los demás datos del evento
+                <Typography variant='caption' color='info.main' sx={{ mt: 0.5, display: 'block' }}>
+                  Configure primero las fechas de recurrencia en el modal
                 </Typography>
               )}
             </Box>
+          </Grid>
+
+          {/* Fecha Inicio */}
+          <Grid item xs={3}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+              <DatePicker
+                label='Fecha Inicio *'
+                value={fechaInicio}
+                onChange={newDate => {
+                  if (newDate) {
+                    setFechaInicio(newDate)
+                    // Si la fecha de término está vacía, usamos la misma fecha
+                    if (!fechaFin) {
+                      const endDate = new Date(newDate)
+                      endDate.setHours(newDate.getHours() + 1)
+                      setFechaFin(endDate)
+                    }
+                    // Si el tipo de visita es EVENTO, sincronizar fechaFin con fechaInicio
+                    else if (formData.tipoVisita === 'EVENTO') {
+                      const endDate = new Date(newDate)
+                      // Mantener la hora de fin actual si existe
+                      if (fechaFin) {
+                        endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
+                      } else {
+                        endDate.setHours(newDate.getHours() + 1)
+                      }
+                      setFechaFin(endDate)
+                    }
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+
+          {/* Hora inicio */}
+          <Grid item xs={2}>
+            <TextField
+              fullWidth
+              label='Hora inicio *'
+              type='time'
+              value={
+                fechaInicio
+                  ? `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
+                  : ''
+              }
+              onChange={e => {
+                const [hours, minutes] = e.target.value.split(':').map(Number)
+                const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
+                newDate.setHours(hours, minutes)
+                setFechaInicio(newDate)
+
+                // Siempre actualizar fecha fin para mantener al menos 1 hora de diferencia
+                const endDate = new Date(newDate)
+                endDate.setHours(newDate.getHours() + 1)
+                setFechaFin(endDate)
+              }}
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
+          </Grid>
+
+          {/* Hora término */}
+          <Grid item xs={2}>
+            <TextField
+              fullWidth
+              label='Hora término *'
+              type='time'
+              value={
+                fechaFin
+                  ? `${fechaFin.getHours().toString().padStart(2, '0')}:${fechaFin.getMinutes().toString().padStart(2, '0')}`
+                  : ''
+              }
+              onChange={e => {
+                const [hours, minutes] = e.target.value.split(':').map(Number)
+                const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
+                newDate.setHours(hours, minutes)
+                setFechaFin(newDate)
+              }}
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
           </Grid>
         </Grid>
 
         {/* Formulario principal - Solo se muestra si se ha seleccionado un tipo */}
         {formData.tipoVisita && (
           <>
-            {/* Sección de fechas y horarios */}
-            <Grid container spacing={2} mt={4} alignItems='center'>
-              <Grid item xs={12}>
-                <Typography variant='h6' sx={{ mb: 2 }}>
-                  Fechas y Horarios
-                </Typography>
-              </Grid>
-
-              {/* Fecha Inicio */}
-              <Grid item xs={3}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                  <DatePicker
-                    label='Fecha Inicio *'
-                    value={fechaInicio}
-                    onChange={newDate => {
-                      if (newDate) {
-                        setFechaInicio(newDate)
-                        // Si la fecha de término está vacía, usamos la misma fecha
-                        if (!fechaFin) {
-                          const endDate = new Date(newDate)
-                          endDate.setHours(newDate.getHours() + 1)
-                          setFechaFin(endDate)
-                        }
-                        // Si el tipo de visita es EVENTO, sincronizar fechaFin con fechaInicio
-                        else if (formData.tipoVisita === 'EVENTO') {
-                          const endDate = new Date(newDate)
-                          // Mantener la hora de fin actual si existe
-                          if (fechaFin) {
-                            endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
-                          } else {
-                            endDate.setHours(newDate.getHours() + 1)
-                          }
-                          setFechaFin(endDate)
-                        }
-                      }
-                    }}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-
-              {/* Fecha Fin */}
-              <Grid item xs={3}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                  <DatePicker
-                    label='Fecha Fin'
-                    value={fechaFin}
-                    onChange={newDate => {
-                      if (newDate) {
-                        setFechaFin(newDate)
-                      }
-                    }}
-                    minDate={fechaInicio || undefined}
-                    disabled={formData.tipoVisita !== 'RECURRENTE'}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        error: !!(formData.tipoVisita === 'RECURRENTE' && fechaFin && fechaInicio && fechaFin < fechaInicio),
-                        helperText: formData.tipoVisita !== 'RECURRENTE'
-                          ? ''
-                          : fechaFin && fechaInicio && fechaFin < fechaInicio
-                            ? 'La fecha de fin no puede ser anterior a la de inicio'
-                            : ''
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-
-              {/* Hora inicio */}
-              <Grid item xs={2}>
-                <TextField
-                  fullWidth
-                  label='Hora inicio *'
-                  type='time'
-                  value={
-                    fechaInicio
-                      ? `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
-                      : ''
-                  }
-                  onChange={e => {
-                    const [hours, minutes] = e.target.value.split(':').map(Number)
-                    const newDate = fechaInicio ? new Date(fechaInicio) : new Date()
-                    newDate.setHours(hours, minutes)
-                    setFechaInicio(newDate)
-
-                    // Siempre actualizar fecha fin para mantener al menos 1 hora de diferencia
-                    const endDate = new Date(newDate)
-                    endDate.setHours(newDate.getHours() + 1)
-                    setFechaFin(endDate)
-                  }}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              </Grid>
-
-              {/* Hora término */}
-              <Grid item xs={2}>
-                <TextField
-                  fullWidth
-                  label='Hora término *'
-                  type='time'
-                  value={
-                    fechaFin
-                      ? `${fechaFin.getHours().toString().padStart(2, '0')}:${fechaFin.getMinutes().toString().padStart(2, '0')}`
-                      : ''
-                  }
-                  onChange={e => {
-                    const [hours, minutes] = e.target.value.split(':').map(Number)
-                    const newDate = fechaFin ? new Date(fechaFin) : new Date(fechaInicio || new Date())
-                    newDate.setHours(hours, minutes)
-                    setFechaFin(newDate)
-                  }}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              </Grid>
-            </Grid>
 
             {/* Sección de información del cliente y obra */}
             <Grid container spacing={2} mt={4}>

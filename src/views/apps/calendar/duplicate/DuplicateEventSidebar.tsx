@@ -1210,11 +1210,6 @@ const DuplicateEventSidebar = ({
           <Box sx={{ flex: 1, overflowY: 'auto', pt: 2 }}>
             <Grid container spacing={3}>
               {/* Primera fila: Tipo/Recurrente, Fecha, Hora inicio, Hora término */}
-              <Grid item xs={3}>
-                <Box>
-
-                </Box>
-              </Grid>
 
               {/* Fecha */}
               <Grid item xs={3}>
