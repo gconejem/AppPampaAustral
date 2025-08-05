@@ -898,9 +898,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           // Calcular fecha 7 días en el futuro
           const fechaSeguimiento = new Date(fechaInicio!)
           fechaSeguimiento.setDate(fechaSeguimiento.getDate() + 7)
+          // Para SKU 2003, resetear las horas a 00:00:00 (sin hora específica)
+          fechaSeguimiento.setHours(0, 0, 0, 0)
 
           const fechaFinSeguimiento = new Date(fechaSeguimiento)
-          fechaFinSeguimiento.setHours(fechaSeguimiento.getHours() + 1)
+          // Para SKU 2003, la fecha fin también debe ser sin hora específica (00:00:00)
+          fechaFinSeguimiento.setHours(0, 0, 0, 0)
 
           // Preparar datos para el evento de seguimiento
           const eventoSeguimiento = {
