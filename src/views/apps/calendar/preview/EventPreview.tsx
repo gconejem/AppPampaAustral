@@ -116,26 +116,10 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
 
         {!loading && !error && (
           <Grid container spacing={4}>
-            {/* Primera fila: Tipo - Fecha - Hora - Estado */}
-            <Grid item xs={3}>
-              <Box>
-                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
-                  Tipo de
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <FormControlLabel
-                    control={<Checkbox checked={displayData.tipoVisita} disabled size='small' />}
-                    label='Evento'
-                  />
-                  <FormControlLabel
-                    control={<Checkbox checked={displayData.esRecurrente} disabled size='small' />}
-                    label='Recurrente'
-                  />
-                </Box>
-              </Box>
-            </Grid>
+            {/* Primera fila: Fecha - Hora - Estado */}
 
-            <Grid item xs={3}>
+
+            <Grid item xs={4}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Fecha
@@ -151,7 +135,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Hora
@@ -165,7 +149,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Box>
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Estado
