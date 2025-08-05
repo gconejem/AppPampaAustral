@@ -54,7 +54,6 @@ interface EditEventSidebarProps {
 
 interface FormData {
   titulo: string
-  tipoVisita: string
   esRecurrente: boolean
   fechaInicio: string
   fechaFin: string
@@ -157,7 +156,6 @@ interface ContactoAgendaForm {
 // Datos iniciales vacíos
 const initialData: FormData = {
   titulo: '',
-  tipoVisita: 'VISITA',
   esRecurrente: false,
   fechaInicio: '',
   fechaFin: '',
@@ -309,22 +307,7 @@ const EditEventSidebar = ({
     }
   }, [fechaFin]) // Removido horaFin de las dependencias
 
-  // Sincronizar fechaFin con fechaInicio cuando el tipo de visita es EVENTO
-  useEffect(() => {
-    if (formData.tipoVisita === 'EVENTO' && fechaInicio && !isLoadingEventData) {
-      const endDate = new Date(fechaInicio)
-      // Mantener la hora de fin actual si existe, sino usar hora de inicio + 1
-      if (fechaFin) {
-        endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
-      } else {
-        endDate.setHours(fechaInicio.getHours() + 1)
-      }
-      // Solo actualizar si la fecha es diferente para evitar loops
-      if (!fechaFin || fechaFin.getTime() !== endDate.getTime()) {
-        setFechaFin(endDate)
-      }
-    }
-  }, [formData.tipoVisita, fechaInicio, isLoadingEventData])
+
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -494,7 +477,6 @@ const EditEventSidebar = ({
           // Establecer datos del formulario
           setFormData({
             titulo: eventData.titulo || '',
-            tipoVisita: eventData.tipoVisita || 'VISITA',
             esRecurrente: eventData.esRecurrente || false,
             fechaInicio: fechaInicioFormatted,
             fechaFin: fechaFinFormatted,
@@ -1202,38 +1184,7 @@ const EditEventSidebar = ({
               </Box>
             </Grid>
 
-            <Grid item xs={2}>
-              <Box display='flex' alignItems='center' gap={1}>
-                <Typography variant='body2'>Estado</Typography>
-                {editandoEstado ? (
-                  <FormControl size='small'>
-                    <Select
-                      value={estado}
-                      onChange={e => {
-                        setEstado(e.target.value)
-                        setEditandoEstado(false)
-                      }}
-                      autoFocus
-                      onBlur={() => setEditandoEstado(false)}
-                    >
-                      <MenuItem value='CREADA'>Creada</MenuItem>
-                      <MenuItem value='AGENDADA'>Agendada</MenuItem>
-                      <MenuItem value='COMPLETADA'>Completada</MenuItem>
-                      <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
-                      <MenuItem value='CANCELADA'>Cancelada</MenuItem>
-                      <MenuItem value='EN_PROCESO'>En Proceso</MenuItem>
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <>
-                    <Typography variant='body2'>{estado}</Typography>
-                    <IconButton size='small' onClick={() => setEditandoEstado(true)}>
-                      <EditIcon fontSize='small' />
-                    </IconButton>
-                  </>
-                )}
-              </Box>
-            </Grid>
+
 
             <Grid item xs={1} display='flex' justifyContent='flex-end'>
               <Button variant='outlined' color='error' onClick={handleEditEventSidebarToggle}>
@@ -1248,28 +1199,7 @@ const EditEventSidebar = ({
               {/* Primera fila: Tipo/Recurrente, Fecha, Hora inicio, Hora término */}
               <Grid item xs={3}>
                 <Box>
-                  <FormControl fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id='tipo-visita-label'>Tipo de Visita</InputLabel>
-                    <Select
-                      labelId='tipo-visita-label'
-                      value={formData.tipoVisita}
-                      onChange={e => handleInputChange('tipoVisita', e.target.value)}
-                      label='Tipo de Visita'
-                    >
-                      <MenuItem value='VISITA'>Visita</MenuItem>
-                      <MenuItem value='EVENTO'>Evento</MenuItem>
-                    </Select>
-                  </FormControl>
 
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.esRecurrente}
-                        onChange={e => handleInputChange('esRecurrente', e.target.checked)}
-                      />
-                    }
-                    label='Es recurrente'
-                  />
                 </Box>
               </Grid>
 
@@ -1286,17 +1216,6 @@ const EditEventSidebar = ({
                         if (!fechaFin) {
                           const endDate = new Date(newDate)
                           endDate.setHours(newDate.getHours() + 1)
-                          setFechaFin(endDate)
-                        }
-                        // Si el tipo de visita es EVENTO, sincronizar fechaFin con fechaInicio
-                        else if (formData.tipoVisita === 'EVENTO') {
-                          const endDate = new Date(newDate)
-                          // Mantener la hora de fin actual si existe
-                          if (fechaFin) {
-                            endDate.setHours(fechaFin.getHours(), fechaFin.getMinutes())
-                          } else {
-                            endDate.setHours(newDate.getHours() + 1)
-                          }
                           setFechaFin(endDate)
                         }
                       }
