@@ -66,20 +66,21 @@ model CondicionComercial {
 }
 
 model User {
-  id             String           @id @default(cuid())
-  name           String?
-  email          String?          @unique
-  password       String?
-  emailVerified  DateTime?
-  image          String?
-  rut            String?
-  usuario        String?
-  activo         String           @default("ACTIVO")
-  accounts       Account[]
-  agendas        AgendaAsignado[]
-  ordenesTrabajo OrdenTrabajo[]
-  sessions       Session[]
-  roles          UserRol[]
+  id               String           @id @default(cuid())
+  name             String?
+  email            String?          @unique
+  password         String?
+  emailVerified    DateTime?
+  image            String?
+  rut              String?
+  usuario          String?
+  activo           String           @default("ACTIVO")
+  accounts         Account[]
+  agendas          AgendaAsignado[]
+  ordenesTrabajo   OrdenTrabajo[]
+  sessions         Session[]
+  roles            UserRol[]
+  equiposAsignados Equipo[]         @relation("EquiposFuncionario")
 }
 
 model Account {
@@ -388,14 +389,29 @@ model Servicio {
 }
 
 model Equipo {
-  id          Int            @id @default(autoincrement())
-  codigo      String         @unique
-  nombre      String
-  descripcion String?
-  estado      Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  agendas     AgendaEquipo[]
+  id                    Int            @id @default(autoincrement())
+  codigo                String         @unique
+  nombre                String
+  tipoEquipoId          Int
+  descripcion           String?
+  serie                 String?
+  funcionarioAsignadoId String?
+  estado                String         @default("Activo")
+  observaciones         String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  tipoEquipo            TipoEquipo     @relation(fields: [tipoEquipoId], references: [id])
+  funcionarioAsignado   User?          @relation("EquiposFuncionario", fields: [funcionarioAsignadoId], references: [id])
+  agendas               AgendaEquipo[]
+
+  @@index([tipoEquipoId])
+  @@index([funcionarioAsignadoId])
+}
+
+model TipoEquipo {
+  id      Int      @id @default(autoincrement())
+  tipo    String   @unique
+  equipos Equipo[]
 }
 
 model Agenda {
