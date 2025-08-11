@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -24,16 +24,32 @@ interface CambiarEstadoModalProps {
 
 // Estados disponibles del enum EstadoAgenda
 const ESTADOS_AGENDA = {
-  CREADA: 'Creada',
-  ELIMINADA: 'Eliminada',
   AGENDADA: 'Agendada',
   SUSPENDIDA: 'Suspendida',
-  SUSPENDIDA_TERRENO: 'Suspendida Terreno',
-  COMPLETADA: 'Completada',
-  EN_REVISION: 'En Revisión',
-  ANULADA: 'Anulada',
-  RECIBIDA_OK: 'Recibida OK',
-  CODIFICADA: 'Codificada'
+  ELIMINADA: 'Eliminada'
+}
+
+// Función para obtener estados disponibles según el estado actual
+const getEstadosDisponibles = (estadoActual: string, isBulkEdit: boolean = false) => {
+  const estadosBase = {
+    AGENDADA: 'Agendada',
+    SUSPENDIDA: 'Suspendida'
+  }
+
+  // Para edición masiva, solo mostrar estados base (sin eliminada)
+  if (isBulkEdit) {
+    return estadosBase
+  }
+
+  // Solo permitir "Eliminada" si el estado actual es "CREADA"
+  if (estadoActual === 'CREADA') {
+    return {
+      ...estadosBase,
+      ELIMINADA: 'Eliminada'
+    }
+  }
+
+  return estadosBase
 }
 
 // Motivos de suspensión del enum MotivoSuspension
@@ -53,12 +69,24 @@ const CambiarEstadoModal = ({
   onCambiarEstado,
   isBulkEdit = false
 }: CambiarEstadoModalProps) => {
-  const [selectedEstado, setSelectedEstado] = useState<string>(estadoActual)
+  // Obtener el primer estado disponible como valor por defecto
+  const estadosDisponibles = getEstadosDisponibles(estadoActual, isBulkEdit)
+  const primerEstadoDisponible = Object.keys(estadosDisponibles)[0] || 'AGENDADA'
+
+  const [selectedEstado, setSelectedEstado] = useState<string>(primerEstadoDisponible)
   const [observacionEliminada, setObservacionEliminada] = useState<string>('')
   const [motivoSuspension, setMotivoSuspension] = useState<string>('')
   const [observacionSuspendida, setObservacionSuspendida] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
+
+  // Resetear al primer estado disponible cuando cambie el estadoActual
+  useEffect(() => {
+    const nuevosEstadosDisponibles = getEstadosDisponibles(estadoActual, isBulkEdit)
+    const nuevoPrimerEstado = Object.keys(nuevosEstadosDisponibles)[0] || 'AGENDADA'
+    setSelectedEstado(nuevoPrimerEstado)
+    setError('')
+  }, [estadoActual, isBulkEdit])
 
   const handleSubmit = async () => {
     if (isLoading) return // Prevenir múltiples clicks
@@ -115,8 +143,8 @@ const CambiarEstadoModal = ({
     // No permitir cerrar mientras está cargando
     if (isLoading) return
 
-    // Limpiar campos al cerrar
-    setSelectedEstado(estadoActual)
+    // Limpiar campos al cerrar y resetear al primer estado disponible
+    setSelectedEstado(primerEstadoDisponible)
     setObservacionEliminada('')
     setMotivoSuspension('')
     setObservacionSuspendida('')
@@ -130,7 +158,13 @@ const CambiarEstadoModal = ({
       <DialogContent>
         {isBulkEdit && (
           <Alert severity='info' sx={{ mb: 2 }}>
-            El estado seleccionado se aplicará a todos los eventos seleccionados
+            El estado seleccionado se aplicará a todos los eventos seleccionados. En edición masiva no se permite cambiar a "Eliminada".
+          </Alert>
+        )}
+
+        {!isBulkEdit && estadoActual !== 'CREADA' && (
+          <Alert severity='warning' sx={{ mb: 2 }}>
+            Solo los eventos en estado "Creada" pueden cambiarse a "Eliminada".
           </Alert>
         )}
         <FormControl fullWidth sx={{ mb: 2, mt: 2 }}>
@@ -141,7 +175,7 @@ const CambiarEstadoModal = ({
             label='Estado'
             onChange={e => setSelectedEstado(e.target.value)}
           >
-            {Object.entries(ESTADOS_AGENDA).map(([key, label]) => (
+            {Object.entries(getEstadosDisponibles(estadoActual, isBulkEdit)).map(([key, label]) => (
               <MenuItem key={key} value={key}>
                 {label}
               </MenuItem>
@@ -213,7 +247,6 @@ const CambiarEstadoModal = ({
           variant='contained'
           disabled={
             isLoading ||
-            selectedEstado === estadoActual ||
             (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
             (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
             (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
