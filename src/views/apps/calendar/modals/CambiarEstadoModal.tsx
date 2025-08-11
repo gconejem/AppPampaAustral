@@ -31,25 +31,42 @@ const ESTADOS_AGENDA = {
 
 // Función para obtener estados disponibles según el estado actual
 const getEstadosDisponibles = (estadoActual: string, isBulkEdit: boolean = false) => {
-  const estadosBase = {
-    AGENDADA: 'Agendada',
-    SUSPENDIDA: 'Suspendida'
-  }
-
   // Para edición masiva, solo mostrar estados base (sin eliminada)
   if (isBulkEdit) {
-    return estadosBase
-  }
-
-  // Solo permitir "Eliminada" si el estado actual es "CREADA"
-  if (estadoActual === 'CREADA') {
     return {
-      ...estadosBase,
-      ELIMINADA: 'Eliminada'
+      AGENDADA: 'Agendada',
+      SUSPENDIDA: 'Suspendida'
     }
   }
 
-  return estadosBase
+  // Reglas específicas por estado actual
+  switch (estadoActual) {
+    case 'CREADA':
+      // CREADA puede ir a: AGENDADA, SUSPENDIDA, ELIMINADA
+      return {
+        AGENDADA: 'Agendada',
+        SUSPENDIDA: 'Suspendida',
+        ELIMINADA: 'Eliminada'
+      }
+
+    case 'AGENDADA':
+      // AGENDADA solo puede ir a: SUSPENDIDA
+      return {
+        SUSPENDIDA: 'Suspendida'
+      }
+
+    case 'SUSPENDIDA':
+      // SUSPENDIDA no puede cambiar a ningún otro estado
+      // Solo puede permanecer como SUSPENDIDA (sin opciones de cambio)
+      return {}
+
+    default:
+      // Para otros estados, solo permitir AGENDADA y SUSPENDIDA
+      return {
+        AGENDADA: 'Agendada',
+        SUSPENDIDA: 'Suspendida'
+      }
+  }
 }
 
 // Motivos de suspensión del enum MotivoSuspension
@@ -72,6 +89,7 @@ const CambiarEstadoModal = ({
   // Obtener el primer estado disponible como valor por defecto
   const estadosDisponibles = getEstadosDisponibles(estadoActual, isBulkEdit)
   const primerEstadoDisponible = Object.keys(estadosDisponibles)[0] || 'AGENDADA'
+  const noHayEstadosDisponibles = Object.keys(estadosDisponibles).length === 0
 
   const [selectedEstado, setSelectedEstado] = useState<string>(primerEstadoDisponible)
   const [observacionEliminada, setObservacionEliminada] = useState<string>('')
@@ -154,7 +172,12 @@ const CambiarEstadoModal = ({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
-      <DialogTitle>{isBulkEdit ? 'Cambiar Estado de Eventos Seleccionados' : 'Cambiar Estado del Evento'}</DialogTitle>
+      <DialogTitle>
+        {noHayEstadosDisponibles
+          ? 'Estado del Evento'
+          : (isBulkEdit ? 'Cambiar Estado de Eventos Seleccionados' : 'Cambiar Estado del Evento')
+        }
+      </DialogTitle>
       <DialogContent>
         {isBulkEdit && (
           <Alert severity='info' sx={{ mb: 2 }}>
@@ -162,28 +185,36 @@ const CambiarEstadoModal = ({
           </Alert>
         )}
 
-        {!isBulkEdit && estadoActual !== 'CREADA' && (
+        {!isBulkEdit && estadoActual !== 'CREADA' && estadoActual !== 'SUSPENDIDA' && (
           <Alert severity='warning' sx={{ mb: 2 }}>
             Solo los eventos en estado "Creada" pueden cambiarse a "Eliminada".
           </Alert>
         )}
-        <FormControl fullWidth sx={{ mb: 2, mt: 2 }}>
-          <InputLabel id='estado-select-label'>Estado</InputLabel>
-          <Select
-            labelId='estado-select-label'
-            value={selectedEstado}
-            label='Estado'
-            onChange={e => setSelectedEstado(e.target.value)}
-          >
-            {Object.entries(getEstadosDisponibles(estadoActual, isBulkEdit)).map(([key, label]) => (
-              <MenuItem key={key} value={key}>
-                {label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
 
-        {selectedEstado === 'ELIMINADA' && (
+        {!isBulkEdit && noHayEstadosDisponibles && (
+          <Alert severity='info' sx={{ mb: 2 }}>
+            Los eventos en estado "Suspendida" no pueden cambiar de estado. Sin embargo, puedes duplicar este evento desde el menú de opciones.
+          </Alert>
+        )}
+        {!noHayEstadosDisponibles && (
+          <FormControl fullWidth sx={{ mb: 2, mt: 2 }}>
+            <InputLabel id='estado-select-label'>Estado</InputLabel>
+            <Select
+              labelId='estado-select-label'
+              value={selectedEstado}
+              label='Estado'
+              onChange={e => setSelectedEstado(e.target.value)}
+            >
+              {Object.entries(getEstadosDisponibles(estadoActual, isBulkEdit)).map(([key, label]) => (
+                <MenuItem key={key} value={key}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+
+        {!noHayEstadosDisponibles && selectedEstado === 'ELIMINADA' && (
           <TextField
             fullWidth
             label='Motivo de eliminación'
@@ -197,7 +228,7 @@ const CambiarEstadoModal = ({
           />
         )}
 
-        {selectedEstado === 'SUSPENDIDA' && (
+        {!noHayEstadosDisponibles && selectedEstado === 'SUSPENDIDA' && (
           <>
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel id='motivo-suspension-label'>Motivo de suspensión</InputLabel>
@@ -239,23 +270,29 @@ const CambiarEstadoModal = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={isLoading}>
-          Cancelar
-        </Button>
+        {!noHayEstadosDisponibles && (
+          <Button onClick={handleClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+        )}
         <Button
-          onClick={handleSubmit}
+          onClick={noHayEstadosDisponibles ? handleClose : handleSubmit}
           variant='contained'
           disabled={
-            isLoading ||
-            (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
-            (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
-            (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
+            !noHayEstadosDisponibles && (
+              isLoading ||
+              (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
+              (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
+              (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
+            )
           }
           startIcon={isLoading ? <CircularProgress size={20} color='inherit' /> : undefined}
         >
-          {isLoading
-            ? 'Actualizando...'
-            : (isBulkEdit ? 'Cambiar Estado de Eventos' : 'Cambiar Estado')
+          {noHayEstadosDisponibles
+            ? 'Cerrar'
+            : (isLoading
+              ? 'Actualizando...'
+              : (isBulkEdit ? 'Cambiar Estado de Eventos' : 'Cambiar Estado'))
           }
         </Button>
       </DialogActions>

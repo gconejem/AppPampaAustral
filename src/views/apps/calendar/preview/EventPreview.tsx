@@ -284,15 +284,25 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 </Typography>
                 <Typography variant='body1'>
                   {(() => {
+                    // Buscar georreferencia directamente desde el evento o la obra
+                    const georreferencia = displayData.georreferencia ||
+                      displayData.obra?.georreferencia ||
+                      displayData.extendedProps?.obra?.georreferencia;
+
+                    if (georreferencia) {
+                      return georreferencia;
+                    }
+
+                    // Fallback: buscar latitud y longitud por separado
                     const obra = displayData.obra || displayData.extendedProps?.obra;
                     const latitud = obra?.latitud || obra?.lat;
                     const longitud = obra?.longitud || obra?.lng || obra?.lon;
 
                     if (latitud && longitud) {
                       return `${latitud}, ${longitud}`;
-                    } else {
-                      return 'No especificada';
                     }
+
+                    return 'No especificada';
                   })()}
                 </Typography>
               </Box>
@@ -583,9 +593,63 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   Observaciones
                 </Typography>
                 <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography>{displayData.observaciones || displayData.extendedProps.observaciones}</Typography>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                    {displayData.observaciones || displayData.extendedProps.observaciones}
+                  </Typography>
                 </Box>
               </Grid>
+            )}
+
+            {/* Observaciones de Suspensión - Solo para eventos SUSPENDIDA */}
+            {(displayData.estado === 'SUSPENDIDA' || displayData.extendedProps?.estado === 'SUSPENDIDA') && (
+              <>
+                {/* Motivo de suspensión */}
+                {(displayData.motivoSuspension || displayData.extendedProps?.motivoSuspension) && (
+                  <Grid item xs={6}>
+                    <Typography variant='h6' sx={{ mb: 2 }}>
+                      Motivo de Suspensión
+                    </Typography>
+                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                        {(() => {
+                          const motivo = displayData.motivoSuspension || displayData.extendedProps?.motivoSuspension;
+                          switch (motivo) {
+                            case 'CLIMA': return 'Clima';
+                            case 'TERRENO_NO_PREPARADO': return 'Terreno No Preparado';
+                            case 'PROBLEMA_PLANTA': return 'Problema Planta';
+                            case 'PROBLEMA_INTERNO_PA': return 'Problema Interno PA';
+                            case 'ACREDITACION_PERSONAL': return 'Acreditación Personal';
+                            case 'OTRO': return 'Otro (Especificado)';
+                            default: return motivo;
+                          }
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* Observaciones específicas de suspensión */}
+                {(displayData.observacionSuspendida || displayData.extendedProps?.observacionSuspendida) && (
+                  <Grid item xs={6}>
+                    <Typography variant='h6' sx={{ mb: 2 }}>
+                      Observaciones de Suspensión
+                    </Typography>
+                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                        {displayData.observacionSuspendida || displayData.extendedProps?.observacionSuspendida}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* Si solo hay motivo pero no observaciones específicas, usar columna completa */}
+                {(displayData.motivoSuspension || displayData.extendedProps?.motivoSuspension) &&
+                  !(displayData.observacionSuspendida || displayData.extendedProps?.observacionSuspendida) && (
+                    <Grid item xs={6}>
+                      {/* Columna vacía para equilibrar el layout */}
+                    </Grid>
+                  )}
+              </>
             )}
           </Grid>
         )}
