@@ -56,6 +56,7 @@ interface DuplicateEventSidebarProps {
 
 interface FormData {
   titulo: string
+  tipoVisita: string
   esRecurrente: boolean
   fechaInicio: string
   fechaFin: string
@@ -177,6 +178,7 @@ interface ContactoAgendaForm {
 // Datos iniciales vacíos
 const initialData: FormData = {
   titulo: '',
+  tipoVisita: 'EVENTO', // Las duplicaciones siempre son eventos únicos
   esRecurrente: false,
   fechaInicio: '',
   fechaFin: '',
@@ -436,12 +438,12 @@ const DuplicateEventSidebar = ({
     }
   }, [])
 
-  // Cargar equipos inicialmente
-  useEffect(() => {
-    if (duplicateEventSidebarOpen) {
-      fetchEquipos()
-    }
-  }, [duplicateEventSidebarOpen, fetchEquipos])
+  // No cargar equipos inicialmente en duplicar - solo cuando hay laboratoristas
+  // useEffect(() => {
+  //   if (duplicateEventSidebarOpen) {
+  //     fetchEquipos()
+  //   }
+  // }, [duplicateEventSidebarOpen, fetchEquipos])
 
   // Recargar equipos cuando cambien los laboratoristas asignados
   useEffect(() => {
@@ -452,8 +454,8 @@ const DuplicateEventSidebar = ({
       const ultimoLaboratorista = laboratoristasAgendados[laboratoristasAgendados.length - 1]
       fetchEquipos(ultimoLaboratorista.id)
     } else {
-      // Si no hay laboratoristas, mostrar todos los equipos
-      fetchEquipos()
+      // Si no hay laboratoristas, limpiar la lista de equipos
+      setEquipos([])
     }
   }, [laboratoristasAgendados, fetchEquipos])
 
@@ -464,6 +466,8 @@ const DuplicateEventSidebar = ({
       // Para duplicación, las fechas siempre deben ser establecidas manualmente por el usuario
       setFechaInicio(null)
       setFechaFin(null)
+      // También asegurar que no hay equipos disponibles hasta que se agreguen laboratoristas
+      setEquipos([])
     }
 
     // Resetear flag de carga cuando se cierre el sidebar
@@ -482,6 +486,8 @@ const DuplicateEventSidebar = ({
       setContactos([])
       setSelectedReferencia('')
       setSelectedGeorreferencia('')
+      // Limpiar también la lista de equipos disponibles
+      setEquipos([])
     }
   }, [duplicateEventSidebarOpen, selectedEvent])
 
@@ -545,7 +551,8 @@ const DuplicateEventSidebar = ({
           // Establecer datos del formulario
           setFormData({
             titulo: eventData.titulo || '',
-            esRecurrente: eventData.esRecurrente || false,
+            tipoVisita: 'EVENTO', // Las duplicaciones siempre son eventos únicos
+            esRecurrente: false, // Las duplicaciones nunca son recurrentes
             fechaInicio: fechaInicioFormatted,
             fechaFin: fechaFinFormatted,
             clienteId: eventData.clienteId,
@@ -599,20 +606,21 @@ const DuplicateEventSidebar = ({
           console.log('Laboratoristas del evento original (no se precargan en duplicación):', eventData.asignados)
           setLaboratoristasAgendados([])
 
-          // Procesar equipos
-          console.log('Equipos recibidos del backend:', eventData.equipos)
-          const formattedEquipos = (eventData.equipos || []).map((e: any) => {
-            console.log('Procesando equipo:', e)
-            return {
-              id: e.equipo?.id || e.equipoId || e.id,
-              codigo: e.equipo?.codigo || e.codigo || '',
-              nombre: e.equipo?.nombre || e.nombre || '',
-              cantidad: e.cantidad || 1,
-              observacion: e.observacion || ''
-            }
-          })
-          console.log('Equipos formateados:', formattedEquipos)
-          setEquiposAgendados(formattedEquipos)
+          // No procesar equipos en duplicación - deben agregarse manualmente después de asignar laboratoristas
+          // console.log('Equipos recibidos del backend:', eventData.equipos)
+          // const formattedEquipos = (eventData.equipos || []).map((e: any) => {
+          //   console.log('Procesando equipo:', e)
+          //   return {
+          //     id: e.equipo?.id || e.equipoId || e.id,
+          //     codigo: e.equipo?.codigo || e.codigo || '',
+          //     nombre: e.equipo?.nombre || e.nombre || '',
+          //     cantidad: e.cantidad || 1,
+          //     observacion: e.observacion || ''
+          //   }
+          // })
+          // console.log('Equipos formateados:', formattedEquipos)
+          // setEquiposAgendados(formattedEquipos)
+          setEquiposAgendados([]) // Limpiar equipos agendados en duplicación
 
           // Procesar contactos del evento (no de la obra)
           console.log('Contactos recibidos del backend:', eventData.contactos)
@@ -728,17 +736,19 @@ const DuplicateEventSidebar = ({
         console.error('Error cargando laboratoristas:', error)
       }
     }
-    const fetchEquipos = async () => {
-      try {
-        const response = await fetch('/api/agenda/equipos')
-        const data = await response.json()
-        setEquipos(data)
-      } catch (error) {
-        console.error('Error cargando equipos:', error)
-      }
-    }
+    // No cargar equipos inicialmente en duplicar - solo cuando hay laboratoristas
+    // const fetchEquipos = async () => {
+    //   try {
+    //     const response = await fetch('/api/agenda/equipos')
+    //     const data = await response.json()
+    //     setEquipos(data)
+    //   } catch (error) {
+    //     console.error('Error cargando equipos:', error)
+    //   }
+    // }
     fetchLaboratoristas()
-    fetchEquipos()
+    // No cargar equipos inicialmente en duplicar - solo cuando hay laboratoristas
+    // fetchEquipos()
   }, [])
 
   // Filtrar obras cuando cambia el cliente seleccionado usando useMemo
@@ -877,7 +887,6 @@ const DuplicateEventSidebar = ({
       }
 
       // Para duplicación, SIEMPRE crear con estado CREADA (sin importar las condiciones)
-      const nuevoEstado = 'CREADA'
       console.log('Creando evento duplicado con estado CREADA (fijo para duplicaciones)')
 
       // Generar título automáticamente
@@ -895,7 +904,9 @@ const DuplicateEventSidebar = ({
       const visitaData = {
         ...formData,
         titulo: tituloGenerado, // Usar el título generado con indicador de duplicación
-        estado: nuevoEstado, // Usar el nuevo estado calculado
+        tipoVisita: 'EVENTO', // Las duplicaciones siempre son eventos únicos
+        esRecurrente: false, // Las duplicaciones nunca son recurrentes
+        estado: 'CREADA', // Las duplicaciones siempre se guardan con estado CREADA
         referencia: selectedReferencia,
         georreferencia: selectedGeorreferencia,
         servicios: serviciosAgendados.map(servicio => ({
