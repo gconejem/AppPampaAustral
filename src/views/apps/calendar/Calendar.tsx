@@ -128,6 +128,7 @@ const Calendar = (props: CalenderProps) => {
   })
 
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
+  const [calendarKey, setCalendarKey] = useState<number>(0)
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -263,7 +264,15 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al cambiar el estado del evento')
       }
 
+      // Esperar a que fetchEvents complete 
       await fetchEvents()
+
+      // Forzar la actualización visual del calendario
+      setCalendarKey(prev => prev + 1)
+
+      // Pequeña pausa adicional para asegurar que la vista se actualice
+      await new Promise(resolve => setTimeout(resolve, 300))
+
       setSnackbarMessage('¡Estado actualizado exitosamente!')
       setSnackbarSeverity('success')
       setOpenSnackbar(true)
@@ -464,6 +473,11 @@ const Calendar = (props: CalenderProps) => {
       setSelectAll(false)
     }
   }, [props.selectedDate, props.selectedDateRange, props.filters, events, statusFilters])
+
+  // Forzar actualización del calendario cuando cambien los eventos filtrados
+  useEffect(() => {
+    setCalendarKey(prev => prev + 1)
+  }, [filteredEvents])
 
   // Navegar el calendario cuando cambie la fecha seleccionada
   useEffect(() => {
@@ -842,7 +856,15 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al cambiar el estado de algunos eventos')
       }
 
+      // Esperar a que fetchEvents complete y luego actualizar
       await fetchEvents()
+
+      // Forzar la actualización visual del calendario
+      setCalendarKey(prev => prev + 1)
+
+      // Pequeña pausa adicional para asegurar que la vista se actualice
+      await new Promise(resolve => setTimeout(resolve, 300))
+
       setSelectedEvents([])
       setCambiarEstadoModalOpen(false)
       enqueueSnackbar('Estado actualizado correctamente para los eventos seleccionados', {
@@ -2099,6 +2121,7 @@ const Calendar = (props: CalenderProps) => {
               </Box>
             </Box>
             <FullCalendar
+              key={calendarKey}
               ref={calendarRef}
               {...calendarOptions}
               customButtons={{

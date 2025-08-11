@@ -11,6 +11,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
+import CircularProgress from '@mui/material/CircularProgress'
 
 interface CambiarEstadoModalProps {
   open: boolean
@@ -57,49 +58,63 @@ const CambiarEstadoModal = ({
   const [motivoSuspension, setMotivoSuspension] = useState<string>('')
   const [observacionSuspendida, setObservacionSuspendida] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   const handleSubmit = async () => {
+    if (isLoading) return // Prevenir múltiples clicks
+
+    setError('')
+
+    // Validar que si el estado es ELIMINADA, se haya ingresado una observación
+    if (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) {
+      setError('Debe ingresar un motivo para eliminar el evento')
+      return
+    }
+
+    // Validar que si el estado es SUSPENDIDA, se haya seleccionado un motivo
+    if (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) {
+      setError('Debe seleccionar un motivo de suspensión')
+      return
+    }
+
+    // Validar que si el motivo es OTRO, se haya ingresado una observación
+    if (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim()) {
+      setError('Debe especificar el motivo de suspensión')
+      return
+    }
+
     try {
-      // Validar que si el estado es ELIMINADA, se haya ingresado una observación
-      if (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) {
-        setError('Debe ingresar un motivo para eliminar el evento')
-        return
-      }
+      setIsLoading(true)
 
-      // Validar que si el estado es SUSPENDIDA, se haya seleccionado un motivo
-      if (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) {
-        setError('Debe seleccionar un motivo de suspensión')
-        return
-      }
-
-      // Validar que si el motivo es OTRO, se haya ingresado una observación
-      if (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim()) {
-        setError('Debe especificar el motivo de suspensión')
-        return
-      }
-
+      // Esperar a que se complete la operación completamente
       await onCambiarEstado(
         selectedEstado,
         selectedEstado === 'ELIMINADA' ? observacionEliminada : undefined,
         selectedEstado === 'SUSPENDIDA' ? motivoSuspension : undefined,
         selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' ? observacionSuspendida : undefined
       )
-      onClose()
-      // Limpiar campos al cerrar
+
+      // Solo limpiar campos y cerrar si la operación fue exitosa
       setObservacionEliminada('')
       setMotivoSuspension('')
       setObservacionSuspendida('')
       setError('')
+      onClose()
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message)
       } else {
         setError('Error al cambiar el estado')
       }
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleClose = () => {
+    // No permitir cerrar mientras está cargando
+    if (isLoading) return
+
     // Limpiar campos al cerrar
     setSelectedEstado(estadoActual)
     setObservacionEliminada('')
@@ -190,18 +205,25 @@ const CambiarEstadoModal = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancelar</Button>
+        <Button onClick={handleClose} disabled={isLoading}>
+          Cancelar
+        </Button>
         <Button
           onClick={handleSubmit}
           variant='contained'
           disabled={
+            isLoading ||
             selectedEstado === estadoActual ||
             (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
             (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
             (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
           }
+          startIcon={isLoading ? <CircularProgress size={20} color='inherit' /> : undefined}
         >
-          {isBulkEdit ? 'Cambiar Estado de Eventos' : 'Cambiar Estado'}
+          {isLoading
+            ? 'Actualizando...'
+            : (isBulkEdit ? 'Cambiar Estado de Eventos' : 'Cambiar Estado')
+          }
         </Button>
       </DialogActions>
     </Dialog>
