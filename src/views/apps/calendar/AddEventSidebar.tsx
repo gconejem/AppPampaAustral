@@ -181,6 +181,18 @@ interface Equipo {
   codigo: string
   nombre: string
   descripcion?: string
+  serie?: string
+  estado: string
+  tipoEquipo?: {
+    id: number
+    tipo: string
+  }
+  funcionarioAsignado?: {
+    id: string
+    name: string
+    email: string
+  }
+  esAsignadoAlLaboratorista?: boolean
 }
 
 interface EquipoAgendado {
@@ -491,23 +503,43 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     fetchLaboratoristas()
   }, [])
 
-  useEffect(() => {
-    const fetchEquipos = async () => {
-      try {
-        console.log('Iniciando carga de equipos...')
-        const response = await fetch('/api/agenda/equipos')
-        const data = await response.json()
+  // Función para cargar equipos (reutilizable)
+  const fetchEquipos = useCallback(async (laboratoristaId?: string) => {
+    try {
+      console.log('Iniciando carga de equipos...', laboratoristaId ? `para laboratorista: ${laboratoristaId}` : 'todos los equipos')
+      const url = laboratoristaId
+        ? `/api/agenda/equipos?laboratoristaId=${encodeURIComponent(laboratoristaId)}`
+        : '/api/agenda/equipos'
 
-        console.log('Equipos cargados:', data)
+      const response = await fetch(url)
+      const data = await response.json()
 
-        setEquipos(data)
-      } catch (error) {
-        console.error('Error cargando equipos:', error)
-      }
+      console.log('Equipos cargados:', data)
+
+      setEquipos(data)
+    } catch (error) {
+      console.error('Error cargando equipos:', error)
     }
-
-    fetchEquipos()
   }, [])
+
+  // Cargar equipos inicialmente
+  useEffect(() => {
+    fetchEquipos()
+  }, [fetchEquipos])
+
+  // Recargar equipos cuando cambien los laboratoristas asignados
+  useEffect(() => {
+    console.log('Laboratoristas agendados cambió:', laboratoristasAgendados)
+
+    if (laboratoristasAgendados.length > 0) {
+      // Si hay laboratoristas asignados, priorizar el último seleccionado
+      const ultimoLaboratorista = laboratoristasAgendados[laboratoristasAgendados.length - 1]
+      fetchEquipos(ultimoLaboratorista.id)
+    } else {
+      // Si no hay laboratoristas, mostrar todos los equipos
+      fetchEquipos()
+    }
+  }, [laboratoristasAgendados, fetchEquipos])
 
   // efecto para ver los contactos actualizados
   useEffect(() => {
@@ -2443,9 +2475,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   }}
                   onChange={(_, newValue) => {
                     if (newValue) {
-                      // Verificar si el laboratorista ya está agregado
                       const yaExiste = laboratoristasAgendados.some(lab => lab.id === newValue.id)
-                      if (!yaExiste) {
+                      if (yaExiste) {
+                        toast.error('El laboratorista ya fue agregado')
+                        // Aun así, cargar equipos asignados a este laboratorista seleccionado
+                        fetchEquipos(newValue.id)
+                      } else {
                         const nuevoLaboratorista: LaboratoristaAgendado = {
                           id: newValue.id,
                           nombre: newValue.name,
@@ -2453,10 +2488,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                         }
                         setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
                       }
-                      // Limpiar la selección y el campo de búsqueda forzando re-render
                       setLaboratoristaSeleccionado(null)
                       setLaboratoristaInputValue('')
-                      setLaboratoristaKey(prev => prev + 1) // Forzar re-render del componente
+                      setLaboratoristaKey(prev => prev + 1)
                     }
                   }}
                   renderInput={params => (
@@ -2514,8 +2548,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 <Autocomplete
                   key={equipoKey}
                   fullWidth
-                  options={equipos}
-                  getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+                  options={[...equipos].sort((a, b) => Number(!!b.esAsignadoAlLaboratorista) - Number(!!a.esAsignadoAlLaboratorista))}
+                  getOptionLabel={option => `${option.codigo} - ${option.nombre}${option.tipoEquipo ? ` (${option.tipoEquipo.tipo})` : ''}`}
                   value={equipoSeleccionado}
                   inputValue={equipoInputValue}
                   onInputChange={(_, newInputValue) => {
@@ -2523,9 +2557,20 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                   }}
                   onChange={(_, newValue) => {
                     if (newValue) {
-                      // Verificar si el equipo ya está agregado
+                      // Bloquear selección si el equipo está asignado a otro laboratorista distinto a los agendados
+                      const asignadoAId = newValue.funcionarioAsignado?.id
+                      if (asignadoAId && !laboratoristasAgendados.some(l => l.id === asignadoAId)) {
+                        toast.error('El equipo está asignado a otro laboratorista')
+                        setEquipoSeleccionado(null)
+                        setEquipoInputValue('')
+                        setEquipoKey(prev => prev + 1)
+                        return
+                      }
+
                       const yaExiste = equiposAgendados.some(equipo => equipo.id === newValue.id)
-                      if (!yaExiste) {
+                      if (yaExiste) {
+                        toast.error('El equipo ya fue agregado')
+                      } else {
                         const nuevoEquipo: EquipoAgendado = {
                           id: newValue.id,
                           codigo: newValue.codigo,
@@ -2533,17 +2578,50 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                         }
                         setEquiposAgendados(prev => [...prev, nuevoEquipo])
                       }
-                      // Limpiar la selección y el campo de búsqueda forzando re-render
                       setEquipoSeleccionado(null)
                       setEquipoInputValue('')
-                      setEquipoKey(prev => prev + 1) // Forzar re-render del componente
+                      setEquipoKey(prev => prev + 1)
                     }
                   }}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} key={option.id}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="body1" sx={{ fontWeight: option.esAsignadoAlLaboratorista ? 'bold' : 'normal' }}>
+                            {option.codigo} - {option.nombre}
+                          </Typography>
+                          {option.esAsignadoAlLaboratorista && (
+                            <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                              ASIGNADO
+                            </Typography>
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {option.tipoEquipo && (
+                            <Typography variant="caption" color="text.secondary">
+                              Tipo: {option.tipoEquipo.tipo}
+                            </Typography>
+                          )}
+                          {option.serie && (
+                            <Typography variant="caption" color="text.secondary">
+                              • Serie: {option.serie}
+                            </Typography>
+                          )}
+                          {option.funcionarioAsignado && !option.esAsignadoAlLaboratorista && (
+                            <Typography variant="caption" color="warning.main">
+                              • Asignado a: {option.funcionarioAsignado.name}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  )}
                   renderInput={params => (
                     <TextField
                       {...params}
                       label='Equipo'
                       placeholder='Seleccione un equipo para agregarlo automáticamente'
+                      helperText={laboratoristasAgendados.length > 0 ? 'Mostrando equipos del último laboratorista seleccionado primero' : 'Todos los equipos disponibles'}
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: (

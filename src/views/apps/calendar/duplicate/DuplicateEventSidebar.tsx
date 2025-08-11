@@ -41,6 +41,7 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Switch from '@mui/material/Switch'
+import { toast } from 'react-hot-toast'
 
 // Hooks
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
@@ -95,6 +96,25 @@ interface EquipoAgendado {
   codigo: string
   cantidad: number
   observacion?: string
+}
+
+interface Equipo {
+  id: number
+  codigo: string
+  nombre: string
+  descripcion?: string
+  serie?: string
+  estado: string
+  tipoEquipo?: {
+    id: number
+    tipo: string
+  }
+  funcionarioAsignado?: {
+    id: string
+    name: string
+    email: string
+  }
+  esAsignadoAlLaboratorista?: boolean
 }
 
 // Interfaces para datos cargados
@@ -357,11 +377,7 @@ const DuplicateEventSidebar = ({
 
         setLaboratoristas(formattedLaboratoristas)
 
-        // Cargar equipos disponibles (para el dropdown)
-        const equiposRes = await fetch('/api/agenda/equipos')
-        const equiposData = await equiposRes.json()
-
-        setEquipos(equiposData)
+        // Los equipos se cargarán dinámicamente basados en laboratoristas
 
         // Los servicios se cargan dinámicamente en el popover, no aquí
 
@@ -400,6 +416,46 @@ const DuplicateEventSidebar = ({
         setServicios([])
       })
   }, [])
+
+  // Función para cargar equipos (reutilizable)
+  const fetchEquipos = useCallback(async (laboratoristaId?: string) => {
+    try {
+      console.log('Iniciando carga de equipos...', laboratoristaId ? `para laboratorista: ${laboratoristaId}` : 'todos los equipos')
+      const url = laboratoristaId
+        ? `/api/agenda/equipos?laboratoristaId=${encodeURIComponent(laboratoristaId)}`
+        : '/api/agenda/equipos'
+
+      const response = await fetch(url)
+      const data = await response.json()
+
+      console.log('Equipos cargados:', data)
+
+      setEquipos(data)
+    } catch (error) {
+      console.error('Error cargando equipos:', error)
+    }
+  }, [])
+
+  // Cargar equipos inicialmente
+  useEffect(() => {
+    if (duplicateEventSidebarOpen) {
+      fetchEquipos()
+    }
+  }, [duplicateEventSidebarOpen, fetchEquipos])
+
+  // Recargar equipos cuando cambien los laboratoristas asignados
+  useEffect(() => {
+    console.log('Laboratoristas agendados cambió:', laboratoristasAgendados)
+
+    if (laboratoristasAgendados.length > 0) {
+      // Si hay laboratoristas asignados, priorizar el último seleccionado
+      const ultimoLaboratorista = laboratoristasAgendados[laboratoristasAgendados.length - 1]
+      fetchEquipos(ultimoLaboratorista.id)
+    } else {
+      // Si no hay laboratoristas, mostrar todos los equipos
+      fetchEquipos()
+    }
+  }, [laboratoristasAgendados, fetchEquipos])
 
   // Resetear estado cuando se abre/cierra el sidebar
   useEffect(() => {
@@ -604,8 +660,8 @@ const DuplicateEventSidebar = ({
   const [laboratoristaInputValue, setLaboratoristaInputValue] = useState<string>('')
   const [laboratoristaKey, setLaboratoristaKey] = useState<number>(0)
 
-  const [equipos, setEquipos] = useState<any[]>([])
-  const [equipoSeleccionado, setEquipoSeleccionado] = useState<any | null>(null)
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null)
   const [equipoInputValue, setEquipoInputValue] = useState<string>('')
   const [equipoKey, setEquipoKey] = useState<number>(0)
 
@@ -928,9 +984,12 @@ const DuplicateEventSidebar = ({
   // Métodos para agregar laboratorista y equipo (similar a AddEventSidebar)
   const handleAgregarLaboratorista = (newValue: any) => {
     if (newValue) {
-      // Verificar si el laboratorista ya está agregado
       const yaExiste = laboratoristasAgendados.some(lab => lab.id === newValue.id)
-      if (!yaExiste) {
+      if (yaExiste) {
+        toast.error('El laboratorista ya fue agregado')
+        // Aun así, cargar equipos asignados a este laboratorista seleccionado
+        fetchEquipos(newValue.id)
+      } else {
         const nuevoLaboratorista: LaboratoristaAgendado = {
           id: newValue.id,
           nombre: newValue.name,
@@ -938,7 +997,6 @@ const DuplicateEventSidebar = ({
         }
         setLaboratoristasAgendados(prev => [...prev, nuevoLaboratorista])
       }
-      // Limpiar la selección y el campo de búsqueda forzando re-render
       setLaboratoristaSeleccionado(null)
       setLaboratoristaInputValue('')
       setLaboratoristaKey(prev => prev + 1)
@@ -947,9 +1005,20 @@ const DuplicateEventSidebar = ({
 
   const handleAgregarEquipo = (newValue: any) => {
     if (newValue) {
-      // Verificar si el equipo ya está agregado
+      // Bloquear selección si el equipo está asignado a otro laboratorista distinto a los agendados
+      const asignadoAId = newValue.funcionarioAsignado?.id
+      if (asignadoAId && !laboratoristasAgendados.some(l => l.id === asignadoAId)) {
+        toast.error('El equipo está asignado a otro laboratorista')
+        setEquipoSeleccionado(null)
+        setEquipoInputValue('')
+        setEquipoKey(prev => prev + 1)
+        return
+      }
+
       const yaExiste = equiposAgendados.some(equipo => equipo.id === newValue.id)
-      if (!yaExiste) {
+      if (yaExiste) {
+        toast.error('El equipo ya fue agregado')
+      } else {
         const nuevoEquipo: EquipoAgendado = {
           id: newValue.id,
           codigo: newValue.codigo,
@@ -959,7 +1028,6 @@ const DuplicateEventSidebar = ({
         }
         setEquiposAgendados(prev => [...prev, nuevoEquipo])
       }
-      // Limpiar la selección y el campo de búsqueda forzando re-render
       setEquipoSeleccionado(null)
       setEquipoInputValue('')
       setEquipoKey(prev => prev + 1)
@@ -2307,19 +2375,53 @@ const DuplicateEventSidebar = ({
                   <Autocomplete
                     key={equipoKey}
                     fullWidth
-                    options={equipos}
-                    getOptionLabel={option => `${option.codigo} - ${option.nombre}`}
+                    options={[...equipos].sort((a, b) => Number(!!b.esAsignadoAlLaboratorista) - Number(!!a.esAsignadoAlLaboratorista))}
+                    getOptionLabel={option => `${option.codigo} - ${option.nombre}${option.tipoEquipo ? ` (${option.tipoEquipo.tipo})` : ''}`}
                     value={equipoSeleccionado}
                     inputValue={equipoInputValue}
                     onInputChange={(_, newInputValue) => {
                       setEquipoInputValue(newInputValue)
                     }}
                     onChange={(_, newValue) => handleAgregarEquipo(newValue)}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={option.id}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body1" sx={{ fontWeight: option.esAsignadoAlLaboratorista ? 'bold' : 'normal' }}>
+                              {option.codigo} - {option.nombre}
+                            </Typography>
+                            {option.esAsignadoAlLaboratorista && (
+                              <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                                ASIGNADO
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {option.tipoEquipo && (
+                              <Typography variant="caption" color="text.secondary">
+                                Tipo: {option.tipoEquipo.tipo}
+                              </Typography>
+                            )}
+                            {option.serie && (
+                              <Typography variant="caption" color="text.secondary">
+                                • Serie: {option.serie}
+                              </Typography>
+                            )}
+                            {option.funcionarioAsignado && !option.esAsignadoAlLaboratorista && (
+                              <Typography variant="caption" color="warning.main">
+                                • Asignado a: {option.funcionarioAsignado.name}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
                     renderInput={params => (
                       <TextField
                         {...params}
                         label='Equipo'
                         placeholder='Seleccione un equipo para agregarlo automáticamente'
+                        helperText={laboratoristasAgendados.length > 0 ? 'Mostrando equipos del último laboratorista seleccionado primero' : 'Todos los equipos disponibles'}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
