@@ -306,7 +306,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Contactos
               </Typography>
               {Array.isArray(displayData.contactos) && displayData.contactos.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -320,7 +320,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.contactos.map((contacto: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
                           </TableCell>
@@ -335,7 +335,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   </Table>
                 </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.contactos) && displayData.extendedProps.contactos.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -349,7 +349,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.extendedProps.contactos.map((contacto: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {ROLES_CONTACTO.find(r => r.value === contacto.rol)?.label || contacto.rol}
                           </TableCell>
@@ -374,7 +374,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Servicios
               </Typography>
               {Array.isArray(displayData.servicios) && displayData.servicios.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -387,7 +387,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.servicios.map((servicio: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {servicio.servicio} {servicio.norma ? `- ${servicio.norma}` : ''}
                           </TableCell>
@@ -401,7 +401,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   </Table>
                 </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.servicios) && displayData.extendedProps.servicios.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -414,7 +414,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.extendedProps.servicios.map((servicio: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {servicio.servicio} {servicio.norma ? `- ${servicio.norma}` : ''}
                           </TableCell>
@@ -438,7 +438,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Laboratoristas Asignados
               </Typography>
               {Array.isArray(displayData.asignados) && displayData.asignados.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -449,7 +449,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.asignados.map((asignado: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {asignado?.user?.name || asignado?.name || 'No especificado'}
                           </TableCell>
@@ -469,7 +469,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                   </Table>
                 </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.asignados) && displayData.extendedProps.asignados.length > 0 ? (
-                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -480,7 +480,7 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                     </TableHead>
                     <TableBody>
                       {displayData.extendedProps.asignados.map((asignado: any, index: number) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
                           <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                             {asignado?.name || asignado?.user?.name || 'No especificado'}
                           </TableCell>
@@ -510,87 +510,67 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 Equipos
               </Typography>
               {Array.isArray(displayData.equipos) && displayData.equipos.length > 0 ? (
-                displayData.equipos.map((equipo: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Equipo
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {equipo.equipo?.nombre}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Código
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {equipo.equipo?.codigo}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Cantidad
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {equipo.cantidad}
-                        </Typography>
-                      </Grid>
-                      {equipo.observacion && (
-                        <Grid item xs={12} md={3}>
-                          <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                            Observación
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.875rem' }}>
-                            {equipo.observacion}
-                          </Typography>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Equipo</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Código</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Cantidad</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Observación</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.equipos.map((equipo: any, index: number) => (
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.equipo?.nombre}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.equipo?.codigo}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.cantidad}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.observacion || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : Array.isArray(displayData.extendedProps?.equipos) && displayData.extendedProps.equipos.length > 0 ? (
-                displayData.extendedProps.equipos.map((equipo: any, index: number) => (
-                  <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Equipo
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {equipo.equipo?.nombre}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Código
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {equipo.equipo?.codigo}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                          Cantidad
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.875rem' }}>
-                          {equipo.cantidad}
-                        </Typography>
-                      </Grid>
-                      {equipo.observacion && (
-                        <Grid item xs={12} md={3}>
-                          <Typography variant='subtitle2' sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-                            Observación
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.875rem' }}>
-                            {equipo.observacion}
-                          </Typography>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </Box>
-                ))
+                <TableContainer component={Paper} elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Equipo</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Código</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Cantidad</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderColor: 'divider' }}>Observación</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayData.extendedProps.equipos.map((equipo: any, index: number) => (
+                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.equipo?.nombre}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.equipo?.codigo}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.cantidad}
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {equipo.observacion || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               ) : (
                 <Typography color='text.secondary'>No hay equipos asignados</Typography>
               )}
