@@ -32,12 +32,12 @@ import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 // Modificar el tipo Dictionary para hacerlo más seguro
 type Dictionary =
   | {
-      navigation: {
-        formsAndTables: string
-        appsPages: string
-        [key: string]: string
-      }
+    navigation: {
+      formsAndTables: string
+      appsPages: string
+      [key: string]: string
     }
+  }
   | undefined
 
 type RenderExpandIconProps = {
@@ -82,13 +82,13 @@ const VerticalMenu = () => {
         <ScrollWrapper
           {...(isBreakpointReached
             ? {
-                className: 'bs-full overflow-y-auto overflow-x-hidden',
-                onScroll: container => scrollMenu(container, false)
-              }
+              className: 'bs-full overflow-y-auto overflow-x-hidden',
+              onScroll: container => scrollMenu(container, false)
+            }
             : {
-                options: { wheelPropagation: false, suppressScrollX: true },
-                onScrollY: container => scrollMenu(container, true)
-              })}
+              options: { wheelPropagation: false, suppressScrollX: true },
+              onScrollY: container => scrollMenu(container, true)
+            })}
         >
           {/* Vertical Menu */}
           <Menu
@@ -130,7 +130,7 @@ const VerticalMenu = () => {
               </MenuItem> */}
 
               <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
-              App
+                App
               </MenuItem>
 
             </MenuSection>
@@ -146,6 +146,9 @@ const VerticalMenu = () => {
                 <MenuItem href={`/${locale}/apps/contacts`} icon={<i className='ri-book-line' />}>
                   Contactos
                 </MenuItem>
+                {/* <MenuItem href={`/${locale}/apps/equipos`} icon={<i className='ri-hammer-line' />}>
+                  Equipos
+                </MenuItem> */}
               </SubMenu>
               <SubMenu label='Productos' icon={<i className='ri-shopping-bag-line' />}>
                 <MenuItem href={`/${locale}/apps/products`} icon={<i className='ri-price-tag-3-line' />}>
