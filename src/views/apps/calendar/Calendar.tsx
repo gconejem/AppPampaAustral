@@ -33,6 +33,7 @@ import { useSnackbar } from 'notistack'
 import EventPreview from './preview/EventPreview'
 import EditEventSidebar from './edit/EditEventSidebar'
 import DuplicateEventSidebar from './duplicate/DuplicateEventSidebar'
+import AddEventSidebar from './AddEventSidebar'
 import AsignarLaboratoristaModal from './modals/AsignarLaboratoristaModal'
 import ReprogramarEventoModal from './modals/ReprogramarEventoModal'
 import { formatDateForBackend } from '@/utils/dateUtils'
@@ -42,6 +43,7 @@ import { parseDateFromBackend } from '@/utils/dateUtils'
 
 type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
+  addEventSidebarOpen: boolean
 }
 
 type StatusType = 'CREADA' | 'ELIMINADA' | 'AGENDADA' | 'SUSPENDIDA' | 'SUSPENDIDA_TERRENO' | 'COMPLETADA' | 'EN_REVISION' | 'ANULADA' | 'RECIBIDA_OK' | 'CODIFICADA'
@@ -189,6 +191,10 @@ const Calendar = (props: CalenderProps) => {
     if (duplicateEventSidebarOpen) {
       fetchEvents()
     }
+  }
+
+  const handleAddEventSidebarToggleInternal = () => {
+    props.handleAddEventSidebarToggle()
   }
 
   const handleEventMenuClose = () => {
@@ -1941,6 +1947,22 @@ const Calendar = (props: CalenderProps) => {
     fetchEvents()
   }, [props.selectedDate, props.selectedDateRange, props.filters])
 
+  // useRef para trackear el estado anterior del AddEventSidebar
+  const prevAddEventSidebarOpen = useRef(props.addEventSidebarOpen)
+
+  // useEffect para refrescar eventos cuando se cierra el AddEventSidebar
+  useEffect(() => {
+    // Solo ejecutar si el sidebar se está cerrando (era true y ahora es false)
+    if (prevAddEventSidebarOpen.current && !props.addEventSidebarOpen) {
+      // Usar un pequeño delay para asegurar que el evento se haya creado
+      setTimeout(() => {
+        fetchEvents()
+      }, 100)
+    }
+    // Actualizar la referencia para el próximo ciclo
+    prevAddEventSidebarOpen.current = props.addEventSidebarOpen
+  }, [props.addEventSidebarOpen])
+
   return (
     <>
       <Card>
@@ -2127,7 +2149,7 @@ const Calendar = (props: CalenderProps) => {
               customButtons={{
                 addEventButton: {
                   text: 'Agregar Evento',
-                  click: props.handleAddEventSidebarToggle
+                  click: handleAddEventSidebarToggleInternal
                 }
               }}
             />
@@ -2145,6 +2167,10 @@ const Calendar = (props: CalenderProps) => {
         duplicateEventSidebarOpen={duplicateEventSidebarOpen}
         handleDuplicateEventSidebarToggle={handleDuplicateEventSidebarToggle}
         selectedEvent={selectedEventForView}
+      />
+      <AddEventSidebar
+        addEventSidebarOpen={props.addEventSidebarOpen}
+        handleAddEventSidebarToggle={handleAddEventSidebarToggleInternal}
       />
       <AsignarLaboratoristaModal
         open={asignarLaboratoristaOpen}

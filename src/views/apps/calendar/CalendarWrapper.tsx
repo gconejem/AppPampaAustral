@@ -195,6 +195,7 @@ const AppCalendar = () => {
       <div className='p-5 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
+          addEventSidebarOpen={addEventSidebarOpen}
           selectedDate={dateRangeEnabled ? null : selectedDate}
           selectedDateRange={dateRangeEnabled ? selectedDateRange : null}
           filters={filters}
