@@ -131,6 +131,7 @@ const Calendar = (props: CalenderProps) => {
 
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
   const [calendarKey, setCalendarKey] = useState<number>(0)
+  const [currentView, setCurrentView] = useState<string>('listMonth')
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -273,11 +274,20 @@ const Calendar = (props: CalenderProps) => {
       // Esperar a que fetchEvents complete 
       await fetchEvents()
 
-      // Forzar la actualización visual del calendario
+      // Preservar la vista actual y forzar la actualización visual del calendario
+      const preservedView = currentView
       setCalendarKey(prev => prev + 1)
 
       // Pequeña pausa adicional para asegurar que la vista se actualice
       await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Restaurar la vista si no es listMonth
+      if (calendarRef.current && preservedView !== 'listMonth') {
+        const calendarApi = calendarRef.current.getApi()
+        if (calendarApi.view.type !== preservedView) {
+          calendarApi.changeView(preservedView)
+        }
+      }
 
       setSnackbarMessage('¡Estado actualizado exitosamente!')
       setSnackbarSeverity('success')
@@ -480,10 +490,21 @@ const Calendar = (props: CalenderProps) => {
     }
   }, [props.selectedDate, props.selectedDateRange, props.filters, events, statusFilters])
 
-  // Forzar actualización del calendario cuando cambien los eventos filtrados
+  // Solo forzar actualización del calendario cuando cambien los filtros de estado
+  // (no cuando cambien solo los eventos por filtros de fecha/cliente)
   useEffect(() => {
+    const preservedView = currentView
     setCalendarKey(prev => prev + 1)
-  }, [filteredEvents])
+    // Preservar la vista actual después de recrear el calendario
+    setTimeout(() => {
+      if (calendarRef.current && preservedView !== 'listMonth') {
+        const calendarApi = calendarRef.current.getApi()
+        if (calendarApi.view.type !== preservedView) {
+          calendarApi.changeView(preservedView)
+        }
+      }
+    }, 100)
+  }, [statusFilters]) // Solo cuando cambien los filtros de estado
 
   // Navegar el calendario cuando cambie la fecha seleccionada
   useEffect(() => {
@@ -865,11 +886,20 @@ const Calendar = (props: CalenderProps) => {
       // Esperar a que fetchEvents complete y luego actualizar
       await fetchEvents()
 
-      // Forzar la actualización visual del calendario
+      // Preservar la vista actual y forzar la actualización visual del calendario
+      const preservedView = currentView
       setCalendarKey(prev => prev + 1)
 
       // Pequeña pausa adicional para asegurar que la vista se actualice
       await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Restaurar la vista si no es listMonth
+      if (calendarRef.current && preservedView !== 'listMonth') {
+        const calendarApi = calendarRef.current.getApi()
+        if (calendarApi.view.type !== preservedView) {
+          calendarApi.changeView(preservedView)
+        }
+      }
 
       setSelectedEvents([])
       setCambiarEstadoModalOpen(false)
@@ -911,7 +941,7 @@ const Calendar = (props: CalenderProps) => {
   const calendarOptions: CalendarOptions = {
     events: filteredEvents,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    initialView: 'listMonth',
+    initialView: currentView,
     locale: esLocale,
     buttonText: {
       today: 'Hoy',
@@ -1677,6 +1707,10 @@ const Calendar = (props: CalenderProps) => {
     eventClick: undefined,
     dateClick(info) {
       console.log('Fecha clickeada:', info.date)
+    },
+    viewDidMount(info) {
+      // Actualizar la vista actual cuando cambia
+      setCurrentView(info.view.type)
     },
     eventContent: (info: EventInfo) => {
       // Si estamos en la vista de lista, no aplicamos ningún estilo especial
