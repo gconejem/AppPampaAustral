@@ -2044,6 +2044,17 @@ const Calendar = (props: CalenderProps) => {
               margin: '0 auto',
               marginLeft: '0px !important'
             },
+            // Quitar fondo azul por defecto de los eventos en vistas de día y semana
+            '& .fc-timegrid-event, & .fc-v-event': {
+              backgroundColor: 'transparent !important',
+              border: 'none !important',
+              boxShadow: 'none !important'
+            },
+            '& .fc-timegrid-event .fc-event-main, & .fc-v-event .fc-event-main': {
+              backgroundColor: 'transparent !important',
+              border: 'none !important',
+              boxShadow: 'none !important'
+            },
             '& .fc-listMonth-view': {
               width: '100%'
             },
