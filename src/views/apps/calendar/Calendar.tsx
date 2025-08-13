@@ -1767,46 +1767,43 @@ const Calendar = (props: CalenderProps) => {
         }
       }
 
-      // Para otras vistas (semana, día)
-      const timeText = info.timeText || ''
-      const title = info.event.title || ''
+      // Para otras vistas (semana, día) - mismo estilo que vista mensual
+      const timeText = info.timeText ? info.timeText.replace(/\s/g, '') : ''
+      const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
+      const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
+      const comuna = info.event.extendedProps?.comuna || ''
+
+      // Crear partes del texto con validación
+      const parts = []
+      if (timeText) parts.push(timeText)
+      if (numeroObra) parts.push(numeroObra)
+      if (cliente) parts.push(cliente)
+      if (comuna) parts.push(comuna)
+
+      const displayText = parts.join(' - ')
 
       return {
         html: `
           <div style="
-            background-color: ${alpha(backgroundColor, 0.1)};
-            border-left: 4px solid ${backgroundColor};
-            padding: 4px 8px;
-            margin: 2px;
-            border-radius: 4px;
-            max-width: 100%;
+            background-color: ${alpha(backgroundColor, 0.15)};
+            border-radius: 10px;
+            padding: 2px 8px;
+            margin: 0;
+            width: 100%;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
           ">
             <div style="
               color: ${backgroundColor};
-              font-weight: 500;
-              font-size: 0.875rem;
+              font-weight: bold;
+              font-size: 0.7rem;
               line-height: 1.2;
               overflow: hidden;
               text-overflow: ellipsis;
             ">
-              ${title}
+              ${displayText}
             </div>
-            ${timeText
-            ? `
-              <div style="
-                font-size: 0.75rem;
-                color: ${alpha(backgroundColor, 0.8)};
-                overflow: hidden;
-                text-overflow: ellipsis;
-              ">
-                ${timeText}
-              </div>
-            `
-            : ''
-          }
           </div>
         `
       }
@@ -2107,11 +2104,11 @@ const Calendar = (props: CalenderProps) => {
             '& .fc-list-table': {
               width: '100%'
             },
-            // Eliminar hover gris en eventos de vista mensual
-            '& .fc-daygrid-event:hover': {
+            // Eliminar hover gris en eventos de todas las vistas
+            '& .fc-daygrid-event:hover, & .fc-timegrid-event:hover': {
               backgroundColor: 'transparent !important'
             },
-            '& .fc-daygrid-event': {
+            '& .fc-daygrid-event, & .fc-timegrid-event': {
               backgroundColor: 'transparent !important',
               border: 'none !important',
               marginBottom: '1px !important'
@@ -2135,6 +2132,19 @@ const Calendar = (props: CalenderProps) => {
               padding: '1px !important'
             },
             '& .fc-daygrid-day-top': {
+              marginBottom: '1px !important'
+            },
+            // Estilos para vistas de semana y día (timegrid)
+            '& .fc-timegrid-event-harness': {
+              marginBottom: '1px !important',
+              marginTop: '0px !important',
+              marginLeft: '1px !important',
+              marginRight: '1px !important'
+            },
+            '& .fc-timegrid-col-events': {
+              padding: '1px !important'
+            },
+            '& .fc-timegrid-event': {
               marginBottom: '1px !important'
             }
           }}>
