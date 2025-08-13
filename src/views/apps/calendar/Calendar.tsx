@@ -1721,7 +1721,53 @@ const Calendar = (props: CalenderProps) => {
         return { html: '' }
       }
 
-      const backgroundColor = statusColors[info.event.extendedProps.estado as StatusType]
+      const backgroundColor = statusColors[info.event.extendedProps.estado as StatusType] || statusColors.AGENDADA
+
+      // Para la vista mensual (incluyendo el popover de "más eventos")
+      if (info.view.type === 'dayGridMonth') {
+        // Formatear la hora de manera más limpia
+        const timeText = info.timeText ? info.timeText.replace(/\s/g, '') : ''
+        const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
+        const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
+        const comuna = info.event.extendedProps?.comuna || ''
+
+        // Crear partes del texto con validación
+        const parts = []
+        if (timeText) parts.push(timeText)
+        if (numeroObra) parts.push(numeroObra)
+        if (cliente) parts.push(cliente)
+        if (comuna) parts.push(comuna)
+
+        const displayText = parts.join(' - ')
+
+        return {
+          html: `
+            <div style="
+              background-color: ${alpha(backgroundColor, 0.15)};
+              border-radius: 10px;
+              padding: 2px 8px;
+              margin: 0;
+              width: 100%;
+              overflow: hidden;
+              white-space: nowrap;
+              text-overflow: ellipsis;
+            ">
+              <div style="
+                color: ${backgroundColor};
+                font-weight: bold;
+                font-size: 0.7rem;
+                line-height: 1.2;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              ">
+                ${displayText}
+              </div>
+            </div>
+          `
+        }
+      }
+
+      // Para otras vistas (semana, día)
       const timeText = info.timeText || ''
       const title = info.event.title || ''
 
@@ -2060,6 +2106,36 @@ const Calendar = (props: CalenderProps) => {
             },
             '& .fc-list-table': {
               width: '100%'
+            },
+            // Eliminar hover gris en eventos de vista mensual
+            '& .fc-daygrid-event:hover': {
+              backgroundColor: 'transparent !important'
+            },
+            '& .fc-daygrid-event': {
+              backgroundColor: 'transparent !important',
+              border: 'none !important',
+              marginBottom: '1px !important'
+            },
+            '& .fc-event-main': {
+              backgroundColor: 'transparent !important',
+              border: 'none !important'
+            },
+            // Reducir espaciado vertical entre eventos y acercar a bordes
+            '& .fc-daygrid-day-events': {
+              margin: '0 !important',
+              padding: '1px !important'
+            },
+            '& .fc-daygrid-event-harness': {
+              marginBottom: '0px !important',
+              marginTop: '0px !important',
+              marginLeft: '0px !important',
+              marginRight: '0px !important'
+            },
+            '& .fc-daygrid-day-frame': {
+              padding: '1px !important'
+            },
+            '& .fc-daygrid-day-top': {
+              marginBottom: '1px !important'
             }
           }}>
             {/* Contenedor principal de los filtros */}
