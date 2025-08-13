@@ -1707,7 +1707,12 @@ const Calendar = (props: CalenderProps) => {
     direction: 'ltr',
     initialDate: new Date(),
     navLinks: true,
-    eventClick: undefined,
+    eventClick: (info) => {
+      // Solo abrir preview si no estamos en vista de lista (ya que en lista tiene sus propios botones)
+      if (info.view.type !== 'listMonth') {
+        handleViewEvent(info.event.id)
+      }
+    },
     dateClick(info) {
       console.log('Fecha clickeada:', info.date)
     },
@@ -2104,14 +2109,16 @@ const Calendar = (props: CalenderProps) => {
             '& .fc-list-table': {
               width: '100%'
             },
-            // Eliminar hover gris en eventos de todas las vistas
+            // Eliminar hover gris en eventos de todas las vistas y agregar cursor pointer
             '& .fc-daygrid-event:hover, & .fc-timegrid-event:hover': {
-              backgroundColor: 'transparent !important'
+              backgroundColor: 'transparent !important',
+              cursor: 'pointer !important'
             },
             '& .fc-daygrid-event, & .fc-timegrid-event': {
               backgroundColor: 'transparent !important',
               border: 'none !important',
-              marginBottom: '1px !important'
+              marginBottom: '1px !important',
+              cursor: 'pointer !important'
             },
             '& .fc-event-main': {
               backgroundColor: 'transparent !important',
