@@ -364,7 +364,7 @@ const Calendar = (props: CalenderProps) => {
   useEffect(() => {
     let filtered = [...events]
 
-    // Filtrar por fecha
+    // Filtrar por fecha solo si tenemos un rango específico o si estamos en vista de día/lista
     if (props.selectedDateRange && props.selectedDateRange.start && props.selectedDateRange.end) {
       const rangeStart = new Date(props.selectedDateRange.start)
       rangeStart.setHours(0, 0, 0, 0)
@@ -376,7 +376,8 @@ const Calendar = (props: CalenderProps) => {
         const eventStart = event.start instanceof Date ? event.start : new Date(event.start as string)
         return eventStart >= rangeStart && eventStart <= rangeEnd
       })
-    } else if (props.selectedDate) {
+    } else if (props.selectedDate && (currentView === 'timeGridDay' || currentView === 'listMonth')) {
+      // Solo filtrar por día específico en vista diaria o de lista
       const selectedDateStart = new Date(props.selectedDate)
       selectedDateStart.setHours(0, 0, 0, 0)
 
@@ -388,6 +389,8 @@ const Calendar = (props: CalenderProps) => {
         return eventStart >= selectedDateStart && eventStart <= selectedDateEnd
       })
     }
+    // En vista semanal o mensual, no aplicamos filtro de fecha aquí porque 
+    // el backend ya devuelve el rango correcto
 
     // Filtrar por cliente
     if (props.filters.cliente) {
@@ -1797,9 +1800,40 @@ const Calendar = (props: CalenderProps) => {
         params.append('fechaFin', endStr)
       } else if (props.selectedDate) {
         const selectedDate = new Date(props.selectedDate)
-        const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-        params.append('fechaInicio', selectedDateStr)
-        params.append('fechaFin', selectedDateStr)
+
+        // Si estamos en vista semanal, calcular el rango de la semana
+        if (currentView === 'timeGridWeek') {
+          // Calcular el primer día de la semana (lunes)
+          const startOfWeek = new Date(selectedDate)
+          const day = startOfWeek.getDay()
+          const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Lunes como primer día
+          startOfWeek.setDate(diff)
+
+          // Calcular el último día de la semana (domingo)
+          const endOfWeek = new Date(startOfWeek)
+          endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+          const startStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
+          const endStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
+
+          params.append('fechaInicio', startStr)
+          params.append('fechaFin', endStr)
+        } else if (currentView === 'dayGridMonth') {
+          // Si estamos en vista mensual, calcular el rango del mes
+          const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+          const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+
+          const startStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`
+          const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`
+
+          params.append('fechaInicio', startStr)
+          params.append('fechaFin', endStr)
+        } else {
+          // Para otras vistas (día, lista), usar solo la fecha seleccionada
+          const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+          params.append('fechaInicio', selectedDateStr)
+          params.append('fechaFin', selectedDateStr)
+        }
       } else {
         // Si no hay fecha seleccionada, cargar eventos del día actual
         const today = new Date()
