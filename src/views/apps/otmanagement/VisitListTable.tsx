@@ -202,6 +202,14 @@ const VisitListTable = ({
   const [laboratoristas, setLaboratoristas] = useState<Array<{ id: string, name: string }>>([])
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(false)
 
+  // Estados para filtros de cliente y obra
+  const [selectedCliente, setSelectedCliente] = useState('')
+  const [selectedObra, setSelectedObra] = useState('')
+  const [clientes, setClientes] = useState<Array<{ clienteId: number, nombreCliente: string, rut: string }>>([])
+  const [obras, setObras] = useState<Array<{ obraId: number, nombreObra: string, numeroObra: string }>>([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
+  const [loadingObras, setLoadingObras] = useState(false)
+
   // Hooks
   // const { lang: locale } = useParams()
 
@@ -235,6 +243,99 @@ const VisitListTable = ({
     }
   }
 
+  // Función para cargar clientes desde el backend
+  const fetchClientes = async () => {
+    try {
+      setLoadingClientes(true)
+      console.log('Intentando cargar clientes...')
+      const response = await fetch('/api/clientes')
+
+      if (!response.ok) {
+        throw new Error(`Error al cargar clientes: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('Datos de clientes recibidos:', data)
+
+      if (!Array.isArray(data)) {
+        throw new Error('Los datos de clientes no son un array')
+      }
+
+      // Ordenar clientes por nombre y incluir RUT para la búsqueda de obras
+      const sortedClientes = data
+        .filter((cliente: any) => cliente.clienteId && cliente.nombreCliente && cliente.rut) // Filtrar datos válidos
+        .map((cliente: any) => ({
+          clienteId: cliente.clienteId,
+          nombreCliente: cliente.nombreCliente,
+          rut: cliente.rut // Incluir RUT para buscar obras
+        }))
+        .sort((a: any, b: any) => a.nombreCliente.localeCompare(b.nombreCliente))
+
+      setClientes(sortedClientes)
+      console.log('Clientes guardados en el estado:', sortedClientes.length, 'clientes válidos')
+    } catch (error) {
+      console.error('Error al cargar clientes:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al cargar la lista de clientes')
+      setAlertOpen(true)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
+
+  // Función para cargar obras de un cliente específico
+  const fetchObras = async (clienteId: string) => {
+    try {
+      setLoadingObras(true)
+
+      // Encontrar el RUT del cliente seleccionado
+      const clienteSeleccionado = clientes.find(c => c.clienteId.toString() === clienteId)
+      if (!clienteSeleccionado) {
+        console.warn('Cliente seleccionado no encontrado en la lista')
+        setObras([])
+        return
+      }
+
+      console.log('Cargando obras para cliente RUT:', clienteSeleccionado.rut)
+      const response = await fetch(`/api/obras?rut=${encodeURIComponent(clienteSeleccionado.rut)}`)
+
+      if (!response.ok) {
+        throw new Error(`Error al cargar obras: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('Obras cargadas:', data)
+
+      if (!Array.isArray(data)) {
+        throw new Error('Los datos de obras no son un array')
+      }
+
+      // Filtrar solo obras activas y ordenar por número de obra descendente
+      const obrasActivas = data
+        .filter((obra: any) => obra.estadoObra === 'activa' && obra.obraId && obra.nombreObra)
+        .map((obra: any) => ({
+          obraId: obra.obraId,
+          nombreObra: obra.nombreObra,
+          numeroObra: obra.numeroObra || 'S/N'
+        }))
+        .sort((a: any, b: any) => {
+          const numeroA = parseInt(a.numeroObra) || 0
+          const numeroB = parseInt(b.numeroObra) || 0
+          return numeroB - numeroA // Orden descendente (más reciente primero)
+        })
+
+      setObras(obrasActivas)
+      console.log('Obras activas establecidas:', obrasActivas.length, 'obras válidas')
+    } catch (error) {
+      console.error('Error al cargar obras:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al cargar la lista de obras')
+      setAlertOpen(true)
+    } finally {
+      setLoadingObras(false)
+    }
+  }
+
   // Función para cargar datos desde el backend con filtros
   const fetchVisitasWithFilters = async (filters: {
     fechaInicio?: string
@@ -243,6 +344,8 @@ const VisitListTable = ({
     laboratorista?: string
     porRecibir?: boolean
     globalFilter?: string
+    clienteId?: string
+    obraId?: string
   }) => {
     try {
       setLoading(true)
@@ -255,6 +358,8 @@ const VisitListTable = ({
       if (filters.laboratorista) params.append('laboratorista', filters.laboratorista)
       if (filters.porRecibir) params.append('porRecibir', 'true')
       if (filters.globalFilter) params.append('search', filters.globalFilter)
+      if (filters.clienteId) params.append('clienteId', filters.clienteId)
+      if (filters.obraId) params.append('obraId', filters.obraId)
 
       const response = await fetch(`/api/agenda?${params.toString()}`)
 
@@ -276,6 +381,7 @@ const VisitListTable = ({
 
   // Efecto para inicializar fechas con la fecha actual y cargar datos
   useEffect(() => {
+    console.log('Inicializando VisitListTable...')
     const today = new Date()
     const year = today.getFullYear()
     const month = String(today.getMonth() + 1).padStart(2, '0')
@@ -293,8 +399,10 @@ const VisitListTable = ({
       porRecibir: true
     })
 
-    // Cargar lista de laboratoristas
+    // Cargar lista de laboratoristas y clientes
+    console.log('Cargando laboratoristas y clientes...')
     fetchLaboratoristas()
+    fetchClientes()
   }, [])
 
   // Efecto para cargar datos cuando cambian los filtros (excepto globalFilter)
@@ -306,10 +414,12 @@ const VisitListTable = ({
         estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
         laboratorista: selectedLaboratorista,
         porRecibir,
-        globalFilter
+        globalFilter,
+        clienteId: selectedCliente,
+        obraId: selectedObra
       })
     }
-  }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir])
+  }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir, selectedCliente, selectedObra])
 
   // Debounce para la búsqueda global
   useEffect(() => {
@@ -321,13 +431,25 @@ const VisitListTable = ({
           estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
           laboratorista: selectedLaboratorista,
           porRecibir,
-          globalFilter
+          globalFilter,
+          clienteId: selectedCliente,
+          obraId: selectedObra
         })
       }
     }, 500) // 500ms de delay
 
     return () => clearTimeout(timer)
   }, [globalFilter])
+
+  // Efecto para depurar la carga de clientes
+  useEffect(() => {
+    console.log('Estado de clientes actualizado:', clientes.length, 'clientes cargados')
+  }, [clientes])
+
+  // Efecto para depurar la carga de obras
+  useEffect(() => {
+    console.log('Estado de obras actualizado:', obras.length, 'obras cargadas')
+  }, [obras])
 
   const handleSelectChange = (event: SelectChangeEvent) => {
     setSelectedLaboratorista(event.target.value)
@@ -353,6 +475,24 @@ const VisitListTable = ({
 
   const handlePorRecibirChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPorRecibir(event.target.checked)
+  }
+
+  const handleClienteChange = (event: SelectChangeEvent) => {
+    const clienteId = event.target.value
+    setSelectedCliente(clienteId)
+
+    // Limpiar obra seleccionada cuando cambia el cliente
+    setSelectedObra('')
+    setObras([])
+
+    // Cargar obras del cliente seleccionado
+    if (clienteId) {
+      fetchObras(clienteId)
+    }
+  }
+
+  const handleObraChange = (event: SelectChangeEvent) => {
+    setSelectedObra(event.target.value)
   }
 
   const handleRowSelection = (row: Agenda) => {
@@ -977,6 +1117,46 @@ const VisitListTable = ({
               </Grid>
               <Grid item xs={12} sm={3}>
                 <Select
+                  value={selectedCliente}
+                  onChange={handleClienteChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingClientes}
+                >
+                  <MenuItem value=''>
+                    {loadingClientes ? 'Cargando...' : 'Todos los Clientes'}
+                  </MenuItem>
+                  {clientes.map((cliente) => (
+                    <MenuItem key={cliente.clienteId} value={cliente.clienteId.toString()}>
+                      {cliente.nombreCliente}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Select
+                  value={selectedObra}
+                  onChange={handleObraChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingObras || !selectedCliente}
+                >
+                  <MenuItem value=''>
+                    {loadingObras ? 'Cargando...' : !selectedCliente ? 'Seleccione un cliente' : 'Todas las Obras'}
+                  </MenuItem>
+                  {obras.map((obra) => (
+                    <MenuItem key={obra.obraId} value={obra.obraId.toString()}>
+                      {obra.numeroObra} - {obra.nombreObra}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+
+              {/* Segunda fila: Laboratorista, Estados, etc. */}
+              <Grid item xs={12} sm={3}>
+                <Select
                   value={selectedLaboratorista}
                   onChange={handleSelectChange}
                   displayEmpty
@@ -1090,6 +1270,9 @@ const VisitListTable = ({
                     setSelectedEstado(todosLosEstados)
                     setPorRecibir(true)
                     setGlobalFilter('')
+                    setSelectedCliente('')
+                    setSelectedObra('')
+                    setObras([])
                   }}
                 >
                   Limpiar Filtros

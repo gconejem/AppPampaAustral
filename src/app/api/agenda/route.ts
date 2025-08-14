@@ -87,6 +87,7 @@ export async function GET(request: Request) {
     const fechaFin = searchParams.get('fechaFin')
     const clienteId = searchParams.get('clienteId')
     const obraIds = searchParams.get('obraIds')
+    const obraId = searchParams.get('obraId')
     const laboratoristaIds = searchParams.get('laboratoristaIds')
     const sectoresComerciales = searchParams.get('sectoresComerciales')
     const regiones = searchParams.get('regiones')
@@ -106,6 +107,7 @@ export async function GET(request: Request) {
       fechaFin,
       clienteId,
       obraIds,
+      obraId,
       laboratoristaIds,
       sectoresComerciales,
       regiones,
@@ -147,12 +149,17 @@ export async function GET(request: Request) {
       whereFilter.clienteId = parseInt(clienteId)
     }
 
-    // Filtro por obras
+    // Filtro por obras (múltiples)
     if (obraIds) {
       const obraIdsArray = obraIds.split(',').map(id => parseInt(id))
       whereFilter.obraId = {
         in: obraIdsArray
       }
+    }
+
+    // Filtro por obra (una sola)
+    if (obraId && !obraIds) {
+      whereFilter.obraId = parseInt(obraId)
     }
 
     // Filtro por sectores comerciales
