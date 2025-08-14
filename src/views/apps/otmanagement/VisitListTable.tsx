@@ -165,7 +165,7 @@ const VisitListTable = ({
   const [globalFilter, setGlobalFilter] = useState('')
   const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
   const [selectedEstado, setSelectedEstado] = useState('')
-  const [porRecibir, setPorRecibir] = useState(false)
+  const [porRecibir, setPorRecibir] = useState(true)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
@@ -271,10 +271,11 @@ const VisitListTable = ({
     setFechaInicio(fechaActual)
     setFechaFin(fechaActual)
 
-    // Cargar datos iniciales con fecha actual
+    // Cargar datos iniciales con fecha actual y por recibir activado
     fetchVisitasWithFilters({
       fechaInicio: fechaActual,
-      fechaFin: fechaActual
+      fechaFin: fechaActual,
+      porRecibir: true
     })
 
     // Cargar lista de laboratoristas
@@ -987,7 +988,7 @@ const VisitListTable = ({
                     setFechaFin(fechaActual)
                     setSelectedLaboratorista('')
                     setSelectedEstado('')
-                    setPorRecibir(false)
+                    setPorRecibir(true)
                     setGlobalFilter('')
                   }}
                 >
