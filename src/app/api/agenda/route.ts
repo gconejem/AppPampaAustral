@@ -195,9 +195,16 @@ export async function GET(request: Request) {
       // Si hay múltiples tipos seleccionados, no aplicamos filtro (mostrar todos)
     }
 
-    // Filtro por estado
+    // Filtro por estado (puede ser múltiple, separado por comas)
     if (estado) {
-      whereFilter.estado = estado
+      const estadosArray = estado.split(',').map(e => e.trim()).filter(e => e.length > 0)
+      if (estadosArray.length === 1) {
+        whereFilter.estado = estadosArray[0]
+      } else if (estadosArray.length > 1) {
+        whereFilter.estado = {
+          in: estadosArray
+        }
+      }
     }
 
     // Filtro por búsqueda global (buscar en título, cliente, obra)

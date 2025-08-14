@@ -157,6 +157,20 @@ const VisitListTable = ({
   onVisitSelect: (visit: Agenda | null) => void
   selectedVisit: Agenda | null
 }) => {
+  // Definir todos los estados disponibles
+  const todosLosEstados = [
+    'CREADA',
+    'ELIMINADA',
+    'AGENDADA',
+    'SUSPENDIDA',
+    'SUSPENDIDA_TERRENO',
+    'COMPLETADA',
+    'EN_REVISION',
+    'ANULADA',
+    'RECIBIDA_OK',
+    'CODIFICADA'
+  ]
+
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null) // Solo permite una selección de fila
@@ -164,7 +178,7 @@ const VisitListTable = ({
   const [loading, setLoading] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
-  const [selectedEstado, setSelectedEstado] = useState('')
+  const [selectedEstado, setSelectedEstado] = useState<string[]>(todosLosEstados) // Inicializar con todos los estados seleccionados
   const [porRecibir, setPorRecibir] = useState(true)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
@@ -271,10 +285,11 @@ const VisitListTable = ({
     setFechaInicio(fechaActual)
     setFechaFin(fechaActual)
 
-    // Cargar datos iniciales con fecha actual y por recibir activado
+    // Cargar datos iniciales con fecha actual, todos los estados y por recibir activado
     fetchVisitasWithFilters({
       fechaInicio: fechaActual,
       fechaFin: fechaActual,
+      estado: todosLosEstados.join(','),
       porRecibir: true
     })
 
@@ -288,7 +303,7 @@ const VisitListTable = ({
       fetchVisitasWithFilters({
         fechaInicio,
         fechaFin,
-        estado: selectedEstado,
+        estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
         laboratorista: selectedLaboratorista,
         porRecibir,
         globalFilter
@@ -303,7 +318,7 @@ const VisitListTable = ({
         fetchVisitasWithFilters({
           fechaInicio,
           fechaFin,
-          estado: selectedEstado,
+          estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
           laboratorista: selectedLaboratorista,
           porRecibir,
           globalFilter
@@ -318,8 +333,22 @@ const VisitListTable = ({
     setSelectedLaboratorista(event.target.value)
   }
 
-  const handleEstadoChange = (event: SelectChangeEvent) => {
-    setSelectedEstado(event.target.value)
+  const handleEstadoChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value
+    const newValue = typeof value === 'string' ? value.split(',') : value
+
+    // Si se selecciona "TODOS", seleccionar todos los estados
+    if (newValue.includes('TODOS')) {
+      if (selectedEstado.length === todosLosEstados.length) {
+        // Si ya están todos seleccionados, deseleccionar todos
+        setSelectedEstado([])
+      } else {
+        // Si no están todos seleccionados, seleccionar todos
+        setSelectedEstado(todosLosEstados)
+      }
+    } else {
+      setSelectedEstado(newValue)
+    }
   }
 
   const handlePorRecibirChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -779,23 +808,35 @@ const VisitListTable = ({
           let color: 'info' | 'success' | 'warning' | 'error' | 'primary' = 'primary'
 
           switch (estado) {
+            case 'CREADA':
+              color = 'primary'
+              break
+            case 'ELIMINADA':
+              color = 'error'
+              break
             case 'AGENDADA':
               color = 'info'
-              break
-            case 'COMPLETADA':
-              color = 'success'
               break
             case 'SUSPENDIDA':
               color = 'warning'
               break
-            case 'CANCELADA':
-              color = 'error'
-              break
-            case 'REVISIÓN':
+            case 'SUSPENDIDA_TERRENO':
               color = 'warning'
               break
-            case 'OK':
+            case 'COMPLETADA':
               color = 'success'
+              break
+            case 'EN_REVISION':
+              color = 'warning'
+              break
+            case 'ANULADA':
+              color = 'error'
+              break
+            case 'RECIBIDA_OK':
+              color = 'success'
+              break
+            case 'CODIFICADA':
+              color = 'info'
               break
             default:
               color = 'primary'
@@ -954,14 +995,73 @@ const VisitListTable = ({
                 </Select>
               </Grid>
               <Grid item xs={12} sm={3}>
-                <Select value={selectedEstado} onChange={handleEstadoChange} displayEmpty fullWidth size='small'>
-                  <MenuItem value=''>Todos los Estados</MenuItem>
-                  <MenuItem value='AGENDADA'>Agendada</MenuItem>
-                  <MenuItem value='COMPLETADA'>Completada</MenuItem>
-                  <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
-                  {/* <MenuItem value='CANCELADA'>Cancelada</MenuItem> */}
-                  <MenuItem value='REVISIÓN'>Revisión</MenuItem>
-                  <MenuItem value='OK'>OK</MenuItem>
+                <Select
+                  multiple
+                  value={selectedEstado}
+                  onChange={handleEstadoChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return 'Ningún estado seleccionado'
+                    }
+                    if (selected.length === todosLosEstados.length) {
+                      return 'Todos los Estados'
+                    }
+                    if (selected.length === 1) {
+                      return selected[0]
+                    }
+                    return `${selected.length} estados seleccionados`
+                  }}
+                >
+                  <MenuItem value='TODOS'>
+                    <Checkbox
+                      checked={selectedEstado.length === todosLosEstados.length}
+                      indeterminate={selectedEstado.length > 0 && selectedEstado.length < todosLosEstados.length}
+                    />
+                    Seleccionar todos
+                  </MenuItem>
+                  <MenuItem value='CREADA'>
+                    <Checkbox checked={selectedEstado.indexOf('CREADA') > -1} />
+                    Creada
+                  </MenuItem>
+                  <MenuItem value='ELIMINADA'>
+                    <Checkbox checked={selectedEstado.indexOf('ELIMINADA') > -1} />
+                    Eliminada
+                  </MenuItem>
+                  <MenuItem value='AGENDADA'>
+                    <Checkbox checked={selectedEstado.indexOf('AGENDADA') > -1} />
+                    Agendada
+                  </MenuItem>
+                  <MenuItem value='SUSPENDIDA'>
+                    <Checkbox checked={selectedEstado.indexOf('SUSPENDIDA') > -1} />
+                    Suspendida
+                  </MenuItem>
+                  <MenuItem value='SUSPENDIDA_TERRENO'>
+                    <Checkbox checked={selectedEstado.indexOf('SUSPENDIDA_TERRENO') > -1} />
+                    Suspendida Terreno
+                  </MenuItem>
+                  <MenuItem value='COMPLETADA'>
+                    <Checkbox checked={selectedEstado.indexOf('COMPLETADA') > -1} />
+                    Completada
+                  </MenuItem>
+                  <MenuItem value='EN_REVISION'>
+                    <Checkbox checked={selectedEstado.indexOf('EN_REVISION') > -1} />
+                    En Revisión
+                  </MenuItem>
+                  <MenuItem value='ANULADA'>
+                    <Checkbox checked={selectedEstado.indexOf('ANULADA') > -1} />
+                    Anulada
+                  </MenuItem>
+                  <MenuItem value='RECIBIDA_OK'>
+                    <Checkbox checked={selectedEstado.indexOf('RECIBIDA_OK') > -1} />
+                    Recibida OK
+                  </MenuItem>
+                  <MenuItem value='CODIFICADA'>
+                    <Checkbox checked={selectedEstado.indexOf('CODIFICADA') > -1} />
+                    Codificada
+                  </MenuItem>
                 </Select>
               </Grid>
               <Grid item xs={12} sm={2}>
@@ -987,7 +1087,7 @@ const VisitListTable = ({
                     setFechaInicio(fechaActual)
                     setFechaFin(fechaActual)
                     setSelectedLaboratorista('')
-                    setSelectedEstado('')
+                    setSelectedEstado(todosLosEstados)
                     setPorRecibir(true)
                     setGlobalFilter('')
                   }}
@@ -1307,14 +1407,19 @@ const VisitListTable = ({
                 onChange={e => setNewStatus(e.target.value)}
                 size='small'
               >
+                <MenuItem value='CREADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='CREADA' size='small' color='primary' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='ELIMINADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='ELIMINADA' size='small' color='error' />
+                  </Box>
+                </MenuItem>
                 <MenuItem value='AGENDADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='AGENDADA' size='small' color='info' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='COMPLETADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='COMPLETADA' size='small' color='success' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='SUSPENDIDA'>
@@ -1322,19 +1427,34 @@ const VisitListTable = ({
                     <Chip label='SUSPENDIDA' size='small' color='warning' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='CANCELADA'>
+                <MenuItem value='SUSPENDIDA_TERRENO'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='CANCELADA' size='small' color='error' />
+                    <Chip label='SUSPENDIDA_TERRENO' size='small' color='warning' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='REVISIÓN'>
+                <MenuItem value='COMPLETADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='REVISIÓN' size='small' color='warning' />
+                    <Chip label='COMPLETADA' size='small' color='success' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='OK'>
+                <MenuItem value='EN_REVISION'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='OK' size='small' color='success' />
+                    <Chip label='EN_REVISION' size='small' color='warning' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='ANULADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='ANULADA' size='small' color='error' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='RECIBIDA_OK'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='RECIBIDA_OK' size='small' color='success' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='CODIFICADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='CODIFICADA' size='small' color='info' />
                   </Box>
                 </MenuItem>
               </Select>
@@ -1383,14 +1503,19 @@ const VisitListTable = ({
                 onChange={e => setBulkNewStatus(e.target.value)}
                 size='small'
               >
+                <MenuItem value='CREADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='CREADA' size='small' color='primary' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='ELIMINADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='ELIMINADA' size='small' color='error' />
+                  </Box>
+                </MenuItem>
                 <MenuItem value='AGENDADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='AGENDADA' size='small' color='info' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='COMPLETADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='COMPLETADA' size='small' color='success' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='SUSPENDIDA'>
@@ -1398,19 +1523,34 @@ const VisitListTable = ({
                     <Chip label='SUSPENDIDA' size='small' color='warning' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='CANCELADA'>
+                <MenuItem value='SUSPENDIDA_TERRENO'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='CANCELADA' size='small' color='error' />
+                    <Chip label='SUSPENDIDA_TERRENO' size='small' color='warning' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='REVISIÓN'>
+                <MenuItem value='COMPLETADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='REVISIÓN' size='small' color='warning' />
+                    <Chip label='COMPLETADA' size='small' color='success' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='OK'>
+                <MenuItem value='EN_REVISION'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='OK' size='small' color='success' />
+                    <Chip label='EN_REVISION' size='small' color='warning' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='ANULADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='ANULADA' size='small' color='error' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='RECIBIDA_OK'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='RECIBIDA_OK' size='small' color='success' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='CODIFICADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='CODIFICADA' size='small' color='info' />
                   </Box>
                 </MenuItem>
               </Select>
