@@ -958,12 +958,12 @@ const VisitListTable = ({
                   <MenuItem value='AGENDADA'>Agendada</MenuItem>
                   <MenuItem value='COMPLETADA'>Completada</MenuItem>
                   <MenuItem value='SUSPENDIDA'>Suspendida</MenuItem>
-                  <MenuItem value='CANCELADA'>Cancelada</MenuItem>
+                  {/* <MenuItem value='CANCELADA'>Cancelada</MenuItem> */}
                   <MenuItem value='REVISIÓN'>Revisión</MenuItem>
                   <MenuItem value='OK'>OK</MenuItem>
                 </Select>
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <FormControlLabel
                   control={<Checkbox checked={porRecibir} onChange={handlePorRecibirChange} />}
                   label='Por Recibir'
