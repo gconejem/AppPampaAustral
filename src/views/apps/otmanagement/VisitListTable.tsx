@@ -65,6 +65,7 @@ import type { OrdenTrabajo } from '@/types/otTypes'
 
 // Util Imports
 import { getInitials } from '@/utils/getInitials'
+import { parseDateFromBackend } from '@/utils/dateUtils'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -196,8 +197,9 @@ const VisitListTable = ({
     // Filtrar por fecha
     if (fechaInicio) {
       result = result.filter(item => {
-        const itemDate = new Date(item.fechaInicio)
-        const filterDate = new Date(fechaInicio)
+        // Usar parseDateFromBackend para manejar correctamente las fechas del backend
+        const itemDate = parseDateFromBackend(item.fechaInicio.toString())
+        const filterDate = new Date(fechaInicio + 'T00:00:00')
 
         return (
           itemDate.getFullYear() === filterDate.getFullYear() &&
@@ -612,7 +614,8 @@ const VisitListTable = ({
       },
       columnHelper.accessor(
         row => {
-          const date = new Date(row.fechaInicio)
+          // Usar parseDateFromBackend para manejar correctamente las fechas del backend
+          const date = parseDateFromBackend(row.fechaInicio.toString())
 
           if (isNaN(date.getTime())) {
             console.error('Fecha inválida:', row.fechaInicio)
@@ -634,7 +637,8 @@ const VisitListTable = ({
       ),
       columnHelper.accessor(
         row => {
-          const date = new Date(row.fechaInicio)
+          // Usar parseDateFromBackend para manejar correctamente las fechas del backend
+          const date = parseDateFromBackend(row.fechaInicio.toString())
 
           return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
         },
