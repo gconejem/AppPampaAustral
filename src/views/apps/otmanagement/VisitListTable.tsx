@@ -184,8 +184,42 @@ const VisitListTable = ({
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
   const [bulkNewStatus, setBulkNewStatus] = useState('')
 
+  // Estado para laboratoristas
+  const [laboratoristas, setLaboratoristas] = useState<Array<{ id: string, name: string }>>([])
+  const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(false)
+
   // Hooks
   // const { lang: locale } = useParams()
+
+  // Función para cargar laboratoristas desde el backend
+  const fetchLaboratoristas = async () => {
+    try {
+      setLoadingLaboratoristas(true)
+      const response = await fetch('/api/equipos/laboratoristas')
+
+      if (!response.ok) {
+        throw new Error('Error al cargar laboratoristas')
+      }
+
+      const data = await response.json()
+      // Ordenar laboratoristas por nombre
+      const sortedLaboratoristas = data
+        .map((lab: any) => ({
+          id: lab.id,
+          name: lab.name
+        }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+
+      setLaboratoristas(sortedLaboratoristas)
+    } catch (error) {
+      console.error('Error al cargar laboratoristas:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al cargar la lista de laboratoristas')
+      setAlertOpen(true)
+    } finally {
+      setLoadingLaboratoristas(false)
+    }
+  }
 
   // Función para cargar datos desde el backend con filtros
   const fetchVisitasWithFilters = async (filters: {
@@ -242,6 +276,9 @@ const VisitListTable = ({
       fechaInicio: fechaActual,
       fechaFin: fechaActual
     })
+
+    // Cargar lista de laboratoristas
+    fetchLaboratoristas()
   }, [])
 
   // Efecto para cargar datos cuando cambian los filtros (excepto globalFilter)
@@ -897,11 +934,22 @@ const VisitListTable = ({
                 </LocalizationProvider>
               </Grid>
               <Grid item xs={12} sm={3}>
-                <Select value={selectedLaboratorista} onChange={handleSelectChange} displayEmpty fullWidth size='small'>
-                  <MenuItem value=''>Todos los Laboratoristas</MenuItem>
-                  <MenuItem value='Juan Pérez'>Juan Pérez</MenuItem>
-                  <MenuItem value='María González'>María González</MenuItem>
-                  <MenuItem value='Carlos Rodríguez'>Carlos Rodríguez</MenuItem>
+                <Select
+                  value={selectedLaboratorista}
+                  onChange={handleSelectChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingLaboratoristas}
+                >
+                  <MenuItem value=''>
+                    {loadingLaboratoristas ? 'Cargando...' : 'Todos los Laboratoristas'}
+                  </MenuItem>
+                  {laboratoristas.map((lab) => (
+                    <MenuItem key={lab.id} value={lab.name}>
+                      {lab.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </Grid>
               <Grid item xs={12} sm={3}>
