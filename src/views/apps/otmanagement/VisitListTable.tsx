@@ -46,6 +46,10 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { es } from 'date-fns/locale'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -275,8 +279,16 @@ const VisitListTable = ({
     }
   }
 
-  const handleFechaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFechaInicio(event.target.value)
+  const handleFechaChange = (date: Date | null) => {
+    if (!date) {
+      setFechaInicio('')
+      return
+    }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const newFecha = `${year}-${month}-${day}`
+    setFechaInicio(newFecha)
   }
 
   const handlePDFClick = () => {
@@ -787,15 +799,19 @@ const VisitListTable = ({
             <Grid container spacing={2} alignItems='center'>
               {/* Primera Fila: 3-3-3-3 */}
               <Grid item xs={12} sm={3}>
-                <TextField
-                  type='date'
-                  fullWidth
-                  size='small'
-                  label='Fecha Inicio'
-                  InputLabelProps={{ shrink: true }}
-                  value={fechaInicio}
-                  onChange={handleFechaChange}
-                />
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                  <DatePicker
+                    label="Fecha Inicio"
+                    value={fechaInicio ? new Date(fechaInicio + 'T00:00:00') : null}
+                    onChange={handleFechaChange}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small'
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
               </Grid>
               <Grid item xs={12} sm={3}>
                 <Select value={selectedLaboratorista} onChange={handleSelectChange} displayEmpty fullWidth size='small'>
@@ -925,7 +941,7 @@ const VisitListTable = ({
               {selectedVisit ? (
                 <>
                   {/* Encabezado con botones */}
-              <Grid container spacing={1}>
+                  <Grid container spacing={1}>
                     {isEditing ? (
                       <>
                         <Grid item xs={6}>
@@ -964,23 +980,23 @@ const VisitListTable = ({
                             fullWidth
                             onClick={handleStartEditing}
                           >
-                    Editar
-                  </Button>
-                </Grid>
+                            Editar
+                          </Button>
+                        </Grid>
                         <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton color='error' size='small'>
-                    <i className='ri-delete-bin-line' />
-                  </IconButton>
-                </Grid>
+                          <IconButton color='error' size='small'>
+                            <i className='ri-delete-bin-line' />
+                          </IconButton>
+                        </Grid>
                       </>
                     )}
-              </Grid>
+                  </Grid>
 
-              <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2 }} />
 
-              {/* Información Principal: Hora Llegada y Salida */}
+                  {/* Información Principal: Hora Llegada y Salida */}
                   <Grid container spacing={2}>
-                <Grid item xs={6}>
+                    <Grid item xs={6}>
                       {isEditing ? (
                         <TextField
                           fullWidth
@@ -990,12 +1006,12 @@ const VisitListTable = ({
                           onChange={e => handleFieldChange('horaLlegada', e.target.value)}
                         />
                       ) : (
-                  <Typography variant='body2'>
+                        <Typography variant='body2'>
                           Hora Llegada: <strong>{selectedVisit.horaLlegada || '---'}</strong>
-                  </Typography>
+                        </Typography>
                       )}
-                </Grid>
-                <Grid item xs={6}>
+                    </Grid>
+                    <Grid item xs={6}>
                       {isEditing ? (
                         <TextField
                           fullWidth
@@ -1005,12 +1021,12 @@ const VisitListTable = ({
                           onChange={e => handleFieldChange('horaSalida', e.target.value)}
                         />
                       ) : (
-                  <Typography variant='body2'>
+                        <Typography variant='body2'>
                           Hora Salida: <strong>{selectedVisit.horaSalida || '---'}</strong>
-                  </Typography>
+                        </Typography>
                       )}
-                </Grid>
-                <Grid item xs={6}>
+                    </Grid>
+                    <Grid item xs={6}>
                       {isEditing ? (
                         <TextField
                           fullWidth
@@ -1020,12 +1036,12 @@ const VisitListTable = ({
                           onChange={e => handleFieldChange('movilizacion', e.target.value)}
                         />
                       ) : (
-                  <Typography variant='body2'>
+                        <Typography variant='body2'>
                           Movilización: <strong>{selectedVisit.movilizacion || '---'}</strong>
-                  </Typography>
+                        </Typography>
                       )}
-                </Grid>
-                <Grid item xs={6}>
+                    </Grid>
+                    <Grid item xs={6}>
                       {isEditing ? (
                         <TextField
                           fullWidth
@@ -1035,30 +1051,30 @@ const VisitListTable = ({
                           onChange={e => handleFieldChange('kmAdicionales', e.target.value)}
                         />
                       ) : (
-                  <Typography variant='body2'>
+                        <Typography variant='body2'>
                           Km Adicionales: <strong>{selectedVisit.kmAdicionales || '---'}</strong>
-                  </Typography>
+                        </Typography>
                       )}
-                </Grid>
-              </Grid>
+                    </Grid>
+                  </Grid>
 
-              <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2 }} />
 
-              {/* Servicios Agendado y Extras */}
-              <Box mb={2}>
-                <Typography variant='subtitle2' fontWeight='bold'>
-                  Servicios Agendado vs Completado
-                </Typography>
-              </Box>
-              <Box mb={2}>
-                <Typography variant='subtitle2' fontWeight='bold'>
-                  Extras Agendados:
-                </Typography>
-              </Box>
+                  {/* Servicios Agendado y Extras */}
+                  <Box mb={2}>
+                    <Typography variant='subtitle2' fontWeight='bold'>
+                      Servicios Agendado vs Completado
+                    </Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant='subtitle2' fontWeight='bold'>
+                      Extras Agendados:
+                    </Typography>
+                  </Box>
 
                   {/* Botones: PDF, En Revisión, Recepción OK */}
-              <Grid container spacing={1}>
-                <Grid item xs={4}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={4}>
                       <Button
                         variant='outlined'
                         color='primary'
@@ -1069,9 +1085,9 @@ const VisitListTable = ({
                         disabled={!selectedVisit?.ordenesTrabajo?.length}
                       >
                         PDF
-                  </Button>
-                </Grid>
-                <Grid item xs={4}>
+                      </Button>
+                    </Grid>
+                    <Grid item xs={4}>
                       <Button
                         variant='outlined'
                         color='warning'
@@ -1080,10 +1096,10 @@ const VisitListTable = ({
                         onClick={handleRevisionClick}
                         disabled={!selectedVisit?.ordenesTrabajo?.length}
                       >
-                    Revisión
-                  </Button>
-                </Grid>
-                <Grid item xs={4}>
+                        Revisión
+                      </Button>
+                    </Grid>
+                    <Grid item xs={4}>
                       <Button
                         variant='outlined'
                         color='success'
@@ -1092,10 +1108,10 @@ const VisitListTable = ({
                         onClick={handleOKClick}
                         disabled={!selectedVisit?.ordenesTrabajo?.length}
                       >
-                    OK
-                  </Button>
-                </Grid>
-              </Grid>
+                        OK
+                      </Button>
+                    </Grid>
+                  </Grid>
                 </>
               ) : (
                 <Typography variant='body2' color='text.secondary' textAlign='center'>
