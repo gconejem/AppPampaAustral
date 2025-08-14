@@ -28,14 +28,14 @@ async function getCotizaciones() {
       'Ejemplo de datos de contacto:',
       cotizaciones.length > 0
         ? JSON.stringify(
-            {
-              contactoId: cotizaciones[0].contactoId,
-              contactoRelacion: cotizaciones[0].contacto,
-              contactoDatos: cotizaciones[0].contacto?.contacto
-            },
-            null,
-            2
-          )
+          {
+            contactId: cotizaciones[0].contactId,
+            contactoRelacion: cotizaciones[0].contacto,
+            contactoDatos: cotizaciones[0].contacto
+          },
+          null,
+          2
+        )
         : 'No hay cotizaciones'
     )
 
@@ -47,18 +47,25 @@ async function getCotizaciones() {
 
       // Log para diagnóstico de cada contacto
       if (cotizacion.contacto?.contactId) {
-        console.log(`Cotización ${cotizacion.id} - contactoId: ${cotizacion.contacto?.contactId}, nombre: ${nombreContacto}`)
+        console.log(`Cotización ${cotizacion.id} - contactId: ${cotizacion.contacto?.contactId}, nombre: ${nombreContacto}`)
       }
 
       return {
         id: cotizacion.id,
         numeroCotizacion: cotizacion.numeroCotizacion,
+        tipoCotizacion: tipoMapeado as string,
         fecha: cotizacion.fechaCreacion.toLocaleDateString(),
         empresa: cotizacion.empresa || 'No especificada',
         comuna: cotizacion.cliente?.comuna || cotizacion.ubicacion?.split(',').pop()?.trim() || 'No especificada',
-        tipo: tipoMapeado,
-        contacto: cotizacion.contacto,
+        tipo: tipoMapeado as string,
+        contacto: cotizacion.contacto ? {
+          nombre: cotizacion.contacto.nombre,
+          cargo: cotizacion.contacto.cargo,
+          email: cotizacion.contacto.email,
+          telefono1: cotizacion.contacto.telefono1
+        } : null,
         estado: cotizacion.estado,
+        detalles: [],
         total: parseFloat(cotizacion.total.toString()),
         observacionGestion: cotizacion.observacionGestion
       }
@@ -75,7 +82,7 @@ export default async function Page() {
 
   return (
     <Suspense fallback={<div>Cargando...</div>}>
-      <InvoiceList invoiceData={invoiceData} />
+      <InvoiceList invoiceData={invoiceData as any} />
     </Suspense>
   )
 }

@@ -8,7 +8,7 @@ import type { InvoiceType } from '@/types/apps/invoiceTypes'
 import Preview from '@views/apps/invoice/preview'
 
 // Data Imports
-import { getInvoiceData } from '@/app/server/actions'
+// import { getInvoiceData } from '@/app/server/actions' // Function doesn't exist
 
 /**
  * ! If you need data using an API call, uncomment the below API code, update the `process.env.API_URL` variable in the
@@ -29,16 +29,9 @@ import { getInvoiceData } from '@/app/server/actions'
 } */
 
 const PreviewPage = async ({ params }: { params: { id: string } }) => {
-  // Vars
-  const data = await getInvoiceData()
-
-  const filteredData = data?.filter((invoice: InvoiceType) => invoice.id === params.id)[0]
-
-  if (!filteredData) {
-    redirect('/not-found')
-  }
-
-  return filteredData ? <Preview invoiceData={filteredData} id={params.id} /> : null
+  // TODO: Implement proper data fetching
+  // For now, return a placeholder or redirect
+  redirect('/not-found')
 }
 
 export default PreviewPage

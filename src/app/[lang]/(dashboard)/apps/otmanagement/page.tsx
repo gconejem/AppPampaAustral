@@ -25,7 +25,32 @@ const getAgendaData = async () => {
     }
   })
 
-  return agendas
+  // Mapear los datos de Prisma al tipo esperado
+  return agendas.map(agenda => ({
+    id: agenda.id,
+    titulo: agenda.titulo,
+    tipoVisita: agenda.tipoVisita,
+    fechaInicio: agenda.fechaInicio,
+    fechaFin: agenda.fechaFin,
+    estado: agenda.estado,
+    cliente: agenda.cliente ? {
+      nombreCliente: agenda.cliente.nombreCliente
+    } : undefined,
+    obra: agenda.obra ? {
+      nombreObra: agenda.obra.nombreObra
+    } : undefined,
+    ordenesTrabajo: agenda.ordenesTrabajo.map(ot => ({
+      id: ot.id.toString(),
+      clave: ot.clave || '',
+      estado: ot.estado,
+      tipoOT: ot.tipoOT,
+      createdAt: ot.createdAt.toISOString(),
+      userId: ot.userId || '',
+      user: ot.user ? {
+        name: ot.user.name || ''
+      } : undefined
+    }))
+  }))
 }
 
 // Page Component

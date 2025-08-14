@@ -105,14 +105,14 @@ const StyledSubMenu = styled.li<StyledSubMenuProps>`
 
   > .${menuClasses.button} {
     ${({ level, disabled, active, children, isCollapsed, isPopoutWhenCollapsed }) =>
-      menuButtonStyles({
-        level,
-        active,
-        disabled,
-        children,
-        isCollapsed,
-        isPopoutWhenCollapsed
-      })};
+    menuButtonStyles({
+      level,
+      active,
+      disabled,
+      children,
+      isCollapsed,
+      isPopoutWhenCollapsed
+    })};
     ${({ buttonStyles }) => buttonStyles};
   }
 `
@@ -287,7 +287,7 @@ const SubMenu: ForwardRefRenderFunction<HTMLLIElement, SubMenuProps> = (props, r
   }, [isCollapsed, level, active])
 
   useEffect(() => {
-    if (confirmUrlInChildren(children, pathname)) {
+    if (pathname && confirmUrlInChildren(children, pathname)) {
       openSubmenusRef?.current.push({ level, label, active: true, id })
     } else {
       if (defaultOpen) {
@@ -300,7 +300,7 @@ const SubMenu: ForwardRefRenderFunction<HTMLLIElement, SubMenuProps> = (props, r
   // Change active state when the url changes
   useEffect(() => {
     // Check if the current url matches any of the children urls
-    if (confirmUrlInChildren(children, pathname)) {
+    if (pathname && confirmUrlInChildren(children, pathname)) {
       setActive(true)
 
       if (openSubmenusRef?.current.findIndex(submenu => submenu.id === id) === -1) {

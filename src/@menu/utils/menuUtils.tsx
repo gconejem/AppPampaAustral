@@ -48,11 +48,11 @@ export const confirmUrlInChildren = (children: ChildrenType['children'], url: st
     if (component && component.props.href) {
       return exactMatch === true || exactMatch === undefined
         ? component.props.href === url
-        : activeUrl && url.includes(activeUrl)
+        : activeUrl && typeof activeUrl === 'string' && url.includes(activeUrl)
     }
 
     if (href) {
-      return exactMatch === true || exactMatch === undefined ? href === url : activeUrl && url.includes(activeUrl)
+      return exactMatch === true || exactMatch === undefined ? href === url : activeUrl && typeof activeUrl === 'string' && url.includes(activeUrl)
     }
 
     if (subChildren) {

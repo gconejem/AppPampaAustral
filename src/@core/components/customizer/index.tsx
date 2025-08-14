@@ -54,7 +54,7 @@ type CustomizerProps = {
   disableDirection?: boolean
 }
 
-const getLocalePath = (pathName: string, locale: string) => {
+const getLocalePath = (pathName: string | null, locale: string) => {
   if (!pathName) return '/'
   const segments = pathName.split('/')
 
@@ -198,7 +198,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
         >
           <div className={styles.customizerBody}>
             <div className='flex flex-col gap-6'>
-              <Chip label='Theming' size='small' color='primary' variant='tonal' className='self-start rounded-sm' />
+              <Chip label='Theming' size='small' color='primary' variant='filled' className='self-start rounded-sm' />
               <div className='flex flex-col gap-2.5'>
                 <p className='font-medium'>Primary Color</p>
                 <div className='flex items-center justify-between'>
@@ -332,8 +332,8 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                 </div>
               </div>
               {settings.mode === 'dark' ||
-              (settings.mode === 'system' && isSystemDark) ||
-              settings.layout === 'horizontal' ? null : (
+                (settings.mode === 'system' && isSystemDark) ||
+                settings.layout === 'horizontal' ? null : (
                 <div className='flex items-center justify-between'>
                   <label className='font-medium cursor-pointer' htmlFor='customizer-semi-dark'>
                     Semi Dark
@@ -348,7 +348,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
             </div>
             <hr className={styles.hr} />
             <div className='flex flex-col gap-6'>
-              <Chip label='Layout' size='small' color='primary' variant='tonal' className='self-start rounded-sm' />
+              <Chip label='Layout' size='small' color='primary' variant='filled' className='self-start rounded-sm' />
               <div className='flex flex-col gap-2.5'>
                 <p className='font-medium'>Layouts</p>
                 <div className='flex items-center justify-between'>
