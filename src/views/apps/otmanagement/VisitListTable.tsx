@@ -923,24 +923,45 @@ const VisitListTable = ({
           )
         }
       ),
-      columnHelper.accessor(row => row.cliente?.nombreCliente || 'Sin Cliente', {
-        id: 'cliente',
-        header: 'Cliente',
-        cell: info => (
-          <Typography className='capitalize' color='text.primary'>
-            {info.getValue()}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor(row => row.obra?.numeroObra || 'Sin Obra', {
-        id: 'obra',
-        header: 'Obra',
-        cell: info => (
-          <Typography className='capitalize' color='text.primary'>
-            {info.getValue()}
-          </Typography>
-        )
-      }),
+      columnHelper.accessor(
+        row => {
+          // Obtener el primer laboratorista asignado
+          const laboratorista = row.asignados?.[0]?.user?.name || 'Sin Asignar'
+          return laboratorista
+        },
+        {
+          id: 'laboratorista',
+          header: 'Laboratorista',
+          cell: info => (
+            <Typography className='capitalize' color='text.primary'>
+              {info.getValue()}
+            </Typography>
+          )
+        }
+      ),
+      columnHelper.accessor(
+        row => ({
+          cliente: row.cliente?.nombreCliente || 'Sin Cliente',
+          numeroObra: row.obra?.numeroObra || 'Sin Obra'
+        }),
+        {
+          id: 'cliente',
+          header: 'Cliente/Obra',
+          cell: info => {
+            const data = info.getValue()
+            return (
+              <Box>
+                <Typography className='capitalize' color='text.primary' variant='body2'>
+                  {data.cliente}
+                </Typography>
+                <Typography className='capitalize' color='text.secondary' variant='caption'>
+                  {data.numeroObra}
+                </Typography>
+              </Box>
+            )
+          }
+        }
+      ),
       columnHelper.accessor('estado', {
         header: 'Estado',
         cell: info => {
