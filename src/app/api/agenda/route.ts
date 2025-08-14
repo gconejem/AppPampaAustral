@@ -92,6 +92,11 @@ export async function GET(request: Request) {
     const regiones = searchParams.get('regiones')
     const comunas = searchParams.get('comunas')
     const tiposEvento = searchParams.get('tiposEvento')
+    // Nuevos parámetros para filtros adicionales
+    const estado = searchParams.get('estado')
+    const laboratorista = searchParams.get('laboratorista')
+    const porRecibir = searchParams.get('porRecibir')
+    const search = searchParams.get('search')
 
     // Construir el filtro base
     const whereFilter: any = {}
@@ -105,7 +110,11 @@ export async function GET(request: Request) {
       sectoresComerciales,
       regiones,
       comunas,
-      tiposEvento
+      tiposEvento,
+      estado,
+      laboratorista,
+      porRecibir,
+      search
     })
 
     // Filtro de fechas
@@ -186,6 +195,39 @@ export async function GET(request: Request) {
       // Si hay múltiples tipos seleccionados, no aplicamos filtro (mostrar todos)
     }
 
+    // Filtro por estado
+    if (estado) {
+      whereFilter.estado = estado
+    }
+
+    // Filtro por búsqueda global (buscar en título, cliente, obra)
+    if (search) {
+      whereFilter.OR = [
+        {
+          titulo: {
+            contains: search,
+            mode: 'insensitive'
+          }
+        },
+        {
+          cliente: {
+            nombreCliente: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          obra: {
+            nombreObra: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        }
+      ]
+    }
+
     console.log('Final whereFilter:', whereFilter)
 
     const agendas = await prisma.agenda.findMany({
@@ -221,10 +263,12 @@ export async function GET(request: Request) {
 
     // Filtrar por laboratoristas si se especifica (esto se hace en memoria porque requiere join complejo)
     let filteredAgendas = agendas
+
+    // Filtrar por IDs de laboratoristas
     if (laboratoristaIds) {
       const laboratoristaIdsArray = laboratoristaIds.split(',')
-      console.log('Filtrando por laboratoristas:', laboratoristaIdsArray)
-      filteredAgendas = agendas.filter(agenda => {
+      console.log('Filtrando por laboratoristas IDs:', laboratoristaIdsArray)
+      filteredAgendas = filteredAgendas.filter(agenda => {
         const agendaLaboratoristaIds = agenda.asignados.map(asignado => asignado.user.id)
         console.log('Agenda laboratoristas:', agendaLaboratoristaIds)
         const hasMatch = agendaLaboratoristaIds.some(id =>
@@ -232,6 +276,25 @@ export async function GET(request: Request) {
         )
         console.log('Tiene coincidencia:', hasMatch)
         return hasMatch
+      })
+    }
+
+    // Filtrar por nombre de laboratorista
+    if (laboratorista) {
+      console.log('Filtrando por nombre de laboratorista:', laboratorista)
+      filteredAgendas = filteredAgendas.filter(agenda => {
+        return agenda.asignados.some(asignado =>
+          asignado.user?.name?.toLowerCase().includes(laboratorista.toLowerCase())
+        )
+      })
+    }
+
+    // Filtrar por "Por Recibir" (visitas sin hora de llegada ni salida)
+    if (porRecibir === 'true') {
+      console.log('Filtrando por visitas por recibir')
+      filteredAgendas = filteredAgendas.filter(agenda => {
+        // Verificar si la agenda no tiene horaLlegada ni horaSalida
+        return !agenda.horaLlegada && !agenda.horaSalida
       })
     }
 

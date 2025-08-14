@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 
 // Next Imports
 import { useParams } from 'next/navigation'
@@ -160,8 +160,8 @@ const VisitListTable = ({
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null) // Solo permite una selección de fila
-  const [data, setData] = useState(tableData || [])
-  const [filteredData, setFilteredData] = useState(data)
+  const [data, setData] = useState<Agenda[]>([])
+  const [loading, setLoading] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
   const [selectedEstado, setSelectedEstado] = useState('')
@@ -187,7 +187,46 @@ const VisitListTable = ({
   // Hooks
   // const { lang: locale } = useParams()
 
-  // Efecto para inicializar fechas con la fecha actual
+  // Función para cargar datos desde el backend con filtros
+  const fetchVisitasWithFilters = async (filters: {
+    fechaInicio?: string
+    fechaFin?: string
+    estado?: string
+    laboratorista?: string
+    porRecibir?: boolean
+    globalFilter?: string
+  }) => {
+    try {
+      setLoading(true)
+
+      // Construir parámetros de consulta
+      const params = new URLSearchParams()
+      if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio)
+      if (filters.fechaFin) params.append('fechaFin', filters.fechaFin)
+      if (filters.estado) params.append('estado', filters.estado)
+      if (filters.laboratorista) params.append('laboratorista', filters.laboratorista)
+      if (filters.porRecibir) params.append('porRecibir', 'true')
+      if (filters.globalFilter) params.append('search', filters.globalFilter)
+
+      const response = await fetch(`/api/agenda?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Error al cargar las visitas')
+      }
+
+      const visitas = await response.json()
+      setData(visitas)
+    } catch (error) {
+      console.error('Error al cargar visitas:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al cargar las visitas: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Efecto para inicializar fechas con la fecha actual y cargar datos
   useEffect(() => {
     const today = new Date()
     const year = today.getFullYear()
@@ -197,64 +236,45 @@ const VisitListTable = ({
 
     setFechaInicio(fechaActual)
     setFechaFin(fechaActual)
+
+    // Cargar datos iniciales con fecha actual
+    fetchVisitasWithFilters({
+      fechaInicio: fechaActual,
+      fechaFin: fechaActual
+    })
   }, [])
 
-  // Efecto para actualizar los datos filtrados
+  // Efecto para cargar datos cuando cambian los filtros (excepto globalFilter)
   useEffect(() => {
-    let result = [...data]
-
-    // Filtrar por rango de fechas
-    if (fechaInicio || fechaFin) {
-      result = result.filter(item => {
-        // Usar parseDateFromBackend para manejar correctamente las fechas del backend
-        const itemDate = parseDateFromBackend(item.fechaInicio.toString())
-
-        let isInRange = true
-
-        // Verificar fecha de inicio
-        if (fechaInicio) {
-          const filterStartDate = new Date(fechaInicio + 'T00:00:00')
-          isInRange = isInRange && itemDate >= filterStartDate
-        }
-
-        // Verificar fecha de fin
-        if (fechaFin) {
-          const filterEndDate = new Date(fechaFin + 'T23:59:59')
-          isInRange = isInRange && itemDate <= filterEndDate
-        }
-
-        return isInRange
+    if (fechaInicio || fechaFin) { // Solo hacer llamada si hay al menos una fecha
+      fetchVisitasWithFilters({
+        fechaInicio,
+        fechaFin,
+        estado: selectedEstado,
+        laboratorista: selectedLaboratorista,
+        porRecibir,
+        globalFilter
       })
     }
+  }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir])
 
-    // Filtrar por estado
-    if (selectedEstado) {
-      result = result.filter(item => item.estado.toLowerCase() === selectedEstado.toLowerCase())
-    }
-
-    // Filtrar por laboratorista
-    if (selectedLaboratorista) {
-      result = result.filter(item =>
-        item.asignados?.some(asignado =>
-          asignado.user?.name?.toLowerCase().includes(selectedLaboratorista.toLowerCase())
-        )
-      )
-    }
-
-    // Filtrar por "Por Recibir"
-    if (porRecibir) {
-      result = result.filter(
-        item => !item.horaLlegada && !item.horaSalida // Si no tiene hora de llegada ni salida, está por recibir
-      )
-    }
-
-    setFilteredData(result)
-  }, [data, fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir])
-
-  // Efecto para actualizar data cuando cambia tableData
+  // Debounce para la búsqueda global
   useEffect(() => {
-    setData(tableData || [])
-  }, [tableData])
+    const timer = setTimeout(() => {
+      if (fechaInicio || fechaFin) { // Solo hacer llamada si hay al menos una fecha
+        fetchVisitasWithFilters({
+          fechaInicio,
+          fechaFin,
+          estado: selectedEstado,
+          laboratorista: selectedLaboratorista,
+          porRecibir,
+          globalFilter
+        })
+      }
+    }, 500) // 500ms de delay
+
+    return () => clearTimeout(timer)
+  }, [globalFilter])
 
   const handleSelectChange = (event: SelectChangeEvent) => {
     setSelectedLaboratorista(event.target.value)
@@ -790,7 +810,7 @@ const VisitListTable = ({
   )
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -813,9 +833,9 @@ const VisitListTable = ({
 
   // Debugging
   useEffect(() => {
-    console.log('Filtered Data:', filteredData)
+    console.log('Data:', data)
     console.log('Table Rows:', table.getRowModel().rows)
-  }, [filteredData, table])
+  }, [data, table])
 
   const getAvatar = (params: { avatar?: string; fullName?: string }) => {
     const { avatar, fullName } = params
@@ -908,12 +928,19 @@ const VisitListTable = ({
                   variant='contained'
                   fullWidth
                   onClick={() => {
-                    // Limpiar filtros
-                    setFechaInicio('')
-                    setFechaFin('')
+                    // Limpiar filtros y establecer fecha actual
+                    const today = new Date()
+                    const year = today.getFullYear()
+                    const month = String(today.getMonth() + 1).padStart(2, '0')
+                    const day = String(today.getDate()).padStart(2, '0')
+                    const fechaActual = `${year}-${month}-${day}`
+
+                    setFechaInicio(fechaActual)
+                    setFechaFin(fechaActual)
                     setSelectedLaboratorista('')
                     setSelectedEstado('')
                     setPorRecibir(false)
+                    setGlobalFilter('')
                   }}
                 >
                   Limpiar Filtros
@@ -951,44 +978,60 @@ const VisitListTable = ({
           <Box display='flex' sx={{ height: '500px' }}>
             {/* Tabla */}
             <Box sx={{ width: '75%', borderRight: '1px solid #e0e0e0', overflowY: 'auto' }}>
-              <div className='overflow-x-auto'>
-                <table className={tableStyles.table}>
-                  <thead>
-                    {table.getHeaderGroups().map(headerGroup => (
-                      <tr key={headerGroup.id}>
-                        {headerGroup.headers.map(header => (
-                          <th key={header.id}>
-                            {header.isPlaceholder ? null : (
-                              <div className='cursor-pointer select-none'>
-                                {flexRender(header.column.columnDef.header, header.getContext())}
-                              </div>
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    ))}
-                  </thead>
-                  <tbody>
-                    {table.getRowModel().rows.map(row => (
-                      <tr key={row.id} style={{ cursor: 'pointer' }}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                  <Typography>Cargando visitas...</Typography>
+                </Box>
+              ) : (
+                <div className='overflow-x-auto'>
+                  <table className={tableStyles.table}>
+                    <thead>
+                      {table.getHeaderGroups().map(headerGroup => (
+                        <tr key={headerGroup.id}>
+                          {headerGroup.headers.map(header => (
+                            <th key={header.id}>
+                              {header.isPlaceholder ? null : (
+                                <div className='cursor-pointer select-none'>
+                                  {flexRender(header.column.columnDef.header, header.getContext())}
+                                </div>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      ))}
+                    </thead>
+                    <tbody>
+                      {table.getRowModel().rows.length === 0 ? (
+                        <tr>
+                          <td colSpan={table.getAllColumns().length} style={{ textAlign: 'center', padding: '20px' }}>
+                            No se encontraron visitas con los filtros aplicados
+                          </td>
+                        </tr>
+                      ) : (
+                        table.getRowModel().rows.map(row => (
+                          <tr key={row.id} style={{ cursor: 'pointer' }}>
+                            {row.getVisibleCells().map(cell => (
+                              <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                            ))}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-              <TablePagination
-                rowsPerPageOptions={[6, 10, 25, 50]}
-                component='div'
-                count={table.getFilteredRowModel().rows.length}
-                rowsPerPage={table.getState().pagination.pageSize}
-                page={table.getState().pagination.pageIndex}
-                onPageChange={(_, page) => table.setPageIndex(page)}
-                onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-              />
+              {!loading && (
+                <TablePagination
+                  rowsPerPageOptions={[6, 10, 25, 50]}
+                  component='div'
+                  count={data.length}
+                  rowsPerPage={table.getState().pagination.pageSize}
+                  page={table.getState().pagination.pageIndex}
+                  onPageChange={(_, page) => table.setPageIndex(page)}
+                  onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+                />
+              )}
             </Box>
 
             {/* Detalles de la Visita */}
