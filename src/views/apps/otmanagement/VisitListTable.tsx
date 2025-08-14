@@ -79,10 +79,6 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type UsersTypeWithAction = UsersType & {
-  action?: string
-}
-
 type UserRoleType = {
   [key: string]: { icon: string; color: string }
 }
@@ -171,6 +167,7 @@ const VisitListTable = ({
   const [selectedEstado, setSelectedEstado] = useState('')
   const [porRecibir, setPorRecibir] = useState(false)
   const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [selectedOT, setSelectedOT] = useState<OrdenTrabajo | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -188,24 +185,45 @@ const VisitListTable = ({
   const [bulkNewStatus, setBulkNewStatus] = useState('')
 
   // Hooks
-  const { lang: locale } = useParams()
+  // const { lang: locale } = useParams()
+
+  // Efecto para inicializar fechas con la fecha actual
+  useEffect(() => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    const fechaActual = `${year}-${month}-${day}`
+
+    setFechaInicio(fechaActual)
+    setFechaFin(fechaActual)
+  }, [])
 
   // Efecto para actualizar los datos filtrados
   useEffect(() => {
     let result = [...data]
 
-    // Filtrar por fecha
-    if (fechaInicio) {
+    // Filtrar por rango de fechas
+    if (fechaInicio || fechaFin) {
       result = result.filter(item => {
         // Usar parseDateFromBackend para manejar correctamente las fechas del backend
         const itemDate = parseDateFromBackend(item.fechaInicio.toString())
-        const filterDate = new Date(fechaInicio + 'T00:00:00')
 
-        return (
-          itemDate.getFullYear() === filterDate.getFullYear() &&
-          itemDate.getMonth() === filterDate.getMonth() &&
-          itemDate.getDate() === filterDate.getDate()
-        )
+        let isInRange = true
+
+        // Verificar fecha de inicio
+        if (fechaInicio) {
+          const filterStartDate = new Date(fechaInicio + 'T00:00:00')
+          isInRange = isInRange && itemDate >= filterStartDate
+        }
+
+        // Verificar fecha de fin
+        if (fechaFin) {
+          const filterEndDate = new Date(fechaFin + 'T23:59:59')
+          isInRange = isInRange && itemDate <= filterEndDate
+        }
+
+        return isInRange
       })
     }
 
@@ -231,7 +249,7 @@ const VisitListTable = ({
     }
 
     setFilteredData(result)
-  }, [data, fechaInicio, selectedEstado, selectedLaboratorista, porRecibir])
+  }, [data, fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir])
 
   // Efecto para actualizar data cuando cambia tableData
   useEffect(() => {
@@ -291,6 +309,32 @@ const VisitListTable = ({
     const day = String(date.getDate()).padStart(2, '0')
     const newFecha = `${year}-${month}-${day}`
     setFechaInicio(newFecha)
+
+    // Si la fecha fin es menor que la nueva fecha inicio, actualizarla
+    if (fechaFin && newFecha > fechaFin) {
+      setFechaFin(newFecha)
+    }
+  }
+
+  const handleFechaFinChange = (date: Date | null) => {
+    if (!date) {
+      setFechaFin('')
+      return
+    }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const newFecha = `${year}-${month}-${day}`
+
+    // Validar que la fecha fin no sea menor que la fecha inicio
+    if (fechaInicio && newFecha < fechaInicio) {
+      setAlertSeverity('error')
+      setAlertMessage('La fecha de fin no puede ser menor que la fecha de inicio')
+      setAlertOpen(true)
+      return
+    }
+
+    setFechaFin(newFecha)
   }
 
   const handlePDFClick = () => {
@@ -604,7 +648,7 @@ const VisitListTable = ({
       {
         id: 'select',
         header: () => <div></div>,
-        cell: ({ row }) => (
+        cell: ({ row }: { row: any }) => (
           <Checkbox
             checked={selectedVisits.some(v => v.id === row.original.id)}
             onChange={() => handleRowSelection(row.original)}
@@ -773,7 +817,7 @@ const VisitListTable = ({
     console.log('Table Rows:', table.getRowModel().rows)
   }, [filteredData, table])
 
-  const getAvatar = (params: Pick<Agenda, 'avatar' | 'fullName'>) => {
+  const getAvatar = (params: { avatar?: string; fullName?: string }) => {
     const { avatar, fullName } = params
 
     if (avatar) {
@@ -781,7 +825,7 @@ const VisitListTable = ({
     } else {
       return (
         <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
+          {getInitials(fullName || 'U')}
         </CustomAvatar>
       )
     }
@@ -801,13 +845,28 @@ const VisitListTable = ({
           {/* Filtros y Botón Editar */}
           <Box className='p-4'>
             <Grid container spacing={2} alignItems='center'>
-              {/* Primera Fila: 3-3-3-3 */}
-              <Grid item xs={12} sm={3}>
+              {/* Primera Fila: 2-2-3-3-2 */}
+              <Grid item xs={12} sm={2}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
                   <DatePicker
                     label="Fecha Inicio"
                     value={fechaInicio ? new Date(fechaInicio + 'T00:00:00') : null}
                     onChange={handleFechaChange}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small'
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={2}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                  <DatePicker
+                    label="Fecha Fin"
+                    value={fechaFin ? new Date(fechaFin + 'T00:00:00') : null}
+                    onChange={handleFechaFinChange}
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -851,6 +910,7 @@ const VisitListTable = ({
                   onClick={() => {
                     // Limpiar filtros
                     setFechaInicio('')
+                    setFechaFin('')
                     setSelectedLaboratorista('')
                     setSelectedEstado('')
                     setPorRecibir(false)
