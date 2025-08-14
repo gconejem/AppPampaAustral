@@ -32,6 +32,8 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
+import Popover from '@mui/material/Popover'
+import Tooltip from '@mui/material/Tooltip'
 
 // Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -209,6 +211,23 @@ const VisitListTable = ({
   const [obras, setObras] = useState<Array<{ obraId: number, nombreObra: string, numeroObra: string }>>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
   const [loadingObras, setLoadingObras] = useState(false)
+
+  // Estado para el popover de obra
+  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
+  const [popoverContent, setPopoverContent] = useState('')
+
+  // Funciones para manejar el popover
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, nombreObra: string) => {
+    setPopoverAnchor(event.currentTarget)
+    setPopoverContent(`Nombre Obra: ${nombreObra}`)
+  }
+
+  const handlePopoverClose = () => {
+    setPopoverAnchor(null)
+    setPopoverContent('')
+  }
+
+  const isPopoverOpen = Boolean(popoverAnchor)
 
   // Hooks
   // const { lang: locale } = useParams()
@@ -942,7 +961,8 @@ const VisitListTable = ({
       columnHelper.accessor(
         row => ({
           cliente: row.cliente?.nombreCliente || 'Sin Cliente',
-          numeroObra: row.obra?.numeroObra || 'Sin Obra'
+          numeroObra: row.obra?.numeroObra || 'Sin Obra',
+          nombreObra: row.obra?.nombreObra || 'Sin Obra'
         }),
         {
           id: 'cliente',
@@ -950,7 +970,11 @@ const VisitListTable = ({
           cell: info => {
             const data = info.getValue()
             return (
-              <Box>
+              <Box
+                onMouseEnter={(e) => handlePopoverOpen(e, data.nombreObra)}
+                onMouseLeave={handlePopoverClose}
+                sx={{ cursor: 'pointer' }}
+              >
                 <Typography className='capitalize' color='text.primary' variant='body2'>
                   {data.cliente}
                 </Typography>
@@ -1013,12 +1037,32 @@ const VisitListTable = ({
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
+              menuProps={{
+                PaperProps: {
+                  sx: {
+                    backgroundColor: '#424242',
+                    color: 'white',
+                    '& .MuiMenuItem-root': {
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: '#616161'
+                      },
+                      '&.Mui-disabled': {
+                        color: '#9e9e9e'
+                      }
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: 'white'
+                    }
+                  }
+                }
+              }}
               options={[
                 {
                   text: 'Ver Comprobante',
                   icon: 'ri-file-pdf-line',
                   menuItemProps: {
-                    className: 'flex items-center gap-2 text-textSecondary',
+                    className: 'flex items-center gap-2',
                     onClick: () => {
                       if (row.original.ordenesTrabajo?.[0]) {
                         setSelectedOT(row.original.ordenesTrabajo[0])
@@ -1032,7 +1076,7 @@ const VisitListTable = ({
                   text: 'Cambiar Estado',
                   icon: 'ri-exchange-line',
                   menuItemProps: {
-                    className: 'flex items-center gap-2 text-textSecondary',
+                    className: 'flex items-center gap-2',
                     onClick: () => {
                       setSelectedVisitForStatus(row.original)
                       setNewStatus(row.original.estado)
@@ -1787,6 +1831,42 @@ const VisitListTable = ({
           {alertMessage}
         </Alert>
       </Snackbar>
+
+      {/* Popover para mostrar el nombre completo de la obra */}
+      <Popover
+        id="obra-popover"
+        open={isPopoverOpen}
+        anchorEl={popoverAnchor}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        sx={{
+          pointerEvents: 'none',
+        }}
+        PaperProps={{
+          sx: {
+            backgroundColor: 'rgba(97, 97, 97, 0.92)',
+            color: 'white',
+            borderRadius: 1,
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.15)',
+            '& .MuiTypography-root': {
+              color: 'white'
+            }
+          }
+        }}
+      >
+        <Box sx={{ p: 1.5, maxWidth: 300 }}>
+          <Typography variant="body2" sx={{ color: 'white', fontSize: '0.875rem' }}>
+            {popoverContent}
+          </Typography>
+        </Box>
+      </Popover>
     </Grid>
   )
 }
