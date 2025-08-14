@@ -986,6 +986,18 @@ const VisitListTable = ({
           }
         }
       ),
+      columnHelper.accessor(
+        row => row.obra?.comuna || 'Sin Comuna',
+        {
+          id: 'comuna',
+          header: 'Comuna',
+          cell: info => (
+            <Typography className='capitalize' color='text.primary'>
+              {info.getValue()}
+            </Typography>
+          )
+        }
+      ),
       columnHelper.accessor('estado', {
         header: 'Estado',
         cell: info => {
