@@ -148,6 +148,14 @@ interface Agenda {
     }
   }>
   ordenesTrabajo?: OrdenTrabajo[]
+  servicios?: Array<{
+    id: number
+    codigo: string
+    servicio: string
+    cantidad: number
+    observacion?: string
+    esSegundaVisita: boolean
+  }>
 }
 
 const VisitListTable = ({
@@ -1042,6 +1050,89 @@ const VisitListTable = ({
           return <Chip variant='tonal' label={estado} size='small' color={color} />
         }
       }),
+      columnHelper.accessor(
+        row => row.servicios || [],
+        {
+          id: 'servicios',
+          header: 'Servicios',
+          cell: info => {
+            const servicios = info.getValue()
+
+            if (!servicios || servicios.length === 0) {
+              return (
+                <Typography variant='body2' color='text.secondary'>
+                  Sin servicios
+                </Typography>
+              )
+            }
+
+            // Mostrar los primeros 2 servicios
+            const serviciosVisibles = servicios.slice(0, 2)
+            const serviciosRestantes = servicios.length - 2
+
+            return (
+              <Box>
+                {serviciosVisibles.map((servicio, index) => (
+                  <Typography key={index} variant='body2' color='text.primary'>
+                    • {servicio.servicio} ({servicio.cantidad})
+                  </Typography>
+                ))}
+                {serviciosRestantes > 0 && (
+                  <Tooltip
+                    title={
+                      <Box sx={{ p: 1 }}>
+                        <Typography variant='subtitle2' sx={{ mb: 1, color: 'white' }}>
+                          Todos los servicios:
+                        </Typography>
+                        {servicios.map((servicio, index) => (
+                          <Typography key={index} variant='body2' sx={{ color: 'white' }}>
+                            • {servicio.servicio} (Cantidad: {servicio.cantidad})
+                            {servicio.observacion && (
+                              <Typography variant='caption' sx={{ display: 'block', ml: 2, color: '#e0e0e0' }}>
+                                {servicio.observacion}
+                              </Typography>
+                            )}
+                          </Typography>
+                        ))}
+                      </Box>
+                    }
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          backgroundColor: '#424242',
+                          color: 'white',
+                          maxWidth: 300,
+                          '& .MuiTooltip-arrow': {
+                            color: '#424242'
+                          }
+                        }
+                      }
+                    }}
+                    arrow
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        '&:hover': {
+                          color: 'primary.dark'
+                        }
+                      }}
+                    >
+                      <Icon className='ri-add-circle-line' style={{ fontSize: '16px', marginRight: '4px' }} />
+                      <Typography variant='caption'>
+                        {serviciosRestantes} más
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                )}
+              </Box>
+            )
+          }
+        }
+      ),
       columnHelper.accessor('id', {
         header: 'Acc',
         cell: ({ row }) => (
