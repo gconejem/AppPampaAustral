@@ -195,6 +195,7 @@ const VisitListTable = ({
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [selectedOT, setSelectedOT] = useState<OrdenTrabajo | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [detallesModalOpen, setDetallesModalOpen] = useState(false)
   const [editedVisit, setEditedVisit] = useState<Partial<Agenda>>({})
   const [isChangeStatusOpen, setIsChangeStatusOpen] = useState(false)
   const [selectedVisitForStatus, setSelectedVisitForStatus] = useState<Agenda | null>(null)
@@ -596,6 +597,10 @@ const VisitListTable = ({
       setSelectedOT(selectedVisit.ordenesTrabajo[0])
       setPdfModalOpen(true)
     }
+  }
+
+  const handleVerComprobante = () => {
+    setDetallesModalOpen(true)
   }
 
   // Función para manejar los cambios en los campos editables
@@ -1006,6 +1011,20 @@ const VisitListTable = ({
           )
         }
       ),
+      // Nueva columna: Inicio / Fin (vacía por ahora)
+      columnHelper.accessor(
+        row => '',
+        {
+          id: 'inicioFin',
+          header: 'Inicio / Fin',
+          cell: info => (
+            <Typography className='capitalize' color='text.primary'>
+              {info.getValue()}
+            </Typography>
+          )
+        }
+      ),
+      // Nueva columna: Estado
       columnHelper.accessor('estado', {
         header: 'Estado',
         cell: info => {
@@ -1167,12 +1186,9 @@ const VisitListTable = ({
                   menuItemProps: {
                     className: 'flex items-center gap-2',
                     onClick: () => {
-                      if (row.original.ordenesTrabajo?.[0]) {
-                        setSelectedOT(row.original.ordenesTrabajo[0])
-                        setPdfModalOpen(true)
-                      }
-                    },
-                    disabled: !row.original.ordenesTrabajo?.length
+                      onVisitSelect(row.original)
+                      setDetallesModalOpen(true)
+                    }
                   }
                 },
                 {
@@ -1474,10 +1490,10 @@ const VisitListTable = ({
 
           <Divider />
 
-          {/* Contenedor Principal con Flexbox */}
-          <Box display='flex' sx={{ height: '500px' }}>
+          {/* Contenedor Principal */}
+          <Box sx={{ height: '500px', overflowY: 'auto' }}>
             {/* Tabla */}
-            <Box sx={{ width: '75%', borderRight: '1px solid #e0e0e0', overflowY: 'auto' }}>
+            <Box sx={{ width: '100%' }}>
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
                   <Typography>Cargando visitas...</Typography>
@@ -1533,199 +1549,6 @@ const VisitListTable = ({
                 />
               )}
             </Box>
-
-            {/* Detalles de la Visita */}
-            <Box
-              sx={{
-                width: '25%',
-                p: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                height: '100%'
-              }}
-            >
-              {selectedVisit ? (
-                <>
-                  {/* Encabezado con botones */}
-                  <Grid container spacing={1}>
-                    {isEditing ? (
-                      <>
-                        <Grid item xs={6}>
-                          <Button
-                            variant='contained'
-                            color='success'
-                            size='small'
-                            fullWidth
-                            onClick={handleSaveChanges}
-                          >
-                            Guardar
-                          </Button>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Button
-                            variant='contained'
-                            color='error'
-                            size='small'
-                            fullWidth
-                            onClick={() => {
-                              setIsEditing(false)
-                              setEditedVisit({})
-                            }}
-                          >
-                            Cancelar
-                          </Button>
-                        </Grid>
-                      </>
-                    ) : (
-                      <>
-                        <Grid item xs={9}>
-                          <Button
-                            variant='contained'
-                            color='primary'
-                            size='small'
-                            fullWidth
-                            onClick={handleStartEditing}
-                          >
-                            Editar
-                          </Button>
-                        </Grid>
-                        <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <IconButton color='error' size='small'>
-                            <i className='ri-delete-bin-line' />
-                          </IconButton>
-                        </Grid>
-                      </>
-                    )}
-                  </Grid>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  {/* Información Principal: Hora Llegada y Salida */}
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      {isEditing ? (
-                        <TextField
-                          fullWidth
-                          size='small'
-                          label='Hora Llegada'
-                          value={editedVisit.horaLlegada || ''}
-                          onChange={e => handleFieldChange('horaLlegada', e.target.value)}
-                        />
-                      ) : (
-                        <Typography variant='body2'>
-                          Hora Llegada: <strong>{selectedVisit.horaLlegada || '---'}</strong>
-                        </Typography>
-                      )}
-                    </Grid>
-                    <Grid item xs={6}>
-                      {isEditing ? (
-                        <TextField
-                          fullWidth
-                          size='small'
-                          label='Hora Salida'
-                          value={editedVisit.horaSalida || ''}
-                          onChange={e => handleFieldChange('horaSalida', e.target.value)}
-                        />
-                      ) : (
-                        <Typography variant='body2'>
-                          Hora Salida: <strong>{selectedVisit.horaSalida || '---'}</strong>
-                        </Typography>
-                      )}
-                    </Grid>
-                    <Grid item xs={6}>
-                      {isEditing ? (
-                        <TextField
-                          fullWidth
-                          size='small'
-                          label='Movilización'
-                          value={editedVisit.movilizacion || ''}
-                          onChange={e => handleFieldChange('movilizacion', e.target.value)}
-                        />
-                      ) : (
-                        <Typography variant='body2'>
-                          Movilización: <strong>{selectedVisit.movilizacion || '---'}</strong>
-                        </Typography>
-                      )}
-                    </Grid>
-                    <Grid item xs={6}>
-                      {isEditing ? (
-                        <TextField
-                          fullWidth
-                          size='small'
-                          label='Km Adicionales'
-                          value={editedVisit.kmAdicionales || ''}
-                          onChange={e => handleFieldChange('kmAdicionales', e.target.value)}
-                        />
-                      ) : (
-                        <Typography variant='body2'>
-                          Km Adicionales: <strong>{selectedVisit.kmAdicionales || '---'}</strong>
-                        </Typography>
-                      )}
-                    </Grid>
-                  </Grid>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  {/* Servicios Agendado y Extras */}
-                  <Box mb={2}>
-                    <Typography variant='subtitle2' fontWeight='bold'>
-                      Servicios Agendado vs Completado
-                    </Typography>
-                  </Box>
-                  <Box mb={2}>
-                    <Typography variant='subtitle2' fontWeight='bold'>
-                      Extras Agendados:
-                    </Typography>
-                  </Box>
-
-                  {/* Botones: PDF, En Revisión, Recepción OK */}
-                  <Grid container spacing={1}>
-                    <Grid item xs={4}>
-                      <Button
-                        variant='outlined'
-                        color='primary'
-                        fullWidth
-                        size='small'
-                        onClick={handlePDFClick}
-                        startIcon={<i className='ri-file-pdf-line' style={{ color: '#FF0000' }} />}
-                        disabled={!selectedVisit?.ordenesTrabajo?.length}
-                      >
-                        PDF
-                      </Button>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Button
-                        variant='outlined'
-                        color='warning'
-                        fullWidth
-                        size='small'
-                        onClick={handleRevisionClick}
-                        disabled={!selectedVisit?.ordenesTrabajo?.length}
-                      >
-                        Revisión
-                      </Button>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Button
-                        variant='outlined'
-                        color='success'
-                        fullWidth
-                        size='small'
-                        onClick={handleOKClick}
-                        disabled={!selectedVisit?.ordenesTrabajo?.length}
-                      >
-                        OK
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </>
-              ) : (
-                <Typography variant='body2' color='text.secondary' textAlign='center'>
-                  Seleccione una visita para ver los detalles
-                </Typography>
-              )}
-            </Box>
           </Box>
         </Card>
       </Grid>
@@ -1734,6 +1557,212 @@ const VisitListTable = ({
       <PDFModal open={pdfModalOpen} onClose={() => setPdfModalOpen(false)} ot={selectedOT || undefined}>
         {selectedOT && <AceptacionVisitaPDF ot={selectedOT} />}
       </PDFModal>
+
+      {/* Modal de Detalles de la Visita */}
+      <Dialog
+        open={detallesModalOpen}
+        onClose={() => setDetallesModalOpen(false)}
+        maxWidth='md'
+        fullWidth
+      >
+        <DialogTitle>
+          Detalles de la Visita
+          <IconButton
+            aria-label="close"
+            onClick={() => setDetallesModalOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <i className='ri-close-line' />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {selectedVisit ? (
+            <Box sx={{ mt: 2 }}>
+              {/* Encabezado con botones */}
+              <Grid container spacing={1} sx={{ mb: 2 }}>
+                {isEditing ? (
+                  <>
+                    <Grid item xs={6}>
+                      <Button
+                        variant='contained'
+                        color='success'
+                        size='small'
+                        fullWidth
+                        onClick={handleSaveChanges}
+                      >
+                        Guardar
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant='contained'
+                        color='error'
+                        size='small'
+                        fullWidth
+                        onClick={() => {
+                          setIsEditing(false)
+                          setEditedVisit({})
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </Grid>
+                  </>
+                ) : (
+                  <>
+                    <Grid item xs={9}>
+                      <Button
+                        variant='contained'
+                        color='primary'
+                        size='small'
+                        fullWidth
+                        onClick={handleStartEditing}
+                      >
+                        Editar
+                      </Button>
+                    </Grid>
+                    <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <IconButton color='error' size='small'>
+                        <i className='ri-delete-bin-line' />
+                      </IconButton>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Información Principal: Hora Llegada y Salida */}
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label='Hora Llegada'
+                      value={editedVisit.horaLlegada || ''}
+                      onChange={e => handleFieldChange('horaLlegada', e.target.value)}
+                    />
+                  ) : (
+                    <Typography variant='body2'>
+                      Hora Llegada: <strong>{selectedVisit.horaLlegada || '---'}</strong>
+                    </Typography>
+                  )}
+                </Grid>
+                <Grid item xs={6}>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label='Hora Salida'
+                      value={editedVisit.horaSalida || ''}
+                      onChange={e => handleFieldChange('horaSalida', e.target.value)}
+                    />
+                  ) : (
+                    <Typography variant='body2'>
+                      Hora Salida: <strong>{selectedVisit.horaSalida || '---'}</strong>
+                    </Typography>
+                  )}
+                </Grid>
+                <Grid item xs={6}>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label='Movilización'
+                      value={editedVisit.movilizacion || ''}
+                      onChange={e => handleFieldChange('movilizacion', e.target.value)}
+                    />
+                  ) : (
+                    <Typography variant='body2'>
+                      Movilización: <strong>{selectedVisit.movilizacion || '---'}</strong>
+                    </Typography>
+                  )}
+                </Grid>
+                <Grid item xs={6}>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label='Km Adicionales'
+                      value={editedVisit.kmAdicionales || ''}
+                      onChange={e => handleFieldChange('kmAdicionales', e.target.value)}
+                    />
+                  ) : (
+                    <Typography variant='body2'>
+                      Km Adicionales: <strong>{selectedVisit.kmAdicionales || '---'}</strong>
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Servicios Agendado y Extras */}
+              <Box mb={2}>
+                <Typography variant='subtitle2' fontWeight='bold'>
+                  Servicios Agendado vs Completado
+                </Typography>
+              </Box>
+              <Box mb={2}>
+                <Typography variant='subtitle2' fontWeight='bold'>
+                  Extras Agendados:
+                </Typography>
+              </Box>
+
+              {/* Botones: PDF, En Revisión, Recepción OK */}
+              <Grid container spacing={1}>
+                <Grid item xs={4}>
+                  <Button
+                    variant='outlined'
+                    color='primary'
+                    fullWidth
+                    size='small'
+                    onClick={handlePDFClick}
+                    startIcon={<i className='ri-file-pdf-line' style={{ color: '#FF0000' }} />}
+                    disabled={!selectedVisit?.ordenesTrabajo?.length}
+                  >
+                    PDF
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button
+                    variant='outlined'
+                    color='warning'
+                    fullWidth
+                    size='small'
+                    onClick={handleRevisionClick}
+                    disabled={!selectedVisit?.ordenesTrabajo?.length}
+                  >
+                    Revisión
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button
+                    variant='outlined'
+                    color='success'
+                    fullWidth
+                    size='small'
+                    onClick={handleOKClick}
+                    disabled={!selectedVisit?.ordenesTrabajo?.length}
+                  >
+                    OK
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+          ) : (
+            <Typography variant='body2' color='text.secondary' textAlign='center'>
+              No hay visita seleccionada
+            </Typography>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Cambio de Estado */}
       <Dialog
