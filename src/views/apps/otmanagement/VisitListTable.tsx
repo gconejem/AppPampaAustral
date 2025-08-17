@@ -1159,26 +1159,6 @@ const VisitListTable = ({
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
-              menuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#424242',
-                    color: 'white',
-                    '& .MuiMenuItem-root': {
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: '#616161'
-                      },
-                      '&.Mui-disabled': {
-                        color: '#9e9e9e'
-                      }
-                    },
-                    '& .MuiSvgIcon-root': {
-                      color: 'white'
-                    }
-                  }
-                }
-              }}
               options={[
                 {
                   text: 'Ver Comprobante',
@@ -1615,18 +1595,16 @@ const VisitListTable = ({
                   </>
                 ) : (
                   <>
-                    <Grid item xs={9}>
+                    <Grid item xs={9} />
+                    <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                       <Button
-                        variant='contained'
+                        variant='outlined'
                         color='primary'
                         size='small'
-                        fullWidth
                         onClick={handleStartEditing}
                       >
                         Editar
                       </Button>
-                    </Grid>
-                    <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <IconButton color='error' size='small'>
                         <i className='ri-delete-bin-line' />
                       </IconButton>
@@ -1637,100 +1615,253 @@ const VisitListTable = ({
 
               <Divider sx={{ my: 2 }} />
 
-              {/* Información Principal: Hora Llegada y Salida */}
-              <Grid container spacing={2}>
+              {/* Información de la visita - Layout similar a la captura */}
+              <Grid container spacing={3}>
+                {/* Columna izquierda - Información de la visita */}
                 <Grid item xs={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Hora Llegada'
-                      value={editedVisit.horaLlegada || ''}
-                      onChange={e => handleFieldChange('horaLlegada', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant='body2'>
-                      Hora Llegada: <strong>{selectedVisit.horaLlegada || '---'}</strong>
+                  <Box>
+                    <Typography variant='body2' sx={{ mb: 1 }}>
+                      Cliente - N° Obra: <strong>{selectedVisit.cliente?.nombreCliente || '---'} - {selectedVisit.obra?.numeroObra || '---'}</strong>
                     </Typography>
-                  )}
+                    <Typography variant='body2' sx={{ mb: 1 }}>
+                      Fecha Visita: <strong>{selectedVisit.fechaInicio ? parseDateFromBackend(selectedVisit.fechaInicio.toString()).toLocaleDateString('es-ES') : '---'}</strong>
+                    </Typography>
+                    <Typography variant='body2' sx={{ mb: 1 }}>
+                      Laboratorista: <strong>{selectedVisit.asignados?.[0]?.user?.name || '---'}</strong>
+                    </Typography>
+                  </Box>
                 </Grid>
+
+                {/* Columna derecha - Estado */}
                 <Grid item xs={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Hora Salida'
-                      value={editedVisit.horaSalida || ''}
-                      onChange={e => handleFieldChange('horaSalida', e.target.value)}
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Chip
+                      label={selectedVisit.estado}
+                      color={
+                        selectedVisit.estado === 'COMPLETADA' ? 'success' :
+                          selectedVisit.estado === 'EN_REVISION' ? 'warning' :
+                            selectedVisit.estado === 'AGENDADA' ? 'info' :
+                              'primary'
+                      }
+                      variant='outlined'
                     />
-                  ) : (
-                    <Typography variant='body2'>
-                      Hora Salida: <strong>{selectedVisit.horaSalida || '---'}</strong>
-                    </Typography>
-                  )}
+                  </Box>
                 </Grid>
+
+                {/* Información de horarios */}
                 <Grid item xs={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Movilización'
-                      value={editedVisit.movilizacion || ''}
-                      onChange={e => handleFieldChange('movilizacion', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant='body2'>
-                      Movilización: <strong>{selectedVisit.movilizacion || '---'}</strong>
-                    </Typography>
-                  )}
+                  <Box>
+                    {isEditing ? (
+                      <>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant='body2' sx={{ mb: 1 }}>
+                            Hora Llegada:
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editedVisit.horaLlegada || ''}
+                            onChange={(e) => handleFieldChange('horaLlegada', e.target.value)}
+                            placeholder='HH:MM'
+                          />
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant='body2' sx={{ mb: 1 }}>
+                            Hora Salida:
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editedVisit.horaSalida || ''}
+                            onChange={(e) => handleFieldChange('horaSalida', e.target.value)}
+                            placeholder='HH:MM'
+                          />
+                        </Box>
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant='body2' sx={{ mb: 1 }}>
+                          Hora Llegada: <strong>{selectedVisit.horaLlegada || '---'}</strong>
+                        </Typography>
+                        <Typography variant='body2' sx={{ mb: 1 }}>
+                          Hora Salida: <strong>{selectedVisit.horaSalida || '---'}</strong>
+                        </Typography>
+                      </>
+                    )}
+                  </Box>
                 </Grid>
+
+                {/* Información de movilización */}
                 <Grid item xs={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Km Adicionales'
-                      value={editedVisit.kmAdicionales || ''}
-                      onChange={e => handleFieldChange('kmAdicionales', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant='body2'>
-                      Km Adicionales: <strong>{selectedVisit.kmAdicionales || '---'}</strong>
-                    </Typography>
-                  )}
+                  <Box>
+                    {isEditing ? (
+                      <>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant='body2' sx={{ mb: 1 }}>
+                            Movilización:
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editedVisit.movilizacion || ''}
+                            onChange={(e) => handleFieldChange('movilizacion', e.target.value)}
+                            placeholder='Ingrese movilización'
+                          />
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant='body2' sx={{ mb: 1 }}>
+                            Km. Adic:
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            value={editedVisit.kmAdicionales || ''}
+                            onChange={(e) => handleFieldChange('kmAdicionales', e.target.value)}
+                            placeholder='Ingrese km adicionales'
+                          />
+                        </Box>
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant='body2' sx={{ mb: 1 }}>
+                          Movilización: <strong>{selectedVisit.movilizacion || '---'}</strong>
+                        </Typography>
+                        <Typography variant='body2'>
+                          Km. Adic: <strong>{selectedVisit.kmAdicionales || '---'}</strong>
+                        </Typography>
+                      </>
+                    )}
+                  </Box>
                 </Grid>
               </Grid>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 3 }} />
 
-              {/* Servicios Agendado y Extras */}
-              <Box mb={2}>
-                <Typography variant='subtitle2' fontWeight='bold'>
-                  Servicios Agendado vs Completado
-                </Typography>
-              </Box>
-              <Box mb={2}>
-                <Typography variant='subtitle2' fontWeight='bold'>
-                  Extras Agendados:
-                </Typography>
+              {/* Tabla de servicios */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant='subtitle1' fontWeight='bold'>
+                    Servicios
+                  </Typography>
+                  <Button
+                    variant='contained'
+                    size='small'
+                    startIcon={<i className='ri-add-line' />}
+                  >
+                    +
+                  </Button>
+                </Box>
+
+                <Box sx={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}>
+                  <Grid container sx={{
+                    backgroundColor: '#f5f5f5',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontWeight: 'bold'
+                  }}>
+                    <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                      <Typography variant='body2'>SKU</Typography>
+                    </Grid>
+                    <Grid item xs={4} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                      <Typography variant='body2'>Servicio</Typography>
+                    </Grid>
+                    <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                      <Typography variant='body2'>Cantidad</Typography>
+                    </Grid>
+                    <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                      <Typography variant='body2'>Obs</Typography>
+                    </Grid>
+                    <Grid item xs={2} sx={{ p: 1 }}>
+                      <Typography variant='body2'>Acciones</Typography>
+                    </Grid>
+                  </Grid>
+
+                  {selectedVisit.servicios && selectedVisit.servicios.length > 0 ? (
+                    selectedVisit.servicios.map((servicio, index) => (
+                      <Grid container key={index} sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2'>{servicio.codigo}</Typography>
+                        </Grid>
+                        <Grid item xs={4} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2'>{servicio.servicio}</Typography>
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2'>{servicio.cantidad}</Typography>
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            {servicio.observacion || '---'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1 }}>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button size='small' variant='outlined' color='primary'>
+                              Editar
+                            </Button>
+                            <Button size='small' variant='outlined' color='error'>
+                              Eliminar
+                            </Button>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    ))
+                  ) : (
+                    <Grid container sx={{ p: 2 }}>
+                      <Grid item xs={12}>
+                        <Typography variant='body2' color='text.secondary' textAlign='center'>
+                          No hay servicios registrados
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  )}
+                </Box>
               </Box>
 
-              {/* Botones: PDF, En Revisión, Recepción OK */}
-              <Grid container spacing={1}>
-                <Grid item xs={4}>
+              {/* Observaciones */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant='subtitle1' fontWeight='bold' sx={{ mb: 1 }}>
+                  Observaciones
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  placeholder='Campo texto abierto'
+                  variant='outlined'
+                  size='small'
+                />
+              </Box>
+
+              {/* Botones de acción */}
+              <Grid container spacing={2}>
+                <Grid item xs={3}>
                   <Button
                     variant='outlined'
                     color='primary'
                     fullWidth
                     size='small'
                     onClick={handlePDFClick}
-                    startIcon={<i className='ri-file-pdf-line' style={{ color: '#FF0000' }} />}
+                    startIcon={<i className='ri-file-pdf-line' />}
                     disabled={!selectedVisit?.ordenesTrabajo?.length}
                   >
                     PDF
                   </Button>
                 </Grid>
-                <Grid item xs={4}>
+                <Grid item xs={5} />
+                <Grid item xs={3}>
+                  <Button
+                    variant='contained'
+                    color='success'
+                    fullWidth
+                    size='small'
+                  >
+                    Recepcionar
+                  </Button>
+                </Grid>
+                {/* <Grid item xs={3}>
                   <Button
                     variant='outlined'
                     color='warning'
@@ -1741,17 +1872,16 @@ const VisitListTable = ({
                   >
                     Revisión
                   </Button>
-                </Grid>
-                <Grid item xs={4}>
+                </Grid> */}
+
+                <Grid item xs={1}>
                   <Button
                     variant='outlined'
-                    color='success'
+                    color='info'
                     fullWidth
                     size='small'
-                    onClick={handleOKClick}
-                    disabled={!selectedVisit?.ordenesTrabajo?.length}
                   >
-                    OK
+                    !
                   </Button>
                 </Grid>
               </Grid>
