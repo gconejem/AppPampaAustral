@@ -2064,7 +2064,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='SUSPENDIDA_TERRENO'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='SUSPENDIDA_TERRENO' size='small' color='warning' />
+                    <Chip label='SUSPENDIDA TERRENO' size='small' color='warning' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='COMPLETADA'>
@@ -2074,7 +2074,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='EN_REVISION'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='EN_REVISION' size='small' color='warning' />
+                    <Chip label='EN REVISION' size='small' color='warning' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='ANULADA'>
@@ -2084,7 +2084,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='RECIBIDA_OK'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='RECIBIDA_OK' size='small' color='success' />
+                    <Chip label='RECIBIDA OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='CODIFICADA'>
@@ -2160,7 +2160,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='SUSPENDIDA_TERRENO'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='SUSPENDIDA_TERRENO' size='small' color='warning' />
+                    <Chip label='SUSPENDIDA TERRENO' size='small' color='warning' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='COMPLETADA'>
@@ -2170,7 +2170,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='EN_REVISION'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='EN_REVISION' size='small' color='warning' />
+                    <Chip label='EN REVISION' size='small' color='warning' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='ANULADA'>
@@ -2180,7 +2180,7 @@ const VisitListTable = ({
                 </MenuItem>
                 <MenuItem value='RECIBIDA_OK'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='RECIBIDA_OK' size='small' color='success' />
+                    <Chip label='RECIBIDA OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='CODIFICADA'>
