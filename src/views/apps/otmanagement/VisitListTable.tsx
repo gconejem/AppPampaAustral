@@ -1538,7 +1538,7 @@ const VisitListTable = ({
         {selectedOT && <AceptacionVisitaPDF ot={selectedOT} />}
       </PDFModal>
 
-      {/* Modal de Detalles de la Visita */}
+      {/* Modal de Comprobante de Visita */}
       <Dialog
         open={detallesModalOpen}
         onClose={() => setDetallesModalOpen(false)}
@@ -1546,7 +1546,7 @@ const VisitListTable = ({
         fullWidth
       >
         <DialogTitle>
-          Detalles de la Visita
+          Comprobante de Visita
           <IconButton
             aria-label="close"
             onClick={() => setDetallesModalOpen(false)}
@@ -1567,7 +1567,8 @@ const VisitListTable = ({
               <Grid container spacing={1} sx={{ mb: 2 }}>
                 {isEditing ? (
                   <>
-                    <Grid item xs={6}>
+                    <Grid item xs={6} />
+                    <Grid item xs={3}>
                       <Button
                         variant='contained'
                         color='success'
@@ -1578,7 +1579,7 @@ const VisitListTable = ({
                         Guardar
                       </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={3}>
                       <Button
                         variant='contained'
                         color='error'
@@ -1605,9 +1606,6 @@ const VisitListTable = ({
                       >
                         Editar
                       </Button>
-                      <IconButton color='error' size='small'>
-                        <i className='ri-delete-bin-line' />
-                      </IconButton>
                     </Grid>
                   </>
                 )}
