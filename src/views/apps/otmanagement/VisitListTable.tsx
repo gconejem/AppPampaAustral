@@ -1248,7 +1248,7 @@ const VisitListTable = ({
           {/* Filtros y Botón Editar */}
           <Box className='p-4'>
             <Grid container spacing={2} alignItems='center'>
-              {/* Primera Fila: 2-2-3-3-2 */}
+              {/* Primera Fila */}
               <Grid item xs={12} sm={2}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
                   <DatePicker
@@ -1279,66 +1279,7 @@ const VisitListTable = ({
                   />
                 </LocalizationProvider>
               </Grid>
-              <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedCliente}
-                  onChange={handleClienteChange}
-                  displayEmpty
-                  fullWidth
-                  size='small'
-                  disabled={loadingClientes}
-                >
-                  <MenuItem value=''>
-                    {loadingClientes ? 'Cargando...' : 'Todos los Clientes'}
-                  </MenuItem>
-                  {clientes.map((cliente) => (
-                    <MenuItem key={cliente.clienteId} value={cliente.clienteId.toString()}>
-                      {cliente.nombreCliente}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedObra}
-                  onChange={handleObraChange}
-                  displayEmpty
-                  fullWidth
-                  size='small'
-                  disabled={loadingObras || !selectedCliente}
-                >
-                  <MenuItem value=''>
-                    {loadingObras ? 'Cargando...' : !selectedCliente ? 'Seleccione un cliente' : 'Todas las Obras'}
-                  </MenuItem>
-                  {obras.map((obra) => (
-                    <MenuItem key={obra.obraId} value={obra.obraId.toString()}>
-                      {obra.numeroObra} - {obra.nombreObra}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Grid>
-
-              {/* Segunda fila: Laboratorista, Estados, etc. */}
-              <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedLaboratorista}
-                  onChange={handleSelectChange}
-                  displayEmpty
-                  fullWidth
-                  size='small'
-                  disabled={loadingLaboratoristas}
-                >
-                  <MenuItem value=''>
-                    {loadingLaboratoristas ? 'Cargando...' : 'Todos los Laboratoristas'}
-                  </MenuItem>
-                  {laboratoristas.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.name}>
-                      {lab.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <Select
                   multiple
                   value={selectedEstado}
@@ -1408,6 +1349,66 @@ const VisitListTable = ({
                   </MenuItem>
                 </Select>
               </Grid>
+              <Grid item xs={12} sm={3}>
+                <Select
+                  value={selectedCliente}
+                  onChange={handleClienteChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingClientes}
+                >
+                  <MenuItem value=''>
+                    {loadingClientes ? 'Cargando...' : 'Todos los Clientes'}
+                  </MenuItem>
+                  {clientes.map((cliente) => (
+                    <MenuItem key={cliente.clienteId} value={cliente.clienteId.toString()}>
+                      {cliente.nombreCliente}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Select
+                  value={selectedObra}
+                  onChange={handleObraChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingObras || !selectedCliente}
+                >
+                  <MenuItem value=''>
+                    {loadingObras ? 'Cargando...' : !selectedCliente ? 'Seleccione un cliente' : 'Todas las Obras'}
+                  </MenuItem>
+                  {obras.map((obra) => (
+                    <MenuItem key={obra.obraId} value={obra.obraId.toString()}>
+                      {obra.numeroObra} - {obra.nombreObra}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+
+              {/* Segunda fila: Laboratorista, Estados, etc. */}
+              <Grid item xs={12} sm={3}>
+                <Select
+                  value={selectedLaboratorista}
+                  onChange={handleSelectChange}
+                  displayEmpty
+                  fullWidth
+                  size='small'
+                  disabled={loadingLaboratoristas}
+                >
+                  <MenuItem value=''>
+                    {loadingLaboratoristas ? 'Cargando...' : 'Todos los Laboratoristas'}
+                  </MenuItem>
+                  {laboratoristas.map((lab) => (
+                    <MenuItem key={lab.id} value={lab.name}>
+                      {lab.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+
               <Grid item xs={12} sm={2}>
                 <FormControlLabel
                   control={<Checkbox checked={porRecibir} onChange={handlePorRecibirChange} />}
@@ -1415,7 +1416,8 @@ const VisitListTable = ({
                 />
               </Grid>
 
-              {/* Segunda Fila: 2-8-2 */}
+              {/* Segunda Fila */}
+              <Grid item xs={3} />
               <Grid item xs={12} sm={2}>
                 <Button
                   variant='contained'
