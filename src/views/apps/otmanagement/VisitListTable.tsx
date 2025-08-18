@@ -1744,7 +1744,6 @@ const VisitListTable = ({
                   <Button
                     variant='contained'
                     size='small'
-                    startIcon={<i className='ri-add-line' />}
                   >
                     +
                   </Button>
@@ -1835,7 +1834,7 @@ const VisitListTable = ({
 
               {/* Botones de acción */}
               <Grid container spacing={2}>
-                <Grid item xs={3}>
+                <Grid item xs={2}>
                   <Button
                     variant='outlined'
                     color='primary'
@@ -1848,8 +1847,8 @@ const VisitListTable = ({
                     PDF
                   </Button>
                 </Grid>
-                <Grid item xs={5} />
-                <Grid item xs={3}>
+                <Grid item xs={7} />
+                <Grid item xs={2}>
                   <Button
                     variant='contained'
                     color='success'
