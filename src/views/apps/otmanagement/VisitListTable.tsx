@@ -1496,7 +1496,17 @@ const VisitListTable = ({
               </Grid>
 
               {/* Segunda Fila */}
-              <Grid item xs={3} />
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  size='small'
+                  placeholder='Buscar'
+                  onChange={e => setGlobalFilter(e.target.value)}
+                  InputProps={{
+                    startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }}></i>
+                  }}
+                />
+              </Grid>
               <Grid item xs={12} sm={2}>
                 <Button
                   variant='contained'
@@ -1535,17 +1545,7 @@ const VisitListTable = ({
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6} />
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  fullWidth
-                  size='small'
-                  placeholder='Buscar'
-                  onChange={e => setGlobalFilter(e.target.value)}
-                  InputProps={{
-                    startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }}></i>
-                  }}
-                />
-              </Grid>
+
             </Grid>
           </Box>
 
