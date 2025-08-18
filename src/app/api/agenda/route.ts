@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     const estado = searchParams.get('estado')
     const laboratorista = searchParams.get('laboratorista')
     const porRecibir = searchParams.get('porRecibir')
-    const search = searchParams.get('search')
+
 
     // Construir el filtro base
     const whereFilter: any = {}
@@ -115,8 +115,7 @@ export async function GET(request: Request) {
       tiposEvento,
       estado,
       laboratorista,
-      porRecibir,
-      search
+      porRecibir
     })
 
     // Filtro de fechas
@@ -214,33 +213,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filtro por búsqueda global (buscar en título, cliente, obra)
-    if (search) {
-      whereFilter.OR = [
-        {
-          titulo: {
-            contains: search,
-            mode: 'insensitive'
-          }
-        },
-        {
-          cliente: {
-            nombreCliente: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          obra: {
-            nombreObra: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        }
-      ]
-    }
+    // Nota: El filtro de búsqueda global se maneja en el frontend
 
     console.log('Final whereFilter:', whereFilter)
 

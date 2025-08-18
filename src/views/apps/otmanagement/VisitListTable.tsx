@@ -78,6 +78,7 @@ import tableStyles from '@core/styles/table.module.css'
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
+    global: FilterFn<unknown>
   }
   interface FilterMeta {
     itemRank: RankingInfo
@@ -106,6 +107,61 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 
   // Return if the item should be filtered in/out
   return itemRank.passed
+}
+
+// Filtro global personalizado que busca en todas las columnas relevantes
+const globalFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  const searchValue = value.toLowerCase()
+  const rowData = row.original as Agenda
+
+  // Campos donde buscar
+  const searchFields = [
+    // Fecha (formateada)
+    rowData.fechaInicio ? parseDateFromBackend(rowData.fechaInicio.toString()).toLocaleDateString('es-ES') : '',
+    // Hora (formateada HH:MM)
+    rowData.fechaInicio ? (() => {
+      const date = parseDateFromBackend(rowData.fechaInicio.toString())
+      return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+    })() : '',
+    // Laboratorista
+    rowData.asignados?.[0]?.user?.name || '',
+    // Cliente
+    rowData.cliente?.nombreCliente || '',
+    // RUT del cliente
+    rowData.cliente?.rut || '',
+    // Nombre de obra
+    rowData.obra?.nombreObra || '',
+    // Número de obra
+    rowData.obra?.numeroObra || '',
+    // Comuna
+    rowData.obra?.comuna || '',
+    // Región
+    rowData.obra?.region || '',
+    // Estado
+    rowData.estado || '',
+    // Servicios
+    ...(rowData.servicios?.map(s => s.servicio) || []),
+    ...(rowData.servicios?.map(s => s.codigo) || []),
+    ...(rowData.servicios?.map(s => s.observacion) || []),
+    // Título de la visita
+    rowData.titulo || '',
+    // Tipo de visita
+    rowData.tipoVisita || '',
+    // Hora llegada y hora salida (datos adicionales de tiempo)
+    rowData.horaLlegada || '',
+    rowData.horaSalida || ''
+  ]
+
+  // Buscar en todos los campos
+  const found = searchFields.some(field =>
+    field && field.toString().toLowerCase().includes(searchValue)
+  )
+
+  // Para compatibilidad con react-table, retornamos el ranking
+  const itemRank = rankItem(searchFields.join(' '), value)
+  addMeta({ itemRank })
+
+  return found
 }
 
 const userRoleObj: UserRoleType = {
@@ -189,7 +245,7 @@ const VisitListTable = ({
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null) // Solo permite una selección de fila
   const [data, setData] = useState<Agenda[]>([])
   const [loading, setLoading] = useState(false)
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [globalFilterValue, setGlobalFilterValue] = useState('')
   const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
   const [selectedEstado, setSelectedEstado] = useState<string[]>(todosLosEstados) // Inicializar con todos los estados seleccionados
   const [porRecibir, setPorRecibir] = useState(true)
@@ -371,7 +427,6 @@ const VisitListTable = ({
     estado?: string
     laboratorista?: string
     porRecibir?: boolean
-    globalFilter?: string
     clienteId?: string
     obraId?: string
   }) => {
@@ -385,7 +440,7 @@ const VisitListTable = ({
       if (filters.estado) params.append('estado', filters.estado)
       if (filters.laboratorista) params.append('laboratorista', filters.laboratorista)
       if (filters.porRecibir) params.append('porRecibir', 'true')
-      if (filters.globalFilter) params.append('search', filters.globalFilter)
+
       if (filters.clienteId) params.append('clienteId', filters.clienteId)
       if (filters.obraId) params.append('obraId', filters.obraId)
 
@@ -433,7 +488,7 @@ const VisitListTable = ({
     fetchClientes()
   }, [])
 
-  // Efecto para cargar datos cuando cambian los filtros (excepto globalFilter)
+  // Efecto para cargar datos cuando cambian los filtros (excepto globalFilterValue)
   useEffect(() => {
     if (fechaInicio || fechaFin) { // Solo hacer llamada si hay al menos una fecha
       fetchVisitasWithFilters({
@@ -442,32 +497,14 @@ const VisitListTable = ({
         estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
         laboratorista: selectedLaboratorista,
         porRecibir,
-        globalFilter,
+
         clienteId: selectedCliente?.clienteId.toString(),
         obraId: selectedObra?.obraId.toString()
       })
     }
   }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir, selectedCliente, selectedObra])
 
-  // Debounce para la búsqueda global
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (fechaInicio || fechaFin) { // Solo hacer llamada si hay al menos una fecha
-        fetchVisitasWithFilters({
-          fechaInicio,
-          fechaFin,
-          estado: selectedEstado.length > 0 ? selectedEstado.join(',') : '',
-          laboratorista: selectedLaboratorista,
-          porRecibir,
-          globalFilter,
-          clienteId: selectedCliente?.clienteId.toString(),
-          obraId: selectedObra?.obraId.toString()
-        })
-      }
-    }, 500) // 500ms de delay
-
-    return () => clearTimeout(timer)
-  }, [globalFilter])
+  // Nota: La búsqueda global ahora se maneja solo en el frontend con react-table
 
   // Efecto para depurar la carga de clientes
   useEffect(() => {
@@ -1193,18 +1230,19 @@ const VisitListTable = ({
     data: data,
     columns,
     filterFns: {
-      fuzzy: fuzzyFilter
+      fuzzy: fuzzyFilter,
+      global: globalFilter
     },
     state: {
-      globalFilter
+      globalFilter: globalFilterValue
     },
     initialState: {
       pagination: {
         pageSize: 10 // Aumentamos el tamaño de página para ver más registros
       }
     },
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: fuzzyFilter,
+    onGlobalFilterChange: setGlobalFilterValue,
+    globalFilterFn: 'global',
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -1500,10 +1538,22 @@ const VisitListTable = ({
                 <TextField
                   fullWidth
                   size='small'
-                  placeholder='Buscar'
-                  onChange={e => setGlobalFilter(e.target.value)}
+                  placeholder='Buscar en todas las columnas...'
+                  value={globalFilterValue}
+                  onChange={e => setGlobalFilterValue(e.target.value)}
                   InputProps={{
-                    startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }}></i>
+                    startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }}></i>,
+                    endAdornment: globalFilterValue && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setGlobalFilterValue('')}
+                          edge="end"
+                        >
+                          <i className='ri-close-line' style={{ fontSize: '16px' }}></i>
+                        </IconButton>
+                      </InputAdornment>
+                    )
                   }}
                 />
               </Grid>
@@ -1524,7 +1574,7 @@ const VisitListTable = ({
                     setSelectedLaboratorista('')
                     setSelectedEstado(todosLosEstados)
                     setPorRecibir(true)
-                    setGlobalFilter('')
+                    setGlobalFilterValue('')
                     setSelectedCliente(null)
                     setSelectedObra(null)
                     setObras([])
