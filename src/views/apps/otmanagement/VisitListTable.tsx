@@ -34,6 +34,9 @@ import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Popover from '@mui/material/Popover'
 import Tooltip from '@mui/material/Tooltip'
+import Autocomplete from '@mui/material/Autocomplete'
+import CircularProgress from '@mui/material/CircularProgress'
+import InputAdornment from '@mui/material/InputAdornment'
 
 // Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -214,12 +217,17 @@ const VisitListTable = ({
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(false)
 
   // Estados para filtros de cliente y obra
-  const [selectedCliente, setSelectedCliente] = useState('')
-  const [selectedObra, setSelectedObra] = useState('')
+  const [selectedCliente, setSelectedCliente] = useState<{ clienteId: number, nombreCliente: string, rut: string } | null>(null)
+  const [selectedObra, setSelectedObra] = useState<{ obraId: number, nombreObra: string, numeroObra: string } | null>(null)
   const [clientes, setClientes] = useState<Array<{ clienteId: number, nombreCliente: string, rut: string }>>([])
   const [obras, setObras] = useState<Array<{ obraId: number, nombreObra: string, numeroObra: string }>>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
   const [loadingObras, setLoadingObras] = useState(false)
+
+  // Estados para búsqueda por texto
+  const [clienteSearchValue, setClienteSearchValue] = useState('')
+  const [obraSearchValue, setObraSearchValue] = useState('')
+  const [laboratoristaSearchValue, setLaboratoristaSearchValue] = useState('')
 
   // Estado para el popover de obra
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
@@ -312,20 +320,12 @@ const VisitListTable = ({
   }
 
   // Función para cargar obras de un cliente específico
-  const fetchObras = async (clienteId: string) => {
+  const fetchObras = async (cliente: { clienteId: number, nombreCliente: string, rut: string }) => {
     try {
       setLoadingObras(true)
 
-      // Encontrar el RUT del cliente seleccionado
-      const clienteSeleccionado = clientes.find(c => c.clienteId.toString() === clienteId)
-      if (!clienteSeleccionado) {
-        console.warn('Cliente seleccionado no encontrado en la lista')
-        setObras([])
-        return
-      }
-
-      console.log('Cargando obras para cliente RUT:', clienteSeleccionado.rut)
-      const response = await fetch(`/api/obras?rut=${encodeURIComponent(clienteSeleccionado.rut)}`)
+      console.log('Cargando obras para cliente RUT:', cliente.rut)
+      const response = await fetch(`/api/obras?rut=${encodeURIComponent(cliente.rut)}`)
 
       if (!response.ok) {
         throw new Error(`Error al cargar obras: ${response.status}`)
@@ -443,8 +443,8 @@ const VisitListTable = ({
         laboratorista: selectedLaboratorista,
         porRecibir,
         globalFilter,
-        clienteId: selectedCliente,
-        obraId: selectedObra
+        clienteId: selectedCliente?.clienteId.toString(),
+        obraId: selectedObra?.obraId.toString()
       })
     }
   }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir, selectedCliente, selectedObra])
@@ -460,8 +460,8 @@ const VisitListTable = ({
           laboratorista: selectedLaboratorista,
           porRecibir,
           globalFilter,
-          clienteId: selectedCliente,
-          obraId: selectedObra
+          clienteId: selectedCliente?.clienteId.toString(),
+          obraId: selectedObra?.obraId.toString()
         })
       }
     }, 500) // 500ms de delay
@@ -479,9 +479,7 @@ const VisitListTable = ({
     console.log('Estado de obras actualizado:', obras.length, 'obras cargadas')
   }, [obras])
 
-  const handleSelectChange = (event: SelectChangeEvent) => {
-    setSelectedLaboratorista(event.target.value)
-  }
+
 
   const handleEstadoChange = (event: SelectChangeEvent<string[]>) => {
     const value = event.target.value
@@ -505,22 +503,21 @@ const VisitListTable = ({
     setPorRecibir(event.target.checked)
   }
 
-  const handleClienteChange = (event: SelectChangeEvent) => {
-    const clienteId = event.target.value
-    setSelectedCliente(clienteId)
+  const handleClienteChange = (cliente: { clienteId: number, nombreCliente: string, rut: string } | null) => {
+    setSelectedCliente(cliente)
 
     // Limpiar obra seleccionada cuando cambia el cliente
-    setSelectedObra('')
+    setSelectedObra(null)
     setObras([])
 
     // Cargar obras del cliente seleccionado
-    if (clienteId) {
-      fetchObras(clienteId)
+    if (cliente) {
+      fetchObras(cliente)
     }
   }
 
-  const handleObraChange = (event: SelectChangeEvent) => {
-    setSelectedObra(event.target.value)
+  const handleObraChange = (obra: { obraId: number, nombreObra: string, numeroObra: string } | null) => {
+    setSelectedObra(obra)
   }
 
   const handleRowSelection = (row: Agenda) => {
@@ -1350,63 +1347,145 @@ const VisitListTable = ({
                 </Select>
               </Grid>
               <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedCliente}
-                  onChange={handleClienteChange}
-                  displayEmpty
+                <Autocomplete
                   fullWidth
                   size='small'
-                  disabled={loadingClientes}
-                >
-                  <MenuItem value=''>
-                    {loadingClientes ? 'Cargando...' : 'Todos los Clientes'}
-                  </MenuItem>
-                  {clientes.map((cliente) => (
-                    <MenuItem key={cliente.clienteId} value={cliente.clienteId.toString()}>
-                      {cliente.nombreCliente}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  options={clientes}
+                  getOptionLabel={(option) => `${option.nombreCliente} (${option.rut})`}
+                  value={selectedCliente}
+                  onChange={(_, newValue) => handleClienteChange(newValue)}
+                  onInputChange={(_, newInputValue) => setClienteSearchValue(newInputValue)}
+                  loading={loadingClientes}
+                  filterOptions={(options, { inputValue }) => {
+                    const searchTerm = inputValue.toLowerCase()
+                    return options.filter(option =>
+                      option.nombreCliente.toLowerCase().includes(searchTerm) ||
+                      option.rut.toLowerCase().includes(searchTerm)
+                    )
+                  }}
+                  noOptionsText={clienteSearchValue.length < 2 ? 'Ingrese al menos 2 caracteres para buscar' : 'No se encontraron clientes'}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={loadingClientes ? 'Cargando...' : 'Buscar cliente por nombre o RUT'}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingClientes ? <CircularProgress color='inherit' size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component='li' {...props} key={option.clienteId}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant='body1'>
+                          {option.nombreCliente}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                          RUT: {option.rut}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                />
               </Grid>
               <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedObra}
-                  onChange={handleObraChange}
-                  displayEmpty
+                <Autocomplete
                   fullWidth
                   size='small'
-                  disabled={loadingObras || !selectedCliente}
-                >
-                  <MenuItem value=''>
-                    {loadingObras ? 'Cargando...' : !selectedCliente ? 'Seleccione un cliente' : 'Todas las Obras'}
-                  </MenuItem>
-                  {obras.map((obra) => (
-                    <MenuItem key={obra.obraId} value={obra.obraId.toString()}>
-                      {obra.numeroObra} - {obra.nombreObra}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  options={obras}
+                  getOptionLabel={(option) => `${option.numeroObra} - ${option.nombreObra}`}
+                  value={selectedObra}
+                  onChange={(_, newValue) => handleObraChange(newValue)}
+                  onInputChange={(_, newInputValue) => setObraSearchValue(newInputValue)}
+                  loading={loadingObras}
+                  disabled={!selectedCliente}
+                  filterOptions={(options, { inputValue }) => {
+                    const searchTerm = inputValue.toLowerCase()
+                    return options.filter(option =>
+                      option.nombreObra.toLowerCase().includes(searchTerm) ||
+                      option.numeroObra.toLowerCase().includes(searchTerm)
+                    )
+                  }}
+                  noOptionsText={
+                    !selectedCliente ? 'Seleccione un cliente primero' :
+                      obraSearchValue.length < 2 ? 'Ingrese al menos 2 caracteres para buscar' : 'No se encontraron obras'
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={
+                        !selectedCliente ? 'Seleccione un cliente primero' :
+                          loadingObras ? 'Cargando...' : 'Buscar obra por nombre o número'
+                      }
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingObras ? <CircularProgress color='inherit' size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component='li' {...props} key={option.obraId}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant='body1'>
+                          {option.numeroObra} - {option.nombreObra}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                />
               </Grid>
 
               {/* Segunda fila: Laboratorista, Estados, etc. */}
               <Grid item xs={12} sm={3}>
-                <Select
-                  value={selectedLaboratorista}
-                  onChange={handleSelectChange}
-                  displayEmpty
+                <Autocomplete
                   fullWidth
                   size='small'
-                  disabled={loadingLaboratoristas}
-                >
-                  <MenuItem value=''>
-                    {loadingLaboratoristas ? 'Cargando...' : 'Todos los Laboratoristas'}
-                  </MenuItem>
-                  {laboratoristas.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.name}>
-                      {lab.name}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  options={laboratoristas}
+                  getOptionLabel={(option) => option.name}
+                  value={laboratoristas.find(lab => lab.name === selectedLaboratorista) || null}
+                  onChange={(_, newValue) => setSelectedLaboratorista(newValue?.name || '')}
+                  onInputChange={(_, newInputValue) => setLaboratoristaSearchValue(newInputValue)}
+                  loading={loadingLaboratoristas}
+                  filterOptions={(options, { inputValue }) => {
+                    const searchTerm = inputValue.toLowerCase()
+                    return options.filter(option =>
+                      option.name.toLowerCase().includes(searchTerm)
+                    )
+                  }}
+                  noOptionsText={laboratoristaSearchValue.length < 2 ? 'Ingrese al menos 2 caracteres para buscar' : 'No se encontraron laboratoristas'}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={loadingLaboratoristas ? 'Cargando...' : 'Buscar laboratorista por nombre'}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingLaboratoristas ? <CircularProgress color='inherit' size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component='li' {...props} key={option.id}>
+                      <Typography variant='body1'>
+                        {option.name}
+                      </Typography>
+                    </Box>
+                  )}
+                />
               </Grid>
 
               <Grid item xs={12} sm={2}>
@@ -1436,8 +1515,8 @@ const VisitListTable = ({
                     setSelectedEstado(todosLosEstados)
                     setPorRecibir(true)
                     setGlobalFilter('')
-                    setSelectedCliente('')
-                    setSelectedObra('')
+                    setSelectedCliente(null)
+                    setSelectedObra(null)
                     setObras([])
                   }}
                 >
