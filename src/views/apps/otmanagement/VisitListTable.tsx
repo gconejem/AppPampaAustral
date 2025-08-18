@@ -237,6 +237,7 @@ const VisitListTable = ({
     'EN_REVISION',
     'ANULADA',
     'RECIBIDA_OK',
+    'REVISADO_OK',
     'CODIFICADA'
   ]
 
@@ -267,6 +268,10 @@ const VisitListTable = ({
   const [selectedVisits, setSelectedVisits] = useState<Agenda[]>([])
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
   const [bulkNewStatus, setBulkNewStatus] = useState('')
+
+  // Estado para el modal de cambio de estado especial (botón !)
+  const [isSpecialStatusOpen, setIsSpecialStatusOpen] = useState(false)
+  const [specialStatus, setSpecialStatus] = useState('')
 
   // Estado para laboratoristas
   const [laboratoristas, setLaboratoristas] = useState<Array<{ id: string, name: string }>>([])
@@ -942,6 +947,56 @@ const VisitListTable = ({
     }
   }
 
+  // Función para manejar el cambio de estado especial (botón !)
+  const handleSpecialStatusChange = async () => {
+    try {
+      if (!selectedVisit || !specialStatus) return
+
+      console.log('Cambiando estado especial de visita:', { visitId: selectedVisit.id, newStatus: specialStatus })
+
+      // Llamada a la API para actualizar el estado de la visita
+      const response = await fetch(`/api/gestionvisita/${selectedVisit.id}/cambiar-estado`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estado: specialStatus
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cambiar el estado')
+      }
+
+      // Actualizar los datos localmente después de la respuesta de la API
+      const updatedData = data.map(item =>
+        item.id === selectedVisit.id ? { ...item, estado: specialStatus } : item
+      )
+
+      setData(updatedData)
+
+      // Actualizar la visita seleccionada
+      onVisitSelect({ ...selectedVisit, estado: specialStatus })
+
+      // Cerrar el diálogo y limpiar estados
+      setIsSpecialStatusOpen(false)
+      setSpecialStatus('')
+
+      // Mostrar alerta de éxito
+      setAlertSeverity('success')
+      setAlertMessage(`Estado cambiado a ${specialStatus} correctamente`)
+      setAlertOpen(true)
+    } catch (error) {
+      console.error('Error al cambiar el estado:', error)
+
+      // Mostrar alerta de error
+      setAlertSeverity('error')
+      setAlertMessage('Error al cambiar el estado: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    }
+  }
+
   const columnHelper = createColumnHelper<Agenda>()
 
   const columns = useMemo(
@@ -1107,6 +1162,9 @@ const VisitListTable = ({
             case 'RECIBIDA_OK':
               color = 'success'
               break
+            case 'REVISADO_OK':
+              color = 'success'
+              break
             case 'CODIFICADA':
               color = 'info'
               break
@@ -1188,9 +1246,8 @@ const VisitListTable = ({
                         }
                       }}
                     >
-                      <Icon className='ri-add-circle-line' style={{ fontSize: '16px', marginRight: '4px' }} />
                       <Typography variant='caption'>
-                        {serviciosRestantes} más
+                        {serviciosRestantes} más...
                       </Typography>
                     </Box>
                   </Tooltip>
@@ -1397,6 +1454,10 @@ const VisitListTable = ({
                   <MenuItem value='RECIBIDA_OK'>
                     <Checkbox checked={selectedEstado.indexOf('RECIBIDA_OK') > -1} />
                     Recibida OK
+                  </MenuItem>
+                  <MenuItem value='REVISADO_OK'>
+                    <Checkbox checked={selectedEstado.indexOf('REVISADO_OK') > -1} />
+                    Revisado OK
                   </MenuItem>
                   <MenuItem value='CODIFICADA'>
                     <Checkbox checked={selectedEstado.indexOf('CODIFICADA') > -1} />
@@ -2042,6 +2103,10 @@ const VisitListTable = ({
                     color='info'
                     fullWidth
                     size='small'
+                    onClick={() => {
+                      setSpecialStatus('')
+                      setIsSpecialStatusOpen(true)
+                    }}
                   >
                     !
                   </Button>
@@ -2122,6 +2187,11 @@ const VisitListTable = ({
                 <MenuItem value='RECIBIDA_OK'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='RECIBIDA OK' size='small' color='success' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='REVISADO_OK'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='REVISADO OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
                 <MenuItem value='CODIFICADA'>
@@ -2220,6 +2290,11 @@ const VisitListTable = ({
                     <Chip label='RECIBIDA OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
+                <MenuItem value='REVISADO_OK'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='REVISADO OK' size='small' color='success' />
+                  </Box>
+                </MenuItem>
                 <MenuItem value='CODIFICADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='CODIFICADA' size='small' color='info' />
@@ -2240,6 +2315,66 @@ const VisitListTable = ({
           </Button>
           <Button variant='contained' onClick={handleBulkStatusChange} disabled={!bulkNewStatus}>
             Actualizar todas
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Cambio de Estado Especial (Botón !) */}
+      <Dialog
+        open={isSpecialStatusOpen}
+        onClose={() => {
+          setIsSpecialStatusOpen(false)
+          setSpecialStatus('')
+        }}
+        maxWidth='xs'
+        fullWidth
+      >
+        <DialogTitle>Cambiar Estado de la Visita</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel id='special-estado-select-label'>Estado</InputLabel>
+              <Select
+                labelId='special-estado-select-label'
+                value={specialStatus}
+                label='Estado'
+                onChange={e => setSpecialStatus(e.target.value)}
+                size='small'
+              >
+                <MenuItem value='REVISADO_OK'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='REVISADO OK' size='small' color='success' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='EN_REVISION'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='EN REVISION' size='small' color='warning' />
+                  </Box>
+                </MenuItem>
+                <MenuItem value='ANULADA'>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label='ANULADA' size='small' color='error' />
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setIsSpecialStatusOpen(false)
+              setSpecialStatus('')
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            onClick={handleSpecialStatusChange}
+            disabled={!specialStatus}
+          >
+            Cambiar Estado
           </Button>
         </DialogActions>
       </Dialog>
