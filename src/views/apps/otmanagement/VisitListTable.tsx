@@ -451,7 +451,15 @@ const VisitListTable = ({
       }
 
       const visitas = await response.json()
-      setData(visitas)
+
+      // Ordenar las visitas de la más antigua a la más reciente por fechaInicio
+      const visitasOrdenadas = visitas.sort((a: Agenda, b: Agenda) => {
+        const fechaA = parseDateFromBackend(a.fechaInicio.toString())
+        const fechaB = parseDateFromBackend(b.fechaInicio.toString())
+        return fechaA.getTime() - fechaB.getTime()
+      })
+
+      setData(visitasOrdenadas)
     } catch (error) {
       console.error('Error al cargar visitas:', error)
       setAlertSeverity('error')
@@ -965,6 +973,12 @@ const VisitListTable = ({
         {
           id: 'fecha',
           header: 'Fecha',
+          enableSorting: true,
+          sortingFn: (rowA, rowB, columnId) => {
+            const fechaA = parseDateFromBackend(rowA.original.fechaInicio.toString())
+            const fechaB = parseDateFromBackend(rowB.original.fechaInicio.toString())
+            return fechaA.getTime() - fechaB.getTime()
+          },
           cell: info => (
             <Typography className='capitalize' color='text.primary'>
               {info.getValue()}
@@ -1239,7 +1253,13 @@ const VisitListTable = ({
     initialState: {
       pagination: {
         pageSize: 10 // Aumentamos el tamaño de página para ver más registros
-      }
+      },
+      sorting: [
+        {
+          id: 'fecha',
+          desc: false // false = ascendente (más antigua a más reciente)
+        }
+      ]
     },
     onGlobalFilterChange: setGlobalFilterValue,
     globalFilterFn: 'global',
@@ -1618,8 +1638,25 @@ const VisitListTable = ({
                           {headerGroup.headers.map(header => (
                             <th key={header.id}>
                               {header.isPlaceholder ? null : (
-                                <div className='cursor-pointer select-none'>
+                                <div
+                                  className={`select-none ${header.column.getCanSort() ? 'cursor-pointer' : ''}`}
+                                  onClick={header.column.getToggleSortingHandler()}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    userSelect: 'none'
+                                  }}
+                                >
                                   {flexRender(header.column.columnDef.header, header.getContext())}
+                                  {header.column.getCanSort() && (
+                                    <span style={{ fontSize: '12px', color: '#666' }}>
+                                      {{
+                                        asc: ' ↑',
+                                        desc: ' ↓',
+                                      }[header.column.getIsSorted() as string] ?? ' ↕'}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </th>
