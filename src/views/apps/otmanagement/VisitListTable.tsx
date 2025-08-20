@@ -276,6 +276,13 @@ const VisitListTable = ({
   const [laboratoristas, setLaboratoristas] = useState<Array<{ id: string, name: string }>>([])
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(false)
 
+  // Estados para edición de servicios
+  const [editingServiceId, setEditingServiceId] = useState<number | null>(null)
+  const [editedServiceData, setEditedServiceData] = useState<{
+    cantidad: number
+    observacion: string
+  }>({ cantidad: 0, observacion: '' })
+
   // Estados para filtros de cliente y obra
   const [selectedCliente, setSelectedCliente] = useState<{ clienteId: number, nombreCliente: string, rut: string } | null>(null)
   const [selectedObra, setSelectedObra] = useState<{ obraId: number, nombreObra: string, numeroObra: string } | null>(null)
@@ -649,6 +656,13 @@ const VisitListTable = ({
     setDetallesModalOpen(true)
   }
 
+  const handleCloseComprobante = () => {
+    setDetallesModalOpen(false)
+    // Limpiar estado de edición de servicios al cerrar el modal
+    setEditingServiceId(null)
+    setEditedServiceData({ cantidad: 0, observacion: '' })
+  }
+
   // Función para manejar los cambios en los campos editables
   const handleFieldChange = (field: keyof Agenda, value: string) => {
     setEditedVisit(prev => ({
@@ -996,6 +1010,129 @@ const VisitListTable = ({
     }
   }
 
+  // Funciones para edición de servicios
+  const handleStartEditingService = (servicio: any) => {
+    setEditingServiceId(servicio.id)
+    setEditedServiceData({
+      cantidad: servicio.cantidad,
+      observacion: servicio.observacion || ''
+    })
+  }
+
+  const handleCancelEditingService = () => {
+    setEditingServiceId(null)
+    setEditedServiceData({ cantidad: 0, observacion: '' })
+  }
+
+  const handleSaveServiceChanges = async () => {
+    try {
+      if (!selectedVisit || !editingServiceId) return
+
+      console.log('Guardando cambios del servicio:', {
+        visitId: selectedVisit.id,
+        serviceId: editingServiceId,
+        changes: editedServiceData
+      })
+
+      // Actualizar los datos localmente primero (simulación)
+      if (selectedVisit.servicios) {
+        const updatedServicios = selectedVisit.servicios.map(servicio =>
+          servicio.id === editingServiceId
+            ? { ...servicio, ...editedServiceData }
+            : servicio
+        )
+
+        const updatedVisit = { ...selectedVisit, servicios: updatedServicios }
+
+        // Actualizar en la lista de datos
+        const updatedData = data.map(item =>
+          item.id === selectedVisit.id
+            ? updatedVisit
+            : item
+        )
+
+        setData(updatedData)
+        onVisitSelect(updatedVisit)
+      }
+
+      // Limpiar estado de edición
+      setEditingServiceId(null)
+      setEditedServiceData({ cantidad: 0, observacion: '' })
+
+      // Mostrar alerta de éxito
+      setAlertSeverity('success')
+      setAlertMessage('Servicio actualizado correctamente')
+      setAlertOpen(true)
+
+      // TODO: Aquí iría la llamada real a la API
+      /*
+      const response = await fetch(`/api/visitas/${selectedVisit.id}/servicios/${editingServiceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editedServiceData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar el servicio')
+      }
+      */
+
+    } catch (error) {
+      console.error('Error al guardar cambios del servicio:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al actualizar el servicio: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    }
+  }
+
+  const handleDeleteService = async (servicioId: number) => {
+    try {
+      if (!selectedVisit) return
+
+      console.log('Eliminando servicio:', { visitId: selectedVisit.id, serviceId: servicioId })
+
+      // Actualizar los datos localmente (simulación)
+      if (selectedVisit.servicios) {
+        const updatedServicios = selectedVisit.servicios.filter(servicio => servicio.id !== servicioId)
+        const updatedVisit = { ...selectedVisit, servicios: updatedServicios }
+
+        // Actualizar en la lista de datos
+        const updatedData = data.map(item =>
+          item.id === selectedVisit.id
+            ? updatedVisit
+            : item
+        )
+
+        setData(updatedData)
+        onVisitSelect(updatedVisit)
+      }
+
+      // Mostrar alerta de éxito
+      setAlertSeverity('success')
+      setAlertMessage('Servicio eliminado correctamente')
+      setAlertOpen(true)
+
+      // TODO: Aquí iría la llamada real a la API
+      /*
+      const response = await fetch(`/api/visitas/${selectedVisit.id}/servicios/${servicioId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar el servicio')
+      }
+      */
+
+    } catch (error) {
+      console.error('Error al eliminar servicio:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al eliminar el servicio: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    }
+  }
+
   const columnHelper = createColumnHelper<Agenda>()
 
   const columns = useMemo(
@@ -1260,11 +1397,11 @@ const VisitListTable = ({
                     className: 'flex items-center gap-2',
                     onClick: () => {
                       onVisitSelect(row.original)
-                      setDetallesModalOpen(true)
+                      handleVerComprobante()
                     }
                   }
                 },
-                {
+                /* {
                   text: 'Cambiar Estado',
                   icon: 'ri-exchange-line',
                   menuItemProps: {
@@ -1275,7 +1412,7 @@ const VisitListTable = ({
                       setIsChangeStatusOpen(true)
                     }
                   }
-                }
+                } */
               ]}
             />
           </div>
@@ -1754,7 +1891,7 @@ const VisitListTable = ({
       {/* Modal de Comprobante de Visita */}
       <Dialog
         open={detallesModalOpen}
-        onClose={() => setDetallesModalOpen(false)}
+        onClose={handleCloseComprobante}
         maxWidth='md'
         fullWidth
       >
@@ -1762,7 +1899,7 @@ const VisitListTable = ({
           Comprobante de Visita
           <IconButton
             aria-label="close"
-            onClick={() => setDetallesModalOpen(false)}
+            onClick={handleCloseComprobante}
             sx={{
               position: 'absolute',
               right: 8,
@@ -1996,21 +2133,87 @@ const VisitListTable = ({
                           <Typography variant='body2'>{servicio.servicio}</Typography>
                         </Grid>
                         <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                          <Typography variant='body2'>{servicio.cantidad}</Typography>
+                          {editingServiceId === servicio.id ? (
+                            <TextField
+                              fullWidth
+                              size='small'
+                              type='number'
+                              value={editedServiceData.cantidad}
+                              onChange={(e) => setEditedServiceData(prev => ({
+                                ...prev,
+                                cantidad: parseInt(e.target.value) || 0
+                              }))}
+                              inputProps={{ min: 0 }}
+                            />
+                          ) : (
+                            <Typography variant='body2'>{servicio.cantidad}</Typography>
+                          )}
                         </Grid>
                         <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                          <Typography variant='body2' color='text.secondary'>
-                            {servicio.observacion || '---'}
-                          </Typography>
+                          {editingServiceId === servicio.id ? (
+                            <TextField
+                              fullWidth
+                              size='small'
+                              multiline
+                              maxRows={2}
+                              value={editedServiceData.observacion}
+                              onChange={(e) => setEditedServiceData(prev => ({
+                                ...prev,
+                                observacion: e.target.value
+                              }))}
+                              placeholder='Observaciones...'
+                            />
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              {servicio.observacion || '---'}
+                            </Typography>
+                          )}
                         </Grid>
                         <Grid item xs={2} sx={{ p: 1 }}>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button size='small' variant='outlined' color='primary'>
-                              Editar
-                            </Button>
-                            <Button size='small' variant='outlined' color='error'>
-                              Eliminar
-                            </Button>
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
+                            {editingServiceId === servicio.id ? (
+                              <>
+                                <Tooltip title="Guardar cambios">
+                                  <IconButton
+                                    size='small'
+                                    color='success'
+                                    onClick={handleSaveServiceChanges}
+                                  >
+                                    <i className='ri-check-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Cancelar edición">
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={handleCancelEditingService}
+                                  >
+                                    <i className='ri-close-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            ) : (
+                              <>
+                                <Tooltip title="Editar servicio">
+                                  <IconButton
+                                    size='small'
+                                    color='primary'
+                                    onClick={() => handleStartEditingService(servicio)}
+                                  >
+                                    <i className='ri-edit-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar servicio">
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={() => handleDeleteService(servicio.id)}
+                                  >
+                                    <i className='ri-delete-bin-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            )}
                           </Box>
                         </Grid>
                       </Grid>
