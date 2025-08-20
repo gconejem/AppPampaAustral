@@ -37,6 +37,11 @@ import Tooltip from '@mui/material/Tooltip'
 import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
 import InputAdornment from '@mui/material/InputAdornment'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
+import Switch from '@mui/material/Switch'
+import SearchIcon from '@mui/icons-material/Search'
 
 // Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -282,6 +287,25 @@ const VisitListTable = ({
     cantidad: number
     observacion: string
   }>({ cantidad: 0, observacion: '' })
+
+  // Estados para el buscador de servicios (similar a AddEventSidebar)
+  const [serviciosBuscador, setServiciosBuscador] = useState<any[]>([])
+  const [servicioSeleccionadoBuscador, setServicioSeleccionadoBuscador] = useState<any | null>(null)
+  const [selectedArea, setSelectedArea] = useState('')
+  const [selectedTipo, setSelectedTipo] = useState('Terreno')
+  const [selectedFamilia, setSelectedFamilia] = useState('')
+  const [tipos, setTipos] = useState<string[]>([])
+  const [familias, setFamilias] = useState<Array<{ id: number; nombre: string; areaId: number }>>([])
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+  const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [serviciosBuscadorAnchorEl, setServiciosBuscadorAnchorEl] = useState<null | HTMLElement>(null)
+  const [loadingProductos, setLoadingProductos] = useState(false)
+  const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+  const [filteredProductos, setFilteredProductos] = useState<any[]>([])
+  const [totalProductos, setTotalProductos] = useState(0)
+  const [productsPage, setProductsPage] = useState(0)
+  const ITEMS_PER_PAGE = 10
 
   // Estados para filtros de cliente y obra
   const [selectedCliente, setSelectedCliente] = useState<{ clienteId: number, nombreCliente: string, rut: string } | null>(null)
@@ -534,6 +558,131 @@ const VisitListTable = ({
   useEffect(() => {
     console.log('Estado de obras actualizado:', obras.length, 'obras cargadas')
   }, [obras])
+
+  // Cargar tipos y familias para el buscador de servicios
+  useEffect(() => {
+    // Cargar todos los servicios para obtener tipos y familias únicas
+    fetch('/api/productos?limit=1000')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar servicios')
+        }
+        return res.json()
+      })
+      .then(response => {
+        const data = response.productos || []
+
+        // Obtener tipos únicos
+        const uniqueTipos = Array.from(new Set(data.map((s: any) => s.tipo || 'Sin tipo')))
+          .filter(tipo => tipo)
+          .sort()
+
+        // Obtener familias únicas
+        const uniqueFamilias = Array.from(new Set(data.map((s: any) => s.familia || 'Sin familia')))
+          .filter(familia => familia)
+          .sort()
+
+        setTipos(uniqueTipos as string[])
+        setFamilias(uniqueFamilias.map((f, index) => ({ id: index, nombre: String(f), areaId: 0 })))
+        setServiciosBuscador(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar servicios:', error)
+        setAlertSeverity('error')
+        setAlertMessage('Error al cargar los servicios')
+        setAlertOpen(true)
+        setServiciosBuscador([])
+      })
+  }, [])
+
+  // Cargar áreas para el buscador de servicios
+  useEffect(() => {
+    fetch('/api/areas')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar áreas')
+        }
+        return res.json()
+      })
+      .then(data => {
+        console.log('Áreas cargadas:', data)
+        setAreas(data)
+      })
+      .catch(error => {
+        console.error('Error al cargar áreas:', error)
+        setAlertSeverity('error')
+        setAlertMessage('Error al cargar las áreas')
+        setAlertOpen(true)
+        setAreas([])
+      })
+  }, [])
+
+  // Cargar familias cuando se selecciona un área
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar familias')
+          }
+          return res.json()
+        })
+        .then(data => {
+          console.log('Familias cargadas:', data)
+          setFamilias(data)
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          setAlertSeverity('error')
+          setAlertMessage('Error al cargar las familias')
+          setAlertOpen(true)
+          setFamilias([])
+        })
+    } else {
+      setFamilias([])
+    }
+  }, [selectedAreaId])
+
+  // Efecto de paginación para productos
+  useEffect(() => {
+    if (serviciosBuscadorAnchorEl) { // Solo ejecutar cuando el popover está abierto
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Error al cargar servicios')
+          }
+          return res.json()
+        })
+        .then(response => {
+          const data = response.productos || []
+          setFilteredProductos(data)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+        })
+        .catch(error => {
+          console.error('Error al cargar servicios paginados:', error)
+          setAlertSeverity('error')
+          setAlertMessage('Error al cargar los servicios')
+          setAlertOpen(true)
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
+    }
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, serviciosBuscadorAnchorEl])
+
+  // Resetear la página cuando cambien los filtros
+  useEffect(() => {
+    if (serviciosBuscadorAnchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
 
 
@@ -1131,6 +1280,131 @@ const VisitListTable = ({
       setAlertMessage('Error al eliminar el servicio: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       setAlertOpen(true)
     }
+  }
+
+  // Funciones para el buscador de servicios
+  const handleAreaChange = (e: SelectChangeEvent<string>) => {
+    const areaNombre = e.target.value
+    setSelectedArea(areaNombre)
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
+
+    // Encontrar el ID del área seleccionada
+    const areaSeleccionada = areas.find(a => a.nombre === areaNombre)
+    setSelectedAreaId(areaSeleccionada?.id || null)
+  }
+
+  const handleFamiliaChange = (e: SelectChangeEvent<string>) => {
+    setSelectedFamilia(e.target.value)
+  }
+
+  const handleTipoChange = (e: SelectChangeEvent<string>) => {
+    setSelectedTipo(e.target.value)
+  }
+
+  const handleClearFilters = () => {
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setSearchTerm('')
+    setShowOnlyPaquetes(false)
+    setProductsPage(0)
+  }
+
+  // Función para filtrar productos
+  const filterProducts = (search: string, area: string, tipo: string, familia: string, onlyPaquetes = showOnlyPaquetes) => {
+    const params = new URLSearchParams()
+    params.append('page', '1')
+    params.append('limit', ITEMS_PER_PAGE.toString())
+    if (search) params.append('search', search)
+    if (area) params.append('area', area)
+    if (tipo) params.append('tipo', tipo)
+    if (familia) params.append('familia', familia)
+    if (onlyPaquetes) params.append('esPaquete', 'true')
+
+    fetch(`/api/productos?${params.toString()}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al cargar servicios')
+        }
+        return res.json()
+      })
+      .then(response => {
+        const data = response.productos || []
+        setFilteredProductos(data)
+        setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
+      })
+      .catch(error => {
+        console.error('Error al cargar servicios:', error)
+        setAlertSeverity('error')
+        setAlertMessage('Error al cargar los servicios')
+        setAlertOpen(true)
+        setFilteredProductos([])
+        setTotalProductos(0)
+      })
+  }
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSearchTerm(event.target.value)
+    filterProducts(event.target.value, selectedArea, selectedTipo, selectedFamilia)
+  }
+
+  const handleOpenServiciosBuscador = (element: HTMLElement | null) => {
+    setServiciosBuscadorAnchorEl(element)
+    setLoadingProductos(true)
+    setProductsPage(0)
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedAreaId(null)
+    setSelectedTipo('Terreno')
+    setSelectedFamilia('')
+    setShowOnlyPaquetes(false)
+    filterProducts('', '', 'Terreno', '', false)
+    setLoadingProductos(false)
+  }
+
+  const handleCloseServiciosBuscador = () => {
+    setServiciosBuscadorAnchorEl(null)
+  }
+
+  const handleSelectProduct = (producto: any) => {
+    if (!selectedVisit) return
+
+    // Crear nuevo servicio con ID único temporal
+    const nuevoServicio = {
+      id: Date.now(), // ID temporal único
+      codigo: producto.sku,
+      servicio: producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre,
+      cantidad: 1,
+      observacion: '',
+      esSegundaVisita: false
+    }
+
+    // Agregar el servicio a la lista (crear array si no existe)
+    const serviciosActuales = selectedVisit.servicios || []
+    const serviciosActualizados = [...serviciosActuales, nuevoServicio]
+    const visitaActualizada = { ...selectedVisit, servicios: serviciosActualizados }
+
+    // Actualizar en la lista de datos
+    const updatedData = data.map(item =>
+      item.id === selectedVisit.id ? visitaActualizada : item
+    )
+
+    setData(updatedData)
+    onVisitSelect(visitaActualizada)
+
+    // Cerrar el buscador
+    handleCloseServiciosBuscador()
+
+    // Mostrar mensaje de éxito
+    setAlertSeverity('success')
+    setAlertMessage('Servicio agregado correctamente')
+    setAlertOpen(true)
+  }
+
+  const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowOnlyPaquetes(event.target.checked)
+    filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia, event.target.checked)
   }
 
   const columnHelper = createColumnHelper<Agenda>()
@@ -2091,6 +2365,7 @@ const VisitListTable = ({
                   <Button
                     variant='contained'
                     size='small'
+                    onClick={(e) => handleOpenServiciosBuscador(e.currentTarget)}
                   >
                     +
                   </Button>
@@ -2565,6 +2840,189 @@ const VisitListTable = ({
           {alertMessage}
         </Alert>
       </Snackbar>
+
+      {/* Popover del buscador de servicios */}
+      <Popover
+        open={Boolean(serviciosBuscadorAnchorEl)}
+        anchorEl={serviciosBuscadorAnchorEl}
+        onClose={handleCloseServiciosBuscador}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '400px',
+            overflow: 'auto',
+            zIndex: 1
+          }
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <TextField
+            fullWidth
+            size='small'
+            placeholder='Buscar por nombre, descripción o código...'
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
+          />
+
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Área</InputLabel>
+                <Select
+                  value={selectedArea}
+                  label='Área'
+                  onChange={handleAreaChange}
+                >
+                  <MenuItem value=''>Todas</MenuItem>
+                  {areas.map(area => (
+                    <MenuItem key={area.id} value={area.nombre}>
+                      {area.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Tipo</InputLabel>
+                <Select
+                  value={selectedTipo}
+                  label='Tipo'
+                  onChange={handleTipoChange}
+                >
+                  <MenuItem value=''>Todos</MenuItem>
+                  {tipos.map(tipo => (
+                    <MenuItem key={tipo} value={tipo}>
+                      {tipo}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <FormControl size='small' fullWidth>
+                <InputLabel shrink>Familia</InputLabel>
+                <Select
+                  value={selectedFamilia}
+                  label='Familia'
+                  onChange={handleFamiliaChange}
+                  displayEmpty
+                  renderValue={selected => selected === '' ? 'Todas' : selected}
+                  disabled={!selectedAreaId}
+                >
+                  <MenuItem value=''>Todas</MenuItem>
+                  {familias.map(familia => (
+                    <MenuItem key={familia.id} value={familia.nombre}>
+                      {familia.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showOnlyPaquetes}
+                onChange={handleShowOnlyPaquetesChange}
+                size='small'
+              />
+            }
+            label='Solo paquetes'
+            sx={{ mt: 2 }}
+          />
+
+          <List sx={{ pt: 2 }}>
+            {filteredProductos.map(producto => (
+              <ListItem
+                key={producto.id}
+                onClick={() => handleSelectProduct(producto)}
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'action.hover'
+                  },
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant='body1'>
+                        {producto.nombre}
+                        {producto.norma && (
+                          <Typography component='span' color='text.secondary'>
+                            {' '}- {producto.norma}
+                          </Typography>
+                        )}
+                      </Typography>
+                      {producto.esPaquete && (
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            ml: 1
+                          }}
+                        >
+                          Paquete
+                        </Typography>
+                      )}
+                    </Box>
+                  }
+                  secondary={
+                    <Box>
+                      <Typography variant='caption' color='text.secondary'>
+                        {producto.area} - {producto.tipo} - {producto.familia}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+          {totalProductos > ITEMS_PER_PAGE && (
+            <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+              <Button
+                size='small'
+                onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                disabled={productsPage === 0}
+              >
+                Anterior
+              </Button>
+              <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+              </Typography>
+              <Button
+                size='small'
+                onClick={() =>
+                  setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
+                }
+                disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+              >
+                Siguiente
+              </Button>
+            </Box>
+          )}
+        </Box>
+      </Popover>
 
       {/* Popover para mostrar el nombre completo de la obra */}
       <Popover
