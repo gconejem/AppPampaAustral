@@ -276,6 +276,9 @@ const VisitListTable = ({
   // Estado para el modal de cambio de estado especial (botón !)
   const [isSpecialStatusOpen, setIsSpecialStatusOpen] = useState(false)
   const [specialStatus, setSpecialStatus] = useState('')
+  const [specialObservaciones, setSpecialObservaciones] = useState('')
+  const [motivoSuspension, setMotivoSuspension] = useState('')
+  const [observacionSuspendida, setObservacionSuspendida] = useState('')
 
   // Estado para laboratoristas
   const [laboratoristas, setLaboratoristas] = useState<Array<{ id: string, name: string }>>([])
@@ -1114,7 +1117,69 @@ const VisitListTable = ({
     try {
       if (!selectedVisit || !specialStatus) return
 
-      console.log('Cambiando estado especial de visita:', { visitId: selectedVisit.id, newStatus: specialStatus })
+      // Validaciones específicas por estado
+      if (specialStatus === 'ELIMINADA' && !specialObservaciones) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe ingresar observaciones para eliminación')
+        setAlertOpen(true)
+        return
+      }
+
+      if (specialStatus === 'SUSPENDIDA' && !motivoSuspension) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe seleccionar un motivo de suspensión')
+        setAlertOpen(true)
+        return
+      }
+
+      if (specialStatus === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe especificar el motivo cuando selecciona "Otro"')
+        setAlertOpen(true)
+        return
+      }
+
+      if ((specialStatus === 'EN_REVISION' || specialStatus === 'ANULADA' || specialStatus === 'RECIBIDA_OK') && !specialObservaciones) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe ingresar observaciones para este cambio de estado')
+        setAlertOpen(true)
+        return
+      }
+
+      console.log('Cambiando estado especial de visita:', {
+        visitId: selectedVisit.id,
+        newStatus: specialStatus,
+        observaciones: specialObservaciones,
+        motivoSuspension,
+        observacionSuspendida
+      })
+
+      // Preparar el cuerpo de la solicitud según el estado
+      const requestBody: any = {
+        estado: specialStatus
+      }
+
+      // Agregar observaciones específicas según el estado
+      switch (specialStatus) {
+        case 'ELIMINADA':
+          requestBody.observacionEliminada = specialObservaciones
+          break
+        case 'SUSPENDIDA':
+          requestBody.motivoSuspension = motivoSuspension
+          if (motivoSuspension === 'OTRO') {
+            requestBody.observacionSuspendida = observacionSuspendida
+          }
+          break
+        case 'EN_REVISION':
+          requestBody.observacionEnRevision = specialObservaciones
+          break
+        case 'ANULADA':
+          requestBody.observacionAnulada = specialObservaciones
+          break
+        case 'RECIBIDA_OK':
+          requestBody.observacionRecibidaOK = specialObservaciones
+          break
+      }
 
       // Llamada a la API para actualizar el estado de la visita
       const response = await fetch(`/api/gestionvisita/${selectedVisit.id}/cambiar-estado`, {
@@ -1122,9 +1187,7 @@ const VisitListTable = ({
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          estado: specialStatus
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
@@ -1142,8 +1205,7 @@ const VisitListTable = ({
       onVisitSelect({ ...selectedVisit, estado: specialStatus })
 
       // Cerrar el diálogo y limpiar estados
-      setIsSpecialStatusOpen(false)
-      setSpecialStatus('')
+      handleCloseSpecialStatusModal()
 
       // Mostrar alerta de éxito
       setAlertSeverity('success')
@@ -1156,6 +1218,29 @@ const VisitListTable = ({
       setAlertSeverity('error')
       setAlertMessage('Error al cambiar el estado: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       setAlertOpen(true)
+    }
+  }
+
+  // Función para cerrar el modal especial y limpiar estados
+  const handleCloseSpecialStatusModal = () => {
+    setIsSpecialStatusOpen(false)
+    setSpecialStatus('')
+    setSpecialObservaciones('')
+    setMotivoSuspension('')
+    setObservacionSuspendida('')
+  }
+
+  // Función para obtener los estados disponibles según el estado actual
+  const getAvailableStates = (currentStatus: string) => {
+    switch (currentStatus) {
+      case 'CREADA':
+        return ['ELIMINADA', 'AGENDADA']
+      case 'AGENDADA':
+        return ['SUSPENDIDA']
+      case 'COMPLETADA':
+        return ['EN_REVISION', 'ANULADA', 'RECIBIDA_OK']
+      default:
+        return []
     }
   }
 
@@ -2579,7 +2664,7 @@ const VisitListTable = ({
                     fullWidth
                     size='small'
                     onClick={() => {
-                      setSpecialStatus('')
+                      handleCloseSpecialStatusModal() // Limpiar primero
                       setIsSpecialStatusOpen(true)
                     }}
                   >
@@ -2789,17 +2874,15 @@ const VisitListTable = ({
       {/* Modal de Cambio de Estado Especial (Botón !) */}
       <Dialog
         open={isSpecialStatusOpen}
-        onClose={() => {
-          setIsSpecialStatusOpen(false)
-          setSpecialStatus('')
-        }}
-        maxWidth='xs'
+        onClose={handleCloseSpecialStatusModal}
+        maxWidth='sm'
         fullWidth
       >
         <DialogTitle>Cambiar Estado de la Visita</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <FormControl fullWidth>
+            {/* Selector de Estado */}
+            <FormControl fullWidth sx={{ mb: 3 }}>
               <InputLabel id='special-estado-select-label'>Estado</InputLabel>
               <Select
                 labelId='special-estado-select-label'
@@ -2808,34 +2891,125 @@ const VisitListTable = ({
                 onChange={e => setSpecialStatus(e.target.value)}
                 size='small'
               >
-
-                <MenuItem value='EN_REVISION'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='EN REVISION' size='small' color='warning' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='ANULADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='ANULADA' size='small' color='error' />
-                  </Box>
-                </MenuItem>
+                {selectedVisit && getAvailableStates(selectedVisit.estado).map(estado => (
+                  <MenuItem key={estado} value={estado}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={estado === 'EN_REVISION' ? 'EN REVISION' :
+                          estado === 'RECIBIDA_OK' ? 'RECIBIDA OK' : estado}
+                        size='small'
+                        color={
+                          estado === 'ELIMINADA' ? 'error' :
+                            estado === 'AGENDADA' ? 'info' :
+                              estado === 'SUSPENDIDA' ? 'warning' :
+                                estado === 'EN_REVISION' ? 'warning' :
+                                  estado === 'ANULADA' ? 'error' :
+                                    estado === 'RECIBIDA_OK' ? 'success' :
+                                      'primary'
+                        }
+                      />
+                    </Box>
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
+
+            {/* Campo de Observaciones Principal (para estados que lo requieren) */}
+            {(specialStatus === 'ELIMINADA' || specialStatus === 'EN_REVISION' || specialStatus === 'ANULADA' || specialStatus === 'RECIBIDA_OK') && (
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label={
+                  specialStatus === 'ELIMINADA' ? 'Observaciones de Eliminación' :
+                    specialStatus === 'EN_REVISION' ? 'Observaciones de Revisión' :
+                      specialStatus === 'ANULADA' ? 'Observaciones de Anulación' :
+                        specialStatus === 'RECIBIDA_OK' ? 'Observaciones de Recepción' :
+                          'Observaciones'
+                }
+                value={specialObservaciones}
+                onChange={e => setSpecialObservaciones(e.target.value)}
+                placeholder="Ingrese las observaciones..."
+                sx={{ mb: 3 }}
+                required
+              />
+            )}
+
+            {/* Motivo de Suspensión (solo para Suspendida) */}
+            {specialStatus === 'SUSPENDIDA' && (
+              <>
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel id='motivo-suspension-label'>Motivo de Suspensión</InputLabel>
+                  <Select
+                    labelId='motivo-suspension-label'
+                    value={motivoSuspension}
+                    label='Motivo de Suspensión'
+                    onChange={e => setMotivoSuspension(e.target.value)}
+                    size='small'
+                    required
+                  >
+                    <MenuItem value='CLIMA'>Clima</MenuItem>
+                    <MenuItem value='TERRENO_NO_PREPARADO'>Terreno no preparado</MenuItem>
+                    <MenuItem value='PROBLEMA_PLANTA'>Problema Planta</MenuItem>
+                    <MenuItem value='PROBLEMA_INTERNO_PA'>Problema Interno PA</MenuItem>
+                    <MenuItem value='ACREDITACION_PERSONAL'>Acreditación Personal</MenuItem>
+                    <MenuItem value='OTRO'>Otro (especificar)</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Campo adicional cuando se selecciona "Otro" */}
+                {motivoSuspension === 'OTRO' && (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    label='Especificar Motivo'
+                    value={observacionSuspendida}
+                    onChange={e => setObservacionSuspendida(e.target.value)}
+                    placeholder="Especifique el motivo..."
+                    sx={{ mb: 3 }}
+                    required
+                  />
+                )}
+              </>
+            )}
+
+            {/* Información del estado actual */}
+            {selectedVisit && (
+              <Box sx={{
+                p: 2,
+                backgroundColor: '#f5f5f5',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                mb: 2
+              }}>
+                <Typography variant='body2' color='text.secondary'>
+                  Estado actual: <strong>{selectedVisit.estado}</strong>
+                </Typography>
+                <Typography variant='caption' color='text.secondary'>
+                  {getAvailableStates(selectedVisit.estado).length === 0 ?
+                    'No hay cambios de estado disponibles desde el estado actual.' :
+                    `Estados disponibles: ${getAvailableStates(selectedVisit.estado).join(', ')}`
+                  }
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
-              setIsSpecialStatusOpen(false)
-              setSpecialStatus('')
-            }}
-          >
+          <Button onClick={handleCloseSpecialStatusModal}>
             Cancelar
           </Button>
           <Button
             variant='contained'
             onClick={handleSpecialStatusChange}
-            disabled={!specialStatus}
+            disabled={
+              !specialStatus ||
+              (specialStatus === 'ELIMINADA' && !specialObservaciones) ||
+              (specialStatus === 'SUSPENDIDA' && !motivoSuspension) ||
+              (specialStatus === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida) ||
+              ((specialStatus === 'EN_REVISION' || specialStatus === 'ANULADA' || specialStatus === 'RECIBIDA_OK') && !specialObservaciones)
+            }
           >
             Cambiar Estado
           </Button>
