@@ -1876,18 +1876,54 @@ const Calendar = (props: CalenderProps) => {
 
           params.append('fechaInicio', startStr)
           params.append('fechaFin', endStr)
+        } else if (currentView === 'listMonth') {
+          // Si estamos en vista de lista, calcular el rango de la semana (lunes a domingo)
+          const startOfWeek = new Date(selectedDate)
+          const day = startOfWeek.getDay()
+          const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Lunes como primer día
+          startOfWeek.setDate(diff)
+
+          // Calcular el último día de la semana (domingo)
+          const endOfWeek = new Date(startOfWeek)
+          endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+          const startStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
+          const endStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
+
+          params.append('fechaInicio', startStr)
+          params.append('fechaFin', endStr)
         } else {
-          // Para otras vistas (día, lista), usar solo la fecha seleccionada
+          // Para otras vistas (día), usar solo la fecha seleccionada
           const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
           params.append('fechaInicio', selectedDateStr)
           params.append('fechaFin', selectedDateStr)
         }
       } else {
-        // Si no hay fecha seleccionada, cargar eventos del día actual
+        // Si no hay fecha seleccionada
         const today = new Date()
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-        params.append('fechaInicio', todayStr)
-        params.append('fechaFin', todayStr)
+
+        if (currentView === 'listMonth') {
+          // Para vista de lista, cargar la semana actual (lunes a domingo)
+          const startOfWeek = new Date(today)
+          const day = startOfWeek.getDay()
+          const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Lunes como primer día
+          startOfWeek.setDate(diff)
+
+          // Calcular el último día de la semana (domingo)
+          const endOfWeek = new Date(startOfWeek)
+          endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+          const startStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`
+          const endStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`
+
+          params.append('fechaInicio', startStr)
+          params.append('fechaFin', endStr)
+        } else {
+          // Para otras vistas, cargar eventos del día actual
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+          params.append('fechaInicio', todayStr)
+          params.append('fechaFin', todayStr)
+        }
       }
 
       // Agregar parámetros de filtro
