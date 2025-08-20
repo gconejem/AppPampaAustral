@@ -1186,19 +1186,11 @@ const VisitListTable = ({
                 </Typography>
               )
             }
-
-            // Mostrar los primeros 2 servicios
-            const serviciosVisibles = servicios.slice(0, 2)
-            const serviciosRestantes = servicios.length - 2
+            const serviciosTotales = servicios.length
 
             return (
               <Box>
-                {serviciosVisibles.map((servicio, index) => (
-                  <Typography key={index} variant='body2' color='text.primary'>
-                    • {servicio.servicio} ({servicio.cantidad})
-                  </Typography>
-                ))}
-                {serviciosRestantes > 0 && (
+                {serviciosTotales > 0 && (
                   <Tooltip
                     title={
                       <Box sx={{ p: 1 }}>
@@ -1243,7 +1235,7 @@ const VisitListTable = ({
                       }}
                     >
                       <Typography variant='caption'>
-                        {serviciosRestantes} más...
+                        Ver {serviciosTotales} {serviciosTotales > 1 ? 'servicios' : 'servicio'}
                       </Typography>
                     </Box>
                   </Tooltip>
