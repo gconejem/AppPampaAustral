@@ -2430,16 +2430,29 @@ const VisitListTable = ({
                               fullWidth
                               size='small'
                               multiline
-                              maxRows={2}
+                              minRows={2}
+                              maxRows={6}
                               value={editedServiceData.observacion}
                               onChange={(e) => setEditedServiceData(prev => ({
                                 ...prev,
                                 observacion: e.target.value
                               }))}
                               placeholder='Observaciones...'
+                              sx={{
+                                '& .MuiInputBase-input': {
+                                  whiteSpace: 'pre-wrap'
+                                }
+                              }}
                             />
                           ) : (
-                            <Typography variant='body2' color='text.secondary'>
+                            <Typography
+                              variant='body2'
+                              color='text.secondary'
+                              sx={{
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}
+                            >
                               {servicio.observacion || '---'}
                             </Typography>
                           )}
