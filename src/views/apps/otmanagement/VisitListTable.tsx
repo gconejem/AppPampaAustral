@@ -237,7 +237,6 @@ const VisitListTable = ({
     'EN_REVISION',
     'ANULADA',
     'RECIBIDA_OK',
-    'REVISADO_OK',
     'CODIFICADA'
   ]
 
@@ -1162,9 +1161,6 @@ const VisitListTable = ({
             case 'RECIBIDA_OK':
               color = 'success'
               break
-            case 'REVISADO_OK':
-              color = 'success'
-              break
             case 'CODIFICADA':
               color = 'info'
               break
@@ -1454,10 +1450,6 @@ const VisitListTable = ({
                   <MenuItem value='RECIBIDA_OK'>
                     <Checkbox checked={selectedEstado.indexOf('RECIBIDA_OK') > -1} />
                     Recibida OK
-                  </MenuItem>
-                  <MenuItem value='REVISADO_OK'>
-                    <Checkbox checked={selectedEstado.indexOf('REVISADO_OK') > -1} />
-                    Revisado OK
                   </MenuItem>
                   <MenuItem value='CODIFICADA'>
                     <Checkbox checked={selectedEstado.indexOf('CODIFICADA') > -1} />
@@ -2189,11 +2181,7 @@ const VisitListTable = ({
                     <Chip label='RECIBIDA OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='REVISADO_OK'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='REVISADO OK' size='small' color='success' />
-                  </Box>
-                </MenuItem>
+
                 <MenuItem value='CODIFICADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='CODIFICADA' size='small' color='info' />
@@ -2290,11 +2278,7 @@ const VisitListTable = ({
                     <Chip label='RECIBIDA OK' size='small' color='success' />
                   </Box>
                 </MenuItem>
-                <MenuItem value='REVISADO_OK'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='REVISADO OK' size='small' color='success' />
-                  </Box>
-                </MenuItem>
+
                 <MenuItem value='CODIFICADA'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='CODIFICADA' size='small' color='info' />
@@ -2341,11 +2325,7 @@ const VisitListTable = ({
                 onChange={e => setSpecialStatus(e.target.value)}
                 size='small'
               >
-                <MenuItem value='REVISADO_OK'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='REVISADO OK' size='small' color='success' />
-                  </Box>
-                </MenuItem>
+
                 <MenuItem value='EN_REVISION'>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label='EN REVISION' size='small' color='warning' />
