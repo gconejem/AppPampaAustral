@@ -1207,6 +1207,9 @@ const VisitListTable = ({
       // Cerrar el diálogo y limpiar estados
       handleCloseSpecialStatusModal()
 
+      // Cerrar también el modal de comprobante de visita
+      handleCloseComprobante()
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
       setAlertMessage(`Estado cambiado a ${specialStatus} correctamente`)
