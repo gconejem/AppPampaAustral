@@ -826,23 +826,64 @@ const VisitListTable = ({
   // Función para guardar los cambios
   const handleSaveChanges = async () => {
     try {
-      // Aquí iría la llamada a la API para actualizar los datos
+      if (!selectedVisit) {
+        setAlertSeverity('error')
+        setAlertMessage('No hay visita seleccionada para actualizar')
+        setAlertOpen(true)
+        return
+      }
+
       console.log('Guardando cambios:', editedVisit)
 
-      // Actualizar los datos localmente
-      const updatedData = data.map(item => (item.id === selectedVisit?.id ? { ...item, ...editedVisit } : item))
+      // Llamada a la API para actualizar los datos de la visita
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/actualizar-campos`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          horaLlegada: editedVisit.horaLlegada || null,
+          horaSalida: editedVisit.horaSalida || null,
+          movilizacion: editedVisit.movilizacion || null,
+          kmAdicionales: editedVisit.kmAdicionales || null
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      const updatedVisit = await response.json()
+
+      // Actualizar los datos localmente después de la respuesta exitosa de la API
+      const updatedData = data.map(item =>
+        item.id === selectedVisit.id
+          ? { ...item, ...editedVisit }
+          : item
+      )
 
       setData(updatedData)
 
-      // Si la visita seleccionada es la que se está editando, actualizarla
-      if (selectedVisit) {
-        onVisitSelect({ ...selectedVisit, ...editedVisit })
-      }
+      // Actualizar la visita seleccionada
+      onVisitSelect({ ...selectedVisit, ...editedVisit })
 
+      // Salir del modo de edición
       setIsEditing(false)
       setEditedVisit({})
+
+      // Mostrar mensaje de éxito
+      setAlertSeverity('success')
+      setAlertMessage('Los datos de la visita se actualizaron correctamente')
+      setAlertOpen(true)
+
     } catch (error) {
       console.error('Error al guardar los cambios:', error)
+
+      // Mostrar mensaje de error
+      setAlertSeverity('error')
+      setAlertMessage('Error al actualizar los datos: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
     }
   }
 
