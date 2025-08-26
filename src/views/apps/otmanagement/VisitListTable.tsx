@@ -273,6 +273,15 @@ const VisitListTable = ({
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
   const [bulkNewStatus, setBulkNewStatus] = useState('')
 
+  // Verificar si todas las visitas seleccionadas tienen el mismo estado
+  const allSelectedHaveSameStatus = useMemo(() => {
+    if (selectedVisits.length === 0) return false
+    if (selectedVisits.length === 1) return true
+
+    const firstStatus = selectedVisits[0].estado
+    return selectedVisits.every(visit => visit.estado === firstStatus)
+  }, [selectedVisits])
+
   // Estado para el modal de cambio de estado especial (botón !)
   const [isSpecialStatusOpen, setIsSpecialStatusOpen] = useState(false)
   const [specialStatus, setSpecialStatus] = useState('')
@@ -2189,15 +2198,27 @@ const VisitListTable = ({
                 </Button>
               </Grid>
               <Grid item xs={12} sm={2}>
-                <Button
-                  variant='contained'
-                  color='warning'
-                  fullWidth
-                  onClick={() => setIsBulkEditOpen(true)}
-                  disabled={selectedVisits.length === 0}
+                <Tooltip
+                  title={
+                    selectedVisits.length === 0
+                      ? 'Seleccione al menos una visita'
+                      : !allSelectedHaveSameStatus
+                        ? 'Todas las visitas seleccionadas deben tener el mismo estado'
+                        : 'Editar estado de las visitas seleccionadas'
+                  }
                 >
-                  Editar Seleccionadas ({selectedVisits.length})
-                </Button>
+                  <span>
+                    <Button
+                      variant='contained'
+                      color='warning'
+                      fullWidth
+                      onClick={() => setIsBulkEditOpen(true)}
+                      disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus}
+                    >
+                      Editar Seleccionadas ({selectedVisits.length})
+                    </Button>
+                  </span>
+                </Tooltip>
               </Grid>
               <Grid item xs={12} sm={6} />
 
