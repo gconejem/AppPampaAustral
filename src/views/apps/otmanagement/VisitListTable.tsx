@@ -273,6 +273,11 @@ const VisitListTable = ({
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
   const [bulkNewStatus, setBulkNewStatus] = useState('')
 
+  // Estados para el modal de edición masiva (similar al modal especial)
+  const [bulkSpecialObservaciones, setBulkSpecialObservaciones] = useState('')
+  const [bulkMotivoSuspension, setBulkMotivoSuspension] = useState('')
+  const [bulkObservacionSuspendida, setBulkObservacionSuspendida] = useState('')
+
   // Verificar si todas las visitas seleccionadas tienen el mismo estado
   const allSelectedHaveSameStatus = useMemo(() => {
     if (selectedVisits.length === 0) return false
@@ -280,6 +285,12 @@ const VisitListTable = ({
 
     const firstStatus = selectedVisits[0].estado
     return selectedVisits.every(visit => visit.estado === firstStatus)
+  }, [selectedVisits])
+
+  // Obtener el estado común de las visitas seleccionadas
+  const commonSelectedStatus = useMemo(() => {
+    if (selectedVisits.length === 0) return ''
+    return selectedVisits[0].estado
   }, [selectedVisits])
 
   // Estado para el modal de cambio de estado especial (botón !)
@@ -1098,12 +1109,74 @@ const VisitListTable = ({
     }
   }
 
-  // Nueva función para manejar el cambio de estado en masa
+  // Nueva función para manejar el cambio de estado en masa (con validaciones como el modal especial)
   const handleBulkStatusChange = async () => {
     try {
       if (!selectedVisits.length || !bulkNewStatus) return
 
-      console.log('Cambiando estado de visitas en masa:', { count: selectedVisits.length, newStatus: bulkNewStatus })
+      // Validaciones específicas por estado (mismas que el modal especial)
+      if (bulkNewStatus === 'ELIMINADA' && !bulkSpecialObservaciones) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe ingresar observaciones para eliminación')
+        setAlertOpen(true)
+        return
+      }
+
+      if (bulkNewStatus === 'SUSPENDIDA' && !bulkMotivoSuspension) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe seleccionar un motivo de suspensión')
+        setAlertOpen(true)
+        return
+      }
+
+      if (bulkNewStatus === 'SUSPENDIDA' && bulkMotivoSuspension === 'OTRO' && !bulkObservacionSuspendida) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe especificar el motivo cuando selecciona "Otro"')
+        setAlertOpen(true)
+        return
+      }
+
+      if ((bulkNewStatus === 'EN_REVISION' || bulkNewStatus === 'ANULADA' || bulkNewStatus === 'RECIBIDA_OK') && !bulkSpecialObservaciones) {
+        setAlertSeverity('error')
+        setAlertMessage('Debe ingresar observaciones para este cambio de estado')
+        setAlertOpen(true)
+        return
+      }
+
+      console.log('Cambiando estado de visitas en masa:', {
+        count: selectedVisits.length,
+        newStatus: bulkNewStatus,
+        observaciones: bulkSpecialObservaciones,
+        motivoSuspension: bulkMotivoSuspension,
+        observacionSuspendida: bulkObservacionSuspendida
+      })
+
+      // Preparar el cuerpo de la solicitud según el estado
+      const requestBody: any = {
+        estado: bulkNewStatus
+      }
+
+      // Agregar observaciones específicas según el estado
+      switch (bulkNewStatus) {
+        case 'ELIMINADA':
+          requestBody.observacionEliminada = bulkSpecialObservaciones
+          break
+        case 'SUSPENDIDA':
+          requestBody.motivoSuspension = bulkMotivoSuspension
+          if (bulkMotivoSuspension === 'OTRO') {
+            requestBody.observacionSuspendida = bulkObservacionSuspendida
+          }
+          break
+        case 'EN_REVISION':
+          requestBody.observacionEnRevision = bulkSpecialObservaciones
+          break
+        case 'ANULADA':
+          requestBody.observacionAnulada = bulkSpecialObservaciones
+          break
+        case 'RECIBIDA_OK':
+          requestBody.observacionRecibidaOK = bulkSpecialObservaciones
+          break
+      }
 
       // Usar Promise.all para hacer todas las solicitudes en paralelo
       const results = await Promise.all(
@@ -1113,9 +1186,7 @@ const VisitListTable = ({
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              estado: bulkNewStatus
-            })
+            body: JSON.stringify(requestBody)
           })
         )
       )
@@ -1145,8 +1216,7 @@ const VisitListTable = ({
       }
 
       // Cerrar el diálogo y limpiar estados
-      setIsBulkEditOpen(false)
-      setBulkNewStatus('')
+      handleCloseBulkEditModal()
 
       // Mostrar alerta de éxito
       setAlertSeverity('success')
@@ -1160,6 +1230,15 @@ const VisitListTable = ({
       setAlertMessage('Error al cambiar el estado: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       setAlertOpen(true)
     }
+  }
+
+  // Función para cerrar el modal de edición masiva y limpiar estados
+  const handleCloseBulkEditModal = () => {
+    setIsBulkEditOpen(false)
+    setBulkNewStatus('')
+    setBulkSpecialObservaciones('')
+    setBulkMotivoSuspension('')
+    setBulkObservacionSuspendida('')
   }
 
   // Función para manejar el cambio de estado especial (botón !)
@@ -2847,91 +2926,144 @@ const VisitListTable = ({
       {/* Modal de Cambio de Estado Masivo */}
       <Dialog
         open={isBulkEditOpen}
-        onClose={() => {
-          setIsBulkEditOpen(false)
-          setBulkNewStatus('')
-        }}
-        maxWidth='xs'
+        onClose={handleCloseBulkEditModal}
+        maxWidth='sm'
         fullWidth
       >
         <DialogTitle>Cambiar Estado de {selectedVisits.length} Visitas</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel id='bulk-estado-select-label'>Nuevo Estado</InputLabel>
+            {/* Selector de Estado */}
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel id='bulk-estado-select-label'>Estado</InputLabel>
               <Select
                 labelId='bulk-estado-select-label'
                 value={bulkNewStatus}
-                label='Nuevo Estado'
+                label='Estado'
                 onChange={e => setBulkNewStatus(e.target.value)}
                 size='small'
               >
-                <MenuItem value='CREADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='CREADA' size='small' color='primary' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='ELIMINADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='ELIMINADA' size='small' color='error' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='AGENDADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='AGENDADA' size='small' color='info' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='SUSPENDIDA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='SUSPENDIDA' size='small' color='warning' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='SUSPENDIDA_TERRENO'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='SUSPENDIDA TERRENO' size='small' color='warning' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='COMPLETADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='COMPLETADA' size='small' color='success' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='EN_REVISION'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='EN REVISION' size='small' color='warning' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='ANULADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='ANULADA' size='small' color='error' />
-                  </Box>
-                </MenuItem>
-                <MenuItem value='RECIBIDA_OK'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='RECIBIDA OK' size='small' color='success' />
-                  </Box>
-                </MenuItem>
-
-                <MenuItem value='CODIFICADA'>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label='CODIFICADA' size='small' color='info' />
-                  </Box>
-                </MenuItem>
+                {commonSelectedStatus && getAvailableStates(commonSelectedStatus).map(estado => (
+                  <MenuItem key={estado} value={estado}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={estado === 'EN_REVISION' ? 'EN REVISION' :
+                          estado === 'RECIBIDA_OK' ? 'RECIBIDA OK' : estado}
+                        size='small'
+                        color={
+                          estado === 'ELIMINADA' ? 'error' :
+                            estado === 'AGENDADA' ? 'info' :
+                              estado === 'SUSPENDIDA' ? 'warning' :
+                                estado === 'EN_REVISION' ? 'warning' :
+                                  estado === 'ANULADA' ? 'error' :
+                                    estado === 'RECIBIDA_OK' ? 'success' :
+                                      'primary'
+                        }
+                      />
+                    </Box>
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
+
+            {/* Campo de Observaciones Principal (para estados que lo requieren) */}
+            {(bulkNewStatus === 'ELIMINADA' || bulkNewStatus === 'EN_REVISION' || bulkNewStatus === 'ANULADA' || bulkNewStatus === 'RECIBIDA_OK') && (
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label={
+                  bulkNewStatus === 'ELIMINADA' ? 'Observaciones de Eliminación' :
+                    bulkNewStatus === 'EN_REVISION' ? 'Observaciones de Revisión' :
+                      bulkNewStatus === 'ANULADA' ? 'Observaciones de Anulación' :
+                        bulkNewStatus === 'RECIBIDA_OK' ? 'Observaciones de Recepción' :
+                          'Observaciones'
+                }
+                value={bulkSpecialObservaciones}
+                onChange={e => setBulkSpecialObservaciones(e.target.value)}
+                placeholder="Ingrese las observaciones..."
+                sx={{ mb: 3 }}
+                required
+              />
+            )}
+
+            {/* Motivo de Suspensión (solo para Suspendida) */}
+            {bulkNewStatus === 'SUSPENDIDA' && (
+              <>
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel id='bulk-motivo-suspension-label'>Motivo de Suspensión</InputLabel>
+                  <Select
+                    labelId='bulk-motivo-suspension-label'
+                    value={bulkMotivoSuspension}
+                    label='Motivo de Suspensión'
+                    onChange={e => setBulkMotivoSuspension(e.target.value)}
+                    size='small'
+                    required
+                  >
+                    <MenuItem value='CLIMA'>Clima</MenuItem>
+                    <MenuItem value='TERRENO_NO_PREPARADO'>Terreno no preparado</MenuItem>
+                    <MenuItem value='PROBLEMA_PLANTA'>Problema Planta</MenuItem>
+                    <MenuItem value='PROBLEMA_INTERNO_PA'>Problema Interno PA</MenuItem>
+                    <MenuItem value='ACREDITACION_PERSONAL'>Acreditación Personal</MenuItem>
+                    <MenuItem value='OTRO'>Otro (especificar)</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Campo adicional cuando se selecciona "Otro" */}
+                {bulkMotivoSuspension === 'OTRO' && (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    label='Especificar Motivo'
+                    value={bulkObservacionSuspendida}
+                    onChange={e => setBulkObservacionSuspendida(e.target.value)}
+                    placeholder="Especifique el motivo..."
+                    sx={{ mb: 3 }}
+                    required
+                  />
+                )}
+              </>
+            )}
+
+            {/* Información del estado actual */}
+            {commonSelectedStatus && (
+              <Box sx={{
+                p: 2,
+                backgroundColor: '#f5f5f5',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                mb: 2
+              }}>
+                <Typography variant='body2' color='text.secondary'>
+                  Estado actual de las {selectedVisits.length} visitas: <strong>{commonSelectedStatus}</strong>
+                </Typography>
+                <Typography variant='caption' color='text.secondary'>
+                  {getAvailableStates(commonSelectedStatus).length === 0 ?
+                    'No hay cambios de estado disponibles desde el estado actual.' :
+                    `Estados disponibles: ${getAvailableStates(commonSelectedStatus).join(', ')}`
+                  }
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
-              setIsBulkEditOpen(false)
-              setBulkNewStatus('')
-            }}
-          >
+          <Button onClick={handleCloseBulkEditModal}>
             Cancelar
           </Button>
-          <Button variant='contained' onClick={handleBulkStatusChange} disabled={!bulkNewStatus}>
-            Actualizar todas
+          <Button
+            variant='contained'
+            onClick={handleBulkStatusChange}
+            disabled={
+              !bulkNewStatus ||
+              (bulkNewStatus === 'ELIMINADA' && !bulkSpecialObservaciones) ||
+              (bulkNewStatus === 'SUSPENDIDA' && !bulkMotivoSuspension) ||
+              (bulkNewStatus === 'SUSPENDIDA' && bulkMotivoSuspension === 'OTRO' && !bulkObservacionSuspendida) ||
+              ((bulkNewStatus === 'EN_REVISION' || bulkNewStatus === 'ANULADA' || bulkNewStatus === 'RECIBIDA_OK') && !bulkSpecialObservaciones)
+            }
+          >
+            Cambiar Estado
           </Button>
         </DialogActions>
       </Dialog>
