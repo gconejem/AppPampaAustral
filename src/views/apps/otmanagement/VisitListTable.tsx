@@ -252,7 +252,7 @@ const VisitListTable = ({
   const [loading, setLoading] = useState(false)
   const [globalFilterValue, setGlobalFilterValue] = useState('')
   const [selectedLaboratorista, setSelectedLaboratorista] = useState('')
-  const [selectedEstado, setSelectedEstado] = useState<string[]>(todosLosEstados) // Inicializar con todos los estados seleccionados
+  const [selectedEstado, setSelectedEstado] = useState<string[]>([]) // Sin estados preseleccionados por defecto
   const [porRecibir, setPorRecibir] = useState(true)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
@@ -540,11 +540,11 @@ const VisitListTable = ({
     setFechaInicio(fechaActual)
     setFechaFin(fechaActual)
 
-    // Cargar datos iniciales con fecha actual, todos los estados y por recibir activado
+    // Cargar datos iniciales con fecha actual, sin filtro de estado y por recibir activado
     fetchVisitasWithFilters({
       fechaInicio: fechaActual,
       fechaFin: fechaActual,
-      estado: todosLosEstados.join(','),
+      estado: '', // Sin filtro de estado por defecto
       porRecibir: true
     })
 
@@ -721,14 +721,26 @@ const VisitListTable = ({
       } else {
         // Si no están todos seleccionados, seleccionar todos
         setSelectedEstado(todosLosEstados)
+        // Al seleccionar todos los estados, desactivar "Por Recibir"
+        setPorRecibir(false)
       }
     } else {
       setSelectedEstado(newValue)
+      // Si se selecciona algún estado específico, desactivar "Por Recibir"
+      if (newValue.length > 0) {
+        setPorRecibir(false)
+      }
     }
   }
 
   const handlePorRecibirChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPorRecibir(event.target.checked)
+    const isChecked = event.target.checked
+    setPorRecibir(isChecked)
+
+    // Si se activa "Por Recibir", limpiar el filtro de estados para que solo busque por COMPLETADA o EN_REVISION
+    if (isChecked) {
+      setSelectedEstado([])
+    }
   }
 
   const handleClienteChange = (cliente: { clienteId: number, nombreCliente: string, rut: string } | null) => {
@@ -2265,7 +2277,7 @@ const VisitListTable = ({
                     setFechaInicio(fechaActual)
                     setFechaFin(fechaActual)
                     setSelectedLaboratorista('')
-                    setSelectedEstado(todosLosEstados)
+                    setSelectedEstado([])
                     setPorRecibir(true)
                     setGlobalFilterValue('')
                     setSelectedCliente(null)

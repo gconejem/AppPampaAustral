@@ -276,12 +276,12 @@ export async function GET(request: Request) {
       })
     }
 
-    // Filtrar por "Por Recibir" (visitas sin hora de llegada ni salida)
+    // Filtrar por "Por Recibir" (visitas con estado COMPLETADA o EN_REVISION)
     if (porRecibir === 'true') {
-      console.log('Filtrando por visitas por recibir')
+      console.log('Filtrando por visitas por recibir (COMPLETADA o EN_REVISION)')
       filteredAgendas = filteredAgendas.filter(agenda => {
-        // Verificar si la agenda no tiene horaLlegada ni horaSalida
-        return !agenda.horaLlegada && !agenda.horaSalida
+        // Verificar si la agenda tiene estado COMPLETADA o EN_REVISION
+        return agenda.estado === 'COMPLETADA' || agenda.estado === 'EN_REVISION'
       })
     }
 
