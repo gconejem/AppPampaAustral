@@ -16,6 +16,11 @@ import IconButton from '@mui/material/IconButton'
 import Grid from '@mui/material/Grid'
 import TablePagination from '@mui/material/TablePagination'
 import Box from '@mui/material/Box'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import type { SelectChangeEvent } from '@mui/material/Select'
 
 // Third-party Imports
 import {
@@ -72,6 +77,15 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
+// Función de filtro global
+const globalFilterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
+  const itemRank = rankItem(row.getValue(columnId), value)
+
+  addMeta({ itemRank })
+
+  return itemRank.passed
+}
+
 // Función para mapear códigos de OT a nombres descriptivos
 const getServiceName = (tipoOT: string) => {
   const serviceNames = {
@@ -107,6 +121,24 @@ const getOTCode = (tipoOT: string) => {
   return otCodes[tipoOT as keyof typeof otCodes] || tipoOT
 }
 
+// Lista de tipos de orden de trabajo basada en el enum TipoOrdenTrabajo
+const tiposOrdenTrabajo = [
+  { value: 'ACEPTACION_VISITA', label: 'Aceptación Visita' },
+  { value: 'DENSIDADES', label: 'Densidades' },
+  { value: 'HORMIGON_FRESCO', label: 'Hormigón Fresco' },
+  { value: 'TESTIGOS', label: 'Testigos' },
+  { value: 'EXTRACCION_ASFALTICA', label: 'Extracción Asfáltica' },
+  { value: 'MUESTREO_MATERIAL', label: 'Muestreo de Material' },
+  { value: 'RETIRO_PROBETA', label: 'Retiro de Probeta' },
+  // Tipos adicionales que pueden existir en el sistema
+  { value: 'CONTROL_COMPACTACION', label: 'Control de Compactación' },
+  { value: 'MUESTREO_HORMIGON', label: 'Muestreo de Hormigón' },
+  { value: 'MUESTREO_MATERIALES', label: 'Muestreo de Materiales' },
+  { value: 'DOSIFICACION', label: 'Dosificación' },
+  { value: 'GENERAL', label: 'General' },
+  { value: 'SUSPENDIDO_TERRENO', label: 'Suspendido en Terreno' }
+]
+
 const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   // States
   const [pageSize, setPageSize] = useState(6)
@@ -115,7 +147,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
-  const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '' })
+  const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
   const [allOTs, setAllOTs] = useState<OrdenTrabajo[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -166,6 +198,11 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       result = result.filter(ot => ot.estado.toLowerCase().includes(filters.estadoOT.toLowerCase()))
     }
 
+    // Filtrar por tipo de OT
+    if (filters.tipoOT) {
+      result = result.filter(ot => ot.tipoOT === filters.tipoOT)
+    }
+
     // Búsqueda global
     if (globalFilter) {
       result = result.filter(ot =>
@@ -180,13 +217,18 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
   // Handler para limpiar filtros
   const handleClearFilters = () => {
-    setFilters({ ot: '', servicio: '', estadoOT: '' })
+    setFilters({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
     setGlobalFilter('')
   }
 
   // Handler para manejar los cambios en los filtros
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
     setFilters(prev => ({ ...prev, [field]: e.target.value }))
+  }
+
+  // Handler para manejar el cambio del Select de tipo de OT
+  const handleTipoOTChange = (e: SelectChangeEvent<string>) => {
+    setFilters(prev => ({ ...prev, tipoOT: e.target.value }))
   }
 
   const handlePDFClick = (ot: OrdenTrabajo) => {
@@ -295,6 +337,10 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const table = useReactTable({
     data: filteredData,
     columns,
+    filterFns: {
+      fuzzy: fuzzyFilter,
+      global: globalFilterFn
+    },
     state: {
       pagination: { pageSize, pageIndex },
       globalFilter
@@ -302,10 +348,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    filterFns: {
-      fuzzy: fuzzyFilter
-    }
+    getFilteredRowModel: getFilteredRowModel()
   })
 
   // Título dinámico de la tabla
@@ -335,7 +378,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         <Box p={3}>
           <Grid container spacing={2} alignItems='center'>
             {/* Primera Fila */}
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
                 size='small'
@@ -344,7 +387,27 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
                 onChange={e => handleFilterChange(e, 'ot')}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth size='small'>
+                <InputLabel id='tipo-ot-label'>Tipo de OT</InputLabel>
+                <Select
+                  labelId='tipo-ot-label'
+                  value={filters.tipoOT}
+                  label='Tipo de OT'
+                  onChange={handleTipoOTChange}
+                >
+                  <MenuItem value=''>
+                    <em>Todos los tipos</em>
+                  </MenuItem>
+                  {tiposOrdenTrabajo.map(tipo => (
+                    <MenuItem key={tipo.value} value={tipo.value}>
+                      {tipo.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
                 size='small'
@@ -353,7 +416,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
                 onChange={e => handleFilterChange(e, 'servicio')}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
                 size='small'
