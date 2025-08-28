@@ -122,7 +122,7 @@ const getOTCode = (tipoOT: string) => {
   return otCodes[tipoOT as keyof typeof otCodes] || tipoOT
 }
 
-// Lista de tipos de orden de trabajo basada en el enum TipoOrdenTrabajo
+// Lista de tipos de orden de trabajo basada en el enum TipoOrdenTrabajo del schema
 const tiposOrdenTrabajo = [
   { value: 'ACEPTACION_VISITA', label: 'Aceptación Visita' },
   { value: 'DENSIDADES', label: 'Densidades' },
@@ -130,14 +130,7 @@ const tiposOrdenTrabajo = [
   { value: 'TESTIGOS', label: 'Testigos' },
   { value: 'EXTRACCION_ASFALTICA', label: 'Extracción Asfáltica' },
   { value: 'MUESTREO_MATERIAL', label: 'Muestreo de Material' },
-  { value: 'RETIRO_PROBETA', label: 'Retiro de Probeta' },
-  // Tipos adicionales que pueden existir en el sistema
-  { value: 'CONTROL_COMPACTACION', label: 'Control de Compactación' },
-  { value: 'MUESTREO_HORMIGON', label: 'Muestreo de Hormigón' },
-  { value: 'MUESTREO_MATERIALES', label: 'Muestreo de Materiales' },
-  { value: 'DOSIFICACION', label: 'Dosificación' },
-  { value: 'GENERAL', label: 'General' },
-  { value: 'SUSPENDIDO_TERRENO', label: 'Suspendido en Terreno' }
+  { value: 'RETIRO_PROBETA', label: 'Retiro de Probeta' }
 ]
 
 const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
