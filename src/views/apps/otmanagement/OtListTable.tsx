@@ -20,6 +20,7 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import Popover from '@mui/material/Popover'
 import type { SelectChangeEvent } from '@mui/material/Select'
 
 // Third-party Imports
@@ -60,7 +61,7 @@ interface Agenda {
     nombreObra: string
     numeroObra?: string
   }
-  ordenesTrabajo: OrdenTrabajo[]
+  ordenesTrabajo?: OrdenTrabajo[] // Opcional ya que no lo usamos más
 }
 
 // Table Styles
@@ -150,6 +151,58 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
   const [allOTs, setAllOTs] = useState<OrdenTrabajo[]>([])
   const [loading, setLoading] = useState(true)
+  const [agendas, setAgendas] = useState<Agenda[]>([])
+
+  // Estado para el popover de obra
+  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
+  const [popoverContent, setPopoverContent] = useState('')
+
+  // Funciones para manejar el popover
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, nombreObra: string) => {
+    setPopoverAnchor(event.currentTarget)
+    setPopoverContent(`Nombre Obra: ${nombreObra}`)
+  }
+
+  const handlePopoverClose = () => {
+    setPopoverAnchor(null)
+    setPopoverContent('')
+  }
+
+  const isPopoverOpen = Boolean(popoverAnchor)
+
+  // Función helper para obtener información de cliente y obra por agendaId
+  const getClienteObraByAgendaId = (agendaId: string | number | undefined) => {
+    if (!agendaId) return { cliente: 'Sin cliente', numeroObra: 'Sin obra', nombreObra: 'Sin obra' }
+
+    const agendaIdNum = typeof agendaId === 'string' ? parseInt(agendaId) : agendaId
+    const agenda = agendas.find(a => a.id === agendaIdNum)
+
+    if (agenda) {
+      return {
+        cliente: agenda.cliente?.nombreCliente || 'Sin cliente',
+        numeroObra: agenda.obra?.numeroObra || 'Sin obra',
+        nombreObra: agenda.obra?.nombreObra || 'Sin obra'
+      }
+    }
+
+    return { cliente: 'Sin cliente', numeroObra: 'Sin obra', nombreObra: 'Sin obra' }
+  }
+
+  // Cargar todas las agendas
+  useEffect(() => {
+    const fetchAgendas = async () => {
+      try {
+        const response = await fetch('/api/agenda')
+        if (!response.ok) throw new Error('Error al cargar agendas')
+        const data = await response.json()
+        setAgendas(data)
+      } catch (error) {
+        console.error('Error al cargar agendas:', error)
+      }
+    }
+
+    fetchAgendas()
+  }, [])
 
   // Cargar todas las OTs al iniciar
   useEffect(() => {
@@ -179,7 +232,13 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     if (allOTs.length === 0) return
 
     // Base de datos a filtrar: todas las OTs o las de la visita seleccionada
-    const baseData = selectedVisit ? selectedVisit.ordenesTrabajo : allOTs
+    const baseData = selectedVisit
+      ? allOTs.filter(ot => ot.agendaId === selectedVisit.id)
+      : allOTs
+
+    console.log('OtListTable - selectedVisit:', selectedVisit?.id)
+    console.log('OtListTable - allOTs count:', allOTs.length)
+    console.log('OtListTable - baseData count:', baseData.length)
 
     let result = [...baseData]
 
@@ -280,18 +339,33 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         cell: info => <Typography>{info.getValue()}</Typography>
       }),
       columnHelper.accessor(
-        row => row.agenda?.cliente?.nombreCliente || selectedVisit?.cliente?.nombreCliente || 'Sin cliente',
+        row => {
+          // Usar el agendaId para obtener información del cliente y obra
+          const agendaId = row.agendaId
+          return getClienteObraByAgendaId(agendaId)
+        },
         {
           id: 'cliente',
-          header: 'CLIENTE',
-          cell: info => <Typography>{info.getValue()}</Typography>
+          header: 'CLIENTE/OBRA',
+          cell: info => {
+            const data = info.getValue()
+            return (
+              <Box
+                onMouseEnter={(e) => handlePopoverOpen(e, data.nombreObra)}
+                onMouseLeave={handlePopoverClose}
+                sx={{ cursor: 'pointer' }}
+              >
+                <Typography className='capitalize' color='text.primary' variant='body2'>
+                  {data.cliente}
+                </Typography>
+                <Typography className='capitalize' color='text.secondary' variant='caption'>
+                  {data.numeroObra}
+                </Typography>
+              </Box>
+            )
+          }
         }
       ),
-      columnHelper.accessor(row => row.agenda?.obra?.numeroObra || selectedVisit?.obra?.numeroObra || 'Sin obra', {
-        id: 'obra',
-        header: 'OBRA',
-        cell: info => <Typography>{info.getValue()}</Typography>
-      }),
       columnHelper.accessor('tipoOT', {
         id: 'servicio',
         header: 'SERVICIO',
@@ -331,7 +405,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         )
       })
     ],
-    [selectedVisit]
+    [selectedVisit, agendas]
   )
 
   const table = useReactTable({
@@ -498,6 +572,42 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
           {renderPDFComponent(selectedOT)}
         </PDFModal>
       )}
+
+      {/* Popover para mostrar el nombre completo de la obra */}
+      <Popover
+        id="ot-obra-popover"
+        open={isPopoverOpen}
+        anchorEl={popoverAnchor}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        sx={{
+          pointerEvents: 'none',
+        }}
+        PaperProps={{
+          sx: {
+            backgroundColor: 'rgba(97, 97, 97, 0.92)',
+            color: 'white',
+            borderRadius: 1,
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.15)',
+            '& .MuiTypography-root': {
+              color: 'white'
+            }
+          }
+        }}
+      >
+        <Box sx={{ p: 1.5, maxWidth: 300 }}>
+          <Typography variant="body2" sx={{ color: 'white', fontSize: '0.875rem' }}>
+            {popoverContent}
+          </Typography>
+        </Box>
+      </Popover>
     </>
   )
 }
