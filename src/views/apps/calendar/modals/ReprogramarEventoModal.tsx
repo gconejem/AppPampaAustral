@@ -86,6 +86,12 @@ const ReprogramarEventoModal = ({
         newFechaFin.setHours(fechaInicio.getHours() + 1, fechaInicio.getMinutes())
       }
 
+      // Asegurar que la fecha de fin sea posterior a la fecha de inicio
+      if (newFechaFin <= newFechaInicio) {
+        // Si la fecha de fin es anterior o igual, ajustar la hora de fin
+        newFechaFin.setHours(newFechaInicio.getHours() + 1, newFechaInicio.getMinutes())
+      }
+
       setFechaInicio(newFechaInicio)
       setFechaFin(newFechaFin)
       setError('')
@@ -180,10 +186,14 @@ const ReprogramarEventoModal = ({
                   Los cambios se aplicarán a todos los eventos seleccionados
                 </Alert>
               )}
+              <Alert severity='info' sx={{ mb: 2 }}>
+                Puedes seleccionar una fecha anterior, igual o posterior a la fecha actual del evento
+              </Alert>
               <DatePicker
                 label='Fecha'
                 value={fechaInicio}
                 onChange={handleDateChange}
+                disablePast={false}
                 slotProps={{
                   textField: {
                     fullWidth: true,
