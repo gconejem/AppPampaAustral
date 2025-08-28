@@ -30,6 +30,7 @@ interface RecurringEventModalProps {
     onConfirm: (recurringData: RecurringEventData) => void
     fechaInicio: Date | null
     fechaFin: Date | null
+    existingRecurringData?: RecurringEventData | null
 }
 
 export interface RecurringEventData {
@@ -56,7 +57,8 @@ const RecurringEventModal = ({
     onClose,
     onConfirm,
     fechaInicio,
-    fechaFin
+    fechaFin,
+    existingRecurringData
 }: RecurringEventModalProps) => {
     const frecuencia = 'semanal' // Siempre semanal
     const intervalo = 1 // Siempre cada semana
@@ -67,17 +69,23 @@ const RecurringEventModal = ({
     // Inicializar fechas cuando se abre el modal
     useEffect(() => {
         if (open && fechaInicio) {
-            // Establecer fecha de término por defecto (30 días después)
-            const defaultEndDate = new Date(fechaInicio.getTime() + 30 * 24 * 60 * 60 * 1000)
-            setFechaTermino(defaultEndDate)
+            // Si hay datos existentes de recurrencia, cargarlos
+            if (existingRecurringData) {
+                setDiasSemana(existingRecurringData.diasSemana)
+                setFechaTermino(existingRecurringData.fechaTermino)
+            } else {
+                // Establecer fecha de término por defecto (30 días después)
+                const defaultEndDate = new Date(fechaInicio.getTime() + 30 * 24 * 60 * 60 * 1000)
+                setFechaTermino(defaultEndDate)
 
-            // Si es frecuencia semanal, seleccionar el día de la semana de la fecha de inicio
-            if (frecuencia === 'semanal') {
-                const dayOfWeek = fechaInicio.getDay()
-                setDiasSemana([dayOfWeek])
+                // Si es frecuencia semanal, seleccionar el día de la semana de la fecha de inicio
+                if (frecuencia === 'semanal') {
+                    const dayOfWeek = fechaInicio.getDay()
+                    setDiasSemana([dayOfWeek])
+                }
             }
         }
-    }, [open, fechaInicio, frecuencia])
+    }, [open, fechaInicio, frecuencia, existingRecurringData])
 
     // Generar preview de eventos cuando cambien los parámetros
     useEffect(() => {

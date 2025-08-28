@@ -1446,9 +1446,21 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                 </Typography>
               )}
               {formData.tipoVisita === 'RECURRENTE' && (
-                <Typography variant='caption' color='info.main' sx={{ mt: 0.5, display: 'block' }}>
-                  Configure primero las fechas de recurrencia en el modal
-                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant='caption' color='info.main' sx={{ mb: 1, display: 'block' }}>
+                    Configure primero las fechas de recurrencia en el modal
+                  </Typography>
+                  {recurringData && (
+                    <Button
+                      variant='outlined'
+                      size='small'
+                      onClick={() => setRecurringModalOpen(true)}
+                      sx={{ mt: 1 }}
+                    >
+                      Reconfigurar Recurrencia
+                    </Button>
+                  )}
+                </Box>
               )}
             </Box>
           </Grid>
@@ -2697,14 +2709,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                     }
                   </Button>
 
-                  {formData.tipoVisita === 'RECURRENTE' && recurringData && (
-                    <Button
-                      variant='outlined'
-                      onClick={() => setRecurringModalOpen(true)}
-                    >
-                      Reconfigurar Recurrencia
-                    </Button>
-                  )}
+
                 </Box>
               </Grid>
             </Grid>
@@ -2736,6 +2741,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         onConfirm={handleRecurringConfirm}
         fechaInicio={fechaInicio}
         fechaFin={fechaFin}
+        existingRecurringData={recurringData}
       />
     </Drawer>
   )
