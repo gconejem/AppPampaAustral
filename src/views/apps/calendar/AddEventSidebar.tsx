@@ -1447,18 +1447,35 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               )}
               {formData.tipoVisita === 'RECURRENTE' && (
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant='caption' color='info.main' sx={{ mb: 1, display: 'block' }}>
-                    Configure primero las fechas de recurrencia en el modal
-                  </Typography>
-                  {recurringData && (
-                    <Button
-                      variant='outlined'
-                      size='small'
-                      onClick={() => setRecurringModalOpen(true)}
-                      sx={{ mt: 1 }}
-                    >
-                      Reconfigurar Recurrencia
-                    </Button>
+                  {!recurringData ? (
+                    <Typography variant='caption' color='info.main' sx={{ mb: 1, display: 'block' }}>
+                      Configure primero las fechas de recurrencia en el modal
+                    </Typography>
+                  ) : (
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant='caption' color='success.main' sx={{ display: 'block', fontWeight: 500 }}>
+                        Recurrencia configurada:
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.5 }}>
+                        • Desde: {recurringData.fechaInicio.toLocaleDateString('es-ES')} hasta {recurringData.fechaTermino.toLocaleDateString('es-ES')}
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                        • Días: {recurringData.diasSemana.map(dia => {
+                          const diasMap = {
+                            0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb'
+                          }
+                          return diasMap[dia as keyof typeof diasMap]
+                        }).join(', ')}
+                      </Typography>
+                      <Button
+                        variant='outlined'
+                        size='small'
+                        onClick={() => setRecurringModalOpen(true)}
+                        sx={{ mt: 1 }}
+                      >
+                        Reconfigurar Recurrencia
+                      </Button>
+                    </Box>
                   )}
                 </Box>
               )}
