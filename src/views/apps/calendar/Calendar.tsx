@@ -724,6 +724,10 @@ const Calendar = (props: CalenderProps) => {
       }
 
       await fetchEvents()
+
+      // Forzar la re-renderización del calendario
+      setCalendarKey(prev => prev + 1)
+
       setSnackbarMessage('¡Eventos reprogramados exitosamente!')
       setSnackbarSeverity('success')
       setOpenSnackbar(true)
@@ -759,6 +763,9 @@ const Calendar = (props: CalenderProps) => {
 
       // Recargar los eventos para mostrar los cambios
       await fetchEvents()
+
+      // Forzar la re-renderización del calendario
+      setCalendarKey(prev => prev + 1)
     } catch (error) {
       console.error('Error:', error)
       throw error
