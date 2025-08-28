@@ -1174,8 +1174,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             titulo: tituloGenerado,
             fechaInicio: instancia.fechaInicio,
             fechaFin: instancia.fechaFin,
-            tipoVisita: 'EVENTO', // Cada instancia es un evento individual
-            esRecurrente: false
+            tipoVisita: 'RECURRENTE', // Las visitas recurrentes mantienen el tipo RECURRENTE
+            esRecurrente: true
           }
 
           const response = await fetch('/api/agenda', {
