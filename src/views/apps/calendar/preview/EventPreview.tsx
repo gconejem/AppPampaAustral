@@ -216,13 +216,31 @@ const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
                 <Typography variant='subtitle2' color='text.secondary' gutterBottom>
                   Solicitud
                 </Typography>
-                <Typography variant='body1'>
-                  {displayData.solicitud?.numeroSolicitud
-                    ? `Solicitud ${displayData.solicitud.numeroSolicitud}`
-                    : displayData.extendedProps?.solicitud?.numeroSolicitud
-                      ? `Solicitud ${displayData.extendedProps.solicitud.numeroSolicitud}`
-                      : 'No especificada'}
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                    {displayData.solicitud?.numeroSolicitud
+                      ? `Solicitud #${displayData.solicitud.numeroSolicitud}`
+                      : displayData.extendedProps?.solicitud?.numeroSolicitud
+                        ? `Solicitud #${displayData.extendedProps.solicitud.numeroSolicitud}`
+                        : displayData.solicitudId
+                          ? `Solicitud #${displayData.solicitudId}`
+                          : displayData.extendedProps?.solicitudId
+                            ? `Solicitud #${displayData.extendedProps.solicitudId}`
+                            : 'No especificada'}
+                  </Typography>
+
+                  <Typography variant='body2' color='text.secondary'>
+                    Cliente: {displayData.solicitud?.cliente?.nombreCliente ||
+                      displayData.extendedProps?.solicitud?.cliente?.nombreCliente ||
+                      'No especificado'}
+                  </Typography>
+
+                  <Typography variant='body2' color='text.secondary'>
+                    Obra: {displayData.solicitud?.obra?.nombreObra ||
+                      displayData.extendedProps?.solicitud?.obra?.nombreObra ||
+                      'No especificada'}
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
 

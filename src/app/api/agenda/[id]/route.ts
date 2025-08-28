@@ -149,7 +149,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
           }
         },
         obra: true,
-        contactos: true
+        contactos: true,
+        solicitud: {
+          include: {
+            cliente: true,
+            obra: true
+          }
+        }
       }
     })
 
