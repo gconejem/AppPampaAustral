@@ -43,10 +43,7 @@ const ReprogramarEventoModal = ({
         const startDate = new Date(fechaInicioActual)
         const endDate = new Date(fechaFinActual)
 
-        // Establecer horas y minutos a 00:00
-        startDate.setHours(0, 0, 0, 0)
-        endDate.setHours(0, 0, 0, 0)
-
+        // Mantener las horas originales del evento
         setFechaInicio(startDate)
         setFechaFin(endDate)
       } else {
