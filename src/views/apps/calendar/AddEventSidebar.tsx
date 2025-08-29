@@ -984,12 +984,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const handleAgregarServicio = () => {
     if (!servicioSeleccionado || !cantidad) return
 
+    // Determinar si es segunda visita: automáticamente true para SKU 2002, sino usar el checkbox
+    const esSegundaVisitaFinal = servicioSeleccionado.sku === '2002' ? true : esSegundaVisita
+
     const nuevoServicio: ServicioAgendado = {
       codigo: servicioSeleccionado.sku,
       servicio: servicioSeleccionado.norma ? `${servicioSeleccionado.nombre} - ${servicioSeleccionado.norma}` : servicioSeleccionado.nombre,
       cantidad: parseInt(cantidad),
       observacion: observacion || undefined,
-      esSegundaVisita
+      esSegundaVisita: esSegundaVisitaFinal
     }
 
     setServiciosAgendados(prev => [...prev, nuevoServicio])
