@@ -79,6 +79,23 @@ const formatPhone = (value: string) => {
   return formatted
 }
 
+// Función para calcular días hábiles en el futuro
+const addBusinessDays = (date: Date, businessDays: number): Date => {
+  const result = new Date(date)
+  let daysAdded = 0
+
+  while (daysAdded < businessDays) {
+    result.setDate(result.getDate() + 1)
+    // 0 = Domingo, 6 = Sábado
+    const dayOfWeek = result.getDay()
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      daysAdded++
+    }
+  }
+
+  return result
+}
+
 // Types
 interface AddEventSidebarProps {
   addEventSidebarOpen: boolean
@@ -927,9 +944,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const servicio2003 = servicios.find(s => s.sku === '2003')
 
         if (servicio2003) {
-          // Calcular fecha 7 días en el futuro
-          const fechaSeguimiento = new Date(fechaInicio!)
-          fechaSeguimiento.setDate(fechaSeguimiento.getDate() + 7)
+          // Calcular fecha 2 días hábiles en el futuro
+          const fechaSeguimiento = addBusinessDays(new Date(fechaInicio!), 2)
           // Para SKU 2003, resetear las horas a 00:00:00 (sin hora específica)
           fechaSeguimiento.setHours(0, 0, 0, 0)
 
@@ -962,7 +978,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           })
 
           if (seguimientoResponse.ok) {
-            toast.success('Visita creada exitosamente. Se ha programado automáticamente una visita de seguimiento para 7 días después.')
+            toast.success('Visita creada exitosamente. Se ha programado automáticamente una visita de seguimiento para 2 días hábiles después.')
           } else {
             toast.success('Visita creada exitosamente. Error al crear la visita de seguimiento automática.')
           }
