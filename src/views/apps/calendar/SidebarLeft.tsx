@@ -375,11 +375,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-          {filters.tiposEvento.length > 0 && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              Tipo seleccionado: {filters.tiposEvento[0]}
-            </Typography>
-          )}
+
         </FormControl>
 
         {/* Campo Cliente con Autocomplete */}
@@ -467,12 +463,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
-          {filters.cliente && !loadingObras && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {obras.length} obra{obras.length !== 1 ? 's' : ''} disponible{obras.length !== 1 ? 's' : ''} para {filters.cliente.razonSocial}
-              {filters.obras.length > 0 && ` - ${filters.obras.length} seleccionada${filters.obras.length !== 1 ? 's' : ''}`}
-            </Typography>
-          )}
+
         </FormControl>
 
         {/* Campo Laboratorista con Autocomplete */}
@@ -517,12 +508,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
-          {!loadingLaboratoristas && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {laboratoristas.length} laboratorista{laboratoristas.length !== 1 ? 's' : ''} disponible{laboratoristas.length !== 1 ? 's' : ''}
-              {filters.laboratoristas.length > 0 && ` - ${filters.laboratoristas.length} seleccionado${filters.laboratoristas.length !== 1 ? 's' : ''}`}
-            </Typography>
-          )}
+
         </FormControl>
 
         {/* Campo Sector Comercial con Autocomplete */}
@@ -552,12 +538,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-          {SECTORES_COMERCIALES.length > 0 && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {SECTORES_COMERCIALES.length} sector{(SECTORES_COMERCIALES.length as number) !== 1 ? 'es' : ''} disponible{(SECTORES_COMERCIALES.length as number) !== 1 ? 's' : ''}
-              {filters.sectoresComerciales.length > 0 && ` - ${filters.sectoresComerciales.length} seleccionado${filters.sectoresComerciales.length !== 1 ? 's' : ''}`}
-            </Typography>
-          )}
+
         </FormControl>
 
         {/* Campo Región con Autocomplete */}
@@ -587,12 +568,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-          {Object.keys(REGIONES_CHILE).length > 0 && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {Object.keys(REGIONES_CHILE).length} region{Object.keys(REGIONES_CHILE).length !== 1 ? 'es' : ''} disponible{Object.keys(REGIONES_CHILE).length !== 1 ? 's' : ''}
-              {filters.regiones.length > 0 && ` - ${filters.regiones.length} seleccionada${filters.regiones.length !== 1 ? 's' : ''}`}
-            </Typography>
-          )}
+
         </FormControl>
 
         {/* Campo Comuna con Autocomplete */}
@@ -623,12 +599,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-          {filters.regiones.length > 0 && !loadingComunas && (
-            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
-              {comunas.length} comuna{comunas.length !== 1 ? 's' : ''} disponible{comunas.length !== 1 ? 's' : ''} de {filters.regiones.length} región{filters.regiones.length !== 1 ? 'es' : ''}
-              {filters.comunas.length > 0 && ` - ${filters.comunas.length} seleccionada${filters.comunas.length !== 1 ? 's' : ''}`}
-            </Typography>
-          )}
+
         </FormControl>
       </div>
     </Drawer>
