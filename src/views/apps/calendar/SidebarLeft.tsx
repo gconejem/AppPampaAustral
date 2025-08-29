@@ -463,7 +463,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
-
+          {filters.obras.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {filters.obras.length} obra{filters.obras.length !== 1 ? 's' : ''} seleccionada{filters.obras.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Laboratorista con Autocomplete */}
@@ -508,7 +512,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               </li>
             )}
           />
-
+          {filters.laboratoristas.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {filters.laboratoristas.length} laboratorista{filters.laboratoristas.length !== 1 ? 's' : ''} seleccionado{filters.laboratoristas.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Sector Comercial con Autocomplete */}
@@ -538,7 +546,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-
+          {filters.sectoresComerciales.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {filters.sectoresComerciales.length} sector{filters.sectoresComerciales.length !== 1 ? 'es' : ''} seleccionado{filters.sectoresComerciales.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Región con Autocomplete */}
@@ -568,7 +580,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-
+          {filters.regiones.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {filters.regiones.length} región{filters.regiones.length !== 1 ? 'es' : ''} seleccionada{filters.regiones.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
         </FormControl>
 
         {/* Campo Comuna con Autocomplete */}
@@ -599,7 +615,11 @@ const SidebarLeft = (props: SidebarLeftProps) => {
               />
             )}
           />
-
+          {filters.comunas.length > 0 && (
+            <Typography variant='caption' color='textSecondary' sx={{ mt: 1, display: 'block' }}>
+              {filters.comunas.length} comuna{filters.comunas.length !== 1 ? 's' : ''} seleccionada{filters.comunas.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
         </FormControl>
       </div>
     </Drawer>
