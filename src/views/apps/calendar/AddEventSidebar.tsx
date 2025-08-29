@@ -953,7 +953,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           // Para SKU 2003, la fecha fin también debe ser sin hora específica (00:00:00)
           fechaFinSeguimiento.setHours(0, 0, 0, 0)
 
-          // Preparar datos para el evento de seguimiento
+          // Preparar datos para el evento de seguimiento (sin laboratoristas ni equipos)
           const eventoSeguimiento = {
             ...visitaData,
             titulo: `Seguimiento ${clientes.find(c => c.clienteId === formData.clienteId)?.razonSocial} - ${servicio2003.nombre} (${fechaSeguimiento.toLocaleDateString('es-ES')})`,
@@ -965,6 +965,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
               cantidad: 1,
               esSegundaVisita: true
             }],
+            laboratoristas: [], // Sin laboratoristas asignados
+            equipos: [], // Sin equipos asignados
             observaciones: `Evento de seguimiento automático generado por servicio SKU 2002. ${visitaData.observaciones || ''}`.trim()
           }
 
