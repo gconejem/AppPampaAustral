@@ -705,6 +705,8 @@ const Calendar = (props: CalenderProps) => {
 
   const handleBulkReprogramar = async (fechaInicio: Date, fechaFin: Date) => {
     try {
+      console.log('Reprogramando eventos masivamente a fecha:', fechaInicio)
+
       // Usar el endpoint de reprogramación masiva
       const response = await fetch(`/api/agenda/7/reprogramar`, {
         method: 'POST',
@@ -723,10 +725,36 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al reprogramar los eventos')
       }
 
+      // Actualizar la fecha seleccionada en el componente padre ANTES de recargar eventos
+      if (props.onDateChange) {
+        props.onDateChange(fechaInicio)
+      }
+
+      // Navegar el calendario a la nueva fecha ANTES de recargar eventos
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+        calendarApi.gotoDate(fechaInicio)
+      }
+
+      // Pequeña pausa para asegurar que la navegación se complete
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Recargar los eventos para mostrar los cambios
       await fetchEvents()
 
       // Forzar la re-renderización del calendario
       setCalendarKey(prev => prev + 1)
+
+      // Pequeña pausa adicional para asegurar que la vista se actualice correctamente
+      setTimeout(() => {
+        if (calendarRef.current) {
+          const calendarApi = calendarRef.current.getApi()
+          // Refrescar la vista actual
+          calendarApi.refetchEvents()
+          // Asegurar que estamos en la fecha correcta
+          calendarApi.gotoDate(fechaInicio)
+        }
+      }, 300)
 
       setSnackbarMessage('¡Eventos reprogramados exitosamente!')
       setSnackbarSeverity('success')
@@ -745,6 +773,8 @@ const Calendar = (props: CalenderProps) => {
     if (!selectedEventId) return
 
     try {
+      console.log('Reprogramando evento individual a fecha:', fechaInicio)
+
       const response = await fetch(`/api/agenda/${selectedEventId}/reprogramar`, {
         method: 'PUT',
         headers: {
@@ -761,11 +791,40 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al reprogramar el evento')
       }
 
+      // Actualizar la fecha seleccionada en el componente padre ANTES de recargar eventos
+      if (props.onDateChange) {
+        props.onDateChange(fechaInicio)
+      }
+
+      // Navegar el calendario a la nueva fecha ANTES de recargar eventos
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+        calendarApi.gotoDate(fechaInicio)
+      }
+
+      // Pequeña pausa para asegurar que la navegación se complete
+      await new Promise(resolve => setTimeout(resolve, 200))
+
       // Recargar los eventos para mostrar los cambios
       await fetchEvents()
 
       // Forzar la re-renderización del calendario
       setCalendarKey(prev => prev + 1)
+
+      // Pequeña pausa adicional para asegurar que la vista se actualice correctamente
+      setTimeout(() => {
+        if (calendarRef.current) {
+          const calendarApi = calendarRef.current.getApi()
+          // Refrescar la vista actual
+          calendarApi.refetchEvents()
+          // Asegurar que estamos en la fecha correcta
+          calendarApi.gotoDate(fechaInicio)
+        }
+      }, 300)
+
+      setSnackbarMessage('¡Evento reprogramado exitosamente!')
+      setSnackbarSeverity('success')
+      setOpenSnackbar(true)
     } catch (error) {
       console.error('Error:', error)
       throw error
@@ -1837,6 +1896,7 @@ const Calendar = (props: CalenderProps) => {
   }
 
   const fetchEvents = async () => {
+    console.log('fetchEvents llamado con selectedDate:', props.selectedDate, 'selectedDateRange:', props.selectedDateRange, 'currentView:', currentView)
 
     try {
       // Construir URL con parámetros de fecha si están disponibles

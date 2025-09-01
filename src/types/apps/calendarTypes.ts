@@ -73,6 +73,7 @@ export type CalendarProps = {
   selectedDate?: Date | null
   selectedDateRange?: { start: Date | null; end: Date | null } | null
   filters: CalendarFilters
+  onDateChange?: (date: Date) => void
 }
 
 export type AddEventSidebarType = {

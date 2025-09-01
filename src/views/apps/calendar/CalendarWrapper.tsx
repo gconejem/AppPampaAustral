@@ -199,6 +199,7 @@ const AppCalendar = () => {
           selectedDate={dateRangeEnabled ? null : selectedDate}
           selectedDateRange={dateRangeEnabled ? selectedDateRange : null}
           filters={filters}
+          onDateChange={handleDateSelect}
         />
       </div>
       <AddEventSidebar
