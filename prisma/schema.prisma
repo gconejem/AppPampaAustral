@@ -540,7 +540,7 @@ model OrdenTrabajo {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   userId              String
-  tipoOT              TipoOrdenTrabajo
+  tipoOrdenTrabajoId  Int
   agendaId            Int?
   aceptacionVisita    AceptacionVisita?
   densidad            Densidad?
@@ -549,8 +549,11 @@ model OrdenTrabajo {
   muestreoMaterial    MuestreoMaterial?
   agenda              Agenda?              @relation(fields: [agendaId], references: [id])
   user                User                 @relation(fields: [userId], references: [id])
+  tipoOT              TipoOrdenTrabajo     @relation(fields: [tipoOrdenTrabajoId], references: [id])
   retiroProbeta       RetiroProbeta?
   testigos            Testigos?
+
+  @@index([tipoOrdenTrabajoId])
 }
 
 model AceptacionVisita {
@@ -807,12 +810,11 @@ enum MotivoSuspension {
   OTRO
 }
 
-enum TipoOrdenTrabajo {
-  ACEPTACION_VISITA
-  DENSIDADES
-  HORMIGON_FRESCO
-  TESTIGOS
-  EXTRACCION_ASFALTICA
-  MUESTREO_MATERIAL
-  RETIRO_PROBETA
+model TipoOrdenTrabajo {
+  id          Int            @id @default(autoincrement())
+  codigo      String?
+  descripcion String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  ordenes     OrdenTrabajo[]
 }
