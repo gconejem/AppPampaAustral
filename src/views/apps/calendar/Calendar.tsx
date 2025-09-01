@@ -140,6 +140,38 @@ const Calendar = (props: CalenderProps) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
+  // Helper function to update date or date range after reprogramming
+  const updateDateAfterReprogramming = (fechaInicio: Date, fechaFin: Date): Date => {
+    if (props.selectedDateRange && props.onDateRangeChange) {
+      // Si estamos en modo de rango de fechas, actualizar el rango para incluir la nueva fecha
+      const currentStart = props.selectedDateRange.start
+      const currentEnd = props.selectedDateRange.end
+
+      // Expandir el rango para incluir las nuevas fechas
+      const newStartDate = currentStart ?
+        new Date(Math.min(fechaInicio.getTime(), currentStart.getTime())) :
+        fechaInicio
+      const newEndDate = currentEnd ?
+        new Date(Math.max(fechaFin.getTime(), currentEnd.getTime())) :
+        fechaFin
+
+      console.log('Actualizando rango de fechas:', newStartDate, 'a', newEndDate)
+      props.onDateRangeChange(newStartDate, newEndDate)
+
+      // En modo de rango, navegar a la fecha de inicio del evento reprogramado
+      return fechaInicio
+    } else if (props.onDateChange) {
+      // Si estamos en modo de fecha individual, actualizar la fecha
+      console.log('Actualizando fecha individual:', fechaInicio)
+      props.onDateChange(fechaInicio)
+
+      // En modo individual, navegar a la nueva fecha
+      return fechaInicio
+    }
+
+    return fechaInicio
+  }
+
   const handleViewEvent = (eventId: string) => {
     const eventToView = events.find(event => String(event.id) === String(eventId))
 
@@ -725,15 +757,13 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al reprogramar los eventos')
       }
 
-      // Actualizar la fecha seleccionada en el componente padre ANTES de recargar eventos
-      if (props.onDateChange) {
-        props.onDateChange(fechaInicio)
-      }
+      // Actualizar la fecha o rango seleccionado en el componente padre ANTES de recargar eventos
+      const navigationDate = updateDateAfterReprogramming(fechaInicio, fechaFin)
 
-      // Navegar el calendario a la nueva fecha ANTES de recargar eventos
+      // Navegar el calendario a la fecha apropiada ANTES de recargar eventos
       if (calendarRef.current) {
         const calendarApi = calendarRef.current.getApi()
-        calendarApi.gotoDate(fechaInicio)
+        calendarApi.gotoDate(navigationDate)
       }
 
       // Pequeña pausa para asegurar que la navegación se complete
@@ -752,7 +782,7 @@ const Calendar = (props: CalenderProps) => {
           // Refrescar la vista actual
           calendarApi.refetchEvents()
           // Asegurar que estamos en la fecha correcta
-          calendarApi.gotoDate(fechaInicio)
+          calendarApi.gotoDate(navigationDate)
         }
       }, 300)
 
@@ -791,15 +821,13 @@ const Calendar = (props: CalenderProps) => {
         throw new Error(errorData.error || 'Error al reprogramar el evento')
       }
 
-      // Actualizar la fecha seleccionada en el componente padre ANTES de recargar eventos
-      if (props.onDateChange) {
-        props.onDateChange(fechaInicio)
-      }
+      // Actualizar la fecha o rango seleccionado en el componente padre ANTES de recargar eventos
+      const navigationDate = updateDateAfterReprogramming(fechaInicio, fechaFin)
 
-      // Navegar el calendario a la nueva fecha ANTES de recargar eventos
+      // Navegar el calendario a la fecha apropiada ANTES de recargar eventos
       if (calendarRef.current) {
         const calendarApi = calendarRef.current.getApi()
-        calendarApi.gotoDate(fechaInicio)
+        calendarApi.gotoDate(navigationDate)
       }
 
       // Pequeña pausa para asegurar que la navegación se complete
@@ -818,7 +846,7 @@ const Calendar = (props: CalenderProps) => {
           // Refrescar la vista actual
           calendarApi.refetchEvents()
           // Asegurar que estamos en la fecha correcta
-          calendarApi.gotoDate(fechaInicio)
+          calendarApi.gotoDate(navigationDate)
         }
       }, 300)
 
