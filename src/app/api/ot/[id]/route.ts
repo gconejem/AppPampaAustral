@@ -15,6 +15,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         extraccionAsfaltica: true,
         muestreoMaterial: true,
         retiroProbeta: true,
+        tipoOT: true,
         user: {
           select: {
             id: true,
@@ -62,6 +63,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         extraccionAsfaltica: true,
         muestreoMaterial: true,
         retiroProbeta: true,
+        tipoOT: true,
         user: {
           select: {
             id: true,

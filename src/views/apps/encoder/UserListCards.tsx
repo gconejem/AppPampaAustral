@@ -18,33 +18,24 @@ const UserListCards = ({ otData, loading }: UserListCardsProps) => {
   const calcularTotalServicios = () => {
     if (!otData) return 0
 
-    switch (otData.tipoOT) {
-      case 'DENSIDADES':
+    const codigo = otData.tipoOT?.codigo
+    switch (codigo) {
+      case 'R-12-03': // Control de Compactación
         return 2 // Por ejemplo, densidad y proctor
-      case 'HORMIGON_FRESCO':
+      case 'R-12-39': // Muestreo de Hormigón Fresco
         return 2 // Por ejemplo, toma de muestra y cono abrams
-      case 'RETIRO_PROBETA':
+      case 'R-12-99': // Retiro de Probeta
         return 1 // Solo el retiro
-      case 'ACEPTACION_VISITA':
-        return 1 // Solo la aceptación
       default:
         return 1
     }
   }
 
-  const getOtType = (tipo: string) => {
-    switch (tipo) {
-      case 'DENSIDADES':
-        return 'Control de Compactación'
-      case 'HORMIGON_FRESCO':
-        return 'Muestreo de Hormigón Fresco'
-      case 'RETIRO_PROBETA':
-        return 'Retiro de Probeta'
-      case 'ACEPTACION_VISITA':
-        return 'Aceptación de Visita'
-      default:
-        return tipo || 'N/A'
+  const getOtType = (tipoOT: any) => {
+    if (typeof tipoOT === 'object' && tipoOT?.descripcion) {
+      return tipoOT.descripcion
     }
+    return 'N/A'
   }
 
   return (

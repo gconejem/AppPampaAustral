@@ -315,18 +315,19 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         cantidad: '1'
       }
 
-      switch (tipoOT) {
-        case 'DENSIDADES':
+      const codigo = otData?.tipoOT?.codigo
+      switch (codigo) {
+        case 'R-12-03': // Control de Compactación
           servicioDefault = { codigo: 'D001', nombre: 'Densidad Terreno', cantidad: '1' }
           break
-        case 'HORMIGON_FRESCO':
+        case 'R-12-39': // Muestreo de Hormigón Fresco
           servicioDefault = { codigo: 'H001', nombre: 'Toma de muestra hormigón fresco', cantidad: '1' }
           break
-        case 'RETIRO_PROBETA':
+        case 'R-12-99': // Retiro de Probeta
           servicioDefault = { codigo: 'R001', nombre: 'Retiro de Probeta', cantidad: '1' }
           break
-        case 'ACEPTACION_VISITA':
-          servicioDefault = { codigo: 'A001', nombre: 'Aceptación de Visita', cantidad: '1' }
+        default:
+          servicioDefault = { codigo: 'G001', nombre: 'Servicio General', cantidad: '1' }
           break
       }
 
@@ -423,9 +424,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
     // Usar setTimeout para implementar un debounce simple
     clearTimeout((window as any).searchTimeout)
-    ;(window as any).searchTimeout = setTimeout(() => {
-      setSearchTerm(value)
-    }, 300) // Esperar 300ms antes de actualizar los resultados
+      ; (window as any).searchTimeout = setTimeout(() => {
+        setSearchTerm(value)
+      }, 300) // Esperar 300ms antes de actualizar los resultados
   }
 
   // Manejar teclas especiales en el buscador
@@ -563,8 +564,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Si está cargando, mostrar indicador de carga
   if (loading) {
-  return (
-    <Card>
+    return (
+      <Card>
         <CardHeader title='Cargando datos...' />
         <CardContent>
           <Typography>Preparando formulario de codificación...</Typography>
@@ -958,14 +959,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       <DeleteIcon fontSize='small' />
                                     </IconButton>
                                   </TableCell>
-                            </TableRow>
+                                </TableRow>
                               ))
                             ) : (
-                            <TableRow>
+                              <TableRow>
                                 <TableCell colSpan={4} align='center'>
                                   No hay servicios agregados
                                 </TableCell>
-                            </TableRow>
+                              </TableRow>
                             )}
                           </TableBody>
                         </Table>
@@ -1119,7 +1120,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     }))
                                   }
                                 />
-                            </Grid>
+                              </Grid>
                               <Grid item xs={3}>
                                 <TextField
                                   fullWidth
@@ -1128,7 +1129,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                   onChange={e => setMuestraActual({ ...muestraActual, cota1: e.target.value })}
                                   size='small'
                                 />
-                            </Grid>
+                              </Grid>
                               <Grid item xs={3}>
                                 <TextField
                                   fullWidth
@@ -1245,7 +1246,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                               </option>
                                             ))}
                                           </TextField>
-                            </Grid>
+                                        </Grid>
                                         <Grid item xs={4}>
                                           <TextField
                                             select
@@ -1266,11 +1267,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                               </option>
                                             ))}
                                           </TextField>
-                            </Grid>
+                                        </Grid>
                                         <Grid item xs={4}>
                                           <TextField
                                             select
-                                size='small'
+                                            size='small'
                                             label='Familia'
                                             fullWidth
                                             value={familiaFilter}
@@ -1287,11 +1288,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                               </option>
                                             ))}
                                           </TextField>
-                            </Grid>
-                          </Grid>
+                                        </Grid>
+                                      </Grid>
                                       <Box
                                         sx={{
-                            display: 'flex',
+                                          display: 'flex',
                                           justifyContent: 'flex-end',
                                           mt: 1
                                         }}
@@ -1304,8 +1305,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         >
                                           Limpiar filtros
                                         </Button>
-                          </Box>
-                            </Box>
+                                      </Box>
+                                    </Box>
                                     <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                                       <List>
                                         {filteredProductos.length > 0 ? (
@@ -1344,7 +1345,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                                     <Typography variant='body2' component='span'>
                                                       Familia: {producto.familia || 'N/A'}
                                                     </Typography>
-                          </Box>
+                                                  </Box>
                                                 }
                                               />
                                             </ListItem>
@@ -1428,15 +1429,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         <TableCell>{serv.codigo}</TableCell>
                                         <TableCell>{serv.nombre}</TableCell>
                                         <TableCell>{serv.cantidad}</TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        label='Codificado'
-                                        sx={{
+                                        <TableCell>
+                                          <Chip
+                                            label='Codificado'
+                                            sx={{
                                               backgroundColor: '#daf3ff',
                                               color: '#16b1ff'
-                                        }}
-                                      />
-                                    </TableCell>
+                                            }}
+                                          />
+                                        </TableCell>
                                         <TableCell>
                                           <IconButton size='small' color='primary'>
                                             <EditIcon fontSize='small' />
@@ -1456,8 +1457,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           >
                                             <DeleteIcon fontSize='small' />
                                           </IconButton>
-                                    </TableCell>
-                                  </TableRow>
+                                        </TableCell>
+                                      </TableRow>
                                     ))
                                   ) : (
                                     <TableRow>
@@ -1474,14 +1475,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                           {/* Sección condicional de probetas */}
                           {vencimiento && (
                             <>
-                          <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={2}>
-                              <TextField label='Muestra' size='small' fullWidth />
-                            </Grid>
-                            <Grid item xs={1}>
-                              <TextField label='N°' size='small' fullWidth />
-                            </Grid>
-                            <Grid item xs={2}>
+                              <Grid container spacing={2} sx={{ mt: 2 }}>
+                                <Grid item xs={2}>
+                                  <TextField label='Muestra' size='small' fullWidth />
+                                </Grid>
+                                <Grid item xs={1}>
+                                  <TextField label='N°' size='small' fullWidth />
+                                </Grid>
+                                <Grid item xs={2}>
                                   <TextField
                                     label='Fecha Confección'
                                     type='date'
@@ -1489,8 +1490,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     fullWidth
                                     InputLabelProps={{ shrink: true }}
                                   />
-                            </Grid>
-                            <Grid item xs={2}>
+                                </Grid>
+                                <Grid item xs={2}>
                                   <TextField
                                     label='Cantidad'
                                     type='number'
@@ -1498,8 +1499,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     fullWidth
                                     inputProps={{ min: 1 }}
                                   />
-                            </Grid>
-                            <Grid item xs={1}>
+                                </Grid>
+                                <Grid item xs={1}>
                                   <TextField
                                     label='Días'
                                     type='number'
@@ -1507,8 +1508,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     fullWidth
                                     inputProps={{ min: 1 }}
                                   />
-                            </Grid>
-                            <Grid item xs={2}>
+                                </Grid>
+                                <Grid item xs={2}>
                                   <TextField
                                     label='Fecha Vencimiento'
                                     type='date'
@@ -1516,40 +1517,40 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     fullWidth
                                     InputLabelProps={{ shrink: true }}
                                   />
-                            </Grid>
-                            <Grid item xs={2}>
-                              <Button
-                                variant='contained'
-                                color='primary'
-                                size='small'
-                                startIcon={<i className='ri-add-line' />}
-                                sx={{
-                                  maxWidth: '150px',
-                                  width: '100%',
-                                  padding: '6px 12px'
-                                }}
-                              >
-                                Añadir
-                              </Button>
-                            </Grid>
-                          </Grid>
+                                </Grid>
+                                <Grid item xs={2}>
+                                  <Button
+                                    variant='contained'
+                                    color='primary'
+                                    size='small'
+                                    startIcon={<i className='ri-add-line' />}
+                                    sx={{
+                                      maxWidth: '150px',
+                                      width: '100%',
+                                      padding: '6px 12px'
+                                    }}
+                                  >
+                                    Añadir
+                                  </Button>
+                                </Grid>
+                              </Grid>
 
                               {/* Tabla de probetas */}
-                          <Box sx={{ mt: 4 }}>
-                            <TableContainer component={Paper}>
-                              <Table>
-                                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                                  <TableRow>
-                                    <TableCell>#</TableCell>
-                                    <TableCell>Muestra</TableCell>
-                                    <TableCell>Confección</TableCell>
-                                    <TableCell>Cantidad</TableCell>
-                                    <TableCell>Días</TableCell>
-                                    <TableCell>Vencimiento</TableCell>
-                                    <TableCell>Estado</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
+                              <Box sx={{ mt: 4 }}>
+                                <TableContainer component={Paper}>
+                                  <Table>
+                                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                      <TableRow>
+                                        <TableCell>#</TableCell>
+                                        <TableCell>Muestra</TableCell>
+                                        <TableCell>Confección</TableCell>
+                                        <TableCell>Cantidad</TableCell>
+                                        <TableCell>Días</TableCell>
+                                        <TableCell>Vencimiento</TableCell>
+                                        <TableCell>Estado</TableCell>
+                                      </TableRow>
+                                    </TableHead>
+                                    <TableBody>
                                       {muestraActual.probetas.length > 0 ? (
                                         muestraActual.probetas.map((probeta, index) => (
                                           <TableRow key={index}>
@@ -1559,16 +1560,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             <TableCell>{probeta.cantidad}</TableCell>
                                             <TableCell>{probeta.dias}</TableCell>
                                             <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                    <TableCell>
-                                      <Chip
+                                            <TableCell>
+                                              <Chip
                                                 label={probeta.estado}
-                                        sx={{
+                                                sx={{
                                                   backgroundColor: '#daf3ff',
                                                   color: '#16b1ff'
-                                        }}
-                                      />
-                                    </TableCell>
-                                  </TableRow>
+                                                }}
+                                              />
+                                            </TableCell>
+                                          </TableRow>
                                         ))
                                       ) : (
                                         <TableRow>
@@ -1577,16 +1578,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           </TableCell>
                                         </TableRow>
                                       )}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </Box>
+                                    </TableBody>
+                                  </Table>
+                                </TableContainer>
+                              </Box>
                             </>
                           )}
 
-                            {/* Campo de Observaciones */}
-                            <Grid container spacing={2} sx={{ mt: 4 }}>
-                              <Grid item xs={12}>
+                          {/* Campo de Observaciones */}
+                          <Grid container spacing={2} sx={{ mt: 4 }}>
+                            <Grid item xs={12}>
                               <TextField
                                 label='Observaciones Muestra'
                                 size='small'
@@ -1601,8 +1602,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                   }))
                                 }
                               />
-                              </Grid>
                             </Grid>
+                          </Grid>
                         </AccordionDetails>
                       </Accordion>
                     </>

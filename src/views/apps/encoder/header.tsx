@@ -41,38 +41,31 @@ const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
     )
   }
 
-  // Mostrar el servicio según el tipo de OT
-  const getServicioNombre = (tipo: string | null) => {
-    switch (tipo) {
-      case 'DENSIDADES':
-        return 'Control de Compactación'
-      case 'HORMIGON_FRESCO':
-        return 'Muestreo de Hormigón Fresco'
-      case 'RETIRO_PROBETA':
-        return 'Retiro de Probeta Hormigón'
-      case 'MUESTREO_MATERIALES':
-        return 'Muestreo de Materiales'
-      case 'TESTIGOS':
-        return 'Testigos'
-      case 'EXTRACCION_ASFALTICA':
-        return 'Extracción Asfáltica'
-      case 'ACEPTACION_VISITA':
-        return 'Aceptación de Visita'
+  // Obtener el servicio desde el objeto tipoOT
+  const getServicioNombre = (tipoOT: any) => {
+    if (typeof tipoOT === 'object' && tipoOT?.descripcion) {
+      return tipoOT.descripcion
+    }
+    return 'Desconocido'
+  }
+
+  const servicioNombre = getServicioNombre(otData?.tipoOT)
+
+  const getAreaOT = (tipoOT: any) => {
+    const codigo = tipoOT?.codigo
+    switch (codigo) {
+      case 'R-12-39': // Muestreo de Hormigón Fresco
+        return 'Hormigón'
+      case 'R-12-03': // Control de Compactación
+        return 'Suelos'
+      case 'R-12-31': // Extracción Asfáltica
+        return 'Asfaltos'
       default:
-        return tipo || 'Desconocido'
+        return 'General'
     }
   }
 
-  const servicioNombre = getServicioNombre(tipoOT || null)
-
-  const areaOT =
-    tipoOT === 'HORMIGON_FRESCO'
-      ? 'Hormigón'
-      : tipoOT === 'DENSIDADES'
-        ? 'Suelos'
-        : tipoOT === 'EXTRACCION_ASFALTICA'
-          ? 'Asfaltos'
-          : 'General'
+  const areaOT = getAreaOT(otData?.tipoOT)
 
   return (
     <Card sx={{ marginBottom: 4, padding: 2 }}>

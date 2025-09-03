@@ -119,7 +119,8 @@ const UserListTable3 = ({
 
           if (otData) {
             // Generar servicios según el tipo de OT
-            if (otData.tipoOT === 'DENSIDADES') {
+            const codigo = otData.tipoOT?.codigo
+            if (codigo === 'R-12-03') { // Control de Compactación
               serviciosSample.push({
                 id: '1',
                 codigo: 'S-D001',
@@ -140,7 +141,7 @@ const UserListTable3 = ({
                 servicio: 'Proctor Modificado',
                 estado: 'Pendiente'
               })
-            } else if (otData.tipoOT === 'HORMIGON_FRESCO') {
+            } else if (codigo === 'R-12-39') { // Muestreo de Hormigón Fresco
               serviciosSample.push({
                 id: '3',
                 codigo: 'H-F001',
@@ -161,7 +162,7 @@ const UserListTable3 = ({
                 servicio: 'Cono de Abrams',
                 estado: 'Pendiente'
               })
-            } else if (otData.tipoOT === 'RETIRO_PROBETA') {
+            } else if (codigo === 'R-12-99') { // Retiro de Probeta
               serviciosSample.push({
                 id: '5',
                 codigo: 'R-P001',

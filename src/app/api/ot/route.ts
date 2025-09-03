@@ -1,30 +1,47 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
-import { TipoOrdenTrabajo } from '@prisma/client'
 
 // Función para obtener el tipo de OT basado en el código de documento
-const getTipoOTFromDocCode = (fklbdocver: string): TipoOrdenTrabajo => {
+const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   // Extraer la parte relevante del código (R-12-XX)
   const docCode = fklbdocver.substring(0, 7) // Tomar solo los primeros 7 caracteres (R-12-34)
-  
+
   console.log(docCode)
-  
-  // Mapear el código al tipo de OT
-  const tipoOTMap: { [key: string]: TipoOrdenTrabajo } = {
-    'R-12-01': TipoOrdenTrabajo.ACEPTACION_VISITA,
-    'R-12-03': TipoOrdenTrabajo.DENSIDADES,
-    'R-12-27': TipoOrdenTrabajo.MUESTREO_MATERIAL,
-    'R-12-31': TipoOrdenTrabajo.EXTRACCION_ASFALTICA,
-    //'R-12-34': TipoOrdenTrabajo.GENERAL,            Se debe agregar al enum
-    'R-12-39': TipoOrdenTrabajo.HORMIGON_FRESCO,
-    'R-12-58': TipoOrdenTrabajo.TESTIGOS,
-    'R-12-99': TipoOrdenTrabajo.RETIRO_PROBETA
+
+  // Mapear el código al ID del tipo de OT en la base de datos
+  const tipoOTMap: { [key: string]: string } = {
+    'R-12-03': 'R-12-03', // Control de Compactación
+    'R-12-39': 'R-12-39', // Muestreo de Hormigón Fresco
+    'R-12-99': 'R-12-99', // Retiro de Probeta Hormigón
+    'R-12-27': 'R-12-27', // Muestreo de Materiales
+    'R-12-58': 'R-12-58', // Testigos
+    'R-12-31': 'R-12-31', // Extracción Asfáltica
+    'R-12-69': 'R-12-69', // Dosificación
+    'R-12-34': 'R-12-34', // General
+    'X-1-001': 'X-1-001'  // Suspendido en Terreno
   }
 
-  console.log(tipoOTMap[docCode])
+  const codigo = tipoOTMap[docCode]
 
-  return tipoOTMap[docCode] || TipoOrdenTrabajo.ACEPTACION_VISITA
+  if (codigo) {
+    // Buscar el tipo de OT por código en la base de datos
+    const tipoOT = await prisma.tipoOrdenTrabajo.findFirst({
+      where: { codigo }
+    })
+
+    if (tipoOT) {
+      console.log('Tipo OT encontrado:', tipoOT)
+      return tipoOT.id
+    }
+  }
+
+  // Si no se encuentra, devolver el ID del tipo "General" por defecto
+  const tipoOTDefault = await prisma.tipoOrdenTrabajo.findFirst({
+    where: { codigo: 'R-12-34' }
+  })
+
+  return tipoOTDefault?.id || 8 // ID 8 corresponde a "General"
 }
 
 // GET /api/ot - Obtener todas las OTs
@@ -39,6 +56,7 @@ export async function GET() {
         extraccionAsfaltica: true,
         muestreoMaterial: true,
         retiroProbeta: true,
+        tipoOT: true,
         user: {
           select: {
             id: true,
@@ -122,6 +140,8 @@ export async function POST(request: Request) {
         FKLBDOCVER?: string
         FKLBRUTSER?: string
       }) => {
+        const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
+
         const ordenData = {
           clave: ot.CLAVE,
           estado: ot.ESTADO || 'PENDIENTE',
@@ -135,7 +155,11 @@ export async function POST(request: Request) {
               id: parseInt(ot.FKLBRUTAS || '-1')
             }
           },
-          tipoOT: getTipoOTFromDocCode(ot.FKLBDOCVER || ''),
+          tipoOT: {
+            connect: {
+              id: tipoOTId
+            }
+          },
           user: {
             connect: {
               //id: data.usuario.id
@@ -154,6 +178,7 @@ export async function POST(request: Request) {
             extraccionAsfaltica: true,
             muestreoMaterial: true,
             retiroProbeta: true,
+            tipoOT: true,
             user: {
               select: {
                 id: true,

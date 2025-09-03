@@ -87,51 +87,21 @@ const globalFilterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
-// Función para mapear códigos de OT a nombres descriptivos
-const getServiceName = (tipoOT: string) => {
-  const serviceNames = {
-    CONTROL_COMPACTACION: 'Control de Compactación',
-    MUESTREO_HORMIGON: 'Muestreo de Hormigón Fresco',
-    RETIRO_PROBETA: 'Retiro de Probeta Hormigón',
-    MUESTREO_MATERIALES: 'Muestreo de Materiales',
-    TESTIGOS: 'Testigos',
-    EXTRACCION_ASFALTICA: 'Extracción Asfáltica',
-    DOSIFICACION: 'Dosificación',
-    GENERAL: 'General',
-    SUSPENDIDO_TERRENO: 'Suspendido en terreno'
+// Función para obtener el nombre del servicio desde el objeto tipoOT
+const getServiceName = (tipoOT: any) => {
+  if (typeof tipoOT === 'object' && tipoOT?.descripcion) {
+    return tipoOT.descripcion
   }
-
-  return serviceNames[tipoOT as keyof typeof serviceNames] || tipoOT
+  return 'Servicio no definido'
 }
 
-// Función para mapear tipos de OT a sus códigos
-const getOTCode = (tipoOT: string) => {
-  const otCodes = {
-    DENSIDADES: 'R-12-03',
-    HORMIGON_FRESCO: 'R-12-39',
-    RETIRO_PROBETA: 'R-12-99',
-    MUESTREO_MATERIALES: 'R-12-27',
-    TESTIGOS: 'R-12-58',
-    EXTRACCION_ASFALTICA: 'R-12-31',
-    DOSIFICACION: 'R-12-69',
-    GENERAL: 'R-12-34',
-    ACEPTACION_VISITA: 'R-12-01',
-    SUSPENDIDO_TERRENO: 'X-1 001'
+// Función para obtener el código de OT desde el objeto tipoOT
+const getOTCode = (tipoOT: any) => {
+  if (typeof tipoOT === 'object' && tipoOT?.codigo) {
+    return tipoOT.codigo
   }
-
-  return otCodes[tipoOT as keyof typeof otCodes] || tipoOT
+  return 'Sin código'
 }
-
-// Lista de tipos de orden de trabajo basada en el enum TipoOrdenTrabajo del schema
-const tiposOrdenTrabajo = [
-  { value: 'ACEPTACION_VISITA', label: 'Aceptación Visita' },
-  { value: 'DENSIDADES', label: 'Densidades' },
-  { value: 'HORMIGON_FRESCO', label: 'Hormigón Fresco' },
-  { value: 'TESTIGOS', label: 'Testigos' },
-  { value: 'EXTRACCION_ASFALTICA', label: 'Extracción Asfáltica' },
-  { value: 'MUESTREO_MATERIAL', label: 'Muestreo de Material' },
-  { value: 'RETIRO_PROBETA', label: 'Retiro de Probeta' }
-]
 
 const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   // States
@@ -144,6 +114,29 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
   const [allOTs, setAllOTs] = useState<OrdenTrabajo[]>([])
   const [loading, setLoading] = useState(true)
+  // Estado para los tipos de orden de trabajo desde la base de datos
+  const [tiposOrdenTrabajo, setTiposOrdenTrabajo] = useState<Array<{ value: number, label: string }>>([])
+
+  // Cargar tipos de orden de trabajo
+  useEffect(() => {
+    const fetchTiposOT = async () => {
+      try {
+        const response = await fetch('/api/tipos-orden-trabajo')
+        if (response.ok) {
+          const tipos = await response.json()
+          const tiposFormatted = tipos.map((tipo: any) => ({
+            value: tipo.id,
+            label: tipo.descripcion || 'Sin descripción'
+          }))
+          setTiposOrdenTrabajo(tiposFormatted)
+        }
+      } catch (error) {
+        console.error('Error al cargar tipos de OT:', error)
+      }
+    }
+
+    fetchTiposOT()
+  }, [])
   const [agendas, setAgendas] = useState<Agenda[]>([])
 
   // Estado para el popover de obra
@@ -242,7 +235,10 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
     // Filtrar por servicio
     if (filters.servicio) {
-      result = result.filter(ot => ot.tipoOT.toLowerCase().includes(filters.servicio.toLowerCase()))
+      result = result.filter(ot => {
+        const serviceName = getServiceName(ot.tipoOT)
+        return serviceName.toLowerCase().includes(filters.servicio.toLowerCase())
+      })
     }
 
     // Filtrar por estado OT
@@ -252,7 +248,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
     // Filtrar por tipo de OT
     if (filters.tipoOT) {
-      result = result.filter(ot => ot.tipoOT === filters.tipoOT)
+      result = result.filter(ot => ot.tipoOrdenTrabajoId === parseInt(filters.tipoOT))
     }
 
     // Búsqueda global
@@ -292,10 +288,12 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const renderPDFComponent = (ot: OrdenTrabajo) => {
     console.log('Rendering PDF for type:', ot.tipoOT) // Debug log
 
-    switch (ot.tipoOT) {
-      case 'CONTROL_COMPACTACION':
+    const codigo = ot.tipoOT?.codigo
+
+    switch (codigo) {
+      case 'R-12-03': // Control de Compactación
         return <DensidadPDF ot={ot} />
-      case 'MUESTREO_HORMIGON':
+      case 'R-12-39': // Muestreo de Hormigón Fresco
         return <HormigonFrescoPDF ot={ot} />
       default:
         // Temporalmente mostrar un mensaje para los tipos no implementados

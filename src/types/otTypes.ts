@@ -1,18 +1,16 @@
-export type TipoOrdenTrabajo =
-  | 'CONTROL_COMPACTACION'
-  | 'MUESTREO_HORMIGON'
-  | 'RETIRO_PROBETA'
-  | 'MUESTREO_MATERIALES'
-  | 'TESTIGOS'
-  | 'EXTRACCION_ASFALTICA'
-  | 'DOSIFICACION'
-  | 'GENERAL'
-  | 'SUSPENDIDO_TERRENO'
+export interface TipoOrdenTrabajo {
+  id: number
+  codigo: string | null
+  descripcion: string | null
+  createdAt: Date
+  updatedAt: Date
+}
 
 export interface OrdenTrabajo {
   id: string
   clave: string
   tipoOT: TipoOrdenTrabajo
+  tipoOrdenTrabajoId: number
   estado: string
   origen: string
   fklbrutas: string
