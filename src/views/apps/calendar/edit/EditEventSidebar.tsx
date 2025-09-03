@@ -49,7 +49,7 @@ import { formatDateForBackend, formatBackendDateForInput, parseDateFromBackend }
 // Types
 interface EditEventSidebarProps {
   editEventSidebarOpen: boolean
-  handleEditEventSidebarToggle: () => void
+  handleEditEventSidebarToggle: (wasSaved?: boolean) => void
   selectedEvent: any // El evento seleccionado para editar
 }
 
@@ -910,8 +910,8 @@ const EditEventSidebar = ({
         throw new Error(error.message || 'Error al actualizar la visita')
       }
 
-      // Cerrar sidebar y mostrar mensaje de éxito
-      handleEditEventSidebarToggle()
+      // Cerrar sidebar y mostrar mensaje de éxito, indicando que se guardó
+      handleEditEventSidebarToggle(true)
 
       // Recargar la lista de visitas tras guardar
       if (typeof window !== 'undefined') {
@@ -1230,7 +1230,7 @@ const EditEventSidebar = ({
       <Drawer
         anchor='right'
         open={editEventSidebarOpen}
-        onClose={handleEditEventSidebarToggle}
+        onClose={() => handleEditEventSidebarToggle(false)}
         sx={{
           '& .MuiDrawer-paper': {
             width: '80%',
@@ -1255,7 +1255,7 @@ const EditEventSidebar = ({
 
 
             <Grid item xs={1} display='flex' justifyContent='flex-end'>
-              <Button variant='outlined' color='error' onClick={handleEditEventSidebarToggle}>
+              <Button variant='outlined' color='error' onClick={() => handleEditEventSidebarToggle(false)}>
                 Cancelar
               </Button>
             </Grid>

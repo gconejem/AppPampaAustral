@@ -140,7 +140,7 @@ const Calendar = (props: CalenderProps) => {
     try {
       // Encontrar el evento actualizado en el estado
       const updatedEvent = events.find(event => String(event.id) === String(eventId))
-      if (!updatedEvent || !updatedEvent.extendedProps?.asignados?.length) return
+      if (!updatedEvent) return
 
       // Buscar el elemento del evento en el DOM
       const eventTitleElement = document.querySelector(`[data-event-id="${eventId}"]`)
@@ -149,31 +149,39 @@ const Calendar = (props: CalenderProps) => {
       const eventRow = eventTitleElement.closest('.fc-list-event')
       if (!eventRow) return
 
-      // Buscar el contenedor del laboratorista
-      const laboratoristaContainer = eventRow.querySelector('.fc-list-event-actions')?.parentElement?.querySelector('div:last-child')
+      // Buscar el contenedor de acciones del evento
+      const actionContainer = eventRow.querySelector('.fc-list-event-actions')
+      if (!actionContainer) return
+
+      // El laboratoristaContainer es el último div hijo del actionContainer
+      const laboratoristaContainer = actionContainer.lastElementChild
       if (!laboratoristaContainer) return
 
-      // Obtener el primer laboratorista asignado
-      const primerLaboratorista = updatedEvent.extendedProps.asignados[0]
-      const nombreLaboratorista = primerLaboratorista.user?.name ||
-        primerLaboratorista.user?.nombre ||
-        primerLaboratorista.nombre ||
-        'Laboratorista'
-
-      // Limpiar y actualizar el contenido
+      // Limpiar el contenido actual
       laboratoristaContainer.innerHTML = ''
-      const laboratoristaText = document.createElement('div')
-      laboratoristaText.style.cssText = `
-        font-size: 0.75rem;
-        color: #666;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100px;
-      `
-      laboratoristaText.textContent = nombreLaboratorista
-      laboratoristaContainer.appendChild(laboratoristaText)
+
+      // Solo agregar laboratorista si hay asignados
+      const asignados = updatedEvent.extendedProps?.asignados || []
+      if (asignados.length > 0) {
+        const primerLaboratorista = asignados[0]
+        const nombreLaboratorista = primerLaboratorista.user?.name ||
+          primerLaboratorista.user?.nombre ||
+          primerLaboratorista.nombre ||
+          'Laboratorista'
+
+        const laboratoristaText = document.createElement('div')
+        laboratoristaText.style.cssText = `
+          font-size: 0.75rem;
+          color: #666;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100px;
+        `
+        laboratoristaText.textContent = nombreLaboratorista
+        laboratoristaContainer.appendChild(laboratoristaText)
+      }
     } catch (error) {
       console.log('Error actualizando laboratorista en DOM:', error)
     }
@@ -254,10 +262,11 @@ const Calendar = (props: CalenderProps) => {
     setSelectedEventForView(null)
   }
 
-  const handleEditEventSidebarToggle = async () => {
+  const handleEditEventSidebarToggle = async (wasSaved: boolean = false) => {
     setEditEventSidebarOpen(!editEventSidebarOpen)
 
-    if (editEventSidebarOpen) {
+    // Solo actualizar si el sidebar se está cerrando Y se guardó el evento
+    if (editEventSidebarOpen && wasSaved) {
       // Aplicar la misma estrategia de actualización que para asignación de laboratoristas
       await fetchEvents()
 
@@ -285,18 +294,8 @@ const Calendar = (props: CalenderProps) => {
           setCalendarKey(prev => prev + 1)
         }, 150)
 
-        // 3. Como backup, actualizar manualmente los elementos DOM si existen
-        // Nota: Como no sabemos qué evento se editó específicamente, forzamos actualización general
-        setTimeout(() => {
-          // Buscar todos los eventos en el DOM y intentar actualizarlos
-          const eventTitles = document.querySelectorAll('[data-event-id]')
-          eventTitles.forEach(element => {
-            const eventId = element.getAttribute('data-event-id')
-            if (eventId) {
-              updateLaboratoristaInDOM(eventId)
-            }
-          })
-        }, 300)
+        // 3. Para edición de eventos, no necesitamos actualización manual del DOM
+        // porque la re-renderización completa ya maneja todos los cambios
       }
     }
   }
@@ -332,17 +331,8 @@ const Calendar = (props: CalenderProps) => {
           setCalendarKey(prev => prev + 1)
         }, 150)
 
-        // 3. Como backup, actualizar manualmente los elementos DOM si existen
-        setTimeout(() => {
-          // Buscar todos los eventos en el DOM y intentar actualizarlos
-          const eventTitles = document.querySelectorAll('[data-event-id]')
-          eventTitles.forEach(element => {
-            const eventId = element.getAttribute('data-event-id')
-            if (eventId) {
-              updateLaboratoristaInDOM(eventId)
-            }
-          })
-        }, 300)
+        // 3. Para duplicación de eventos, no necesitamos actualización manual del DOM
+        // porque la re-renderización completa ya maneja todos los cambios
       }
     }
   }
