@@ -1,5 +1,5 @@
 // React Imports
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography'
 import FormControl from '@mui/material/FormControl'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
-import { TextField, InputAdornment, Autocomplete, FormControlLabel, Checkbox } from '@mui/material'
+import { TextField, InputAdornment, Autocomplete } from '@mui/material'
 import Box from '@mui/material/Box'
 
 // Third-party imports
@@ -19,7 +19,7 @@ import classnames from 'classnames'
 import type { SidebarLeftProps } from '@/types/apps/calendarTypes'
 
 // Component Imports
-import SidebarMiniCalendar from './SidebarMiniCalendar'
+
 import PickersRange from './RangeCalendar'
 
 // Slice Imports
@@ -67,8 +67,6 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     handleAddEventSidebarToggle,
     onDateSelect,
     onRangeSelect,
-    dateRangeEnabled = false,
-    onDateRangeToggle,
     filters,
     onFilterChange,
     onClearAllFilters
@@ -84,10 +82,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
   const [loadingLaboratoristas, setLoadingLaboratoristas] = useState(true)
   const [loadingComunas, setLoadingComunas] = useState(true)
 
-  // Memoizar la fecha actual del calendario para evitar nuevas instancias en cada render
-  const memoizedCurrentDate = useMemo(() => {
-    return calendarApi?.getDate() ?? null
-  }, [calendarApi])
+
 
   // Cargar clientes al montar el componente
   useEffect(() => {
@@ -288,45 +283,12 @@ const SidebarLeft = (props: SidebarLeftProps) => {
         </Button>
       </div>
 
-      {/* Mini Calendario */}
-      <Box sx={{ px: 5, pb: 5 }}>
-        <SidebarMiniCalendar
-          onDateSelect={date => {
-            if (calendarApi) {
-              calendarApi.gotoDate(date)
-            }
-            // Llamar también al callback del padre si existe
-            if (onDateSelect) {
-              onDateSelect(date)
-            }
-          }}
-          currentDate={memoizedCurrentDate}
-          calendarRef={{ current: calendarApi }}
-        />
-      </Box>
+
 
       {/* Sección de Rango de Fechas */}
       <Box sx={{ px: 5 }}>
         <div className='flex flex-col p-5 is-full'>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={dateRangeEnabled}
-                onChange={(e) => onDateRangeToggle?.(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Buscar por rango de fechas"
-            sx={{ mb: 2 }}
-          />
-        </div>
-      </Box>
-
-      <Box sx={{ px: 5 }}>
-        <div className='flex flex-col p-5 is-full'>
-          {dateRangeEnabled && (
-            <PickersRange onRangeChange={onRangeSelect} />
-          )}
+          <PickersRange onRangeChange={onRangeSelect} />
         </div>
       </Box>
 

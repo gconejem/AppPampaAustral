@@ -1,5 +1,5 @@
 // React Imports
-import { useState, forwardRef } from 'react'
+import { useState, forwardRef, useEffect } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -25,11 +25,19 @@ interface PickersRangeProps {
 }
 
 const PickersRange = ({ onRangeChange }: PickersRangeProps) => {
-    // States
-    const [startDate, setStartDate] = useState<Date | null | undefined>(new Date())
-    const [endDate, setEndDate] = useState<Date | null | undefined>(addDays(new Date(), 15))
-    const [startDateRange, setStartDateRange] = useState<Date | null | undefined>(new Date())
-    const [endDateRange, setEndDateRange] = useState<Date | null | undefined>(addDays(new Date(), 45))
+    // States - Inicializar con fecha actual (hoy) para start y end
+    const today = new Date()
+    const [startDate, setStartDate] = useState<Date | null | undefined>(today)
+    const [endDate, setEndDate] = useState<Date | null | undefined>(today)
+    const [startDateRange, setStartDateRange] = useState<Date | null | undefined>(today)
+    const [endDateRange, setEndDateRange] = useState<Date | null | undefined>(today)
+
+    // Notificar al componente padre sobre el rango inicial
+    useEffect(() => {
+        if (onRangeChange && startDate && endDate) {
+            onRangeChange(startDate, endDate)
+        }
+    }, []) // Solo ejecutar al montar el componente
 
     const handleOnChange = (dates: any) => {
         const [start, end] = dates

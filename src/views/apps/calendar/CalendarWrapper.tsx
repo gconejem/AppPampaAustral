@@ -65,10 +65,14 @@ const AppCalendar = () => {
   const [calendarApi, setCalendarApi] = useState<null | any>(null)
   const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(false)
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
-  // Cambiar aquí: inicializar con la fecha de hoy
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-  const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null)
-  const [dateRangeEnabled, setDateRangeEnabled] = useState<boolean>(false)
+  // Inicializar con la fecha de hoy como rango seleccionado por defecto (hoy - hoy)
+  const today = new Date()
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDateRange, setSelectedDateRange] = useState<{ start: Date | null; end: Date | null } | null>({
+    start: today,
+    end: today
+  })
+
 
   // Estados para los filtros
   const [filters, setFilters] = useState<CalendarFilters>({
@@ -97,23 +101,12 @@ const AppCalendar = () => {
   }
 
   const handleRangeSelect = (startDate: Date | null, endDate: Date | null) => {
-    if (dateRangeEnabled) {
-      setSelectedDateRange({ start: startDate, end: endDate })
-      // Limpiar la fecha específica cuando se selecciona un rango
-      setSelectedDate(null)
-    }
+    setSelectedDateRange({ start: startDate, end: endDate })
+    // Limpiar la fecha específica cuando se selecciona un rango
+    setSelectedDate(null)
   }
 
-  const handleDateRangeToggle = (enabled: boolean) => {
-    setDateRangeEnabled(enabled)
-    if (!enabled) {
-      // Si se desactiva el rango, limpiar la selección de rango
-      setSelectedDateRange(null)
-    } else {
-      // Si se activa el rango, limpiar la fecha específica
-      setSelectedDate(null)
-    }
-  }
+
 
   const handleFilterChange = (filterType: string, value: any) => {
     setFilters(prev => {
@@ -186,8 +179,6 @@ const AppCalendar = () => {
         handleAddEventSidebarToggle={handleAddEventSidebarToggle}
         onDateSelect={handleDateSelect}
         onRangeSelect={handleRangeSelect}
-        dateRangeEnabled={dateRangeEnabled}
-        onDateRangeToggle={handleDateRangeToggle}
         filters={filters}
         onFilterChange={handleFilterChange}
         onClearAllFilters={handleClearAllFilters}
@@ -196,8 +187,8 @@ const AppCalendar = () => {
         <Calendar
           handleAddEventSidebarToggle={handleAddEventSidebarToggle}
           addEventSidebarOpen={addEventSidebarOpen}
-          selectedDate={dateRangeEnabled ? null : selectedDate}
-          selectedDateRange={dateRangeEnabled ? selectedDateRange : null}
+          selectedDate={selectedDate}
+          selectedDateRange={selectedDateRange}
           filters={filters}
           onDateChange={handleDateSelect}
           onDateRangeChange={handleRangeSelect}
