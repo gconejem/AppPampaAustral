@@ -254,19 +254,96 @@ const Calendar = (props: CalenderProps) => {
     setSelectedEventForView(null)
   }
 
-  const handleEditEventSidebarToggle = () => {
+  const handleEditEventSidebarToggle = async () => {
     setEditEventSidebarOpen(!editEventSidebarOpen)
 
     if (editEventSidebarOpen) {
-      fetchEvents()
+      // Aplicar la misma estrategia de actualización que para asignación de laboratoristas
+      await fetchEvents()
+
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
+        }
+
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
+
+        // 3. Como backup, actualizar manualmente los elementos DOM si existen
+        // Nota: Como no sabemos qué evento se editó específicamente, forzamos actualización general
+        setTimeout(() => {
+          // Buscar todos los eventos en el DOM y intentar actualizarlos
+          const eventTitles = document.querySelectorAll('[data-event-id]')
+          eventTitles.forEach(element => {
+            const eventId = element.getAttribute('data-event-id')
+            if (eventId) {
+              updateLaboratoristaInDOM(eventId)
+            }
+          })
+        }, 300)
+      }
     }
   }
 
-  const handleDuplicateEventSidebarToggle = () => {
+  const handleDuplicateEventSidebarToggle = async () => {
     setDuplicateEventSidebarOpen(!duplicateEventSidebarOpen)
 
     if (duplicateEventSidebarOpen) {
-      fetchEvents()
+      // Aplicar la misma estrategia de actualización que para asignación de laboratoristas
+      await fetchEvents()
+
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
+        }
+
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
+
+        // 3. Como backup, actualizar manualmente los elementos DOM si existen
+        setTimeout(() => {
+          // Buscar todos los eventos en el DOM y intentar actualizarlos
+          const eventTitles = document.querySelectorAll('[data-event-id]')
+          eventTitles.forEach(element => {
+            const eventId = element.getAttribute('data-event-id')
+            if (eventId) {
+              updateLaboratoristaInDOM(eventId)
+            }
+          })
+        }, 300)
+      }
     }
   }
 
@@ -297,7 +374,34 @@ const Calendar = (props: CalenderProps) => {
 
       if (!response.ok) throw new Error('Error al eliminar el evento')
 
+      // Aplicar la misma estrategia de actualización mejorada
       await fetchEvents()
+
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
+        }
+
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
+      }
+
       setSnackbarMessage('¡Evento eliminado exitosamente!')
       setSnackbarSeverity('success')
       setOpenSnackbar(true)
@@ -1108,7 +1212,34 @@ const Calendar = (props: CalenderProps) => {
         )
       )
 
+      // Aplicar la misma estrategia de actualización mejorada
       await fetchEvents()
+
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
+        }
+
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
+      }
+
       setSelectedEvents([])
       setDeleteDialogOpen(false)
       enqueueSnackbar('Eventos eliminados correctamente', {
