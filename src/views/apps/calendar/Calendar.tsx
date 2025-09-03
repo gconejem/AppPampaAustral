@@ -135,6 +135,50 @@ const Calendar = (props: CalenderProps) => {
 
   const { enqueueSnackbar } = useSnackbar()
 
+  // Helper function para actualizar manualmente el laboratorista en el DOM
+  const updateLaboratoristaInDOM = (eventId: string) => {
+    try {
+      // Encontrar el evento actualizado en el estado
+      const updatedEvent = events.find(event => String(event.id) === String(eventId))
+      if (!updatedEvent || !updatedEvent.extendedProps?.asignados?.length) return
+
+      // Buscar el elemento del evento en el DOM
+      const eventTitleElement = document.querySelector(`[data-event-id="${eventId}"]`)
+      if (!eventTitleElement) return
+
+      const eventRow = eventTitleElement.closest('.fc-list-event')
+      if (!eventRow) return
+
+      // Buscar el contenedor del laboratorista
+      const laboratoristaContainer = eventRow.querySelector('.fc-list-event-actions')?.parentElement?.querySelector('div:last-child')
+      if (!laboratoristaContainer) return
+
+      // Obtener el primer laboratorista asignado
+      const primerLaboratorista = updatedEvent.extendedProps.asignados[0]
+      const nombreLaboratorista = primerLaboratorista.user?.name ||
+        primerLaboratorista.user?.nombre ||
+        primerLaboratorista.nombre ||
+        'Laboratorista'
+
+      // Limpiar y actualizar el contenido
+      laboratoristaContainer.innerHTML = ''
+      const laboratoristaText = document.createElement('div')
+      laboratoristaText.style.cssText = `
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100px;
+      `
+      laboratoristaText.textContent = nombreLaboratorista
+      laboratoristaContainer.appendChild(laboratoristaText)
+    } catch (error) {
+      console.log('Error actualizando laboratorista en DOM:', error)
+    }
+  }
+
   // Helper function to format date to YYYY-MM-DD in local timezone
   const formatDateToString = (date: Date): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -865,7 +909,7 @@ const Calendar = (props: CalenderProps) => {
 
   const handleBulkAssignLaboratoristas = async (laboratoristas: string[]) => {
     try {
-      await Promise.all(
+      const responses = await Promise.all(
         selectedEvents.map(event =>
           axios.post(`/api/agenda/${event.id}/asignar-laboratoristas`, {
             laboratoristas
@@ -873,19 +917,41 @@ const Calendar = (props: CalenderProps) => {
         )
       )
 
-      // Actualizar eventos en el calendario
-      const updatedEvents = events.map(event => {
-        if (selectedEvents.some(selected => selected.id === event.id)) {
-          return {
-            ...event,
-            laboratoristas
-          }
+      // Recargar los eventos desde el backend para obtener la estructura completa y actualizada
+      await fetchEvents()
+
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
         }
 
-        return event
-      })
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
 
-      setEvents(updatedEvents)
+        // 3. Como backup, actualizar manualmente los elementos DOM si existen
+        setTimeout(() => {
+          selectedEvents.forEach(event => {
+            updateLaboratoristaInDOM(event.id)
+          })
+        }, 300)
+      }
+
       setSelectedEvents([])
       setAsignarLaboratoristaOpen(false)
 
@@ -909,22 +975,43 @@ const Calendar = (props: CalenderProps) => {
         return
       }
 
-      await axios.post(`/api/agenda/${selectedEventId}/asignar-laboratoristas`, {
+      const response = await axios.post(`/api/agenda/${selectedEventId}/asignar-laboratoristas`, {
         laboratoristas
       })
 
-      // Actualizar eventos en el calendario
-      const updatedEvents = events.map(event => {
-        if (event.id === selectedEventId) {
-          return {
-            ...event,
-            laboratoristas
-          }
-        }
-        return event
-      })
+      // Recargar los eventos desde el backend para obtener la estructura completa y actualizada
+      await fetchEvents()
 
-      setEvents(updatedEvents)
+      // Pequeña pausa para asegurar que los filtros se apliquen
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Forzar múltiples tipos de actualización para asegurar que la vista se actualice
+      const preservedView = currentView
+
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi()
+
+        // 1. Cambiar temporalmente a otra vista y volver
+        if (preservedView === 'listMonth') {
+          calendarApi.changeView('dayGridMonth')
+          setTimeout(() => {
+            if (calendarRef.current) {
+              calendarRef.current.getApi().changeView('listMonth')
+            }
+          }, 100)
+        }
+
+        // 2. Forzar re-renderización con calendarKey
+        setTimeout(() => {
+          setCalendarKey(prev => prev + 1)
+        }, 150)
+
+        // 3. Como backup, actualizar manualmente los elementos DOM si existen
+        setTimeout(() => {
+          updateLaboratoristaInDOM(selectedEventId!)
+        }, 300)
+      }
+
       setAsignarLaboratoristaOpen(false)
       setSelectedEventId(null)
 
