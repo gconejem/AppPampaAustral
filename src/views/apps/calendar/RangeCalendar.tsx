@@ -45,9 +45,24 @@ const PickersRange = ({ onRangeChange }: PickersRangeProps) => {
         setStartDate(start)
         setEndDate(end)
 
-        // Comunicar el cambio al componente padre
+        // Solo comunicar al padre cuando se haya completado la selección
         if (onRangeChange) {
-            onRangeChange(start, end)
+            if (start && end) {
+                // Si las fechas son iguales, es un día único
+                const startStr = start.toDateString()
+                const endStr = end.toDateString()
+
+                if (startStr === endStr) {
+                    // Día único - usar la misma fecha para inicio y fin
+                    onRangeChange(start, start)
+                } else {
+                    // Rango de fechas - usar las fechas tal como están
+                    onRangeChange(start, end)
+                }
+            } else if (start && !end) {
+                // Solo se ha seleccionado el inicio, tratar como día único
+                onRangeChange(start, start)
+            }
         }
     }
 
