@@ -42,6 +42,9 @@ import DensidadPDF from './pdfs/DensidadPDF'
 import HormigonFrescoPDF from './pdfs/HormigonFrescoPDF'
 import type { OrdenTrabajo as OTType } from '@/types/otTypes'
 
+// Utils Imports
+import { parseDateFromBackend } from '@/utils/dateUtils'
+
 // Interfaces
 interface OrdenTrabajo extends OTType {
   user?: {
@@ -308,7 +311,17 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       }),
       columnHelper.accessor('createdAt', {
         header: 'FECHA',
-        cell: info => <Typography>{new Date(info.getValue()).toLocaleDateString()}</Typography>
+        cell: info => {
+          const dateValue = info.getValue()
+          // Si ya es una fecha, convertir a string primero
+          const dateString = dateValue instanceof Date ? dateValue.toISOString() : dateValue
+          const date = parseDateFromBackend(dateString)
+          const day = String(date.getDate()).padStart(2, '0')
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const year = date.getFullYear()
+          const formattedDate = `${day}-${month}-${year}`
+          return <Typography>{formattedDate}</Typography>
+        }
       }),
       columnHelper.accessor(row => row.user?.name || 'Sin asignar', {
         id: 'laboratorista',
