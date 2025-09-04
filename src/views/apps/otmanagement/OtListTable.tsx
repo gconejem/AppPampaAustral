@@ -21,6 +21,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Popover from '@mui/material/Popover'
+import Tooltip from '@mui/material/Tooltip'
 import type { SelectChangeEvent } from '@mui/material/Select'
 
 // Third-party Imports
@@ -139,22 +140,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   }, [])
   const [agendas, setAgendas] = useState<Agenda[]>([])
 
-  // Estado para el popover de obra
-  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
-  const [popoverContent, setPopoverContent] = useState('')
-
-  // Funciones para manejar el popover
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, nombreObra: string) => {
-    setPopoverAnchor(event.currentTarget)
-    setPopoverContent(`Nombre Obra: ${nombreObra}`)
-  }
-
-  const handlePopoverClose = () => {
-    setPopoverAnchor(null)
-    setPopoverContent('')
-  }
-
-  const isPopoverOpen = Boolean(popoverAnchor)
+  // Ya no necesitamos el estado del popover, el Tooltip se maneja automáticamente
 
   // Función helper para obtener información de cliente y obra por agendaId
   const getClienteObraByAgendaId = (agendaId: string | number | undefined) => {
@@ -341,18 +327,16 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
           cell: info => {
             const data = info.getValue()
             return (
-              <Box
-                onMouseEnter={(e) => handlePopoverOpen(e, data.nombreObra)}
-                onMouseLeave={handlePopoverClose}
-                sx={{ cursor: 'pointer' }}
-              >
-                <Typography className='capitalize' color='text.primary' variant='body2'>
-                  {data.cliente}
-                </Typography>
-                <Typography className='capitalize' color='text.secondary' variant='caption'>
-                  {data.numeroObra}
-                </Typography>
-              </Box>
+              <Tooltip title={`Nombre Obra: ${data.nombreObra}`} arrow>
+                <Box sx={{ cursor: 'pointer' }}>
+                  <Typography className='capitalize' color='text.primary' variant='body2'>
+                    {data.cliente}
+                  </Typography>
+                  <Typography className='capitalize' color='text.secondary' variant='caption'>
+                    {data.numeroObra}
+                  </Typography>
+                </Box>
+              </Tooltip>
             )
           }
         }
@@ -564,41 +548,6 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         </PDFModal>
       )}
 
-      {/* Popover para mostrar el nombre completo de la obra */}
-      <Popover
-        id="ot-obra-popover"
-        open={isPopoverOpen}
-        anchorEl={popoverAnchor}
-        onClose={handlePopoverClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        sx={{
-          pointerEvents: 'none',
-        }}
-        PaperProps={{
-          sx: {
-            backgroundColor: 'rgba(97, 97, 97, 0.92)',
-            color: 'white',
-            borderRadius: 1,
-            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.15)',
-            '& .MuiTypography-root': {
-              color: 'white'
-            }
-          }
-        }}
-      >
-        <Box sx={{ p: 1.5, maxWidth: 300 }}>
-          <Typography variant="body2" sx={{ color: 'white', fontSize: '0.875rem' }}>
-            {popoverContent}
-          </Typography>
-        </Box>
-      </Popover>
     </>
   )
 }
