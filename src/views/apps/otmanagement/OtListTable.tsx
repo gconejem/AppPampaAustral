@@ -115,7 +115,20 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
-  const [filters, setFilters] = useState({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
+  // Estados disponibles para las órdenes de trabajo
+  const estadosDisponibles = [
+    'EN_REVISION',
+    'DISPONIBLE',
+    'PENDIENTE',
+    'COMPLETADA',
+    'CANCELADA'
+  ]
+
+  const [filters, setFilters] = useState({
+    servicioId: '',
+    estadosSeleccionados: [] as string[],
+    porCodificar: false
+  })
   const [allOTs, setAllOTs] = useState<OrdenTrabajo[]>([])
   const [loading, setLoading] = useState(true)
   // Estado para los tipos de orden de trabajo desde la base de datos
@@ -217,28 +230,20 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
     let result = [...baseData]
 
-    // Filtrar por número de OT
-    if (filters.ot) {
-      result = result.filter(ot => ot.clave.toLowerCase().includes(filters.ot.toLowerCase()))
+    // Filtrar por servicio (tipo de OT)
+    if (filters.servicioId) {
+      result = result.filter(ot => ot.tipoOrdenTrabajoId === parseInt(filters.servicioId))
     }
 
-    // Filtrar por servicio
-    if (filters.servicio) {
-      result = result.filter(ot => {
-        const serviceName = getServiceName(ot.tipoOT)
-        return serviceName.toLowerCase().includes(filters.servicio.toLowerCase())
-      })
+    // Filtrar por estados seleccionados (múltiples)
+    if (filters.estadosSeleccionados.length > 0) {
+      result = result.filter(ot => filters.estadosSeleccionados.includes(ot.estado))
     }
 
-    // Filtrar por estado OT
-    if (filters.estadoOT) {
-      result = result.filter(ot => ot.estado.toLowerCase().includes(filters.estadoOT.toLowerCase()))
-    }
-
-    // Filtrar por tipo de OT
-    if (filters.tipoOT) {
-      result = result.filter(ot => ot.tipoOrdenTrabajoId === parseInt(filters.tipoOT))
-    }
+    // Filtro "Por codificar" - por ahora no hace nada según requerimiento
+    // if (filters.porCodificar) {
+    //   // Lógica futura para filtrar por codificar
+    // }
 
     // Búsqueda global
     if (globalFilter) {
@@ -254,18 +259,29 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
   // Handler para limpiar filtros
   const handleClearFilters = () => {
-    setFilters({ ot: '', servicio: '', estadoOT: '', tipoOT: '' })
+    setFilters({ servicioId: '', estadosSeleccionados: [], porCodificar: false })
     setGlobalFilter('')
   }
 
-  // Handler para manejar los cambios en los filtros
+  // Handler para manejar los cambios en los filtros de texto
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
     setFilters(prev => ({ ...prev, [field]: e.target.value }))
   }
 
-  // Handler para manejar el cambio del Select de tipo de OT
-  const handleTipoOTChange = (e: SelectChangeEvent<string>) => {
-    setFilters(prev => ({ ...prev, tipoOT: e.target.value }))
+  // Handler para manejar el cambio del Select de servicio
+  const handleServicioChange = (e: SelectChangeEvent<string>) => {
+    setFilters(prev => ({ ...prev, servicioId: e.target.value }))
+  }
+
+  // Handler para manejar el cambio del Select de estados múltiples
+  const handleEstadosChange = (e: SelectChangeEvent<string[]>) => {
+    const value = e.target.value as string[]
+    setFilters(prev => ({ ...prev, estadosSeleccionados: value }))
+  }
+
+  // Handler para manejar el checkbox "Por codificar"
+  const handlePorCodificarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters(prev => ({ ...prev, porCodificar: e.target.checked }))
   }
 
   const handlePDFClick = (ot: OrdenTrabajo) => {
@@ -441,25 +457,16 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
           <Grid container spacing={2} alignItems='center'>
             {/* Primera Fila */}
             <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                size='small'
-                label='Orden de Trabajo, Nº Tarjeta'
-                value={filters.ot}
-                onChange={e => handleFilterChange(e, 'ot')}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
               <FormControl fullWidth size='small'>
-                <InputLabel id='tipo-ot-label'>Tipo de OT</InputLabel>
+                <InputLabel id='servicio-label'>Servicio</InputLabel>
                 <Select
-                  labelId='tipo-ot-label'
-                  value={filters.tipoOT}
-                  label='Tipo de OT'
-                  onChange={handleTipoOTChange}
+                  labelId='servicio-label'
+                  value={filters.servicioId}
+                  label='Servicio'
+                  onChange={handleServicioChange}
                 >
                   <MenuItem value=''>
-                    <em>Todos los tipos</em>
+                    <em>Todos los servicios</em>
                   </MenuItem>
                   {tiposOrdenTrabajo.map(tipo => (
                     <MenuItem key={tipo.value} value={tipo.value}>
@@ -469,32 +476,36 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                size='small'
-                label='Servicio'
-                value={filters.servicio}
-                onChange={e => handleFilterChange(e, 'servicio')}
-              />
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size='small'>
+                <InputLabel id='estados-label'>Estado</InputLabel>
+                <Select
+                  labelId='estados-label'
+                  multiple
+                  value={filters.estadosSeleccionados}
+                  label='Estado'
+                  onChange={handleEstadosChange}
+                  renderValue={(selected) => selected.join(', ')}
+                >
+                  {estadosDisponibles.map(estado => (
+                    <MenuItem key={estado} value={estado}>
+                      <Checkbox checked={filters.estadosSeleccionados.indexOf(estado) > -1} />
+                      <Typography>{estado.replace('_', ' ')}</Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                size='small'
-                label='Estado OT'
-                value={filters.estadoOT}
-                onChange={e => handleFilterChange(e, 'estadoOT')}
-              />
-            </Grid>
-
-            {/* Segunda Fila */}
             <Grid item xs={12} sm={2}>
-              <Button variant='contained' fullWidth onClick={handleClearFilters}>
-                Limpiar Filtros
-              </Button>
+              <Box display='flex' alignItems='center'>
+                <Checkbox
+                  checked={filters.porCodificar}
+                  onChange={handlePorCodificarChange}
+                  size='small'
+                />
+                <Typography variant='body2'>Por codificar</Typography>
+              </Box>
             </Grid>
-            <Grid item xs={12} sm={7} />
             <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
@@ -506,6 +517,13 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
                   startAdornment: <i className='ri-search-line' style={{ marginRight: '8px', color: '#aaa' }} />
                 }}
               />
+            </Grid>
+
+            {/* Segunda Fila */}
+            <Grid item xs={12} sm={2}>
+              <Button variant='contained' fullWidth onClick={handleClearFilters}>
+                Limpiar Filtros
+              </Button>
             </Grid>
           </Grid>
         </Box>
