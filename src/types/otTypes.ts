@@ -17,6 +17,7 @@ export interface OrdenTrabajo {
   correlativ: string
   fklbdocver: string
   fklbrutser: string
+  numeroTarjeta?: string
   createdAt: Date
   updatedAt: Date
   userId: string

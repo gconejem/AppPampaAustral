@@ -139,8 +139,15 @@ export async function POST(request: Request) {
         CORRELATIV?: string
         FKLBDOCVER?: string
         FKLBRUTSER?: string
+        RESPUESTA?: any
       }) => {
         const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
+
+        // Extraer nTarjetaArray de RESPUESTA si existe
+        let numeroTarjeta: string | undefined = undefined
+        if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
+          numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
+        }
 
         const ordenData = {
           clave: ot.CLAVE,
@@ -150,6 +157,7 @@ export async function POST(request: Request) {
           correlativ: ot.CORRELATIV || '001',
           fklbdocver: ot.FKLBDOCVER || '',
           fklbrutser: ot.FKLBRUTSER || '',
+          numeroTarjeta: numeroTarjeta,
           agenda: {
             connect: {
               id: parseInt(ot.FKLBRUTAS || '-1')
