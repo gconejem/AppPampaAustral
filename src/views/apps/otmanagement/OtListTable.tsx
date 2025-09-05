@@ -375,6 +375,11 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         header: 'SERVICIO',
         cell: info => <Typography>{getServiceName(info.getValue())}</Typography>
       }),
+      columnHelper.accessor(row => '', {
+        id: 'numeroTarjeta',
+        header: 'N° TARJETA',
+        cell: info => <Typography>-</Typography>
+      }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
         cell: info => (
