@@ -375,10 +375,62 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         header: 'SERVICIO',
         cell: info => <Typography>{getServiceName(info.getValue())}</Typography>
       }),
-      columnHelper.accessor(row => '', {
+      columnHelper.accessor(row => row.numeroTarjeta, {
         id: 'numeroTarjeta',
         header: 'N° TARJETA',
-        cell: info => <Typography>-</Typography>
+        cell: info => {
+          const numeroTarjeta = info.getValue()
+          if (!numeroTarjeta) return <Typography>-</Typography>
+
+          const tarjetas = numeroTarjeta.split(',').map(t => t.trim())
+
+          if (tarjetas.length <= 2) {
+            return (
+              <Box>
+                {tarjetas.map((tarjeta, index) => (
+                  <Typography key={index} variant='body2'>
+                    {tarjeta}
+                  </Typography>
+                ))}
+              </Box>
+            )
+          }
+
+          // Si hay más de 2 tarjetas, mostrar las primeras 2 y "...ver más"
+          const todasLasTarjetas = tarjetas.join('\n')
+
+          return (
+            <Box>
+              <Typography variant='body2'>{tarjetas[0]}</Typography>
+              <Typography variant='body2'>{tarjetas[1]}</Typography>
+              <Tooltip title={
+                <Box>
+                  <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mb: 1, color: 'white' }}>
+                    Números de Tarjeta:
+                  </Typography>
+                  {tarjetas.map((tarjeta, index) => (
+                    <Typography key={index} variant='body2' sx={{ color: 'white' }}>
+                      • {tarjeta}
+                    </Typography>
+                  ))}
+                </Box>
+              } arrow>
+                <Typography
+                  variant='caption'
+                  sx={{
+                    cursor: 'pointer',
+                    color: 'primary.main',
+                    '&:hover': {
+                      textDecoration: 'underline'
+                    }
+                  }}
+                >
+                  ...ver más
+                </Typography>
+              </Tooltip>
+            </Box>
+          )
+        }
       }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
