@@ -537,6 +537,7 @@ model OrdenTrabajo {
   correlativ          String
   fklbdocver          String
   fklbrutser          String
+  numeroTarjeta       String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   userId              String
