@@ -245,13 +245,65 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     //   // Lógica futura para filtrar por codificar
     // }
 
-    // Búsqueda global
+    // Búsqueda global - busca en todos los campos relevantes
     if (globalFilter) {
-      result = result.filter(ot =>
-        Object.values(ot).some(
-          value => typeof value === 'string' && value.toLowerCase().includes(globalFilter.toLowerCase())
-        )
-      )
+      const searchTerm = globalFilter.toLowerCase().trim()
+
+      result = result.filter(ot => {
+        // Crear array con todos los valores para buscar
+        const searchableValues = [
+          // Campos directos de la OT
+          ot.estado,
+          ot.numeroTarjeta,
+          ot.clave,
+          ot.correlativ,
+          ot.fklbdocver,
+          ot.fklbrutser,
+          ot.id,
+          // Usuario
+          ot.user?.name,
+          ot.user?.email,
+          // Tipo de OT (campos que se muestran en la tabla)
+          ot.tipoOT?.codigo,
+          ot.tipoOT?.descripcion
+        ]
+
+        // Agregar información de cliente y obra
+        try {
+          const clienteObraInfo = getClienteObraByAgendaId(ot.agendaId)
+          searchableValues.push(
+            clienteObraInfo.cliente,
+            clienteObraInfo.numeroObra,
+            clienteObraInfo.nombreObra
+          )
+        } catch (error) {
+          // Silencioso - continuar sin info de cliente/obra
+        }
+
+        // Agregar fecha formateada
+        if (ot.createdAt) {
+          try {
+            const dateValue = ot.createdAt
+            const dateString = dateValue instanceof Date ? dateValue.toISOString() : dateValue
+            const date = parseDateFromBackend(dateString)
+            const day = String(date.getDate()).padStart(2, '0')
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const year = date.getFullYear()
+            const fechaFormateada = `${day}-${month}-${year}`
+            searchableValues.push(fechaFormateada)
+          } catch (error) {
+            // Silencioso - continuar sin fecha formateada
+          }
+        }
+
+        // Filtrar valores válidos y convertir a string
+        const validValues = searchableValues
+          .filter(value => value != null && value !== '')
+          .map(value => String(value).toLowerCase())
+
+        // Buscar el término en cualquiera de los valores
+        return validValues.some(value => value.includes(searchTerm))
+      })
     }
 
     setFilteredData(result)
@@ -477,13 +529,13 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       global: globalFilterFn
     },
     state: {
-      pagination: { pageSize, pageIndex },
-      globalFilter
+      pagination: { pageSize, pageIndex }
+      // Removido globalFilter del state ya que manejamos el filtro manualmente
     },
-    onGlobalFilterChange: setGlobalFilter,
+    // Removido onGlobalFilterChange ya que manejamos el filtro manualmente
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel()
+    getPaginationRowModel: getPaginationRowModel()
+    // Removido getFilteredRowModel() ya que filtramos los datos manualmente
   })
 
   // Título dinámico de la tabla
@@ -598,7 +650,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
               ))}
             </thead>
             <tbody>
-              {filteredData.length > 0 ? (
+              {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map(row => (
                   <tr key={row.id}>
                     {row.getVisibleCells().map(cell => (
