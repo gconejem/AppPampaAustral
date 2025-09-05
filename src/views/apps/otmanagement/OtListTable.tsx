@@ -341,7 +341,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       }),
       columnHelper.accessor(row => row.user?.name || 'Sin asignar', {
         id: 'laboratorista',
-        header: 'LABRST.',
+        header: 'LABORATORISTA',
         cell: info => <Typography>{info.getValue()}</Typography>
       }),
       columnHelper.accessor(
