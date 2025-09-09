@@ -538,6 +538,7 @@ model OrdenTrabajo {
   fklbdocver          String
   fklbrutser          String
   numeroTarjeta       String?
+  jsonOT              Json?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   userId              String
