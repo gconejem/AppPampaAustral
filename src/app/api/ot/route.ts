@@ -140,6 +140,7 @@ export async function POST(request: Request) {
         FKLBDOCVER?: string
         FKLBRUTSER?: string
         RESPUESTA?: any
+        jsonOT?: any
       }) => {
         const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
 
@@ -158,6 +159,7 @@ export async function POST(request: Request) {
           fklbdocver: ot.FKLBDOCVER || '',
           fklbrutser: ot.FKLBRUTSER || '',
           numeroTarjeta: numeroTarjeta,
+          jsonOT: ot.jsonOT || null, // Almacenar el JSON completo de la OT
           agenda: {
             connect: {
               id: parseInt(ot.FKLBRUTAS || '-1')

@@ -88,7 +88,7 @@ const JsonUpload = ({ agendas }: Props) => {
         try {
           const content = e.target?.result as string
           const jsonData = JSON.parse(content)
-          
+
           // Crear una copia profunda del JSON y modificar los campos según el tipo
           if (jsonData.data) {
             const modifiedJsonData = {
@@ -100,6 +100,15 @@ const JsonUpload = ({ agendas }: Props) => {
                 ...item,
                 ...(type === 'ots' ? { FKLBRUTAS: agendaId.toString() } : {}),
                 ...(type === 'aceptacion' ? { CLAVE: agendaId.toString() } : {})
+              }))
+            }
+
+            // Para OTs, agregar el JSON completo de cada OT individual
+            if (type === 'ots') {
+              modifiedJsonData.data = jsonData.data.map((item: any) => ({
+                ...item,
+                FKLBRUTAS: agendaId.toString(),
+                jsonOT: item // Almacenar el JSON completo de la OT
               }))
             }
 
@@ -118,11 +127,11 @@ const JsonUpload = ({ agendas }: Props) => {
 
             const result = await response.json()
             console.log('Respuesta del servidor:', result)
-            
+
             if (type === 'ots') {
               setCompletedOts(prev => new Set([...prev, agendaId]))
             }
-            
+
             setSuccess(`Archivo JSON de ${type === 'ots' ? 'OTs' : 'aceptación'} subido correctamente`)
           }
         } catch (parseError) {
@@ -209,10 +218,10 @@ const JsonUpload = ({ agendas }: Props) => {
                           id={`aceptacion-${agenda.id}`}
                           onChange={(e) => handleFileChange(e, 'aceptacion', agenda.id)}
                         />
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
                             gap: 1,
                             cursor: 'pointer',
                             '&:hover': {
@@ -230,10 +239,10 @@ const JsonUpload = ({ agendas }: Props) => {
                           </IconButton>
                           <Typography variant='body2'>1. Subir JSON OTs</Typography>
                         </Box>
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
                             gap: 1,
                             cursor: completedOts.has(agenda.id) ? 'pointer' : 'not-allowed',
                             opacity: completedOts.has(agenda.id) ? 1 : 0.5,
