@@ -505,6 +505,14 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
               <i className='ri-file-pdf-line' style={{ fontSize: '1.2rem', color: '#FF0000' }} />
             </IconButton>
             <IconButton
+              onClick={() => {
+                // TODO: Implementar funcionalidad de edición
+                console.log('Editar OT:', row.original.id)
+              }}
+            >
+              <i className='ri-edit-line' style={{ fontSize: '1.2rem', color: '#1976d2' }} />
+            </IconButton>
+            <IconButton
               onClick={() =>
                 window.open(`http://localhost:3001/en/apps/internalcontrol?otId=${row.original.id}`, '_blank')
               }
