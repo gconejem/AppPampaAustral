@@ -82,6 +82,37 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
+// PATCH /api/ot/[id] - Actualizar parcialmente una OT específica (para jsonOT)
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const data = await request.json()
+
+    // Verificar que la OT existe
+    const existingOT = await prisma.ordenTrabajo.findUnique({
+      where: { id: params.id }
+    })
+
+    if (!existingOT) {
+      return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
+    }
+
+    // Solo actualizar los campos que se envían
+    const ordenTrabajo = await prisma.ordenTrabajo.update({
+      where: { id: params.id },
+      data: {
+        ...data,
+        updatedAt: new Date()
+      }
+    })
+
+    return NextResponse.json(ordenTrabajo)
+  } catch (error) {
+    console.error('Error al actualizar OT:', error)
+
+    return NextResponse.json({ error: 'Error al actualizar la orden de trabajo' }, { status: 500 })
+  }
+}
+
 // DELETE /api/ot/[id] - Eliminar una OT específica
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {

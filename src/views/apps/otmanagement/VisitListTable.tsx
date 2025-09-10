@@ -225,11 +225,13 @@ interface Agenda {
 const VisitListTable = ({
   tableData,
   onVisitSelect,
-  selectedVisit
+  selectedVisit,
+  onFiltersChange
 }: {
   tableData: Agenda[]
   onVisitSelect: (visit: Agenda | null) => void
   selectedVisit: Agenda | null
+  onFiltersChange?: (filters: { fechaInicio: string, fechaFin: string }) => void
 }) => {
   // Definir todos los estados disponibles
   const todosLosEstados = [
@@ -571,6 +573,13 @@ const VisitListTable = ({
   }, [fechaInicio, fechaFin, selectedEstado, selectedLaboratorista, porRecibir, selectedCliente, selectedObra])
 
   // Nota: La búsqueda global ahora se maneja solo en el frontend con react-table
+
+  // Efecto para notificar cambios de filtros de fecha al componente padre
+  useEffect(() => {
+    if (onFiltersChange && fechaInicio && fechaFin) {
+      onFiltersChange({ fechaInicio, fechaFin })
+    }
+  }, [fechaInicio, fechaFin, onFiltersChange])
 
   // Efecto para depurar la carga de clientes
   useEffect(() => {

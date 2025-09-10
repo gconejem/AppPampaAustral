@@ -18,11 +18,13 @@ export interface OrdenTrabajo {
   fklbdocver: string
   fklbrutser: string
   numeroTarjeta?: string
+  jsonOT?: any
   createdAt: Date
   updatedAt: Date
   userId: string
   agendaId?: number
   agenda?: {
+    fechaInicio?: Date | string
     cliente?: {
       rut: string
       nombreCliente: string

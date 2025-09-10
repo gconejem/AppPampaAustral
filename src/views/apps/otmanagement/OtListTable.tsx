@@ -38,25 +38,18 @@ import { rankItem } from '@tanstack/match-sorter-utils'
 
 // Components Imports
 import PDFModal from './components/PDFModal'
+import JsonEditorModal from './components/JsonEditorModal'
 import DensidadPDF from './pdfs/DensidadPDF'
 import HormigonFrescoPDF from './pdfs/HormigonFrescoPDF'
-import type { OrdenTrabajo as OTType } from '@/types/otTypes'
+import type { OrdenTrabajo } from '@/types/otTypes'
 
 // Utils Imports
 import { parseDateFromBackend } from '@/utils/dateUtils'
 
-// Interfaces
-interface OrdenTrabajo extends OTType {
-  user?: {
-    id: string
-    name?: string
-    email?: string
-  }
-}
-
 interface Agenda {
   id: number
   titulo: string
+  fechaInicio: Date | string
   cliente?: {
     nombreCliente: string
     rut?: string
@@ -107,12 +100,21 @@ const getOTCode = (tipoOT: any) => {
   return 'Sin código'
 }
 
-const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
+const OtListTable = ({
+  selectedVisit,
+  fechaInicio,
+  fechaFin
+}: {
+  selectedVisit: Agenda | null
+  fechaInicio?: string
+  fechaFin?: string
+}) => {
   // States
   const [pageSize, setPageSize] = useState(6)
   const [pageIndex, setPageIndex] = useState(0)
   const [selectedOT, setSelectedOT] = useState<OrdenTrabajo | null>(null)
   const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [jsonModalOpen, setJsonModalOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
   // Estados disponibles para las órdenes de trabajo
@@ -158,18 +160,14 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
   // Ya no necesitamos el estado del popover, el Tooltip se maneja automáticamente
 
-  // Función helper para obtener información de cliente y obra por agendaId
-  const getClienteObraByAgendaId = (agendaId: string | number | undefined) => {
-    if (!agendaId) return { cliente: 'Sin cliente', numeroObra: 'Sin obra', nombreObra: 'Sin obra' }
-
-    const agendaIdNum = typeof agendaId === 'string' ? parseInt(agendaId) : agendaId
-    const agenda = agendas.find(a => a.id === agendaIdNum)
-
-    if (agenda) {
+  // Función helper para obtener información de cliente y obra desde la agenda incluida en la OT
+  const getClienteObraFromOT = (ot: OrdenTrabajo) => {
+    // Usar la información de la agenda que viene incluida en la respuesta de la API
+    if (ot.agenda?.cliente && ot.agenda?.obra) {
       return {
-        cliente: agenda.cliente?.nombreCliente || 'Sin cliente',
-        numeroObra: agenda.obra?.numeroObra || 'Sin obra',
-        nombreObra: agenda.obra?.nombreObra || 'Sin obra'
+        cliente: ot.agenda.cliente.nombreCliente || 'Sin cliente',
+        numeroObra: ot.agenda.obra.numeroObra || 'Sin obra',
+        nombreObra: ot.agenda.obra.nombreObra || 'Sin obra'
       }
     }
 
@@ -192,12 +190,19 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     fetchAgendas()
   }, [])
 
-  // Cargar todas las OTs al iniciar
+  // Cargar todas las OTs al iniciar y cuando cambien las fechas
   useEffect(() => {
     const fetchAllOTs = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/ot')
+
+        // Construir parámetros de consulta
+        const params = new URLSearchParams()
+        if (fechaInicio) params.append('fechaInicio', fechaInicio)
+        if (fechaFin) params.append('fechaFin', fechaFin)
+
+        const url = params.toString() ? `/api/ot?${params.toString()}` : '/api/ot'
+        const response = await fetch(url)
 
         if (!response.ok) throw new Error('Error al cargar OTs')
         const data = await response.json()
@@ -212,21 +217,22 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     }
 
     fetchAllOTs()
-  }, [])
+  }, [fechaInicio, fechaFin])
 
   // Effect para manejar los filtros y la selección de visita
   useEffect(() => {
     // Si no hay OTs, no hacer nada
     if (allOTs.length === 0) return
 
-    // Base de datos a filtrar: todas las OTs o las de la visita seleccionada
-    const baseData = selectedVisit
-      ? allOTs.filter(ot => ot.agendaId === selectedVisit.id)
-      : allOTs
+    // Base de datos a filtrar: todas las OTs en el rango de fechas (ya filtradas por la API)
+    // La visita seleccionada solo se usa para mostrar información en el título
+    const baseData = allOTs
 
     console.log('OtListTable - selectedVisit:', selectedVisit?.id)
     console.log('OtListTable - allOTs count:', allOTs.length)
+    console.log('OtListTable - fechas:', { fechaInicio, fechaFin })
     console.log('OtListTable - baseData count:', baseData.length)
+    console.log('OtListTable - globalFilter:', globalFilter)
 
     let result = [...baseData]
 
@@ -270,7 +276,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
 
         // Agregar información de cliente y obra
         try {
-          const clienteObraInfo = getClienteObraByAgendaId(ot.agendaId)
+          const clienteObraInfo = getClienteObraFromOT(ot)
           searchableValues.push(
             clienteObraInfo.cliente,
             clienteObraInfo.numeroObra,
@@ -280,7 +286,8 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
           // Silencioso - continuar sin info de cliente/obra
         }
 
-        // Agregar fecha formateada
+        // Agregar fecha formateada (usando tanto createdAt como la fecha de la agenda relacionada)
+        // La fecha de creación de la OT
         if (ot.createdAt) {
           try {
             const dateValue = ot.createdAt
@@ -289,11 +296,34 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
             const day = String(date.getDate()).padStart(2, '0')
             const month = String(date.getMonth() + 1).padStart(2, '0')
             const year = date.getFullYear()
-            const fechaFormateada = `${day}-${month}-${year}`
-            searchableValues.push(fechaFormateada)
+
+            // Agregar ambos formatos para búsqueda
+            const fechaFormateadaVista = `${day}-${month}-${year}` // Para mostrar en tabla
+            const fechaFormateadaFiltro = `${year}-${month}-${day}` // Para filtrar por rango
+
+            searchableValues.push(fechaFormateadaVista, fechaFormateadaFiltro)
           } catch (error) {
             // Silencioso - continuar sin fecha formateada
           }
+        }
+
+        // También agregar la fecha de la agenda relacionada (incluida en la OT)
+        try {
+          const agenda = ot.agenda as any // Casting temporal para evitar problemas de tipo
+          if (agenda?.fechaInicio) {
+            const dateString = agenda.fechaInicio instanceof Date ? agenda.fechaInicio.toISOString() : agenda.fechaInicio
+            const date = parseDateFromBackend(dateString.toString())
+            const day = String(date.getDate()).padStart(2, '0')
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const year = date.getFullYear()
+
+            const fechaAgendaVista = `${day}-${month}-${year}`
+            const fechaAgendaFiltro = `${year}-${month}-${day}`
+
+            searchableValues.push(fechaAgendaVista, fechaAgendaFiltro)
+          }
+        } catch (error) {
+          // Silencioso - continuar sin fecha de agenda
         }
 
         // Filtrar valores válidos y convertir a string
@@ -306,8 +336,9 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       })
     }
 
+    console.log('OtListTable - result count after all filters:', result.length)
     setFilteredData(result)
-  }, [selectedVisit, allOTs, filters, globalFilter])
+  }, [selectedVisit, allOTs, filters, globalFilter, fechaInicio, fechaFin])
 
   // Handler para limpiar filtros
   const handleClearFilters = () => {
@@ -340,6 +371,17 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
     console.log('OT seleccionada:', ot) // Para debug
     setSelectedOT(ot)
     setPdfModalOpen(true)
+  }
+
+  const handleEditClick = (ot: OrdenTrabajo) => {
+    console.log('Editar OT JSON:', ot.id)
+    setSelectedOT(ot)
+    setJsonModalOpen(true)
+  }
+
+  const handleJsonSave = () => {
+    // Recargar datos después de guardar el JSON
+    window.location.reload()
   }
 
   const renderPDFComponent = (ot: OrdenTrabajo) => {
@@ -398,9 +440,8 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
       }),
       columnHelper.accessor(
         row => {
-          // Usar el agendaId para obtener información del cliente y obra
-          const agendaId = row.agendaId
-          return getClienteObraByAgendaId(agendaId)
+          // Usar la información de la agenda incluida en la OT
+          return getClienteObraFromOT(row)
         },
         {
           id: 'cliente',
@@ -505,10 +546,7 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
               <i className='ri-file-pdf-line' style={{ fontSize: '1.2rem', color: '#FF0000' }} />
             </IconButton>
             <IconButton
-              onClick={() => {
-                // TODO: Implementar funcionalidad de edición
-                console.log('Editar OT:', row.original.id)
-              }}
+              onClick={() => handleEditClick(row.original)}
             >
               <i className='ri-edit-line' style={{ fontSize: '1.2rem', color: '#1976d2' }} />
             </IconButton>
@@ -547,9 +585,11 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
   })
 
   // Título dinámico de la tabla
-  const tableTitle = selectedVisit
-    ? `Órdenes de Trabajo - ${selectedVisit.cliente?.nombreCliente || ''}`
-    : 'Todas las Órdenes de Trabajo'
+  const tableTitle = (fechaInicio && fechaFin)
+    ? `Órdenes de Trabajo (${fechaInicio} - ${fechaFin})`
+    : selectedVisit
+      ? `Órdenes de Trabajo - ${selectedVisit.cliente?.nombreCliente || ''}`
+      : 'Todas las Órdenes de Trabajo'
 
   // Mostramos mensaje de carga mientras se obtienen las OTs
   if (loading) {
@@ -694,6 +734,16 @@ const OtListTable = ({ selectedVisit }: { selectedVisit: Agenda | null }) => {
         <PDFModal open={pdfModalOpen} onClose={() => setPdfModalOpen(false)} ot={selectedOT}>
           {renderPDFComponent(selectedOT)}
         </PDFModal>
+      )}
+
+      {/* Modal de edición JSON */}
+      {selectedOT && (
+        <JsonEditorModal
+          open={jsonModalOpen}
+          onClose={() => setJsonModalOpen(false)}
+          ot={selectedOT}
+          onSave={handleJsonSave}
+        />
       )}
 
     </>

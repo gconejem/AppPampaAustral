@@ -44,10 +44,43 @@ const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   return tipoOTDefault?.id || 8 // ID 8 corresponde a "General"
 }
 
-// GET /api/ot - Obtener todas las OTs
-export async function GET() {
+// GET /api/ot - Obtener todas las OTs con filtros opcionales
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const fechaInicio = searchParams.get('fechaInicio')
+    const fechaFin = searchParams.get('fechaFin')
+
+    // Construir el filtro para OTs
+    const whereFilter: any = {}
+
+    // Filtro de fechas basado en el campo createdAt de la OrdenTrabajo
+    if (fechaInicio || fechaFin) {
+      if (fechaInicio && fechaFin) {
+        const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+        const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+
+        whereFilter.createdAt = {
+          gte: startDate,
+          lte: endDate
+        }
+      } else if (fechaInicio) {
+        const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+        whereFilter.createdAt = {
+          gte: startDate
+        }
+      } else if (fechaFin) {
+        const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+        whereFilter.createdAt = {
+          lte: endDate
+        }
+      }
+    }
+
+    console.log('OT Query filters:', { fechaInicio, fechaFin, whereFilter })
+
     const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
+      where: whereFilter,
       include: {
         aceptacionVisita: true,
         densidad: true,
@@ -57,6 +90,12 @@ export async function GET() {
         muestreoMaterial: true,
         retiroProbeta: true,
         tipoOT: true,
+        agenda: {
+          include: {
+            cliente: true,
+            obra: true
+          }
+        },
         user: {
           select: {
             id: true,
@@ -64,6 +103,9 @@ export async function GET() {
             email: true
           }
         }
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     })
 

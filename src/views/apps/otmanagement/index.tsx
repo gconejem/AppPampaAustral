@@ -3,7 +3,7 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -43,10 +43,18 @@ interface Agenda {
 
 const UserList = ({ data }: { data: Agenda[] }) => {
   const [selectedVisit, setSelectedVisit] = useState<Agenda | null>(null)
+  const [dateFilters, setDateFilters] = useState<{ fechaInicio: string, fechaFin: string }>({
+    fechaInicio: '',
+    fechaFin: ''
+  })
 
   const handleVisitSelect = (visit: Agenda | null) => {
     setSelectedVisit(visit)
   }
+
+  const handleFiltersChange = useCallback((filters: { fechaInicio: string, fechaFin: string }) => {
+    setDateFilters(filters)
+  }, [])
 
   return (
     <Grid container spacing={6}>
@@ -54,10 +62,19 @@ const UserList = ({ data }: { data: Agenda[] }) => {
         <UserListCards />
       </Grid>
       <Grid item xs={12}>
-        <VisitListTable tableData={data} onVisitSelect={handleVisitSelect} selectedVisit={selectedVisit} />
+        <VisitListTable
+          tableData={data}
+          onVisitSelect={handleVisitSelect}
+          selectedVisit={selectedVisit}
+          onFiltersChange={handleFiltersChange}
+        />
       </Grid>
       <Grid item xs={12}>
-        <OtListTable selectedVisit={selectedVisit} />
+        <OtListTable
+          selectedVisit={selectedVisit}
+          fechaInicio={dateFilters.fechaInicio}
+          fechaFin={dateFilters.fechaFin}
+        />
       </Grid>
     </Grid>
   )
