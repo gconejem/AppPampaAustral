@@ -226,12 +226,14 @@ const VisitListTable = ({
   tableData,
   onVisitSelect,
   selectedVisit,
-  onFiltersChange
+  onFiltersChange,
+  onSelectedVisitsChange
 }: {
   tableData: Agenda[]
   onVisitSelect: (visit: Agenda | null) => void
   selectedVisit: Agenda | null
   onFiltersChange?: (filters: { fechaInicio: string, fechaFin: string }) => void
+  onSelectedVisitsChange?: (visits: Agenda[]) => void
 }) => {
   // Definir todos los estados disponibles
   const todosLosEstados = [
@@ -580,6 +582,13 @@ const VisitListTable = ({
       onFiltersChange({ fechaInicio, fechaFin })
     }
   }, [fechaInicio, fechaFin, onFiltersChange])
+
+  // Efecto para notificar cambios en las visitas seleccionadas al componente padre
+  useEffect(() => {
+    if (onSelectedVisitsChange) {
+      onSelectedVisitsChange(selectedVisits)
+    }
+  }, [selectedVisits, onSelectedVisitsChange])
 
   // Efecto para depurar la carga de clientes
   useEffect(() => {

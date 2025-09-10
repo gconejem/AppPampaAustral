@@ -102,10 +102,12 @@ const getOTCode = (tipoOT: any) => {
 
 const OtListTable = ({
   selectedVisit,
+  selectedVisits,
   fechaInicio,
   fechaFin
 }: {
   selectedVisit: Agenda | null
+  selectedVisits: Agenda[]
   fechaInicio?: string
   fechaFin?: string
 }) => {
@@ -225,10 +227,18 @@ const OtListTable = ({
     if (allOTs.length === 0) return
 
     // Base de datos a filtrar: todas las OTs en el rango de fechas (ya filtradas por la API)
-    // La visita seleccionada solo se usa para mostrar información en el título
-    const baseData = allOTs
+    let baseData = allOTs
+
+    // Filtrar por visitas seleccionadas si hay alguna
+    if (selectedVisits && selectedVisits.length > 0) {
+      const selectedVisitIds = selectedVisits.map(visit => visit.id)
+      baseData = allOTs.filter(ot => ot.agendaId && selectedVisitIds.includes(ot.agendaId))
+      console.log('OtListTable - Filtrando por visitas seleccionadas:', selectedVisitIds)
+      console.log('OtListTable - OTs filtradas por visitas:', baseData.length)
+    }
 
     console.log('OtListTable - selectedVisit:', selectedVisit?.id)
+    console.log('OtListTable - selectedVisits count:', selectedVisits?.length || 0)
     console.log('OtListTable - allOTs count:', allOTs.length)
     console.log('OtListTable - fechas:', { fechaInicio, fechaFin })
     console.log('OtListTable - baseData count:', baseData.length)
@@ -338,7 +348,7 @@ const OtListTable = ({
 
     console.log('OtListTable - result count after all filters:', result.length)
     setFilteredData(result)
-  }, [selectedVisit, allOTs, filters, globalFilter, fechaInicio, fechaFin])
+  }, [selectedVisit, selectedVisits, allOTs, filters, globalFilter, fechaInicio, fechaFin])
 
   // Handler para limpiar filtros
   const handleClearFilters = () => {
@@ -585,11 +595,13 @@ const OtListTable = ({
   })
 
   // Título dinámico de la tabla
-  const tableTitle = (fechaInicio && fechaFin)
-    ? `Órdenes de Trabajo (${fechaInicio} - ${fechaFin})`
-    : selectedVisit
-      ? `Órdenes de Trabajo - ${selectedVisit.cliente?.nombreCliente || ''}`
-      : 'Todas las Órdenes de Trabajo'
+  const tableTitle = selectedVisits && selectedVisits.length > 0
+    ? `Órdenes de Trabajo - ${selectedVisits.length} visita${selectedVisits.length > 1 ? 's' : ''} seleccionada${selectedVisits.length > 1 ? 's' : ''}`
+    : (fechaInicio && fechaFin)
+      ? `Órdenes de Trabajo (${fechaInicio} - ${fechaFin})`
+      : selectedVisit
+        ? `Órdenes de Trabajo - ${selectedVisit.cliente?.nombreCliente || ''}`
+        : 'Todas las Órdenes de Trabajo'
 
   // Mostramos mensaje de carga mientras se obtienen las OTs
   if (loading) {

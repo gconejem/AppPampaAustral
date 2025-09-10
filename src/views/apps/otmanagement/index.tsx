@@ -43,6 +43,7 @@ interface Agenda {
 
 const UserList = ({ data }: { data: Agenda[] }) => {
   const [selectedVisit, setSelectedVisit] = useState<Agenda | null>(null)
+  const [selectedVisits, setSelectedVisits] = useState<Agenda[]>([])
   const [dateFilters, setDateFilters] = useState<{ fechaInicio: string, fechaFin: string }>({
     fechaInicio: '',
     fechaFin: ''
@@ -51,6 +52,10 @@ const UserList = ({ data }: { data: Agenda[] }) => {
   const handleVisitSelect = (visit: Agenda | null) => {
     setSelectedVisit(visit)
   }
+
+  const handleSelectedVisitsChange = useCallback((visits: Agenda[]) => {
+    setSelectedVisits(visits)
+  }, [])
 
   const handleFiltersChange = useCallback((filters: { fechaInicio: string, fechaFin: string }) => {
     setDateFilters(filters)
@@ -67,11 +72,13 @@ const UserList = ({ data }: { data: Agenda[] }) => {
           onVisitSelect={handleVisitSelect}
           selectedVisit={selectedVisit}
           onFiltersChange={handleFiltersChange}
+          onSelectedVisitsChange={handleSelectedVisitsChange}
         />
       </Grid>
       <Grid item xs={12}>
         <OtListTable
           selectedVisit={selectedVisit}
+          selectedVisits={selectedVisits}
           fechaInicio={dateFilters.fechaInicio}
           fechaFin={dateFilters.fechaFin}
         />
