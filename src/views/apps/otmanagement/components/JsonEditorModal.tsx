@@ -11,8 +11,10 @@ import {
     Box,
     Alert,
     CircularProgress,
-    TextField
+    TextField,
+    IconButton
 } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import JsonView from '@uiw/react-json-view'
 import { lightTheme } from '@uiw/react-json-view/light'
 
@@ -144,12 +146,11 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                     <Typography variant="h6">
                         Editar JSON - OT #{ot?.id}
                     </Typography>
-                    <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Button
                             size="small"
                             variant={editMode === 'visual' ? 'contained' : 'outlined'}
                             onClick={() => setEditMode('visual')}
-                            sx={{ mr: 1 }}
                         >
                             Visual
                         </Button>
@@ -160,6 +161,13 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         >
                             Texto
                         </Button>
+                        <IconButton
+                            aria-label="cerrar"
+                            onClick={handleClose}
+                            sx={{ ml: 1 }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>
@@ -176,6 +184,18 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         {jsonError}
                     </Alert>
                 )}
+
+                {/* Botón Guardar arriba del JSON */}
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                        onClick={handleSave}
+                        variant="contained"
+                        disabled={!hasChanges || saving || !!jsonError}
+                        startIcon={saving ? <CircularProgress size={16} /> : null}
+                    >
+                        {saving ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                </Box>
 
                 {loading ? (
                     <Box display="flex" justifyContent="center" alignItems="center" height="200px">
@@ -227,17 +247,41 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                 )}
             </DialogContent>
 
-            <DialogActions>
-                <Button onClick={handleClose} disabled={saving}>
-                    Cancelar
+            <DialogActions sx={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {/* TODO: Implementar funcionalidad Codificado */ }}
+                >
+                    Codificado
                 </Button>
                 <Button
-                    onClick={handleSave}
-                    variant="contained"
-                    disabled={!hasChanges || saving || !!jsonError}
-                    startIcon={saving ? <CircularProgress size={16} /> : null}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {/* TODO: Implementar funcionalidad Rechazado */ }}
                 >
-                    {saving ? 'Guardando...' : 'Guardar Cambios'}
+                    Rechazado
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {/* TODO: Implementar funcionalidad Seguimiento */ }}
+                >
+                    Seguimiento
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {/* TODO: Implementar funcionalidad PDF Laboratorio */ }}
+                >
+                    PDF Laboratorio
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {/* TODO: Implementar funcionalidad PDF Cliente */ }}
+                >
+                    PDF Cliente
                 </Button>
             </DialogActions>
         </Dialog>
