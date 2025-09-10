@@ -284,11 +284,24 @@ const VisitListTable = ({
 
   // Verificar si todas las visitas seleccionadas tienen el mismo estado
   const allSelectedHaveSameStatus = useMemo(() => {
+    console.log('🔍 Verificando estados de visitas seleccionadas:', {
+      count: selectedVisits.length,
+      visitas: selectedVisits.map(v => ({ id: v.id, estado: v.estado }))
+    })
+
     if (selectedVisits.length === 0) return false
     if (selectedVisits.length === 1) return true
 
     const firstStatus = selectedVisits[0].estado
-    return selectedVisits.every(visit => visit.estado === firstStatus)
+    const allSame = selectedVisits.every(visit => visit.estado === firstStatus)
+
+    console.log('🔍 Resultado validación estados:', {
+      firstStatus,
+      allSame,
+      estados: selectedVisits.map(v => v.estado)
+    })
+
+    return allSame
   }, [selectedVisits])
 
   // Obtener el estado común de las visitas seleccionadas
@@ -522,6 +535,19 @@ const VisitListTable = ({
       })
 
       setData(visitasOrdenadas)
+
+      // Preservar visitas seleccionadas después de recargar datos
+      if (selectedVisits.length > 0) {
+        const selectedIds = selectedVisits.map((v: Agenda) => v.id)
+        const updatedSelectedVisits = visitasOrdenadas.filter((v: Agenda) => selectedIds.includes(v.id))
+        if (updatedSelectedVisits.length !== selectedVisits.length) {
+          console.log('📋 Actualizando visitas seleccionadas después de recargar datos:', {
+            antes: selectedVisits.length,
+            después: updatedSelectedVisits.length
+          })
+          setSelectedVisits(updatedSelectedVisits)
+        }
+      }
     } catch (error) {
       console.error('Error al cargar visitas:', error)
       setAlertSeverity('error')
@@ -779,12 +805,22 @@ const VisitListTable = ({
   }
 
   const handleRowSelection = (row: Agenda) => {
+    console.log('📋 Selección de fila:', {
+      rowId: row.id,
+      estado: row.estado,
+      currentSelected: selectedVisits.map(v => ({ id: v.id, estado: v.estado }))
+    })
+
     // Si es la fila seleccionada actualmente en el detalle, mantener el comportamiento de deselección
     if (selectedVisit?.id === row.id) {
       onVisitSelect(null)
 
       // Remover de la lista de seleccionados también
-      setSelectedVisits(prev => prev.filter(v => v.id !== row.id))
+      setSelectedVisits(prev => {
+        const newSelected = prev.filter(v => v.id !== row.id)
+        console.log('📋 Removiendo de selectedVisits (detalle):', newSelected.length)
+        return newSelected
+      })
 
       return
     }
@@ -794,7 +830,11 @@ const VisitListTable = ({
 
     if (isSelected) {
       // Si ya está seleccionada, la quitamos de la lista
-      setSelectedVisits(prev => prev.filter(v => v.id !== row.id))
+      setSelectedVisits(prev => {
+        const newSelected = prev.filter(v => v.id !== row.id)
+        console.log('📋 Removiendo de selectedVisits:', newSelected.length)
+        return newSelected
+      })
 
       // Si era la que estaba en el detalle, quitar el detalle
       if (selectedVisit?.id === row.id) {
@@ -802,7 +842,11 @@ const VisitListTable = ({
       }
     } else {
       // Si no está seleccionada, la agregamos a la lista
-      setSelectedVisits(prev => [...prev, row])
+      setSelectedVisits(prev => {
+        const newSelected = [...prev, row]
+        console.log('📋 Agregando a selectedVisits:', newSelected.length)
+        return newSelected
+      })
 
       // Actualizar el detalle para mostrar la fila recién seleccionada
       onVisitSelect(row)
@@ -2301,6 +2345,9 @@ const VisitListTable = ({
                     setSelectedCliente(null)
                     setSelectedObra(null)
                     setObras([])
+                    // Limpiar selección de visitas también
+                    setSelectedVisits([])
+                    onVisitSelect(null)
                   }}
                 >
                   Limpiar Filtros
@@ -2321,7 +2368,14 @@ const VisitListTable = ({
                       variant='contained'
                       color='warning'
                       fullWidth
-                      onClick={() => setIsBulkEditOpen(true)}
+                      onClick={() => {
+                        console.log('🔘 Click en Editar Seleccionadas:', {
+                          selectedCount: selectedVisits.length,
+                          allSameStatus: allSelectedHaveSameStatus,
+                          disabled: selectedVisits.length === 0 || !allSelectedHaveSameStatus
+                        })
+                        setIsBulkEditOpen(true)
+                      }}
                       disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus}
                     >
                       Editar Seleccionadas ({selectedVisits.length})
@@ -2329,7 +2383,22 @@ const VisitListTable = ({
                   </span>
                 </Tooltip>
               </Grid>
-              <Grid item xs={12} sm={6} />
+              <Grid item xs={12} sm={2}>
+                <Button
+                  variant='outlined'
+                  color='secondary'
+                  fullWidth
+                  onClick={() => {
+                    console.log('🧹 Limpiando selección de visitas')
+                    setSelectedVisits([])
+                    onVisitSelect(null)
+                  }}
+                  disabled={selectedVisits.length === 0}
+                >
+                  Limpiar Selección
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={4} />
 
             </Grid>
           </Box>
