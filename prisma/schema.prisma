@@ -820,3 +820,10 @@ model TipoOrdenTrabajo {
   updatedAt   DateTime       @updatedAt
   ordenes     OrdenTrabajo[]
 }
+
+model EstadoOT {
+  id       Int     @id @default(autoincrement())
+  origen   String?
+  tipoJSON String?
+  estado   String?
+}
