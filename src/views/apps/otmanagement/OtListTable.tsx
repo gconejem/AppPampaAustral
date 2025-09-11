@@ -119,14 +119,8 @@ const OtListTable = ({
   const [jsonModalOpen, setJsonModalOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
-  // Estados disponibles para las órdenes de trabajo
-  const estadosDisponibles = [
-    'EN_REVISION',
-    'DISPONIBLE',
-    'PENDIENTE',
-    'COMPLETADA',
-    'CANCELADA'
-  ]
+  // Estados disponibles para las órdenes de trabajo (se cargan todos desde la base de datos)
+  const [estadosDisponibles, setEstadosDisponibles] = useState<string[]>([])
 
   const [filters, setFilters] = useState({
     servicioId: '',
@@ -157,6 +151,32 @@ const OtListTable = ({
     }
 
     fetchTiposOT()
+  }, [])
+
+  // Cargar todos los estados de OT desde la base de datos
+  useEffect(() => {
+    const fetchEstadosOT = async () => {
+      try {
+        const response = await fetch('/api/estados-ot')
+        if (response.ok) {
+          const estados = await response.json()
+          const estadosFormatted = estados.map((estado: any) => estado.estado).filter(Boolean)
+          setEstadosDisponibles(estadosFormatted)
+        }
+      } catch (error) {
+        console.error('Error al cargar estados de OT:', error)
+        // Fallback a estados por defecto en caso de error
+        setEstadosDisponibles([
+          'EN_REVISION',
+          'DISPONIBLE',
+          'PENDIENTE',
+          'COMPLETADA',
+          'CANCELADA'
+        ])
+      }
+    }
+
+    fetchEstadosOT()
   }, [])
   const [agendas, setAgendas] = useState<Agenda[]>([])
 
