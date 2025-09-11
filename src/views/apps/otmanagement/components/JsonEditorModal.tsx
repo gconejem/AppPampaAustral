@@ -247,42 +247,50 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                 )}
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {/* TODO: Implementar funcionalidad Codificado */ }}
-                >
-                    Codificado
-                </Button>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {/* TODO: Implementar funcionalidad Rechazado */ }}
-                >
-                    Rechazado
-                </Button>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {/* TODO: Implementar funcionalidad Seguimiento */ }}
-                >
-                    Seguimiento
-                </Button>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {/* TODO: Implementar funcionalidad PDF Laboratorio */ }}
-                >
-                    PDF Laboratorio
-                </Button>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {/* TODO: Implementar funcionalidad PDF Cliente */ }}
-                >
-                    PDF Cliente
-                </Button>
+            <DialogActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        color="primary"
+                        onClick={() => {/* TODO: Implementar funcionalidad Codificado */ }}
+                    >
+                        Codificado
+                    </Button>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        color="primary"
+                        onClick={() => {/* TODO: Implementar funcionalidad Rechazado */ }}
+                    >
+                        Rechazado
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {/* TODO: Implementar funcionalidad Seguimiento */ }}
+                    >
+                        Seguimiento
+                    </Button>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        color="primary"
+                        onClick={() => {/* TODO: Implementar funcionalidad PDF Laboratorio */ }}
+                    >
+                        PDF Laboratorio
+                    </Button>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        color="primary"
+                        onClick={() => {/* TODO: Implementar funcionalidad PDF Cliente */ }}
+                    >
+                        PDF Cliente
+                    </Button>
+                </Box>
             </DialogActions>
         </Dialog>
     )
