@@ -291,10 +291,14 @@ const OtListTable = ({
       })
     }
 
-    // Filtro "Por codificar" - por ahora no hace nada según requerimiento
-    // if (filters.porCodificar) {
-    //   // Lógica futura para filtrar por codificar
-    // }
+    // Filtro "Por codificar" - mostrar OTs con estado distinto a CODIFICADA
+    // Este filtro se aplica después de los filtros de servicio y estados
+    // para mostrar solo las OTs que necesitan ser codificadas
+    if (filters.porCodificar) {
+      const beforeCount = result.length
+      result = result.filter(ot => ot.estado !== 'CODIFICADA')
+      console.log(`Filtro "Por codificar": ${beforeCount} -> ${result.length} OTs (excluyendo CODIFICADA)`)
+    }
 
     // Búsqueda global - busca en todos los campos relevantes
     if (globalFilter) {
@@ -390,6 +394,7 @@ const OtListTable = ({
   const handleClearFilters = () => {
     setFilters({ servicioId: '', estadosSeleccionados: [], porCodificar: false })
     setGlobalFilter('')
+    console.log('Todos los filtros han sido limpiados')
   }
 
   // Handler para limpiar solo los estados seleccionados
@@ -415,7 +420,9 @@ const OtListTable = ({
 
   // Handler para manejar el checkbox "Por codificar"
   const handlePorCodificarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prev => ({ ...prev, porCodificar: e.target.checked }))
+    const isChecked = e.target.checked
+    setFilters(prev => ({ ...prev, porCodificar: isChecked }))
+    console.log(`Filtro "Por codificar" ${isChecked ? 'activado' : 'desactivado'}`)
   }
 
   const handlePDFClick = (ot: OrdenTrabajo) => {
