@@ -41,7 +41,12 @@ import PDFModal from './components/PDFModal'
 import JsonEditorModal from './components/JsonEditorModal'
 import DensidadPDF from './pdfs/DensidadPDF'
 import HormigonFrescoPDF from './pdfs/HormigonFrescoPDF'
-import type { OrdenTrabajo } from '@/types/otTypes'
+import type { OrdenTrabajo as BaseOrdenTrabajo } from '@/types/otTypes'
+
+// Extender el tipo para incluir el campo estadoOriginal que viene de la API
+interface OrdenTrabajo extends BaseOrdenTrabajo {
+  estadoOriginal?: string
+}
 
 // Utils Imports
 import { parseDateFromBackend } from '@/utils/dateUtils'
@@ -160,18 +165,24 @@ const OtListTable = ({
         const response = await fetch('/api/estados-ot')
         if (response.ok) {
           const estados = await response.json()
-          const estadosFormatted = estados.map((estado: any) => estado.estado).filter(Boolean)
+          // Usar los estados mapeados (palabras completas) en lugar de los códigos
+          const estadosFormatted = estados
+            .map((estado: any) => estado.estado)
+            .filter(Boolean)
+            .sort() // Ordenar alfabéticamente para mejor UX
           setEstadosDisponibles(estadosFormatted)
         }
       } catch (error) {
         console.error('Error al cargar estados de OT:', error)
         // Fallback a estados por defecto en caso de error
         setEstadosDisponibles([
-          'EN_REVISION',
-          'DISPONIBLE',
-          'PENDIENTE',
+          'AGENDADA',
+          'CANCELADA',
+          'CODIFICADA',
           'COMPLETADA',
-          'CANCELADA'
+          'DISPONIBLE',
+          'EN_PROCESO',
+          'EN_REVISION'
         ])
       }
     }
@@ -273,7 +284,11 @@ const OtListTable = ({
 
     // Filtrar por estados seleccionados (múltiples)
     if (filters.estadosSeleccionados.length > 0) {
-      result = result.filter(ot => filters.estadosSeleccionados.includes(ot.estado))
+      result = result.filter(ot => {
+        // Comparar tanto con el estado mapeado como con el estado original
+        return filters.estadosSeleccionados.includes(ot.estado) ||
+          (ot.estadoOriginal && filters.estadosSeleccionados.includes(ot.estadoOriginal))
+      })
     }
 
     // Filtro "Por codificar" - por ahora no hace nada según requerimiento
@@ -289,7 +304,8 @@ const OtListTable = ({
         // Crear array con todos los valores para buscar
         const searchableValues = [
           // Campos directos de la OT
-          ot.estado,
+          ot.estado, // Ahora ya viene mapeado desde la API
+          ot.estadoOriginal, // También buscar en el estado original (código)
           ot.numeroTarjeta,
           ot.clave,
           ot.correlativ,
@@ -557,16 +573,35 @@ const OtListTable = ({
       }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
-        cell: info => (
-          <Chip
-            label={info.getValue().replace('_', ' ')}
-            size='small'
-            color={
-              info.getValue() === 'EN REVISION' ? 'warning' : info.getValue() === 'DISPONIBLE' ? 'success' : 'info'
-            }
-            className='capitalize'
-          />
-        )
+        cell: info => {
+          const estado = info.getValue()
+          const estadoFormateado = estado.replace('_', ' ')
+
+          // Determinar el color basado en el estado completo
+          let color: 'warning' | 'success' | 'info' | 'error' | 'default' = 'info'
+          if (estado === 'EN_REVISION') {
+            color = 'warning'
+          } else if (estado === 'DISPONIBLE') {
+            color = 'success'
+          } else if (estado === 'COMPLETADA') {
+            color = 'success'
+          } else if (estado === 'CANCELADA') {
+            color = 'error'
+          } else if (estado === 'AGENDADA') {
+            color = 'info'
+          } else if (estado === 'EN_PROCESO') {
+            color = 'warning'
+          }
+
+          return (
+            <Chip
+              label={estadoFormateado}
+              size='small'
+              color={color}
+              className='capitalize'
+            />
+          )
+        }
       }),
       columnHelper.accessor('id', {
         header: 'ACCIONES',

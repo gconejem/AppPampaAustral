@@ -12,6 +12,7 @@ export interface OrdenTrabajo {
   tipoOT: TipoOrdenTrabajo
   tipoOrdenTrabajoId: number
   estado: string
+  estadoOriginal?: string // Campo para mantener el estado original (código)
   origen: string
   fklbrutas: string
   correlativ: string

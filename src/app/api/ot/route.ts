@@ -109,7 +109,23 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(ordenesTrabajo)
+    // Obtener el mapeo de estados desde la tabla EstadoOT
+    const estadosOT = await prisma.estadoOT.findMany()
+    const estadoMap = new Map()
+    estadosOT.forEach(estado => {
+      if (estado.tipoJSON) {
+        estadoMap.set(estado.tipoJSON, estado.estado)
+      }
+    })
+
+    // Mapear los estados de las OTs
+    const ordenesTrabajoConEstados = ordenesTrabajo.map(ot => ({
+      ...ot,
+      estadoOriginal: ot.estado, // Mantener el estado original
+      estado: estadoMap.get(ot.estado) || ot.estado // Usar el mapeo o el estado original si no se encuentra
+    }))
+
+    return NextResponse.json(ordenesTrabajoConEstados)
   } catch (error) {
     console.error('Error al obtener OTs:', error)
 
