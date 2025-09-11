@@ -392,6 +392,11 @@ const OtListTable = ({
     setGlobalFilter('')
   }
 
+  // Handler para limpiar solo los estados seleccionados
+  const handleClearEstados = () => {
+    setFilters(prev => ({ ...prev, estadosSeleccionados: [] }))
+  }
+
   // Handler para manejar los cambios en los filtros de texto
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
     setFilters(prev => ({ ...prev, [field]: e.target.value }))
@@ -700,7 +705,7 @@ const OtListTable = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <FormControl fullWidth size='small'>
                 <InputLabel id='estados-label'>Estado</InputLabel>
                 <Select
@@ -720,6 +725,22 @@ const OtListTable = ({
                 </Select>
               </FormControl>
             </Grid>
+            <Grid item xs={12} sm={1}>
+              <Button
+                variant='outlined'
+                size='small'
+                onClick={handleClearEstados}
+                disabled={filters.estadosSeleccionados.length === 0}
+                title='Limpiar estados seleccionados'
+                sx={{
+                  minWidth: 'auto',
+                  px: 1,
+                  height: '40px' // Misma altura que el Select
+                }}
+              >
+                <i className='ri-close-line' style={{ fontSize: '1rem' }} />
+              </Button>
+            </Grid>
             <Grid item xs={12} sm={2}>
               <Box display='flex' alignItems='center'>
                 <Checkbox
@@ -730,7 +751,7 @@ const OtListTable = ({
                 <Typography variant='body2'>Por codificar</Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={2}>
               <TextField
                 fullWidth
                 size='small'
