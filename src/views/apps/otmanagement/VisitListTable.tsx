@@ -1188,7 +1188,7 @@ const VisitListTable = ({
     try {
       if (!selectedVisit) return
 
-      console.log('Cambiando estado de visita a RECIBIDA_OK')
+      console.log('Cambiando estado de visita a RECIBIDA_OK y OTs a DISPONIBLE')
 
       // Llamada a la API para actualizar el estado de la visita
       const response = await fetch(`/api/gestionvisita/${selectedVisit.id}/cambiar-estado`, {
@@ -1197,7 +1197,8 @@ const VisitListTable = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          estado: 'RECIBIDA_OK'
+          estado: 'RECIBIDA_OK',
+          ordenesTrabajoEstado: 'DISPONIBLE'
         })
       })
 
@@ -1206,21 +1207,38 @@ const VisitListTable = ({
       }
 
       // Actualizar los datos localmente después de la respuesta de la API
-      const updatedData = data.map(item =>
-        item.id === selectedVisit.id ? { ...item, estado: 'RECIBIDA_OK' } : item
-      )
+      const updatedData = data.map(item => {
+        if (item.id === selectedVisit.id) {
+          return {
+            ...item,
+            estado: 'RECIBIDA_OK',
+            ordenesTrabajo: item.ordenesTrabajo?.map(ot => ({
+              ...ot,
+              estado: 'DISPONIBLE'
+            }))
+          }
+        }
+        return item
+      })
 
       setData(updatedData)
 
       // Actualizar la visita seleccionada
-      onVisitSelect({ ...selectedVisit, estado: 'RECIBIDA_OK' })
+      onVisitSelect({
+        ...selectedVisit,
+        estado: 'RECIBIDA_OK',
+        ordenesTrabajo: selectedVisit.ordenesTrabajo?.map(ot => ({
+          ...ot,
+          estado: 'DISPONIBLE'
+        }))
+      })
 
       // Cerrar el modal de comprobante de visita
       handleCloseComprobante()
 
       // Mostrar alerta de éxito
       setAlertSeverity('success')
-      setAlertMessage('Visita recepcionada correctamente')
+      setAlertMessage('Visita recepcionada correctamente y órdenes de trabajo actualizadas a DISPONIBLE')
       setAlertOpen(true)
     } catch (error) {
       console.error('Error al recepcionar la visita:', error)
