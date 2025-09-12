@@ -16,6 +16,22 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             return NextResponse.json({ error: 'Agenda no encontrada' }, { status: 404 })
         }
 
+        // Obtener el comprobanteVisitaJSON actual para actualizarlo
+        const comprobanteActual = existeAgenda.comprobanteVisitaJSON as any || {}
+
+        // Actualizar el JSON con los nuevos valores
+        const comprobanteActualizado = {
+            ...comprobanteActual,
+            ACEPVISITA: {
+                ...comprobanteActual.ACEPVISITA,
+                hora_llegada: data.horaLlegada,
+                hora_salida: data.horaSalida,
+                movilizacion: data.movilizacion,
+                // Agregar kmAdicionales si existe en el JSON original o si se está actualizando
+                ...(data.kmAdicionales !== undefined && { km_adicionales: data.kmAdicionales })
+            }
+        }
+
         // Actualizar solo los campos específicos
         const agendaActualizada = await prisma.agenda.update({
             where: { id },
@@ -23,7 +39,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
                 horaLlegada: data.horaLlegada,
                 horaSalida: data.horaSalida,
                 movilizacion: data.movilizacion,
-                kmAdicionales: data.kmAdicionales
+                kmAdicionales: data.kmAdicionales,
+                comprobanteVisitaJSON: comprobanteActualizado
             },
             include: {
                 cliente: true,
