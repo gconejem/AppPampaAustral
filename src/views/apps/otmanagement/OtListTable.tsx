@@ -223,59 +223,58 @@ const OtListTable = ({
     fetchAgendas()
   }, [])
 
-  // Cargar todas las OTs al iniciar y cuando cambien las fechas
+  // Cargar OTs basadas en visitas seleccionadas o rango de fechas
   useEffect(() => {
-    const fetchAllOTs = async () => {
+    const fetchOTs = async () => {
       try {
         setLoading(true)
 
         // Construir parámetros de consulta
         const params = new URLSearchParams()
-        if (fechaInicio) params.append('fechaInicio', fechaInicio)
-        if (fechaFin) params.append('fechaFin', fechaFin)
+
+        // Si hay visitas seleccionadas, filtrar por sus IDs
+        if (selectedVisits && selectedVisits.length > 0) {
+          const agendaIds = selectedVisits.map(visit => visit.id.toString())
+          params.append('agendaIds', agendaIds.join(','))
+          console.log('Cargando OTs para visitas:', agendaIds)
+        } else {
+          // Si no hay visitas seleccionadas, usar rango de fechas
+          if (fechaInicio) params.append('fechaInicio', fechaInicio)
+          if (fechaFin) params.append('fechaFin', fechaFin)
+        }
 
         const url = params.toString() ? `/api/ot?${params.toString()}` : '/api/ot'
+        console.log('Fetching OTs from:', url)
         const response = await fetch(url)
 
         if (!response.ok) throw new Error('Error al cargar OTs')
         const data = await response.json()
 
+        console.log('OTs cargadas:', data.length)
         setAllOTs(data)
         setFilteredData(data)
       } catch (error) {
         console.error('Error al cargar OTs:', error)
+        setAllOTs([])
+        setFilteredData([])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchAllOTs()
-  }, [fechaInicio, fechaFin])
+    fetchOTs()
+  }, [selectedVisits, fechaInicio, fechaFin])
 
-  // Effect para manejar los filtros y la selección de visita
+  // Effect para manejar los filtros
   useEffect(() => {
     // Si no hay OTs, no hacer nada
     if (allOTs.length === 0) return
 
-    // Base de datos a filtrar: todas las OTs en el rango de fechas (ya filtradas por la API)
-    let baseData = allOTs
-
-    // Filtrar por visitas seleccionadas si hay alguna
-    if (selectedVisits && selectedVisits.length > 0) {
-      const selectedVisitIds = selectedVisits.map(visit => visit.id)
-      baseData = allOTs.filter(ot => ot.agendaId && selectedVisitIds.includes(ot.agendaId))
-      console.log('OtListTable - Filtrando por visitas seleccionadas:', selectedVisitIds)
-      console.log('OtListTable - OTs filtradas por visitas:', baseData.length)
-    }
-
-    console.log('OtListTable - selectedVisit:', selectedVisit?.id)
-    console.log('OtListTable - selectedVisits count:', selectedVisits?.length || 0)
+    console.log('OtListTable - Aplicando filtros locales')
     console.log('OtListTable - allOTs count:', allOTs.length)
-    console.log('OtListTable - fechas:', { fechaInicio, fechaFin })
-    console.log('OtListTable - baseData count:', baseData.length)
     console.log('OtListTable - globalFilter:', globalFilter)
 
-    let result = [...baseData]
+    let result = [...allOTs]
 
     // Filtrar por servicio (tipo de OT)
     if (filters.servicioId) {
@@ -388,7 +387,7 @@ const OtListTable = ({
 
     console.log('OtListTable - result count after all filters:', result.length)
     setFilteredData(result)
-  }, [selectedVisit, selectedVisits, allOTs, filters, globalFilter, fechaInicio, fechaFin])
+  }, [allOTs, filters, globalFilter])
 
   // Handler para limpiar filtros
   const handleClearFilters = () => {
@@ -663,12 +662,10 @@ const OtListTable = ({
 
   // Título dinámico de la tabla
   const tableTitle = selectedVisits && selectedVisits.length > 0
-    ? `Órdenes de Trabajo - ${selectedVisits.length} visita${selectedVisits.length > 1 ? 's' : ''} seleccionada${selectedVisits.length > 1 ? 's' : ''}`
+    ? `Órdenes de Trabajo - ${selectedVisits.length} visita${selectedVisits.length > 1 ? 's' : ''} seleccionada${selectedVisits.length > 1 ? 's' : ''} (${filteredData.length} OTs)`
     : (fechaInicio && fechaFin)
-      ? `Órdenes de Trabajo (${fechaInicio} - ${fechaFin})`
-      : selectedVisit
-        ? `Órdenes de Trabajo - ${selectedVisit.cliente?.nombreCliente || ''}`
-        : 'Todas las Órdenes de Trabajo'
+      ? `Órdenes de Trabajo (${fechaInicio} - ${fechaFin}) - ${filteredData.length} OTs`
+      : `Todas las Órdenes de Trabajo - ${filteredData.length} OTs`
 
   // Mostramos mensaje de carga mientras se obtienen las OTs
   if (loading) {

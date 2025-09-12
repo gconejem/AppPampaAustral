@@ -50,34 +50,46 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const fechaInicio = searchParams.get('fechaInicio')
     const fechaFin = searchParams.get('fechaFin')
+    const agendaIds = searchParams.get('agendaIds')
 
     // Construir el filtro para OTs
     const whereFilter: any = {}
 
-    // Filtro de fechas basado en el campo createdAt de la OrdenTrabajo
-    if (fechaInicio || fechaFin) {
-      if (fechaInicio && fechaFin) {
-        const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
-        const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+    // Filtro por IDs de agenda (si se especifican, tiene prioridad sobre las fechas)
+    if (agendaIds) {
+      const agendaIdArray = agendaIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+      if (agendaIdArray.length > 0) {
+        whereFilter.agendaId = {
+          in: agendaIdArray
+        }
+        console.log('Filtrando OTs por agendaIds:', agendaIdArray)
+      }
+    } else {
+      // Filtro de fechas basado en el campo createdAt de la OrdenTrabajo (solo si no hay agendaIds)
+      if (fechaInicio || fechaFin) {
+        if (fechaInicio && fechaFin) {
+          const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+          const endDate = new Date(fechaFin + 'T23:59:59.999Z')
 
-        whereFilter.createdAt = {
-          gte: startDate,
-          lte: endDate
-        }
-      } else if (fechaInicio) {
-        const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
-        whereFilter.createdAt = {
-          gte: startDate
-        }
-      } else if (fechaFin) {
-        const endDate = new Date(fechaFin + 'T23:59:59.999Z')
-        whereFilter.createdAt = {
-          lte: endDate
+          whereFilter.createdAt = {
+            gte: startDate,
+            lte: endDate
+          }
+        } else if (fechaInicio) {
+          const startDate = new Date(fechaInicio + 'T00:00:00.000Z')
+          whereFilter.createdAt = {
+            gte: startDate
+          }
+        } else if (fechaFin) {
+          const endDate = new Date(fechaFin + 'T23:59:59.999Z')
+          whereFilter.createdAt = {
+            lte: endDate
+          }
         }
       }
     }
 
-    console.log('OT Query filters:', { fechaInicio, fechaFin, whereFilter })
+    console.log('OT Query filters:', { fechaInicio, fechaFin, agendaIds, whereFilter })
 
     const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
       where: whereFilter,
