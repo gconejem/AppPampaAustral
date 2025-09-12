@@ -12,9 +12,13 @@ import {
     Alert,
     CircularProgress,
     TextField,
-    IconButton
+    IconButton,
+    Menu,
+    MenuItem,
+    Snackbar
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import JsonView from '@uiw/react-json-view'
 import { lightTheme } from '@uiw/react-json-view/light'
 
@@ -49,6 +53,10 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
     const [hasChanges, setHasChanges] = useState(false)
     const [jsonError, setJsonError] = useState<string | null>(null)
     const [editMode, setEditMode] = useState<'visual' | 'text'>('visual')
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+    const [updatingStatus, setUpdatingStatus] = useState(false)
+    const [snackbarOpen, setSnackbarOpen] = useState(false)
+    const [snackbarMessage, setSnackbarMessage] = useState('')
 
     // Load JSON data when modal opens
     useEffect(() => {
@@ -140,7 +148,49 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             const confirmClose = window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar?')
             if (!confirmClose) return
         }
+        setAnchorEl(null) // Cerrar menú si está abierto
         onClose()
+    }
+
+    const handleActionsClick = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget)
+    }
+
+    const handleActionsClose = () => {
+        setAnchorEl(null)
+    }
+
+    const handleStatusChange = async (newStatus: 'EN_REVISION' | 'ANULADA') => {
+        if (!ot) return
+
+        setUpdatingStatus(true)
+        setAnchorEl(null)
+
+        try {
+            const response = await fetch(`/api/ot/${ot.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    estado: newStatus
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('Error al actualizar el estado de la OT')
+            }
+
+            setSnackbarMessage(`Estado cambiado a ${newStatus === 'EN_REVISION' ? 'En Revisión' : 'Anulada'} exitosamente`)
+            setSnackbarOpen(true)
+            onSave?.() // Refrescar datos
+        } catch (err) {
+            console.error('Error updating status:', err)
+            setSnackbarMessage('Error al cambiar el estado de la OT')
+            setSnackbarOpen(true)
+        } finally {
+            setUpdatingStatus(false)
+        }
     }
 
     return (
@@ -270,10 +320,34 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         variant="contained"
                         size="small"
                         color="primary"
-                        onClick={() => {/* TODO: Implementar funcionalidad Codificado */ }}
+                        onClick={handleActionsClick}
+                        endIcon={<ExpandMoreIcon />}
+                        disabled={updatingStatus}
                     >
                         Acciones
                     </Button>
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl)}
+                        onClose={handleActionsClose}
+                        anchorOrigin={{
+                            vertical: 'top',
+                            horizontal: 'left',
+                        }}
+                        transformOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'left',
+                        }}
+                    >
+                        <MenuItem onClick={() => handleStatusChange('EN_REVISION')} disabled={updatingStatus}>
+                            {updatingStatus ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+                            Cambiar a En Revisión
+                        </MenuItem>
+                        <MenuItem onClick={() => handleStatusChange('ANULADA')} disabled={updatingStatus}>
+                            {updatingStatus ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+                            Cambiar a Anulada
+                        </MenuItem>
+                    </Menu>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
@@ -294,6 +368,15 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                     </Button>
                 </Box>
             </DialogActions>
+
+            {/* Snackbar para mostrar mensajes de estado */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={() => setSnackbarOpen(false)}
+                message={snackbarMessage}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            />
         </Dialog>
     )
 }
