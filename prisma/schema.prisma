@@ -444,6 +444,7 @@ model Agenda {
   observacionAnulada     String?
   observacionRecibidaOK  String?
   observacionComprobante String?
+  comprobanteVisitaJSON  Json?
   motivoSuspension       MotivoSuspension?
   cliente                Cliente?          @relation(fields: [clienteId], references: [clienteId])
   obra                   Obra?             @relation(fields: [obraId], references: [obraId])
