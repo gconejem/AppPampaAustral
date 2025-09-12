@@ -89,6 +89,10 @@ const JsonUpload = ({ agendas }: Props) => {
           const content = e.target?.result as string
           const jsonData = JSON.parse(content)
 
+          console.log('JSON original:', jsonData)
+          console.log('Agenda ID:', agendaId)
+          console.log('Tipo:', type)
+
           // Crear una copia profunda del JSON y modificar los campos según el tipo
           if (jsonData.data) {
             const modifiedJsonData = {
@@ -111,6 +115,8 @@ const JsonUpload = ({ agendas }: Props) => {
                 jsonOT: item // Almacenar el JSON completo de la OT
               }))
             }
+
+            console.log('JSON modificado:', modifiedJsonData)
 
             const response = await fetch('/api/ot', {
               method: 'POST',

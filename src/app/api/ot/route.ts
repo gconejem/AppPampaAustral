@@ -177,7 +177,8 @@ export async function POST(request: Request) {
             data: {
               horaLlegada: item.ACEPVISITA.hora_llegada,
               horaSalida: item.ACEPVISITA.hora_salida,
-              movilizacion: item.ACEPVISITA.movilizacion
+              movilizacion: item.ACEPVISITA.movilizacion,
+              comprobanteVisitaJSON: item // Guardar el JSON completo de aceptación de visita
             }
           })
         }
