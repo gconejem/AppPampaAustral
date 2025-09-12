@@ -1474,7 +1474,21 @@ const VisitListTable = ({
         changes: editedServiceData
       })
 
-      // Actualizar los datos localmente primero (simulación)
+      // Llamada a la API para actualizar el servicio
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/servicios/${editingServiceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editedServiceData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      // Actualizar los datos localmente después de la respuesta exitosa
       if (selectedVisit.servicios) {
         const updatedServicios = selectedVisit.servicios.map(servicio =>
           servicio.id === editingServiceId
@@ -1504,21 +1518,6 @@ const VisitListTable = ({
       setAlertMessage('Servicio actualizado correctamente')
       setAlertOpen(true)
 
-      // TODO: Aquí iría la llamada real a la API
-      /*
-      const response = await fetch(`/api/visitas/${selectedVisit.id}/servicios/${editingServiceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(editedServiceData)
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al actualizar el servicio')
-      }
-      */
-
     } catch (error) {
       console.error('Error al guardar cambios del servicio:', error)
       setAlertSeverity('error')
@@ -1533,7 +1532,17 @@ const VisitListTable = ({
 
       console.log('Eliminando servicio:', { visitId: selectedVisit.id, serviceId: servicioId })
 
-      // Actualizar los datos localmente (simulación)
+      // Llamada a la API para eliminar el servicio
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/servicios/${servicioId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      // Actualizar los datos localmente después de la respuesta exitosa
       if (selectedVisit.servicios) {
         const updatedServicios = selectedVisit.servicios.filter(servicio => servicio.id !== servicioId)
         const updatedVisit = { ...selectedVisit, servicios: updatedServicios }
@@ -1553,17 +1562,6 @@ const VisitListTable = ({
       setAlertSeverity('success')
       setAlertMessage('Servicio eliminado correctamente')
       setAlertOpen(true)
-
-      // TODO: Aquí iría la llamada real a la API
-      /*
-      const response = await fetch(`/api/visitas/${selectedVisit.id}/servicios/${servicioId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al eliminar el servicio')
-      }
-      */
 
     } catch (error) {
       console.error('Error al eliminar servicio:', error)
@@ -1658,39 +1656,69 @@ const VisitListTable = ({
     setServiciosBuscadorAnchorEl(null)
   }
 
-  const handleSelectProduct = (producto: any) => {
+  const handleSelectProduct = async (producto: any) => {
     if (!selectedVisit) return
 
-    // Crear nuevo servicio con ID único temporal
-    const nuevoServicio = {
-      id: Date.now(), // ID temporal único
-      codigo: producto.sku,
-      servicio: producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre,
-      cantidad: 1,
-      observacion: '',
-      esSegundaVisita: false
+    try {
+      // Llamada a la API para agregar el servicio
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/servicios`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          codigo: producto.sku,
+          servicio: producto.norma ? `${producto.nombre} - ${producto.norma}` : producto.nombre,
+          cantidad: 1,
+          observacion: '',
+          esSegundaVisita: false
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+
+      // Crear nuevo servicio con el ID real de la base de datos
+      const nuevoServicio = {
+        id: result.servicio.id,
+        codigo: result.servicio.codigo,
+        servicio: result.servicio.servicio,
+        cantidad: result.servicio.cantidad,
+        observacion: result.servicio.observacion || '',
+        esSegundaVisita: result.servicio.esSegundaVisita
+      }
+
+      // Agregar el servicio a la lista (crear array si no existe)
+      const serviciosActuales = selectedVisit.servicios || []
+      const serviciosActualizados = [...serviciosActuales, nuevoServicio]
+      const visitaActualizada = { ...selectedVisit, servicios: serviciosActualizados }
+
+      // Actualizar en la lista de datos
+      const updatedData = data.map(item =>
+        item.id === selectedVisit.id ? visitaActualizada : item
+      )
+
+      setData(updatedData)
+      onVisitSelect(visitaActualizada)
+
+      // Cerrar el buscador
+      handleCloseServiciosBuscador()
+
+      // Mostrar mensaje de éxito
+      setAlertSeverity('success')
+      setAlertMessage('Servicio agregado correctamente')
+      setAlertOpen(true)
+
+    } catch (error) {
+      console.error('Error al agregar servicio:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al agregar el servicio: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
     }
-
-    // Agregar el servicio a la lista (crear array si no existe)
-    const serviciosActuales = selectedVisit.servicios || []
-    const serviciosActualizados = [...serviciosActuales, nuevoServicio]
-    const visitaActualizada = { ...selectedVisit, servicios: serviciosActualizados }
-
-    // Actualizar en la lista de datos
-    const updatedData = data.map(item =>
-      item.id === selectedVisit.id ? visitaActualizada : item
-    )
-
-    setData(updatedData)
-    onVisitSelect(visitaActualizada)
-
-    // Cerrar el buscador
-    handleCloseServiciosBuscador()
-
-    // Mostrar mensaje de éxito
-    setAlertSeverity('success')
-    setAlertMessage('Servicio agregado correctamente')
-    setAlertOpen(true)
   }
 
   const handleShowOnlyPaquetesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
