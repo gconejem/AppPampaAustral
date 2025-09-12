@@ -545,6 +545,7 @@ model OrdenTrabajo {
   userId              String
   tipoOrdenTrabajoId  Int
   agendaId            Int?
+  estadoOTId          Int?
   aceptacionVisita    AceptacionVisita?
   densidad            Densidad?
   extraccionAsfaltica ExtraccionAsfaltica?
@@ -553,10 +554,12 @@ model OrdenTrabajo {
   agenda              Agenda?              @relation(fields: [agendaId], references: [id])
   user                User                 @relation(fields: [userId], references: [id])
   tipoOT              TipoOrdenTrabajo     @relation(fields: [tipoOrdenTrabajoId], references: [id])
+  estadoOT            EstadoOT?            @relation(fields: [estadoOTId], references: [id])
   retiroProbeta       RetiroProbeta?
   testigos            Testigos?
 
   @@index([tipoOrdenTrabajoId])
+  @@index([estadoOTId])
 }
 
 model AceptacionVisita {
@@ -823,8 +826,9 @@ model TipoOrdenTrabajo {
 }
 
 model EstadoOT {
-  id       Int     @id @default(autoincrement())
-  origen   String?
-  tipoJSON String?
-  estado   String?
+  id             Int            @id @default(autoincrement())
+  origen         String?
+  tipoJSON       String?
+  estado         String?
+  ordenesTrabajo OrdenTrabajo[]
 }
