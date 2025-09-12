@@ -358,14 +358,17 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                     >
                         PDF OT
                     </Button>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        color="primary"
-                        onClick={() => {/* TODO: Implementar funcionalidad PDF Cliente */ }}
-                    >
-                        PDF Cliente
-                    </Button>
+                    {/* Solo mostrar PDF Cliente para Control de Compactación (R-12-03) */}
+                    {ot?.tipoOT?.codigo === 'R-12-03' && (
+                        <Button
+                            variant="contained"
+                            size="small"
+                            color="primary"
+                            onClick={() => {/* TODO: Implementar funcionalidad PDF Cliente */ }}
+                        >
+                            PDF Cliente
+                        </Button>
+                    )}
                 </Box>
             </DialogActions>
 
