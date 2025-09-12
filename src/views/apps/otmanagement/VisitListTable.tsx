@@ -1870,7 +1870,7 @@ const VisitListTable = ({
               color = 'primary'
           }
 
-          return <Chip variant='tonal' label={estado} size='small' color={color} />
+          return <Chip variant='tonal' label={estado.replace(/_/g, ' ')} size='small' color={color} />
         }
       }),
       columnHelper.accessor(
@@ -3046,8 +3046,7 @@ const VisitListTable = ({
                   <MenuItem key={estado} value={estado}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
-                        label={estado === 'EN_REVISION' ? 'EN REVISION' :
-                          estado === 'RECIBIDA_OK' ? 'RECIBIDA OK' : estado}
+                        label={estado.replace(/_/g, ' ')}
                         size='small'
                         color={
                           estado === 'ELIMINADA' ? 'error' :
@@ -3140,7 +3139,7 @@ const VisitListTable = ({
                 <Typography variant='caption' color='text.secondary'>
                   {getAvailableStates(commonSelectedStatus).length === 0 ?
                     'No hay cambios de estado disponibles desde el estado actual.' :
-                    `Estados disponibles: ${getAvailableStates(commonSelectedStatus).join(', ')}`
+                    `Estados disponibles: ${getAvailableStates(commonSelectedStatus).map(estado => estado.replace(/_/g, ' ')).join(', ')}`
                   }
                 </Typography>
               </Box>
@@ -3191,8 +3190,7 @@ const VisitListTable = ({
                   <MenuItem key={estado} value={estado}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
-                        label={estado === 'EN_REVISION' ? 'EN REVISION' :
-                          estado === 'RECIBIDA_OK' ? 'RECIBIDA OK' : estado}
+                        label={estado.replace(/_/g, ' ')}
                         size='small'
                         color={
                           estado === 'ELIMINADA' ? 'error' :
@@ -3285,7 +3283,7 @@ const VisitListTable = ({
                 <Typography variant='caption' color='text.secondary'>
                   {getAvailableStates(selectedVisit.estado).length === 0 ?
                     'No hay cambios de estado disponibles desde el estado actual.' :
-                    `Estados disponibles: ${getAvailableStates(selectedVisit.estado).join(', ')}`
+                    `Estados disponibles: ${getAvailableStates(selectedVisit.estado).map(estado => estado.replace(/_/g, ' ')).join(', ')}`
                   }
                 </Typography>
               </Box>

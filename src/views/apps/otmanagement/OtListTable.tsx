@@ -587,7 +587,7 @@ const OtListTable = ({
         header: 'ESTADO',
         cell: info => {
           const estado = info.getValue()
-          const estadoFormateado = estado.replace('_', ' ')
+          const estadoFormateado = estado.replace(/_/g, ' ')
 
           // Determinar el color basado en el estado completo
           let color: 'warning' | 'success' | 'info' | 'error' | 'default' = 'info'
