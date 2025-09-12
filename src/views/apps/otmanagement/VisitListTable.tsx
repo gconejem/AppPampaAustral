@@ -2614,7 +2614,7 @@ const VisitListTable = ({
                 <Grid item xs={6}>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Chip
-                      label={selectedVisit.estado}
+                      label={selectedVisit.estado.replace(/_/g, ' ')}
                       color={
                         selectedVisit.estado === 'COMPLETADA' ? 'success' :
                           selectedVisit.estado === 'EN_REVISION' ? 'warning' :
