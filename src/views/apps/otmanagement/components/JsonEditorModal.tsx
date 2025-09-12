@@ -255,22 +255,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         color="primary"
                         onClick={() => {/* TODO: Implementar funcionalidad Codificado */ }}
                     >
-                        Codificado
-                    </Button>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        color="primary"
-                        onClick={() => {/* TODO: Implementar funcionalidad Rechazado */ }}
-                    >
-                        Rechazado
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => {/* TODO: Implementar funcionalidad Seguimiento */ }}
-                    >
-                        Seguimiento
+                        Acciones
                     </Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -280,7 +265,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         color="primary"
                         onClick={() => {/* TODO: Implementar funcionalidad PDF Laboratorio */ }}
                     >
-                        PDF Laboratorio
+                        PDF OT
                     </Button>
                     <Button
                         variant="contained"
