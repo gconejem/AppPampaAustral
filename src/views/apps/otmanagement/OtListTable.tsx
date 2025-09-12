@@ -109,12 +109,14 @@ const OtListTable = ({
   selectedVisit,
   selectedVisits,
   fechaInicio,
-  fechaFin
+  fechaFin,
+  refreshTrigger
 }: {
   selectedVisit: Agenda | null
   selectedVisits: Agenda[]
   fechaInicio?: string
   fechaFin?: string
+  refreshTrigger?: number
 }) => {
   // States
   const [pageSize, setPageSize] = useState(6)
@@ -263,7 +265,7 @@ const OtListTable = ({
     }
 
     fetchOTs()
-  }, [selectedVisits, fechaInicio, fechaFin])
+  }, [selectedVisits, fechaInicio, fechaFin, refreshTrigger])
 
   // Effect para manejar los filtros
   useEffect(() => {

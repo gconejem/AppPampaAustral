@@ -48,6 +48,7 @@ const UserList = ({ data }: { data: Agenda[] }) => {
     fechaInicio: '',
     fechaFin: ''
   })
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const handleVisitSelect = (visit: Agenda | null) => {
     setSelectedVisit(visit)
@@ -59,6 +60,11 @@ const UserList = ({ data }: { data: Agenda[] }) => {
 
   const handleFiltersChange = useCallback((filters: { fechaInicio: string, fechaFin: string }) => {
     setDateFilters(filters)
+  }, [])
+
+  const handleVisitStatusChange = useCallback(() => {
+    // Incrementar el trigger para forzar el refresh de la tabla de OTs
+    setRefreshTrigger(prev => prev + 1)
   }, [])
 
   return (
@@ -73,6 +79,7 @@ const UserList = ({ data }: { data: Agenda[] }) => {
           selectedVisit={selectedVisit}
           onFiltersChange={handleFiltersChange}
           onSelectedVisitsChange={handleSelectedVisitsChange}
+          onVisitStatusChange={handleVisitStatusChange}
         />
       </Grid>
       <Grid item xs={12}>
@@ -81,6 +88,7 @@ const UserList = ({ data }: { data: Agenda[] }) => {
           selectedVisits={selectedVisits}
           fechaInicio={dateFilters.fechaInicio}
           fechaFin={dateFilters.fechaFin}
+          refreshTrigger={refreshTrigger}
         />
       </Grid>
     </Grid>

@@ -227,13 +227,15 @@ const VisitListTable = ({
   onVisitSelect,
   selectedVisit,
   onFiltersChange,
-  onSelectedVisitsChange
+  onSelectedVisitsChange,
+  onVisitStatusChange
 }: {
   tableData: Agenda[]
   onVisitSelect: (visit: Agenda | null) => void
   selectedVisit: Agenda | null
   onFiltersChange?: (filters: { fechaInicio: string, fechaFin: string }) => void
   onSelectedVisitsChange?: (visits: Agenda[]) => void
+  onVisitStatusChange?: () => void
 }) => {
   // Definir todos los estados disponibles
   const todosLosEstados = [
@@ -359,6 +361,10 @@ const VisitListTable = ({
   const [clienteSearchValue, setClienteSearchValue] = useState('')
   const [obraSearchValue, setObraSearchValue] = useState('')
   const [laboratoristaSearchValue, setLaboratoristaSearchValue] = useState('')
+
+  // Estados para el modal de recepcionar
+  const [isRecepcionarModalOpen, setIsRecepcionarModalOpen] = useState(false)
+  const [observacionesRecepcion, setObservacionesRecepcion] = useState('')
 
   // Estado para el popover de obra
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
@@ -1102,6 +1108,11 @@ const VisitListTable = ({
         })
       }
 
+      // Notificar al componente padre que se cambió el estado de OTs
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
       setAlertMessage('Estado cambiado a Revisión correctamente')
@@ -1169,6 +1180,11 @@ const VisitListTable = ({
         })
       }
 
+      // Notificar al componente padre que se cambió el estado de OTs
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
       setAlertMessage('Estado cambiado a OK correctamente')
@@ -1183,8 +1199,15 @@ const VisitListTable = ({
     }
   }
 
-  // Función para manejar el botón Recepcionar (cambiar estado a RECIBIDA_OK)
-  const handleRecepcionarClick = async () => {
+  // Función para manejar el botón Recepcionar (abrir modal)
+  const handleRecepcionarClick = () => {
+    if (!selectedVisit) return
+    setObservacionesRecepcion('') // Limpiar observaciones previas
+    setIsRecepcionarModalOpen(true)
+  }
+
+  // Función para confirmar la recepción con observaciones
+  const handleConfirmarRecepcion = async () => {
     try {
       if (!selectedVisit) return
 
@@ -1198,7 +1221,8 @@ const VisitListTable = ({
         },
         body: JSON.stringify({
           estado: 'RECIBIDA_OK',
-          ordenesTrabajoEstado: 'DISPONIBLE'
+          ordenesTrabajoEstado: 'DISPONIBLE',
+          observacionRecibidaOK: observacionesRecepcion
         })
       })
 
@@ -1233,8 +1257,15 @@ const VisitListTable = ({
         }))
       })
 
-      // Cerrar el modal de comprobante de visita
+      // Cerrar los modales
+      setIsRecepcionarModalOpen(false)
+      setObservacionesRecepcion('')
       handleCloseComprobante()
+
+      // Notificar al componente padre que se cambió el estado de una visita
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
 
       // Mostrar alerta de éxito
       setAlertSeverity('success')
@@ -1248,6 +1279,12 @@ const VisitListTable = ({
       setAlertMessage('Error al recepcionar la visita: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       setAlertOpen(true)
     }
+  }
+
+  // Función para cerrar el modal de recepcionar
+  const handleCloseRecepcionarModal = () => {
+    setIsRecepcionarModalOpen(false)
+    setObservacionesRecepcion('')
   }
 
   // Nueva función para manejar el cambio de estado en masa (con validaciones como el modal especial)
@@ -3403,6 +3440,43 @@ const VisitListTable = ({
             }
           >
             Cambiar Estado
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Recepcionar Visita */}
+      <Dialog
+        open={isRecepcionarModalOpen}
+        onClose={handleCloseRecepcionarModal}
+        maxWidth='sm'
+        fullWidth
+      >
+        <DialogTitle>Recepcionar Visita</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label='Observaciones de Recepción'
+              value={observacionesRecepcion}
+              onChange={e => setObservacionesRecepcion(e.target.value)}
+              placeholder="Ingrese observaciones sobre la recepción de la visita..."
+              variant='outlined'
+              sx={{ mb: 2 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRecepcionarModal}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            color='success'
+            onClick={handleConfirmarRecepcion}
+          >
+            Confirmar Recepción
           </Button>
         </DialogActions>
       </Dialog>
