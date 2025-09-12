@@ -1183,6 +1183,55 @@ const VisitListTable = ({
     }
   }
 
+  // Función para manejar el botón Recepcionar (cambiar estado a RECIBIDA_OK)
+  const handleRecepcionarClick = async () => {
+    try {
+      if (!selectedVisit) return
+
+      console.log('Cambiando estado de visita a RECIBIDA_OK')
+
+      // Llamada a la API para actualizar el estado de la visita
+      const response = await fetch(`/api/gestionvisita/${selectedVisit.id}/cambiar-estado`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estado: 'RECIBIDA_OK'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cambiar el estado')
+      }
+
+      // Actualizar los datos localmente después de la respuesta de la API
+      const updatedData = data.map(item =>
+        item.id === selectedVisit.id ? { ...item, estado: 'RECIBIDA_OK' } : item
+      )
+
+      setData(updatedData)
+
+      // Actualizar la visita seleccionada
+      onVisitSelect({ ...selectedVisit, estado: 'RECIBIDA_OK' })
+
+      // Cerrar el modal de comprobante de visita
+      handleCloseComprobante()
+
+      // Mostrar alerta de éxito
+      setAlertSeverity('success')
+      setAlertMessage('Visita recepcionada correctamente')
+      setAlertOpen(true)
+    } catch (error) {
+      console.error('Error al recepcionar la visita:', error)
+
+      // Mostrar alerta de error
+      setAlertSeverity('error')
+      setAlertMessage('Error al recepcionar la visita: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    }
+  }
+
   // Nueva función para manejar el cambio de estado en masa (con validaciones como el modal especial)
   const handleBulkStatusChange = async () => {
     try {
@@ -1444,7 +1493,7 @@ const VisitListTable = ({
       case 'AGENDADA':
         return ['SUSPENDIDA']
       case 'COMPLETADA':
-        return ['EN_REVISION', 'ANULADA', 'RECIBIDA_OK']
+        return ['EN_REVISION', 'ANULADA']
       default:
         return []
     }
@@ -2911,6 +2960,8 @@ const VisitListTable = ({
                     color='success'
                     fullWidth
                     size='small'
+                    onClick={handleRecepcionarClick}
+                    disabled={!selectedVisit || selectedVisit.estado !== 'COMPLETADA'}
                   >
                     Recepcionar
                   </Button>
