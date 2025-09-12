@@ -24,6 +24,18 @@ interface JsonEditorModalProps {
     ot: {
         id: string
         jsonOT?: any
+        tipoOT?: {
+            codigo?: string
+            descripcion?: string
+        }
+        agenda?: {
+            cliente?: {
+                nombreCliente?: string
+            }
+            obra?: {
+                numeroObra?: string
+            }
+        }
     }
     onSave?: () => void
 }
@@ -142,10 +154,15 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             }}
         >
             <DialogTitle>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6">
-                        Editar JSON - OT #{ot?.id}
-                    </Typography>
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                    <Box>
+                        <Typography variant="h6" sx={{ mb: 0.5 }}>
+                            Numero de ot: {ot?.id} - {ot?.tipoOT?.codigo || 'Sin código'} - {ot?.tipoOT?.descripcion || 'Sin descripción'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {ot?.agenda?.cliente?.nombreCliente || 'Sin cliente'} - N° de Obra: {ot?.agenda?.obra?.numeroObra || 'Sin número de obra'}
+                        </Typography>
+                    </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Button
                             size="small"
