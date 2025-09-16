@@ -357,6 +357,9 @@ const VisitListTable = ({
   const [loadingClientes, setLoadingClientes] = useState(false)
   const [loadingObras, setLoadingObras] = useState(false)
 
+  // Estado para controlar si se debe limpiar la selección después de cargar datos
+  const [shouldClearSelection, setShouldClearSelection] = useState(false)
+
   // Estados para búsqueda por texto
   const [clienteSearchValue, setClienteSearchValue] = useState('')
   const [obraSearchValue, setObraSearchValue] = useState('')
@@ -542,16 +545,24 @@ const VisitListTable = ({
 
       setData(visitasOrdenadas)
 
-      // Preservar visitas seleccionadas después de recargar datos
-      if (selectedVisits.length > 0) {
-        const selectedIds = selectedVisits.map((v: Agenda) => v.id)
-        const updatedSelectedVisits = visitasOrdenadas.filter((v: Agenda) => selectedIds.includes(v.id))
-        if (updatedSelectedVisits.length !== selectedVisits.length) {
-          console.log('📋 Actualizando visitas seleccionadas después de recargar datos:', {
-            antes: selectedVisits.length,
-            después: updatedSelectedVisits.length
-          })
-          setSelectedVisits(updatedSelectedVisits)
+      // Limpiar selección si se solicitó (como cuando se limpian filtros)
+      if (shouldClearSelection) {
+        console.log('🧹 Limpiando selección después de cargar datos como se solicitó')
+        setSelectedVisits([])
+        onVisitSelect(null)
+        setShouldClearSelection(false) // Resetear la bandera
+      } else {
+        // Preservar visitas seleccionadas después de recargar datos
+        if (selectedVisits.length > 0) {
+          const selectedIds = selectedVisits.map((v: Agenda) => v.id)
+          const updatedSelectedVisits = visitasOrdenadas.filter((v: Agenda) => selectedIds.includes(v.id))
+          if (updatedSelectedVisits.length !== selectedVisits.length) {
+            console.log('📋 Actualizando visitas seleccionadas después de recargar datos:', {
+              antes: selectedVisits.length,
+              después: updatedSelectedVisits.length
+            })
+            setSelectedVisits(updatedSelectedVisits)
+          }
         }
       }
     } catch (error) {
@@ -2468,6 +2479,9 @@ const VisitListTable = ({
                     const day = String(today.getDate()).padStart(2, '0')
                     const fechaActual = `${year}-${month}-${day}`
 
+                    // Activar la bandera para limpiar selección después de cargar datos
+                    setShouldClearSelection(true)
+
                     setFechaInicio(fechaActual)
                     setFechaFin(fechaActual)
                     setSelectedLaboratorista('')
@@ -2477,7 +2491,7 @@ const VisitListTable = ({
                     setSelectedCliente(null)
                     setSelectedObra(null)
                     setObras([])
-                    // Limpiar selección de visitas también
+                    // Limpiar selección inmediatamente también
                     setSelectedVisits([])
                     onVisitSelect(null)
                   }}
