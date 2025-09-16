@@ -40,6 +40,7 @@ import { formatDateForBackend } from '@/utils/dateUtils'
 import CambiarEstadoModal from './modals/CambiarEstadoModal'
 import type { CalendarProps } from '@/types/apps/calendarTypes'
 import { parseDateFromBackend } from '@/utils/dateUtils'
+import { getInitials } from '@/utils/getInitials'
 
 type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
@@ -139,6 +140,20 @@ const Calendar = (props: CalenderProps) => {
   // Helper function to format date to YYYY-MM-DD in local timezone
   const formatDateToString = (date: Date): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
+  // Helper function to format time for events
+  const formatEventTime = (date: Date): string => {
+    if (!date || isNaN(date.getTime())) return ''
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+
+  // Helper function to get laboratorista initials
+  const getLaboratoristaInitials = (asignados: any[]): string => {
+    if (!asignados || asignados.length === 0) return ''
+    const primerAsignado = asignados[0]
+    const nombre = primerAsignado.user?.name || primerAsignado.user?.nombre || primerAsignado.nombre || ''
+    return nombre ? getInitials(nombre) : ''
   }
 
   // Helper function to update date or date range after reprogramming
@@ -1931,17 +1946,20 @@ const Calendar = (props: CalenderProps) => {
 
       // Para vista semanal - ocupar todo el espacio disponible
       if (info.view.type === 'timeGridWeek') {
+        // Obtener datos del evento
+        const horaInicio = formatEventTime(info.event.start)
+        const horaFin = formatEventTime(info.event.end)
+        const estado = info.event.extendedProps?.estado || 'AGENDADA'
         const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
         const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
         const comuna = info.event.extendedProps?.comuna || ''
+        const laboratorista = getLaboratoristaInitials(info.event.extendedProps?.asignados || [])
 
-        // Crear partes del texto con validación (sin hora para vista semanal)
-        const parts = []
-        if (numeroObra) parts.push(numeroObra)
-        if (cliente) parts.push(cliente)
-        if (comuna) parts.push(comuna)
-
-        const displayText = parts.join(' - ')
+        // Formatear líneas de información
+        const linea1 = `${horaInicio} - ${horaFin} ${estado}`
+        const linea2 = numeroObra && cliente ? `${numeroObra} - ${cliente}` : (numeroObra || cliente || '')
+        const linea3 = comuna
+        const linea4 = laboratorista
 
         return {
           html: `
@@ -1951,26 +1969,68 @@ const Calendar = (props: CalenderProps) => {
               height: 100%;
               width: 100%;
               display: flex;
-              align-items: center;
+              flex-direction: column;
               justify-content: center;
-              text-align: center;
+              text-align: left;
               padding: 4px;
               box-sizing: border-box;
               overflow: hidden;
               border-radius: 0;
               margin: 0;
+              gap: 1px;
             ">
               <div style="
                 font-weight: bold;
-                font-size: 0.75rem;
-                line-height: 1.2;
+                font-size: 0.55rem;
+                line-height: 1.0;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 width: 100%;
+                text-align: left;
               ">
-                ${displayText}
+                ${linea1}
               </div>
+              ${linea2 ? `<div style="
+                font-weight: 500;
+                font-size: 0.5rem;
+                line-height: 1.0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                text-align: left;
+              ">
+                ${linea2}
+              </div>` : ''}
+              ${linea3 ? `<div style="
+                font-weight: 400;
+                font-size: 0.5rem;
+                line-height: 1.0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                text-align: left;
+              ">
+                ${linea3}
+              </div>` : ''}
+              ${linea4 ? `<div style="
+                font-weight: bold;
+                font-size: 0.55rem;
+                line-height: 1.0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 1px 4px;
+                margin-top: 1px;
+                text-align: left;
+              ">
+                ${linea4}
+              </div>` : ''}
             </div>
           `
         }
