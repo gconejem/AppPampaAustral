@@ -1929,7 +1929,54 @@ const Calendar = (props: CalenderProps) => {
         }
       }
 
-      // Para otras vistas (semana, día) - mismo estilo que vista mensual
+      // Para vista semanal - ocupar todo el espacio disponible
+      if (info.view.type === 'timeGridWeek') {
+        const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
+        const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
+        const comuna = info.event.extendedProps?.comuna || ''
+
+        // Crear partes del texto con validación (sin hora para vista semanal)
+        const parts = []
+        if (numeroObra) parts.push(numeroObra)
+        if (cliente) parts.push(cliente)
+        if (comuna) parts.push(comuna)
+
+        const displayText = parts.join(' - ')
+
+        return {
+          html: `
+            <div style="
+              background-color: ${backgroundColor};
+              color: white;
+              height: 100%;
+              width: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              padding: 4px;
+              box-sizing: border-box;
+              overflow: hidden;
+              border-radius: 0;
+              margin: 0;
+            ">
+              <div style="
+                font-weight: bold;
+                font-size: 0.75rem;
+                line-height: 1.2;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+              ">
+                ${displayText}
+              </div>
+            </div>
+          `
+        }
+      }
+
+      // Para otras vistas (día) - mismo estilo que vista mensual
       const timeText = info.timeText ? info.timeText.replace(/\s/g, '') : ''
       const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
       const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
@@ -2290,12 +2337,16 @@ const Calendar = (props: CalenderProps) => {
             '& .fc-timegrid-event, & .fc-v-event': {
               backgroundColor: 'transparent !important',
               border: 'none !important',
-              boxShadow: 'none !important'
+              boxShadow: 'none !important',
+              padding: '0 !important'
             },
             '& .fc-timegrid-event .fc-event-main, & .fc-v-event .fc-event-main': {
               backgroundColor: 'transparent !important',
               border: 'none !important',
-              boxShadow: 'none !important'
+              boxShadow: 'none !important',
+              padding: '0 !important',
+              height: '100% !important',
+              width: '100% !important'
             },
             '& .fc-listMonth-view': {
               width: '100%'
@@ -2347,6 +2398,24 @@ const Calendar = (props: CalenderProps) => {
             },
             '& .fc-timegrid-event': {
               marginBottom: '1px !important'
+            },
+            // Estilos específicos para vista semanal - eventos ocupan todo el espacio
+            '& .fc-timeGridWeek-view .fc-timegrid-event': {
+              margin: '0 !important',
+              border: 'none !important',
+              borderRadius: '0 !important'
+            },
+            '& .fc-timeGridWeek-view .fc-timegrid-event-harness': {
+              margin: '0 !important',
+              padding: '0 !important'
+            },
+            '& .fc-timeGridWeek-view .fc-timegrid-event .fc-event-main': {
+              padding: '0 !important',
+              margin: '0 !important',
+              border: 'none !important',
+              borderRadius: '0 !important',
+              height: '100% !important',
+              width: '100% !important'
             }
           }}>
             {/* Contenedor principal de los filtros */}
