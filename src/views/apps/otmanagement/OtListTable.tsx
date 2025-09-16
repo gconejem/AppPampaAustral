@@ -701,7 +701,7 @@ const OtListTable = ({
                   onChange={handleServicioChange}
                 >
                   <MenuItem value=''>
-                    <em>Todos los servicios</em>
+                    <em>Servicios Agendados</em>
                   </MenuItem>
                   {tiposOrdenTrabajo.map(tipo => (
                     <MenuItem key={tipo.value} value={tipo.value}>
