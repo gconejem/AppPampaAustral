@@ -393,6 +393,14 @@ const Calendar = (props: CalenderProps) => {
         const eventToReprogramar = events.find(event => String(event.id) === String(selectedEventId))
 
         if (eventToReprogramar) {
+          // Verificar si el evento está suspendido
+          if (eventToReprogramar.extendedProps?.estado === 'SUSPENDIDA') {
+            setSnackbarMessage('No se puede reprogramar un evento suspendido')
+            setSnackbarSeverity('error')
+            setOpenSnackbar(true)
+            return
+          }
+
           setSelectedEventDates({
             start: new Date(eventToReprogramar.start as string),
             end: new Date(eventToReprogramar.end as string)
@@ -798,6 +806,19 @@ const Calendar = (props: CalenderProps) => {
   const handleBulkReprogramar = async (fechaInicio: Date, fechaFin: Date) => {
     try {
       console.log('Reprogramando eventos masivamente a fecha:', fechaInicio)
+
+      // Verificar que ningún evento seleccionado esté suspendido
+      const eventosSuspendidos = selectedEvents.filter(selectedEvent => {
+        const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+        return evento?.extendedProps?.estado === 'SUSPENDIDA'
+      })
+
+      if (eventosSuspendidos.length > 0) {
+        setSnackbarMessage(`No se pueden reprogramar eventos suspendidos. ${eventosSuspendidos.length} evento(s) seleccionado(s) tienen estado suspendido.`)
+        setSnackbarSeverity('error')
+        setOpenSnackbar(true)
+        return
+      }
 
       // Usar el endpoint de reprogramación masiva
       const response = await fetch(`/api/agenda/7/reprogramar`, {
@@ -1324,6 +1345,7 @@ const Calendar = (props: CalenderProps) => {
               e.preventDefault()
               e.stopPropagation()
               setSelectedEventId(info.event.id)
+              setSelectedEventEstado(info.event.extendedProps?.estado || 'AGENDADA')
               setEventMenuAnchorEl(e.currentTarget as HTMLElement)
             })
 
@@ -2745,7 +2767,14 @@ const Calendar = (props: CalenderProps) => {
           horizontal: 'right'
         }}
       >
-        <MenuItem onClick={() => handleMenuAction('reprogramar')}>
+        <MenuItem
+          onClick={() => handleMenuAction('reprogramar')}
+          disabled={selectedEventEstado === 'SUSPENDIDA'}
+          sx={{
+            opacity: selectedEventEstado === 'SUSPENDIDA' ? 0.5 : 1,
+            cursor: selectedEventEstado === 'SUSPENDIDA' ? 'not-allowed' : 'pointer'
+          }}
+        >
           <i className='ri-calendar-line' style={{ marginRight: '8px' }}></i>
           Reprogramar
         </MenuItem>
@@ -2777,7 +2806,23 @@ const Calendar = (props: CalenderProps) => {
           horizontal: 'right'
         }}
       >
-        <MenuItem onClick={() => handleBulkMenuAction('reprogramar')}>
+        <MenuItem
+          onClick={() => handleBulkMenuAction('reprogramar')}
+          disabled={selectedEvents.some(selectedEvent => {
+            const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+            return evento?.extendedProps?.estado === 'SUSPENDIDA'
+          })}
+          sx={{
+            opacity: selectedEvents.some(selectedEvent => {
+              const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+            }) ? 0.5 : 1,
+            cursor: selectedEvents.some(selectedEvent => {
+              const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+            }) ? 'not-allowed' : 'pointer'
+          }}
+        >
           <ListItemIcon>
             <i className='ri-calendar-line' style={{ fontSize: '1.25rem' }}></i>
           </ListItemIcon>

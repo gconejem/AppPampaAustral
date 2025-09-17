@@ -16,6 +16,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Agenda no encontrada' }, { status: 404 })
     }
 
+    // Verificar que el evento no esté suspendido
+    if (existeAgenda.estado === 'SUSPENDIDA') {
+      return NextResponse.json({ error: 'No se puede reprogramar un evento suspendido' }, { status: 400 })
+    }
+
     // Función helper para parsear fechas que vienen del frontend
     const parseLocalDate = (dateString: string) => {
       // La fecha viene ya ajustada desde el frontend para compensar la zona horaria
@@ -85,6 +90,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (eventosExistentes.length !== ids.length) {
       return NextResponse.json({ error: 'Algunos eventos no fueron encontrados' }, { status: 404 })
+    }
+
+    // Verificar que ningún evento esté suspendido
+    const eventosSuspendidos = eventosExistentes.filter(evento => evento.estado === 'SUSPENDIDA')
+    if (eventosSuspendidos.length > 0) {
+      return NextResponse.json({
+        error: `No se pueden reprogramar eventos suspendidos. ${eventosSuspendidos.length} evento(s) tienen estado suspendido.`
+      }, { status: 400 })
     }
 
     // Actualizar todos los eventos en una transacción
