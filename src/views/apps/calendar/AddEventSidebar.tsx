@@ -957,6 +957,15 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           const duracionEvento = fechaOriginalFin.getTime() - fechaOriginalInicio.getTime()
           fechaFinSeguimiento.setTime(fechaSeguimiento.getTime() + duracionEvento)
 
+          // Crear lista de servicios de la visita original para las observaciones
+          const serviciosOriginales = serviciosAgendados.map(servicio => {
+            let servicioTexto = `- ${servicio.servicio} (Cantidad: ${servicio.cantidad})`
+            if (servicio.observacion && servicio.observacion.trim()) {
+              servicioTexto += `\n  Observaciones: ${servicio.observacion}`
+            }
+            return servicioTexto
+          }).join('\n')
+
           // Preparar datos para el evento de seguimiento (sin laboratoristas ni equipos)
           const eventoSeguimiento = {
             ...visitaData,
@@ -971,7 +980,12 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             }],
             laboratoristas: [], // Sin laboratoristas asignados
             equipos: [], // Sin equipos asignados
-            observaciones: `Evento de seguimiento automático generado por servicio SKU 2002. ${visitaData.observaciones || ''}`.trim()
+            observaciones: `Evento de seguimiento automático generado por servicio SKU 2002.
+
+Servicios de la visita original:
+${serviciosOriginales}
+
+${visitaData.observaciones ? `Observaciones adicionales: ${visitaData.observaciones}` : ''}`.trim()
           }
 
           // Crear el evento de seguimiento
