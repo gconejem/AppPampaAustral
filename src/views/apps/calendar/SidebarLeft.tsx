@@ -389,7 +389,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
           <Autocomplete
             multiple
             options={obras}
-            getOptionLabel={option => `${option.numeroObra} - ${option.comuna.length > 30 ? option.comuna.substring(0, 30) + '...' : option.comuna}`}
+            getOptionLabel={option => `${option.numeroObra} - ${option.comuna} - ${option.nombreObra.length > 30 ? option.nombreObra.substring(0, 30) + '...' : option.nombreObra}`}
             value={filters.obras}
             onChange={(_, newValue) => handleFilterChange('Obra', newValue)}
             loading={loadingObras}
@@ -420,7 +420,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             renderOption={(props, option) => (
               <li {...props}>
                 <Typography variant='body1'>
-                  {option.numeroObra} - {option.comuna.length > 30 ? option.comuna.substring(0, 30) + '...' : option.comuna}
+                  {option.numeroObra} - {option.comuna} - {option.nombreObra.length > 30 ? option.nombreObra.substring(0, 30) + '...' : option.nombreObra}
                 </Typography>
               </li>
             )}
