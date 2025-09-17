@@ -944,14 +944,17 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const servicio2003 = servicios.find(s => s.sku === '2003')
 
         if (servicio2003) {
-          // Calcular fecha 2 días hábiles en el futuro
-          const fechaSeguimiento = addBusinessDays(new Date(fechaInicio!), 2)
-          // Para SKU 2003, resetear las horas a 00:00:00 (sin hora específica)
-          fechaSeguimiento.setHours(0, 0, 0, 0)
+          // Calcular fecha 2 días hábiles en el futuro manteniendo las horas del evento original
+          const fechaOriginalInicio = new Date(fechaInicio!)
+          const fechaSeguimiento = addBusinessDays(fechaOriginalInicio, 2)
+          // Mantener las mismas horas del evento original (SKU 2002)
+          fechaSeguimiento.setHours(fechaOriginalInicio.getHours(), fechaOriginalInicio.getMinutes(), fechaOriginalInicio.getSeconds(), fechaOriginalInicio.getMilliseconds())
 
+          const fechaOriginalFin = new Date(fechaFin!)
           const fechaFinSeguimiento = new Date(fechaSeguimiento)
-          // Para SKU 2003, la fecha fin también debe ser sin hora específica (00:00:00)
-          fechaFinSeguimiento.setHours(0, 0, 0, 0)
+          // Calcular la duración del evento original y aplicarla al evento de seguimiento
+          const duracionEvento = fechaOriginalFin.getTime() - fechaOriginalInicio.getTime()
+          fechaFinSeguimiento.setTime(fechaSeguimiento.getTime() + duracionEvento)
 
           // Preparar datos para el evento de seguimiento (sin laboratoristas ni equipos)
           const eventoSeguimiento = {
