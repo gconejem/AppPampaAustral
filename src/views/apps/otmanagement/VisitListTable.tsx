@@ -2720,7 +2720,14 @@ const VisitListTable = ({
                       Cliente - N° Obra: <strong>{selectedVisit.cliente?.nombreCliente || '---'} - {selectedVisit.obra?.numeroObra || '---'}</strong>
                     </Typography>
                     <Typography variant='body2' sx={{ mb: 1 }}>
-                      Fecha Visita: <strong>{selectedVisit.fechaInicio ? parseDateFromBackend(selectedVisit.fechaInicio.toString()).toLocaleDateString('es-ES') : '---'}</strong>
+                      Fecha Visita: <strong>{selectedVisit.fechaInicio ? (() => {
+                        const fechaInicio = parseDateFromBackend(selectedVisit.fechaInicio.toString())
+                        const fechaFin = selectedVisit.fechaFin ? parseDateFromBackend(selectedVisit.fechaFin.toString()) : null
+                        const fecha = fechaInicio.toLocaleDateString('es-ES')
+                        const horaInicio = `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
+                        const horaFin = fechaFin ? `${fechaFin.getHours().toString().padStart(2, '0')}:${fechaFin.getMinutes().toString().padStart(2, '0')}` : '---'
+                        return `${fecha} - ${horaInicio} ${horaFin}`
+                      })() : '---'}</strong>
                     </Typography>
                     <Typography variant='body2' sx={{ mb: 1 }}>
                       Laboratorista: <strong>{selectedVisit.asignados?.[0]?.user?.name || '---'}</strong>
