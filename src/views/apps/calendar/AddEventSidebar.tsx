@@ -2390,10 +2390,10 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
 
               {/* 2da Visita (checkbox) */}
               <Grid item xs={12} sm={1}>
-                <FormControlLabel
+                {/* <FormControlLabel
                   control={<Checkbox checked={esSegundaVisita} onChange={e => setEsSegundaVisita(e.target.checked)} />}
                   label='2a Visita'
-                />
+                /> */}
               </Grid>
 
               {/* Botón Agregar Servicio */}

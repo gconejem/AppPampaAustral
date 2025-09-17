@@ -2064,7 +2064,7 @@ const DuplicateEventSidebar = ({
 
                   {/* Segunda visita */}
                   <Grid item xs={12} sm={1}>
-                    <FormControlLabel
+                    {/* <FormControlLabel
                       control={
                         <Checkbox
                           checked={esSegundaVisita}
@@ -2072,7 +2072,7 @@ const DuplicateEventSidebar = ({
                         />
                       }
                       label='2da visita'
-                    />
+                    /> */}
                   </Grid>
 
                   {/* Botón agregar */}
