@@ -934,7 +934,99 @@ const DuplicateEventSidebar = ({
         throw new Error(error.message || 'Error al duplicar la visita')
       }
 
-      // Cerrar sidebar y mostrar mensaje de éxito
+      // Verificar si algún servicio tiene SKU 2002 Y está marcado para segunda visita para crear evento automático
+      const tieneSKU2002 = serviciosAgendados.some(servicio => servicio.codigo === '2002' && servicio.esSegundaVisita)
+
+      if (tieneSKU2002) {
+        try {
+          // Buscar el servicio con SKU 2003
+          const servicio2003 = servicios.find(s => s.sku === '2003')
+
+          if (servicio2003) {
+            // Calcular fecha 2 días hábiles en el futuro manteniendo las horas del evento original
+            const addBusinessDays = (date: Date, businessDays: number): Date => {
+              const result = new Date(date)
+              let daysAdded = 0
+
+              while (daysAdded < businessDays) {
+                result.setDate(result.getDate() + 1)
+                // 0 = Domingo, 6 = Sábado
+                const dayOfWeek = result.getDay()
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                  daysAdded++
+                }
+              }
+
+              return result
+            }
+
+            const fechaOriginalInicio = new Date(fechaInicio!)
+            const fechaSeguimiento = addBusinessDays(fechaOriginalInicio, 2)
+            // Mantener las mismas horas del evento original (SKU 2002)
+            fechaSeguimiento.setHours(fechaOriginalInicio.getHours(), fechaOriginalInicio.getMinutes(), fechaOriginalInicio.getSeconds(), fechaOriginalInicio.getMilliseconds())
+
+            const fechaOriginalFin = new Date(fechaFin!)
+            const fechaFinSeguimiento = new Date(fechaSeguimiento)
+            // Calcular la duración del evento original y aplicarla al evento de seguimiento
+            const duracionEvento = fechaOriginalFin.getTime() - fechaOriginalInicio.getTime()
+            fechaFinSeguimiento.setTime(fechaSeguimiento.getTime() + duracionEvento)
+
+            // Función auxiliar para formatear fecha para backend
+            const formatDateForBackendPreserveTime = (date: Date): string => {
+              const year = date.getFullYear()
+              const month = String(date.getMonth() + 1).padStart(2, '0')
+              const day = String(date.getDate()).padStart(2, '0')
+              const hours = String(date.getHours()).padStart(2, '0')
+              const minutes = String(date.getMinutes()).padStart(2, '0')
+              const seconds = String(date.getSeconds()).padStart(2, '0')
+
+              return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+            }
+
+            // Preparar datos para el evento de seguimiento (sin laboratoristas ni equipos)
+            const eventoSeguimiento = {
+              ...visitaData,
+              titulo: `Seguimiento ${cliente?.razonSocial} - ${servicio2003.nombre} (${fechaSeguimiento.toLocaleDateString('es-ES')}) - DUPLICADA`,
+              fechaInicio: formatDateForBackendPreserveTime(fechaSeguimiento),
+              fechaFin: formatDateForBackendPreserveTime(fechaFinSeguimiento),
+              servicios: [{
+                codigo: servicio2003.sku,
+                servicio: servicio2003.norma ? `${servicio2003.nombre} - ${servicio2003.norma}` : servicio2003.nombre,
+                cantidad: 1,
+                esSegundaVisita: true,
+                id: parseInt(servicio2003.sku)
+              }],
+              laboratoristas: [], // Sin laboratoristas asignados
+              equipos: [], // Sin equipos asignados
+              observaciones: `Evento de seguimiento automático generado por servicio SKU 2002. ${visitaData.observaciones || ''}`.trim()
+            }
+
+            // Crear el evento de seguimiento
+            const seguimientoResponse = await fetch('/api/agenda', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(eventoSeguimiento)
+            })
+
+            if (seguimientoResponse.ok) {
+              toast.success('Visita duplicada exitosamente. Se ha programado automáticamente una visita de seguimiento para 2 días hábiles después.')
+            } else {
+              toast.success('Visita duplicada exitosamente. Error al crear la visita de seguimiento automática.')
+            }
+          } else {
+            toast.success('Visita duplicada exitosamente. No se pudo encontrar el servicio SKU 2003 para el seguimiento automático.')
+          }
+        } catch (error) {
+          console.error('Error al crear evento de seguimiento:', error)
+          toast.success('Visita duplicada exitosamente. Error al crear la visita de seguimiento automática.')
+        }
+      } else {
+        toast.success('Visita duplicada exitosamente')
+      }
+
+      // Cerrar sidebar
       handleDuplicateEventSidebarToggle()
 
       // Recargar la lista de visitas tras guardar
@@ -2242,7 +2334,26 @@ const DuplicateEventSidebar = ({
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell>{servicio.esSegundaVisita ? 'Sí' : 'No'}</TableCell>
+                            <TableCell>
+                              {editingIndex === index ? (
+                                <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                      checked={editingService?.esSegundaVisita !== undefined ? editingService.esSegundaVisita : servicio.esSegundaVisita}
+                                      onChange={e => {
+                                        const newService = { ...editingService!, esSegundaVisita: e.target.checked }
+                                        setEditingService(newService)
+                                      }}
+                                      size='small'
+                                    />
+                                  }
+                                  label='Sí'
+                                  sx={{ m: 0 }}
+                                />
+                              ) : (
+                                <span>{servicio.esSegundaVisita ? 'Sí' : 'No'}</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               {editingIndex === index ? (
                                 <Box display='flex' alignItems='center' gap={1}>

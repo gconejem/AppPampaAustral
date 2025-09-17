@@ -299,7 +299,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
   const [editingServiceData, setEditingServiceData] = useState<{
     cantidad: string
     observacion: string
-  }>({ cantidad: '', observacion: '' })
+    esSegundaVisita: boolean
+  }>({ cantidad: '', observacion: '', esSegundaVisita: false })
 
   // Nuevo estado para los contactos de la obra
   const [contactos, setContactos] = useState<ContactoAgendaForm[]>([])
@@ -935,8 +936,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       throw new Error(error.message || 'Error al crear la agenda')
     }
 
-    // Verificar si algún servicio tiene SKU 2002 para crear evento automático
-    const tieneSKU2002 = serviciosAgendados.some(servicio => servicio.codigo === '2002')
+    // Verificar si algún servicio tiene SKU 2002 Y está marcado para segunda visita para crear evento automático
+    const tieneSKU2002 = serviciosAgendados.some(servicio => servicio.codigo === '2002' && servicio.esSegundaVisita)
 
     if (tieneSKU2002) {
       try {
@@ -1028,7 +1029,8 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     setEditingServiceIndex(index)
     setEditingServiceData({
       cantidad: serviciosAgendados[index].cantidad.toString(),
-      observacion: serviciosAgendados[index].observacion || ''
+      observacion: serviciosAgendados[index].observacion || '',
+      esSegundaVisita: serviciosAgendados[index].esSegundaVisita
     })
   }
 
@@ -1040,19 +1042,20 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
           index === editingServiceIndex ? {
             ...servicio,
             cantidad: nuevaCantidad,
-            observacion: editingServiceData.observacion || undefined
+            observacion: editingServiceData.observacion || undefined,
+            esSegundaVisita: editingServiceData.esSegundaVisita
           } : servicio
         )
         setServiciosAgendados(updatedServicios)
       }
     }
     setEditingServiceIndex(null)
-    setEditingServiceData({ cantidad: '', observacion: '' })
+    setEditingServiceData({ cantidad: '', observacion: '', esSegundaVisita: false })
   }
 
   const handleCancelServiceEdit = () => {
     setEditingServiceIndex(null)
-    setEditingServiceData({ cantidad: '', observacion: '' })
+    setEditingServiceData({ cantidad: '', observacion: '', esSegundaVisita: false })
   }
 
 
@@ -2460,7 +2463,23 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{servicio.esSegundaVisita ? 'Sí' : 'No'}</TableCell>
+                      <TableCell>
+                        {editingServiceIndex === index ? (
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={editingServiceData.esSegundaVisita}
+                                onChange={(e) => setEditingServiceData(prev => ({ ...prev, esSegundaVisita: e.target.checked }))}
+                                size='small'
+                              />
+                            }
+                            label='Sí'
+                            sx={{ m: 0 }}
+                          />
+                        ) : (
+                          <span>{servicio.esSegundaVisita ? 'Sí' : 'No'}</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {editingServiceIndex === index ? (
                           <Box display='flex' alignItems='center' gap={1}>
