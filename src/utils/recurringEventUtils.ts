@@ -1,4 +1,5 @@
 import { RecurringEventData } from '@/views/apps/calendar/modals/RecurringEventModal'
+import { formatDateForBackend } from './dateUtils'
 
 export interface RecurringEventInstance {
     fecha: Date
@@ -31,10 +32,8 @@ export function generateRecurringEventInstances(config: RecurringEventData): Rec
     while (count < maxEvents && currentDate <= fechaTermino) {
         if (frecuencia === 'diaria') {
             const eventoInicio = new Date(currentDate)
-            // Preservar la hora original o usar 00:00 si no hay hora específica
-            if (fechaInicio.getHours() === 0 && fechaInicio.getMinutes() === 0) {
-                eventoInicio.setHours(0, 0, 0, 0)
-            }
+            // Siempre preservar la hora original del evento (incluyendo 00:00 si fue seleccionada)
+            eventoInicio.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), fechaInicio.getSeconds(), fechaInicio.getMilliseconds())
             const eventoFin = new Date(eventoInicio.getTime() + duracionMinutos)
 
             instancias.push({
@@ -56,12 +55,8 @@ export function generateRecurringEventInstances(config: RecurringEventData): Rec
 
                 const eventoInicio = new Date(weekStart)
                 eventoInicio.setDate(weekStart.getDate() + dia)
-                // Preservar la hora original o usar 00:00 si no hay hora específica
-                if (fechaInicio.getHours() === 0 && fechaInicio.getMinutes() === 0) {
-                    eventoInicio.setHours(0, 0, 0, 0)
-                } else {
-                    eventoInicio.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), 0, 0)
-                }
+                // Siempre preservar la hora original del evento (incluyendo 00:00 si fue seleccionada)
+                eventoInicio.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), fechaInicio.getSeconds(), fechaInicio.getMilliseconds())
 
                 // Solo agregar si la fecha está dentro del rango válido
                 if (eventoInicio >= fechaInicio && eventoInicio <= fechaTermino) {
@@ -87,10 +82,8 @@ export function generateRecurringEventInstances(config: RecurringEventData): Rec
             }
         } else if (frecuencia === 'mensual') {
             const eventoInicio = new Date(currentDate)
-            // Preservar la hora original o usar 00:00 si no hay hora específica
-            if (fechaInicio.getHours() === 0 && fechaInicio.getMinutes() === 0) {
-                eventoInicio.setHours(0, 0, 0, 0)
-            }
+            // Siempre preservar la hora original del evento (incluyendo 00:00 si fue seleccionada)
+            eventoInicio.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), fechaInicio.getSeconds(), fechaInicio.getMilliseconds())
             const eventoFin = new Date(eventoInicio.getTime() + duracionMinutos)
 
             if (eventoInicio <= fechaTermino) {
@@ -113,22 +106,6 @@ export function generateRecurringEventInstances(config: RecurringEventData): Rec
     }
 
     return instancias.sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-}
-
-/**
- * Formatea una fecha para el backend preservando la hora exacta
- */
-function formatDateForBackend(date: Date): string {
-    // Si la fecha tiene hora 00:00, mantenerla así sin ajustes de zona horaria
-    if (date.getHours() === 0 && date.getMinutes() === 0) {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}T00:00:00.000Z`
-    }
-
-    // Para otras horas, usar el formato ISO normal
-    return date.toISOString()
 }
 
 /**

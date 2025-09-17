@@ -272,12 +272,8 @@ function generateRecurringDates(config: RecurringEventData): Date[] {
         for (const dia of diasSemana) {
             const eventDate = new Date(startOfWeek)
             eventDate.setDate(startOfWeek.getDate() + dia)
-            // Preservar la hora original o usar 00:00 si no hay hora específica
-            if (fechaInicio.getHours() === 0 && fechaInicio.getMinutes() === 0) {
-                eventDate.setHours(0, 0, 0, 0)
-            } else {
-                eventDate.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), 0, 0)
-            }
+            // Siempre preservar la hora original del evento (incluyendo 00:00 si fue seleccionada)
+            eventDate.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), fechaInicio.getSeconds(), fechaInicio.getMilliseconds())
 
             if (eventDate >= fechaInicio && eventDate <= fechaTermino && count < maxEvents) {
                 eventos.push(new Date(eventDate))
