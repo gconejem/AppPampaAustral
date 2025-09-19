@@ -11,15 +11,20 @@ interface EventPreviewProps {
   event: any | null
 }
 
-type StatusType = 'CREADA' | 'AGENDADA' | 'COMPLETADA' | 'SUSPENDIDA' | 'REPROGRAMADA'
+type StatusType = 'CREADA' | 'ELIMINADA' | 'AGENDADA' | 'SUSPENDIDA' | 'SUSPENDIDA_TERRENO' | 'COMPLETADA' | 'EN_REVISION' | 'ANULADA' | 'RECIBIDA_OK' | 'CODIFICADA'
 
 // Definir colores por estado (mismos que en Calendar.tsx)
 const statusColors: Record<StatusType, string> = {
   CREADA: '#9C27B0', // Púrpura
+  ELIMINADA: '#424242', // Gris oscuro
   AGENDADA: '#4CAF50', // Verde
-  COMPLETADA: '#2196F3', // Azul
   SUSPENDIDA: '#F44336', // Rojo
-  REPROGRAMADA: '#FF9800' // Naranja
+  SUSPENDIDA_TERRENO: '#D32F2F', // Rojo más oscuro
+  COMPLETADA: '#2196F3', // Azul
+  EN_REVISION: '#FF9800', // Naranja
+  ANULADA: '#795548', // Marrón
+  RECIBIDA_OK: '#8BC34A', // Verde claro
+  CODIFICADA: '#607D8B' // Azul gris
 }
 
 const EventPreview = ({ open, onClose, event }: EventPreviewProps) => {
