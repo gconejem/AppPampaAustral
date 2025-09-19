@@ -939,7 +939,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         contactos: contactos
       }
 
-      await createSingleEvent(visitaData)
+      await createSingleEvent(visitaData, estadoFinal)
 
     } catch (error: any) {
       console.error('Error:', error)
@@ -947,7 +947,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
     }
   }
 
-  const createSingleEvent = async (visitaData: any) => {
+  const createSingleEvent = async (visitaData: any, estadoFinal: string) => {
     console.log('Datos completos a enviar:', visitaData)
 
     // Enviar la solicitud POST para crear el evento
@@ -1039,6 +1039,45 @@ ${visitaData.observaciones ? `Observaciones adicionales: ${visitaData.observacio
       }
     } else {
       toast.success('Visita creada exitosamente')
+    }
+
+    // Mostrar mensaje informativo si el evento quedó con estado CREADA por falta de campos
+    if (estadoFinal === 'CREADA') {
+      const camposFaltantes = []
+
+      const tieneFechaInicio = !!formData.fechaInicio
+      const tieneFechaFin = !!formData.fechaFin
+      const tieneHoraInicio = !!fechaInicio && (fechaInicio.getHours() !== 0 || fechaInicio.getMinutes() !== 0)
+      const tieneHoraFin = !!fechaFin && (fechaFin.getHours() !== 0 || fechaFin.getMinutes() !== 0)
+      const tieneLaboratoristas = laboratoristasAgendados.length > 0
+      const tieneEquipos = equiposAgendados.length > 0
+
+      if (!tieneFechaInicio) camposFaltantes.push('Fecha de inicio')
+      if (!tieneFechaFin) camposFaltantes.push('Fecha de fin')
+      if (!tieneHoraInicio) camposFaltantes.push('Hora de inicio')
+      if (!tieneHoraFin) camposFaltantes.push('Hora de fin')
+      if (!tieneLaboratoristas) camposFaltantes.push('Laboratoristas')
+      if (!tieneEquipos) camposFaltantes.push('Equipos')
+
+      if (camposFaltantes.length > 0) {
+        toast(`ℹ️ El evento se creó con estado "Creada". Para que pase a "Agendada" debe completar: ${camposFaltantes.join(', ')}`, {
+          duration: 6000,
+          style: {
+            background: '#e3f2fd',
+            color: '#1976d2',
+            border: '1px solid #2196f3'
+          }
+        })
+      }
+    } else if (estadoFinal === 'AGENDADA') {
+      toast(`✅ El evento se creó con estado "Agendada" porque tiene todos los campos requeridos completos.`, {
+        duration: 4000,
+        style: {
+          background: '#e8f5e8',
+          color: '#2e7d32',
+          border: '1px solid #4caf50'
+        }
+      })
     }
 
     // Cerrar sidebar
