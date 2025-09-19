@@ -156,6 +156,12 @@ const Calendar = (props: CalenderProps) => {
     return nombre ? getInitials(nombre) : ''
   }
 
+  // Helper function to format status for display (replace underscores with spaces)
+  const formatStatusForDisplay = (status: string): string => {
+    if (!status) return 'AGENDADA'
+    return status.replace(/_/g, ' ')
+  }
+
   // Helper function to update date or date range after reprogramming
   const updateDateAfterReprogramming = (fechaInicio: Date, fechaFin: Date): Date => {
     if (props.selectedDateRange && props.onDateRangeChange) {
@@ -1671,7 +1677,7 @@ const Calendar = (props: CalenderProps) => {
                   color: ${statusColors[info.event.extendedProps?.estado as StatusType] || statusColors.AGENDADA};
                   text-align: center;
                 ">
-                  ${info.event.extendedProps?.estado || 'AGENDADA'}
+                  ${formatStatusForDisplay(info.event.extendedProps?.estado || 'AGENDADA')}
                 </div>
               `
 
@@ -1978,7 +1984,7 @@ const Calendar = (props: CalenderProps) => {
         const laboratorista = getLaboratoristaInitials(info.event.extendedProps?.asignados || [])
 
         // Formatear líneas de información
-        const linea1 = `${horaInicio} - ${horaFin} ${estado}`
+        const linea1 = `${horaInicio} - ${horaFin} ${formatStatusForDisplay(estado)}`
         const linea2 = numeroObra && cliente ? `${numeroObra} - ${cliente}` : (numeroObra || cliente || '')
         const linea3 = comuna
         const linea4 = laboratorista
