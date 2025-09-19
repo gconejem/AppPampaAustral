@@ -888,6 +888,34 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
       }
 
+      // Lógica para determinar el estado automáticamente
+      let estadoFinal = estado
+
+      // Si el estado actual es CREADA, verificar si se cumplen las condiciones para cambiar a AGENDADA
+      if (estado === 'CREADA') {
+        const tieneFechaInicio = !!formData.fechaInicio
+        const tieneFechaFin = !!formData.fechaFin
+        const tieneHoraInicio = !!fechaInicio && (fechaInicio.getHours() !== 0 || fechaInicio.getMinutes() !== 0)
+        const tieneHoraFin = !!fechaFin && (fechaFin.getHours() !== 0 || fechaFin.getMinutes() !== 0)
+        const tieneLaboratoristas = laboratoristasAgendados.length > 0
+        const tieneEquipos = equiposAgendados.length > 0
+
+        // Si se cumplen todas las condiciones, cambiar a AGENDADA
+        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas && tieneEquipos) {
+          estadoFinal = 'AGENDADA'
+          console.log('Creando evento con estado AGENDADA - se cumplen todas las condiciones')
+        } else {
+          console.log('Creando evento con estado CREADA - no se cumplen todas las condiciones:', {
+            tieneFechaInicio,
+            tieneFechaFin,
+            tieneHoraInicio,
+            tieneHoraFin,
+            tieneLaboratoristas,
+            tieneEquipos
+          })
+        }
+      }
+
       // Generar título automáticamente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
       const serviciosPrincipales = serviciosAgendados.map(s => s.servicio).join(', ')
@@ -899,7 +927,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
       const visitaData = {
         ...formData,
         titulo: tituloGenerado,
-        estado: estado,
+        estado: estadoFinal,
         referencia: selectedReferencia,
         georreferencia: selectedGeorreferencia,
         servicios: serviciosAgendados.map(servicio => ({
