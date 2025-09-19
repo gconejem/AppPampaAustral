@@ -60,6 +60,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { es } from 'date-fns/locale'
+import * as XLSX from 'xlsx'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -272,7 +273,7 @@ const VisitListTable = ({
   const [newStatus, setNewStatus] = useState('')
   const [alertOpen, setAlertOpen] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error'>('success')
+  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error' | 'warning'>('success')
 
   // Nuevo estado para manejar selección múltiple
   const [selectedVisits, setSelectedVisits] = useState<Agenda[]>([])
@@ -1841,6 +1842,101 @@ const VisitListTable = ({
     filterProducts(searchTerm, selectedArea, selectedTipo, selectedFamilia, event.target.checked)
   }
 
+  // Función para exportar a Excel
+  const handleExportToExcel = () => {
+    if (selectedVisits.length === 0) {
+      setAlertSeverity('warning')
+      setAlertMessage('No hay visitas seleccionadas para exportar')
+      setAlertOpen(true)
+      return
+    }
+
+    try {
+      // Preparar los datos para el Excel
+      const excelData = selectedVisits.map(visit => {
+        const fechaInicio = parseDateFromBackend(visit.fechaInicio.toString())
+        const fecha = fechaInicio.toLocaleDateString('es-ES')
+        const hora = `${fechaInicio.getHours().toString().padStart(2, '0')}:${fechaInicio.getMinutes().toString().padStart(2, '0')}`
+
+        // Formatear servicios para Excel - mejor presentación para múltiples servicios
+        const servicios = visit.servicios && visit.servicios.length > 0
+          ? visit.servicios.map((s, index) => {
+            const numero = visit.servicios!.length > 1 ? `${index + 1}. ` : ''
+            const observacion = s.observacion ? ` | Obs: ${s.observacion}` : ''
+            return `${numero}${s.servicio} (Cantidad: ${s.cantidad}${observacion})`
+          }).join('\n')
+          : 'Sin servicios'
+
+        return {
+          'Fecha': fecha,
+          'Hora': hora,
+          'Laboratorista': visit.asignados?.[0]?.user?.name || 'Sin Asignar',
+          'Cliente': visit.cliente?.nombreCliente || 'Sin Cliente',
+          'RUT Cliente': visit.cliente?.rut || 'Sin RUT',
+          'Número Obra': visit.obra?.numeroObra || 'Sin Obra',
+          'Nombre Obra': visit.obra?.nombreObra || 'Sin Obra',
+          'Comuna': visit.obra?.comuna || 'Sin Comuna',
+          'Región': visit.obra?.region || 'Sin Región',
+          'Estado': visit.estado.replace(/_/g, ' '), // Reemplazar guiones bajos por espacios
+          'Hora Llegada': visit.horaLlegada || '---',
+          'Hora Salida': visit.horaSalida || '---',
+          'Movilización': visit.movilizacion || '---',
+          'Km Adicionales': visit.kmAdicionales || '---',
+          'Título': visit.titulo || '---',
+          'Tipo Visita': visit.tipoVisita || '---',
+          'Servicios': servicios
+        }
+      })
+
+      // Crear el libro de trabajo de Excel
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Visitas')
+
+      // Ajustar el ancho de las columnas
+      const colWidths = [
+        { wch: 12 }, // Fecha
+        { wch: 8 },  // Hora
+        { wch: 20 }, // Laboratorista
+        { wch: 25 }, // Cliente
+        { wch: 15 }, // RUT Cliente
+        { wch: 15 }, // Número Obra
+        { wch: 30 }, // Nombre Obra
+        { wch: 15 }, // Comuna
+        { wch: 15 }, // Región
+        { wch: 15 }, // Estado
+        { wch: 12 }, // Hora Llegada
+        { wch: 12 }, // Hora Salida
+        { wch: 15 }, // Movilización
+        { wch: 15 }, // Km Adicionales
+        { wch: 25 }, // Título
+        { wch: 15 }, // Tipo Visita
+        { wch: 50 }  // Servicios
+      ]
+      worksheet['!cols'] = colWidths
+
+      // Generar nombre del archivo con fecha actual
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS
+      const fileName = `visitas_seleccionadas_${dateStr}_${timeStr}.xlsx`
+
+      // Descargar el archivo
+      XLSX.writeFile(workbook, fileName)
+
+      // Mostrar mensaje de éxito
+      setAlertSeverity('success')
+      setAlertMessage(`Se exportaron ${selectedVisits.length} visitas a Excel correctamente`)
+      setAlertOpen(true)
+
+    } catch (error) {
+      console.error('Error al exportar a Excel:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al exportar a Excel: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      setAlertOpen(true)
+    }
+  }
+
   const columnHelper = createColumnHelper<Agenda>()
 
   const columns = useMemo(
@@ -2544,7 +2640,19 @@ const VisitListTable = ({
                   Limpiar Selección
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={4} />
+              <Grid item xs={12} sm={2}>
+                <Button
+                  variant='contained'
+                  color='success'
+                  fullWidth
+                  onClick={handleExportToExcel}
+                  disabled={selectedVisits.length === 0}
+                  startIcon={<i className='ri-file-excel-2-line' />}
+                >
+                  Exportar a Excel ({selectedVisits.length})
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={2} />
 
             </Grid>
           </Box>
