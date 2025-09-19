@@ -2054,17 +2054,28 @@ const VisitListTable = ({
           )
         }
       ),
-      // Nueva columna: Inicio / Fin (vacía por ahora)
+      // Nueva columna: Inicio / Fin
       columnHelper.accessor(
-        row => '',
+        row => ({
+          horaLlegada: row.horaLlegada || '',
+          horaSalida: row.horaSalida || ''
+        }),
         {
           id: 'inicioFin',
           header: 'Inicio / Fin',
-          cell: info => (
-            <Typography className='capitalize' color='text.primary'>
-              {info.getValue()}
-            </Typography>
-          )
+          cell: info => {
+            const data = info.getValue()
+            return (
+              <Box>
+                <Typography variant='body2' color='text.primary'>
+                  {data.horaLlegada || '---'}
+                </Typography>
+                <Typography variant='caption' color='text.secondary'>
+                  {data.horaSalida || '---'}
+                </Typography>
+              </Box>
+            )
+          }
         }
       ),
       // Nueva columna: Estado
