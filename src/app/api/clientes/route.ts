@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
 import { createCliente, getClientes, getClienteById, updateCliente, deleteCliente } from './index'
 
 // GET - Obtener todos los clientes

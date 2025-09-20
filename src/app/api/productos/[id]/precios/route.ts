@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -24,9 +24,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         precio: producto.precio,
         lista: producto.listaPrecio
           ? {
-              id: producto.listaPrecio.id,
-              nombre: producto.listaPrecio.nombre
-            }
+            id: producto.listaPrecio.id,
+            nombre: producto.listaPrecio.nombre
+          }
           : null
       }
     })
