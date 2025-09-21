@@ -28,6 +28,8 @@ import interactionPlugin from '@fullcalendar/interaction'
 import esLocale from '@fullcalendar/core/locales/es'
 import axios from 'axios'
 import { useSnackbar } from 'notistack'
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 // Component Imports
 import EventPreview from './preview/EventPreview'
@@ -1150,14 +1152,127 @@ const Calendar = (props: CalenderProps) => {
     setReportsMenuAnchorEl(null)
   }
 
+  // Función para formatear los datos para Excel
+  const formatDataForExcel = () => {
+    return filteredEvents.map(event => {
+      const eventDate = new Date(event.start as string)
+      const fecha = eventDate.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+
+      const horaInicio = event.start ? formatEventTime(new Date(event.start as string)) : ''
+      const horaFin = event.end ? formatEventTime(new Date(event.end as string)) : ''
+
+      const cliente = event.extendedProps?.cliente?.nombreCliente || 'Sin Cliente'
+      const numeroObra = event.extendedProps?.obra?.numeroObra || ''
+      const obra = event.extendedProps?.obra?.nombreObra || event.extendedProps?.direccion || 'Sin ubicación'
+      const comuna = event.extendedProps?.comuna || 'Sin comuna'
+      const estado = formatStatusForDisplay(event.extendedProps?.estado || 'AGENDADA')
+
+      // Formatear laboratoristas
+      const laboratoristas = event.extendedProps?.asignados || []
+      const laboratoristasText = laboratoristas.map((asignado: any) => {
+        const nombre = asignado.user?.name || asignado.user?.nombre || asignado.nombre || 'Sin nombre'
+        return nombre
+      }).join('\n')
+
+      // Formatear servicios
+      const servicios = event.extendedProps?.servicios || []
+      const serviciosText = servicios.map((servicio: any) => {
+        if (typeof servicio === 'string') return servicio
+        return servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+      }).join('\n')
+
+      return {
+        Fecha: fecha,
+        'Hora Inicio': horaInicio,
+        'Hora Fin': horaFin,
+        Cliente: cliente,
+        'Número de Obra': numeroObra,
+        Obra: obra,
+        Comuna: comuna,
+        Estado: estado,
+        Laboratoristas: laboratoristasText || 'Sin asignar',
+        Servicios: serviciosText || 'Sin servicios'
+      }
+    })
+  }
+
   const handleReportAction = (action: string) => {
     switch (action) {
       case 'exportarAgenda':
-        console.log('Exportar Agenda')
-        // Aquí iría la lógica para exportar la agenda
-        enqueueSnackbar('Funcionalidad de exportar agenda en desarrollo', {
-          variant: 'info'
-        })
+        try {
+          // Obtener los datos formateados
+          const data = formatDataForExcel()
+
+          if (data.length === 0) {
+            enqueueSnackbar('No hay eventos para exportar', {
+              variant: 'warning'
+            })
+            return
+          }
+
+          // Crear el workbook y la hoja de trabajo
+          const wb = XLSX.utils.book_new()
+          const ws = XLSX.utils.json_to_sheet(data)
+
+          // Ajustar el ancho de las columnas
+          const colWidths = [
+            { wch: 12 }, // Fecha
+            { wch: 10 }, // Hora Inicio
+            { wch: 10 }, // Hora Fin
+            { wch: 25 }, // Cliente
+            { wch: 15 }, // Número de Obra
+            { wch: 30 }, // Obra
+            { wch: 15 }, // Comuna
+            { wch: 12 }, // Estado
+            { wch: 35 }, // Laboratoristas (más ancho para múltiples líneas)
+            { wch: 40 }  // Servicios (más ancho para múltiples líneas)
+          ]
+          ws['!cols'] = colWidths
+
+          // Ajustar la altura de las filas para mostrar correctamente los saltos de línea
+          const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+          for (let row = range.s.r + 1; row <= range.e.r; row++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: 8 }) // Columna I (Laboratoristas)
+            if (ws[cellAddress] && ws[cellAddress].v && ws[cellAddress].v.includes('\n')) {
+              ws[cellAddress].s = ws[cellAddress].s || {}
+              ws[cellAddress].s.alignment = ws[cellAddress].s.alignment || {}
+              ws[cellAddress].s.alignment.wrapText = true
+            }
+
+            const cellAddressServicios = XLSX.utils.encode_cell({ r: row, c: 9 }) // Columna J (Servicios)
+            if (ws[cellAddressServicios] && ws[cellAddressServicios].v && ws[cellAddressServicios].v.includes('\n')) {
+              ws[cellAddressServicios].s = ws[cellAddressServicios].s || {}
+              ws[cellAddressServicios].s.alignment = ws[cellAddressServicios].s.alignment || {}
+              ws[cellAddressServicios].s.alignment.wrapText = true
+            }
+          }
+
+          // Agregar la hoja al workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Agenda')
+
+          // Generar el archivo Excel
+          const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' })
+
+          // Convertir a Blob y descargar
+          const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' })
+          const fechaActual = new Date().toISOString().split('T')[0]
+          const fileName = `agenda_${fechaActual}.xlsx`
+
+          saveAs(blob, fileName)
+
+          enqueueSnackbar(`¡Agenda exportada exitosamente! ${data.length} eventos incluidos`, {
+            variant: 'success'
+          })
+        } catch (error) {
+          console.error('Error al exportar agenda:', error)
+          enqueueSnackbar('Error al exportar la agenda', {
+            variant: 'error'
+          })
+        }
         break
       case 'agendaDiaria':
         console.log('Agenda Diaria Laboratorista')
@@ -1168,6 +1283,14 @@ const Calendar = (props: CalenderProps) => {
         break
     }
     handleReportsMenuClose()
+  }
+
+  // Función auxiliar para convertir string a ArrayBuffer
+  const s2ab = (s: string): ArrayBuffer => {
+    const buf = new ArrayBuffer(s.length)
+    const view = new Uint8Array(buf)
+    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF
+    return buf
   }
 
   const calendarOptions: CalendarOptions = {
