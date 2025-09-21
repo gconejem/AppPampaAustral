@@ -1205,6 +1205,22 @@ const Calendar = (props: CalenderProps) => {
     })
   }
 
+  // Función para verificar si se cumplen las condiciones para agenda diaria
+  const canShowAgendaDiaria = () => {
+    const hasLaboratoristaFilter = props.filters.laboratoristas.length > 0
+    const hasDateFilter = props.selectedDate !== null && props.selectedDate !== undefined
+
+    return hasLaboratoristaFilter && hasDateFilter
+  }
+
+  // Estado para controlar si la agenda diaria está disponible
+  const [agendaDiariaEnabled, setAgendaDiariaEnabled] = useState(false)
+
+  // useEffect para actualizar el estado cuando cambien los filtros
+  useEffect(() => {
+    setAgendaDiariaEnabled(canShowAgendaDiaria())
+  }, [props.filters.laboratoristas, props.selectedDate])
+
   const handleReportAction = (action: string) => {
     switch (action) {
       case 'exportarAgenda':
@@ -1285,9 +1301,27 @@ const Calendar = (props: CalenderProps) => {
         }
         break
       case 'agendaDiaria':
-        console.log('Agenda Diaria Laboratorista')
-        // Aquí iría la lógica para mostrar la agenda diaria del laboratorista
-        enqueueSnackbar('Funcionalidad de agenda diaria en desarrollo', {
+        if (!agendaDiariaEnabled) {
+          enqueueSnackbar('Para ver la agenda diaria debe filtrar por un laboratorista y seleccionar una fecha', {
+            variant: 'warning'
+          })
+          return
+        }
+
+        // Obtener el laboratorista seleccionado
+        const laboratoristaSeleccionado = props.filters.laboratoristas[0]
+        const fechaSeleccionada = props.selectedDate
+
+        console.log('Generando agenda diaria para:', {
+          laboratorista: laboratoristaSeleccionado,
+          fecha: fechaSeleccionada
+        })
+
+        // Aquí iría la lógica para generar la agenda diaria del laboratorista
+        const nombreLaboratorista = laboratoristaSeleccionado?.name || 'el laboratorista seleccionado'
+        const fechaFormateada = fechaSeleccionada ? new Date(fechaSeleccionada).toLocaleDateString('es-ES') : 'fecha seleccionada'
+
+        enqueueSnackbar(`Generando agenda diaria para ${nombreLaboratorista} del ${fechaFormateada}`, {
           variant: 'info'
         })
         break
@@ -3052,11 +3086,20 @@ const Calendar = (props: CalenderProps) => {
           </ListItemIcon>
           <ListItemText>Exportar Agenda</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleReportAction('agendaDiaria')}>
+        <MenuItem
+          onClick={() => handleReportAction('agendaDiaria')}
+          disabled={!agendaDiariaEnabled}
+          sx={{
+            opacity: agendaDiariaEnabled ? 1 : 0.5,
+            cursor: agendaDiariaEnabled ? 'pointer' : 'not-allowed'
+          }}
+        >
           <ListItemIcon>
-            <i className='ri-calendar-check-line' style={{ fontSize: '1.25rem' }}></i>
+            <i className='ri-calendar-check-line' style={{ fontSize: '1.25rem', opacity: agendaDiariaEnabled ? 1 : 0.5 }}></i>
           </ListItemIcon>
-          <ListItemText>Agenda Diaria Laboratorista</ListItemText>
+          <ListItemText>
+            Agenda Diaria Laboratorista
+          </ListItemText>
         </MenuItem>
       </Menu>
 
