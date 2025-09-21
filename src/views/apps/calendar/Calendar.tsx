@@ -1182,7 +1182,12 @@ const Calendar = (props: CalenderProps) => {
       const servicios = event.extendedProps?.servicios || []
       const serviciosText = servicios.map((servicio: any) => {
         if (typeof servicio === 'string') return servicio
-        return servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+
+        const nombreServicio = servicio.servicio || servicio.nombre || servicio.tipoServicio || servicio.descripcion || 'Servicio'
+        const cantidad = servicio.cantidad ? ` (Cant: ${servicio.cantidad})` : ''
+        const observaciones = servicio.observaciones ? ` - ${servicio.observaciones}` : ''
+
+        return `${nombreServicio}${cantidad}${observaciones}`
       }).join('\n')
 
       return {
@@ -1229,7 +1234,7 @@ const Calendar = (props: CalenderProps) => {
             { wch: 15 }, // Comuna
             { wch: 12 }, // Estado
             { wch: 35 }, // Laboratoristas (más ancho para múltiples líneas)
-            { wch: 40 }  // Servicios (más ancho para múltiples líneas)
+            { wch: 50 }  // Servicios (más ancho para nombre + cantidad + observaciones)
           ]
           ws['!cols'] = colWidths
 
@@ -1244,10 +1249,15 @@ const Calendar = (props: CalenderProps) => {
             }
 
             const cellAddressServicios = XLSX.utils.encode_cell({ r: row, c: 9 }) // Columna J (Servicios)
-            if (ws[cellAddressServicios] && ws[cellAddressServicios].v && ws[cellAddressServicios].v.includes('\n')) {
+            if (ws[cellAddressServicios] && ws[cellAddressServicios].v) {
               ws[cellAddressServicios].s = ws[cellAddressServicios].s || {}
               ws[cellAddressServicios].s.alignment = ws[cellAddressServicios].s.alignment || {}
               ws[cellAddressServicios].s.alignment.wrapText = true
+              // Ajustar altura de fila si hay múltiples servicios
+              if (ws[cellAddressServicios].v.includes('\n')) {
+                ws['!rows'] = ws['!rows'] || []
+                ws['!rows'][row] = { hpt: 15 * (ws[cellAddressServicios].v.split('\n').length + 1) }
+              }
             }
           }
 
