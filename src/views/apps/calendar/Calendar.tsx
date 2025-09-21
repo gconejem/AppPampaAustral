@@ -1208,9 +1208,8 @@ const Calendar = (props: CalenderProps) => {
   // Función para verificar si se cumplen las condiciones para agenda diaria
   const canShowAgendaDiaria = () => {
     const hasLaboratoristaFilter = props.filters.laboratoristas.length > 0
-    const hasDateFilter = props.selectedDate !== null && props.selectedDate !== undefined
 
-    return hasLaboratoristaFilter && hasDateFilter
+    return hasLaboratoristaFilter
   }
 
   // Estado para controlar si la agenda diaria está disponible
@@ -1219,9 +1218,9 @@ const Calendar = (props: CalenderProps) => {
   // useEffect para actualizar el estado cuando cambien los filtros
   useEffect(() => {
     setAgendaDiariaEnabled(canShowAgendaDiaria())
-  }, [props.filters.laboratoristas, props.selectedDate])
+  }, [props.filters.laboratoristas])
 
-  const handleReportAction = (action: string) => {
+  const handleReportAction = async (action: string) => {
     switch (action) {
       case 'exportarAgenda':
         try {
@@ -1302,7 +1301,7 @@ const Calendar = (props: CalenderProps) => {
         break
       case 'agendaDiaria':
         if (!agendaDiariaEnabled) {
-          enqueueSnackbar('Para ver la agenda diaria debe filtrar por un laboratorista y seleccionar una fecha', {
+          enqueueSnackbar('Para ver la agenda diaria debe filtrar por un laboratorista', {
             variant: 'warning'
           })
           return
@@ -1321,9 +1320,45 @@ const Calendar = (props: CalenderProps) => {
         const nombreLaboratorista = laboratoristaSeleccionado?.name || 'el laboratorista seleccionado'
         const fechaFormateada = fechaSeleccionada ? new Date(fechaSeleccionada).toLocaleDateString('es-ES') : 'fecha seleccionada'
 
-        enqueueSnackbar(`Generando agenda diaria para ${nombreLaboratorista} del ${fechaFormateada}`, {
-          variant: 'info'
-        })
+        try {
+          // Obtener los datos de la agenda para el laboratorista y fecha seleccionados
+          const agendaData = {
+            laboratorista: laboratoristaSeleccionado,
+            fecha: fechaSeleccionada,
+            eventos: filteredEvents
+          }
+
+          const response = await fetch('/api/agenda/pdf/diaria', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(agendaData)
+          })
+
+          if (!response.ok) {
+            throw new Error('Error al generar el PDF de agenda diaria')
+          }
+
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `agenda_diaria_${nombreLaboratorista}_${fechaFormateada}.pdf`
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+
+          enqueueSnackbar(`¡Agenda diaria generada exitosamente para ${nombreLaboratorista}!`, {
+            variant: 'success'
+          })
+        } catch (error) {
+          console.error('Error al generar agenda diaria:', error)
+          enqueueSnackbar('Error al generar la agenda diaria', {
+            variant: 'error'
+          })
+        }
         break
     }
     handleReportsMenuClose()
