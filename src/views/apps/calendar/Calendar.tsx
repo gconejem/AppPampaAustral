@@ -106,6 +106,8 @@ const Calendar = (props: CalenderProps) => {
     end: null
   })
 
+  const [reportsMenuAnchorEl, setReportsMenuAnchorEl] = useState<null | HTMLElement>(null)
+
   const [statusFilters, setStatusFilters] = useState<StatusFiltersType>({
     TODOS: false,
     CREADA: true,
@@ -1138,6 +1140,34 @@ const Calendar = (props: CalenderProps) => {
         variant: 'error'
       })
     }
+  }
+
+  const handleReportsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setReportsMenuAnchorEl(event.currentTarget)
+  }
+
+  const handleReportsMenuClose = () => {
+    setReportsMenuAnchorEl(null)
+  }
+
+  const handleReportAction = (action: string) => {
+    switch (action) {
+      case 'exportarAgenda':
+        console.log('Exportar Agenda')
+        // Aquí iría la lógica para exportar la agenda
+        enqueueSnackbar('Funcionalidad de exportar agenda en desarrollo', {
+          variant: 'info'
+        })
+        break
+      case 'agendaDiaria':
+        console.log('Agenda Diaria Laboratorista')
+        // Aquí iría la lógica para mostrar la agenda diaria del laboratorista
+        enqueueSnackbar('Funcionalidad de agenda diaria en desarrollo', {
+          variant: 'info'
+        })
+        break
+    }
+    handleReportsMenuClose()
   }
 
   const calendarOptions: CalendarOptions = {
@@ -2535,16 +2565,31 @@ const Calendar = (props: CalenderProps) => {
                   )}
                 </Box>
 
-                {selectedEvents.length > 1 && (
-                  <Button
-                    variant='contained'
-                    color='primary'
-                    startIcon={<i className='ri-edit-line'></i>}
-                    onClick={handleEditSelected}
-                  >
-                    Editar ({selectedEvents.length})
-                  </Button>
-                )}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {/* Botón de Reportes - solo visible en vista de lista */}
+                  {currentView === 'listMonth' && (
+                    <Button
+                      variant='outlined'
+                      color='primary'
+                      startIcon={<i className='ri-file-chart-line'></i>}
+                      endIcon={<i className='ri-arrow-down-s-line'></i>}
+                      onClick={handleReportsMenuOpen}
+                    >
+                      Reportes
+                    </Button>
+                  )}
+
+                  {selectedEvents.length > 1 && (
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      startIcon={<i className='ri-edit-line'></i>}
+                      onClick={handleEditSelected}
+                    >
+                      Editar ({selectedEvents.length})
+                    </Button>
+                  )}
+                </Box>
               </Box>
 
               {/* Fila de los filtros de estado */}
@@ -2852,6 +2897,34 @@ const Calendar = (props: CalenderProps) => {
           </ListItemIcon>
           <ListItemText>Eliminar Eventos</ListItemText>
         </MenuItem> */}
+      </Menu>
+
+      {/* Menú para reportes */}
+      <Menu
+        anchorEl={reportsMenuAnchorEl}
+        open={Boolean(reportsMenuAnchorEl)}
+        onClose={handleReportsMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right'
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+      >
+        <MenuItem onClick={() => handleReportAction('exportarAgenda')}>
+          <ListItemIcon>
+            <i className='ri-file-excel-line' style={{ fontSize: '1.25rem' }}></i>
+          </ListItemIcon>
+          <ListItemText>Exportar Agenda</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleReportAction('agendaDiaria')}>
+          <ListItemIcon>
+            <i className='ri-calendar-check-line' style={{ fontSize: '1.25rem' }}></i>
+          </ListItemIcon>
+          <ListItemText>Agenda Diaria Laboratorista</ListItemText>
+        </MenuItem>
       </Menu>
 
       <Snackbar
