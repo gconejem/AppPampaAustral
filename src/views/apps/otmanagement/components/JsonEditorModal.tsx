@@ -19,8 +19,8 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import JsonView from '@uiw/react-json-view'
-import { lightTheme } from '@uiw/react-json-view/light'
+import JsonView from 'react18-json-view'
+import 'react18-json-view/src/style.css'
 
 interface JsonEditorModalProps {
     open: boolean
@@ -280,15 +280,36 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                                 overflow: 'auto'
                             }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Visualización del JSON (solo lectura). Para editar, use el modo "Texto".
+                                    Visualización y edición del JSON. También puede usar el modo "Texto" para edición avanzada.
                                 </Typography>
                                 <JsonView
-                                    value={jsonData}
-                                    style={lightTheme}
-                                    enableClipboard={true}
-                                    displayDataTypes={true}
-                                    displayObjectSize={true}
+                                    src={jsonData}
                                     collapsed={2}
+                                    editable={true}
+                                    onEdit={(params) => {
+                                        console.log('JSON editado:', params)
+                                        // Actualizar el JSON cuando se edite
+                                        setJsonData(params.src)
+                                        setJsonText(JSON.stringify(params.src, null, 2))
+                                        setHasChanges(true)
+                                        setJsonError(null)
+                                    }}
+                                    onAdd={(params) => {
+                                        console.log('JSON añadido:', params)
+                                        // Actualizar el JSON cuando se añada un elemento
+                                        setJsonData(params.src)
+                                        setJsonText(JSON.stringify(params.src, null, 2))
+                                        setHasChanges(true)
+                                        setJsonError(null)
+                                    }}
+                                    onDelete={(params) => {
+                                        console.log('JSON eliminado:', params)
+                                        // Actualizar el JSON cuando se elimine un elemento
+                                        setJsonData(params.src)
+                                        setJsonText(JSON.stringify(params.src, null, 2))
+                                        setHasChanges(true)
+                                        setJsonError(null)
+                                    }}
                                 />
                             </Box>
                         ) : (
