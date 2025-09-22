@@ -29,15 +29,15 @@ interface JsonEditorModalProps {
         id: string
         jsonOT?: any
         tipoOT?: {
-            codigo?: string
-            descripcion?: string
+            codigo?: string | null
+            descripcion?: string | null
         }
         agenda?: {
             cliente?: {
-                nombreCliente?: string
+                nombreCliente?: string | null
             }
             obra?: {
-                numeroObra?: string
+                numeroObra?: string | null
             }
         }
     }
@@ -133,8 +133,13 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             }
 
             setHasChanges(false)
+            setSnackbarMessage('JSON guardado exitosamente')
+            setSnackbarOpen(true)
             onSave?.()
-            onClose()
+            // Cerrar el modal después de un pequeño delay para que se vea el mensaje
+            setTimeout(() => {
+                onClose()
+            }, 1500)
         } catch (err) {
             console.error('Error saving JSON:', err)
             setError('Error al guardar los cambios')

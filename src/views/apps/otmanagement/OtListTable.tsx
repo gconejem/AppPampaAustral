@@ -25,6 +25,7 @@ import Tooltip from '@mui/material/Tooltip'
 import type { SelectChangeEvent } from '@mui/material/Select'
 
 // Third-party Imports
+import { toast } from 'react-hot-toast'
 import {
   createColumnHelper,
   flexRender,
@@ -432,15 +433,28 @@ const OtListTable = ({
     setPdfModalOpen(true)
   }
 
-  const handleEditClick = (ot: OrdenTrabajo) => {
+  const handleEditClick = async (ot: OrdenTrabajo) => {
     console.log('Editar OT JSON:', ot.id)
-    setSelectedOT(ot)
-    setJsonModalOpen(true)
+
+    try {
+      // Cargar datos actualizados desde el backend
+      const response = await fetch(`/api/ot/${ot.id}`)
+      if (!response.ok) {
+        throw new Error('Error al cargar los datos de la OT')
+      }
+
+      const otUpdated = await response.json()
+      setSelectedOT(otUpdated)
+      setJsonModalOpen(true)
+    } catch (error) {
+      console.error('Error al cargar la OT:', error)
+      toast.error('Error al cargar los datos de la OT')
+    }
   }
 
   const handleJsonSave = () => {
-    // Recargar datos después de guardar el JSON
-    window.location.reload()
+    // Mostrar mensaje de éxito sin recargar la página
+    toast.success('JSON guardado exitosamente')
   }
 
   const renderPDFComponent = (ot: OrdenTrabajo) => {
