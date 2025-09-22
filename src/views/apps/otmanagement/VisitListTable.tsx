@@ -313,6 +313,14 @@ const VisitListTable = ({
     return selectedVisits[0].estado
   }, [selectedVisits])
 
+  // Verificar si el estado común es uno de los permitidos para cambio masivo
+  const isAllowedStatusForBulkChange = useMemo(() => {
+    if (!commonSelectedStatus) return false
+
+    const allowedStatuses = ['EN_REVISION', 'ANULADA', 'RECIBIDA_OK']
+    return allowedStatuses.includes(commonSelectedStatus)
+  }, [commonSelectedStatus])
+
   // Estado para el modal de cambio de estado especial (botón !)
   const [isSpecialStatusOpen, setIsSpecialStatusOpen] = useState(false)
   const [specialStatus, setSpecialStatus] = useState('')
@@ -2613,7 +2621,9 @@ const VisitListTable = ({
                       ? 'Seleccione al menos una visita'
                       : !allSelectedHaveSameStatus
                         ? 'Todas las visitas seleccionadas deben tener el mismo estado'
-                        : 'Editar estado de las visitas seleccionadas'
+                        : !isAllowedStatusForBulkChange
+                          ? 'Solo se pueden cambiar visitas en estado: En Revisión, Anulada o Recibida OK'
+                          : 'Editar estado de las visitas seleccionadas'
                   }
                 >
                   <span>
@@ -2622,14 +2632,9 @@ const VisitListTable = ({
                       color='warning'
                       fullWidth
                       onClick={() => {
-                        console.log('🔘 Click en Editar Seleccionadas:', {
-                          selectedCount: selectedVisits.length,
-                          allSameStatus: allSelectedHaveSameStatus,
-                          disabled: selectedVisits.length === 0 || !allSelectedHaveSameStatus
-                        })
                         setIsBulkEditOpen(true)
                       }}
-                      disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus}
+                      disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus || !isAllowedStatusForBulkChange}
                     >
                       Editar Seleccionadas ({selectedVisits.length})
                     </Button>
@@ -3345,7 +3350,7 @@ const VisitListTable = ({
                 onChange={e => setBulkNewStatus(e.target.value)}
                 size='small'
               >
-                {commonSelectedStatus && getAvailableStates(commonSelectedStatus).map(estado => (
+                {selectedVisits.length > 0 && commonSelectedStatus && getAvailableStates(commonSelectedStatus).map(estado => (
                   <MenuItem key={estado} value={estado}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
@@ -3428,7 +3433,7 @@ const VisitListTable = ({
             )}
 
             {/* Información del estado actual */}
-            {commonSelectedStatus && (
+            {selectedVisits.length > 0 && commonSelectedStatus && (
               <Box sx={{
                 p: 2,
                 backgroundColor: '#f5f5f5',
