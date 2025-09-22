@@ -3505,7 +3505,7 @@ const VisitListTable = ({
                 mb: 3
               }}>
                 <Typography variant='body2' color='text.secondary'>
-                  Estado actual: <strong>{selectedVisit.estado}</strong>
+                  Estado actual: <strong>{selectedVisit.estado.replace(/_/g, ' ')}</strong>
                 </Typography>
               </Box>
             )}
