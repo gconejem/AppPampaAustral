@@ -1,5 +1,4 @@
 import type { Prisma } from '@prisma/client'
-import type { PrismaClient } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
@@ -163,15 +162,15 @@ export const getClienteById = async (id: number) => {
 // Actualizar un cliente
 export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput) => {
   return prisma.cliente.update({
-    where: { clienteId: id },
+    where: { id },
     data,
     include: {
-      clientesContactos: {
+      ClienteContacto: {
         include: {
           contacto: true
         }
       },
-      condicionesComerciales: true
+      CondicionComercial: true
     }
   })
 }
@@ -179,7 +178,7 @@ export const updateCliente = async (id: number, data: Prisma.ClienteUpdateInput)
 // Eliminar un cliente
 export const deleteCliente = async (id: number) => {
   // Iniciamos una transacción para asegurar que todo se ejecute o nada
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  return prisma.$transaction(async (tx: typeof prisma) => {
     try {
       // 1. Eliminamos los contactos asociados
       await tx.clienteContacto.deleteMany({

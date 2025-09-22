@@ -25,18 +25,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const data = await req.json()
     const clienteId = parseInt(params.id)
 
-    // Primero crear el contacto
-    const contactoCreado = await prisma.contacto.create({
-      data: data.contacto
-    })
-
-    // Luego crear la relación ClienteContacto
     const nuevoContacto = await prisma.clienteContacto.create({
       data: {
         clienteId,
-        contactId: contactoCreado.contactId,
-        cargo: data.contacto.cargo || '',
-        isPrincipal: data.isPrincipal
+        isPrincipal: data.isPrincipal,
+        contacto: {
+          create: data.contacto
+        }
       },
       include: {
         contacto: true

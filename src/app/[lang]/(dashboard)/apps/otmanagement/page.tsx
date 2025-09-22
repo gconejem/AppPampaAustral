@@ -19,8 +19,7 @@ const getAgendaData = async () => {
         include: {
           user: true,
           aceptacionVisita: true,
-          densidad: true,
-          tipoOT: true
+          densidad: true
         }
       }
     }
@@ -44,7 +43,7 @@ const getAgendaData = async () => {
       id: ot.id.toString(),
       clave: ot.clave || '',
       estado: ot.estado,
-      tipoOT: ot.tipoOT?.codigo || '',
+      tipoOT: ot.tipoOT,
       createdAt: ot.createdAt.toISOString(),
       userId: ot.userId || '',
       user: ot.user ? {

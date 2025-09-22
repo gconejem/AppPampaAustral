@@ -12,32 +12,17 @@ interface Props {
 
 async function getContactData() {
   try {
-    const contactos = await prisma.contacto.findMany({
+    const contacts = await prisma.contacto.findMany({
       include: {
-        clientesContactos: {
+        ClienteContacto: {
           include: {
-            cliente: true
+            Cliente: true
           }
         }
       }
     })
 
-    // Mapear los datos de Prisma al tipo esperado
-    return contactos.map(contacto => ({
-      contactId: contacto.contactId,
-      nombre: contacto.nombre,
-      cargo: contacto.cargo || undefined,
-      email: contacto.email,
-      telefono1: contacto.telefono1,
-      telefono2: contacto.telefono2 || undefined,
-      comuna: contacto.comuna || undefined,
-      direccion: contacto.direccion || undefined,
-      empresa: contacto.empresa || undefined,
-      estado: contacto.estado as 'ACTIVO' | 'INACTIVO',
-      createdAt: contacto.createdAt.toISOString(),
-      updatedAt: contacto.updatedAt.toISOString(),
-      rol: 'CONTACTO' // Valor por defecto o mapear según tu lógica
-    }))
+    return contacts
   } catch (error) {
     console.error('Error fetching contacts:', error)
 

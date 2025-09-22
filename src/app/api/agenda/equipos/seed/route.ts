@@ -7,29 +7,25 @@ const equiposIniciales = [
     codigo: 'EQ-001',
     nombre: 'Densímetro Nuclear',
     descripcion: 'Equipo para medición de densidad',
-    estado: 'Activo',
-    tipoEquipoId: 1 // Asumiendo que el tipo 1 existe
+    estado: true
   },
   {
     codigo: 'EQ-002',
     nombre: 'Prensa Hidráulica',
     descripcion: 'Equipo para ensayos de compresión',
-    estado: 'Activo',
-    tipoEquipoId: 1 // Asumiendo que el tipo 1 existe
+    estado: true
   },
   {
     codigo: 'EQ-003',
     nombre: 'Tamizador',
     descripcion: 'Equipo para análisis granulométrico',
-    estado: 'Activo',
-    tipoEquipoId: 1 // Asumiendo que el tipo 1 existe
+    estado: true
   },
   {
     codigo: 'EQ-004',
     nombre: 'Cono de Arena',
     descripcion: 'Equipo para densidad in situ',
-    estado: 'Activo',
-    tipoEquipoId: 1 // Asumiendo que el tipo 1 existe
+    estado: true
   }
 ]
 

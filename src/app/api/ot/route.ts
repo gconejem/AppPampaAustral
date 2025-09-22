@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
-
 import { prisma } from '@/lib/prisma'
 
 // Función para obtener el tipo de OT basado en el código de documento

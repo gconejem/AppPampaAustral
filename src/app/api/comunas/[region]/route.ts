@@ -4,7 +4,7 @@ import { REGIONES_CHILE } from '@/data/clientData'
 
 export async function GET(request: Request, { params }: { params: { region: string } }) {
   try {
-    const region = decodeURIComponent(params.region) as keyof typeof REGIONES_CHILE
+    const region = decodeURIComponent(params.region)
     const comunas = REGIONES_CHILE[region]?.comunas || []
 
     return NextResponse.json(comunas)
