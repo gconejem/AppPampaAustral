@@ -313,6 +313,20 @@ const VisitListTable = ({
     return selectedVisits[0].estado
   }, [selectedVisits])
 
+  // Función específica para obtener estados disponibles en el modal de cambio masivo
+  const getAvailableStatesForBulkEdit = (currentStatus: string) => {
+    // Los tres estados que permiten cambio masivo entre sí
+    const bulkEditStates = ['EN_REVISION', 'ANULADA', 'RECIBIDA_OK']
+
+    if (bulkEditStates.includes(currentStatus)) {
+      // Retornar todos los estados del grupo excepto el actual
+      return bulkEditStates.filter(estado => estado !== currentStatus)
+    }
+
+    // Para otros estados, no hay cambios disponibles
+    return []
+  }
+
   // Verificar si el estado común es uno de los permitidos para cambio masivo
   const isAllowedStatusForBulkChange = useMemo(() => {
     if (!commonSelectedStatus) return false
@@ -320,6 +334,16 @@ const VisitListTable = ({
     const allowedStatuses = ['EN_REVISION', 'ANULADA', 'RECIBIDA_OK']
     return allowedStatuses.includes(commonSelectedStatus)
   }, [commonSelectedStatus])
+
+  // Estados disponibles para el modal de bulk edit
+  const availableStatesForBulkEdit = useMemo(() => {
+    return getAvailableStatesForBulkEdit(commonSelectedStatus)
+  }, [commonSelectedStatus])
+
+  // Verificar si hay estados disponibles para cambiar
+  const hasAvailableStatesForBulkEdit = useMemo(() => {
+    return availableStatesForBulkEdit.length > 0
+  }, [availableStatesForBulkEdit])
 
   // Estado para el modal de cambio de estado especial (botón !)
   const [isSpecialStatusOpen, setIsSpecialStatusOpen] = useState(false)
@@ -2622,8 +2646,10 @@ const VisitListTable = ({
                       : !allSelectedHaveSameStatus
                         ? 'Todas las visitas seleccionadas deben tener el mismo estado'
                         : !isAllowedStatusForBulkChange
-                          ? 'Solo se pueden cambiar visitas en estado: En Revisión, Anulada o Recibida OK'
-                          : 'Editar estado de las visitas seleccionadas'
+                          ? 'Solo se pueden cambiar visitas que estén en estado: En Revisión, Anulada o Recibida OK'
+                          : !hasAvailableStatesForBulkEdit
+                            ? 'No hay estados disponibles para cambiar desde el estado actual'
+                            : 'Editar estado de las visitas seleccionadas'
                   }
                 >
                   <span>
@@ -2634,7 +2660,7 @@ const VisitListTable = ({
                       onClick={() => {
                         setIsBulkEditOpen(true)
                       }}
-                      disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus || !isAllowedStatusForBulkChange}
+                      disabled={selectedVisits.length === 0 || !allSelectedHaveSameStatus || !isAllowedStatusForBulkChange || !hasAvailableStatesForBulkEdit}
                     >
                       Editar Seleccionadas ({selectedVisits.length})
                     </Button>
@@ -3350,7 +3376,7 @@ const VisitListTable = ({
                 onChange={e => setBulkNewStatus(e.target.value)}
                 size='small'
               >
-                {selectedVisits.length > 0 && commonSelectedStatus && getAvailableStates(commonSelectedStatus).map(estado => (
+                {selectedVisits.length > 0 && commonSelectedStatus && availableStatesForBulkEdit.map(estado => (
                   <MenuItem key={estado} value={estado}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
@@ -3430,27 +3456,6 @@ const VisitListTable = ({
                   />
                 )}
               </>
-            )}
-
-            {/* Información del estado actual */}
-            {selectedVisits.length > 0 && commonSelectedStatus && (
-              <Box sx={{
-                p: 2,
-                backgroundColor: '#f5f5f5',
-                borderRadius: 1,
-                border: '1px solid #e0e0e0',
-                mb: 2
-              }}>
-                <Typography variant='body2' color='text.secondary'>
-                  Estado actual de las {selectedVisits.length} visitas: <strong>{commonSelectedStatus}</strong>
-                </Typography>
-                <Typography variant='caption' color='text.secondary'>
-                  {getAvailableStates(commonSelectedStatus).length === 0 ?
-                    'No hay cambios de estado disponibles desde el estado actual.' :
-                    `Estados disponibles: ${getAvailableStates(commonSelectedStatus).map(estado => estado.replace(/_/g, ' ')).join(', ')}`
-                  }
-                </Typography>
-              </Box>
             )}
           </Box>
         </DialogContent>
