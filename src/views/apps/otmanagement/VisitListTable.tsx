@@ -2637,6 +2637,35 @@ const VisitListTable = ({
                 </Tooltip>
               </Grid>
               <Grid item xs={12} sm={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={data.length > 0 && selectedVisits.length === data.length}
+                        indeterminate={selectedVisits.length > 0 && selectedVisits.length < data.length}
+                        onChange={() => {
+                          if (selectedVisits.length === data.length) {
+                            // Deseleccionar todas
+                            console.log('🧹 Limpiando selección de visitas (desde seleccionar todo)')
+                            setSelectedVisits([])
+                            onVisitSelect(null)
+                          } else {
+                            // Seleccionar todas las visibles
+                            console.log('✅ Seleccionando todas las visitas:', data.length)
+                            setSelectedVisits(data)
+                            if (data.length > 0) {
+                              onVisitSelect(data[0])
+                            }
+                          }
+                        }}
+                      />
+                    }
+                    label="Seleccionar todo"
+                    sx={{ mr: 1 }}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={2}>
                 <Button
                   variant='outlined'
                   color='secondary'
