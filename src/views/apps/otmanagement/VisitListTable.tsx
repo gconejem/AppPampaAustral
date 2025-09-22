@@ -1593,6 +1593,12 @@ const VisitListTable = ({
         return ['SUSPENDIDA']
       case 'COMPLETADA':
         return ['EN_REVISION', 'ANULADA']
+      case 'EN_REVISION':
+        return ['ANULADA', 'RECIBIDA_OK']
+      case 'ANULADA':
+        return ['EN_REVISION', 'RECIBIDA_OK']
+      case 'RECIBIDA_OK':
+        return ['EN_REVISION', 'ANULADA']
       default:
         return []
     }
@@ -3489,6 +3495,21 @@ const VisitListTable = ({
         <DialogTitle>Cambiar Estado de la Visita</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
+            {/* Información del estado actual */}
+            {selectedVisit && (
+              <Box sx={{
+                p: 2,
+                backgroundColor: '#f5f5f5',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                mb: 3
+              }}>
+                <Typography variant='body2' color='text.secondary'>
+                  Estado actual: <strong>{selectedVisit.estado}</strong>
+                </Typography>
+              </Box>
+            )}
+
             {/* Selector de Estado */}
             <FormControl fullWidth sx={{ mb: 3 }}>
               <InputLabel id='special-estado-select-label'>Estado</InputLabel>
@@ -3579,27 +3600,6 @@ const VisitListTable = ({
                   />
                 )}
               </>
-            )}
-
-            {/* Información del estado actual */}
-            {selectedVisit && (
-              <Box sx={{
-                p: 2,
-                backgroundColor: '#f5f5f5',
-                borderRadius: 1,
-                border: '1px solid #e0e0e0',
-                mb: 2
-              }}>
-                <Typography variant='body2' color='text.secondary'>
-                  Estado actual: <strong>{selectedVisit.estado}</strong>
-                </Typography>
-                <Typography variant='caption' color='text.secondary'>
-                  {getAvailableStates(selectedVisit.estado).length === 0 ?
-                    'No hay cambios de estado disponibles desde el estado actual.' :
-                    `Estados disponibles: ${getAvailableStates(selectedVisit.estado).map(estado => estado.replace(/_/g, ' ')).join(', ')}`
-                  }
-                </Typography>
-              </Box>
             )}
           </Box>
         </DialogContent>
