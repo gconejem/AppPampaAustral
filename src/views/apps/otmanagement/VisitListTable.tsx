@@ -3372,6 +3372,21 @@ const VisitListTable = ({
         <DialogTitle>Cambiar Estado de {selectedVisits.length} Visitas</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
+            {/* Información del estado actual */}
+            {selectedVisits.length > 0 && commonSelectedStatus && (
+              <Box sx={{
+                p: 2,
+                backgroundColor: '#f5f5f5',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                mb: 3
+              }}>
+                <Typography variant='body2' color='text.secondary'>
+                  Estado actual de las {selectedVisits.length} visitas: <strong>{commonSelectedStatus.replace(/_/g, ' ')}</strong>
+                </Typography>
+              </Box>
+            )}
+
             {/* Selector de Estado */}
             <FormControl fullWidth sx={{ mb: 3 }}>
               <InputLabel id='bulk-estado-select-label'>Estado</InputLabel>
