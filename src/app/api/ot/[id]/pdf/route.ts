@@ -1028,6 +1028,338 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Muestreo de Materiales (R-12-27)
+function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
+    const jsonData = ot.jsonOT || {}
+    const { cliente, obra } = ot.agenda || {}
+
+    // Extraer datos del JSON según la estructura real
+    const respuesta = jsonData.RESPUESTA || jsonData
+    const controles = respuesta?.controles || []
+    const obsServicio = respuesta?.obs_servicio || ''
+    const muestreadoPor = respuesta?.muestreado_por || ''
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 9px;
+          line-height: 1.2;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 8px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 8px 5px;
+        }
+        
+        .logo {
+          width: 70px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 15px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 18px;
+          margin-bottom: 5px;
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 8px 5px;
+          font-size: 8px;
+        }
+        
+        .info-section {
+          margin-bottom: 8px;
+          font-size: 9px;
+          line-height: 1.4;
+        }
+        
+        .info-line {
+          margin-bottom: 4px;
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+        }
+        
+        .info-line:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 4px;
+        }
+        
+        .info-field {
+          flex: 1;
+          margin-right: 20px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .muestras-title {
+          font-weight: bold;
+          font-size: 14px;
+          margin: 15px 0 8px 0;
+        }
+        
+        .muestras-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 15px;
+          font-size: 8px;
+        }
+        
+        .muestras-table th,
+        .muestras-table td {
+          border: 1px solid #000;
+          padding: 4px;
+          vertical-align: top;
+        }
+        
+        .muestras-table th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .muestra-row {
+          page-break-inside: avoid;
+        }
+        
+        .numero-cell {
+          width: 30px;
+          text-align: center;
+          font-weight: bold;
+          vertical-align: middle;
+        }
+        
+        .tarjeta-cell {
+          width: 80px;
+        }
+        
+        .area-cell {
+          width: 60px;
+        }
+        
+        .ensayos-cell {
+          width: 180px;
+        }
+        
+        .item-cell {
+          width: 80px;
+        }
+        
+        .tipo-cell {
+          width: 80px;
+        }
+        
+        .procedencia-cell {
+          width: 120px;
+        }
+        
+        .sector-cell {
+          width: 100px;
+        }
+        
+        .obs-cell {
+          width: 120px;
+        }
+        
+        .field-label {
+          font-weight: bold;
+          display: block;
+          margin-bottom: 2px;
+        }
+        
+        .field-value {
+          display: block;
+        }
+        
+        .ensayos-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        
+        .ensayos-list li {
+          margin-bottom: 2px;
+          font-size: 7px;
+          line-height: 1.1;
+        }
+        
+        .observaciones-finales {
+          border: 1px solid #000;
+          padding: 8px;
+          margin-top: 10px;
+          min-height: 40px;
+        }
+        
+        .obs-title {
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">MUESTREO DE MATERIALES</div>
+        </div>
+        <div class="document-info">
+          <div><strong>R-12-27</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
+          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
+          <div>Aprobado por: Cristián Salinas Celedón</div>
+          <div>Fecha Aprobación: 04-10-2023</div>
+          <div>Versión: 12</div>
+        </div>
+      </div>
+
+      <!-- Client and Work Info -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Comuna de ${obra?.comuna || 'Sin comuna'} - Región ${obra?.region || 'Sin región'}
+        </div>
+      </div>
+
+      <!-- Date and Laboratorist Info -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Fecha de Muestreo:</span> ${parseDateFromBackend(ot.createdAt).toLocaleDateString('es-CL')}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Muestreado por:</span> ${muestreadoPor}
+          </div>
+        </div>
+      </div>
+
+      <!-- Muestras Title -->
+      <div class="muestras-title">Muestras</div>
+
+      <!-- Muestras Table -->
+      <table class="muestras-table">
+        <thead>
+          <tr>
+            <th class="numero-cell">#</th>
+            <th class="tarjeta-cell">N° Tarjeta:</th>
+            <th class="area-cell">Área:</th>
+            <th class="ensayos-cell">Ensayos / Servicios:</th>
+            <th class="item-cell">Item:</th>
+            <th class="tipo-cell">Tipo Material:</th>
+            <th class="procedencia-cell">Procedencia:</th>
+            <th class="sector-cell">Sector:</th>
+            <th class="obs-cell">Observaciones:</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${controles && controles.length > 0 ? controles.map((control: any, index: number) => {
+        // Formatear la lista de ensayos/servicios
+        const ensayosList = control.services && control.services.length > 0
+            ? control.services.map((service: any) => service.descripcion || '').join('<br>- ')
+            : 'Sin ensayos definidos'
+
+        return `
+              <tr class="muestra-row">
+                <td class="numero-cell">${control.numero || (index + 1)}</td>
+                <td class="tarjeta-cell">
+                  <span class="field-label">N° Tarjeta:</span> <span class="field-value">${control.n_tarjeta || ''}</span><br>
+                  <span class="field-label">Item:</span><br>
+                  <span class="field-value">${control.item || ''}</span>
+                </td>
+                <td class="area-cell">
+                  <span class="field-label">Área:</span> <span class="field-value">${control.area || ''}</span><br>
+                  <span class="field-label">Tipo Material:</span><br>
+                  <span class="field-value">${control.tipo_material || ''}</span>
+                </td>
+                <td class="ensayos-cell">
+                  - ${ensayosList}
+                </td>
+                <td class="item-cell">
+                  <!-- Campo vacío según captura -->
+                </td>
+                <td class="tipo-cell">
+                  <!-- Campo vacío según captura -->
+                </td>
+                <td class="procedencia-cell">
+                  <span class="field-label">Procedencia:</span><br>
+                  <span class="field-value">${control.procedencia || ''}</span><br><br>
+                  <span class="field-label">Sector:</span><br>
+                  <span class="field-value">${control.sector || ''}</span>
+                </td>
+                <td class="sector-cell">
+                  <!-- Campo vacío según captura -->
+                </td>
+                <td class="obs-cell">
+                  <span class="field-label">Observaciones:</span> <span class="field-value">${control.obs_control || 'Sin observaciones'}</span>
+                </td>
+              </tr>
+            `
+    }).join('') : `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 20px;">Sin muestras registradas</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <!-- Observaciones Finales -->
+      <div class="observaciones-finales">
+        <div class="obs-title">Observaciones:</div>
+        <div>${obsServicio || 'Sin observaciones'}</div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 // Función para renderizar HTML genérico para otros tipos de OT
 function renderGenericOTHTML(ot: any, logoBase64: string) {
     const jsonData = ot.jsonOT || {}
@@ -1135,6 +1467,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 break
             case 'R-12-39': // Muestreo de Hormigón Fresco
                 html = renderMuestreoHormigonFrescoHTML(ot, logoBase64)
+                break
+            case 'R-12-27': // Muestreo de Materiales
+                html = renderMuestreoMaterialesHTML(ot, logoBase64)
                 break
             default:
                 html = renderGenericOTHTML(ot, logoBase64)
