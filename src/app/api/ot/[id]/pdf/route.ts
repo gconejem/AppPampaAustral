@@ -1360,6 +1360,412 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Muestreo de Testigos (R-12-58)
+function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
+    const jsonData = ot.jsonOT || {}
+    const { cliente, obra } = ot.agenda || {}
+
+    // Extraer datos del JSON según la estructura real
+    const respuesta = jsonData.RESPUESTA || jsonData
+    const controles = respuesta?.controles || []
+
+    // Información específica de testigos
+    const testigoInfo = {
+        grado: respuesta?.grado || '',
+        comuna: respuesta?.comuna || '',
+        diametro: respuesta?.diametro || '',
+        nombreCapa: respuesta?.nombre_capa || '',
+        itemTestigo: respuesta?.item_testigo || '',
+        tipoTestigo: respuesta?.tipo_testigo || '',
+        fechaMuestreo: respuesta?.fecha_muestreo || '',
+        muestreadoPor: respuesta?.muestreado_por || '',
+        numeroTarjeta: respuesta?.numero_tarjeta || '',
+        tipoPavimento: respuesta?.tipo_pavimento || '',
+        marshallMezcla: respuesta?.marshall_mezcla || '',
+        codigoTestigera: respuesta?.codigo_testigera || '',
+        procedenciaMezcla: respuesta?.procedencia_mezcla || '',
+        compactacionExigido: respuesta?.compactacion_exigido || '',
+        tiempoUsoTestigera: respuesta?.tiempo_uso_testigera || ''
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 9px;
+          line-height: 1.2;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 8px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 8px 5px;
+        }
+        
+        .logo {
+          width: 70px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 10px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 14px;
+          margin-bottom: 3px;
+        }
+        
+        .subtitle {
+          font-size: 8px;
+          font-style: italic;
+          line-height: 1.1;
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 8px 5px;
+          font-size: 8px;
+        }
+        
+        .info-section {
+          margin-bottom: 8px;
+          font-size: 9px;
+          line-height: 1.4;
+        }
+        
+        .info-line {
+          margin-bottom: 4px;
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+        }
+        
+        .info-line:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 4px;
+        }
+        
+        .info-field {
+          flex: 1;
+          margin-right: 20px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .info-field-small {
+          flex: 0.6;
+        }
+        
+        .testigos-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 10px 0;
+          font-size: 8px;
+        }
+        
+        .testigos-table th,
+        .testigos-table td {
+          border: 1px solid #000;
+          padding: 4px;
+          vertical-align: top;
+          text-align: center;
+        }
+        
+        .testigos-table th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        
+        .testigo-row {
+          page-break-inside: avoid;
+        }
+        
+        .numero-col {
+          width: 30px;
+        }
+        
+        .ubicacion-col {
+          width: 80px;
+        }
+        
+        .fecha-col {
+          width: 70px;
+        }
+        
+        .faja-col {
+          width: 60px;
+        }
+        
+        .frente-col {
+          width: 80px;
+        }
+        
+        .entre-col {
+          width: 70px;
+        }
+        
+        .espesor-col {
+          width: 60px;
+        }
+        
+        .obs-col {
+          width: 80px;
+        }
+        
+        .additional-info {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          margin: 15px 0;
+          font-size: 8px;
+        }
+        
+        .info-grid {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 5px 10px;
+          align-items: center;
+        }
+        
+        .grid-label {
+          font-weight: bold;
+          text-align: right;
+        }
+        
+        .grid-value {
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+          min-height: 14px;
+        }
+        
+        .informacion-section {
+          margin: 15px 0;
+        }
+        
+        .informacion-title {
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        
+        .tiempo-codigo-row {
+          display: flex;
+          gap: 50px;
+          margin-bottom: 15px;
+        }
+        
+        .empty-box {
+          border: 1px solid #000;
+          height: 80px;
+          margin: 15px 0;
+        }
+        
+        .legal-note {
+          font-size: 7px;
+          line-height: 1.2;
+          margin-top: 15px;
+          font-style: italic;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">ORDEN DE TRABAJO</div>
+          <div class="title">MUESTREO DE TESTIGOS</div>
+          <div class="subtitle">
+            Según Normas NCh 1171/1-2012 (Hormigón)<br>
+            ASTM D3549/D3549M-17 (Asfalto)
+          </div>
+        </div>
+        <div class="document-info">
+          <div><strong>R-12-58</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
+          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
+          <div>Aprobado por: Cristián Salinas Celedón</div>
+          <div>Fecha Aprobación: 15-11-2023</div>
+          <div>Versión: 5</div>
+        </div>
+      </div>
+
+      <!-- Client and Work Info -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Región ${obra?.region || 'Sin región'}
+        </div>
+      </div>
+
+      <!-- Detailed Info -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Comuna (Sector):</span> ${testigoInfo.comuna || obra?.comuna || ''}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field info-field-small">
+            <span class="info-label">Fecha de Muestreo:</span> ${testigoInfo.fechaMuestreo}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Muestreado por:</span> ${testigoInfo.muestreadoPor}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">N° Tarjeta:</span> ${testigoInfo.numeroTarjeta}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field info-field-small">
+            <span class="info-label">Tipo de Pavimento:</span> ${testigoInfo.tipoPavimento}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Tipo Testigo:</span> ${testigoInfo.tipoTestigo}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Diámetro:</span> ${testigoInfo.diametro}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field info-field-small">
+            <span class="info-label">Item Testigo:</span> ${testigoInfo.itemTestigo}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Grado Hormigón:</span> ${testigoInfo.grado}
+          </div>
+        </div>
+      </div>
+
+      <!-- Testigos Table -->
+      <table class="testigos-table">
+        <thead>
+          <tr>
+            <th class="numero-col">N°</th>
+            <th class="ubicacion-col">Ubicación</th>
+            <th class="fecha-col">Fecha Confección</th>
+            <th class="faja-col">Faja o Lado</th>
+            <th class="frente-col">Frente a Casa y/o Kilómetro</th>
+            <th class="entre-col">Entre Calles</th>
+            <th class="espesor-col">Espesor de extracción (cm)</th>
+            <th class="obs-col">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${controles && controles.length > 0 ? controles.map((control: any) => {
+        // Construir campo "Entre Calles"
+        let entreText = 'No Aplica'
+        if (control.entre_na !== 'true' && control.entre_na !== true) {
+            if (control.entre_1 && control.entre_2) {
+                entreText = `${control.entre_1} - ${control.entre_2}`
+            } else if (control.entre_1) {
+                entreText = control.entre_1
+            } else if (control.entre_2) {
+                entreText = control.entre_2
+            }
+        }
+
+        return `
+              <tr class="testigo-row">
+                <td class="numero-col">${control.numero || ''}</td>
+                <td class="ubicacion-col">${control.ubicacion || ''}</td>
+                <td class="fecha-col">${control.fecha_confeccion || ''}</td>
+                <td class="faja-col">${control.faja_lado || ''}</td>
+                <td class="frente-col">${control.frente_a || 'No Aplica'}</td>
+                <td class="entre-col">${entreText}</td>
+                <td class="espesor-col">${control.espesor || ''}</td>
+                <td class="obs-col">${control.observaciones || ''}</td>
+              </tr>
+            `
+    }).join('') : `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 20px;">Sin testigos registrados</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <!-- Additional Information -->
+      <div class="additional-info">
+        <div class="info-grid">
+          <div class="grid-label">Marshall Mezcla:</div>
+          <div class="grid-value">${testigoInfo.marshallMezcla || 'No Aplica'}</div>
+          <div class="grid-label">Procedencia Mezcla:</div>
+          <div class="grid-value">${testigoInfo.procedenciaMezcla || 'No Aplica'}</div>
+          <div class="grid-label">Compactación Exigido:</div>
+          <div class="grid-value">${testigoInfo.compactacionExigido || 'No Aplica'}</div>
+          <div class="grid-label">Nombre de la Capa:</div>
+          <div class="grid-value">${testigoInfo.nombreCapa || 'No Aplica'}</div>
+        </div>
+      </div>
+
+      <!-- Información -->
+      <div class="informacion-section">
+        <div class="informacion-title">Información</div>
+        <div class="tiempo-codigo-row">
+          <div>
+            <span class="info-label">Tiempo de uso de la Testigera:</span> ${testigoInfo.tiempoUsoTestigera} minutos
+          </div>
+          <div>
+            <span class="info-label">Código de la Testigera:</span> ${testigoInfo.codigoTestigera}
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Box -->
+      <div class="empty-box"></div>
+
+      <!-- Legal Note -->
+      <div class="legal-note">
+        <em>En el evento que por motivos ajenos al Laboratorio Pampa Austral, no sea factible efectuar la muestra y controles solicitados, el costo asociado de la movilización deberá ser cancelado por el cliente.</em>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 // Función para renderizar HTML genérico para otros tipos de OT
 function renderGenericOTHTML(ot: any, logoBase64: string) {
     const jsonData = ot.jsonOT || {}
@@ -1470,6 +1876,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 break
             case 'R-12-27': // Muestreo de Materiales
                 html = renderMuestreoMaterialesHTML(ot, logoBase64)
+                break
+            case 'R-12-58': // Muestreo de Testigos
+                html = renderMuestreoTestigosHTML(ot, logoBase64)
                 break
             default:
                 html = renderGenericOTHTML(ot, logoBase64)
