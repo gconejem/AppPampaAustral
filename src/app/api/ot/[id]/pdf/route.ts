@@ -538,6 +538,496 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Muestreo Hormigón Fresco (R-12-39)
+function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
+    const jsonData = ot.jsonOT || {}
+    const { cliente, obra } = ot.agenda || {}
+
+    // Extraer datos del JSON según la estructura real
+    const respuesta = jsonData.RESPUESTA || jsonData
+
+    // Información del muestreo de hormigón fresco
+    const muestreoInfo = {
+        item: respuesta?.item || '',
+        clima: respuesta?.clima || '',
+        regla: respuesta?.regla || '',
+        tAmbiente: respuesta?.t_ambiente || '',
+        tHormigon: respuesta?.t_hormigon || '',
+        termometro: respuesta?.termometro || '',
+        vibradores: respuesta?.vibradores || '',
+        conoAbrams: respuesta?.cono_abrams || '',
+        numTarjeta: respuesta?.num_tarjeta || '',
+        numeroGuia: respuesta?.numero_guia || '',
+        tipoMuestra: respuesta?.tipo_muestra || '',
+        tipoProbeta: respuesta?.tipo_probeta || '',
+        codigoMoldes: respuesta?.codigo_moldes || '',
+        fechaIngreso: respuesta?.fecha_ingreso || '',
+        horaMuestreo: respuesta?.hora_muestreo || '',
+        numeroCamion: respuesta?.numero_camion || '',
+        observaciones: respuesta?.observaciones || '',
+        tipoHormigon: respuesta?.tipo_hormigon || '',
+        fechaMuestreo: respuesta?.fecha_muestreo || '',
+        muestreadoPor: respuesta?.muestreado_por || '',
+        patenteCamion: respuesta?.patente_camion || '',
+        tInicioCurado: respuesta?.t_inicio_curado || '',
+        tipoColocacion: respuesta?.tipo_colocacion || '',
+        tipoTransporte: respuesta?.tipo_transporte || '',
+        lugarExtraccion: respuesta?.lugar_extraccion || '',
+        volumenHormigon: respuesta?.volumen_hormigon || '',
+        cantidadProbetas: respuesta?.cantidad_probetas || '',
+        conoAsentamiento: respuesta?.cono_asentamiento || '',
+        ensayoSolicitado: respuesta?.ensayo_solicitado || '',
+        horaLlegadaObra: respuesta?.hora_llegada_obra || '',
+        horaSalidaPlanta: respuesta?.hora_salida_planta || '',
+        horaInicioDescarga: respuesta?.hora_inicio_descarga || '',
+        horaTerminoDescarga: respuesta?.hora_termino_descarga || '',
+        compactacionProbeta: respuesta?.compactacion_probeta || '',
+        caracteristicasMezcla: respuesta?.caracteristicas_mezcla || '',
+        curadoInicial: respuesta?.curado_inicial || [],
+        procedenciaHormigon: respuesta?.procedencia_hormigon || '',
+        probetas: respuesta?.probetas || []
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 8px;
+          line-height: 1.2;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 8px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 8px 5px;
+        }
+        
+        .logo {
+          width: 70px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 10px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 14px;
+          margin-bottom: 5px;
+        }
+        
+        .references {
+          font-size: 7px;
+          line-height: 1.1;
+          margin-bottom: 3px;
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 8px 5px;
+          font-size: 8px;
+        }
+        
+        .info-section {
+          margin-bottom: 8px;
+          font-size: 8px;
+          line-height: 1.4;
+        }
+        
+        .info-line {
+          margin-bottom: 4px;
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+        }
+        
+        .info-line:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 4px;
+        }
+        
+        .info-field {
+          flex: 1;
+          border-bottom: 1px solid #000;
+          padding-bottom: 2px;
+          margin-right: 15px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .info-field-narrow {
+          flex: 0.6;
+        }
+        
+        .equipment-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 8px 0;
+          font-size: 8px;
+        }
+        
+        .equipment-table td {
+          border: 1px solid #000;
+          padding: 4px 6px;
+          text-align: center;
+        }
+        
+        .equipment-table .label {
+          font-weight: bold;
+          background-color: #f0f0f0;
+        }
+        
+        .probetas-section {
+          display: flex;
+          margin: 8px 0;
+          gap: 20px;
+        }
+        
+        .probetas-table {
+          border-collapse: collapse;
+          font-size: 8px;
+        }
+        
+        .probetas-table th,
+        .probetas-table td {
+          border: 1px solid #000;
+          padding: 4px 8px;
+          text-align: center;
+        }
+        
+        .probetas-table th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        
+        .observaciones-box {
+          flex: 1;
+          border: 1px solid #000;
+          padding: 8px;
+          min-height: 60px;
+        }
+        
+        .obs-title {
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .note-section {
+          margin-top: 10px;
+          font-size: 7px;
+          line-height: 1.3;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">MUESTREO HORMIGÓN FRESCO</div>
+          <div class="references">
+            <strong>REFERENCIAS:</strong> Extracción de muestra del hormigón<br>
+            fresco (NCh 171:2008) Requisitos generales de calidad (NCh<br>
+            170:2016);Confección y curado en Obra (NCh 1017:2009)<br>
+            Determinación de la docilidad (NCh 1019:Of 2009)
+          </div>
+        </div>
+        <div class="document-info">
+          <div><strong>R-12-39</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
+          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
+          <div>Aprobado por: Juan Salas Sepulveda</div>
+          <div>Fecha Aprobación: 01-11-2021</div>
+          <div>Versión: 11</div>
+        </div>
+      </div>
+
+      <!-- Client and Work Info -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'}
+        </div>
+      </div>
+
+      <!-- Detailed Info -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Muestreado por:</span> ${muestreoInfo.muestreadoPor}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Item:</span> ${muestreoInfo.item}
+          </div>
+          <div class="info-field info-field-narrow">
+            <span class="info-label">Fecha Muestreo:</span> ${muestreoInfo.fechaMuestreo}
+          </div>
+          <div class="info-field info-field-narrow">
+            <span class="info-label">Hora Muestreo:</span> ${muestreoInfo.horaMuestreo}
+          </div>
+          <div class="info-field">
+            <span class="info-label">T° Inicio Curado:</span> ${muestreoInfo.tInicioCurado}°C
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Fecha Ingreso:</span> ${muestreoInfo.fechaIngreso}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Lugar de Extracción:</span> ${muestreoInfo.lugarExtraccion}
+          </div>
+          <div class="info-field">
+            <span class="info-label">N° de Tarjeta:</span> ${muestreoInfo.numTarjeta}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">N° Correlativo muestra para obra:</span> (No informado)
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Elemento Hormigonado:</span> ${muestreoInfo.item}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Ubicación elemento hormigonado:</span> ${muestreoInfo.lugarExtraccion}
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment Table -->
+      <table class="equipment-table">
+        <tr>
+          <td class="label">Termómetro:</td>
+          <td>${muestreoInfo.termometro}</td>
+          <td class="label">Cono Abrams:</td>
+          <td>${muestreoInfo.conoAbrams}</td>
+          <td class="label">Vibrador:</td>
+          <td>${muestreoInfo.vibradores}</td>
+          <td class="label">Regla:</td>
+          <td>${muestreoInfo.regla}</td>
+        </tr>
+      </table>
+
+      <!-- Additional Info Grid -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Tipo de Probeta:</span> ${muestreoInfo.tipoProbeta}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Cantidad de Probetas:</span> ${muestreoInfo.cantidadProbetas}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Clima:</span> ${muestreoInfo.clima}
+          </div>
+          <div class="info-field">
+            <span class="info-label">T° Ambiente:</span> ${muestreoInfo.tAmbiente}°C
+          </div>
+          <div class="info-field">
+            <span class="info-label">T° Hormigón:</span> ${muestreoInfo.tHormigon}°C
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Número de Guía:</span> ${muestreoInfo.numeroGuia}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Número de Camión:</span> ${muestreoInfo.numeroCamion}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Patente Camión:</span> ${muestreoInfo.patenteCamion}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Tipo de Hormigón:</span> ${muestreoInfo.tipoHormigon}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Ensayo Solicitado:</span> ${muestreoInfo.ensayoSolicitado}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Hora Salida Planta:</span> ${muestreoInfo.horaSalidaPlanta}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Hora Llegada Obra:</span> ${muestreoInfo.horaLlegadaObra}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Hora Inicio Descarga:</span> ${muestreoInfo.horaInicioDescarga}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Hora Término Descarga:</span> ${muestreoInfo.horaTerminoDescarga}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Tipo de Transporte:</span> ${muestreoInfo.tipoTransporte}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Volumen Hormigón:</span> ${muestreoInfo.volumenHormigon} m3
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Cono Asentamiento:</span> ${muestreoInfo.conoAsentamiento} cm
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Tipo Muestra:</span> ${muestreoInfo.tipoMuestra}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Compactación de la probeta:</span> ${muestreoInfo.compactacionProbeta}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Tipo de Colocación:</span> ${muestreoInfo.tipoColocacion}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Características de la mezcla:</span> ${muestreoInfo.caracteristicasMezcla}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Curado Inicial:</span> ${Array.isArray(muestreoInfo.curadoInicial) ? muestreoInfo.curadoInicial.join(', ') : muestreoInfo.curadoInicial}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Código de los moldes:</span> ${muestreoInfo.codigoMoldes}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Procedencia del hormigón:</span> ${muestreoInfo.procedenciaHormigon}
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="note-section">
+        <p><strong>Nota:</strong> Es responsabilidad del cliente la custodia de las probetas en obra, por tanto ante la pérdida o extravío de estas, serán de su cargo.</p>
+        <p>El cliente es responsable del curado inicial de las probetas y no deberán moverse estas del lugar de donde fueron muestreadas hasta el retiro de ellas.</p>
+      </div>
+
+      <!-- Probetas Table and Observations -->
+      <div class="probetas-section">
+        <table class="probetas-table">
+          <thead>
+            <tr>
+              <th>Cantidad</th>
+              <th>Días de Ensayo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${muestreoInfo.probetas && muestreoInfo.probetas.length > 0 ? muestreoInfo.probetas.map((probeta: any) => `
+              <tr>
+                <td>${probeta.cantidad || ''}</td>
+                <td>${probeta.dias || ''}</td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td>1</td>
+                <td>7</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>28</td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+
+        <div class="observaciones-box">
+          <div class="obs-title">Observaciones:</div>
+          <div>${muestreoInfo.observaciones}</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 // Función para renderizar HTML genérico para otros tipos de OT
 function renderGenericOTHTML(ot: any, logoBase64: string) {
     const jsonData = ot.jsonOT || {}
@@ -644,8 +1134,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 html = renderRetiroProbetasHTML(ot, logoBase64)
                 break
             case 'R-12-39': // Muestreo de Hormigón Fresco
-                // TODO: Implementar template específico
-                html = renderGenericOTHTML(ot, logoBase64)
+                html = renderMuestreoHormigonFrescoHTML(ot, logoBase64)
                 break
             default:
                 html = renderGenericOTHTML(ot, logoBase64)
