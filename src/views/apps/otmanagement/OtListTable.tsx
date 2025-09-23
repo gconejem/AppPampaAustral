@@ -38,10 +38,7 @@ import {
 import { rankItem } from '@tanstack/match-sorter-utils'
 
 // Components Imports
-import PDFModal from './components/PDFModal'
 import JsonEditorModal from './components/JsonEditorModal'
-import DensidadPDF from './pdfs/DensidadPDF'
-import HormigonFrescoPDF from './pdfs/HormigonFrescoPDF'
 import type { OrdenTrabajo as BaseOrdenTrabajo } from '@/types/otTypes'
 
 // Extender el tipo para incluir el campo estadoOriginal que viene de la API
@@ -123,7 +120,6 @@ const OtListTable = ({
   const [pageSize, setPageSize] = useState(6)
   const [pageIndex, setPageIndex] = useState(0)
   const [selectedOT, setSelectedOT] = useState<OrdenTrabajo | null>(null)
-  const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const [jsonModalOpen, setJsonModalOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
@@ -427,10 +423,45 @@ const OtListTable = ({
     console.log(`Filtro "Por codificar" ${isChecked ? 'activado' : 'desactivado'}`)
   }
 
-  const handlePDFClick = (ot: OrdenTrabajo) => {
-    console.log('OT seleccionada:', ot) // Para debug
-    setSelectedOT(ot)
-    setPdfModalOpen(true)
+  const handlePDFClick = async (ot: OrdenTrabajo) => {
+    console.log('OT seleccionada para PDF:', ot) // Para debug
+
+    try {
+      // Llamar al endpoint del backend para generar y descargar el PDF
+      const response = await fetch(`/api/ot/${ot.id}/pdf`)
+
+      if (!response.ok) {
+        throw new Error('Error al generar el PDF')
+      }
+
+      // Obtener el blob del PDF
+      const blob = await response.blob()
+
+      // Crear URL temporal para el blob
+      const url = window.URL.createObjectURL(blob)
+
+      // Crear elemento <a> para forzar la descarga
+      const link = document.createElement('a')
+      link.href = url
+
+      // Generar nombre del archivo
+      const tipoCode = ot.tipoOT?.codigo || 'OT'
+      const fileName = `${tipoCode}_${ot.id}.pdf`
+      link.download = fileName
+
+      // Simular click para iniciar descarga
+      document.body.appendChild(link)
+      link.click()
+
+      // Limpiar
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      toast.success('PDF generado y descargado exitosamente')
+    } catch (error) {
+      console.error('Error al descargar PDF:', error)
+      toast.error('Error al generar el PDF')
+    }
   }
 
   const handleEditClick = async (ot: OrdenTrabajo) => {
@@ -457,21 +488,6 @@ const OtListTable = ({
     toast.success('JSON guardado exitosamente')
   }
 
-  const renderPDFComponent = (ot: OrdenTrabajo) => {
-    console.log('Rendering PDF for type:', ot.tipoOT) // Debug log
-
-    const codigo = ot.tipoOT?.codigo
-
-    switch (codigo) {
-      case 'R-12-03': // Control de Compactación
-        return <DensidadPDF ot={ot} />
-      case 'R-12-39': // Muestreo de Hormigón Fresco
-        return <HormigonFrescoPDF ot={ot} />
-      default:
-        // Temporalmente mostrar un mensaje para los tipos no implementados
-        return <Typography>PDF en desarrollo para el tipo de OT: {getServiceName(ot.tipoOT)}</Typography>
-    }
-  }
 
   // Columns Definition
   const columns = useMemo(
@@ -836,13 +852,6 @@ const OtListTable = ({
           rowsPerPageOptions={[6, 10, 25, 50]}
         />
       </Card>
-
-      {/* Modal de PDF */}
-      {selectedOT && (
-        <PDFModal open={pdfModalOpen} onClose={() => setPdfModalOpen(false)} ot={selectedOT}>
-          {renderPDFComponent(selectedOT)}
-        </PDFModal>
-      )}
 
       {/* Modal de edición JSON */}
       {selectedOT && (
