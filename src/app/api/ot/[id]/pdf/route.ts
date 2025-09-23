@@ -100,38 +100,39 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
           margin-bottom: 3px;
         }
         
-        .client-info {
-          display: flex;
+        
+        .info-section {
           border: 1px solid #000;
-          margin-bottom: 2px;
-        }
-        
-        .client-section, .work-section {
-          flex: 1;
-          padding: 5px;
-        }
-        
-        .work-section {
-          border-left: 1px solid #000;
-        }
-        
-        .info-grid {
-          width: 100%;
-          border-collapse: collapse;
+          padding: 8px;
           margin-bottom: 5px;
+          font-size: 9px;
+          line-height: 1.4;
         }
         
-        .info-grid td {
-          border: 1px solid #000;
-          padding: 4px 6px;
-          font-size: 8px;
-          vertical-align: middle;
-          width: 16.66%;
+        .info-line {
+          margin-bottom: 4px;
+        }
+        
+        .info-line:last-child {
+          margin-bottom: 0;
         }
         
         .info-label {
           font-weight: bold;
-          background-color: #f0f0f0;
+          display: inline;
+        }
+        
+        .info-two-column {
+          display: flex;
+          justify-content: space-between;
+        }
+        
+        .info-left, .info-right {
+          flex: 1;
+        }
+        
+        .info-right {
+          text-align: right;
         }
         
         .data-table {
@@ -212,47 +213,54 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
         </div>
       </div>
 
-      <!-- Client and Work Info -->
-      <div class="client-info">
-        <div class="client-section">
-          <strong>Cliente:</strong> ${cliente?.nombreCliente || 'Sin cliente'}<br>
-          <strong>Obra:</strong> ${obra?.nombreObra || 'Sin obra'}
+      <!-- Info Section -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
         </div>
-        <div class="work-section">
-          <strong>Obra:</strong> ${obra?.numeroObra || 'Sin número de obra'}<br>
-          <strong>Comuna:</strong> ${obra?.comuna || 'Sin comuna'} - <strong>Región:</strong> ${obra?.region || 'Sin región'}
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Comuna de ${obra?.comuna || 'Sin comuna'} - Región ${obra?.region || 'Sin región'}
+        </div>
+        
+        <br>
+        
+        <div class="info-line info-two-column">
+          <div class="info-left">
+            <span class="info-label">Fecha Control:</span> ${parseDateFromBackend(ot.createdAt).toLocaleDateString('es-CL')}
+          </div>
+          <div class="info-right">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+        </div>
+        <div class="info-line info-two-column">
+          <div class="info-left">
+            <span class="info-label">Densímetro:</span> ${equipoInfo.codigoEquipo} Marca:${equipoInfo.marca} Modelo:${equipoInfo.modelo}
+          </div>
+          <div class="info-right">
+            <span class="info-label">Item:</span> ${equipoInfo.item} &nbsp;&nbsp;&nbsp;&nbsp; ${equipoInfo.itemObs || ''}
+          </div>
+        </div>
+        <div class="info-line info-two-column">
+          <div class="info-left">
+            <span class="info-label">N° de Serie:</span> ${equipoInfo.numeroSerie}
+          </div>
+          <div class="info-right">
+            <span class="info-label">Obs. al item:</span> ${equipoInfo.itemObs || ''}
+          </div>
+        </div>
+        <div class="info-line">
+          <span class="info-label">Conteo Estándar:</span> D:${equipoInfo.conteoEstandarD} H:${equipoInfo.conteoEstandarH}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Tiempo Medición:</span> ${equipoInfo.tipoMedicion}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Descrip. visual suelo:</span> ${equipoInfo.descripSuelo}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Observaciones:</span> ${respuesta?.observaciones || 'Sin observaciones'}
         </div>
       </div>
-
-      <!-- Info Grid -->
-      <table class="info-grid">
-        <tr>
-          <td class="info-label">Fecha Control:</td>
-          <td>${parseDateFromBackend(ot.createdAt).toLocaleDateString('es-CL')}</td>
-          <td class="info-label">Laboratorista:</td>
-          <td>${ot.user?.name || 'Sin asignar'}</td>
-          <td class="info-label">Densímetro:</td>
-          <td>${equipoInfo.codigoEquipo} Marca: ${equipoInfo.marca} Modelo: ${equipoInfo.modelo}</td>
-        </tr>
-        
-        <tr>
-          <td class="info-label">N° de Serie:</td>
-          <td>${equipoInfo.numeroSerie}</td>
-          <td class="info-label">Item:</td>
-          <td>${equipoInfo.item}</td>
-          <td class="info-label">Obs. al Item:</td>
-          <td>${equipoInfo.itemObs}</td>
-        </tr>
-        
-        <tr>
-          <td class="info-label">Conteo Estándar:</td>
-          <td>D: ${equipoInfo.conteoEstandarD}  H: ${equipoInfo.conteoEstandarH}</td>
-          <td class="info-label">Tiempo Medición:</td>
-          <td>${equipoInfo.tipoMedicion}</td>
-          <td class="info-label">Descrip. visual suelo:</td>
-          <td>${equipoInfo.descripSuelo}</td>
-        </tr>
-      </table>
 
       <!-- Data Table -->
       <table class="data-table">
@@ -323,6 +331,207 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
         `).join('') : `
           <div class="checklist-item">Sin lista de chequeo disponible</div>
         `}
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// Función para renderizar el HTML del PDF para Retiro de Probetas (R-12-99)
+function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
+    const jsonData = ot.jsonOT || {}
+    const { cliente, obra } = ot.agenda || {}
+
+    // Extraer datos del JSON según la estructura real
+    const respuesta = jsonData.RESPUESTA || jsonData
+
+    // Información del retiro de probetas
+    const retiroInfo = {
+        horaRetiro: respuesta?.hora_retiro || '',
+        numTarjeta: respuesta?.num_tarjeta || '',
+        otMuestreo: respuesta?.ot_muestreo || '',
+        fechaRetiro: respuesta?.fecha_retiro || '',
+        tempFinCurado: respuesta?.temp_fin_curado || '',
+        formaTransporte: respuesta?.forma_transporte || '',
+        condicionAlRetirar: respuesta?.condicion_al_retirar || '',
+        condicionTransporte: respuesta?.condicion_transporte || ''
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 10px;
+          line-height: 1.3;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 10px;
+        }
+        
+        .logo-section {
+          width: 120px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 10px 5px;
+        }
+        
+        .logo {
+          width: 80px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 15px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 16px;
+          margin-bottom: 8px;
+        }
+        
+        .code {
+          font-weight: bold;
+          font-size: 14px;
+          margin-bottom: 5px;
+        }
+        
+        .subtitle {
+          font-size: 11px;
+          font-style: italic;
+        }
+        
+        .version-info {
+          width: 100px;
+          border-left: 1px solid #000;
+          padding: 10px 5px;
+          text-align: center;
+        }
+        
+        .info-section {
+          margin-bottom: 15px;
+          font-size: 10px;
+          line-height: 1.6;
+        }
+        
+        .info-line {
+          margin-bottom: 8px;
+          border-bottom: 1px solid #000;
+          padding-bottom: 3px;
+        }
+        
+        .info-line:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 8px;
+        }
+        
+        .info-field {
+          flex: 1;
+          border-bottom: 1px solid #000;
+          padding-bottom: 3px;
+          margin-right: 20px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .info-field-half {
+          flex: 0.5;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">RETIRO DE PROBETAS</div>
+          <div class="code">R-12-99</div>
+          <div class="subtitle">Confección y curado en Obra<br>(NCh 1017-2009)</div>
+        </div>
+        <div class="version-info">
+          <div style="font-weight: bold;">Versión: 5</div>
+        </div>
+      </div>
+
+      <!-- Info Section -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Comuna de ${obra?.comuna || 'Sin comuna'} - Región ${obra?.region || 'Sin región'}
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+          <div class="info-field info-field-half">
+            <span class="info-label">N° Tarjeta:</span> ${retiroInfo.numTarjeta}
+          </div>
+          <div class="info-field info-field-half">
+            <span class="info-label">OT Muestreo:</span> ${retiroInfo.otMuestreo}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Fecha retiro:</span> ${retiroInfo.fechaRetiro}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Hora retiro:</span> ${retiroInfo.horaRetiro}
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Condición de Probetas al retirar:</span> ${retiroInfo.condicionAlRetirar}
+          </div>
+          <div class="info-field">
+            <span class="info-label">T° Fin de curado:</span> ${retiroInfo.tempFinCurado}°C
+          </div>
+        </div>
+        
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Forma de transporte:</span> ${retiroInfo.formaTransporte}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Condición Transporte al Lab:</span> ${retiroInfo.condicionTransporte}
+          </div>
+        </div>
       </div>
     </body>
     </html>
@@ -430,6 +639,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         switch (ot.tipoOT?.codigo) {
             case 'R-12-03': // Control de Compactación
                 html = renderControlCompactacionHTML(ot, logoBase64)
+                break
+            case 'R-12-99': // Retiro de Probetas
+                html = renderRetiroProbetasHTML(ot, logoBase64)
                 break
             case 'R-12-39': // Muestreo de Hormigón Fresco
                 // TODO: Implementar template específico
