@@ -2434,6 +2434,254 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Cancelación de Visita (X-1)
+function renderCancelacionVisitaHTML(ot: any, logoBase64: string) {
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
+
+  // Extraer datos del JSON según la estructura proporcionada
+  const respuesta = jsonData.RESPUESTA || {}
+  const motivo = respuesta.motivo_cancelacion || 'Sin especificar'
+  const observaciones = respuesta.observaciones || 'Sin observaciones'
+
+  // Formatear fecha
+  const fechaVisita = ot.agenda?.fechaAgenda ?
+    new Date(ot.agenda.fechaAgenda).toLocaleDateString('es-CL', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) : ''
+
+  // Obtener información de la OT
+  const otNumero = jsonData.FKLBDOCVER || ot.tipoOT?.codigo || ''
+  const version = '1'
+  const autor = ot.user?.name || 'N/A'
+  const fechaActual = new Date().toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 10px;
+          line-height: 1.3;
+          margin: 0;
+          padding: 0;
+          color: #000;
+        }
+        
+        .header {
+          display: flex;
+          border: 2px solid #000;
+          margin-bottom: 10px;
+        }
+        
+        .logo-section {
+          width: 150px;
+          text-align: center;
+          border-right: 2px solid #000;
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .logo {
+          width: 120px;
+          height: auto;
+          margin: 0 auto;
+        }
+        
+        .logo-text {
+          font-size: 8px;
+          margin-top: 5px;
+          text-align: center;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 20px 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .main-title {
+          font-weight: bold;
+          font-size: 18px;
+          margin-bottom: 8px;
+          letter-spacing: 1px;
+        }
+        
+        .subtitle {
+          font-size: 12px;
+          margin-bottom: 5px;
+        }
+        
+        .ot-info {
+          width: 200px;
+          border-left: 2px solid #000;
+          padding: 8px;
+          font-size: 9px;
+        }
+        
+        .ot-info div {
+          margin-bottom: 3px;
+        }
+        
+        .ot-info strong {
+          display: inline-block;
+          width: 80px;
+        }
+        
+        .client-info {
+          border: 1px solid #000;
+          margin-bottom: 10px;
+          padding: 8px;
+        }
+        
+        .client-row {
+          display: flex;
+          margin-bottom: 8px;
+        }
+        
+        .client-row strong {
+          display: inline-block;
+          width: 80px;
+          margin-right: 10px;
+        }
+        
+        .work-info {
+          display: flex;
+          margin-bottom: 15px;
+        }
+        
+        .work-left {
+          flex: 1;
+          margin-right: 20px;
+        }
+        
+        .work-right {
+          flex: 1;
+        }
+        
+        .work-row {
+          display: flex;
+          margin-bottom: 8px;
+        }
+        
+        .work-row strong {
+          display: inline-block;
+          width: 100px;
+          margin-right: 10px;
+        }
+        
+        .motivo-section {
+          margin-top: 20px;
+        }
+        
+        .motivo-row {
+          display: flex;
+          margin-bottom: 10px;
+          align-items: flex-start;
+        }
+        
+        .motivo-row strong {
+          display: inline-block;
+          width: 150px;
+          margin-right: 10px;
+        }
+        
+        .observaciones-section {
+          margin-top: 15px;
+        }
+        
+        .observaciones-content {
+          border: 1px solid #000;
+          padding: 8px;
+          min-height: 60px;
+          margin-top: 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" alt="Logo PAMPA AUSTRAL" class="logo">` : ''}
+          <div class="logo-text">Laboratorio Oficial Acreditado INS - Chil.E</div>
+        </div>
+        
+        <div class="title-section">
+          <div class="main-title">CANCELACIÓN DE VISITA</div>
+          <div class="subtitle">Por Laboratorista en Terreno</div>
+        </div>
+        
+        <div class="ot-info">
+          <div><strong>OT N°</strong> ${ot.id || 'N/A'}</div>
+          <div><strong>Autor:</strong> ${autor}</div>
+          <div><strong>Aprobado por:</strong> Juan Salas Sepúlveda</div>
+          <div><strong>Fecha Aprobación:</strong> ${fechaActual}</div>
+          <div><strong>Versión:</strong> ${version}</div>
+        </div>
+      </div>
+      
+      <div class="client-info">
+        <div class="client-row">
+          <strong>Cliente:</strong>
+          <span>${cliente?.rut || 'N/A'} - ${cliente?.razonSocial || 'Cliente no especificado'}</span>
+        </div>
+        <div class="client-row">
+          <strong>Obra:</strong>
+          <span>${obra?.codigo || 'N/A'} - ${obra?.nombre || 'Obra no especificada'} - ${obra?.direccion || ''}</span>
+        </div>
+      </div>
+      
+      <div class="work-info">
+        <div class="work-left">
+          <div class="work-row">
+            <strong>Laboratorista:</strong>
+            <span>${autor}</span>
+          </div>
+        </div>
+        <div class="work-right">
+          <div class="work-row">
+            <strong>Fecha:</strong>
+            <span>${fechaVisita}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="motivo-section">
+        <div class="motivo-row">
+          <strong>Motivo de la cancelación:</strong>
+          <span>${motivo}</span>
+        </div>
+      </div>
+      
+      <div class="observaciones-section">
+        <div><strong>Observaciones:</strong></div>
+        <div class="observaciones-content">
+          ${observaciones}
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id
@@ -2487,6 +2735,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         break
       case 'R-12-34': // Orden de Trabajo General
         html = renderOrdenTrabajoGeneralHTML(ot, logoBase64)
+        break
+      case 'X-1': // Cancelación de Visita
+        html = renderCancelacionVisitaHTML(ot, logoBase64)
         break
       default:
         html = renderGenericOTHTML(ot, logoBase64)
