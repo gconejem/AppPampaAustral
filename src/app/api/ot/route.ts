@@ -4,10 +4,17 @@ import { prisma } from '@/lib/prisma'
 
 // Función para obtener el tipo de OT basado en el código de documento
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
-  // Extraer la parte relevante del código (R-12-XX)
-  const docCode = fklbdocver.substring(0, 7) // Tomar solo los primeros 7 caracteres (R-12-34)
+  // Extraer la parte relevante del código
+  // Para códigos R-12-XX: tomar los primeros 7 caracteres
+  // Para código X-1: tomar los primeros 3 caracteres
+  let docCode: string
+  if (fklbdocver.startsWith('X-1')) {
+    docCode = fklbdocver.substring(0, 3) // X-1
+  } else {
+    docCode = fklbdocver.substring(0, 7) // R-12-34
+  }
 
-  console.log(docCode)
+  console.log('Doc code extraído:', docCode)
 
   // Mapear el código al ID del tipo de OT en la base de datos
   const tipoOTMap: { [key: string]: string } = {
@@ -19,7 +26,7 @@ const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
     'R-12-31': 'R-12-31', // Extracción Asfáltica
     'R-12-69': 'R-12-69', // Dosificación
     'R-12-34': 'R-12-34', // General
-    'X-1-001': 'X-1-001'  // Suspendido en Terreno
+    'X-1': 'X-1'  // Suspendido en Terreno / Cancelación de Visita
   }
 
   const codigo = tipoOTMap[docCode]

@@ -14,7 +14,7 @@ async function seedTipoOrdenTrabajo() {
     { id: 6, codigo: 'R-12-31', descripcion: 'Extracción Asfáltica' },
     { id: 7, codigo: 'R-12-69', descripcion: 'Dosificación' },
     { id: 8, codigo: 'R-12-34', descripcion: 'General' },
-    { id: 9, codigo: 'X-1-001', descripcion: 'Suspendido en Terreno' }
+    { id: 9, codigo: 'X-1', descripcion: 'Suspendido en Terreno' }
   ]
 
   for (const tipo of tiposOrdenTrabajo) {
