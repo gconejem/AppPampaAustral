@@ -57,6 +57,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
     const [updatingStatus, setUpdatingStatus] = useState(false)
     const [snackbarOpen, setSnackbarOpen] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState('')
+    const [generatingPDF, setGeneratingPDF] = useState(false)
 
     // Load JSON data when modal opens
     useEffect(() => {
@@ -195,6 +196,53 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             setSnackbarOpen(true)
         } finally {
             setUpdatingStatus(false)
+        }
+    }
+
+    const handlePDFClick = async () => {
+        if (!ot) return
+
+        setGeneratingPDF(true)
+
+        try {
+            // Llamar al endpoint del backend para generar y descargar el PDF
+            const response = await fetch(`/api/ot/${ot.id}/pdf`)
+
+            if (!response.ok) {
+                throw new Error('Error al generar el PDF')
+            }
+
+            // Obtener el blob del PDF
+            const blob = await response.blob()
+
+            // Crear URL temporal para el blob
+            const url = window.URL.createObjectURL(blob)
+
+            // Crear elemento <a> para forzar la descarga
+            const link = document.createElement('a')
+            link.href = url
+
+            // Generar nombre del archivo
+            const tipoCode = ot.tipoOT?.codigo || 'OT'
+            const fileName = `${tipoCode}_${ot.id}.pdf`
+            link.download = fileName
+
+            // Simular click para iniciar descarga
+            document.body.appendChild(link)
+            link.click()
+
+            // Limpiar
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+            setSnackbarMessage('PDF generado y descargado exitosamente')
+            setSnackbarOpen(true)
+        } catch (error) {
+            console.error('Error al descargar PDF:', error)
+            setSnackbarMessage('Error al generar el PDF')
+            setSnackbarOpen(true)
+        } finally {
+            setGeneratingPDF(false)
         }
     }
 
@@ -380,9 +428,11 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                         variant="contained"
                         size="small"
                         color="primary"
-                        onClick={() => {/* TODO: Implementar funcionalidad PDF Laboratorio */ }}
+                        onClick={handlePDFClick}
+                        disabled={generatingPDF}
+                        startIcon={generatingPDF ? <CircularProgress size={16} /> : null}
                     >
-                        PDF OT
+                        {generatingPDF ? 'Generando...' : 'PDF OT'}
                     </Button>
                     {/* Solo mostrar PDF Cliente para Control de Compactación (R-12-03) */}
                     {ot?.tipoOT?.codigo === 'R-12-03' && (
