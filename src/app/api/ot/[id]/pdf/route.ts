@@ -2121,6 +2121,253 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Orden de Trabajo General (R-12-34)
+function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
+
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
+  const ensayos = respuesta?.ensayos || []
+  const observaciones = respuesta?.observaciones || ''
+  const muestreadoPor = respuesta?.muestreado_por || ''
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 10px;
+          line-height: 1.3;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 10px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 10px 5px;
+        }
+        
+        .logo {
+          width: 70px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 15px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 16px;
+          margin-bottom: 3px;
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 10px 5px;
+          font-size: 9px;
+        }
+        
+        .info-section {
+          margin-bottom: 10px;
+          font-size: 10px;
+          line-height: 1.4;
+        }
+        
+        .info-line {
+          margin-bottom: 5px;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 5px;
+        }
+        
+        .info-field {
+          flex: 1;
+          margin-right: 30px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .muestras-title {
+          font-weight: bold;
+          font-size: 14px;
+          margin: 20px 0 10px 0;
+        }
+        
+        .muestras-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 9px;
+        }
+        
+        .muestras-table th,
+        .muestras-table td {
+          border: 1px solid #000;
+          padding: 8px;
+          vertical-align: top;
+        }
+        
+        .muestras-table th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .muestra-row {
+          page-break-inside: avoid;
+        }
+        
+        .numero-col {
+          width: 30px;
+          text-align: center;
+        }
+        
+        .servicio-col {
+          width: 60%;
+        }
+        
+        .observaciones-col {
+          width: 40%;
+        }
+        
+        .observaciones-finales {
+          border: 1px solid #000;
+          padding: 10px;
+          margin-top: 20px;
+          min-height: 100px;
+        }
+        
+        .obs-title {
+          font-weight: bold;
+          margin-bottom: 8px;
+        }
+        
+        .obs-content {
+          white-space: pre-line;
+          line-height: 1.4;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">ORDEN DE TRABAJO GENERAL</div>
+        </div>
+        <div class="document-info">
+          <div><strong>R-12-34</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
+          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
+          <div>Aprobado por: Cristián Salinas Celedón</div>
+          <div>Fecha Aprobación: 04-10-2023</div>
+          <div>Versión: 1</div>
+        </div>
+      </div>
+
+      <!-- Client and Work Info -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Comuna de ${obra?.comuna || 'Sin comuna'} - Región ${obra?.region || 'Sin región'}
+        </div>
+      </div>
+
+      <!-- Date and Laboratorist Info -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Fecha de Muestreo:</span> ${parseDateFromBackend(ot.createdAt).toLocaleDateString('es-CL')}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Muestreado por:</span> ${muestreadoPor}
+          </div>
+        </div>
+      </div>
+
+      <!-- Muestras Title -->
+      <div class="muestras-title">Muestras</div>
+
+      <!-- Muestras Table -->
+      <table class="muestras-table">
+        <thead>
+          <tr>
+            <th class="numero-col">#</th>
+            <th class="servicio-col">Servicio</th>
+            <th class="observaciones-col">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ensayos && ensayos.length > 0 ? ensayos.map((ensayo: any) => {
+    // Construir descripción del servicio con norma
+    const servicioCompleto = ensayo.norma
+      ? `${ensayo.descripcion} ${ensayo.norma}`
+      : ensayo.descripcion || 'Servicio no definido'
+
+    return `
+              <tr class="muestra-row">
+                <td class="numero-col">${ensayo.numero || ''}</td>
+                <td class="servicio-col">${servicioCompleto}</td>
+                <td class="observaciones-col">${ensayo.obs_muestra || 'Sin observaciones'}</td>
+              </tr>
+            `
+  }).join('') : `
+            <tr>
+              <td colspan="3" style="text-align: center; padding: 20px;">Sin ensayos registrados</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <!-- Observaciones Finales -->
+      <div class="observaciones-finales">
+        <div class="obs-title">Observaciones:</div>
+        <div class="obs-content">${observaciones || 'Sin observaciones'}</div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 // Función para renderizar HTML genérico para otros tipos de OT
 function renderGenericOTHTML(ot: any, logoBase64: string) {
   const jsonData = ot.jsonOT || {}
@@ -2237,6 +2484,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         break
       case 'R-12-31': // Toma de Muestra de Extracción
         html = renderExtraccionAsfálticaHTML(ot, logoBase64)
+        break
+      case 'R-12-34': // Orden de Trabajo General
+        html = renderOrdenTrabajoGeneralHTML(ot, logoBase64)
         break
       default:
         html = renderGenericOTHTML(ot, logoBase64)
