@@ -6,30 +6,30 @@ import { parseDateFromBackend } from '@/utils/dateUtils'
 
 // Función para renderizar el HTML del PDF para Control de Compactación (R-12-03)
 function renderControlCompactacionHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    // Extraer datos del JSON según la estructura real
-    // Los datos pueden estar en jsonData.RESPUESTA (estructura del archivo de ejemplo)
-    // o directamente en jsonData si se almacena de otra forma
-    const respuesta = jsonData.RESPUESTA || jsonData
-    const controles = respuesta?.controles || []
+  // Extraer datos del JSON según la estructura real
+  // Los datos pueden estar en jsonData.RESPUESTA (estructura del archivo de ejemplo)
+  // o directamente en jsonData si se almacena de otra forma
+  const respuesta = jsonData.RESPUESTA || jsonData
+  const controles = respuesta?.controles || []
 
-    // Información del equipo y medición
-    const equipoInfo = {
-        item: respuesta?.item || '',
-        marca: respuesta?.marca || '',
-        modelo: respuesta?.modelo || '',
-        numeroSerie: respuesta?.numero_de_serie || '',
-        codigoEquipo: respuesta?.codigo_equipo || '',
-        tipoMedicion: respuesta?.tipo_medicion || '60 seg',
-        conteoEstandarD: respuesta?.conteo_estandar_d || '',
-        conteoEstandarH: respuesta?.conteo_estandar_h || '',
-        descripSuelo: respuesta?.descrip_suelo || '',
-        itemObs: respuesta?.item_obs || ''
-    }
+  // Información del equipo y medición
+  const equipoInfo = {
+    item: respuesta?.item || '',
+    marca: respuesta?.marca || '',
+    modelo: respuesta?.modelo || '',
+    numeroSerie: respuesta?.numero_de_serie || '',
+    codigoEquipo: respuesta?.codigo_equipo || '',
+    tipoMedicion: respuesta?.tipo_medicion || '60 seg',
+    conteoEstandarD: respuesta?.conteo_estandar_d || '',
+    conteoEstandarH: respuesta?.conteo_estandar_h || '',
+    descripSuelo: respuesta?.descrip_suelo || '',
+    itemObs: respuesta?.item_obs || ''
+  }
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -283,19 +283,19 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
         </thead>
         <tbody>
           ${controles && controles.length > 0 ? controles.map((control: any) => {
-        // Construir campo "Entre" combinando entre_1 y entre_2
-        let entreText = ''
-        if (control.entre_1 && control.entre_2 && !control.entre_na) {
-            entreText = control.entre_2 // Usar entre_2 como principal
-        } else if (control.entre_na === 'true' || control.entre_na === true) {
-            entreText = 'No Aplica'
-        } else if (control.entre_1) {
-            entreText = control.entre_1
-        } else if (control.entre_2) {
-            entreText = control.entre_2
-        }
+    // Construir campo "Entre" combinando entre_1 y entre_2
+    let entreText = ''
+    if (control.entre_1 && control.entre_2 && !control.entre_na) {
+      entreText = control.entre_2 // Usar entre_2 como principal
+    } else if (control.entre_na === 'true' || control.entre_na === true) {
+      entreText = 'No Aplica'
+    } else if (control.entre_1) {
+      entreText = control.entre_1
+    } else if (control.entre_2) {
+      entreText = control.entre_2
+    }
 
-        return `
+    return `
               <tr>
                 <td>${control.numero || ''}</td>
                 <td>${control.calle_pasaje || ''}</td>
@@ -312,7 +312,7 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
                 <td>${control.exig || ''}</td>
               </tr>
             `
-    }).join('') : `
+  }).join('') : `
             <tr>
               <td colspan="13" style="text-align: center; padding: 20px;">Sin datos de controles</td>
             </tr>
@@ -339,25 +339,25 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
 
 // Función para renderizar el HTML del PDF para Retiro de Probetas (R-12-99)
 function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    // Extraer datos del JSON según la estructura real
-    const respuesta = jsonData.RESPUESTA || jsonData
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
 
-    // Información del retiro de probetas
-    const retiroInfo = {
-        horaRetiro: respuesta?.hora_retiro || '',
-        numTarjeta: respuesta?.num_tarjeta || '',
-        otMuestreo: respuesta?.ot_muestreo || '',
-        fechaRetiro: respuesta?.fecha_retiro || '',
-        tempFinCurado: respuesta?.temp_fin_curado || '',
-        formaTransporte: respuesta?.forma_transporte || '',
-        condicionAlRetirar: respuesta?.condicion_al_retirar || '',
-        condicionTransporte: respuesta?.condicion_transporte || ''
-    }
+  // Información del retiro de probetas
+  const retiroInfo = {
+    horaRetiro: respuesta?.hora_retiro || '',
+    numTarjeta: respuesta?.num_tarjeta || '',
+    otMuestreo: respuesta?.ot_muestreo || '',
+    fechaRetiro: respuesta?.fecha_retiro || '',
+    tempFinCurado: respuesta?.temp_fin_curado || '',
+    formaTransporte: respuesta?.forma_transporte || '',
+    condicionAlRetirar: respuesta?.condicion_al_retirar || '',
+    condicionTransporte: respuesta?.condicion_transporte || ''
+  }
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -540,55 +540,55 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
 
 // Función para renderizar el HTML del PDF para Muestreo Hormigón Fresco (R-12-39)
 function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    // Extraer datos del JSON según la estructura real
-    const respuesta = jsonData.RESPUESTA || jsonData
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
 
-    // Información del muestreo de hormigón fresco
-    const muestreoInfo = {
-        item: respuesta?.item || '',
-        clima: respuesta?.clima || '',
-        regla: respuesta?.regla || '',
-        tAmbiente: respuesta?.t_ambiente || '',
-        tHormigon: respuesta?.t_hormigon || '',
-        termometro: respuesta?.termometro || '',
-        vibradores: respuesta?.vibradores || '',
-        conoAbrams: respuesta?.cono_abrams || '',
-        numTarjeta: respuesta?.num_tarjeta || '',
-        numeroGuia: respuesta?.numero_guia || '',
-        tipoMuestra: respuesta?.tipo_muestra || '',
-        tipoProbeta: respuesta?.tipo_probeta || '',
-        codigoMoldes: respuesta?.codigo_moldes || '',
-        fechaIngreso: respuesta?.fecha_ingreso || '',
-        horaMuestreo: respuesta?.hora_muestreo || '',
-        numeroCamion: respuesta?.numero_camion || '',
-        observaciones: respuesta?.observaciones || '',
-        tipoHormigon: respuesta?.tipo_hormigon || '',
-        fechaMuestreo: respuesta?.fecha_muestreo || '',
-        muestreadoPor: respuesta?.muestreado_por || '',
-        patenteCamion: respuesta?.patente_camion || '',
-        tInicioCurado: respuesta?.t_inicio_curado || '',
-        tipoColocacion: respuesta?.tipo_colocacion || '',
-        tipoTransporte: respuesta?.tipo_transporte || '',
-        lugarExtraccion: respuesta?.lugar_extraccion || '',
-        volumenHormigon: respuesta?.volumen_hormigon || '',
-        cantidadProbetas: respuesta?.cantidad_probetas || '',
-        conoAsentamiento: respuesta?.cono_asentamiento || '',
-        ensayoSolicitado: respuesta?.ensayo_solicitado || '',
-        horaLlegadaObra: respuesta?.hora_llegada_obra || '',
-        horaSalidaPlanta: respuesta?.hora_salida_planta || '',
-        horaInicioDescarga: respuesta?.hora_inicio_descarga || '',
-        horaTerminoDescarga: respuesta?.hora_termino_descarga || '',
-        compactacionProbeta: respuesta?.compactacion_probeta || '',
-        caracteristicasMezcla: respuesta?.caracteristicas_mezcla || '',
-        curadoInicial: respuesta?.curado_inicial || [],
-        procedenciaHormigon: respuesta?.procedencia_hormigon || '',
-        probetas: respuesta?.probetas || []
-    }
+  // Información del muestreo de hormigón fresco
+  const muestreoInfo = {
+    item: respuesta?.item || '',
+    clima: respuesta?.clima || '',
+    regla: respuesta?.regla || '',
+    tAmbiente: respuesta?.t_ambiente || '',
+    tHormigon: respuesta?.t_hormigon || '',
+    termometro: respuesta?.termometro || '',
+    vibradores: respuesta?.vibradores || '',
+    conoAbrams: respuesta?.cono_abrams || '',
+    numTarjeta: respuesta?.num_tarjeta || '',
+    numeroGuia: respuesta?.numero_guia || '',
+    tipoMuestra: respuesta?.tipo_muestra || '',
+    tipoProbeta: respuesta?.tipo_probeta || '',
+    codigoMoldes: respuesta?.codigo_moldes || '',
+    fechaIngreso: respuesta?.fecha_ingreso || '',
+    horaMuestreo: respuesta?.hora_muestreo || '',
+    numeroCamion: respuesta?.numero_camion || '',
+    observaciones: respuesta?.observaciones || '',
+    tipoHormigon: respuesta?.tipo_hormigon || '',
+    fechaMuestreo: respuesta?.fecha_muestreo || '',
+    muestreadoPor: respuesta?.muestreado_por || '',
+    patenteCamion: respuesta?.patente_camion || '',
+    tInicioCurado: respuesta?.t_inicio_curado || '',
+    tipoColocacion: respuesta?.tipo_colocacion || '',
+    tipoTransporte: respuesta?.tipo_transporte || '',
+    lugarExtraccion: respuesta?.lugar_extraccion || '',
+    volumenHormigon: respuesta?.volumen_hormigon || '',
+    cantidadProbetas: respuesta?.cantidad_probetas || '',
+    conoAsentamiento: respuesta?.cono_asentamiento || '',
+    ensayoSolicitado: respuesta?.ensayo_solicitado || '',
+    horaLlegadaObra: respuesta?.hora_llegada_obra || '',
+    horaSalidaPlanta: respuesta?.hora_salida_planta || '',
+    horaInicioDescarga: respuesta?.hora_inicio_descarga || '',
+    horaTerminoDescarga: respuesta?.hora_termino_descarga || '',
+    compactacionProbeta: respuesta?.compactacion_probeta || '',
+    caracteristicasMezcla: respuesta?.caracteristicas_mezcla || '',
+    curadoInicial: respuesta?.curado_inicial || [],
+    procedenciaHormigon: respuesta?.procedencia_hormigon || '',
+    probetas: respuesta?.probetas || []
+  }
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -1030,16 +1030,16 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
 
 // Función para renderizar el HTML del PDF para Muestreo de Materiales (R-12-27)
 function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    // Extraer datos del JSON según la estructura real
-    const respuesta = jsonData.RESPUESTA || jsonData
-    const controles = respuesta?.controles || []
-    const obsServicio = respuesta?.obs_servicio || ''
-    const muestreadoPor = respuesta?.muestreado_por || ''
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
+  const controles = respuesta?.controles || []
+  const obsServicio = respuesta?.obs_servicio || ''
+  const muestreadoPor = respuesta?.muestreado_por || ''
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -1301,12 +1301,12 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
         </thead>
         <tbody>
           ${controles && controles.length > 0 ? controles.map((control: any, index: number) => {
-        // Formatear la lista de ensayos/servicios
-        const ensayosList = control.services && control.services.length > 0
-            ? control.services.map((service: any) => service.descripcion || '').join('<br>- ')
-            : 'Sin ensayos definidos'
+    // Formatear la lista de ensayos/servicios
+    const ensayosList = control.services && control.services.length > 0
+      ? control.services.map((service: any) => service.descripcion || '').join('<br>- ')
+      : 'Sin ensayos definidos'
 
-        return `
+    return `
               <tr class="muestra-row">
                 <td class="numero-cell">${control.numero || (index + 1)}</td>
                 <td class="tarjeta-cell">
@@ -1342,7 +1342,7 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
                 </td>
               </tr>
             `
-    }).join('') : `
+  }).join('') : `
             <tr>
               <td colspan="9" style="text-align: center; padding: 20px;">Sin muestras registradas</td>
             </tr>
@@ -1362,33 +1362,33 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
 
 // Función para renderizar el HTML del PDF para Muestreo de Testigos (R-12-58)
 function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    // Extraer datos del JSON según la estructura real
-    const respuesta = jsonData.RESPUESTA || jsonData
-    const controles = respuesta?.controles || []
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
+  const controles = respuesta?.controles || []
 
-    // Información específica de testigos
-    const testigoInfo = {
-        grado: respuesta?.grado || '',
-        comuna: respuesta?.comuna || '',
-        diametro: respuesta?.diametro || '',
-        nombreCapa: respuesta?.nombre_capa || '',
-        itemTestigo: respuesta?.item_testigo || '',
-        tipoTestigo: respuesta?.tipo_testigo || '',
-        fechaMuestreo: respuesta?.fecha_muestreo || '',
-        muestreadoPor: respuesta?.muestreado_por || '',
-        numeroTarjeta: respuesta?.numero_tarjeta || '',
-        tipoPavimento: respuesta?.tipo_pavimento || '',
-        marshallMezcla: respuesta?.marshall_mezcla || '',
-        codigoTestigera: respuesta?.codigo_testigera || '',
-        procedenciaMezcla: respuesta?.procedencia_mezcla || '',
-        compactacionExigido: respuesta?.compactacion_exigido || '',
-        tiempoUsoTestigera: respuesta?.tiempo_uso_testigera || ''
-    }
+  // Información específica de testigos
+  const testigoInfo = {
+    grado: respuesta?.grado || '',
+    comuna: respuesta?.comuna || '',
+    diametro: respuesta?.diametro || '',
+    nombreCapa: respuesta?.nombre_capa || '',
+    itemTestigo: respuesta?.item_testigo || '',
+    tipoTestigo: respuesta?.tipo_testigo || '',
+    fechaMuestreo: respuesta?.fecha_muestreo || '',
+    muestreadoPor: respuesta?.muestreado_por || '',
+    numeroTarjeta: respuesta?.numero_tarjeta || '',
+    tipoPavimento: respuesta?.tipo_pavimento || '',
+    marshallMezcla: respuesta?.marshall_mezcla || '',
+    codigoTestigera: respuesta?.codigo_testigera || '',
+    procedenciaMezcla: respuesta?.procedencia_mezcla || '',
+    compactacionExigido: respuesta?.compactacion_exigido || '',
+    tiempoUsoTestigera: respuesta?.tiempo_uso_testigera || ''
+  }
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -1695,19 +1695,19 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
         </thead>
         <tbody>
           ${controles && controles.length > 0 ? controles.map((control: any) => {
-        // Construir campo "Entre Calles"
-        let entreText = 'No Aplica'
-        if (control.entre_na !== 'true' && control.entre_na !== true) {
-            if (control.entre_1 && control.entre_2) {
-                entreText = `${control.entre_1} - ${control.entre_2}`
-            } else if (control.entre_1) {
-                entreText = control.entre_1
-            } else if (control.entre_2) {
-                entreText = control.entre_2
-            }
-        }
+    // Construir campo "Entre Calles"
+    let entreText = 'No Aplica'
+    if (control.entre_na !== 'true' && control.entre_na !== true) {
+      if (control.entre_1 && control.entre_2) {
+        entreText = `${control.entre_1} - ${control.entre_2}`
+      } else if (control.entre_1) {
+        entreText = control.entre_1
+      } else if (control.entre_2) {
+        entreText = control.entre_2
+      }
+    }
 
-        return `
+    return `
               <tr class="testigo-row">
                 <td class="numero-col">${control.numero || ''}</td>
                 <td class="ubicacion-col">${control.ubicacion || ''}</td>
@@ -1719,7 +1719,7 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
                 <td class="obs-col">${control.observaciones || ''}</td>
               </tr>
             `
-    }).join('') : `
+  }).join('') : `
             <tr>
               <td colspan="8" style="text-align: center; padding: 20px;">Sin testigos registrados</td>
             </tr>
@@ -1766,12 +1766,367 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
   `
 }
 
+// Función para renderizar el HTML del PDF para Toma de Muestra de Extracción (R-12-31)
+function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
+
+  // Extraer datos del JSON según la estructura real
+  const respuesta = jsonData.RESPUESTA || jsonData
+  const controles = respuesta?.controles || []
+
+  // Información específica de extracción asfáltica
+  const extraccionInfo = {
+    item: respuesta?.item || '',
+    metodo: respuesta?.metodo || '',
+    bitumen: respuesta?.bitumen === 'true' || respuesta?.bitumen === true,
+    cubicidad: respuesta?.cubicidad === 'true' || respuesta?.cubicidad === true,
+    granulometria: respuesta?.granulometria === 'true' || respuesta?.granulometria === true,
+    fechaMuestreo: respuesta?.fecha_muestreo || '',
+    muestreadoPor: respuesta?.muestreado_por || '',
+    fechaConfeccion: respuesta?.fecha_confeccion || '',
+    procedenciaAsfalto: respuesta?.procedencia_asfalto || ''
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 9px;
+          line-height: 1.2;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: center;
+          border: 1px solid #000;
+          margin-bottom: 5px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 8px 5px;
+        }
+        
+        .logo {
+          width: 70px;
+          height: auto;
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 10px;
+        }
+        
+        .title {
+          font-weight: bold;
+          font-size: 14px;
+          margin-bottom: 3px;
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 8px 5px;
+          font-size: 8px;
+        }
+        
+        .references {
+          border: 1px solid #000;
+          padding: 5px;
+          margin-bottom: 5px;
+          font-size: 8px;
+        }
+        
+        .ref-title {
+          font-weight: bold;
+          margin-bottom: 3px;
+        }
+        
+        .info-section {
+          margin-bottom: 8px;
+          font-size: 9px;
+          line-height: 1.4;
+        }
+        
+        .info-line {
+          margin-bottom: 4px;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          display: inline;
+        }
+        
+        .info-row {
+          display: flex;
+          margin-bottom: 4px;
+        }
+        
+        .info-field {
+          flex: 1;
+          margin-right: 20px;
+        }
+        
+        .info-field:last-child {
+          margin-right: 0;
+        }
+        
+        .info-field-small {
+          flex: 0.6;
+        }
+        
+        .ensayos-section {
+          display: flex;
+          gap: 30px;
+          margin: 10px 0;
+          font-size: 9px;
+        }
+        
+        .ensayo-item {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        
+        .checkbox {
+          width: 12px;
+          height: 12px;
+          border: 1px solid #000;
+          display: inline-block;
+          text-align: center;
+          line-height: 10px;
+          font-size: 8px;
+        }
+        
+        .checked {
+          background-color: #000;
+          color: white;
+        }
+        
+        .muestras-title {
+          font-weight: bold;
+          font-size: 12px;
+          margin: 15px 0 8px 0;
+        }
+        
+        .muestras-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 15px;
+          font-size: 7px;
+        }
+        
+        .muestras-table th,
+        .muestras-table td {
+          border: 1px solid #000;
+          padding: 3px;
+          vertical-align: top;
+          text-align: center;
+        }
+        
+        .muestras-table th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        
+        .muestra-row {
+          page-break-inside: avoid;
+        }
+        
+        .num-col { width: 25px; }
+        .tarjeta-col { width: 60px; }
+        .tipo-ligante-col { width: 80px; }
+        .muestra-cliente-col { width: 70px; }
+        .agregado-col { width: 70px; }
+        .km-inicial-col { width: 50px; }
+        .km-final-col { width: 50px; }
+        .punto-km-col { width: 60px; }
+        .faja-col { width: 80px; }
+        .proposito-col { width: 80px; }
+        .cantidad-col { width: 70px; }
+        .obs-col { width: 80px; }
+        
+        .observaciones-finales {
+          border: 1px solid #000;
+          padding: 8px;
+          margin-top: 10px;
+          min-height: 60px;
+        }
+        
+        .obs-title {
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">ORDEN DE TRABAJO</div>
+          <div class="title">TOMA DE MUESTRA DE EXTRACCIÓN</div>
+        </div>
+        <div class="document-info">
+          <div><strong>R-12-31</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
+          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
+          <div>Aprobado por: Cristián Salinas Celedón</div>
+          <div>Fecha Aprobación: 15-11-2023</div>
+          <div>Versión: 4</div>
+        </div>
+      </div>
+
+      <!-- References -->
+      <div class="references">
+        <div class="ref-title">Referencias:</div>
+        <div>Método de Muestreo de Mezclas 8.302.27, Diciembre 2003, MC-V8</div>
+        <div>Contenido de Bitumen en mezclas. Ensayo de Extracción Según 8.302.36 (MC-V6-2010)</div>
+        <div>Método para análisis Granulométrico de agregados proveniente de Extracción Según 8.302.28, Dic 2003, MC-V8</div>
+      </div>
+
+      <!-- Client and Basic Info -->
+      <div class="info-section">
+        <div class="info-line">
+          <span class="info-label">Cliente:</span> ${cliente?.rut || ''} - ${cliente?.nombreCliente || 'Sin cliente'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Obra:</span> ${obra?.numeroObra || ''} - ${obra?.nombreObra || 'Sin obra'} - Comuna de ${obra?.comuna || 'Sin comuna'}
+        </div>
+        <div class="info-line">
+          <span class="info-label">Laboratorista:</span> ${ot.user?.name || 'Sin asignar'}
+        </div>
+      </div>
+
+      <!-- Detailed Info -->
+      <div class="info-section">
+        <div class="info-row">
+          <div class="info-field info-field-small">
+            <span class="info-label">Item:</span> ${extraccionInfo.item}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Fecha de Muestreo:</span> ${extraccionInfo.fechaMuestreo}
+          </div>
+          <div class="info-field">
+            <span class="info-label">Muestreado por:</span> ${extraccionInfo.muestreadoPor}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Procedencia del Asfalto:</span> ${extraccionInfo.procedenciaAsfalto}
+          </div>
+          <div class="info-field info-field-small">
+            <span class="info-label">Fecha de Confección:</span> ${extraccionInfo.fechaConfeccion}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-field">
+            <span class="info-label">Método de Ensayo:</span> ${extraccionInfo.metodo}
+          </div>
+        </div>
+      </div>
+
+      <!-- Ensayos -->
+      <div class="info-section">
+        <div class="info-label">Ensayos:</div>
+        <div class="ensayos-section">
+          <div class="ensayo-item">
+            <span class="checkbox ${extraccionInfo.granulometria ? 'checked' : ''}">
+              ${extraccionInfo.granulometria ? 'X' : ''}
+            </span>
+            <span>Granulometría</span>
+          </div>
+          <div class="ensayo-item">
+            <span class="checkbox ${extraccionInfo.bitumen ? 'checked' : ''}">
+              ${extraccionInfo.bitumen ? 'X' : ''}
+            </span>
+            <span>% de Bitumen en la mezcla</span>
+          </div>
+          <div class="ensayo-item">
+            <span class="checkbox ${extraccionInfo.cubicidad ? 'checked' : ''}">
+              ${extraccionInfo.cubicidad ? 'X' : ''}
+            </span>
+            <span>Cubicidad de partículas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Muestras Title -->
+      <div class="muestras-title">Muestras:</div>
+
+      <!-- Muestras Table -->
+      <table class="muestras-table">
+        <thead>
+          <tr>
+            <th class="num-col">#</th>
+            <th class="tarjeta-col">N° de Tarjeta</th>
+            <th class="tipo-ligante-col">Tipo de Ligante Asfáltico</th>
+            <th class="muestra-cliente-col">N° Muestra Cliente:</th>
+            <th class="agregado-col">Agregado Usado:</th>
+            <th class="km-inicial-col">Km. Inicial:</th>
+            <th class="km-final-col">Km. Final:</th>
+            <th class="punto-km-col">Punto Kilométrico:</th>
+            <th class="faja-col">Faja o lugar de muestreo:</th>
+            <th class="proposito-col">Propósito toma de muestra:</th>
+            <th class="cantidad-col">Cantidad Representada:</th>
+            <th class="obs-col">Sin Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${controles && controles.length > 0 ? controles.map((control: any) => `
+            <tr class="muestra-row">
+              <td class="num-col">${control.numero || ''}</td>
+              <td class="tarjeta-col">${control.n_tarjeta || ''}</td>
+              <td class="tipo-ligante-col">${control.tipo_ligante || ''}</td>
+              <td class="muestra-cliente-col">${control.n_muestra_cliente || ''}</td>
+              <td class="agregado-col">${control.agregado_usado || ''}</td>
+              <td class="km-inicial-col">${control.km_inicial || ''}</td>
+              <td class="km-final-col">${control.km_final || ''}</td>
+              <td class="punto-km-col">${control.punto_kilometrico || ''}</td>
+              <td class="faja-col">${control.faja_o_lugar || ''}</td>
+              <td class="proposito-col">${control.proposito_muestra || ''}</td>
+              <td class="cantidad-col">${control.cantidad_representada || ''}</td>
+              <td class="obs-col">${control.observaciones || 'Sin Observaciones'}</td>
+            </tr>
+          `).join('') : `
+            <tr>
+              <td colspan="12" style="text-align: center; padding: 20px;">Sin muestras registradas</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <!-- Observaciones Finales -->
+      <div class="observaciones-finales">
+        <div class="obs-title">Sin Observaciones</div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 // Función para renderizar HTML genérico para otros tipos de OT
 function renderGenericOTHTML(ot: any, logoBase64: string) {
-    const jsonData = ot.jsonOT || {}
-    const { cliente, obra } = ot.agenda || {}
+  const jsonData = ot.jsonOT || {}
+  const { cliente, obra } = ot.agenda || {}
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -1833,101 +2188,104 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-    try {
-        const id = params.id
+  try {
+    const id = params.id
 
-        // Buscar la OT con toda la información relacionada
-        const ot = await prisma.ordenTrabajo.findUnique({
-            where: { id },
-            include: {
-                tipoOT: true,
-                user: true,
-                agenda: {
-                    include: {
-                        cliente: true,
-                        obra: true
-                    }
-                }
-            }
-        })
-
-        if (!ot) {
-            return new NextResponse('Orden de Trabajo no encontrada', { status: 404 })
+    // Buscar la OT con toda la información relacionada
+    const ot = await prisma.ordenTrabajo.findUnique({
+      where: { id },
+      include: {
+        tipoOT: true,
+        user: true,
+        agenda: {
+          include: {
+            cliente: true,
+            obra: true
+          }
         }
+      }
+    })
 
-        // Cargar logo como base64
-        const logoPath = `${process.cwd()}/public/images/logos/PAMPA_MG_2025_017-2.png`
-        const logoBase64 = fs.existsSync(logoPath)
-            ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
-            : ''
-
-        let html = ''
-
-        // Generar HTML según el tipo de OT
-        switch (ot.tipoOT?.codigo) {
-            case 'R-12-03': // Control de Compactación
-                html = renderControlCompactacionHTML(ot, logoBase64)
-                break
-            case 'R-12-99': // Retiro de Probetas
-                html = renderRetiroProbetasHTML(ot, logoBase64)
-                break
-            case 'R-12-39': // Muestreo de Hormigón Fresco
-                html = renderMuestreoHormigonFrescoHTML(ot, logoBase64)
-                break
-            case 'R-12-27': // Muestreo de Materiales
-                html = renderMuestreoMaterialesHTML(ot, logoBase64)
-                break
-            case 'R-12-58': // Muestreo de Testigos
-                html = renderMuestreoTestigosHTML(ot, logoBase64)
-                break
-            default:
-                html = renderGenericOTHTML(ot, logoBase64)
-                break
-        }
-
-        // Si la URL tiene ?preview=1, devolver HTML en lugar de PDF
-        const url = new URL(request.url)
-        if (url.searchParams.get('preview') === '1') {
-            return new NextResponse(html, {
-                headers: { 'Content-Type': 'text/html; charset=utf-8' }
-            })
-        }
-
-        // Generar PDF usando Puppeteer
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-web-security', '--disable-features=VizDisplayCompositor']
-        })
-
-        const page = await browser.newPage()
-        await page.setContent(html, { waitUntil: 'networkidle0' })
-
-        // Esperar a que las fuentes se carguen completamente
-        await page.evaluateHandle('document.fonts.ready')
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
-            printBackground: true,
-            preferCSSPageSize: true
-        })
-
-        await browser.close()
-
-        // Generar nombre del archivo
-        const tipoCode = ot.tipoOT?.codigo || 'OT'
-        const fileName = `${tipoCode}_${ot.id}.pdf`
-
-        return new NextResponse(Buffer.from(pdfBuffer), {
-            headers: {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${fileName}"`
-            }
-        })
-
-    } catch (error) {
-        console.error('Error al generar PDF de OT:', error)
-        return new NextResponse('Error interno del servidor', { status: 500 })
+    if (!ot) {
+      return new NextResponse('Orden de Trabajo no encontrada', { status: 404 })
     }
+
+    // Cargar logo como base64
+    const logoPath = `${process.cwd()}/public/images/logos/PAMPA_MG_2025_017-2.png`
+    const logoBase64 = fs.existsSync(logoPath)
+      ? 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64')
+      : ''
+
+    let html = ''
+
+    // Generar HTML según el tipo de OT
+    switch (ot.tipoOT?.codigo) {
+      case 'R-12-03': // Control de Compactación
+        html = renderControlCompactacionHTML(ot, logoBase64)
+        break
+      case 'R-12-99': // Retiro de Probetas
+        html = renderRetiroProbetasHTML(ot, logoBase64)
+        break
+      case 'R-12-39': // Muestreo de Hormigón Fresco
+        html = renderMuestreoHormigonFrescoHTML(ot, logoBase64)
+        break
+      case 'R-12-27': // Muestreo de Materiales
+        html = renderMuestreoMaterialesHTML(ot, logoBase64)
+        break
+      case 'R-12-58': // Muestreo de Testigos
+        html = renderMuestreoTestigosHTML(ot, logoBase64)
+        break
+      case 'R-12-31': // Toma de Muestra de Extracción
+        html = renderExtraccionAsfálticaHTML(ot, logoBase64)
+        break
+      default:
+        html = renderGenericOTHTML(ot, logoBase64)
+        break
+    }
+
+    // Si la URL tiene ?preview=1, devolver HTML en lugar de PDF
+    const url = new URL(request.url)
+    if (url.searchParams.get('preview') === '1') {
+      return new NextResponse(html, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      })
+    }
+
+    // Generar PDF usando Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+    })
+
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: 'networkidle0' })
+
+    // Esperar a que las fuentes se carguen completamente
+    await page.evaluateHandle('document.fonts.ready')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
+      printBackground: true,
+      preferCSSPageSize: true
+    })
+
+    await browser.close()
+
+    // Generar nombre del archivo
+    const tipoCode = ot.tipoOT?.codigo || 'OT'
+    const fileName = `${tipoCode}_${ot.id}.pdf`
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${fileName}"`
+      }
+    })
+
+  } catch (error) {
+    console.error('Error al generar PDF de OT:', error)
+    return new NextResponse('Error interno del servidor', { status: 500 })
+  }
 }
