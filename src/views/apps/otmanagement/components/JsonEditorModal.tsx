@@ -184,6 +184,11 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             setSnackbarMessage(`Estado cambiado a ${newStatus === 'EN_REVISION' ? 'En Revisión' : 'Anulada'} exitosamente`)
             setSnackbarOpen(true)
             onSave?.() // Refrescar datos
+
+            // Cerrar el modal después del cambio exitoso
+            setTimeout(() => {
+                onClose()
+            }, 1500)
         } catch (err) {
             console.error('Error updating status:', err)
             setSnackbarMessage('Error al cambiar el estado de la OT')

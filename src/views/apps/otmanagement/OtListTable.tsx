@@ -483,9 +483,40 @@ const OtListTable = ({
     }
   }
 
-  const handleJsonSave = () => {
+  const handleJsonSave = async () => {
     // Mostrar mensaje de éxito sin recargar la página
     toast.success('JSON guardado exitosamente')
+
+    // Recargar los datos de las OTs para reflejar los cambios
+    try {
+      setLoading(true)
+
+      // Construir parámetros de consulta (misma lógica que en el useEffect)
+      const params = new URLSearchParams()
+
+      // Si hay visitas seleccionadas, filtrar por sus IDs
+      if (selectedVisits && selectedVisits.length > 0) {
+        const agendaIds = selectedVisits.map(visit => visit.id.toString())
+        params.append('agendaIds', agendaIds.join(','))
+      } else {
+        // Si no hay visitas seleccionadas, usar rango de fechas
+        if (fechaInicio) params.append('fechaInicio', fechaInicio)
+        if (fechaFin) params.append('fechaFin', fechaFin)
+      }
+
+      const url = params.toString() ? `/api/ot?${params.toString()}` : '/api/ot'
+      const response = await fetch(url)
+
+      if (!response.ok) throw new Error('Error al cargar OTs')
+      const data = await response.json()
+
+      setAllOTs(data)
+      setFilteredData(data)
+    } catch (error) {
+      console.error('Error al recargar OTs:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
 
