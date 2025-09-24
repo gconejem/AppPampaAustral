@@ -134,13 +134,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
             }
 
             setHasChanges(false)
-            setSnackbarMessage('JSON guardado exitosamente')
-            setSnackbarOpen(true)
             onSave?.()
-            // Cerrar el modal después de un pequeño delay para que se vea el mensaje
-            setTimeout(() => {
-                onClose()
-            }, 1500)
         } catch (err) {
             console.error('Error saving JSON:', err)
             setError('Error al guardar los cambios')
