@@ -2296,7 +2296,99 @@ const Calendar = (props: CalenderProps) => {
         }
       }
 
-      // Para otras vistas (día) - mismo estilo que vista mensual
+      // Para vista de día - ocupar todo el espacio disponible
+      if (info.view.type === 'timeGridDay') {
+        // Obtener datos del evento
+        const horaInicio = formatEventTime(info.event.start)
+        const horaFin = formatEventTime(info.event.end)
+        const estado = info.event.extendedProps?.estado || 'AGENDADA'
+        const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
+        const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
+        const comuna = info.event.extendedProps?.comuna || ''
+        const laboratorista = getLaboratoristaInitials(info.event.extendedProps?.asignados || [])
+
+        // Formatear líneas de información
+        const linea1 = `${horaInicio} - ${horaFin} ${formatStatusForDisplay(estado)}`
+        const linea2 = numeroObra && cliente ? `${numeroObra} - ${cliente}` : (numeroObra || cliente || '')
+        const linea3 = comuna
+        const linea4 = laboratorista
+
+        return {
+          html: `
+            <div style="
+              background-color: ${backgroundColor};
+              color: white;
+              height: 100%;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              text-align: left;
+              padding: 4px 8px;
+              box-sizing: border-box;
+              overflow: hidden;
+              border-radius: 0;
+              margin: 0;
+              gap: 1px;
+            ">
+              <div style="
+                font-weight: bold;
+                font-size: 0.75rem;
+                line-height: 1.1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                text-align: left;
+              ">
+                ${linea1}
+              </div>
+              ${linea2 ? `<div style="
+                font-weight: 500;
+                font-size: 0.7rem;
+                line-height: 1.1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                text-align: left;
+              ">
+                ${linea2}
+              </div>` : ''}
+              ${linea3 ? `<div style="
+                font-weight: 400;
+                font-size: 0.65rem;
+                line-height: 1.1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                text-align: left;
+              ">
+                ${linea3}
+              </div>` : ''}
+              ${linea4 ? `<div style="
+                font-weight: bold;
+                font-size: 0.7rem;
+                line-height: 1.1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 1px 4px;
+                margin-top: 1px;
+                text-align: left;
+              ">
+                ${linea4}
+              </div>` : ''}
+            </div>
+          `
+        }
+      }
+
+      // Para otras vistas - mismo estilo que vista mensual
       const timeText = info.timeText ? info.timeText.replace(/\s/g, '') : ''
       const numeroObra = info.event.extendedProps?.obra?.numeroObra || ''
       const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
