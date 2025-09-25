@@ -1728,6 +1728,10 @@ const VisitListTable = ({
   // Funciones para el buscador de servicios
   const handleAreaChange = (e: SelectChangeEvent<string>) => {
     const areaNombre = e.target.value
+    // En el modal de servicios, solo permitir área "Servicios"
+    if (serviciosBuscadorAnchorEl && areaNombre !== 'Servicios') {
+      return // No permitir cambiar el área
+    }
     setSelectedArea(areaNombre)
     setSelectedFamilia('') // Resetear familia cuando cambia el área
 
@@ -1745,7 +1749,7 @@ const VisitListTable = ({
   }
 
   const handleClearFilters = () => {
-    setSelectedArea('')
+    setSelectedArea('Servicios') // Mantener área "Servicios" seleccionada
     setSelectedAreaId(null)
     setSelectedTipo('')
     setSelectedFamilia('')
@@ -1797,12 +1801,12 @@ const VisitListTable = ({
     setLoadingProductos(true)
     setProductsPage(0)
     setSearchTerm('')
-    setSelectedArea('')
+    setSelectedArea('Servicios') // Filtrar solo por área "Servicios"
     setSelectedAreaId(null)
-    setSelectedTipo('Terreno')
+    setSelectedTipo('') // Limpiar tipo para mostrar todos los tipos del área Servicios
     setSelectedFamilia('')
     setShowOnlyPaquetes(false)
-    filterProducts('', '', 'Terreno', '', false)
+    filterProducts('', 'Servicios', '', '', false) // Filtrar por área "Servicios"
     setLoadingProductos(false)
   }
 
@@ -3728,13 +3732,9 @@ const VisitListTable = ({
                   value={selectedArea}
                   label='Área'
                   onChange={handleAreaChange}
+                  disabled={true} // Deshabilitar el selector de área
                 >
-                  <MenuItem value=''>Todas</MenuItem>
-                  {areas.map(area => (
-                    <MenuItem key={area.id} value={area.nombre}>
-                      {area.nombre}
-                    </MenuItem>
-                  ))}
+                  <MenuItem value='Servicios'>Servicios</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
