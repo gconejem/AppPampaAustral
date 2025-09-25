@@ -402,6 +402,16 @@ const VisitListTable = ({
   const [isRecepcionarModalOpen, setIsRecepcionarModalOpen] = useState(false)
   const [observacionesRecepcion, setObservacionesRecepcion] = useState('')
 
+  // Estado para servicios filtrados del modal (solo área "Servicios")
+  const [serviciosFiltradosModal, setServiciosFiltradosModal] = useState<Array<{
+    id: number
+    codigo: string
+    servicio: string
+    cantidad: number
+    observacion?: string
+    esSegundaVisita: boolean
+  }>>([])
+
   // Estado para el popover de obra
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
   const [popoverContent, setPopoverContent] = useState('')
@@ -534,6 +544,49 @@ const VisitListTable = ({
       setAlertOpen(true)
     } finally {
       setLoadingObras(false)
+    }
+  }
+
+  // Función para obtener los servicios de una visita específica desde el backend
+  const fetchVisitaServicios = async (visitaId: number) => {
+    try {
+      console.log('Cargando servicios de la visita:', visitaId)
+      const response = await fetch(`/api/agenda/${visitaId}`)
+
+      if (!response.ok) {
+        throw new Error(`Error al cargar servicios de la visita: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('Datos de la visita cargados:', data)
+
+      // Obtener todos los productos del área "Servicios" para verificar
+      const productosResponse = await fetch('/api/productos?area=Servicios&limit=1000')
+      let productosServicios: any[] = []
+
+      if (productosResponse.ok) {
+        const productosData = await productosResponse.json()
+        productosServicios = productosData.productos || []
+      }
+
+      // Filtrar solo servicios del área "Servicios"
+      const serviciosFiltrados = data.servicios?.filter((servicio: any) => {
+        // Verificar si el código del servicio corresponde a un producto del área "Servicios"
+        const productoCorrespondiente = productosServicios.find(
+          producto => producto.sku === servicio.codigo
+        )
+        return productoCorrespondiente !== undefined
+      }) || []
+
+      console.log('Servicios filtrados del área Servicios:', serviciosFiltrados.length, 'de', data.servicios?.length || 0, 'total')
+
+      return serviciosFiltrados
+    } catch (error) {
+      console.error('Error al cargar servicios de la visita:', error)
+      setAlertSeverity('error')
+      setAlertMessage('Error al cargar los servicios de la visita')
+      setAlertOpen(true)
+      return []
     }
   }
 
@@ -948,8 +1001,24 @@ const VisitListTable = ({
     }
   }
 
-  const handleVerComprobante = () => {
+  const handleVerComprobante = async () => {
+    if (!selectedVisit) return
+
     setDetallesModalOpen(true)
+
+    // Cargar servicios actualizados desde el backend
+    try {
+      const serviciosFiltrados = await fetchVisitaServicios(selectedVisit.id)
+
+      // Actualizar solo el estado local de servicios filtrados para el modal
+      setServiciosFiltradosModal(serviciosFiltrados)
+
+      console.log('Servicios actualizados en el modal:', serviciosFiltrados.length)
+    } catch (error) {
+      console.error('Error al cargar servicios actualizados:', error)
+      // Si hay error, usar los servicios existentes de la visita
+      setServiciosFiltradosModal(selectedVisit.servicios || [])
+    }
   }
 
   const handleCloseComprobante = () => {
@@ -957,6 +1026,8 @@ const VisitListTable = ({
     // Limpiar estado de edición de servicios al cerrar el modal
     setEditingServiceId(null)
     setEditedServiceData({ cantidad: 0, observacion: '' })
+    // Limpiar servicios filtrados del modal
+    setServiciosFiltradosModal([])
   }
 
   // Función para manejar los cambios en los campos editables
@@ -1661,6 +1732,17 @@ const VisitListTable = ({
 
         setData(updatedData)
         onVisitSelect(updatedVisit)
+
+        // Actualizar también los servicios filtrados del modal si el servicio editado está en la lista
+        const servicioEnModal = serviciosFiltradosModal.find(s => s.id === editingServiceId)
+        if (servicioEnModal) {
+          const updatedServiciosFiltrados = serviciosFiltradosModal.map(servicio =>
+            servicio.id === editingServiceId
+              ? { ...servicio, ...editedServiceData }
+              : servicio
+          )
+          setServiciosFiltradosModal(updatedServiciosFiltrados)
+        }
       }
 
       // Limpiar estado de edición
@@ -1710,6 +1792,13 @@ const VisitListTable = ({
 
         setData(updatedData)
         onVisitSelect(updatedVisit)
+
+        // Actualizar también los servicios filtrados del modal si el servicio eliminado estaba en la lista
+        const servicioEnModal = serviciosFiltradosModal.find(s => s.id === servicioId)
+        if (servicioEnModal) {
+          const updatedServiciosFiltrados = serviciosFiltradosModal.filter(servicio => servicio.id !== servicioId)
+          setServiciosFiltradosModal(updatedServiciosFiltrados)
+        }
       }
 
       // Mostrar alerta de éxito
@@ -1862,6 +1951,11 @@ const VisitListTable = ({
 
       setData(updatedData)
       onVisitSelect(visitaActualizada)
+
+      // Agregar el nuevo servicio también a los servicios filtrados del modal
+      // (ya que el buscador solo permite servicios del área "Servicios")
+      const serviciosFiltradosActualizados = [...serviciosFiltradosModal, nuevoServicio]
+      setServiciosFiltradosModal(serviciosFiltradosActualizados)
 
       // Cerrar el buscador
       handleCloseServiciosBuscador()
@@ -3068,8 +3162,8 @@ const VisitListTable = ({
                     </Grid>
                   </Grid>
 
-                  {selectedVisit.servicios && selectedVisit.servicios.length > 0 ? (
-                    selectedVisit.servicios.map((servicio, index) => (
+                  {serviciosFiltradosModal && serviciosFiltradosModal.length > 0 ? (
+                    serviciosFiltradosModal.map((servicio, index) => (
                       <Grid container key={index} sx={{ borderBottom: '1px solid #e0e0e0' }}>
                         <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
                           <Typography variant='body2'>{servicio.codigo}</Typography>
@@ -3179,9 +3273,6 @@ const VisitListTable = ({
                   ) : (
                     <Grid container sx={{ p: 2 }}>
                       <Grid item xs={12}>
-                        <Typography variant='body2' color='text.secondary' textAlign='center'>
-                          No hay servicios registrados
-                        </Typography>
                       </Grid>
                     </Grid>
                   )}
