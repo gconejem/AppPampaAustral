@@ -382,25 +382,6 @@ const VisitListTable = ({
   const [productsPage, setProductsPage] = useState(0)
   const ITEMS_PER_PAGE = 10
 
-  // Función para determinar si un servicio pertenece al área "Servicios"
-  const isServicioArea = (codigo: string): boolean => {
-    // Patrones de códigos que típicamente pertenecen al área "Servicios"
-    // Basándose en las familias: 'Adicionales', 'Profesionales', 'Otros Servicios'
-    const patronesServicios = [
-      /^SERV-/i,     // Códigos que empiezan con SERV-
-      /^ADIC-/i,     // Códigos que empiezan con ADIC- (Adicionales)
-      /^PROF-/i,     // Códigos que empiezan con PROF- (Profesionales)
-      /^OTRO-/i,     // Códigos que empiezan con OTRO- (Otros Servicios)
-      /^SER-/i,      // Códigos que empiezan con SER-
-      /^SVC-/i,      // Códigos que empiezan con SVC-
-      /^SERVICIO/i,  // Códigos que contienen SERVICIO
-      /^ADICIONAL/i, // Códigos que contienen ADICIONAL
-      /^PROFESIONAL/i, // Códigos que contienen PROFESIONAL
-    ]
-
-    return patronesServicios.some(patron => patron.test(codigo))
-  }
-
   // Estados para filtros de cliente y obra
   const [selectedCliente, setSelectedCliente] = useState<{ clienteId: number, nombreCliente: string, rut: string } | null>(null)
   const [selectedObra, setSelectedObra] = useState<{ obraId: number, nombreObra: string, numeroObra: string } | null>(null)
@@ -3044,12 +3025,9 @@ const VisitListTable = ({
 
               <Divider sx={{ my: 3 }} />
 
-              {/* Tabla de servicios del área "Servicios" */}
+              {/* Tabla de servicios */}
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant='subtitle1' fontWeight='bold'>
-                    Servicios del Área "Servicios"
-                  </Typography>
                   <Button
                     variant='contained'
                     size='small'
@@ -3086,122 +3064,123 @@ const VisitListTable = ({
                     </Grid>
                   </Grid>
 
-                  {(() => {
-                    // Filtrar solo los servicios del área "Servicios"
-                    const serviciosFiltrados = selectedVisit.servicios?.filter(servicio =>
-                      isServicioArea(servicio.codigo)
-                    ) || []
-
-                    return serviciosFiltrados.length > 0 ? (
-                      serviciosFiltrados.map((servicio, index) => (
-                        <Grid container key={index} sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                          <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                            <Typography variant='body2'>{servicio.codigo}</Typography>
-                          </Grid>
-                          <Grid item xs={4} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                            <Typography variant='body2'>{servicio.servicio}</Typography>
-                          </Grid>
-                          <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                            {editingServiceId === servicio.id ? (
-                              <TextField
-                                fullWidth
-                                size='small'
-                                type='number'
-                                value={editedServiceData.cantidad}
-                                onChange={(e) => setEditedServiceData(prev => ({
-                                  ...prev,
-                                  cantidad: parseInt(e.target.value) || 0
-                                }))}
-                                inputProps={{ min: 0 }}
-                              />
-                            ) : (
-                              <Typography variant='body2'>{servicio.cantidad}</Typography>
-                            )}
-                          </Grid>
-                          <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
-                            {editingServiceId === servicio.id ? (
-                              <TextField
-                                fullWidth
-                                size='small'
-                                multiline
-                                minRows={2}
-                                maxRows={6}
-                                value={editedServiceData.observacion}
-                                onChange={(e) => setEditedServiceData(prev => ({
-                                  ...prev,
-                                  observacion: e.target.value
-                                }))}
-                                placeholder='Observaciones...'
-                                sx={{
-                                  '& .MuiInputBase-input': {
-                                    whiteSpace: 'pre-wrap'
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <Typography
-                                variant='body2'
-                                color='text.secondary'
-                                sx={{
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word'
-                                }}
-                              >
-                                {servicio.observacion || '---'}
-                              </Typography>
-                            )}
-                          </Grid>
-                          <Grid item xs={2} sx={{ p: 1 }}>
-                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
-                              {editingServiceId === servicio.id ? (
-                                <>
-                                  <Tooltip title="Guardar cambios">
-                                    <IconButton
-                                      size='small'
-                                      color='success'
-                                      onClick={handleSaveServiceChanges}
-                                    >
-                                      <i className='ri-check-line' style={{ fontSize: '16px' }} />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Cancelar edición">
-                                    <IconButton
-                                      size='small'
-                                      color='error'
-                                      onClick={handleCancelEditingService}
-                                    >
-                                      <i className='ri-close-line' style={{ fontSize: '16px' }} />
-                                    </IconButton>
-                                  </Tooltip>
-                                </>
-                              ) : (
-                                <>
-                                  <Tooltip title="Editar servicio">
-                                    <IconButton
-                                      size='small'
-                                      color='primary'
-                                      onClick={() => handleStartEditingService(servicio)}
-                                    >
-                                      <i className='ri-edit-line' style={{ fontSize: '16px' }} />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Eliminar servicio">
-                                    <IconButton
-                                      size='small'
-                                      color='error'
-                                      onClick={() => handleDeleteService(servicio.id)}
-                                    >
-                                      <i className='ri-delete-bin-line' style={{ fontSize: '16px' }} />
-                                    </IconButton>
-                                  </Tooltip>
-                                </>
-                              )}
-                            </Box>
-                          </Grid>
+                  {selectedVisit.servicios && selectedVisit.servicios.length > 0 ? (
+                    selectedVisit.servicios.map((servicio, index) => (
+                      <Grid container key={index} sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2'>{servicio.codigo}</Typography>
                         </Grid>
-                      ))
-                    ) : null
-                  })()}
+                        <Grid item xs={4} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          <Typography variant='body2'>{servicio.servicio}</Typography>
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          {editingServiceId === servicio.id ? (
+                            <TextField
+                              fullWidth
+                              size='small'
+                              type='number'
+                              value={editedServiceData.cantidad}
+                              onChange={(e) => setEditedServiceData(prev => ({
+                                ...prev,
+                                cantidad: parseInt(e.target.value) || 0
+                              }))}
+                              inputProps={{ min: 0 }}
+                            />
+                          ) : (
+                            <Typography variant='body2'>{servicio.cantidad}</Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1, borderRight: '1px solid #e0e0e0' }}>
+                          {editingServiceId === servicio.id ? (
+                            <TextField
+                              fullWidth
+                              size='small'
+                              multiline
+                              minRows={2}
+                              maxRows={6}
+                              value={editedServiceData.observacion}
+                              onChange={(e) => setEditedServiceData(prev => ({
+                                ...prev,
+                                observacion: e.target.value
+                              }))}
+                              placeholder='Observaciones...'
+                              sx={{
+                                '& .MuiInputBase-input': {
+                                  whiteSpace: 'pre-wrap'
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Typography
+                              variant='body2'
+                              color='text.secondary'
+                              sx={{
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              {servicio.observacion || '---'}
+                            </Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={2} sx={{ p: 1 }}>
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
+                            {editingServiceId === servicio.id ? (
+                              <>
+                                <Tooltip title="Guardar cambios">
+                                  <IconButton
+                                    size='small'
+                                    color='success'
+                                    onClick={handleSaveServiceChanges}
+                                  >
+                                    <i className='ri-check-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Cancelar edición">
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={handleCancelEditingService}
+                                  >
+                                    <i className='ri-close-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            ) : (
+                              <>
+                                <Tooltip title="Editar servicio">
+                                  <IconButton
+                                    size='small'
+                                    color='primary'
+                                    onClick={() => handleStartEditingService(servicio)}
+                                  >
+                                    <i className='ri-edit-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar servicio">
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={() => handleDeleteService(servicio.id)}
+                                  >
+                                    <i className='ri-delete-bin-line' style={{ fontSize: '16px' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    ))
+                  ) : (
+                    <Grid container sx={{ p: 2 }}>
+                      <Grid item xs={12}>
+                        <Typography variant='body2' color='text.secondary' textAlign='center'>
+                          No hay servicios registrados
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  )}
                 </Box>
               </Box>
 
