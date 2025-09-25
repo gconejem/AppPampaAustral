@@ -220,33 +220,6 @@ function renderAgendaDiariaHTML(agendaData: any, eventos: any[], logoBase64: str
         @page {
           margin: 5mm 5mm 25mm 5mm;
         }
-        .status-badge {
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 8px;
-          font-weight: bold;
-          text-transform: uppercase;
-        }
-        .status-agendada {
-          background-color: rgba(76, 175, 80, 0.1);
-          color: #4CAF50;
-        }
-        .status-creada {
-          background-color: rgba(156, 39, 176, 0.1);
-          color: #9C27B0;
-        }
-        .status-completada {
-          background-color: rgba(33, 150, 243, 0.1);
-          color: #2196F3;
-        }
-        .status-suspendida {
-          background-color: rgba(244, 67, 54, 0.1);
-          color: #F44336;
-        }
-        .status-eliminada {
-          background-color: rgba(66, 66, 66, 0.1);
-          color: #424242;
-        }
       </style>
     </head>
     <body>
@@ -307,39 +280,21 @@ function renderAgendaDiariaHTML(agendaData: any, eventos: any[], logoBase64: str
       return `${nombreServicio}${cantidad}`
     }).join('<br>')
 
-    // Determinar clase CSS para el estado
-    let statusClass = 'status-agendada'
-    switch (estado) {
-      case 'CREADA':
-        statusClass = 'status-creada'
-        break
-      case 'COMPLETADA':
-        statusClass = 'status-completada'
-        break
-      case 'SUSPENDIDA':
-      case 'SUSPENDIDA_TERRENO':
-        statusClass = 'status-suspendida'
-        break
-      case 'ELIMINADA':
-        statusClass = 'status-eliminada'
-        break
-      default:
-        statusClass = 'status-agendada'
-    }
+    // Obtener referencia y georreferencia de la obra
+    const obraData = evento.extendedProps?.obra
+    const referencia = obraData?.referencia || 'Sin referencia'
+    const georreferencia = obraData?.georreferencia || 'Sin georreferencia'
+    const referenciaGeorreferencia = `${referencia} / ${georreferencia}`
 
     return `
                   <tr class="event-row">
                     <td><strong>${horaInicio}</strong></td>
-                    <td>
-                      <span class="status-badge ${statusClass}">
-                        ${estadoFormateado}
-                      </span>
-                    </td>
+                    <td>${estadoFormateado}</td>
                     <td>${cliente}</td>
                     <td>${obra}</td>
                     <td>${comuna}</td>
                     <td>${direccion}</td>
-                    <td>Referencia / Georreferencia</td>
+                    <td>${referenciaGeorreferencia}</td>
                     <td>${serviciosText || 'Sin servicios'}</td>
                     <td>${solicitante}</td>
                   </tr>
