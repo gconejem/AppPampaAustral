@@ -295,6 +295,36 @@ const Calendar = (props: CalenderProps) => {
     setEventMenuAnchorEl(null)
   }
 
+  // Función para abrir el menú de opciones desde las vistas de semana/día
+  const openEventMenu = (eventId: string) => {
+    setSelectedEventId(eventId)
+
+    // Buscar el botón que fue clickeado
+    const menuButton = document.querySelector(`[data-event-id="${eventId}"] .event-menu-button`)
+    if (menuButton) {
+      setEventMenuAnchorEl(menuButton)
+    } else {
+      // Fallback: crear un elemento temporal posicionado en el centro si no se encuentra el botón
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'fixed'
+      tempElement.style.left = '50%'
+      tempElement.style.top = '50%'
+      tempElement.style.transform = 'translate(-50%, -50%)'
+      tempElement.style.width = '1px'
+      tempElement.style.height = '1px'
+      document.body.appendChild(tempElement)
+
+      setEventMenuAnchorEl(tempElement)
+
+      // Limpiar el elemento temporal después de que se abra el menú
+      setTimeout(() => {
+        if (document.body.contains(tempElement)) {
+          document.body.removeChild(tempElement)
+        }
+      }, 100)
+    }
+  }
+
   const handleDuplicarEvento = async () => {
     if (!selectedEventId) return
 
@@ -399,6 +429,19 @@ const Calendar = (props: CalenderProps) => {
 
   const handleMenuAction = async (action: string) => {
     switch (action) {
+      case 'editar':
+        const eventToEdit = events.find(event => String(event.id) === String(selectedEventId))
+
+        if (eventToEdit) {
+          setSelectedEventForView(eventToEdit)
+          setEditEventSidebarOpen(true)
+        }
+
+        break
+      case 'asignarLaboratorista':
+        // Esta acción ya abre el modal de asignar laboratorista
+        setAsignarLaboratoristaOpen(true)
+        break
       case 'reprogramar':
         const eventToReprogramar = events.find(event => String(event.id) === String(selectedEventId))
 
@@ -418,9 +461,6 @@ const Calendar = (props: CalenderProps) => {
           setReprogramarModalOpen(true)
         }
 
-        break
-      case 'duplicar':
-        await handleDuplicarEvento()
         break
       case 'cambiarEstado':
         const eventToChangeStatus = events.find(event => String(event.id) === String(selectedEventId))
@@ -734,13 +774,19 @@ const Calendar = (props: CalenderProps) => {
   }, [events, selectAll])
 
   // Hacer la función accesible globalmente para FullCalendar
-  // Hacer la función accesible para los checkboxes
+  // Hacer las funciones accesibles para los checkboxes y botones del calendario
   useEffect(() => {
     (window as any).toggleEventSelection = (eventId: string) => {
       handleSelectEvent(eventId)
     }
+
+    (window as any).openEventMenu = (eventId: string) => {
+      openEventMenu(eventId)
+    }
+
     return () => {
       delete (window as any).toggleEventSelection
+      delete (window as any).openEventMenu
     }
   }, [handleSelectEvent])
 
@@ -2140,6 +2186,11 @@ const Calendar = (props: CalenderProps) => {
     initialDate: new Date(),
     navLinks: true,
     eventClick: (info) => {
+      // Verificar si el clic fue en un botón de opciones o acciones dentro del evento
+      if (info.jsEvent.target.closest('.event-menu-button, .fc-list-event-preview-button, .fc-list-event-edit-button, .fc-list-event-person-button')) {
+        return; // No abrir preview si fue clic en un botón de acción
+      }
+
       // Solo abrir preview si no estamos en vista de lista (ya que en lista tiene sus propios botones)
       if (info.view.type !== 'listMonth') {
         handleViewEvent(info.event.id)
@@ -2204,7 +2255,7 @@ const Calendar = (props: CalenderProps) => {
         }
       }
 
-      // Para vista semanal - ocupar todo el espacio disponible
+      // Para vista semanal - ocupar todo el espacio disponible con menú de opciones
       if (info.view.type === 'timeGridWeek') {
         // Obtener datos del evento
         const horaInicio = formatEventTime(info.event.start)
@@ -2214,6 +2265,7 @@ const Calendar = (props: CalenderProps) => {
         const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
         const comuna = info.event.extendedProps?.comuna || ''
         const laboratorista = getLaboratoristaInitials(info.event.extendedProps?.asignados || [])
+        const eventId = info.event.id
 
         // Formatear líneas de información
         const linea1 = `${horaInicio} - ${horaFin} ${formatStatusForDisplay(estado)}`
@@ -2223,80 +2275,130 @@ const Calendar = (props: CalenderProps) => {
 
         return {
           html: `
-            <div style="
-              background-color: ${backgroundColor};
-              color: white;
-              height: 100%;
-              width: 100%;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              text-align: left;
-              padding: 4px;
-              box-sizing: border-box;
-              overflow: hidden;
-              border-radius: 0;
-              margin: 0;
-              gap: 1px;
-            ">
+            <div
+              data-event-id="${info.event.id}"
+              style="
+                background-color: ${backgroundColor};
+                color: white;
+                height: 100%;
+                width: 100%;
+                display: flex;
+                position: relative;
+                border-radius: 0;
+                margin: 0;
+                pointer-events: auto;
+              "
+            >
               <div style="
-                font-weight: bold;
-                font-size: 0.55rem;
-                line-height: 1.0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
                 text-align: left;
+                padding: 4px;
+                box-sizing: border-box;
+                overflow: hidden;
+                gap: 1px;
               ">
-                ${linea1}
+                <div style="
+                  font-weight: bold;
+                  font-size: 0.55rem;
+                  line-height: 1.0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea1}
+                </div>
+                ${linea2 ? `<div style="
+                  font-weight: 500;
+                  font-size: 0.5rem;
+                  line-height: 1.0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea2}
+                </div>` : ''}
+                ${linea3 ? `<div style="
+                  font-weight: 400;
+                  font-size: 0.5rem;
+                  line-height: 1.0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea3}
+                </div>` : ''}
+                ${linea4 ? `<div style="
+                  font-weight: bold;
+                  font-size: 0.55rem;
+                  line-height: 1.0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  background-color: rgba(255, 255, 255, 0.2);
+                  border-radius: 8px;
+                  padding: 1px 4px;
+                  margin-top: 1px;
+                  text-align: left;
+                ">
+                  ${linea4}
+                </div>` : ''}
               </div>
-              ${linea2 ? `<div style="
-                font-weight: 500;
-                font-size: 0.5rem;
-                line-height: 1.0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                text-align: left;
+
+              <!-- Menú de opciones -->
+              <div style="
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 20px;
+                height: 20px;
               ">
-                ${linea2}
-              </div>` : ''}
-              ${linea3 ? `<div style="
-                font-weight: 400;
-                font-size: 0.5rem;
-                line-height: 1.0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                text-align: left;
-              ">
-                ${linea3}
-              </div>` : ''}
-              ${linea4 ? `<div style="
-                font-weight: bold;
-                font-size: 0.55rem;
-                line-height: 1.0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                padding: 1px 4px;
-                margin-top: 1px;
-                text-align: left;
-              ">
-                ${linea4}
-              </div>` : ''}
+                <button
+                  class="event-menu-button"
+                  onclick="event.stopPropagation(); event.preventDefault(); window.openEventMenu && window.openEventMenu('${eventId}'); return false;"
+                  style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: none;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    padding: 0;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 16px;
+                    height: 16px;
+                    font-size: 10px;
+                    transition: background-color 0.2s;
+                    pointer-events: auto;
+                  "
+                  onmouseover="this.style.backgroundColor='rgba(255, 255, 255, 0.3)'"
+                  onmouseout="this.style.backgroundColor='rgba(255, 255, 255, 0.2)'"
+                  title="Opciones"
+                >
+                  <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;">
+                    <path fill="currentColor" d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           `
         }
       }
 
-      // Para vista de día - ocupar todo el espacio disponible
+      // Para vista de día - ocupar todo el espacio disponible con menú de opciones
       if (info.view.type === 'timeGridDay') {
         // Obtener datos del evento
         const horaInicio = formatEventTime(info.event.start)
@@ -2306,6 +2408,7 @@ const Calendar = (props: CalenderProps) => {
         const cliente = info.event.extendedProps?.cliente?.nombreCliente || ''
         const comuna = info.event.extendedProps?.comuna || ''
         const laboratorista = getLaboratoristaInitials(info.event.extendedProps?.asignados || [])
+        const eventId = info.event.id
 
         // Formatear líneas de información
         const linea1 = `${horaInicio} - ${horaFin} ${formatStatusForDisplay(estado)}`
@@ -2315,74 +2418,124 @@ const Calendar = (props: CalenderProps) => {
 
         return {
           html: `
-            <div style="
-              background-color: ${backgroundColor};
-              color: white;
-              height: 100%;
-              width: 100%;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              text-align: left;
-              padding: 4px 8px;
-              box-sizing: border-box;
-              overflow: hidden;
-              border-radius: 0;
-              margin: 0;
-              gap: 1px;
-            ">
+            <div
+              data-event-id="${info.event.id}"
+              style="
+                background-color: ${backgroundColor};
+                color: white;
+                height: 100%;
+                width: 100%;
+                display: flex;
+                position: relative;
+                border-radius: 0;
+                margin: 0;
+                pointer-events: auto;
+              "
+            >
               <div style="
-                font-weight: bold;
-                font-size: 0.75rem;
-                line-height: 1.1;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
                 text-align: left;
+                padding: 4px 8px;
+                box-sizing: border-box;
+                overflow: hidden;
+                gap: 1px;
               ">
-                ${linea1}
+                <div style="
+                  font-weight: bold;
+                  font-size: 0.75rem;
+                  line-height: 1.1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea1}
+                </div>
+                ${linea2 ? `<div style="
+                  font-weight: 500;
+                  font-size: 0.7rem;
+                  line-height: 1.1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea2}
+                </div>` : ''}
+                ${linea3 ? `<div style="
+                  font-weight: 400;
+                  font-size: 0.65rem;
+                  line-height: 1.1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  text-align: left;
+                ">
+                  ${linea3}
+                </div>` : ''}
+                ${linea4 ? `<div style="
+                  font-weight: bold;
+                  font-size: 0.7rem;
+                  line-height: 1.1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  width: 100%;
+                  background-color: rgba(255, 255, 255, 0.2);
+                  border-radius: 8px;
+                  padding: 1px 4px;
+                  margin-top: 1px;
+                  text-align: left;
+                ">
+                  ${linea4}
+                </div>` : ''}
               </div>
-              ${linea2 ? `<div style="
-                font-weight: 500;
-                font-size: 0.7rem;
-                line-height: 1.1;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                text-align: left;
+
+              <!-- Menú de opciones -->
+              <div style="
+                position: absolute;
+                top: 4px;
+                right: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
               ">
-                ${linea2}
-              </div>` : ''}
-              ${linea3 ? `<div style="
-                font-weight: 400;
-                font-size: 0.65rem;
-                line-height: 1.1;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                text-align: left;
-              ">
-                ${linea3}
-              </div>` : ''}
-              ${linea4 ? `<div style="
-                font-weight: bold;
-                font-size: 0.7rem;
-                line-height: 1.1;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                padding: 1px 4px;
-                margin-top: 1px;
-                text-align: left;
-              ">
-                ${linea4}
-              </div>` : ''}
+                <button
+                  class="event-menu-button"
+                  onclick="event.stopPropagation(); event.preventDefault(); window.openEventMenu && window.openEventMenu('${eventId}'); return false;"
+                  style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: none;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    padding: 0;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 20px;
+                    height: 20px;
+                    font-size: 12px;
+                    transition: background-color 0.2s;
+                    pointer-events: auto;
+                  "
+                  onmouseover="this.style.backgroundColor='rgba(255, 255, 255, 0.3)'"
+                  onmouseout="this.style.backgroundColor='rgba(255, 255, 255, 0.2)'"
+                  title="Opciones"
+                >
+                  <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;">
+                    <path fill="currentColor" d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           `
         }
@@ -3112,6 +3265,14 @@ const Calendar = (props: CalenderProps) => {
           horizontal: 'right'
         }}
       >
+        <MenuItem onClick={() => handleMenuAction('editar')}>
+          <i className='ri-edit-line' style={{ marginRight: '8px' }}></i>
+          Editar
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('asignarLaboratorista')}>
+          <i className='ri-user-star-line' style={{ marginRight: '8px' }}></i>
+          Asignar Laboratorista
+        </MenuItem>
         <MenuItem
           onClick={() => handleMenuAction('reprogramar')}
           disabled={selectedEventEstado === 'SUSPENDIDA'}
@@ -3121,19 +3282,11 @@ const Calendar = (props: CalenderProps) => {
           }}
         >
           <i className='ri-calendar-line' style={{ marginRight: '8px' }}></i>
-          Reprogramar
-        </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('duplicar')}>
-          <i className='ri-file-copy-line' style={{ marginRight: '8px' }}></i>
-          Duplicar
+          Reprogramar (Fecha / Hora)
         </MenuItem>
         <MenuItem onClick={() => handleMenuAction('cambiarEstado')}>
           <i className='ri-exchange-line' style={{ marginRight: '8px' }}></i>
           Cambiar Estado
-        </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('eliminar')} sx={{ color: 'error.main' }}>
-          <i className='ri-delete-bin-line' style={{ marginRight: '8px' }}></i>
-          Eliminar
         </MenuItem>
       </Menu>
 
