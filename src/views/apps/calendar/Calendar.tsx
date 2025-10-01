@@ -137,6 +137,9 @@ const Calendar = (props: CalenderProps) => {
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
   const [calendarKey, setCalendarKey] = useState<number>(0)
   const [currentView, setCurrentView] = useState<string>('listMonth')
+  const [calendarInitialDate, setCalendarInitialDate] = useState<Date>(() => {
+    return props.selectedDate || (props.selectedDateRange?.start || new Date())
+  })
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -507,6 +510,10 @@ const Calendar = (props: CalenderProps) => {
 
     setStatusFilters(newStatusFilters)
 
+    // Establecer la fecha inicial correcta antes de recrear el calendario
+    const targetDate = props.selectedDate || (props.selectedDateRange?.start || new Date())
+    setCalendarInitialDate(targetDate)
+
     // Forzar actualización del calendario cuando cambien los filtros de estado
     setTimeout(() => {
       setCalendarKey(prev => prev + 1)
@@ -674,6 +681,12 @@ const Calendar = (props: CalenderProps) => {
       setSelectAll(false)
     }
   }, [props.selectedDate])
+
+  // Actualizar la fecha inicial del calendario cuando cambien las fechas seleccionadas
+  useEffect(() => {
+    const targetDate = props.selectedDate || (props.selectedDateRange?.start || new Date())
+    setCalendarInitialDate(targetDate)
+  }, [props.selectedDate, props.selectedDateRange?.start])
 
   const handleSelectAll = () => {
     setSelectAll(prev => {
@@ -2193,7 +2206,7 @@ const Calendar = (props: CalenderProps) => {
       }
     },
     direction: 'ltr',
-    initialDate: new Date(),
+    initialDate: calendarInitialDate,
     navLinks: true,
     eventClick: (info) => {
       // Verificar si el clic fue en un botón de opciones o acciones dentro del evento
