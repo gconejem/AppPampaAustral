@@ -300,7 +300,7 @@ const Calendar = (props: CalenderProps) => {
     setSelectedEventId(eventId)
 
     // Buscar el botón que fue clickeado
-    const menuButton = document.querySelector(`[data-event-id="${eventId}"] .event-menu-button`)
+    const menuButton = document.querySelector(`[data-event-id="${eventId}"] .event-menu-button`) as HTMLElement | null
     if (menuButton) {
       setEventMenuAnchorEl(menuButton)
     } else {
@@ -2197,7 +2197,7 @@ const Calendar = (props: CalenderProps) => {
     navLinks: true,
     eventClick: (info) => {
       // Verificar si el clic fue en un botón de opciones o acciones dentro del evento
-      if (info.jsEvent.target.closest('.event-menu-button, .fc-list-event-preview-button, .fc-list-event-edit-button, .fc-list-event-person-button')) {
+      if (info.jsEvent.target && (info.jsEvent.target as HTMLElement).closest('.event-menu-button, .fc-list-event-preview-button, .fc-list-event-edit-button, .fc-list-event-person-button')) {
         return; // No abrir preview si fue clic en un botón de acción
       }
 
