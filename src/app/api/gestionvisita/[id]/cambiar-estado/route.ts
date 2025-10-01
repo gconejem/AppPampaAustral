@@ -110,6 +110,28 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     })
 
+    // Si se cambió el estado a RECIBIDA_OK, automáticamente actualizar todas las OTs a DISPONIBLE
+    if (estado === 'RECIBIDA_OK' && visita.ordenesTrabajo && visita.ordenesTrabajo.length > 0) {
+      console.log(`Actualizando ${visita.ordenesTrabajo.length} OTs a DISPONIBLE para visita ${visitaId}`)
+
+      // Actualizar todas las órdenes de trabajo asociadas a esta visita a DISPONIBLE
+      await prisma.ordenTrabajo.updateMany({
+        where: { agendaId: visitaId },
+        data: { estado: 'DISPONIBLE' }
+      })
+
+      // Obtener las órdenes de trabajo actualizadas
+      const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
+        where: { agendaId: visitaId }
+      })
+
+      return NextResponse.json({
+        visita,
+        ordenesTrabajo,
+        message: `Visita actualizada a RECIBIDA_OK y ${ordenesTrabajo.length} OTs actualizadas a DISPONIBLE`
+      })
+    }
+
     // Si se proporcionó un estado para las órdenes de trabajo, actualizarlas
     if (ordenesTrabajoEstado && visita.ordenesTrabajo && visita.ordenesTrabajo.length > 0) {
       // Actualizar todas las órdenes de trabajo asociadas a esta visita

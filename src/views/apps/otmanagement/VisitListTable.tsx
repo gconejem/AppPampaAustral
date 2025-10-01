@@ -1336,7 +1336,6 @@ const VisitListTable = ({
         },
         body: JSON.stringify({
           estado: 'RECIBIDA_OK',
-          ordenesTrabajoEstado: 'DISPONIBLE',
           observacionRecibidaOK: observacionesRecepcion
         })
       })
@@ -1492,6 +1491,17 @@ const VisitListTable = ({
       // Actualizar los datos localmente después de la respuesta de la API
       const updatedData = data.map(item => {
         if (selectedVisits.some(v => v.id === item.id)) {
+          // Si se cambió a RECIBIDA_OK, también actualizar las OTs a DISPONIBLE
+          if (bulkNewStatus === 'RECIBIDA_OK') {
+            return {
+              ...item,
+              estado: bulkNewStatus,
+              ordenesTrabajo: item.ordenesTrabajo?.map(ot => ({
+                ...ot,
+                estado: 'DISPONIBLE'
+              }))
+            }
+          }
           return {
             ...item,
             estado: bulkNewStatus
@@ -1505,15 +1515,35 @@ const VisitListTable = ({
 
       // Si la visita seleccionada es una de las que se está editando, actualizarla
       if (selectedVisit && selectedVisits.some(v => v.id === selectedVisit.id)) {
-        onVisitSelect({ ...selectedVisit, estado: bulkNewStatus })
+        if (bulkNewStatus === 'RECIBIDA_OK') {
+          onVisitSelect({
+            ...selectedVisit,
+            estado: bulkNewStatus,
+            ordenesTrabajo: selectedVisit.ordenesTrabajo?.map(ot => ({
+              ...ot,
+              estado: 'DISPONIBLE'
+            }))
+          })
+        } else {
+          onVisitSelect({ ...selectedVisit, estado: bulkNewStatus })
+        }
       }
 
       // Cerrar el diálogo y limpiar estados
       handleCloseBulkEditModal()
 
+      // Notificar al componente padre que se cambió el estado de visitas (para actualizar tabla de OTs)
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
-      setAlertMessage(`${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus}`)
+      setAlertMessage(
+        bulkNewStatus === 'RECIBIDA_OK'
+          ? `${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus} y OTs actualizadas a DISPONIBLE`
+          : `${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus}`
+      )
       setAlertOpen(true)
     } catch (error) {
       console.error('Error al cambiar el estado de las visitas:', error)
@@ -1617,14 +1647,39 @@ const VisitListTable = ({
       }
 
       // Actualizar los datos localmente después de la respuesta de la API
-      const updatedData = data.map(item =>
-        item.id === selectedVisit.id ? { ...item, estado: specialStatus } : item
-      )
+      const updatedData = data.map(item => {
+        if (item.id === selectedVisit.id) {
+          // Si se cambió a RECIBIDA_OK, también actualizar las OTs a DISPONIBLE
+          if (specialStatus === 'RECIBIDA_OK') {
+            return {
+              ...item,
+              estado: specialStatus,
+              ordenesTrabajo: item.ordenesTrabajo?.map(ot => ({
+                ...ot,
+                estado: 'DISPONIBLE'
+              }))
+            }
+          }
+          return { ...item, estado: specialStatus }
+        }
+        return item
+      })
 
       setData(updatedData)
 
       // Actualizar la visita seleccionada
-      onVisitSelect({ ...selectedVisit, estado: specialStatus })
+      if (specialStatus === 'RECIBIDA_OK') {
+        onVisitSelect({
+          ...selectedVisit,
+          estado: specialStatus,
+          ordenesTrabajo: selectedVisit.ordenesTrabajo?.map(ot => ({
+            ...ot,
+            estado: 'DISPONIBLE'
+          }))
+        })
+      } else {
+        onVisitSelect({ ...selectedVisit, estado: specialStatus })
+      }
 
       // Cerrar el diálogo y limpiar estados
       handleCloseSpecialStatusModal()
@@ -1632,9 +1687,18 @@ const VisitListTable = ({
       // Cerrar también el modal de comprobante de visita
       handleCloseComprobante()
 
+      // Notificar al componente padre que se cambió el estado de una visita (para actualizar tabla de OTs)
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
-      setAlertMessage(`Estado cambiado a ${specialStatus} correctamente`)
+      setAlertMessage(
+        specialStatus === 'RECIBIDA_OK'
+          ? `Estado cambiado a ${specialStatus} correctamente y OTs actualizadas a DISPONIBLE`
+          : `Estado cambiado a ${specialStatus} correctamente`
+      )
       setAlertOpen(true)
     } catch (error) {
       console.error('Error al cambiar el estado:', error)
