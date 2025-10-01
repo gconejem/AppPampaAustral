@@ -3399,7 +3399,7 @@ const VisitListTable = ({
                     fullWidth
                     size='small'
                     onClick={handleRecepcionarClick}
-                    disabled={!selectedVisit || selectedVisit.estado !== 'COMPLETADA'}
+                    disabled={!selectedVisit || selectedVisit.estado !== 'EN_REVISION'}
                   >
                     Recepcionar
                   </Button>
