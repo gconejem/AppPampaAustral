@@ -50,9 +50,10 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 2px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -60,6 +61,9 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -71,6 +75,9 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -93,6 +100,9 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
           width: 140px;
           border-left: 1px solid #000;
           padding: 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .doc-number {
@@ -204,12 +214,12 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
           <div class="method">Según 8.502.1 - 8.502.2 Diciembre 2003 MC-V8</div>
         </div>
         <div class="document-info">
-          <div class="doc-number">${ot.tipoOT?.codigo || 'R-12-03'}</div>
-          <div>OT N° ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: ${jsonData.aprobadoPor || ''}</div>
-          <div>Fecha Aprobación: ${jsonData.fechaAprobacion || ''}</div>
-          <div>Versión: ${jsonData.version || '13'}</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>${ot.tipoOT?.codigo || 'R-12-03'}</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -378,9 +388,10 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 10px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -388,6 +399,9 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 10px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -399,6 +413,9 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 15px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -418,11 +435,14 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
           font-style: italic;
         }
         
-        .version-info {
-          width: 100px;
+        .document-info {
+          width: 140px;
           border-left: 1px solid #000;
           padding: 10px 5px;
-          text-align: center;
+          font-size: 9px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .info-section {
@@ -479,8 +499,13 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
           <div class="code">R-12-99</div>
           <div class="subtitle">Confección y curado en Obra<br>(NCh 1017-2009)</div>
         </div>
-        <div class="version-info">
-          <div style="font-weight: bold;">Versión: 5</div>
+        <div class="document-info">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-99</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -609,9 +634,10 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 8px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -619,6 +645,9 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 8px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -630,6 +659,9 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -649,6 +681,9 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
           border-left: 1px solid #000;
           padding: 8px 5px;
           font-size: 8px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .info-section {
@@ -769,11 +804,12 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
           </div>
         </div>
         <div class="document-info">
-          <div><strong>R-12-39</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: Juan Salas Sepulveda</div>
-          <div>Fecha Aprobación: 01-11-2021</div>
-          <div>Versión: 11</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-39</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -1060,9 +1096,10 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 8px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -1070,6 +1107,9 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 8px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -1081,6 +1121,9 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 15px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -1094,6 +1137,9 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
           border-left: 1px solid #000;
           padding: 8px 5px;
           font-size: 8px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .info-section {
@@ -1246,11 +1292,12 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
           <div class="title">MUESTREO DE MATERIALES</div>
         </div>
         <div class="document-info">
-          <div><strong>R-12-27</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: Cristián Salinas Celedón</div>
-          <div>Fecha Aprobación: 04-10-2023</div>
-          <div>Versión: 12</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-27</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -1409,9 +1456,10 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 8px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -1419,6 +1467,9 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 8px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -1430,6 +1481,9 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -1449,6 +1503,9 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
           border-left: 1px solid #000;
           padding: 8px 5px;
           font-size: 8px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .info-section {
@@ -1559,7 +1616,7 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
           display: grid;
           grid-template-columns: auto 1fr;
           gap: 5px 10px;
-          align-items: center;
+          align-items: stretch;
         }
         
         .grid-label {
@@ -1617,11 +1674,12 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
           </div>
         </div>
         <div class="document-info">
-          <div><strong>R-12-58</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: Cristián Salinas Celedón</div>
-          <div>Fecha Aprobación: 15-11-2023</div>
-          <div>Versión: 5</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-58</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -1809,9 +1867,10 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 5px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -1819,6 +1878,9 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 8px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -1830,6 +1892,9 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -1843,6 +1908,9 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
           border-left: 1px solid #000;
           padding: 8px 5px;
           font-size: 8px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .references {
@@ -1899,7 +1967,7 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
         
         .ensayo-item {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           gap: 5px;
         }
         
@@ -1985,11 +2053,12 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
           <div class="title">TOMA DE MUESTRA DE EXTRACCIÓN</div>
         </div>
         <div class="document-info">
-          <div><strong>R-12-31</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: Cristián Salinas Celedón</div>
-          <div>Fecha Aprobación: 15-11-2023</div>
-          <div>Versión: 4</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-31</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -2153,9 +2222,10 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
         
         .header {
           display: flex;
-          align-items: center;
+          align-items: stretch;
           border: 1px solid #000;
           margin-bottom: 10px;
+          min-height: 60px;
         }
         
         .logo-section {
@@ -2163,6 +2233,9 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
           text-align: center;
           border-right: 1px solid #000;
           padding: 10px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .logo {
@@ -2174,6 +2247,9 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
           flex: 1;
           text-align: center;
           padding: 15px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .title {
@@ -2187,6 +2263,9 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
           border-left: 1px solid #000;
           padding: 10px 5px;
           font-size: 9px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
         
         .info-section {
@@ -2289,11 +2368,12 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
           <div class="title">ORDEN DE TRABAJO GENERAL</div>
         </div>
         <div class="document-info">
-          <div><strong>R-12-34</strong> &nbsp;&nbsp;&nbsp; <strong>OT N°</strong> ${ot.id}</div>
-          <div>Autor: ${ot.user?.name || 'Sin asignar'}</div>
-          <div>Aprobado por: Cristián Salinas Celedón</div>
-          <div>Fecha Aprobación: 04-10-2023</div>
-          <div>Versión: 1</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>R-12-34</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
 
@@ -2379,10 +2459,67 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
     <head>
       <meta charset="UTF-8">
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .logo { width: 100px; height: auto; }
-        .title { font-size: 24px; font-weight: bold; margin: 20px 0; }
+        @page {
+          size: A4;
+          margin: 8mm;
+        }
+        
+        body { 
+          font-family: Arial, sans-serif; 
+          font-size: 10px;
+          line-height: 1.3;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .header {
+          display: flex;
+          align-items: stretch;
+          border: 1px solid #000;
+          margin-bottom: 10px;
+          min-height: 60px;
+        }
+        
+        .logo-section {
+          width: 100px;
+          text-align: center;
+          border-right: 1px solid #000;
+          padding: 10px 5px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .logo { 
+          width: 70px; 
+          height: auto; 
+        }
+        
+        .title-section {
+          flex: 1;
+          text-align: center;
+          padding: 15px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .title { 
+          font-size: 16px; 
+          font-weight: bold; 
+          margin-bottom: 3px; 
+        }
+        
+        .document-info {
+          width: 140px;
+          border-left: 1px solid #000;
+          padding: 10px 5px;
+          font-size: 9px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
         .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
         .info-item { padding: 10px; border: 1px solid #ccc; }
         .label { font-weight: bold; }
@@ -2392,10 +2529,21 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
     </head>
     <body>
       <div class="header">
-        ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
-        <h1 class="title">ORDEN DE TRABAJO</h1>
-        <h2>${ot.tipoOT?.descripcion || 'Tipo de OT no definido'}</h2>
-        <p>Código: ${ot.tipoOT?.codigo || 'Sin código'}</p>
+        <div class="logo-section">
+          ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo">` : ''}
+        </div>
+        <div class="title-section">
+          <div class="title">ORDEN DE TRABAJO</div>
+          <div class="title">${ot.tipoOT?.descripcion || 'Tipo de OT no definido'}</div>
+        </div>
+        <div class="document-info">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>${ot.tipoOT?.codigo || 'R-XX-XX'}</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
+        </div>
       </div>
 
       <div class="info-grid">
@@ -2630,11 +2778,12 @@ function renderCancelacionVisitaHTML(ot: any, logoBase64: string) {
         </div>
         
         <div class="ot-info">
-          <div><strong>OT N°</strong> ${ot.id || 'N/A'}</div>
-          <div><strong>Autor:</strong> ${autor}</div>
-          <div><strong>Aprobado por:</strong> Juan Salas Sepúlveda</div>
-          <div><strong>Fecha Aprobación:</strong> ${fechaActual}</div>
-          <div><strong>Versión:</strong> ${version}</div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
+            <span>X-1</span>
+            <span>OT N°</span>
+          </div>
+          <div>Fecha de aprobación:</div>
+          <div>Revisión: N° 00</div>
         </div>
       </div>
       
