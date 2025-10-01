@@ -2256,6 +2256,24 @@ const VisitListTable = ({
               color = 'primary'
           }
 
+          // Para RECIBIDA_OK, usar un estilo personalizado con verde más oscuro
+          if (estado === 'RECIBIDA_OK') {
+            return (
+              <Chip
+                variant='tonal'
+                label={estado.replace(/_/g, ' ')}
+                size='small'
+                sx={{
+                  backgroundColor: '#2e7d32', // Verde más oscuro
+                  color: 'white',
+                  '& .MuiChip-label': {
+                    color: 'white'
+                  }
+                }}
+              />
+            )
+          }
+
           return <Chip variant='tonal' label={estado.replace(/_/g, ' ')} size='small' color={color} />
         }
       }),
