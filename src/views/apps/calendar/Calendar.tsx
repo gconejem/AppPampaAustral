@@ -446,9 +446,10 @@ const Calendar = (props: CalenderProps) => {
         const eventToReprogramar = events.find(event => String(event.id) === String(selectedEventId))
 
         if (eventToReprogramar) {
-          // Verificar si el evento está suspendido
-          if (eventToReprogramar.extendedProps?.estado === 'SUSPENDIDA') {
-            setSnackbarMessage('No se puede reprogramar un evento suspendido')
+          // Verificar si el evento se puede reprogramar (solo CREADA o AGENDADA)
+          const estado = eventToReprogramar.extendedProps?.estado || 'AGENDADA'
+          if (estado !== 'CREADA' && estado !== 'AGENDADA') {
+            setSnackbarMessage(`No se puede reprogramar un evento con estado ${estado}. Solo se pueden reprogramar eventos con estado CREADA o AGENDADA`)
             setSnackbarSeverity('error')
             setOpenSnackbar(true)
             return
@@ -866,14 +867,20 @@ const Calendar = (props: CalenderProps) => {
     try {
       console.log('Reprogramando eventos masivamente a fecha:', fechaInicio)
 
-      // Verificar que ningún evento seleccionado esté suspendido
-      const eventosSuspendidos = selectedEvents.filter(selectedEvent => {
+      // Verificar que todos los eventos seleccionados se puedan reprogramar (solo CREADA o AGENDADA)
+      const eventosNoReprogramables = selectedEvents.filter(selectedEvent => {
         const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-        return evento?.extendedProps?.estado === 'SUSPENDIDA'
+        const estado = evento?.extendedProps?.estado || 'AGENDADA'
+        return estado !== 'CREADA' && estado !== 'AGENDADA'
       })
 
-      if (eventosSuspendidos.length > 0) {
-        setSnackbarMessage(`No se pueden reprogramar eventos suspendidos. ${eventosSuspendidos.length} evento(s) seleccionado(s) tienen estado suspendido.`)
+      if (eventosNoReprogramables.length > 0) {
+        const estadosNoPermitidos = eventosNoReprogramables.map(selectedEvent => {
+          const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+          return evento?.extendedProps?.estado || 'AGENDADA'
+        }).filter((value, index, self) => self.indexOf(value) === index) // Obtener estados únicos
+
+        setSnackbarMessage(`No se pueden reprogramar eventos con estado ${estadosNoPermitidos.join(', ')}. Solo se pueden reprogramar eventos con estado CREADA o AGENDADA`)
         setSnackbarSeverity('error')
         setOpenSnackbar(true)
         return
@@ -3282,10 +3289,10 @@ const Calendar = (props: CalenderProps) => {
         </MenuItem>
         <MenuItem
           onClick={() => handleMenuAction('reprogramar')}
-          disabled={selectedEventEstado === 'SUSPENDIDA'}
+          disabled={selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA'}
           sx={{
-            opacity: selectedEventEstado === 'SUSPENDIDA' ? 0.5 : 1,
-            cursor: selectedEventEstado === 'SUSPENDIDA' ? 'not-allowed' : 'pointer'
+            opacity: selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA' ? 0.5 : 1,
+            cursor: selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA' ? 'not-allowed' : 'pointer'
           }}
         >
           <i className='ri-calendar-line' style={{ marginRight: '8px' }}></i>
@@ -3315,16 +3322,19 @@ const Calendar = (props: CalenderProps) => {
           onClick={() => handleBulkMenuAction('reprogramar')}
           disabled={selectedEvents.some(selectedEvent => {
             const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-            return evento?.extendedProps?.estado === 'SUSPENDIDA'
+            const estado = evento?.extendedProps?.estado || 'AGENDADA'
+            return estado !== 'CREADA' && estado !== 'AGENDADA'
           })}
           sx={{
             opacity: selectedEvents.some(selectedEvent => {
               const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+              const estado = evento?.extendedProps?.estado || 'AGENDADA'
+              return estado !== 'CREADA' && estado !== 'AGENDADA'
             }) ? 0.5 : 1,
             cursor: selectedEvents.some(selectedEvent => {
               const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+              const estado = evento?.extendedProps?.estado || 'AGENDADA'
+              return estado !== 'CREADA' && estado !== 'AGENDADA'
             }) ? 'not-allowed' : 'pointer'
           }}
         >
