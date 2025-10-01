@@ -471,6 +471,9 @@ const Calendar = (props: CalenderProps) => {
         }
 
         break
+      case 'duplicar':
+        await handleDuplicarEvento()
+        break
       case 'eliminar':
         setDeleteDialogOpen(true)
         break
@@ -3268,6 +3271,10 @@ const Calendar = (props: CalenderProps) => {
         <MenuItem onClick={() => handleMenuAction('editar')}>
           <i className='ri-edit-line' style={{ marginRight: '8px' }}></i>
           Editar
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('duplicar')}>
+          <i className='ri-file-copy-line' style={{ marginRight: '8px' }}></i>
+          Duplicar
         </MenuItem>
         <MenuItem onClick={() => handleMenuAction('asignarLaboratorista')}>
           <i className='ri-user-star-line' style={{ marginRight: '8px' }}></i>

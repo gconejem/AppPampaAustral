@@ -819,7 +819,7 @@ const DuplicateEventSidebar = ({
     return (
       formData.clienteId &&
       formData.obraId &&
-      formData.solicitudId &&
+      // La solicitud NO es obligatoria para duplicar visitas
       formData.sectorComercial &&
       formData.region &&
       formData.comuna &&
@@ -835,7 +835,7 @@ const DuplicateEventSidebar = ({
   }, [
     formData.clienteId,
     formData.obraId,
-    formData.solicitudId,
+    // Removido formData.solicitudId de las dependencias ya que no es obligatorio
     formData.sectorComercial,
     formData.region,
     formData.comuna,
@@ -858,10 +858,7 @@ const DuplicateEventSidebar = ({
       if (!formData.clienteId) camposFaltantes.push('Cliente')
       if (!formData.obraId) camposFaltantes.push('Obra')
 
-      // Solicitud es obligatoria solo para estado AGENDADO
-      if (estado === 'AGENDADA' && !formData.solicitudId) {
-        camposFaltantes.push('Solicitud')
-      }
+      // Para duplicaciones, la solicitud NO es obligatoria (las duplicaciones siempre se crean con estado CREADA)
       if (!formData.sectorComercial) camposFaltantes.push('Sector Comercial')
       if (!formData.region) camposFaltantes.push('Región')
       if (!formData.comuna) camposFaltantes.push('Comuna')
@@ -1363,7 +1360,7 @@ const DuplicateEventSidebar = ({
               <Box display='flex' alignItems='center' gap={1}>
                 <Typography variant='h5'>Duplicar Visita</Typography>
                 <Typography variant='body2' color='textSecondary'>
-                  * Campo obligatorio - Debe completar fechas, horas y asignar laboratoristas
+                  * Campos obligatorios: fechas, horas, laboratoristas, contactos y servicios.
                 </Typography>
               </Box>
             </Grid>
@@ -1739,9 +1736,8 @@ const DuplicateEventSidebar = ({
                   renderInput={params => (
                     <TextField
                       {...params}
-                      label={estado === 'AGENDADA' ? 'Solicitud *' : 'Solicitud'}
-                      error={estado === 'AGENDADA' && !formData.solicitudId}
-                      helperText={estado === 'AGENDADA' && !formData.solicitudId ? 'Campo obligatorio para eventos agendados' : ''}
+                      label='Solicitud'
+                      helperText='La solicitud no es obligatoria para duplicar visitas'
                     />
                   )}
                   disabled={!formData.clienteId}
@@ -2605,7 +2601,7 @@ const DuplicateEventSidebar = ({
           <Grid container spacing={2} mt={2} mb={2}>
             <Grid item xs={12} display='flex' justifyContent='flex-start'>
               <Tooltip
-                title={!isFormValid ? 'Complete todos los campos obligatorios: fechas, horas y laboratoristas' : ''}
+                title={!isFormValid ? 'Complete todos los campos obligatorios: fechas, horas, laboratoristas, contactos y servicios' : ''}
                 arrow
               >
                 <span>
