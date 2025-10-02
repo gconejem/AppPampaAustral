@@ -20,6 +20,7 @@ interface CambiarEstadoModalProps {
   estadoActual: string
   onCambiarEstado: (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => Promise<void>
   isBulkEdit?: boolean
+  eventData?: any // Datos completos del evento para validaciones
 }
 
 // Estados disponibles del enum EstadoAgenda
@@ -84,7 +85,8 @@ const CambiarEstadoModal = ({
   onClose,
   estadoActual,
   onCambiarEstado,
-  isBulkEdit = false
+  isBulkEdit = false,
+  eventData
 }: CambiarEstadoModalProps) => {
   // Obtener el primer estado disponible como valor por defecto
   const estadosDisponibles = getEstadosDisponibles(estadoActual, isBulkEdit)
@@ -100,6 +102,35 @@ const CambiarEstadoModal = ({
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
+  // Función para validar campos obligatorios al cambiar de CREADA a AGENDADA
+  const validateEventForAgendada = (eventData: any): { isValid: boolean; missingFields: string[] } => {
+    if (!eventData) return { isValid: true, missingFields: [] } // Para edición masiva, no validamos
+
+    const missingFields: string[] = []
+
+    // Validar hora de inicio y fin
+    if (!eventData.start || !eventData.end) {
+      missingFields.push('horas de inicio y fin')
+    }
+
+    // Validar laboratoristas asignados
+    const asignados = eventData.extendedProps?.asignados || []
+    if (asignados.length === 0) {
+      missingFields.push('laboratoristas asignados')
+    }
+
+    // Validar equipos
+    const equipos = eventData.extendedProps?.equipos || []
+    if (equipos.length === 0) {
+      missingFields.push('equipos asignados')
+    }
+
+    return {
+      isValid: missingFields.length === 0,
+      missingFields
+    }
+  }
+
   // Resetear al primer estado disponible cuando cambie el estadoActual
   useEffect(() => {
     const nuevosEstadosDisponibles = getEstadosDisponibles(estadoActual, isBulkEdit)
@@ -112,6 +143,15 @@ const CambiarEstadoModal = ({
     if (isLoading) return // Prevenir múltiples clicks
 
     setError('')
+
+    // Validar campos obligatorios al cambiar de CREADA a AGENDADA
+    if (estadoActual === 'CREADA' && selectedEstado === 'AGENDADA') {
+      const validation = validateEventForAgendada(eventData)
+      if (!validation.isValid) {
+        setError(`No se puede cambiar el estado a "Agendada" porque faltan los siguientes campos obligatorios: ${validation.missingFields.join(', ')}. Por favor, complete estos campos antes de cambiar el estado.`)
+        return
+      }
+    }
 
     // Validar que si el estado es ELIMINADA, se haya ingresado una observación
     if (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) {
@@ -223,16 +263,29 @@ const CambiarEstadoModal = ({
         )}
 
         {!noHayEstadosDisponibles && selectedEstado === 'AGENDADA' && (
-          <TextField
-            fullWidth
-            label='Observación (opcional)'
-            multiline
-            rows={3}
-            value={observacionAgendada}
-            onChange={e => setObservacionAgendada(e.target.value)}
-            placeholder='Ingrese una observación opcional para el evento agendado'
-            sx={{ mb: 2 }}
-          />
+          <>
+            {estadoActual === 'CREADA' && !validateEventForAgendada(eventData).isValid && (
+              <Alert severity='warning' sx={{ mb: 2 }}>
+                Para cambiar el estado a "Agendada", el evento debe tener:
+                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                  <li>Horas de inicio y fin definidas</li>
+                  <li>Al menos un laboratorista asignado</li>
+                  <li>Al menos un equipo asignado</li>
+                </ul>
+                Complete estos campos antes de cambiar el estado.
+              </Alert>
+            )}
+            <TextField
+              fullWidth
+              label='Observación (opcional)'
+              multiline
+              rows={3}
+              value={observacionAgendada}
+              onChange={e => setObservacionAgendada(e.target.value)}
+              placeholder='Ingrese una observación opcional para el evento agendado'
+              sx={{ mb: 2 }}
+            />
+          </>
         )}
 
         {!noHayEstadosDisponibles && selectedEstado === 'ELIMINADA' && (
@@ -315,7 +368,8 @@ const CambiarEstadoModal = ({
               isLoading ||
               (selectedEstado === 'ELIMINADA' && !observacionEliminada.trim()) ||
               (selectedEstado === 'SUSPENDIDA' && !motivoSuspension) ||
-              (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim())
+              (selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida.trim()) ||
+              (estadoActual === 'CREADA' && selectedEstado === 'AGENDADA' && !validateEventForAgendada(eventData).isValid)
             )
           }
           startIcon={isLoading ? <CircularProgress size={20} color='inherit' /> : undefined}

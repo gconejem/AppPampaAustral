@@ -102,6 +102,7 @@ const Calendar = (props: CalenderProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [cambiarEstadoModalOpen, setCambiarEstadoModalOpen] = useState(false)
   const [selectedEventEstado, setSelectedEventEstado] = useState<string>('AGENDADA')
+  const [selectedEventData, setSelectedEventData] = useState<any>(null)
 
   const [selectedEventDates, setSelectedEventDates] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
@@ -480,6 +481,7 @@ const Calendar = (props: CalenderProps) => {
 
         if (eventToChangeStatus) {
           setSelectedEventEstado(eventToChangeStatus.extendedProps?.estado || 'AGENDADA')
+          setSelectedEventData(eventToChangeStatus)
           setCambiarEstadoModalOpen(true)
         }
 
@@ -875,6 +877,8 @@ const Calendar = (props: CalenderProps) => {
         setAsignarLaboratoristaOpen(true)
         break
       case 'cambiarEstado':
+        // Para edición masiva, no pasamos datos específicos del evento
+        setSelectedEventData(null)
         setCambiarEstadoModalOpen(true)
         break
       case 'eliminar':
@@ -3255,11 +3259,13 @@ const Calendar = (props: CalenderProps) => {
         onClose={() => {
           setCambiarEstadoModalOpen(false)
           setSelectedEventId(null)
+          setSelectedEventData(null)
         }}
         eventId={selectedEventId}
         estadoActual={selectedEventEstado}
         onCambiarEstado={selectedEventId ? handleCambiarEstado : handleBulkCambiarEstado}
         isBulkEdit={!selectedEventId && selectedEvents.length > 1}
+        eventData={selectedEventData}
       />
 
       <Dialog
