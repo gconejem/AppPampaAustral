@@ -218,6 +218,7 @@ function renderControlCompactacionHTML(ot: any, logoBase64: string) {
             <span>${ot.tipoOT?.codigo || 'R-12-03'}</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -504,6 +505,7 @@ function renderRetiroProbetasHTML(ot: any, logoBase64: string) {
             <span>R-12-99</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -808,6 +810,7 @@ function renderMuestreoHormigonFrescoHTML(ot: any, logoBase64: string) {
             <span>R-12-39</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -1296,6 +1299,7 @@ function renderMuestreoMaterialesHTML(ot: any, logoBase64: string) {
             <span>R-12-27</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -1678,6 +1682,7 @@ function renderMuestreoTestigosHTML(ot: any, logoBase64: string) {
             <span>R-12-58</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -2057,6 +2062,7 @@ function renderExtraccionAsfálticaHTML(ot: any, logoBase64: string) {
             <span>R-12-31</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -2372,6 +2378,7 @@ function renderOrdenTrabajoGeneralHTML(ot: any, logoBase64: string) {
             <span>R-12-34</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -2541,6 +2548,7 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
             <span>${ot.tipoOT?.codigo || 'R-XX-XX'}</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
@@ -2782,6 +2790,7 @@ function renderCancelacionVisitaHTML(ot: any, logoBase64: string) {
             <span>X-1</span>
             <span>OT N°</span>
           </div>
+          <div>Fecha de emisión: 01-11-2025</div>
           <div>Fecha de aprobación:</div>
           <div>Revisión: N° 00</div>
         </div>
