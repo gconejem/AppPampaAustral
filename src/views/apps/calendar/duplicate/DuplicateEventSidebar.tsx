@@ -828,7 +828,7 @@ const DuplicateEventSidebar = ({
       fechaFin &&
       horaInicio &&
       horaFin &&
-      laboratoristasAgendados.length > 0 &&
+      // Los laboratoristas NO son obligatorios para duplicar visitas
       contactos.length > 0 &&
       serviciosAgendados.length > 0
     )
@@ -844,7 +844,7 @@ const DuplicateEventSidebar = ({
     fechaFin,
     horaInicio,
     horaFin,
-    laboratoristasAgendados.length,
+    // Removido laboratoristasAgendados.length de las dependencias ya que no es obligatorio
     contactos.length,
     serviciosAgendados.length
   ])
@@ -870,8 +870,7 @@ const DuplicateEventSidebar = ({
       if (!horaInicio || horaInicio === '') camposFaltantes.push('Hora de Inicio')
       if (!horaFin || horaFin === '') camposFaltantes.push('Hora de Término')
 
-      // Validar que haya al menos un laboratorista asignado
-      if (laboratoristasAgendados.length === 0) camposFaltantes.push('Al menos un Laboratorista')
+      // Los laboratoristas NO son obligatorios para duplicar visitas
 
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
@@ -1360,7 +1359,7 @@ const DuplicateEventSidebar = ({
               <Box display='flex' alignItems='center' gap={1}>
                 <Typography variant='h5'>Duplicar Visita</Typography>
                 <Typography variant='body2' color='textSecondary'>
-                  * Campos obligatorios: fechas, horas, laboratoristas, contactos y servicios.
+                  * Campos obligatorios: fechas, horas, contactos y servicios.
                 </Typography>
               </Box>
             </Grid>
@@ -2412,7 +2411,7 @@ const DuplicateEventSidebar = ({
                 {/* Laboratoristas */}
                 <Grid item xs={6}>
                   <Typography variant='h5' sx={{ mb: 2 }}>
-                    Laboratoristas *
+                    Laboratoristas
                   </Typography>
                   <Autocomplete
                     key={laboratoristaKey}
@@ -2428,10 +2427,9 @@ const DuplicateEventSidebar = ({
                     renderInput={params => (
                       <TextField
                         {...params}
-                        label='Laboratorista *'
+                        label='Laboratorista'
                         placeholder='Seleccione un laboratorista para agregarlo automáticamente'
-                        error={laboratoristasAgendados.length === 0}
-                        helperText={laboratoristasAgendados.length === 0 ? 'Debe asignar al menos un laboratorista' : ''}
+                        helperText='Opcional: puede agregar laboratoristas después de crear la visita'
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
@@ -2458,8 +2456,8 @@ const DuplicateEventSidebar = ({
                         {laboratoristasAgendados.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={3} align="center">
-                              <Typography variant="body2" color="error">
-                                Debe asignar al menos un laboratorista
+                              <Typography variant="body2" color="textSecondary">
+                                No hay laboratoristas asignados (opcional)
                               </Typography>
                             </TableCell>
                           </TableRow>
@@ -2600,7 +2598,7 @@ const DuplicateEventSidebar = ({
           <Grid container spacing={2} mt={2} mb={2}>
             <Grid item xs={12} display='flex' justifyContent='flex-start'>
               <Tooltip
-                title={!isFormValid ? 'Complete todos los campos obligatorios: fechas, horas, laboratoristas, contactos y servicios' : ''}
+                title={!isFormValid ? 'Complete todos los campos obligatorios: fechas, horas, contactos y servicios' : ''}
                 arrow
               >
                 <span>
