@@ -363,7 +363,7 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
+  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => {
     if (!selectedEventId) return
 
     try {
@@ -372,6 +372,8 @@ const Calendar = (props: CalenderProps) => {
         observacionEliminada?: string;
         motivoSuspension?: string;
         observacionSuspendida?: string;
+        observacionAgendada?: string;
+        observacionAnuladaGeneral?: string;
       } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
@@ -385,6 +387,13 @@ const Calendar = (props: CalenderProps) => {
         if (motivoSuspension === 'OTRO' && observacionSuspendida) {
           requestBody.observacionSuspendida = observacionSuspendida
         }
+        if (observacionAnuladaGeneral) {
+          requestBody.observacionAnuladaGeneral = observacionAnuladaGeneral
+        }
+      }
+
+      if (nuevoEstado === 'AGENDADA' && observacionAgendada) {
+        requestBody.observacionAgendada = observacionAgendada
       }
 
       const response = await fetch(`/api/agenda/${selectedEventId}/cambiar-estado`, {
@@ -1114,13 +1123,15 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
+  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => {
     try {
       const requestBody: {
         estado: string;
         observacionEliminada?: string;
         motivoSuspension?: string;
         observacionSuspendida?: string;
+        observacionAgendada?: string;
+        observacionAnuladaGeneral?: string;
       } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
@@ -1134,6 +1145,13 @@ const Calendar = (props: CalenderProps) => {
         if (motivoSuspension === 'OTRO' && observacionSuspendida) {
           requestBody.observacionSuspendida = observacionSuspendida
         }
+        if (observacionAnuladaGeneral) {
+          requestBody.observacionAnuladaGeneral = observacionAnuladaGeneral
+        }
+      }
+
+      if (nuevoEstado === 'AGENDADA' && observacionAgendada) {
+        requestBody.observacionAgendada = observacionAgendada
       }
 
       const responses = await Promise.all(

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const agendaId = parseInt(params.id)
-    const { estado, observacionEliminada, motivoSuspension, observacionSuspendida } = await request.json()
+    const { estado, observacionEliminada, motivoSuspension, observacionSuspendida, observacionAgendada, observacionAnuladaGeneral } = await request.json()
 
     // Verificar que el estado sea válido
     if (!Object.values(EstadoAgenda).includes(estado)) {
@@ -44,6 +44,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       observacionEliminada?: string | null;
       motivoSuspension?: MotivoSuspension | null;
       observacionSuspendida?: string | null;
+      observacionAgendada?: string | null;
+      observacionAnuladaGeneral?: string | null;
     } = { estado }
 
     // Manejar campos específicos según el estado
@@ -51,15 +53,27 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       updateData.observacionEliminada = observacionEliminada
       updateData.motivoSuspension = null
       updateData.observacionSuspendida = null
+      updateData.observacionAgendada = null
+      updateData.observacionAnuladaGeneral = null
     } else if (estado === EstadoAgenda.SUSPENDIDA) {
       updateData.motivoSuspension = motivoSuspension as MotivoSuspension
       updateData.observacionSuspendida = motivoSuspension === 'OTRO' ? observacionSuspendida : null
+      updateData.observacionAnuladaGeneral = observacionAnuladaGeneral
       updateData.observacionEliminada = null
+      updateData.observacionAgendada = null
+    } else if (estado === EstadoAgenda.AGENDADA) {
+      updateData.observacionAgendada = observacionAgendada
+      updateData.observacionEliminada = null
+      updateData.motivoSuspension = null
+      updateData.observacionSuspendida = null
+      updateData.observacionAnuladaGeneral = null
     } else {
       // Limpiar todos los campos de observación para otros estados
       updateData.observacionEliminada = null
       updateData.motivoSuspension = null
       updateData.observacionSuspendida = null
+      updateData.observacionAgendada = null
+      updateData.observacionAnuladaGeneral = null
     }
 
     // Actualizar el estado de la agenda

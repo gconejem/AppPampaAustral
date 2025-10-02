@@ -18,7 +18,7 @@ interface CambiarEstadoModalProps {
   onClose: () => void
   eventId: string | null
   estadoActual: string
-  onCambiarEstado: (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => Promise<void>
+  onCambiarEstado: (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => Promise<void>
   isBulkEdit?: boolean
 }
 
@@ -95,6 +95,8 @@ const CambiarEstadoModal = ({
   const [observacionEliminada, setObservacionEliminada] = useState<string>('')
   const [motivoSuspension, setMotivoSuspension] = useState<string>('')
   const [observacionSuspendida, setObservacionSuspendida] = useState<string>('')
+  const [observacionAgendada, setObservacionAgendada] = useState<string>('')
+  const [observacionAnuladaGeneral, setObservacionAnuladaGeneral] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
@@ -137,13 +139,17 @@ const CambiarEstadoModal = ({
         selectedEstado,
         selectedEstado === 'ELIMINADA' ? observacionEliminada : undefined,
         selectedEstado === 'SUSPENDIDA' ? motivoSuspension : undefined,
-        selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' ? observacionSuspendida : undefined
+        selectedEstado === 'SUSPENDIDA' && motivoSuspension === 'OTRO' ? observacionSuspendida : undefined,
+        selectedEstado === 'AGENDADA' ? observacionAgendada : undefined,
+        selectedEstado === 'SUSPENDIDA' ? observacionAnuladaGeneral : undefined
       )
 
       // Solo limpiar campos y cerrar si la operación fue exitosa
       setObservacionEliminada('')
       setMotivoSuspension('')
       setObservacionSuspendida('')
+      setObservacionAgendada('')
+      setObservacionAnuladaGeneral('')
       setError('')
       onClose()
     } catch (error) {
@@ -166,6 +172,8 @@ const CambiarEstadoModal = ({
     setObservacionEliminada('')
     setMotivoSuspension('')
     setObservacionSuspendida('')
+    setObservacionAgendada('')
+    setObservacionAnuladaGeneral('')
     setError('')
     onClose()
   }
@@ -214,6 +222,19 @@ const CambiarEstadoModal = ({
           </FormControl>
         )}
 
+        {!noHayEstadosDisponibles && selectedEstado === 'AGENDADA' && (
+          <TextField
+            fullWidth
+            label='Observación (opcional)'
+            multiline
+            rows={3}
+            value={observacionAgendada}
+            onChange={e => setObservacionAgendada(e.target.value)}
+            placeholder='Ingrese una observación opcional para el evento agendado'
+            sx={{ mb: 2 }}
+          />
+        )}
+
         {!noHayEstadosDisponibles && selectedEstado === 'ELIMINADA' && (
           <TextField
             fullWidth
@@ -260,6 +281,17 @@ const CambiarEstadoModal = ({
                 sx={{ mb: 2 }}
               />
             )}
+
+            <TextField
+              fullWidth
+              label='Observación (opcional)'
+              multiline
+              rows={3}
+              value={observacionAnuladaGeneral}
+              onChange={e => setObservacionAnuladaGeneral(e.target.value)}
+              placeholder='Ingrese una observación opcional para el evento suspendido'
+              sx={{ mb: 2 }}
+            />
           </>
         )}
 
