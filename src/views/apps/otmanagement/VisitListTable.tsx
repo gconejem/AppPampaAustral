@@ -196,6 +196,7 @@ interface Agenda {
   horaSalida?: string
   movilizacion?: string
   kmAdicionales?: string
+  comprobanteVisitaJSON?: any
   cliente?: {
     nombreCliente: string
     rut?: string
@@ -994,10 +995,53 @@ const VisitListTable = ({
     setFechaFin(newFecha)
   }
 
-  const handlePDFClick = () => {
-    if (selectedVisit?.ordenesTrabajo?.[0]) {
-      setSelectedOT(selectedVisit.ordenesTrabajo[0])
-      setPdfModalOpen(true)
+  const handlePDFClick = async () => {
+    if (!selectedVisit) return
+
+    try {
+      // Generar y descargar el PDF del comprobante de visita
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/comprobante-pdf`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      // Obtener el blob del PDF
+      const blob = await response.blob()
+
+      // Crear URL temporal para descarga
+      const url = window.URL.createObjectURL(blob)
+
+      // Crear elemento de descarga
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Comprobante_Visita_${selectedVisit.id}.pdf`
+
+      // Simular clic para descargar
+      document.body.appendChild(link)
+      link.click()
+
+      // Limpiar
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      // Mostrar mensaje de éxito
+      setAlertSeverity('success')
+      setAlertMessage('PDF del comprobante de visita generado y descargado correctamente')
+      setAlertOpen(true)
+
+    } catch (error) {
+      console.error('Error al generar PDF del comprobante de visita:', error)
+
+      // Mostrar mensaje de error
+      setAlertSeverity('error')
+      setAlertMessage('Error al generar el PDF del comprobante de visita')
+      setAlertOpen(true)
     }
   }
 
@@ -3386,7 +3430,7 @@ const VisitListTable = ({
                     size='small'
                     onClick={handlePDFClick}
                     startIcon={<i className='ri-file-pdf-line' />}
-                    disabled={!selectedVisit?.ordenesTrabajo?.length}
+                    disabled={!selectedVisit?.comprobanteVisitaJSON}
                   >
                     PDF
                   </Button>
