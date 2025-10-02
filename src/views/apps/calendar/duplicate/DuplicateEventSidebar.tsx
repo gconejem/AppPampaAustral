@@ -1737,7 +1737,6 @@ const DuplicateEventSidebar = ({
                     <TextField
                       {...params}
                       label='Solicitud'
-                      helperText='La solicitud no es obligatoria para duplicar visitas'
                     />
                   )}
                   disabled={!formData.clienteId}
