@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import puppeteer from 'puppeteer'
 import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { parseDateFromBackend } from '@/utils/dateUtils'
 
 // Función para renderizar el HTML del PDF para Control de Compactación (R-12-03)

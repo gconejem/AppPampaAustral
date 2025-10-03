@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET - Obtener una obra específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -49,16 +52,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         // Actualizar los contactos si existen
         contactos: contactos
           ? {
-              deleteMany: {}, // Eliminar contactos existentes
-              create: contactos.map((contacto: any) => ({
-                nombre: contacto.nombre,
-                rol: contacto.rol,
-                email: contacto.email,
-                telefono1: contacto.telefono1,
-                telefono2: contacto.telefono2,
-                isPrincipal: contacto.isPrincipal
-              }))
-            }
+            deleteMany: {}, // Eliminar contactos existentes
+            create: contactos.map((contacto: any) => ({
+              nombre: contacto.nombre,
+              rol: contacto.rol,
+              email: contacto.email,
+              telefono1: contacto.telefono1,
+              telefono2: contacto.telefono2,
+              isPrincipal: contacto.isPrincipal
+            }))
+          }
           : undefined
       },
       include: {

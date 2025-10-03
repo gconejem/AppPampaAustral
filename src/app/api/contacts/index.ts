@@ -2,6 +2,9 @@ import type { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Crear un contacto
 export const createContacto = async (data: Prisma.ContactoCreateInput) => {
   return prisma.contacto.create({

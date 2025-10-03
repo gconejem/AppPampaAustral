@@ -4,6 +4,9 @@ import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST - Crear un nuevo producto
 export async function POST(req: Request) {
   try {
