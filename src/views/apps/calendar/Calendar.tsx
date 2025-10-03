@@ -141,6 +141,9 @@ const Calendar = (props: CalenderProps) => {
   const [calendarInitialDate, setCalendarInitialDate] = useState<Date>(() => {
     return props.selectedDate || (props.selectedDateRange?.start || new Date())
   })
+  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(() => {
+    return props.selectedDate || (props.selectedDateRange?.start || new Date())
+  })
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -521,9 +524,13 @@ const Calendar = (props: CalenderProps) => {
 
     setStatusFilters(newStatusFilters)
 
-    // Establecer la fecha inicial correcta antes de recrear el calendario
-    const targetDate = props.selectedDate || (props.selectedDateRange?.start || new Date())
+    // Usar la fecha actual del calendario en lugar de la fecha inicial
+    const targetDate = calendarRef.current ?
+      calendarRef.current.getApi().getDate() :
+      (props.selectedDate || (props.selectedDateRange?.start || new Date()))
+
     setCalendarInitialDate(targetDate)
+    setCurrentCalendarDate(targetDate)
 
     // Forzar actualización del calendario cuando cambien los filtros de estado
     setTimeout(() => {
@@ -697,6 +704,7 @@ const Calendar = (props: CalenderProps) => {
   useEffect(() => {
     const targetDate = props.selectedDate || (props.selectedDateRange?.start || new Date())
     setCalendarInitialDate(targetDate)
+    setCurrentCalendarDate(targetDate)
   }, [props.selectedDate, props.selectedDateRange?.start])
 
   const handleSelectAll = () => {
@@ -1480,6 +1488,10 @@ const Calendar = (props: CalenderProps) => {
       center: 'title',
       end: 'listMonth,dayGridMonth,timeGridWeek,timeGridDay'
     },
+    datesSet: (dateInfo) => {
+      // Actualizar la fecha actual del calendario cuando el usuario navega
+      setCurrentCalendarDate(dateInfo.start)
+    },
     views: {
       dayGridMonth: {
         dayMaxEvents: 2
@@ -2228,7 +2240,7 @@ const Calendar = (props: CalenderProps) => {
       }
     },
     direction: 'ltr',
-    initialDate: calendarInitialDate,
+    initialDate: currentCalendarDate,
     navLinks: true,
     eventClick: (info) => {
       // Verificar si el clic fue en un botón de opciones o acciones dentro del evento
@@ -2247,6 +2259,9 @@ const Calendar = (props: CalenderProps) => {
     viewDidMount(info) {
       // Actualizar la vista actual cuando cambia
       setCurrentView(info.view.type)
+
+      // Actualizar la fecha actual del calendario
+      setCurrentCalendarDate(info.view.currentStart)
     },
     eventContent: (info: EventInfo) => {
       // Si estamos en la vista de lista, no aplicamos ningún estilo especial
