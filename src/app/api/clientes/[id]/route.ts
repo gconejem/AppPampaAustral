@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const clienteId = parseInt(params.id)
@@ -179,7 +182,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     // Actualizar contactos si se proporcionaron
     if (data.clientesContactos) {
       console.log('Actualizando contactos:', data.clientesContactos)
-      
+
       // Primero eliminamos todas las relaciones existentes
       await prisma.clienteContacto.deleteMany({
         where: {

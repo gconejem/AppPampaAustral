@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -85,14 +88,14 @@ export async function GET(request: Request) {
         'Otros',
         'Servicios'
       ]
-      
+
       familias.sort((a, b) => {
         const areaA = a.area?.nombre || ''
         const areaB = b.area?.nombre || ''
-        
+
         const indexAreaA = ordenAreas.indexOf(areaA)
         const indexAreaB = ordenAreas.indexOf(areaB)
-        
+
         // Si están en la misma área, ordenar por el orden personalizado de familias
         if (indexAreaA === indexAreaB) {
           const ordenFamilias = ordenFamiliasPorArea[areaA] || []
@@ -100,7 +103,7 @@ export async function GET(request: Request) {
           const indexFamiliaB = ordenFamilias.indexOf(b.nombre)
           return indexFamiliaA - indexFamiliaB
         }
-        
+
         // Si están en áreas diferentes, ordenar por área
         return indexAreaA - indexAreaB
       })

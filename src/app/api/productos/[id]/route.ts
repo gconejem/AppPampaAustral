@@ -4,6 +4,9 @@ import { Decimal } from '@prisma/client/runtime/library'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET - Obtener un producto específico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {

@@ -102,6 +102,7 @@ const Calendar = (props: CalenderProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [cambiarEstadoModalOpen, setCambiarEstadoModalOpen] = useState(false)
   const [selectedEventEstado, setSelectedEventEstado] = useState<string>('AGENDADA')
+  const [selectedEventData, setSelectedEventData] = useState<any>(null)
 
   const [selectedEventDates, setSelectedEventDates] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
@@ -137,6 +138,12 @@ const Calendar = (props: CalenderProps) => {
   const [filteredEvents, setFilteredEvents] = useState<EventInput[]>([])
   const [calendarKey, setCalendarKey] = useState<number>(0)
   const [currentView, setCurrentView] = useState<string>('listMonth')
+  const [calendarInitialDate, setCalendarInitialDate] = useState<Date>(() => {
+    return props.selectedDate || (props.selectedDateRange?.start || new Date())
+  })
+  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(() => {
+    return props.selectedDate || (props.selectedDateRange?.start || new Date())
+  })
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -300,7 +307,7 @@ const Calendar = (props: CalenderProps) => {
     setSelectedEventId(eventId)
 
     // Buscar el botón que fue clickeado
-    const menuButton = document.querySelector(`[data-event-id="${eventId}"] .event-menu-button`)
+    const menuButton = document.querySelector(`[data-event-id="${eventId}"] .event-menu-button`) as HTMLElement | null
     if (menuButton) {
       setEventMenuAnchorEl(menuButton)
     } else {
@@ -360,7 +367,7 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
+  const handleCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => {
     if (!selectedEventId) return
 
     try {
@@ -369,6 +376,8 @@ const Calendar = (props: CalenderProps) => {
         observacionEliminada?: string;
         motivoSuspension?: string;
         observacionSuspendida?: string;
+        observacionAgendada?: string;
+        observacionAnuladaGeneral?: string;
       } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
@@ -382,6 +391,13 @@ const Calendar = (props: CalenderProps) => {
         if (motivoSuspension === 'OTRO' && observacionSuspendida) {
           requestBody.observacionSuspendida = observacionSuspendida
         }
+        if (observacionAnuladaGeneral) {
+          requestBody.observacionAnuladaGeneral = observacionAnuladaGeneral
+        }
+      }
+
+      if (nuevoEstado === 'AGENDADA' && observacionAgendada) {
+        requestBody.observacionAgendada = observacionAgendada
       }
 
       const response = await fetch(`/api/agenda/${selectedEventId}/cambiar-estado`, {
@@ -446,9 +462,10 @@ const Calendar = (props: CalenderProps) => {
         const eventToReprogramar = events.find(event => String(event.id) === String(selectedEventId))
 
         if (eventToReprogramar) {
-          // Verificar si el evento está suspendido
-          if (eventToReprogramar.extendedProps?.estado === 'SUSPENDIDA') {
-            setSnackbarMessage('No se puede reprogramar un evento suspendido')
+          // Verificar si el evento se puede reprogramar (solo CREADA o AGENDADA)
+          const estado = eventToReprogramar.extendedProps?.estado || 'AGENDADA'
+          if (estado !== 'CREADA' && estado !== 'AGENDADA') {
+            setSnackbarMessage(`No se puede reprogramar un evento con estado ${estado}. Solo se pueden reprogramar eventos con estado CREADA o AGENDADA`)
             setSnackbarSeverity('error')
             setOpenSnackbar(true)
             return
@@ -467,9 +484,13 @@ const Calendar = (props: CalenderProps) => {
 
         if (eventToChangeStatus) {
           setSelectedEventEstado(eventToChangeStatus.extendedProps?.estado || 'AGENDADA')
+          setSelectedEventData(eventToChangeStatus)
           setCambiarEstadoModalOpen(true)
         }
 
+        break
+      case 'duplicar':
+        await handleDuplicarEvento()
         break
       case 'eliminar':
         setDeleteDialogOpen(true)
@@ -502,6 +523,14 @@ const Calendar = (props: CalenderProps) => {
     }
 
     setStatusFilters(newStatusFilters)
+
+    // Usar la fecha actual del calendario en lugar de la fecha inicial
+    const targetDate = calendarRef.current ?
+      calendarRef.current.getApi().getDate() :
+      (props.selectedDate || (props.selectedDateRange?.start || new Date()))
+
+    setCalendarInitialDate(targetDate)
+    setCurrentCalendarDate(targetDate)
 
     // Forzar actualización del calendario cuando cambien los filtros de estado
     setTimeout(() => {
@@ -670,6 +699,13 @@ const Calendar = (props: CalenderProps) => {
       setSelectAll(false)
     }
   }, [props.selectedDate])
+
+  // Actualizar la fecha inicial del calendario cuando cambien las fechas seleccionadas
+  useEffect(() => {
+    const targetDate = props.selectedDate || (props.selectedDateRange?.start || new Date())
+    setCalendarInitialDate(targetDate)
+    setCurrentCalendarDate(targetDate)
+  }, [props.selectedDate, props.selectedDateRange?.start])
 
   const handleSelectAll = () => {
     setSelectAll(prev => {
@@ -849,6 +885,8 @@ const Calendar = (props: CalenderProps) => {
         setAsignarLaboratoristaOpen(true)
         break
       case 'cambiarEstado':
+        // Para edición masiva, no pasamos datos específicos del evento
+        setSelectedEventData(null)
         setCambiarEstadoModalOpen(true)
         break
       case 'eliminar':
@@ -863,14 +901,20 @@ const Calendar = (props: CalenderProps) => {
     try {
       console.log('Reprogramando eventos masivamente a fecha:', fechaInicio)
 
-      // Verificar que ningún evento seleccionado esté suspendido
-      const eventosSuspendidos = selectedEvents.filter(selectedEvent => {
+      // Verificar que todos los eventos seleccionados se puedan reprogramar (solo CREADA o AGENDADA)
+      const eventosNoReprogramables = selectedEvents.filter(selectedEvent => {
         const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-        return evento?.extendedProps?.estado === 'SUSPENDIDA'
+        const estado = evento?.extendedProps?.estado || 'AGENDADA'
+        return estado !== 'CREADA' && estado !== 'AGENDADA'
       })
 
-      if (eventosSuspendidos.length > 0) {
-        setSnackbarMessage(`No se pueden reprogramar eventos suspendidos. ${eventosSuspendidos.length} evento(s) seleccionado(s) tienen estado suspendido.`)
+      if (eventosNoReprogramables.length > 0) {
+        const estadosNoPermitidos = eventosNoReprogramables.map(selectedEvent => {
+          const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+          return evento?.extendedProps?.estado || 'AGENDADA'
+        }).filter((value, index, self) => self.indexOf(value) === index) // Obtener estados únicos
+
+        setSnackbarMessage(`No se pueden reprogramar eventos con estado ${estadosNoPermitidos.join(', ')}. Solo se pueden reprogramar eventos con estado CREADA o AGENDADA`)
         setSnackbarSeverity('error')
         setOpenSnackbar(true)
         return
@@ -1091,13 +1135,15 @@ const Calendar = (props: CalenderProps) => {
     }
   }
 
-  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string) => {
+  const handleBulkCambiarEstado = async (nuevoEstado: string, observacionEliminada?: string, motivoSuspension?: string, observacionSuspendida?: string, observacionAgendada?: string, observacionAnuladaGeneral?: string) => {
     try {
       const requestBody: {
         estado: string;
         observacionEliminada?: string;
         motivoSuspension?: string;
         observacionSuspendida?: string;
+        observacionAgendada?: string;
+        observacionAnuladaGeneral?: string;
       } = { estado: nuevoEstado }
 
       if (nuevoEstado === 'ELIMINADA' && observacionEliminada) {
@@ -1111,6 +1157,13 @@ const Calendar = (props: CalenderProps) => {
         if (motivoSuspension === 'OTRO' && observacionSuspendida) {
           requestBody.observacionSuspendida = observacionSuspendida
         }
+        if (observacionAnuladaGeneral) {
+          requestBody.observacionAnuladaGeneral = observacionAnuladaGeneral
+        }
+      }
+
+      if (nuevoEstado === 'AGENDADA' && observacionAgendada) {
+        requestBody.observacionAgendada = observacionAgendada
       }
 
       const responses = await Promise.all(
@@ -1434,6 +1487,10 @@ const Calendar = (props: CalenderProps) => {
       start: 'prev,next today',
       center: 'title',
       end: 'listMonth,dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    datesSet: (dateInfo) => {
+      // Actualizar la fecha actual del calendario cuando el usuario navega
+      setCurrentCalendarDate(dateInfo.start)
     },
     views: {
       dayGridMonth: {
@@ -2183,11 +2240,11 @@ const Calendar = (props: CalenderProps) => {
       }
     },
     direction: 'ltr',
-    initialDate: new Date(),
+    initialDate: currentCalendarDate,
     navLinks: true,
     eventClick: (info) => {
       // Verificar si el clic fue en un botón de opciones o acciones dentro del evento
-      if (info.jsEvent.target.closest('.event-menu-button, .fc-list-event-preview-button, .fc-list-event-edit-button, .fc-list-event-person-button')) {
+      if (info.jsEvent.target && (info.jsEvent.target as HTMLElement).closest('.event-menu-button, .fc-list-event-preview-button, .fc-list-event-edit-button, .fc-list-event-person-button')) {
         return; // No abrir preview si fue clic en un botón de acción
       }
 
@@ -2202,6 +2259,9 @@ const Calendar = (props: CalenderProps) => {
     viewDidMount(info) {
       // Actualizar la vista actual cuando cambia
       setCurrentView(info.view.type)
+
+      // Actualizar la fecha actual del calendario
+      setCurrentCalendarDate(info.view.currentStart)
     },
     eventContent: (info: EventInfo) => {
       // Si estamos en la vista de lista, no aplicamos ningún estilo especial
@@ -3214,11 +3274,13 @@ const Calendar = (props: CalenderProps) => {
         onClose={() => {
           setCambiarEstadoModalOpen(false)
           setSelectedEventId(null)
+          setSelectedEventData(null)
         }}
         eventId={selectedEventId}
         estadoActual={selectedEventEstado}
         onCambiarEstado={selectedEventId ? handleCambiarEstado : handleBulkCambiarEstado}
         isBulkEdit={!selectedEventId && selectedEvents.length > 1}
+        eventData={selectedEventData}
       />
 
       <Dialog
@@ -3269,16 +3331,20 @@ const Calendar = (props: CalenderProps) => {
           <i className='ri-edit-line' style={{ marginRight: '8px' }}></i>
           Editar
         </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('duplicar')}>
+          <i className='ri-file-copy-line' style={{ marginRight: '8px' }}></i>
+          Duplicar
+        </MenuItem>
         <MenuItem onClick={() => handleMenuAction('asignarLaboratorista')}>
           <i className='ri-user-star-line' style={{ marginRight: '8px' }}></i>
           Asignar Laboratorista
         </MenuItem>
         <MenuItem
           onClick={() => handleMenuAction('reprogramar')}
-          disabled={selectedEventEstado === 'SUSPENDIDA'}
+          disabled={selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA'}
           sx={{
-            opacity: selectedEventEstado === 'SUSPENDIDA' ? 0.5 : 1,
-            cursor: selectedEventEstado === 'SUSPENDIDA' ? 'not-allowed' : 'pointer'
+            opacity: selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA' ? 0.5 : 1,
+            cursor: selectedEventEstado !== 'CREADA' && selectedEventEstado !== 'AGENDADA' ? 'not-allowed' : 'pointer'
           }}
         >
           <i className='ri-calendar-line' style={{ marginRight: '8px' }}></i>
@@ -3308,16 +3374,19 @@ const Calendar = (props: CalenderProps) => {
           onClick={() => handleBulkMenuAction('reprogramar')}
           disabled={selectedEvents.some(selectedEvent => {
             const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-            return evento?.extendedProps?.estado === 'SUSPENDIDA'
+            const estado = evento?.extendedProps?.estado || 'AGENDADA'
+            return estado !== 'CREADA' && estado !== 'AGENDADA'
           })}
           sx={{
             opacity: selectedEvents.some(selectedEvent => {
               const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+              const estado = evento?.extendedProps?.estado || 'AGENDADA'
+              return estado !== 'CREADA' && estado !== 'AGENDADA'
             }) ? 0.5 : 1,
             cursor: selectedEvents.some(selectedEvent => {
               const evento = events.find(e => String(e.id) === String(selectedEvent.id))
-              return evento?.extendedProps?.estado === 'SUSPENDIDA'
+              const estado = evento?.extendedProps?.estado || 'AGENDADA'
+              return estado !== 'CREADA' && estado !== 'AGENDADA'
             }) ? 'not-allowed' : 'pointer'
           }}
         >

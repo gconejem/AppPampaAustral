@@ -2,15 +2,18 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET - Obtener todos los contactos
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const incluirInactivos = searchParams.get('incluirInactivos') === 'true'
-    
+
     // Por defecto, solo retornar contactos activos a menos que se especifique incluirInactivos=true
     const whereClause = incluirInactivos ? {} : { estado: 'ACTIVO' }
-    
+
     const contacts = await prisma.contacto.findMany({
       where: whereClause,
       include: {

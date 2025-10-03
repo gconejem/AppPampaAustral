@@ -196,6 +196,7 @@ interface Agenda {
   horaSalida?: string
   movilizacion?: string
   kmAdicionales?: string
+  comprobanteVisitaJSON?: any
   cliente?: {
     nombreCliente: string
     rut?: string
@@ -994,10 +995,53 @@ const VisitListTable = ({
     setFechaFin(newFecha)
   }
 
-  const handlePDFClick = () => {
-    if (selectedVisit?.ordenesTrabajo?.[0]) {
-      setSelectedOT(selectedVisit.ordenesTrabajo[0])
-      setPdfModalOpen(true)
+  const handlePDFClick = async () => {
+    if (!selectedVisit) return
+
+    try {
+      // Generar y descargar el PDF del comprobante de visita
+      const response = await fetch(`/api/agenda/${selectedVisit.id}/comprobante-pdf`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      // Obtener el blob del PDF
+      const blob = await response.blob()
+
+      // Crear URL temporal para descarga
+      const url = window.URL.createObjectURL(blob)
+
+      // Crear elemento de descarga
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Comprobante_Visita_${selectedVisit.id}.pdf`
+
+      // Simular clic para descargar
+      document.body.appendChild(link)
+      link.click()
+
+      // Limpiar
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      // Mostrar mensaje de éxito
+      setAlertSeverity('success')
+      setAlertMessage('PDF del comprobante de visita generado y descargado correctamente')
+      setAlertOpen(true)
+
+    } catch (error) {
+      console.error('Error al generar PDF del comprobante de visita:', error)
+
+      // Mostrar mensaje de error
+      setAlertSeverity('error')
+      setAlertMessage('Error al generar el PDF del comprobante de visita')
+      setAlertOpen(true)
     }
   }
 
@@ -1336,7 +1380,6 @@ const VisitListTable = ({
         },
         body: JSON.stringify({
           estado: 'RECIBIDA_OK',
-          ordenesTrabajoEstado: 'DISPONIBLE',
           observacionRecibidaOK: observacionesRecepcion
         })
       })
@@ -1492,6 +1535,17 @@ const VisitListTable = ({
       // Actualizar los datos localmente después de la respuesta de la API
       const updatedData = data.map(item => {
         if (selectedVisits.some(v => v.id === item.id)) {
+          // Si se cambió a RECIBIDA_OK, también actualizar las OTs a DISPONIBLE
+          if (bulkNewStatus === 'RECIBIDA_OK') {
+            return {
+              ...item,
+              estado: bulkNewStatus,
+              ordenesTrabajo: item.ordenesTrabajo?.map(ot => ({
+                ...ot,
+                estado: 'DISPONIBLE'
+              }))
+            }
+          }
           return {
             ...item,
             estado: bulkNewStatus
@@ -1505,15 +1559,35 @@ const VisitListTable = ({
 
       // Si la visita seleccionada es una de las que se está editando, actualizarla
       if (selectedVisit && selectedVisits.some(v => v.id === selectedVisit.id)) {
-        onVisitSelect({ ...selectedVisit, estado: bulkNewStatus })
+        if (bulkNewStatus === 'RECIBIDA_OK') {
+          onVisitSelect({
+            ...selectedVisit,
+            estado: bulkNewStatus,
+            ordenesTrabajo: selectedVisit.ordenesTrabajo?.map(ot => ({
+              ...ot,
+              estado: 'DISPONIBLE'
+            }))
+          })
+        } else {
+          onVisitSelect({ ...selectedVisit, estado: bulkNewStatus })
+        }
       }
 
       // Cerrar el diálogo y limpiar estados
       handleCloseBulkEditModal()
 
+      // Notificar al componente padre que se cambió el estado de visitas (para actualizar tabla de OTs)
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
-      setAlertMessage(`${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus}`)
+      setAlertMessage(
+        bulkNewStatus === 'RECIBIDA_OK'
+          ? `${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus} y OTs actualizadas a DISPONIBLE`
+          : `${selectedVisits.length} visitas actualizadas correctamente a estado ${bulkNewStatus}`
+      )
       setAlertOpen(true)
     } catch (error) {
       console.error('Error al cambiar el estado de las visitas:', error)
@@ -1617,14 +1691,39 @@ const VisitListTable = ({
       }
 
       // Actualizar los datos localmente después de la respuesta de la API
-      const updatedData = data.map(item =>
-        item.id === selectedVisit.id ? { ...item, estado: specialStatus } : item
-      )
+      const updatedData = data.map(item => {
+        if (item.id === selectedVisit.id) {
+          // Si se cambió a RECIBIDA_OK, también actualizar las OTs a DISPONIBLE
+          if (specialStatus === 'RECIBIDA_OK') {
+            return {
+              ...item,
+              estado: specialStatus,
+              ordenesTrabajo: item.ordenesTrabajo?.map(ot => ({
+                ...ot,
+                estado: 'DISPONIBLE'
+              }))
+            }
+          }
+          return { ...item, estado: specialStatus }
+        }
+        return item
+      })
 
       setData(updatedData)
 
       // Actualizar la visita seleccionada
-      onVisitSelect({ ...selectedVisit, estado: specialStatus })
+      if (specialStatus === 'RECIBIDA_OK') {
+        onVisitSelect({
+          ...selectedVisit,
+          estado: specialStatus,
+          ordenesTrabajo: selectedVisit.ordenesTrabajo?.map(ot => ({
+            ...ot,
+            estado: 'DISPONIBLE'
+          }))
+        })
+      } else {
+        onVisitSelect({ ...selectedVisit, estado: specialStatus })
+      }
 
       // Cerrar el diálogo y limpiar estados
       handleCloseSpecialStatusModal()
@@ -1632,9 +1731,18 @@ const VisitListTable = ({
       // Cerrar también el modal de comprobante de visita
       handleCloseComprobante()
 
+      // Notificar al componente padre que se cambió el estado de una visita (para actualizar tabla de OTs)
+      if (onVisitStatusChange) {
+        onVisitStatusChange()
+      }
+
       // Mostrar alerta de éxito
       setAlertSeverity('success')
-      setAlertMessage(`Estado cambiado a ${specialStatus} correctamente`)
+      setAlertMessage(
+        specialStatus === 'RECIBIDA_OK'
+          ? `Estado cambiado a ${specialStatus} correctamente y OTs actualizadas a DISPONIBLE`
+          : `Estado cambiado a ${specialStatus} correctamente`
+      )
       setAlertOpen(true)
     } catch (error) {
       console.error('Error al cambiar el estado:', error)
@@ -2254,6 +2362,24 @@ const VisitListTable = ({
               break
             default:
               color = 'primary'
+          }
+
+          // Para RECIBIDA_OK, usar un estilo personalizado con verde más oscuro
+          if (estado === 'RECIBIDA_OK') {
+            return (
+              <Chip
+                variant='tonal'
+                label={estado.replace(/_/g, ' ')}
+                size='small'
+                sx={{
+                  backgroundColor: '#2e7d32', // Verde más oscuro
+                  color: 'white',
+                  '& .MuiChip-label': {
+                    color: 'white'
+                  }
+                }}
+              />
+            )
           }
 
           return <Chip variant='tonal' label={estado.replace(/_/g, ' ')} size='small' color={color} />
@@ -3304,7 +3430,7 @@ const VisitListTable = ({
                     size='small'
                     onClick={handlePDFClick}
                     startIcon={<i className='ri-file-pdf-line' />}
-                    disabled={!selectedVisit?.ordenesTrabajo?.length}
+                    disabled={!selectedVisit?.comprobanteVisitaJSON}
                   >
                     PDF
                   </Button>
@@ -3317,7 +3443,7 @@ const VisitListTable = ({
                     fullWidth
                     size='small'
                     onClick={handleRecepcionarClick}
-                    disabled={!selectedVisit || selectedVisit.estado !== 'COMPLETADA'}
+                    disabled={!selectedVisit || selectedVisit.estado !== 'EN_REVISION'}
                   >
                     Recepcionar
                   </Button>
