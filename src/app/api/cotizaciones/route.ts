@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 import type { TipoCotizacion } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'

@@ -1,3 +1,3 @@
-import { auth } from '@/auth'
+import { GET, POST } from '@/auth'
 
-export const { GET, POST } = auth 
+export { GET, POST }

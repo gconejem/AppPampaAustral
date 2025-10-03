@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import puppeteer from 'puppeteer'
 import fs from 'fs'
@@ -298,12 +300,12 @@ function renderObraHTML(obra: any, logoBase64: string) {
               <th style="border:1px solid #ccc; padding:6px;">Teléfono</th>
             </tr>
             ${obra.contactos && obra.contactos.length > 0 ? obra.contactos
-              .sort((a: any, b: any) => {
-                if (a.isPrincipal && !b.isPrincipal) return -1;
-                if (!a.isPrincipal && b.isPrincipal) return 1;
-                return 0;
-              })
-              .map((contact: any) => `
+      .sort((a: any, b: any) => {
+        if (a.isPrincipal && !b.isPrincipal) return -1;
+        if (!a.isPrincipal && b.isPrincipal) return 1;
+        return 0;
+      })
+      .map((contact: any) => `
                 <tr>
                   <td style="border:1px solid #ccc; padding:6px;">${contact.nombre}${contact.isPrincipal ? ' (Principal)' : ''}</td>
                   <td style="border:1px solid #ccc; padding:6px;">${ROLES_CONTACTO.find(rol => rol.value === contact.rol)?.label || contact.rol || '-'}</td>
@@ -371,8 +373,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       })
     }
 
-    const browser = await puppeteer.launch({ 
-      headless: true, 
+    const browser = await puppeteer.launch({
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -382,14 +384,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ]
     })
     const page = await browser.newPage()
-    await page.setContent(html, { 
+    await page.setContent(html, {
       waitUntil: 'networkidle0',
       timeout: 30000
     })
-    
+
     // Asegurar que las fuentes se carguen correctamente
     await page.evaluateHandle('document.fonts.ready')
-    
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },

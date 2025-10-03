@@ -27,9 +27,9 @@ export const getContactoById = async (id: number) => {
   return prisma.contacto.findUnique({
     where: { contactId: id },
     include: {
-      ClienteContacto: {
+      clientesContactos: {
         include: {
-          Cliente: true
+          cliente: true
         }
       }
     }
@@ -39,7 +39,7 @@ export const getContactoById = async (id: number) => {
 // Actualizar un contacto
 export const updateContacto = async (id: number, data: Prisma.ContactoUpdateInput) => {
   return prisma.contacto.update({
-    where: { id },
+    where: { contactId: id },
     data,
     include: {
       clientesContactos: {
@@ -54,6 +54,6 @@ export const updateContacto = async (id: number, data: Prisma.ContactoUpdateInpu
 // Eliminar un contacto
 export const deleteContacto = async (id: number) => {
   return prisma.contacto.delete({
-    where: { id }
+    where: { contactId: id }
   })
 }
