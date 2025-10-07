@@ -897,9 +897,9 @@ const Calendar = (props: CalenderProps) => {
     setBulkEditMenuAnchorEl(null)
   }
 
-  const handleBulkReprogramar = async (fechaInicio: Date, fechaFin: Date) => {
+  const handleBulkReprogramar = async (fechaInicio: Date, fechaFin: Date, soloCambiarHora: boolean = false) => {
     try {
-      console.log('Reprogramando eventos masivamente a fecha:', fechaInicio)
+      console.log('Reprogramando eventos masivamente:', { fechaInicio, fechaFin, soloCambiarHora })
 
       // Verificar que todos los eventos seleccionados se puedan reprogramar (solo CREADA o AGENDADA)
       const eventosNoReprogramables = selectedEvents.filter(selectedEvent => {
@@ -920,23 +920,76 @@ const Calendar = (props: CalenderProps) => {
         return
       }
 
-      // Usar el endpoint de reprogramación masiva
-      const response = await fetch(`/api/agenda/7/reprogramar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ids: selectedEvents.map(event => parseInt(event.id)),
-          fechaInicio: formatDateForBackend(fechaInicio),
-          fechaFin: formatDateForBackend(fechaFin)
-        })
-      })
+      if (soloCambiarHora) {
+        // Si solo se cambia la hora, usar fechas originales de cada evento pero con nueva hora
+        const eventosActualizados = selectedEvents.map(selectedEvent => {
+          const evento = events.find(e => String(e.id) === String(selectedEvent.id))
+          if (evento) {
+            const fechaOriginalInicio = new Date(evento.start as string)
+            const fechaOriginalFin = new Date(evento.end as string)
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al reprogramar los eventos')
+            // Crear nuevas fechas con la fecha original pero hora nueva
+            const nuevaFechaInicio = new Date(fechaOriginalInicio)
+            nuevaFechaInicio.setHours(fechaInicio.getHours(), fechaInicio.getMinutes(), 0, 0)
+
+            const nuevaFechaFin = new Date(fechaOriginalFin)
+            nuevaFechaFin.setHours(fechaFin.getHours(), fechaFin.getMinutes(), 0, 0)
+
+            return {
+              id: parseInt(selectedEvent.id),
+              fechaInicio: formatDateForBackend(nuevaFechaInicio),
+              fechaFin: formatDateForBackend(nuevaFechaFin)
+            }
+          }
+          return null
+        }).filter(Boolean)
+
+        // Hacer múltiples requests individuales para cada evento
+        const responses = await Promise.all(
+          eventosActualizados.map(evento =>
+            fetch(`/api/agenda/${evento?.id}/reprogramar`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fechaInicio: evento?.fechaInicio,
+                fechaFin: evento?.fechaFin
+              })
+            })
+          )
+        )
+
+        // Verificar si alguna respuesta falló
+        const failedResponses = responses.filter(response => !response.ok)
+        if (failedResponses.length > 0) {
+          const errorData = await failedResponses[0].json()
+          throw new Error(errorData.error || 'Error al cambiar la hora de algunos eventos')
+        }
+      } else {
+        // Comportamiento original: cambiar fecha y hora para todos los eventos
+        const response = await fetch(`/api/agenda/7/reprogramar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ids: selectedEvents.map(event => parseInt(event.id)),
+            fechaInicio: formatDateForBackend(fechaInicio),
+            fechaFin: formatDateForBackend(fechaFin)
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Error al reprogramar los eventos')
+        }
       }
+
+      // Cerrar el modal inmediatamente después de la operación exitosa
+      setReprogramarModalOpen(false)
+      setSelectedEventId(null)
+      setSelectedEventDates({ start: null, end: null })
 
       // Actualizar la fecha o rango seleccionado en el componente padre ANTES de recargar eventos
       const navigationDate = updateDateAfterReprogramming(fechaInicio, fechaFin)
@@ -967,7 +1020,7 @@ const Calendar = (props: CalenderProps) => {
         }
       }, 300)
 
-      setSnackbarMessage('¡Eventos reprogramados exitosamente!')
+      setSnackbarMessage(soloCambiarHora ? '¡Hora de eventos cambiada exitosamente!' : '¡Eventos reprogramados exitosamente!')
       setSnackbarSeverity('success')
       setOpenSnackbar(true)
       setSelectedEvents([])
@@ -3262,12 +3315,15 @@ const Calendar = (props: CalenderProps) => {
         onClose={() => {
           setReprogramarModalOpen(false)
           setSelectedEventId(null)
+          setSelectedEventDates({ start: null, end: null })
         }}
         eventId={selectedEventId}
         onReprogramar={selectedEventId ? handleReprogramarEvento : handleBulkReprogramar}
         fechaInicioActual={selectedEventDates.start || undefined}
         fechaFinActual={selectedEventDates.end || undefined}
         isBulkEdit={!selectedEventId && selectedEvents.length > 1}
+        selectedEvents={selectedEvents}
+        events={events}
       />
       <CambiarEstadoModal
         open={cambiarEstadoModalOpen}
