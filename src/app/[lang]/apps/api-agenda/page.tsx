@@ -54,7 +54,7 @@ export default function ApiAgendaPage() {
   };
 
   const goHome = () => {
-    window.location.href = '/home';
+    window.location.href = '/home/apps/api';
   };
 
   return (

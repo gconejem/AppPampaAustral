@@ -132,7 +132,9 @@ const VerticalMenu = () => {
               <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
                 App
               </MenuItem>
-              <MenuItem href={`/${locale}/apps/api-agenda`} icon={<i className='ri-code-s-slash-line' />}>
+
+              {/* Nueva entrada: lista de APIs - apunta a la página intermedia */}
+              <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-api-line' />}>
                 API Agenda
               </MenuItem>
             </MenuSection>
