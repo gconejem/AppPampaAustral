@@ -12,7 +12,7 @@ const ENDPOINTS: Endpoint[] = [
     { id: 5, name: 'api-get-lbrutaot-check-integracion', estado: 'Pendiente' },
     { id: 6, name: 'api-get-lab-obras', estado: 'Construido', detalle: 'LBOBRAS - Disponible' },
     { id: 7, name: 'api-get-lbrutas-join-lbequipos', estado: 'Construido', detalle: 'LBEQUIPO - Disponible' },
-    { id: 8, name: 'api-get-lbrutser', estado: 'Pendiente' },
+    { id: 8, name: 'api-get-lbrutser', estado: 'Construido', detalle: 'LBRUTSER - Disponible' },
     { id: 9, name: 'api-get-lbdocver', estado: 'Pendiente' },
 ];
 
@@ -29,10 +29,16 @@ export default function ApiListPage() {
             router.push(`/${lang}/apps/api-obras?endpoint=${encodeURIComponent(endpoint.name)}`);
             return;
         }
-        if (endpoint.name === 'api-get-lbrutas-join-lbequipos' || endpoint.name === 'api-get-lbrutas-join-lbequipos'.replace(/\s/g, '')) {
+        if (endpoint.name === 'api-get-lbrutas-join-lbequipos') {
             router.push(`/${lang}/apps/api-equipos?endpoint=${encodeURIComponent(endpoint.name)}`);
             return;
         }
+        // nuevo: TipoOrdenTrabajo para 'api-get-lbrutser'
+        if (endpoint.name === 'api-get-lbrutser') {
+            router.push(`/${lang}/apps/api-tipo-orden-trabajo?endpoint=${encodeURIComponent(endpoint.name)}`);
+            return;
+        }
+
         // fallback: agenda
         router.push(`/${lang}/apps/api-agenda?endpoint=${encodeURIComponent(endpoint.name)}`);
     };
@@ -80,16 +86,16 @@ export default function ApiListPage() {
                                 <td style={{ padding: '12px 8px' }}>
                                     <button
                                         onClick={() => handleVer(ep)}
-                                        // habilitar para: primer endpoint, obras y equipos endpoint
-                                        disabled={!(ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos')}
-                                        title={(ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos') ? 'Ver endpoint' : 'No disponible'}
+                                        // habilitar para: primer endpoint, obras, equipos y tipo-orden-trabajo endpoint
+                                        disabled={!(ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos' || ep.name === 'api-get-lbrutser')}
+                                        title={(ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos' || ep.name === 'api-get-lbrutser') ? 'Ver endpoint' : 'No disponible'}
                                         style={{
-                                            background: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos') ? '#1976d2' : '#e0e0e0',
-                                            color: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos') ? '#fff' : '#8a8a8a',
+                                            background: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos' || ep.name === 'api-get-lbrutser') ? '#1976d2' : '#e0e0e0',
+                                            color: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos' || ep.name === 'api-get-lbrutser') ? '#fff' : '#8a8a8a',
                                             border: 'none',
                                             borderRadius: 6,
                                             padding: '6px 12px',
-                                            cursor: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos') ? 'pointer' : 'not-allowed'
+                                            cursor: (ep.id === 1 || ep.name === 'api-get-lab-obras' || ep.name === 'api-get-lbrutas-join-lbequipos' || ep.name === 'api-get-lbrutser') ? 'pointer' : 'not-allowed'
                                         }}
                                     >
                                         VER
