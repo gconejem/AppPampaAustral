@@ -164,7 +164,8 @@ const UserListTable3 = ({
     data: serviciosData,
     columns,
     filterFns: {
-      fuzzy: fuzzyFilter
+      fuzzy: fuzzyFilter,
+      global: fuzzyFilter
     },
     state: {
       rowSelection,
