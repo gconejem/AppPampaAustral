@@ -25,6 +25,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
             name: true,
             email: true
           }
+        },
+        agenda: {
+          include: {
+            obra: true,
+            cliente: true
+          }
         }
       }
     })
@@ -72,6 +78,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             id: true,
             name: true,
             email: true
+          }
+        },
+        agenda: {
+          include: {
+            obra: true,
+            cliente: true
           }
         }
       }
