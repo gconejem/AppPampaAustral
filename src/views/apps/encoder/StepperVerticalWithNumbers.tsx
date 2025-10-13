@@ -127,6 +127,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Estados para el paso 2
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [cantidad, setCantidad] = useState<string>('1')
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null)
+  const [editingCantidad, setEditingCantidad] = useState<string>('1')
 
   // Estados para el paso 3
   const [muestras, setMuestras] = useState<Muestra[]>([])
@@ -422,6 +424,27 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
     nuevosServicios.splice(index, 1)
     setServicios(nuevosServicios)
+  }
+
+  const handleEditServicio = (index: number) => {
+    setEditingServiceIndex(index)
+    setEditingCantidad(servicios[index].cantidad)
+  }
+
+  const handleSaveEditServicio = (index: number) => {
+    const nuevosServicios = [...servicios]
+    nuevosServicios[index] = {
+      ...nuevosServicios[index],
+      cantidad: editingCantidad
+    }
+    setServicios(nuevosServicios)
+    setEditingServiceIndex(null)
+    setEditingCantidad('1')
+  }
+
+  const handleCancelEditServicio = () => {
+    setEditingServiceIndex(null)
+    setEditingCantidad('1')
   }
 
   // Limpiar filtros
@@ -906,14 +929,56 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 <TableRow key={index}>
                                   <TableCell>{serv.codigo}</TableCell>
                                   <TableCell>{serv.nombre}</TableCell>
-                                  <TableCell>{serv.cantidad}</TableCell>
                                   <TableCell>
-                                    <IconButton size='small' color='primary'>
-                                      <EditIcon fontSize='small' />
-                                    </IconButton>
-                                    <IconButton size='small' color='error' onClick={() => handleDeleteServicio(index)}>
-                                      <DeleteIcon fontSize='small' />
-                                    </IconButton>
+                                    {editingServiceIndex === index ? (
+                                      <TextField
+                                        size='small'
+                                        type='number'
+                                        value={editingCantidad}
+                                        onChange={e => setEditingCantidad(e.target.value)}
+                                        inputProps={{ min: 1 }}
+                                        sx={{ width: '80px' }}
+                                      />
+                                    ) : (
+                                      serv.cantidad
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {editingServiceIndex === index ? (
+                                      <>
+                                        <IconButton
+                                          size='small'
+                                          color='success'
+                                          onClick={() => handleSaveEditServicio(index)}
+                                        >
+                                          <i className='ri-check-line' />
+                                        </IconButton>
+                                        <IconButton
+                                          size='small'
+                                          color='secondary'
+                                          onClick={handleCancelEditServicio}
+                                        >
+                                          <i className='ri-close-line' />
+                                        </IconButton>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <IconButton
+                                          size='small'
+                                          color='primary'
+                                          onClick={() => handleEditServicio(index)}
+                                        >
+                                          <EditIcon fontSize='small' />
+                                        </IconButton>
+                                        <IconButton
+                                          size='small'
+                                          color='error'
+                                          onClick={() => handleDeleteServicio(index)}
+                                        >
+                                          <DeleteIcon fontSize='small' />
+                                        </IconButton>
+                                      </>
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               ))
