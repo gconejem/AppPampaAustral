@@ -247,7 +247,7 @@ const UserListTable3 = ({
             startIcon={<i className='ri-add-line' />}
             onClick={() =>
               window.open(
-                `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT || ''}&servicioId=${serviciosData.length > 0 ? serviciosData[0].id : ''}`,
+                `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}&servicioId=${serviciosData.length > 0 ? serviciosData[0].id : ''}`,
                 '_blank'
               )
             }
