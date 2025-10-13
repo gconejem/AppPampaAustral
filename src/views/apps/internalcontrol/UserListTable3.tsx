@@ -36,14 +36,12 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Interface para servicios de OT
 interface ServicioOT {
-  id: string
+  id: number
   codigo: string
-  fechaCodificacion: string
-  fechaMuestreo: string
-  area: string
-  familia: string
   servicio: string
-  estado: string
+  cantidad: number
+  observacion?: string
+  esSegundaVisita: boolean
 }
 
 // Definición básica para UsersType
@@ -103,105 +101,16 @@ const UserListTable3 = ({
 
   // Efecto para cargar los servicios asociados a la OT
   useEffect(() => {
-    if (otId) {
-      const fetchServicios = async () => {
-        try {
-          setLoadingServicios(true)
-
-          // En un caso real, esta API devolvería los servicios asociados a la OT
-          // Por ahora, simulamos datos para la demostración
-
-          // Esperar un poco para simular carga
-          await new Promise(resolve => setTimeout(resolve, 1000))
-
-          // Datos simulados basados en el tipo de OT
-          const serviciosSample: ServicioOT[] = []
-
-          if (otData) {
-            // Generar servicios según el tipo de OT
-            const codigo = otData.tipoOT?.codigo
-            if (codigo === 'R-12-03') { // Control de Compactación
-              serviciosSample.push({
-                id: '1',
-                codigo: 'S-D001',
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'Suelos',
-                familia: 'Densidad',
-                servicio: 'Densidad Terreno',
-                estado: 'Pendiente'
-              })
-              serviciosSample.push({
-                id: '2',
-                codigo: 'S-D002',
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'Suelos',
-                familia: 'Compactación',
-                servicio: 'Proctor Modificado',
-                estado: 'Pendiente'
-              })
-            } else if (codigo === 'R-12-39') { // Muestreo de Hormigón Fresco
-              serviciosSample.push({
-                id: '3',
-                codigo: 'H-F001',
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'Hormigones',
-                familia: 'Muestreo',
-                servicio: 'Toma de muestra hormigón fresco',
-                estado: 'Pendiente'
-              })
-              serviciosSample.push({
-                id: '4',
-                codigo: 'H-F002',
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'Hormigones',
-                familia: 'Ensayo',
-                servicio: 'Cono de Abrams',
-                estado: 'Pendiente'
-              })
-            } else if (codigo === 'R-12-99') { // Retiro de Probeta
-              serviciosSample.push({
-                id: '5',
-                codigo: 'R-P001',
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'Hormigones',
-                familia: 'Retiro',
-                servicio: 'Retiro Probeta',
-                estado: 'Pendiente'
-              })
-            } else {
-              // Servicio genérico para otros tipos de OT
-              serviciosSample.push({
-                id: '6',
-                codigo: `${otData.tipoOT.substring(0, 1)}-001`,
-                fechaCodificacion: new Date().toLocaleDateString(),
-                fechaMuestreo: otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : '-',
-                area: 'General',
-                familia: 'General',
-                servicio: `Servicio ${otData.tipoOT}`,
-                estado: 'Pendiente'
-              })
-            }
-          }
-
-          setServiciosData(serviciosSample)
-        } catch (error) {
-          console.error('Error al cargar servicios:', error)
-        } finally {
-          setLoadingServicios(false)
-        }
-      }
-
-      fetchServicios()
+    if (otData?.agenda?.servicios) {
+      // Usar los servicios reales de la agenda asociada a la OT
+      setServiciosData(otData.agenda.servicios)
+      setLoadingServicios(false)
     } else {
-      // Si no hay OT seleccionada, limpiar los servicios
+      // Si no hay servicios, limpiar el array
       setServiciosData([])
+      setLoadingServicios(false)
     }
-  }, [otId, otData])
+  }, [otData])
 
   const columns = useMemo<ColumnDef<ServicioOT, any>[]>(
     () => [
@@ -209,33 +118,25 @@ const UserListTable3 = ({
         header: 'CÓDIGO',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.codigo}</Typography>
       }),
-      columnHelper.accessor('fechaCodificacion', {
-        header: 'FECHA DE CODIFICACIÓN',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaCodificacion}</Typography>
-      }),
-      columnHelper.accessor('fechaMuestreo', {
-        header: 'FECHA DE MUESTREO',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaMuestreo}</Typography>
-      }),
-      columnHelper.accessor('area', {
-        header: 'ÁREA',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.area}</Typography>
-      }),
-      columnHelper.accessor('familia', {
-        header: 'FAMILIA',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.familia}</Typography>
-      }),
       columnHelper.accessor('servicio', {
         header: 'SERVICIO',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.servicio}</Typography>
       }),
-      columnHelper.accessor('estado', {
-        header: 'ESTADO OP',
+      columnHelper.accessor('cantidad', {
+        header: 'CANTIDAD',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.cantidad}</Typography>
+      }),
+      columnHelper.accessor('observacion', {
+        header: 'OBSERVACIÓN',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.observacion || '-'}</Typography>
+      }),
+      columnHelper.accessor('esSegundaVisita', {
+        header: 'SEGUNDA VISITA',
         cell: ({ row }) => (
           <Chip
-            label={row.original.estado}
+            label={row.original.esSegundaVisita ? 'Sí' : 'No'}
             size='small'
-            color={row.original.estado === 'Pendiente' ? 'warning' : 'success'}
+            color={row.original.esSegundaVisita ? 'info' : 'default'}
           />
         )
       }),
@@ -360,13 +261,31 @@ const UserListTable3 = ({
         <>
           <Grid container spacing={2} sx={{ p: 5, pb: 3 }}>
             <Grid item xs={4}>
-              <TextField fullWidth placeholder='Área' />
+              <TextField
+                fullWidth
+                placeholder='Buscar servicio'
+                value={globalFilter ?? ''}
+                onChange={e => setGlobalFilter(e.target.value)}
+              />
             </Grid>
             <Grid item xs={4}>
-              <TextField fullWidth placeholder='Familia' />
+              <TextField
+                fullWidth
+                placeholder='Código'
+                onChange={e => {
+                  table.getColumn('codigo')?.setFilterValue(e.target.value)
+                }}
+              />
             </Grid>
             <Grid item xs={4}>
-              <TextField fullWidth placeholder='Fecha de Codificación' type='date' InputLabelProps={{ shrink: true }} />
+              <TextField
+                fullWidth
+                placeholder='Cantidad'
+                type='number'
+                onChange={e => {
+                  table.getColumn('cantidad')?.setFilterValue(e.target.value)
+                }}
+              />
             </Grid>
           </Grid>
 
