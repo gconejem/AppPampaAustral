@@ -42,7 +42,11 @@ import {
   ListItemText,
   Popover,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
 
 // Component Imports
@@ -159,151 +163,85 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null)
 
   // Estados para filtros
-  const [tipoFilter, setTipoFilter] = useState<string>('')
-  const [areaFilter, setAreaFilter] = useState<string>('')
-  const [familiaFilter, setFamiliaFilter] = useState<string>('')
-  const [tiposDisponibles, setTiposDisponibles] = useState<string[]>([])
-  const [areasDisponibles, setAreasDisponibles] = useState<string[]>([])
-  const [familiasDisponibles, setFamiliasDisponibles] = useState<string[]>([])
+  const [selectedArea, setSelectedArea] = useState<string>('')
+  const [selectedTipo, setSelectedTipo] = useState<string>('')
+  const [selectedFamilia, setSelectedFamilia] = useState<string>('')
+  const [tipos, setTipos] = useState<string[]>([])
+  const [areas, setAreas] = useState<string[]>([])
+  const [familias, setFamilias] = useState<string[]>([])
 
-  // Cargar productos desde la API
-  const fetchProductos = async () => {
-    try {
-      setLoadingProductos(true)
-      const response = await fetch('/api/productos')
-      const data = await response.json()
+  // Estados para paginación
+  const [productsPage, setProductsPage] = useState(0)
+  const [totalProductos, setTotalProductos] = useState(0)
+  const ITEMS_PER_PAGE = 10
 
-      if (data.productos) {
-        // Filtrar solo los que no son paquetes
-        const productosSimples = data.productos.filter((p: any) => !p.esPaquete)
-
-        setProductos(productosSimples)
-        setFilteredProductos(productosSimples)
-      }
-    } catch (error) {
-      console.error('Error al cargar productos:', error)
-    } finally {
-      setLoadingProductos(false)
-    }
-  }
-
-  // Cargar productos cuando se monta el componente
+  // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
-    fetchProductos()
+    fetch('/api/productos?limit=1000')
+      .then(res => res.json())
+      .then(response => {
+        const data = response.productos || []
+
+        // Filtrar solo los que no son paquetes
+        const productosSimples = data.filter((p: any) => !p.esPaquete)
+
+        // Obtener valores únicos para filtros
+        const uniqueTipos = Array.from(new Set(productosSimples.map((p: any) => p.tipo || 'Sin tipo')))
+          .filter(tipo => tipo)
+          .sort()
+
+        const uniqueAreas = Array.from(new Set(productosSimples.map((p: any) => p.area || 'Sin área')))
+          .filter(area => area)
+          .sort()
+
+        const uniqueFamilias = Array.from(new Set(productosSimples.map((p: any) => p.familia || 'Sin familia')))
+          .filter(familia => familia)
+          .sort()
+
+        setTipos(uniqueTipos as string[])
+        setAreas(uniqueAreas as string[])
+        setFamilias(uniqueFamilias as string[])
+        setProductos(productosSimples)
+      })
+      .catch(error => {
+        console.error('Error al cargar productos:', error)
+        setProductos([])
+      })
   }, [])
 
-  // Extraer valores únicos para filtros cuando se cargan los productos
+  // Cargar productos paginados cuando el popover está abierto
   useEffect(() => {
-    if (productos.length > 0) {
-      // Extraer valores únicos para tipos, áreas y familias
-      const tipos = [...new Set(productos.map(p => p.tipo).filter(Boolean))] as string[]
-      const areas = [...new Set(productos.map(p => p.area).filter(Boolean))] as string[]
-      const familias = [...new Set(productos.map(p => p.familia).filter(Boolean))] as string[]
+    if (anchorEl) {
+      const params = new URLSearchParams()
+      params.append('page', (productsPage + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+      params.append('esPaquete', 'false') // Solo productos simples
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
 
-      setTiposDisponibles(tipos)
-      setAreasDisponibles(areas)
-      setFamiliasDisponibles(familias)
-    }
-  }, [productos])
-
-  // Filtrar productos cuando se escribe en el campo de búsqueda o cambian los filtros
-  useEffect(() => {
-    // Aplicar primero los filtros de tipo, área y familia
-    let results = productos
-
-    if (tipoFilter) {
-      results = results.filter(p => p.tipo === tipoFilter)
-    }
-
-    if (areaFilter) {
-      results = results.filter(p => p.area === areaFilter)
-    }
-
-    if (familiaFilter) {
-      results = results.filter(p => p.familia === familiaFilter)
-    }
-
-    // Si no hay término de búsqueda, mostrar los resultados filtrados (limitados)
-    if (searchTerm.trim() === '') {
-      setFilteredProductos(results.slice(0, 50)) // Limitar a 50 resultados cuando no hay búsqueda
-    } else {
-      const searchTerms = searchTerm
-        .toLowerCase()
-        .split(' ')
-        .filter(term => term.length > 0)
-
-      if (searchTerms.length === 0) {
-        setFilteredProductos(results.slice(0, 50))
-
-        return
-      }
-
-      // Buscar en múltiples campos y dar prioridad basada en coincidencias exactas
-      const filtered = results
-        .map(producto => {
-          const sku = producto.sku?.toLowerCase() || ''
-          const nombre = producto.nombre?.toLowerCase() || ''
-          const tipo = producto.tipo?.toLowerCase() || ''
-          const area = producto.area?.toLowerCase() || ''
-          const familia = producto.familia?.toLowerCase() || ''
-
-          // Calcular puntaje de relevancia
-          let score = 0
-          let matchesAllTerms = true
-
-          for (const term of searchTerms) {
-            let termMatched = false
-
-            // Coincidencia exacta en SKU (máxima prioridad)
-            if (sku === term) {
-              score += 100
-              termMatched = true
-            } else if (sku.includes(term)) {
-              score += 50
-              termMatched = true
-            }
-
-            // Coincidencia en nombre
-            if (nombre === term) {
-              score += 40
-              termMatched = true
-            } else if (nombre.includes(term)) {
-              score += 30
-              termMatched = true
-            }
-
-            // Coincidencia en tipo
-            if (tipo === term) {
-              score += 25
-              termMatched = true
-            } else if (tipo.includes(term)) {
-              score += 20
-              termMatched = true
-            }
-
-            // Coincidencia en área o familia
-            if (area.includes(term) || familia.includes(term)) {
-              score += 15
-              termMatched = true
-            }
-
-            // Si algún término no coincide, no cumple con todos los términos
-            if (!termMatched) {
-              matchesAllTerms = false
-            }
-          }
-
-          // Solo devolver productos que coinciden con todos los términos de búsqueda
-          return matchesAllTerms ? { producto, score } : null
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => res.json())
+        .then(response => {
+          const data = response.productos || []
+          setFilteredProductos(data)
+          setTotalProductos(Number.isFinite(response.total) ? Number(response.total) : 0)
         })
-        .filter(item => item !== null)
-        .sort((a, b) => b!.score - a!.score)
-        .map(item => item!.producto)
-        .slice(0, 50) // Limitar resultados para mejor rendimiento
-
-      setFilteredProductos(filtered)
+        .catch(error => {
+          console.error('Error al cargar productos paginados:', error)
+          setFilteredProductos([])
+          setTotalProductos(0)
+        })
     }
-  }, [searchTerm, productos, tipoFilter, areaFilter, familiaFilter])
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+
+  // Resetear página cuando cambien los filtros
+  useEffect(() => {
+    if (anchorEl) {
+      setProductsPage(0)
+    }
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   // Efecto para cargar un servicio predeterminado basado en el tipo de OT
   useEffect(() => {
@@ -396,10 +334,13 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Abrir el popover
   const handleOpenPopover = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
-
-    if (!productos.length) {
-      fetchProductos()
-    }
+    setLoadingProductos(true)
+    setProductsPage(0)
+    setSearchTerm('')
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setLoadingProductos(false)
   }
 
   // Cerrar el popover
@@ -485,9 +426,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Limpiar filtros
   const handleClearFilters = () => {
-    setTipoFilter('')
-    setAreaFilter('')
-    setFamiliaFilter('')
+    setSelectedTipo('')
+    setSelectedArea('')
+    setSelectedFamilia('')
+    setSearchTerm('')
+    setProductsPage(0)
   }
 
   // Función para validar los campos requeridos
@@ -705,69 +648,78 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     p: 2
                                   }}
                                 >
+                                  <TextField
+                                    fullWidth
+                                    size='small'
+                                    placeholder='Buscar por nombre, SKU o descripción...'
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    InputProps={{
+                                      startAdornment: (
+                                        <InputAdornment position='start'>
+                                          <i className='ri-search-line' />
+                                        </InputAdornment>
+                                      )
+                                    }}
+                                    sx={{ mb: 2 }}
+                                  />
                                   <Grid container spacing={2}>
                                     <Grid item xs={4}>
-                                      <TextField
-                                        select
-                                        size='small'
-                                        label='Tipo'
-                                        fullWidth
-                                        value={tipoFilter}
-                                        onChange={e => setTipoFilter(e.target.value)}
-                                        SelectProps={{
-                                          native: true,
-                                          style: { paddingRight: '24px' }
-                                        }}
-                                      >
-                                        <option value=''>Todos</option>
-                                        {tiposDisponibles.map(tipo => (
-                                          <option key={tipo} value={tipo}>
-                                            {tipo}
-                                          </option>
-                                        ))}
-                                      </TextField>
+                                      <FormControl size='small' fullWidth>
+                                        <InputLabel shrink>Tipo</InputLabel>
+                                        <Select
+                                          value={selectedTipo}
+                                          label='Tipo'
+                                          onChange={e => setSelectedTipo(e.target.value)}
+                                          displayEmpty
+                                          renderValue={selected => selected === '' ? 'Todos' : selected}
+                                        >
+                                          <MenuItem value=''>Todos</MenuItem>
+                                          {tipos.map((tipo: string) => (
+                                            <MenuItem key={tipo} value={tipo}>
+                                              {tipo}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
                                     </Grid>
                                     <Grid item xs={4}>
-                                      <TextField
-                                        select
-                                        size='small'
-                                        label='Área'
-                                        fullWidth
-                                        value={areaFilter}
-                                        onChange={e => setAreaFilter(e.target.value)}
-                                        SelectProps={{
-                                          native: true,
-                                          style: { paddingRight: '24px' }
-                                        }}
-                                      >
-                                        <option value=''>Todas</option>
-                                        {areasDisponibles.map(area => (
-                                          <option key={area} value={area}>
-                                            {area}
-                                          </option>
-                                        ))}
-                                      </TextField>
+                                      <FormControl size='small' fullWidth>
+                                        <InputLabel shrink>Área</InputLabel>
+                                        <Select
+                                          value={selectedArea}
+                                          label='Área'
+                                          onChange={e => setSelectedArea(e.target.value)}
+                                          displayEmpty
+                                          renderValue={selected => selected === '' ? 'Todas' : selected}
+                                        >
+                                          <MenuItem value=''>Todas</MenuItem>
+                                          {areas.map((area: string) => (
+                                            <MenuItem key={area} value={area}>
+                                              {area}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
                                     </Grid>
                                     <Grid item xs={4}>
-                                      <TextField
-                                        select
-                                        size='small'
-                                        label='Familia'
-                                        fullWidth
-                                        value={familiaFilter}
-                                        onChange={e => setFamiliaFilter(e.target.value)}
-                                        SelectProps={{
-                                          native: true,
-                                          style: { paddingRight: '24px' }
-                                        }}
-                                      >
-                                        <option value=''>Todas</option>
-                                        {familiasDisponibles.map(familia => (
-                                          <option key={familia} value={familia}>
-                                            {familia}
-                                          </option>
-                                        ))}
-                                      </TextField>
+                                      <FormControl size='small' fullWidth>
+                                        <InputLabel shrink>Familia</InputLabel>
+                                        <Select
+                                          value={selectedFamilia}
+                                          label='Familia'
+                                          onChange={e => setSelectedFamilia(e.target.value)}
+                                          displayEmpty
+                                          renderValue={selected => selected === '' ? 'Todas' : selected}
+                                        >
+                                          <MenuItem value=''>Todas</MenuItem>
+                                          {familias.map((familia: string) => (
+                                            <MenuItem key={familia} value={familia}>
+                                              {familia}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
                                     </Grid>
                                   </Grid>
                                   <Box
@@ -839,22 +791,26 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       </ListItem>
                                     )}
 
-                                    {filteredProductos.length > 0 && filteredProductos.length >= 50 && (
-                                      <ListItem>
-                                        <ListItemText
-                                          secondary='Se muestran los primeros 50 resultados. Refina tu búsqueda para ver resultados más precisos.'
-                                          sx={{ textAlign: 'center', fontStyle: 'italic' }}
-                                        />
-                                      </ListItem>
-                                    )}
                                   </List>
                                 </Box>
-                                <Box sx={{ p: 1, borderTop: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
-                                  <Typography variant='caption' sx={{ display: 'block', textAlign: 'center' }}>
-                                    {filteredProductos.length === 0
-                                      ? 'Sin resultados'
-                                      : `Mostrando ${filteredProductos.length > 50 ? '50' : filteredProductos.length} de ${productos.length} productos`}
+                                <Box sx={{ p: 1, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                  <Button
+                                    size='small'
+                                    onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                                    disabled={productsPage === 0}
+                                  >
+                                    Anterior
+                                  </Button>
+                                  <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                                    Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
                                   </Typography>
+                                  <Button
+                                    size='small'
+                                    onClick={() => setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))}
+                                    disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                                  >
+                                    Siguiente
+                                  </Button>
                                 </Box>
                               </>
                             )}
@@ -1225,69 +1181,78 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         p: 2
                                       }}
                                     >
+                                      <TextField
+                                        fullWidth
+                                        size='small'
+                                        placeholder='Buscar por nombre, SKU o descripción...'
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        InputProps={{
+                                          startAdornment: (
+                                            <InputAdornment position='start'>
+                                              <i className='ri-search-line' />
+                                            </InputAdornment>
+                                          )
+                                        }}
+                                        sx={{ mb: 2 }}
+                                      />
                                       <Grid container spacing={2}>
                                         <Grid item xs={4}>
-                                          <TextField
-                                            select
-                                            size='small'
-                                            label='Tipo'
-                                            fullWidth
-                                            value={tipoFilter}
-                                            onChange={e => setTipoFilter(e.target.value)}
-                                            SelectProps={{
-                                              native: true,
-                                              style: { paddingRight: '24px' }
-                                            }}
-                                          >
-                                            <option value=''>Todos</option>
-                                            {tiposDisponibles.map(tipo => (
-                                              <option key={tipo} value={tipo}>
-                                                {tipo}
-                                              </option>
-                                            ))}
-                                          </TextField>
+                                          <FormControl size='small' fullWidth>
+                                            <InputLabel shrink>Tipo</InputLabel>
+                                            <Select
+                                              value={selectedTipo}
+                                              label='Tipo'
+                                              onChange={e => setSelectedTipo(e.target.value)}
+                                              displayEmpty
+                                              renderValue={selected => selected === '' ? 'Todos' : selected}
+                                            >
+                                              <MenuItem value=''>Todos</MenuItem>
+                                              {tipos.map((tipo: string) => (
+                                                <MenuItem key={tipo} value={tipo}>
+                                                  {tipo}
+                                                </MenuItem>
+                                              ))}
+                                            </Select>
+                                          </FormControl>
                                         </Grid>
                                         <Grid item xs={4}>
-                                          <TextField
-                                            select
-                                            size='small'
-                                            label='Área'
-                                            fullWidth
-                                            value={areaFilter}
-                                            onChange={e => setAreaFilter(e.target.value)}
-                                            SelectProps={{
-                                              native: true,
-                                              style: { paddingRight: '24px' }
-                                            }}
-                                          >
-                                            <option value=''>Todas</option>
-                                            {areasDisponibles.map(area => (
-                                              <option key={area} value={area}>
-                                                {area}
-                                              </option>
-                                            ))}
-                                          </TextField>
+                                          <FormControl size='small' fullWidth>
+                                            <InputLabel shrink>Área</InputLabel>
+                                            <Select
+                                              value={selectedArea}
+                                              label='Área'
+                                              onChange={e => setSelectedArea(e.target.value)}
+                                              displayEmpty
+                                              renderValue={selected => selected === '' ? 'Todas' : selected}
+                                            >
+                                              <MenuItem value=''>Todas</MenuItem>
+                                              {areas.map((area: string) => (
+                                                <MenuItem key={area} value={area}>
+                                                  {area}
+                                                </MenuItem>
+                                              ))}
+                                            </Select>
+                                          </FormControl>
                                         </Grid>
                                         <Grid item xs={4}>
-                                          <TextField
-                                            select
-                                            size='small'
-                                            label='Familia'
-                                            fullWidth
-                                            value={familiaFilter}
-                                            onChange={e => setFamiliaFilter(e.target.value)}
-                                            SelectProps={{
-                                              native: true,
-                                              style: { paddingRight: '24px' }
-                                            }}
-                                          >
-                                            <option value=''>Todas</option>
-                                            {familiasDisponibles.map(familia => (
-                                              <option key={familia} value={familia}>
-                                                {familia}
-                                              </option>
-                                            ))}
-                                          </TextField>
+                                          <FormControl size='small' fullWidth>
+                                            <InputLabel shrink>Familia</InputLabel>
+                                            <Select
+                                              value={selectedFamilia}
+                                              label='Familia'
+                                              onChange={e => setSelectedFamilia(e.target.value)}
+                                              displayEmpty
+                                              renderValue={selected => selected === '' ? 'Todas' : selected}
+                                            >
+                                              <MenuItem value=''>Todas</MenuItem>
+                                              {familias.map((familia: string) => (
+                                                <MenuItem key={familia} value={familia}>
+                                                  {familia}
+                                                </MenuItem>
+                                              ))}
+                                            </Select>
+                                          </FormControl>
                                         </Grid>
                                       </Grid>
                                       <Box
@@ -1359,22 +1324,26 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           </ListItem>
                                         )}
 
-                                        {filteredProductos.length > 0 && filteredProductos.length >= 50 && (
-                                          <ListItem>
-                                            <ListItemText
-                                              secondary='Se muestran los primeros 50 resultados. Refina tu búsqueda para ver resultados más precisos.'
-                                              sx={{ textAlign: 'center', fontStyle: 'italic' }}
-                                            />
-                                          </ListItem>
-                                        )}
                                       </List>
                                     </Box>
-                                    <Box sx={{ p: 1, borderTop: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
-                                      <Typography variant='caption' sx={{ display: 'block', textAlign: 'center' }}>
-                                        {filteredProductos.length === 0
-                                          ? 'Sin resultados'
-                                          : `Mostrando ${filteredProductos.length > 50 ? '50' : filteredProductos.length} de ${productos.length} productos`}
+                                    <Box sx={{ p: 1, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                      <Button
+                                        size='small'
+                                        onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                                        disabled={productsPage === 0}
+                                      >
+                                        Anterior
+                                      </Button>
+                                      <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                                        Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
                                       </Typography>
+                                      <Button
+                                        size='small'
+                                        onClick={() => setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))}
+                                        disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                                      >
+                                        Siguiente
+                                      </Button>
                                     </Box>
                                   </>
                                 )}
