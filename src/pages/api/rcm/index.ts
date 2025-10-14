@@ -34,7 +34,7 @@ interface Muestra {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { fechaCodificacion, fechaMuestreo, fechaIngreso, servicios, muestras, observaciones } = req.body
+      const { fechaCodificacion, fechaMuestreo, fechaIngreso, servicios, muestras, observaciones, clienteId, obraId } = req.body
 
       // Obtener los productos por su código
       const codigosServicios = [
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, {})
 
       // Generar número de RCM único
-      const ultimoRCM = await prisma.RCM.findFirst({
+      const ultimoRCM = await prisma.rCM.findFirst({
         orderBy: {
           numeroRcm: 'desc'
         }
@@ -68,13 +68,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const numeroRcm = `${nuevoNumero}-${new Date().getFullYear()}`
 
       // Crear el RCM
-      const rcm = await prisma.RCM.create({
+      const rcm = await prisma.rCM.create({
         data: {
           numeroRcm,
           fechaCodificacion: new Date(fechaCodificacion),
           fechaMuestreo: new Date(fechaMuestreo),
           fechaIngreso: new Date(fechaIngreso),
           observaciones,
+          clienteId: clienteId || null,
+          obraId: obraId || null,
           servicios: {
             create: servicios
               .filter((servicio: Servicio) => productosMap[servicio.codigo]) // Only create services that have a matching product
@@ -146,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     try {
-      const rcms = await prisma.RCM.findMany({
+      const rcms = await prisma.rCM.findMany({
         include: {
           servicios: {
             include: {

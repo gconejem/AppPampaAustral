@@ -516,6 +516,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         cota2: undefined
       }))
 
+      // Extraer clienteId y obraId del otData
+      const clienteId = otData?.agenda?.cliente?.clienteId || null
+      const obraId = otData?.agenda?.obra?.obraId || null
+
       const response = await fetch('/api/rcm', {
         method: 'POST',
         headers: {
@@ -527,7 +531,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
           fechaIngreso,
           servicios,
           muestras: muestrasTransformadas,
-          observaciones
+          observaciones,
+          clienteId,
+          obraId
         })
       })
 
