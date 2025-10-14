@@ -76,19 +76,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           fechaIngreso: new Date(fechaIngreso),
           observaciones,
           servicios: {
-            create: servicios.map((servicio: Servicio) => ({
-              codigo: servicio.codigo,
-              nombre: servicio.nombre,
-              cantidad: parseInt(servicio.cantidad.toString()),
-              estado: 'CODIFICADO',
-              ...(productosMap[servicio.codigo] && {
+            create: servicios
+              .filter((servicio: Servicio) => productosMap[servicio.codigo]) // Only create services that have a matching product
+              .map((servicio: Servicio) => ({
+                codigo: servicio.codigo,
+                nombre: servicio.nombre,
+                cantidad: parseInt(servicio.cantidad.toString()),
+                estado: 'CODIFICADO',
                 producto: {
                   connect: {
                     productoId: productosMap[servicio.codigo]
                   }
                 }
-              })
-            }))
+              }))
           },
           muestras: {
             create: muestras.map((muestra: Muestra, index: number) => ({
@@ -103,32 +103,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               vencimiento: muestra.vencimiento,
               observaciones: muestra.observaciones,
               servicios: {
-                create: muestra.servicios.map(servicio => ({
-                  codigo: servicio.codigo,
-                  nombre: servicio.nombre,
-                  cantidad: parseInt(servicio.cantidad.toString()),
-                  estado: 'CODIFICADO',
-                  ...(productosMap[servicio.codigo] && {
+                create: muestra.servicios
+                  .filter(servicio => productosMap[servicio.codigo]) // Only create services that have a matching product
+                  .map(servicio => ({
+                    codigo: servicio.codigo,
+                    nombre: servicio.nombre,
+                    cantidad: parseInt(servicio.cantidad.toString()),
+                    estado: 'CODIFICADO',
                     producto: {
                       connect: {
                         productoId: productosMap[servicio.codigo]
                       }
                     }
-                  })
-                }))
+                  }))
               },
               probetas:
                 muestra.vencimiento && muestra.probetas?.length > 0
                   ? {
-                      create: muestra.probetas.map((probeta: Probeta) => ({
-                        numero: probeta.numero,
-                        fechaConfeccion: new Date(probeta.fechaConfeccion),
-                        cantidad: probeta.cantidad,
-                        dias: probeta.dias,
-                        fechaVencimiento: new Date(probeta.fechaVencimiento),
-                        estado: 'CODIFICADO'
-                      }))
-                    }
+                    create: muestra.probetas.map((probeta: Probeta) => ({
+                      numero: probeta.numero,
+                      fechaConfeccion: new Date(probeta.fechaConfeccion),
+                      cantidad: probeta.cantidad,
+                      dias: probeta.dias,
+                      fechaVencimiento: new Date(probeta.fechaVencimiento),
+                      estado: 'CODIFICADO'
+                    }))
+                  }
                   : undefined
             }))
           }

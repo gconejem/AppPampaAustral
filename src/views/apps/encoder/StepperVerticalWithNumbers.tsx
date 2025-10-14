@@ -311,8 +311,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         return
       }
 
-      // Agregar la muestra actual al array de muestras
-      setMuestras([...muestras, muestraActual])
+      // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
+      const muestraConCotas = {
+        ...muestraActual,
+        cotas: muestraActual.cota1 && muestraActual.cota2
+          ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+          : muestraActual.cota1 || muestraActual.cota2 || ''
+      }
+      setMuestras([...muestras, muestraConCotas])
     }
 
     setActiveStep(prevActiveStep => prevActiveStep + 1)
@@ -499,6 +505,17 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Función para guardar el RCM
   const handleSaveRCM = async () => {
     try {
+      // Transformar las muestras para combinar cota1 y cota2 en cotas
+      const muestrasTransformadas = muestras.map(muestra => ({
+        ...muestra,
+        cotas: muestra.cota1 && muestra.cota2
+          ? `${muestra.cota1} - ${muestra.cota2}`
+          : muestra.cota1 || muestra.cota2 || '',
+        // Remover los campos cota1 y cota2 ya que no existen en la API
+        cota1: undefined,
+        cota2: undefined
+      }))
+
       const response = await fetch('/api/rcm', {
         method: 'POST',
         headers: {
@@ -509,7 +526,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
           fechaMuestreo,
           fechaIngreso,
           servicios,
-          muestras,
+          muestras: muestrasTransformadas,
           observaciones
         })
       })
