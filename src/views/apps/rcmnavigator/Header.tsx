@@ -86,20 +86,21 @@ const Header = () => {
       </Grid>
 
       {/* Primera Fila de Inputs */}
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={4}>
+      <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6}>
           <TextField label='Fecha Codificación' size='small' fullWidth select>
             {/* Opciones */}
           </TextField>
         </Grid>
-        <Grid item xs={8}>
+        <Grid item xs={12} sm={6}>
           {/* Rango de Fechas usando PickersRange */}
           <PickersRange />
         </Grid>
+
       </Grid>
 
       {/* Segunda Fila de Inputs */}
-      <Grid container spacing={2}>
+      <Grid container spacing={2} >
         <Grid item xs={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='area-select'>Área</InputLabel>

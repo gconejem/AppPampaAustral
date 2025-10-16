@@ -1,14 +1,12 @@
 'use client'
 
-// React Imports
-import { useEffect, useState, useMemo, useCallback } from 'react'
+// ...existing code...
+import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // MUI Imports
-import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -18,12 +16,19 @@ import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import { styled } from '@mui/material/styles'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
 import TablePagination from '@mui/material/TablePagination'
+import { styled } from '@mui/material/styles'
 import type { TextFieldProps } from '@mui/material/TextField'
 
+// Icons
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import DownloadIcon from '@mui/icons-material/Download'
+
 // Third-party Imports
-import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
@@ -31,37 +36,16 @@ import {
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
-// Type Imports
-import type { ThemeColor } from '@core/types'
-import type { UsersType } from '@/types/apps/userTypes'
-import type { Locale } from '@configs/i18n'
-
-// Component Imports
-
-import HistorialPopup from './HistorialPopup'
-
-import TableFilters from './TableFilters'
-import AddUserDrawer from './AddUserDrawer'
-import OptionMenu from '@core/components/option-menu'
-import CustomAvatar from '@core/components/mui/Avatar'
-import InfoCards from './InfoCards'
-
-// Util Imports
-import { getInitials } from '@/utils/getInitials'
-import { getLocalizedUrl } from '@/utils/i18n'
-
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
+// ...existing code...
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
@@ -71,31 +55,12 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type UsersTypeWithAction = UsersType & {
-  action?: string
-}
-
-type UserRoleType = {
-  [key: string]: { icon: string; color: string }
-}
-
-type UserStatusType = {
-  [key: string]: ThemeColor
-}
-
 // Styled Components
 const Icon = styled('i')({})
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
+  addMeta({ itemRank })
   return itemRank.passed
 }
 
@@ -109,110 +74,67 @@ const DebouncedInput = ({
   onChange: (value: string | number) => void
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
-  // States
   const [value, setValue] = useState(initialValue)
-
+  useEffect(() => setValue(initialValue), [initialValue])
   useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value)
-    }, debounce)
-
+    const timeout = setTimeout(() => onChange(value), debounce)
     return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
-
   return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
 }
 
-// Vars
-
-const userRoleObj: UserRoleType = {
-  admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+// Small helpers for status color mapping
+const statusColor = (s?: string) => {
+  if (!s) return 'default'
+  const key = s.toString().toLowerCase()
+  if (['codificado', 'activo', 'a', 'ok', 'firmado'].some(k => key.includes(k))) return 'success'
+  if (['pendiente', 'p', 'pend'].some(k => key.includes(k))) return 'warning'
+  if (['rechazado', 'cancelado', 'inactivo'].some(k => key.includes(k))) return 'error'
+  return 'default'
 }
 
-const userStatusObj: UserStatusType = {
-  active: 'success',
-  pending: 'warning',
-  inactive: 'secondary'
-}
-
-// Column Definitions
-const columnHelper = createColumnHelper<UsersTypeWithAction>()
-
-// Agregar el tipo RCM
+// RCM type (kept)
 interface RCM {
   id: number
   numeroRcm: string
+  ot?: string
   fechaCodificacion: string
   fechaMuestreo: string
-  fechaIngreso: string
-  estado: string
+  estadoOperativo?: string
+  estadoAdministrativo?: string
   cliente?: {
-    nombreCliente: string
-    comuna: string
+    nombreCliente?: string
+    comuna?: string
   }
+  area?: string
+  familia?: string
   obra?: {
-    numeroObra: string
+    numeroObra?: string
   }
-  servicios: Array<{
+  servicios?: Array<{
     codigo: string
     nombre: string
     cantidad: number
   }>
 }
 
+// Component
+const columnHelper = createColumnHelper<RCM>()
+
 const UserListTable2 = () => {
   // States
-  const [addUserOpen, setAddUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
-  const [openHistorial, setOpenHistorial] = useState(false)
 
-  const [historialData, setHistorialData] = useState([
-    {
-      registro: '04/03/2024 - 17:07',
-      funcionario: 'Paola Mena',
-      aplicadoA: 'Ensayo/Serv 2',
-      tipo: 'Ope',
-      estadoAnterior: 'Firmado',
-      estadoNuevo: 'Env-Cliente',
-      informe: '1',
-      fechaAccion: '04/03/2024',
-      observacion: 'Codificar, automático'
-    },
-    {
-      registro: '04/03/2024 - 18:10',
-      funcionario: 'Cristian Salinas',
-      aplicadoA: 'Ensayo/Serv 1',
-      tipo: 'Adm',
-      estadoAnterior: 'Facturado',
-      estadoNuevo: 'Pagado',
-      informe: '---',
-      fechaAccion: '04/03/2024',
-      observacion: 'Procesar Abonos, automático'
-    }
-  ])
-
-  const [rcms, setRcms] = useState<RCM[]>([])
-
-  // Fetch RCMs only once when component mounts
+  // Fetch RCMs
   useEffect(() => {
     const fetchRCMs = async () => {
       try {
         const response = await fetch('/api/rcm')
         const result = await response.json()
-
         setData(result)
         setFilteredData(result)
       } catch (error) {
@@ -221,56 +143,110 @@ const UserListTable2 = () => {
         setLoading(false)
       }
     }
-
     fetchRCMs()
   }, [])
 
-  const handleFilterChange = useCallback((newFilteredData: RCM[]) => {
-    setFilteredData(newFilteredData)
-  }, [])
-
-  // Función para abrir el historial
-  const handleOpenHistorial = () => {
-    setOpenHistorial(true)
-  }
-
-  // Función para cerrar el historial
-  const handleCloseHistorial = () => {
-    setOpenHistorial(false)
-  }
-
-  // Hooks
   const { lang: locale } = useParams()
 
-  const columns = useMemo<ColumnDef<RCM>[]>(
-    () => [
+  const columns = useMemo((): ColumnDef<RCM>[] => {
+    return [
       {
-        id: 'numeroRcm',
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            size='small'
+            onChange={e => {
+              const checked = e.target.checked
+              const ids = table.getRowModel().rows.map(r => r.id)
+              setRowSelection(prev => {
+                const next: any = {}
+                ids.forEach(id => (next[id] = checked))
+                return next
+              })
+            }}
+          />
+        ),
+        cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
+      },
+      {
+        id: 'rcm',
         header: 'RCM',
         accessorKey: 'numeroRcm',
-        cell: ({ row }) => <span>{row.original.numeroRcm}</span>
+        cell: ({ row }) => <Typography variant='body2'>{row.original.numeroRcm}</Typography>
       },
       {
-        id: 'obra',
-        header: 'N° Obra',
-        accessorKey: 'obra.numeroObra',
-        cell: ({ row }) => <span>{row.original.obra?.numeroObra || '-'}</span>
+        id: 'ot',
+        header: 'OT',
+        accessorFn: r => r.ot ?? r['ordenTrabajo'] ?? r['ot'],
+        cell: ({ row }) => <Typography variant='body2'>{row.original.ot ?? row.original['ordenTrabajo'] ?? '-'}</Typography>
       },
       {
-        id: 'fechaCodificacion',
+        id: 'fechaCod',
         header: 'Fecha Cod.',
         accessorKey: 'fechaCodificacion',
-        cell: ({ row }) => <span>{new Date(row.original.fechaCodificacion).toLocaleDateString()}</span>
+        cell: ({ row }) => <span>{row.original.fechaCodificacion ? new Date(row.original.fechaCodificacion).toLocaleDateString() : '-'}</span>
       },
       {
-        id: 'fechaMuestreo',
+        id: 'fechaMues',
         header: 'Fecha Mues.',
         accessorKey: 'fechaMuestreo',
-        cell: ({ row }) => <span>{new Date(row.original.fechaMuestreo).toLocaleDateString()}</span>
+        cell: ({ row }) => <span>{row.original.fechaMuestreo ? new Date(row.original.fechaMuestreo).toLocaleDateString() : '-'}</span>
+      },
+      {
+        id: 'area',
+        header: 'ÁREA',
+        accessorFn: r => r.area ?? r.cliente?.nombreCliente ?? '-',
+        cell: ({ row }) => <span>{row.original.area ?? row.original.cliente?.nombreCliente ?? '-'}</span>
+      },
+      {
+        id: 'familia',
+        header: 'FAMILIA',
+        accessorKey: 'familia',
+        cell: ({ row }) => <span>{row.original.familia ?? '-'}</span>
+      },
+      {
+        id: 'muestras',
+        header: '# MUES.',
+        accessorFn: r => (Array.isArray(r.servicios) ? r.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0),
+        cell: ({ row }) => <span>{Array.isArray(row.original.servicios) ? row.original.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0}</span>
+      },
+      {
+        id: 'estOp',
+        header: 'EST. OP',
+        accessorKey: 'estadoOperativo',
+        cell: ({ row }) => <Chip label={row.original.estadoOperativo ?? '-'} size='small' color={statusColor(row.original.estadoOperativo)} />
+      },
+      {
+        id: 'estAd',
+        header: 'EST. AD.',
+        accessorKey: 'estadoAdministrativo',
+        cell: ({ row }) => <Chip label={row.original.estadoAdministrativo ?? '-'} size='small' color={statusColor(row.original.estadoAdministrativo)} />
+      },
+      {
+        id: 'nobra',
+        header: 'N° OBRA',
+        accessorFn: r => r.obra?.numeroObra ?? '-',
+        cell: ({ row }) => <span>{row.original.obra?.numeroObra ?? '-'}</span>
+      },
+      {
+        id: 'acciones',
+        header: 'ACCIONES',
+        cell: ({ row }) => (
+          <Stack direction='row' spacing={1}>
+            <IconButton size='small' title='Ver'>
+              <VisibilityIcon fontSize='small' />
+            </IconButton>
+            <IconButton size='small' title='Marcar'>
+              <CheckBoxOutlinedIcon fontSize='small' />
+            </IconButton>
+            <IconButton size='small' title='Más'>
+              <MoreVertIcon fontSize='small' />
+            </IconButton>
+          </Stack>
+        )
       }
-    ],
-    []
-  )
+    ]
+  }, [rowSelection])
 
   const table = useReactTable({
     data: filteredData,
@@ -281,28 +257,167 @@ const UserListTable2 = () => {
     getPaginationRowModel: getPaginationRowModel()
   })
 
-  const getAvatar = (params: Pick<RCM, 'avatar' | 'fullName'>) => {
-    const { avatar, fullName } = params
+  // reemplazado: indicadores ampliados y heurísticos
+  const indicators = useMemo(() => {
+    const total = data.length
+    const lower = (s?: string) => (s ?? '').toString().toLowerCase()
 
-    if (avatar) {
-      return <CustomAvatar src={avatar} skin='light' size={34} />
-    } else {
-      return (
-        <CustomAvatar skin='light' size={34}>
-          {getInitials(fullName as string)}
-        </CustomAvatar>
-      )
+    const porEnsayar = data.filter(d =>
+      lower(d.estadoOperativo).includes('ensayar') ||
+      lower(d.estadoAdministrativo).includes('ensayar')
+    ).length
+
+    const porDigitar = data.filter(d =>
+      lower(d.estadoOperativo).includes('digitar') ||
+      lower(d.estadoAdministrativo).includes('digitar') ||
+      lower(d.estadoAdministrativo).includes('digitacion') ||
+      lower(d.estadoAdministrativo).includes('digitación')
+    ).length
+
+    const porEnviarDigitacion = data.filter(d =>
+      lower(d.estadoAdministrativo).includes('enviar') && lower(d.estadoAdministrativo).includes('digit')
+    ).length
+
+    const porRevisar = data.filter(d =>
+      lower(d.estadoOperativo).includes('revisar') ||
+      lower(d.estadoAdministrativo).includes('revisar')
+    ).length
+
+    const porCorregir = data.filter(d =>
+      lower(d.estadoOperativo).includes('corregir') ||
+      lower(d.estadoAdministrativo).includes('corregir')
+    ).length
+
+    const porFirmar = data.filter(d =>
+      lower(d.estadoAdministrativo).includes('firmar') ||
+      lower(d.estadoAdministrativo).includes('firmado') ||
+      lower(d.estadoOperativo).includes('firmar')
+    ).length
+
+    const porEnviarFirmados = data.filter(d =>
+      (lower(d.estadoAdministrativo).includes('firmado') || lower(d.estadoAdministrativo).includes('firmados')) &&
+      lower(d.estadoAdministrativo).includes('enviar')
+    ).length
+
+    const firmadosPagados = data.filter(d => {
+      const adm = lower(d.estadoAdministrativo)
+      return (adm.includes('firmado') || adm.includes('firmados')) &&
+        (adm.includes('pagado') || adm.includes('pagados') || adm.includes('pag'))
+    }).length
+
+    return {
+      total,
+      porEnsayar,
+      porDigitar,
+      porEnviarDigitacion,
+      porRevisar,
+      porCorregir,
+      porFirmar,
+      porEnviarFirmados,
+      firmadosPagados
     }
-  }
+  }, [data])
 
-  if (loading) {
-    return <div>Cargando...</div>
-  }
+  if (loading) return <div>Cargando...</div>
 
   return (
+
+
+
     <Card>
-      <CardHeader title='RCMs' />
-      <TableFilters onFilterChange={handleFilterChange} initialData={data} />
+
+
+      {/* Card header: only title */}
+      < CardHeader
+        title={
+          < Box display='flex' alignItems='center' justifyContent='space-between' gap={2} >
+            <Typography variant='h6'>RCMs</Typography>
+          </Box >
+        }
+      />
+
+      < Divider />
+
+      {/* ROW: Dashboard indicadores (fila superior) */}
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
+        {[
+          { label: 'Por Ensayar', value: indicators.porEnsayar },
+          { label: 'Por Digitar', value: indicators.porDigitar },
+          { label: 'Por Enviar Digitación', value: indicators.porEnviarDigitacion },
+          { label: 'Por Revisar', value: indicators.porRevisar },
+          { label: 'Por Corregir', value: indicators.porCorregir },
+          { label: 'Por Firmar', value: indicators.porFirmar },
+          { label: 'Por Enviar(Firmados)', value: indicators.porEnviarFirmados },
+          { label: 'Firmados Pagados', value: indicators.firmadosPagados }
+        ].map(item => (
+          <Box
+            key={item.label}
+            sx={{
+              minWidth: 140,
+              backgroundColor: '#fff',
+              borderRadius: 1,
+              boxShadow: 1,
+              p: 1.25,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start'
+            }}
+          >
+            <Typography variant='caption' color='text.secondary'>
+              {item.label}
+            </Typography>
+            <Typography variant='h6' sx={{ fontWeight: 700 }}>
+              {item.value}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      <Divider />
+
+
+
+      {/* New toolbar row: Exportar + Buscar (separate row under title) */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
+        <Box>
+          <Button variant='outlined' startIcon={<DownloadIcon />} size='small'>
+            Exportar
+          </Button>
+        </Box>
+
+        <Box sx={{ width: 300 }}>
+          <DebouncedInput
+            value={globalFilter}
+            onChange={(v: any) => {
+              setGlobalFilter(String(v))
+              const q = String(v).toLowerCase()
+              if (!q) {
+                setFilteredData(data)
+                return
+              }
+              const filtered = data.filter(item =>
+                [
+                  item.numeroRcm,
+                  item.ot,
+                  item.area,
+                  item.familia,
+                  item.obra?.numeroObra,
+                  item.cliente?.nombreCliente
+                ]
+                  .filter(Boolean)
+                  .some(s => String(s).toLowerCase().includes(q))
+              )
+              setFilteredData(filtered)
+            }}
+            placeholder='Buscar RCM, OT, ÁREA, FAMILIA...'
+            fullWidth
+            size='small'
+          />
+        </Box>
+      </Box>
+
+      <Divider />
+
       <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
@@ -320,13 +435,16 @@ const UserListTable2 = () => {
             {table.getRowModel().rows.map(row => (
               <tr key={row.id}>
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  <td key={cell.id} style={{ verticalAlign: 'middle' }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
         component='div'
