@@ -1,6 +1,5 @@
 // Next Imports
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
@@ -45,11 +44,6 @@ type RenderExpandIconProps = {
   transitionDuration?: VerticalMenuContextProps['transitionDuration']
 }
 
-type Props = {
-  dictionary: Dictionary
-  scrollMenu: (container: any, isPerfectScrollbar: boolean) => void
-}
-
 const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
   <StyledVerticalNavExpandIcon open={open} transitionDuration={transitionDuration}>
     <i className='ri-arrow-right-s-line' />
@@ -72,7 +66,7 @@ const VerticalMenu = () => {
   const labels = defaultLabels
 
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
-  const { lang: locale } = params
+  const locale = (params?.lang as string) || 'en'
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
@@ -82,12 +76,10 @@ const VerticalMenu = () => {
         <ScrollWrapper
           {...(isBreakpointReached
             ? {
-              className: 'bs-full overflow-y-auto overflow-x-hidden',
-              onScroll: container => scrollMenu(container, false)
+              className: 'bs-full overflow-y-auto overflow-x-hidden'
             }
             : {
-              options: { wheelPropagation: false, suppressScrollX: true },
-              onScrollY: container => scrollMenu(container, true)
+              options: { wheelPropagation: false, suppressScrollX: true }
             })}
         >
           {/* Vertical Menu */}
