@@ -691,7 +691,7 @@ const OtListTable = ({
             </IconButton>
             <IconButton
               onClick={() =>
-                window.open(`http://localhost:3001/en/apps/internalcontrol?otId=${row.original.id}`, '_blank')
+                window.open(`${window.location.origin}/en/apps/internalcontrol?otId=${row.original.id}`, '_blank')
               }
             >
               <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} />
