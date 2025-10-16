@@ -113,7 +113,7 @@ const VerticalMenu = () => {
                   Gestión de Agenda
                 </MenuItem>
               </SubMenu>
-              {/* <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />} disabled>
+              <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
                 <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
                   Control Interno
                 </MenuItem>
@@ -125,13 +125,13 @@ const VerticalMenu = () => {
                 </MenuItem>
               </SubMenu>
 
-              <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />} disabled>
+              {/* <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />} disabled>
                 Facturación
               </MenuItem> */}
 
-              <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
+              {/* <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
                 App
-              </MenuItem>
+              </MenuItem> */}
 
               {/* Nueva entrada: lista de APIs - apunta a la página intermedia */}
               <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-api-line' />}>
