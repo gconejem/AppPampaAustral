@@ -129,6 +129,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [cantidad, setCantidad] = useState<string>('1')
   const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null)
   const [editingCantidad, setEditingCantidad] = useState<string>('1')
+  const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
+  const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
 
   // Estados para el paso 3
   const [muestras, setMuestras] = useState<Muestra[]>([])
@@ -451,6 +453,40 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const handleCancelEditServicio = () => {
     setEditingServiceIndex(null)
     setEditingCantidad('1')
+  }
+
+  // Funciones para editar servicios en la muestra
+  const handleEditMuestraServicio = (index: number) => {
+    setEditingMuestraServiceIndex(index)
+    setEditingMuestraCantidad(muestraActual.servicios[index].cantidad.toString())
+  }
+
+  const handleSaveEditMuestraServicio = (index: number) => {
+    const nuevosServicios = [...muestraActual.servicios]
+    nuevosServicios[index] = {
+      ...nuevosServicios[index],
+      cantidad: parseInt(editingMuestraCantidad) || 1
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      servicios: nuevosServicios
+    }))
+    setEditingMuestraServiceIndex(null)
+    setEditingMuestraCantidad('1')
+  }
+
+  const handleCancelEditMuestraServicio = () => {
+    setEditingMuestraServiceIndex(null)
+    setEditingMuestraCantidad('1')
+  }
+
+  const handleDeleteMuestraServicio = (index: number) => {
+    const nuevosServicios = [...muestraActual.servicios]
+    nuevosServicios.splice(index, 1)
+    setMuestraActual(prev => ({
+      ...prev,
+      servicios: nuevosServicios
+    }))
   }
 
   // Limpiar filtros
@@ -1485,7 +1521,20 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       <TableRow key={index}>
                                         <TableCell>{serv.codigo}</TableCell>
                                         <TableCell>{serv.nombre}</TableCell>
-                                        <TableCell>{serv.cantidad}</TableCell>
+                                        <TableCell>
+                                          {editingMuestraServiceIndex === index ? (
+                                            <TextField
+                                              size='small'
+                                              type='number'
+                                              value={editingMuestraCantidad}
+                                              onChange={e => setEditingMuestraCantidad(e.target.value)}
+                                              inputProps={{ min: 1 }}
+                                              sx={{ width: '80px' }}
+                                            />
+                                          ) : (
+                                            serv.cantidad
+                                          )}
+                                        </TableCell>
                                         <TableCell>
                                           <Chip
                                             label='Codificado'
@@ -1496,24 +1545,41 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           />
                                         </TableCell>
                                         <TableCell>
-                                          <IconButton size='small' color='primary'>
-                                            <EditIcon fontSize='small' />
-                                          </IconButton>
-                                          <IconButton
-                                            size='small'
-                                            color='error'
-                                            onClick={() => {
-                                              const nuevosServicios = [...muestraActual.servicios]
-
-                                              nuevosServicios.splice(index, 1)
-                                              setMuestraActual(prev => ({
-                                                ...prev,
-                                                servicios: nuevosServicios
-                                              }))
-                                            }}
-                                          >
-                                            <DeleteIcon fontSize='small' />
-                                          </IconButton>
+                                          {editingMuestraServiceIndex === index ? (
+                                            <>
+                                              <IconButton
+                                                size='small'
+                                                color='success'
+                                                onClick={() => handleSaveEditMuestraServicio(index)}
+                                              >
+                                                <i className='ri-check-line' />
+                                              </IconButton>
+                                              <IconButton
+                                                size='small'
+                                                color='secondary'
+                                                onClick={handleCancelEditMuestraServicio}
+                                              >
+                                                <i className='ri-close-line' />
+                                              </IconButton>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <IconButton
+                                                size='small'
+                                                color='primary'
+                                                onClick={() => handleEditMuestraServicio(index)}
+                                              >
+                                                <EditIcon fontSize='small' />
+                                              </IconButton>
+                                              <IconButton
+                                                size='small'
+                                                color='error'
+                                                onClick={() => handleDeleteMuestraServicio(index)}
+                                              >
+                                                <DeleteIcon fontSize='small' />
+                                              </IconButton>
+                                            </>
+                                          )}
                                         </TableCell>
                                       </TableRow>
                                     ))
