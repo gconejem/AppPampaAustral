@@ -257,6 +257,50 @@ const UserListTable2 = () => {
     getPaginationRowModel: getPaginationRowModel()
   })
 
+  // <-- añadir: conteo de filas seleccionadas
+  const selectedCount = useMemo(() => {
+    return Object.values(rowSelection as any).filter(Boolean).length
+  }, [rowSelection])
+
+  // EXPORT: exportar sólo filas seleccionadas a CSV (si no hay selección, no hace nada)
+  const handleExport = () => {
+    try {
+      const selectedIds = Object.keys(rowSelection).filter(id => (rowSelection as any)[id])
+      if (!selectedIds.length) return
+
+      // columnas visibles (excluir columnas no deseadas como select/acciones)
+      const cols = table.getAllLeafColumns().filter(c => !['select', 'acciones'].includes(c.id))
+      const headers = cols.map(c => (typeof c.columnDef.header === 'string' ? c.columnDef.header : c.id))
+
+      // construir filas para los ids seleccionados
+      const rows = selectedIds.map(id => {
+        const row = table.getRowModel().rows.find(r => r.id === id)
+        return cols
+          .map(c => {
+            const v = row ? row.getValue(c.id) : ''
+            if (v === null || v === undefined) return '""'
+            const s = typeof v === 'object' ? JSON.stringify(v) : String(v)
+            // escapar comillas dobles para CSV y envolver en comillas
+            return '"' + s.replace(/"/g, '""') + '"'
+          })
+          .join(',')
+      })
+
+      const headerRow = headers.map(h => '"' + String(h).replace(/"/g, '""') + '"').join(',')
+      const csv = [headerRow, ...rows].join('\r\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'rcms_selected_export.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error', err)
+    }
+  }
+
   // reemplazado: indicadores ampliados y heurísticos
   const indicators = useMemo(() => {
     const total = data.length
@@ -377,12 +421,26 @@ const UserListTable2 = () => {
 
 
 
-      {/* New toolbar row: Exportar + Buscar (separate row under title) */}
+      {/* New toolbar row: Exportar + contador + Buscar (separate row under title) */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
-        <Box>
-          <Button variant='outlined' startIcon={<DownloadIcon />} size='small'>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant='outlined'
+            startIcon={<DownloadIcon />}
+            size='small'
+            onClick={handleExport}
+            disabled={selectedCount === 0}
+            title={selectedCount === 0 ? 'Seleccione filas para exportar' : 'Exportar filas seleccionadas'}
+          >
             Exportar
           </Button>
+
+          {/* contador de seleccionados (visible solo si hay al menos 1) */}
+          {selectedCount > 0 && (
+            <Typography variant='body2' color='text.secondary'>
+              {selectedCount} fila{selectedCount > 1 ? 's' : ''} seleccionada{selectedCount > 1 ? 's' : ''}
+            </Typography>
+          )}
         </Box>
 
         <Box sx={{ width: 300 }}>
