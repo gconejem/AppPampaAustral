@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Grid, TextField, Typography, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
+import { Box, Grid, TextField, Typography, Button, FormControl, InputLabel, Select, MenuItem, Menu } from '@mui/material'
 
 // Importa el componente PickersRange
 import PickersRange from './date'
@@ -25,6 +25,25 @@ const Header = () => {
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
+
+  // Menu Informes
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const informesOpen = Boolean(anchorEl)
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)
+  const handleMenuClose = () => setAnchorEl(null)
+
+  // Cambiado: abrir informes SIN prefijo de idioma (opción B)
+  const handleInforme = (slug: string) => {
+    // abre la página directamente en /informes/<slug>
+    if (slug === 'densidad') {
+      window.open(`/informes/densidad`, '_blank')
+    } else if (slug === 'hormigon') {
+      window.open(`/informes/hormigon`, '_blank')
+    } else {
+      window.open(`/informes/${slug}`, '_blank')
+    }
+    handleMenuClose()
+  }
 
   // Cargar áreas cuando se monta el componente
   useEffect(() => {
@@ -79,9 +98,20 @@ const Header = () => {
         </Grid>
         <Grid item xs={6} />
         <Grid item xs={3} sx={{ textAlign: 'right' }}>
-          <Button variant='contained' color='primary' size='large' sx={{ fontWeight: '' }}>
+          <Button variant='contained' color='primary' size='large' sx={{ fontWeight: '' }} onClick={handleMenuOpen}>
             Informes
           </Button>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={informesOpen}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={() => handleInforme('densidad')}>Informe Densidad</MenuItem>
+            <MenuItem onClick={() => handleInforme('hormigon')}>Informe Hormigón</MenuItem>
+          </Menu>
         </Grid>
       </Grid>
 
