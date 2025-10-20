@@ -21,6 +21,24 @@ import Stack from '@mui/material/Stack'
 import TablePagination from '@mui/material/TablePagination'
 import { styled } from '@mui/material/styles'
 import type { TextFieldProps } from '@mui/material/TextField'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import Paper from '@mui/material/Paper'
+
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -129,6 +147,163 @@ const UserListTable2 = () => {
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
 
+  // menu contextual por fila
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [menuRowId, setMenuRowId] = useState<number | null>(null)
+
+  // Menu "Marcar" state (falta declararlo)
+  const [markAnchorEl, setMarkAnchorEl] = useState<null | HTMLElement>(null)
+  const [markRowId, setMarkRowId] = useState<number | null>(null)
+
+  // Dialog para acciones de "Marcar" (ej. Digitado / En Corrección)
+  const [markDialogOpen, setMarkDialogOpen] = useState(false)
+  const [markDialogAction, setMarkDialogAction] = useState<string | null>(null)
+  const [markDialogRowId, setMarkDialogRowId] = useState<number | null>(null)
+  const [informeNumber, setInformeNumber] = useState<string>('')
+  // campos para "En Corrección"
+  const [correctionMotivo, setCorrectionMotivo] = useState<string>('')
+  const [correctionObservaciones, setCorrectionObservaciones] = useState<string>('')
+
+  // Historial dialog
+  const [histDialogOpen, setHistDialogOpen] = useState(false)
+  const [histRowId, setHistRowId] = useState<number | null>(null)
+  const [histRows, setHistRows] = useState<any[]>([])
+
+  const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
+    setMarkAnchorEl(e.currentTarget)
+    setMarkRowId(rowId)
+  }
+  const handleCloseMarkMenu = () => {
+    setMarkAnchorEl(null)
+    setMarkRowId(null)
+  }
+
+  const handleMarkAction = async (action: string, rowId: number | null) => {
+    // acciones que requieren diálogo: DIGITADO y EN_CORRECCION
+    if (action === 'DIGITADO' || action === 'EN_CORRECCION') {
+      setMarkDialogAction(action)
+      setMarkDialogRowId(rowId)
+      // reset campos del diálogo según acción
+      setInformeNumber('')
+      setCorrectionMotivo('')
+      setCorrectionObservaciones('')
+      handleCloseMarkMenu()
+      setMarkDialogOpen(true)
+      return
+    }
+
+    // Acciones que se ejecutan inmediatamente (placeholder - ajustar API)
+    try {
+      console.log('Marcar acción inmediata', action, 'fila', rowId)
+      // ejemplo de llamada:
+      // await fetch(`/api/rcm/${rowId}/marcar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) })
+    } catch (err) {
+      console.error('Error marcar', err)
+    } finally {
+      handleCloseMarkMenu()
+      // opcional: refrescar datos
+    }
+  }
+
+  const handleSaveMarkDialog = async () => {
+    // Guardar la acción según el tipo de diálogo
+    try {
+      if (markDialogAction === 'DIGITADO') {
+        console.log('Guardar DIGITADO', { rowId: markDialogRowId, informe: informeNumber })
+        // POST a API: { action: 'DIGITADO', informe: informeNumber }
+      } else if (markDialogAction === 'EN_CORRECCION') {
+        console.log('Guardar EN_CORRECCION', {
+          rowId: markDialogRowId,
+          motivo: correctionMotivo,
+          observaciones: correctionObservaciones
+        })
+        // POST a API: { action: 'EN_CORRECCION', motivo: correctionMotivo, observaciones: correctionObservaciones }
+      } else {
+        console.log('Guardar acción', markDialogAction)
+      }
+    } catch (err) {
+      console.error('Error guardar marcación', err)
+    } finally {
+      setMarkDialogOpen(false)
+      setMarkDialogAction(null)
+      setMarkDialogRowId(null)
+      setInformeNumber('')
+      setCorrectionMotivo('')
+      setCorrectionObservaciones('')
+      // opcional: refrescar tabla
+    }
+  }
+
+  const handleCancelMarkDialog = () => {
+    setMarkDialogOpen(false)
+    setMarkDialogAction(null)
+    setMarkDialogRowId(null)
+    setInformeNumber('')
+    setCorrectionMotivo('')
+    setCorrectionObservaciones('')
+  }
+
+  const handleOpenRowMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
+    setMenuAnchorEl(e.currentTarget)
+    setMenuRowId(rowId)
+  }
+  const handleCloseRowMenu = () => {
+    setMenuAnchorEl(null)
+    setMenuRowId(null)
+  }
+
+  const handleEdit = (rowId: number | null) => {
+    console.log('Editar', rowId)
+    handleCloseRowMenu()
+    // TODO: abrir drawer/editar con rowId
+  }
+
+  const handleGenerateInforme = (rowId: number | null) => {
+    console.log('Generar Informe', rowId)
+    handleCloseRowMenu()
+    if (typeof window !== 'undefined' && rowId != null) window.open(`/informes/generar/${rowId}`, '_blank')
+  }
+
+  // mock helper para historial (añadir aquí)
+  const getMockHistEntries = (rowId: number | null) => {
+    return [
+      {
+        registro: '04/03/2024-17:07',
+        funcionario: 'Paola Mena',
+        tipo: 'Ope',
+        estAnterior: 'Firmado',
+        estNuevo: 'Env-Cliente',
+        informe: 1,
+        fechaAccion: '04/03/2024',
+        observacion: 'Codificar, automático'
+      },
+      {
+        registro: '04/03/2024-18:10',
+        funcionario: 'Cristian Salinas',
+        tipo: 'Adm',
+        estAnterior: 'Facturado',
+        estNuevo: 'Pagado',
+        informe: '---',
+        fechaAccion: '04/03/2024',
+        observacion: 'Procesar Abonos, automático'
+      }
+    ]
+  }
+
+  const handleHistorial = (rowId: number | null) => {
+    // cargar mock y abrir dialog
+    setHistRowId(rowId)
+    setHistRows(getMockHistEntries(rowId))
+    setHistDialogOpen(true)
+    handleCloseRowMenu()
+  }
+
+  const handleCloseHistDialog = () => {
+    setHistDialogOpen(false)
+    setHistRowId(null)
+    setHistRows([])
+  }
+
   // Fetch RCMs
   useEffect(() => {
     const fetchRCMs = async () => {
@@ -152,20 +327,29 @@ const UserListTable2 = () => {
     return [
       {
         id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            size='small'
-            onChange={e => {
-              const checked = e.target.checked
-              const ids = table.getRowModel().rows.map(r => r.id)
-              setRowSelection(prev => {
-                const next: any = {}
-                ids.forEach(id => (next[id] = checked))
-                return next
-              })
-            }}
-          />
-        ),
+        header: ({ table }) => {
+          const visibleIds = table.getRowModel().rows.map(r => r.id)
+          const allSelected = visibleIds.length > 0 && visibleIds.every(id => Boolean((rowSelection as any)[id]))
+          const someSelected = visibleIds.some(id => Boolean((rowSelection as any)[id]))
+
+          return (
+            <Checkbox
+              size='small'
+              checked={allSelected}
+              indeterminate={!allSelected && someSelected}
+              onChange={() => {
+                // si no están todos seleccionados => seleccionar todos visibles, si ya lo están => deseleccionar todo
+                if (!allSelected) {
+                  const next: any = {}
+                  visibleIds.forEach(id => (next[id] = true))
+                  setRowSelection(next)
+                } else {
+                  setRowSelection({}) // deselecciona todo
+                }
+              }}
+            />
+          )
+        },
         cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
       },
       {
@@ -236,10 +420,16 @@ const UserListTable2 = () => {
             <IconButton size='small' title='Ver'>
               <VisibilityIcon fontSize='small' />
             </IconButton>
-            <IconButton size='small' title='Marcar'>
+
+            <IconButton
+              size='small'
+              title='Marcar'
+              onClick={(e) => handleOpenMarkMenu(e, row.original.id)}
+            >
               <CheckBoxOutlinedIcon fontSize='small' />
             </IconButton>
-            <IconButton size='small' title='Más'>
+
+            <IconButton size='small' title='Más' onClick={e => handleOpenRowMenu(e, row.original.id)}>
               <MoreVertIcon fontSize='small' />
             </IconButton>
           </Stack>
@@ -512,6 +702,154 @@ const UserListTable2 = () => {
         onPageChange={(_, page) => table.setPageIndex(page)}
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
+
+      {/* Menu "Marcar" con opciones (popup) */}
+      <Menu
+        anchorEl={markAnchorEl}
+        open={Boolean(markAnchorEl)}
+        onClose={handleCloseMarkMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => handleMarkAction('ENVIADO_DIGITACION', markRowId)}>Enviado a Digitación</MenuItem>
+        <MenuItem onClick={() => handleMarkAction('DIGITADO', markRowId)}>Digitado</MenuItem>
+        <MenuItem onClick={() => handleMarkAction('INFORME_OK', markRowId)}>Informe OK</MenuItem>
+        <MenuItem onClick={() => handleMarkAction('EN_CORRECCION', markRowId)}>En Corrección</MenuItem>
+        <MenuItem onClick={() => handleMarkAction('FIRMADO', markRowId)}>Firmado</MenuItem>
+        <MenuItem onClick={() => handleMarkAction('ENVIADO_CLIENTE', markRowId)}>Enviado a Cliente</MenuItem>
+      </Menu>
+
+      {/* Dialog: Form "Estado Muestra" para acciones (Digitado, En Corrección, ...) */}
+      <Dialog open={markDialogOpen} onClose={handleCancelMarkDialog} maxWidth='sm' fullWidth>
+        <DialogTitle>Estado Muestra</DialogTitle>
+        <DialogContent>
+          {markDialogAction === 'DIGITADO' && (
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
+              <FormControl fullWidth size='small'>
+                <InputLabel id='mark-action-label'>Acción</InputLabel>
+                <Select labelId='mark-action-label' value={markDialogAction ?? ''} label='Acción' disabled>
+                  <MenuItemMUI value='DIGITADO'>Digitado</MenuItemMUI>
+                </Select>
+              </FormControl>
+
+              <TextField
+                label='N° de Informe'
+                value={informeNumber}
+                onChange={e => setInformeNumber(e.target.value)}
+                size='small'
+                fullWidth
+              />
+            </Box>
+          )}
+
+          {markDialogAction === 'EN_CORRECCION' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl fullWidth size='small'>
+                  <InputLabel id='correction-action-label'>Estado</InputLabel>
+                  <Select
+                    labelId='correction-action-label'
+                    value={'EN_CORRECCION'}
+                    label='Estado'
+                    disabled
+                  >
+                    <MenuItemMUI value='EN_CORRECCION'>En Corrección</MenuItemMUI>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  label='Motivo'
+                  value={correctionMotivo}
+                  onChange={e => setCorrectionMotivo(e.target.value)}
+                  size='small'
+                  fullWidth
+                />
+              </Box>
+
+              <TextField
+                label='Observaciones'
+                value={correctionObservaciones}
+                onChange={e => setCorrectionObservaciones(e.target.value)}
+                size='small'
+                fullWidth
+                multiline
+                minRows={3}
+              />
+            </Box>
+          )}
+
+          {/* Otros actions pueden añadirse aquí con condiciones similares */}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelMarkDialog}>Cerrar</Button>
+          <Button variant='contained' onClick={handleSaveMarkDialog}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Menu contextual (por fila) - 3 puntos */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleCloseRowMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar</MenuItem>
+        <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
+        <MenuItem onClick={() => handleGenerateInforme(menuRowId)}>Generar Informe</MenuItem>
+      </Menu>
+
+      {/* Dialog: Historial (mock) */}
+      <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
+        <DialogTitle>Historial</DialogTitle>
+        <DialogContent>
+          <TableContainer component={Paper} variant='outlined'>
+            <Table size='small'>
+              <TableHead>
+                <TableRow>
+                  <TableCell>REGISTRO</TableCell>
+                  <TableCell>FUNCIONARIO</TableCell>
+                  <TableCell>TIPO</TableCell>
+                  <TableCell>EST. ANTERIOR</TableCell>
+                  <TableCell>EST. NUEVO</TableCell>
+                  <TableCell>INFORME</TableCell>
+                  <TableCell>FECHA ACCIÓN</TableCell>
+                  <TableCell>OBSERVACIÓN</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {histRows.map((h, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{h.registro}</TableCell>
+                    <TableCell>{h.funcionario}</TableCell>
+                    <TableCell>{h.tipo}</TableCell>
+                    <TableCell>
+                      <Chip label={h.estAnterior} size='small' color={statusColor(h.estAnterior)} />
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={h.estNuevo} size='small' color={statusColor(h.estNuevo)} />
+                    </TableCell>
+                    <TableCell>{h.informe}</TableCell>
+                    <TableCell>{h.fechaAccion}</TableCell>
+                    <TableCell>{h.observacion}</TableCell>
+                  </TableRow>
+                ))}
+                {histRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} align='center' sx={{ py: 4 }}>
+                      No hay registros
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHistDialog}>Cerrar</Button>
+          <Button variant='contained' onClick={handleCloseHistDialog}>Aceptar</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

@@ -20,11 +20,33 @@ interface Familia {
   }
 }
 
+const ESTADOS_OPERATIVO = [
+  'PENDIENTE',
+  'DIGITAR',
+  'POR_REVISAR',
+  'REVISAR',
+  'CORREGIR',
+  'CODIFICADO',
+  'FIRMADO'
+]
+
+const ESTADOS_ADMINISTRATIVO = [
+  'PENDIENTE',
+  'ENVIAR_DIGITACION',
+  'ENVIADO',
+  'FIRMADO',
+  'PAGADO',
+  'CODIFICADO',
+  'RECHAZADO'
+]
+
 const Header = () => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
+  const [selectedEstadoAd, setSelectedEstadoAd] = useState<string>('')
 
   // Menu Informes
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -82,11 +104,11 @@ const Header = () => {
   return (
     <Box
       sx={{
-        p: 4,
+        p: 3,
         backgroundColor: 'white',
         boxShadow: 2,
         borderRadius: 2,
-        mb: 4 // Margen inferior para separación
+        mb: 4
       }}
     >
       {/* Título y Botón */}
@@ -130,8 +152,8 @@ const Header = () => {
       </Grid>
 
       {/* Segunda Fila de Inputs */}
-      <Grid container spacing={2} >
-        <Grid item xs={3}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='area-select'>Área</InputLabel>
             <Select
@@ -149,7 +171,8 @@ const Header = () => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={3}>
+
+        <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='familia-select'>Familia</InputLabel>
             <Select
@@ -168,15 +191,45 @@ const Header = () => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={3}>
-          <TextField label='Estado Operativo' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+
+        {/* Estado Operativo */}
+        <Grid item xs={12} sm={3}>
+          <FormControl fullWidth size='small'>
+            <InputLabel id='estado-op-select'>Estado Operativo</InputLabel>
+            <Select
+              labelId='estado-op-select'
+              label='Estado Operativo'
+              value={selectedEstadoOp}
+              onChange={e => setSelectedEstadoOp(e.target.value)}
+            >
+              <MenuItem value=''>Todos</MenuItem>
+              {ESTADOS_OPERATIVO.map(s => (
+                <MenuItem key={s} value={s}>
+                  {s.replace(/_/g, ' ')}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
-        <Grid item xs={3}>
-          <TextField label='Estado Administrativo' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+
+        {/* Estado Administrativo */}
+        <Grid item xs={12} sm={3}>
+          <FormControl fullWidth size='small'>
+            <InputLabel id='estado-ad-select'>Estado Administrativo</InputLabel>
+            <Select
+              labelId='estado-ad-select'
+              label='Estado Administrativo'
+              value={selectedEstadoAd}
+              onChange={e => setSelectedEstadoAd(e.target.value)}
+            >
+              <MenuItem value=''>Todos</MenuItem>
+              {ESTADOS_ADMINISTRATIVO.map(s => (
+                <MenuItem key={s} value={s}>
+                  {s.replace(/_/g, ' ')}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
       </Grid>
     </Box>
