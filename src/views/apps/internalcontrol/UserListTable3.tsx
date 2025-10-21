@@ -321,7 +321,7 @@ const UserListTable3 = ({
       <CardHeader
         title={
           <Grid container spacing={2} alignItems='center'>
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <FormControl fullWidth size='small'>
                 <InputLabel>Filtrar por Área</InputLabel>
                 <Select
@@ -342,7 +342,7 @@ const UserListTable3 = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <FormControl fullWidth size='small'>
                 <InputLabel>Filtrar por Familia</InputLabel>
                 <Select
@@ -363,7 +363,7 @@ const UserListTable3 = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6} display='flex' justifyContent='flex-end'>
+            <Grid item xs={4} display='flex' justifyContent='flex-end'>
               <Button
                 variant='contained'
                 size='small'
