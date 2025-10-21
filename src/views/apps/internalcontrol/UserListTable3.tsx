@@ -158,11 +158,21 @@ const UserListTable3 = ({
       }),
       columnHelper.accessor('fechaCodificacion', {
         header: 'FECHA CODIFICACIÓN',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaCodificacion || '-'}</Typography>
+        cell: ({ row }) => {
+          // Mostrar la fecha de hoy en formato dd-mm-aaaa
+          const today = new Date()
+          const fechaHoy = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`
+          return <Typography color='text.primary'>{fechaHoy}</Typography>
+        }
       }),
       columnHelper.accessor('fechaMuestreo', {
         header: 'FECHA MUESTREO',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaMuestreo || '-'}</Typography>
+        cell: ({ row }) => {
+          // Mostrar la fecha de hoy en formato dd-mm-aaaa
+          const today = new Date()
+          const fechaHoy = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`
+          return <Typography color='text.primary'>{fechaHoy}</Typography>
+        }
       }),
       columnHelper.accessor('area', {
         header: 'ÁREA',
