@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -37,11 +37,12 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 // Interface para servicios de OT
 interface ServicioOT {
   id: number
-  codigo: string
-  servicio: string
-  cantidad: number
+  fechaCodificacion?: string
+  fechaMuestreo?: string
+  area?: string
+  familia?: string
   observacion?: string
-  esSegundaVisita: boolean
+  estadoOP?: string
 }
 
 // Definición básica para UsersType
@@ -114,29 +115,62 @@ const UserListTable3 = ({
 
   const columns = useMemo<ColumnDef<ServicioOT, any>[]>(
     () => [
-      columnHelper.accessor('codigo', {
-        header: 'CÓDIGO',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.codigo}</Typography>
+      {
+        id: 'select',
+        header: ({ table }) => {
+          const checkboxRef = useRef<HTMLInputElement>(null)
+
+          useEffect(() => {
+            if (checkboxRef.current) {
+              checkboxRef.current.indeterminate = table.getIsSomeRowsSelected()
+            }
+          }, [table.getIsSomeRowsSelected()])
+
+          return (
+            <input
+              ref={checkboxRef}
+              type='checkbox'
+              checked={table.getIsAllRowsSelected()}
+              onChange={table.getToggleAllRowsSelectedHandler()}
+            />
+          )
+        },
+        cell: ({ row }) => (
+          <input
+            type='checkbox'
+            checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
+            onChange={row.getToggleSelectedHandler()}
+          />
+        )
+      },
+      columnHelper.accessor('fechaCodificacion', {
+        header: 'FECHA CODIFICACIÓN',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaCodificacion || '-'}</Typography>
       }),
-      columnHelper.accessor('servicio', {
-        header: 'SERVICIO',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.servicio}</Typography>
+      columnHelper.accessor('fechaMuestreo', {
+        header: 'FECHA MUESTREO',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaMuestreo || '-'}</Typography>
       }),
-      columnHelper.accessor('cantidad', {
-        header: 'CANTIDAD',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.cantidad}</Typography>
+      columnHelper.accessor('area', {
+        header: 'ÁREA',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.area || '-'}</Typography>
+      }),
+      columnHelper.accessor('familia', {
+        header: 'FAMILIA',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.familia || '-'}</Typography>
       }),
       columnHelper.accessor('observacion', {
         header: 'OBSERVACIÓN',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.observacion || '-'}</Typography>
       }),
-      columnHelper.accessor('esSegundaVisita', {
-        header: 'SEGUNDA VISITA',
+      columnHelper.accessor('estadoOP', {
+        header: 'ESTADO OP',
         cell: ({ row }) => (
           <Chip
-            label={row.original.esSegundaVisita ? 'Sí' : 'No'}
+            label={row.original.estadoOP || 'Pendiente'}
             size='small'
-            color={row.original.esSegundaVisita ? 'info' : 'default'}
+            color={row.original.estadoOP === 'Completado' ? 'success' : 'default'}
           />
         )
       }),
@@ -264,7 +298,7 @@ const UserListTable3 = ({
             <Grid item xs={4}>
               <TextField
                 fullWidth
-                placeholder='Buscar servicio'
+                placeholder='Buscar'
                 value={globalFilter ?? ''}
                 onChange={e => setGlobalFilter(e.target.value)}
               />
@@ -272,19 +306,18 @@ const UserListTable3 = ({
             <Grid item xs={4}>
               <TextField
                 fullWidth
-                placeholder='Código'
+                placeholder='Área'
                 onChange={e => {
-                  table.getColumn('codigo')?.setFilterValue(e.target.value)
+                  table.getColumn('area')?.setFilterValue(e.target.value)
                 }}
               />
             </Grid>
             <Grid item xs={4}>
               <TextField
                 fullWidth
-                placeholder='Cantidad'
-                type='number'
+                placeholder='Familia'
                 onChange={e => {
-                  table.getColumn('cantidad')?.setFilterValue(e.target.value)
+                  table.getColumn('familia')?.setFilterValue(e.target.value)
                 }}
               />
             </Grid>
