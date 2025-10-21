@@ -5,8 +5,6 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
@@ -16,6 +14,10 @@ import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import TablePagination from '@mui/material/TablePagination'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
 
 // Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -98,12 +100,63 @@ const UserListTable3 = ({
   const [rowSelection, setRowSelection] = useState({})
   const [serviciosData, setServiciosData] = useState<ServicioOT[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [isCollapsed, setIsCollapsed] = useState(false)
   const [loadingServicios, setLoadingServicios] = useState(false)
+  const [areaFilter, setAreaFilter] = useState('')
+  const [familiaFilter, setFamiliaFilter] = useState('')
+  const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
+  const [familias, setFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
+  const [loadingAreas, setLoadingAreas] = useState(false)
+  const [loadingFamilias, setLoadingFamilias] = useState(false)
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed)
-  }
+  // Efecto para cargar las áreas desde la API
+  useEffect(() => {
+    const fetchAreas = async () => {
+      setLoadingAreas(true)
+      try {
+        const response = await fetch('/api/areas')
+        if (response.ok) {
+          const areasData = await response.json()
+          setAreas(areasData)
+        }
+      } catch (error) {
+        console.error('Error al cargar áreas:', error)
+      } finally {
+        setLoadingAreas(false)
+      }
+    }
+
+    fetchAreas()
+  }, [])
+
+  // Efecto para cargar las familias cuando cambia el área seleccionada
+  useEffect(() => {
+    const fetchFamilias = async () => {
+      if (!areaFilter) {
+        setFamilias([])
+        return
+      }
+
+      setLoadingFamilias(true)
+      try {
+        const areaSeleccionada = areas.find(area => area.nombre === areaFilter)
+        if (areaSeleccionada) {
+          const response = await fetch(`/api/familias?areaId=${areaSeleccionada.id}`)
+          if (response.ok) {
+            const familiasData = await response.json()
+            setFamilias(familiasData)
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar familias:', error)
+      } finally {
+        setLoadingFamilias(false)
+      }
+    }
+
+    fetchFamilias()
+    // Limpiar el filtro de familia cuando cambia el área
+    setFamiliaFilter('')
+  }, [areaFilter, areas])
 
   // Efecto para cargar los servicios asociados a la OT
   useEffect(() => {
@@ -244,19 +297,8 @@ const UserListTable3 = ({
   if (loading || loadingServicios) {
     return (
       <Card>
-        <CardHeader
-          title={
-            <div className='flex items-center gap-2'>
-              <span>Servicios</span>
-              <IconButton onClick={toggleCollapse} size='small'>
-                {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
-              </IconButton>
-            </div>
-          }
-        />
-        <Divider />
         <Typography p={4} textAlign='center'>
-          Cargando servicios...
+          Cargando...
         </Typography>
       </Card>
     )
@@ -266,17 +308,6 @@ const UserListTable3 = ({
   if (!otId || !otData) {
     return (
       <Card>
-        <CardHeader
-          title={
-            <div className='flex items-center gap-2'>
-              <span>Servicios</span>
-              <IconButton onClick={toggleCollapse} size='small'>
-                {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
-              </IconButton>
-            </div>
-          }
-        />
-        <Divider />
         <Typography p={4} textAlign='center'>
           Seleccione una orden de trabajo para ver sus servicios asociados
         </Typography>
@@ -289,108 +320,113 @@ const UserListTable3 = ({
     <Card>
       <CardHeader
         title={
-          <div className='flex items-center gap-2'>
-            <span>Servicios</span>
-            <IconButton onClick={toggleCollapse} size='small'>
-              {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
-            </IconButton>
-          </div>
-        }
-        action={
-          <Button
-            variant='contained'
-            size='small'
-            startIcon={<i className='ri-add-line' />}
-            onClick={() =>
-              window.open(
-                `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}&servicioId=${serviciosData.length > 0 ? serviciosData[0].id : ''}`,
-                '_blank'
-              )
-            }
-          >
-            Crear Código
-          </Button>
+          <Grid container spacing={2} alignItems='center'>
+            <Grid item xs={3}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Filtrar por Área</InputLabel>
+                <Select
+                  value={areaFilter}
+                  label='Filtrar por Área'
+                  disabled={loadingAreas}
+                  onChange={(e) => {
+                    setAreaFilter(e.target.value)
+                    table.getColumn('area')?.setFilterValue(e.target.value === '' ? undefined : e.target.value)
+                  }}
+                >
+                  <MenuItem value=''>Todas las áreas</MenuItem>
+                  {areas.map((area) => (
+                    <MenuItem key={area.id} value={area.nombre}>
+                      {area.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={3}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Filtrar por Familia</InputLabel>
+                <Select
+                  value={familiaFilter}
+                  label='Filtrar por Familia'
+                  disabled={loadingFamilias || !areaFilter}
+                  onChange={(e) => {
+                    setFamiliaFilter(e.target.value)
+                    table.getColumn('familia')?.setFilterValue(e.target.value === '' ? undefined : e.target.value)
+                  }}
+                >
+                  <MenuItem value=''>Todas las familias</MenuItem>
+                  {familias.map((familia) => (
+                    <MenuItem key={familia.id} value={familia.nombre}>
+                      {familia.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6} display='flex' justifyContent='flex-end'>
+              <Button
+                variant='contained'
+                size='small'
+                startIcon={<i className='ri-add-line' />}
+                onClick={() =>
+                  window.open(
+                    `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}&servicioId=${serviciosData.length > 0 ? serviciosData[0].id : ''}`,
+                    '_blank'
+                  )
+                }
+              >
+                Crear Código
+              </Button>
+            </Grid>
+          </Grid>
         }
       />
       <Divider />
 
-      {!isCollapsed && (
-        <>
-          <Grid container spacing={2} sx={{ p: 5, pb: 3 }}>
-            <Grid item xs={4}>
-              <TextField
-                fullWidth
-                placeholder='Buscar'
-                value={globalFilter ?? ''}
-                onChange={e => setGlobalFilter(e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                fullWidth
-                placeholder='Área'
-                onChange={e => {
-                  table.getColumn('area')?.setFilterValue(e.target.value)
-                }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                fullWidth
-                placeholder='Familia'
-                onChange={e => {
-                  table.getColumn('familia')?.setFilterValue(e.target.value)
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <div className='overflow-x-auto'>
-            <table className={tableStyles.table}>
-              <thead>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th key={header.id}>
-                        {header.isPlaceholder ? null : (
-                          <div>{flexRender(header.column.columnDef.header, header.getContext())}</div>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
+      <div className='overflow-x-auto'>
+        <table className={tableStyles.table}>
+          <thead>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th key={header.id}>
+                    {header.isPlaceholder ? null : (
+                      <div>{flexRender(header.column.columnDef.header, header.getContext())}</div>
+                    )}
+                  </th>
                 ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length} className='text-center'>
-                      No se encontraron servicios para esta OT
-                    </td>
-                  </tr>
-                ) : (
-                  table.getRowModel().rows.map(row => (
-                    <tr key={row.id}>
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className='text-center'>
+                  No se encontraron servicios para esta OT
+                </td>
+              </tr>
+            ) : (
+              table.getRowModel().rows.map(row => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          <TablePagination
-            component='div'
-            count={serviciosData.length}
-            rowsPerPage={table.getState().pagination.pageSize}
-            page={table.getState().pagination.pageIndex}
-            onPageChange={(_, page) => table.setPageIndex(page)}
-            onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-            rowsPerPageOptions={[5, 10, 25]}
-          />
-        </>
-      )}
+      <TablePagination
+        component='div'
+        count={serviciosData.length}
+        rowsPerPage={table.getState().pagination.pageSize}
+        page={table.getState().pagination.pageIndex}
+        onPageChange={(_, page) => table.setPageIndex(page)}
+        onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+        rowsPerPageOptions={[5, 10, 25]}
+      />
     </Card>
   )
 }
