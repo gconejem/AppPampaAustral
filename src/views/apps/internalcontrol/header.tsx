@@ -179,14 +179,28 @@ const Header = ({ otData, loading }: HeaderProps) => {
             />
           </Grid>
           <Grid item xs={4}>
-            <TextField
-              label='Comuna'
-              value={otData.agenda?.comuna || ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label='Región'
+                  value={otData.agenda?.region || ''}
+                  variant='outlined'
+                  fullWidth
+                  size='small'
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label='Comuna'
+                  value={otData.agenda?.comuna || ''}
+                  variant='outlined'
+                  fullWidth
+                  size='small'
+                  InputProps={{ readOnly: true }}
+                />
+              </Grid>
+            </Grid>
           </Grid>
 
           {/* Tercera fila */}
@@ -212,7 +226,6 @@ const Header = ({ otData, loading }: HeaderProps) => {
             />
           </Grid>
 
-          {/* Cuarta fila */}
           <Grid item xs={4}>
             <TextField
               label='Mandante'
