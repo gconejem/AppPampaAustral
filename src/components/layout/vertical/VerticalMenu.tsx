@@ -112,7 +112,7 @@ const VerticalMenu = () => {
                 <MenuItem href={`/${locale}/apps/rcmnavigator`} icon={<i className='ri-home-smile-line' />}>
                   Navegador
                 </MenuItem>
-                <MenuItem href={`/${locale}/apps/user/registro2`} icon={<i className='ri-home-smile-line' />}>
+                <MenuItem href={`/${locale}/apps/rcmdetallenavigator`} icon={<i className='ri-home-smile-line' />}>
                   Navegador Detalle
                 </MenuItem>
               </SubMenu>
