@@ -37,10 +37,15 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 // Interface para servicios de OT
 interface ServicioOT {
   id: number
-  fechaCodificacion?: string
-  fechaMuestreo?: string
+  agendaId?: number
+  codigo?: string
+  servicio?: string
+  cantidad?: number
   area?: string
   familia?: string
+  nombreProducto?: string
+  fechaCodificacion?: string
+  fechaMuestreo?: string
   observacion?: string
   estadoOP?: string
 }
@@ -103,6 +108,9 @@ const UserListTable3 = ({
   // Efecto para cargar los servicios asociados a la OT
   useEffect(() => {
     if (otData?.agenda?.servicios) {
+      console.log('Frontend - Datos de servicios recibidos:', otData.agenda.servicios)
+      console.log('Frontend - Primer servicio:', otData.agenda.servicios[0])
+
       // Usar los servicios reales de la agenda asociada a la OT
       setServiciosData(otData.agenda.servicios)
       setLoadingServicios(false)
@@ -144,6 +152,10 @@ const UserListTable3 = ({
           />
         )
       },
+      columnHelper.accessor('codigo', {
+        header: 'CÓDIGO',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.codigo || '-'}</Typography>
+      }),
       columnHelper.accessor('fechaCodificacion', {
         header: 'FECHA CODIFICACIÓN',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.fechaCodificacion || '-'}</Typography>

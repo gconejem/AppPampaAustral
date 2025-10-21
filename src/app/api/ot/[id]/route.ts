@@ -40,6 +40,42 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
     }
 
+    // Enriquecer los servicios con información del producto (área y familia)
+    if (ordenTrabajo.agenda?.servicios) {
+      console.log('Enriqueciendo servicios con información del producto...')
+      const serviciosConProducto = await Promise.all(
+        ordenTrabajo.agenda.servicios.map(async (servicio: any) => {
+          console.log('Buscando producto para código:', servicio.codigo)
+
+          // Buscar el producto por código (sku)
+          const producto = await prisma.producto.findUnique({
+            where: { sku: servicio.codigo },
+            select: {
+              area: true,
+              familia: true,
+              nombre: true
+            }
+          })
+
+          console.log('Producto encontrado:', producto)
+
+          const servicioEnriquecido = {
+            ...servicio,
+            area: producto?.area || null,
+            familia: producto?.familia || null,
+            nombreProducto: producto?.nombre || servicio.servicio
+          }
+
+          console.log('Servicio enriquecido:', servicioEnriquecido)
+          return servicioEnriquecido
+        })
+      )
+
+      // Reemplazar los servicios con la información enriquecida
+      ordenTrabajo.agenda.servicios = serviciosConProducto
+      console.log('Servicios finales:', ordenTrabajo.agenda.servicios)
+    }
+
     return NextResponse.json(ordenTrabajo)
   } catch (error) {
     console.error('Error al obtener OT:', error)
@@ -90,6 +126,33 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
       }
     })
+
+    // Enriquecer los servicios con información del producto (área y familia)
+    if (ordenTrabajo.agenda?.servicios) {
+      const serviciosConProducto = await Promise.all(
+        ordenTrabajo.agenda.servicios.map(async (servicio: any) => {
+          // Buscar el producto por código (sku)
+          const producto = await prisma.producto.findUnique({
+            where: { sku: servicio.codigo },
+            select: {
+              area: true,
+              familia: true,
+              nombre: true
+            }
+          })
+
+          return {
+            ...servicio,
+            area: producto?.area || null,
+            familia: producto?.familia || null,
+            nombreProducto: producto?.nombre || servicio.servicio
+          }
+        })
+      )
+
+      // Reemplazar los servicios con la información enriquecida
+      ordenTrabajo.agenda.servicios = serviciosConProducto
+    }
 
     return NextResponse.json(ordenTrabajo)
   } catch (error) {
