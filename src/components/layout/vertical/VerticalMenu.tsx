@@ -121,12 +121,12 @@ const VerticalMenu = () => {
                 Facturación
               </MenuItem> */}
 
-              {/* <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
+              <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
                 App
-              </MenuItem> */}
+              </MenuItem>
 
               {/* Nueva entrada: lista de APIs - apunta a la página intermedia */}
-              <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-api-line' />}>
+              <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-calendar-schedule-line' />}>
                 API Agenda
               </MenuItem>
             </MenuSection>
