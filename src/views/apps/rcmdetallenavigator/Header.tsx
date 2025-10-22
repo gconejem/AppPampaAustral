@@ -138,17 +138,35 @@ const Header = () => {
       </Grid>
 
       {/* Primera Fila de Inputs */}
-      <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6}>
+      <Grid container spacing={2} sx={{ mb: 2 }} alignItems='center'>
+        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
           <TextField label='Fecha Codificación' size='small' fullWidth select>
             {/* Opciones */}
           </TextField>
         </Grid>
-        <Grid item xs={12} sm={6}>
-          {/* Rango de Fechas usando PickersRange */}
-          <PickersRange />
+
+        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+          {/* Wrapper que fuerza ancho completo al input interno del PickersRange */}
+          <Box
+            sx={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              // Forzar que los elementos internos de MUI ocupen todo el ancho
+              '& .MuiInputBase-root': { width: '100%' },
+              '& .MuiOutlinedInput-root': { width: '100%' },
+              '& input#date-range-picker': { width: '100%' } // selector que aparece en DOM
+            }}
+          >
+            <PickersRange />
+          </Box>
         </Grid>
 
+        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+          <TextField label='Fecha Vencimiento' size='small' fullWidth select>
+            {/* Opciones */}
+          </TextField>
+        </Grid>
       </Grid>
 
       {/* Segunda Fila de Inputs */}
