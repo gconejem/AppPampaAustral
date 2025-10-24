@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Box, Grid, TextField, Typography, Button, FormControl, InputLabel, Select, MenuItem, Menu } from '@mui/material'
-
-// Importa el componente PickersRange
 import PickersRange from './date'
+import OPERATIONAL_STATES from '../../../constants/operationalStates'
+import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
+
+// Añadidos para DatePicker (date-fns, locale ES)
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { es } from 'date-fns/locale'
 
 interface Area {
   id: number
@@ -20,33 +25,22 @@ interface Familia {
   }
 }
 
-const ESTADOS_OPERATIVO = [
-  'PENDIENTE',
-  'DIGITAR',
-  'POR_REVISAR',
-  'REVISAR',
-  'CORREGIR',
-  'CODIFICADO',
-  'FIRMADO'
-]
-
-const ESTADOS_ADMINISTRATIVO = [
-  'PENDIENTE',
-  'ENVIAR_DIGITACION',
-  'ENVIADO',
-  'FIRMADO',
-  'PAGADO',
-  'CODIFICADO',
-  'RECHAZADO'
-]
+// (se eliminó array local de estados administrativos; se usa ADMINISTRATIVE_STATES)
 
 const Header = () => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
-  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('') // usa este estado para Estado Operativo
   const [selectedEstadoAd, setSelectedEstadoAd] = useState<string>('')
+
+  // Nuevo estado para Fecha Vencimiento
+  const [fechaVencimiento, setFechaVencimiento] = useState<string>('')
+
+  const handleFechaVencimientoChange = (date: Date | null) => {
+    setFechaVencimiento(date ? date.toISOString().slice(0, 10) : '')
+  }
 
   // Menu Informes
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -101,6 +95,11 @@ const Header = () => {
     setSelectedAreaId(areaId)
     setSelectedFamilia('') // Resetear familia cuando cambia el área
   }
+
+  // Añadir estado para la opción seleccionada en "Fecha Codificación"
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'fecha_codificacion' | 'fecha_muestreo'>('fecha_muestreo')
+  const [operationalState, setOperationalState] = useState<OperationalState>('CODIFICADO')
+
   return (
     <Box
       sx={{
@@ -138,36 +137,49 @@ const Header = () => {
       </Grid>
 
       {/* Primera Fila de Inputs */}
-      <Grid container spacing={2} sx={{ mb: 2 }} alignItems='center'>
-        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
-          <TextField label='Fecha Codificación' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
-        </Grid>
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+        <Grid container spacing={2} sx={{ mb: 2 }} alignItems='center'>
+          <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+            <TextField
+              label='Fecha Codificación'
+              size='small'
+              fullWidth
+              select
+              value={fechaCodificacionOption}
+              onChange={(e) => setFechaCodificacionOption(e.target.value)}
+            >
+              <MenuItem value='fecha_codificacion'>Fecha Codificación</MenuItem>
+              <MenuItem value='fecha_muestreo'>Fecha de Muestreo</MenuItem>
+            </TextField>
+          </Grid>
 
-        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
-          {/* Wrapper que fuerza ancho completo al input interno del PickersRange */}
-          <Box
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              // Forzar que los elementos internos de MUI ocupen todo el ancho
-              '& .MuiInputBase-root': { width: '100%' },
-              '& .MuiOutlinedInput-root': { width: '100%' },
-              '& input#date-range-picker': { width: '100%' } // selector que aparece en DOM
-            }}
-          >
-            <PickersRange />
-          </Box>
-        </Grid>
+          <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                '& .MuiInputBase-root': { width: '100%' },
+                '& .MuiOutlinedInput-root': { width: '100%' },
+                '& input#date-range-picker': { width: '100%' }
+              }}
+            >
+              <PickersRange />
+            </Box>
+          </Grid>
 
-        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
-          <TextField label='Fecha Vencimiento' size='small' fullWidth select>
-            {/* Opciones */}
-          </TextField>
+          <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+            <DatePicker
+              label='Fecha Vencimiento'
+              value={fechaVencimiento ? new Date(fechaVencimiento + 'T00:00:00') : null}
+              onChange={handleFechaVencimientoChange}
+              slotProps={{
+                textField: { fullWidth: true, size: 'small' }
+              }}
+            />
+          </Grid>
         </Grid>
-      </Grid>
+      </LocalizationProvider>
 
       {/* Segunda Fila de Inputs */}
       <Grid container spacing={2}>
@@ -182,7 +194,7 @@ const Header = () => {
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
               {areaOptions.map(area => (
-                <MenuItem key={area.id} value={area.id}>
+                <MenuItem key={area.id} value={area.id.toString()}>
                   {area.nombre}
                 </MenuItem>
               ))}
@@ -210,24 +222,23 @@ const Header = () => {
           </FormControl>
         </Grid>
 
-        {/* Estado Operativo */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth size='small'>
-            <InputLabel id='estado-op-select'>Estado Operativo</InputLabel>
-            <Select
-              labelId='estado-op-select'
-              label='Estado Operativo'
-              value={selectedEstadoOp}
-              onChange={e => setSelectedEstadoOp(e.target.value)}
-            >
-              <MenuItem value=''>Todos</MenuItem>
-              {ESTADOS_OPERATIVO.map(s => (
-                <MenuItem key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        {/* Estado Operativo (ahora sm=3 para 4 columnas iguales) */}
+        <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'center' }}>
+          <TextField
+            label='Estado Operativo'
+            size='small'
+            fullWidth
+            select
+            value={selectedEstadoOp}
+            onChange={(e) => setSelectedEstadoOp(e.target.value)}
+          >
+            <MenuItem value=''>Todos</MenuItem>
+            {OPERATIONAL_STATES.map((s) => (
+              <MenuItem key={s.value} value={s.value}>
+                {s.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </Grid>
 
         {/* Estado Administrativo */}
@@ -241,9 +252,9 @@ const Header = () => {
               onChange={e => setSelectedEstadoAd(e.target.value)}
             >
               <MenuItem value=''>Todos</MenuItem>
-              {ESTADOS_ADMINISTRATIVO.map(s => (
-                <MenuItem key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
+              {ADMINISTRATIVE_STATES.map(s => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
                 </MenuItem>
               ))}
             </Select>

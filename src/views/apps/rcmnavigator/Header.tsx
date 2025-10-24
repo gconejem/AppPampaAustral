@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Grid, TextField, Typography, Button, FormControl, InputLabel, Select, MenuItem, Menu } from '@mui/material'
+import { Box, Grid, TextField, MenuItem, Typography, Button, FormControl, InputLabel, Select, Menu } from '@mui/material'
 
 // Importa el componente PickersRange
 import PickersRange from './date'
+import OPERATIONAL_STATES from '../../../constants/operationalStates'
+import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 
 interface Area {
   id: number
@@ -19,26 +21,6 @@ interface Familia {
     nombre: string
   }
 }
-
-const ESTADOS_OPERATIVO = [
-  'PENDIENTE',
-  'DIGITAR',
-  'POR_REVISAR',
-  'REVISAR',
-  'CORREGIR',
-  'CODIFICADO',
-  'FIRMADO'
-]
-
-const ESTADOS_ADMINISTRATIVO = [
-  'PENDIENTE',
-  'ENVIAR_DIGITACION',
-  'ENVIADO',
-  'FIRMADO',
-  'PAGADO',
-  'CODIFICADO',
-  'RECHAZADO'
-]
 
 const Header = () => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
@@ -101,6 +83,11 @@ const Header = () => {
     setSelectedAreaId(areaId)
     setSelectedFamilia('') // Resetear familia cuando cambia el área
   }
+
+  // Estado para opción de Fecha Codificación (por defecto 'fecha_muestreo')
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'fecha_codificacion' | 'fecha_muestreo'>('fecha_muestreo')
+  const [operationalState, setOperationalState] = useState<OperationalState>('CODIFICADO')
+
   return (
     <Box
       sx={{
@@ -139,12 +126,21 @@ const Header = () => {
 
       {/* Primera Fila de Inputs */}
       <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6}>
-          <TextField label='Fecha Codificación' size='small' fullWidth select>
-            {/* Opciones */}
+        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+          <TextField
+            label='Fecha Codificación'
+            size='small'
+            fullWidth
+            select
+            value={fechaCodificacionOption}
+            onChange={(e) => setFechaCodificacionOption(e.target.value)}
+          >
+            <MenuItem value='fecha_codificacion'>Fecha Codificación</MenuItem>
+            <MenuItem value='fecha_muestreo'>Fecha de Muestreo</MenuItem>
           </TextField>
         </Grid>
-        <Grid item xs={12} sm={6}>
+
+        <Grid item xs={12} sm={4}>
           {/* Rango de Fechas usando PickersRange */}
           <PickersRange />
         </Grid>
@@ -152,15 +148,15 @@ const Header = () => {
       </Grid>
 
       {/* Segunda Fila de Inputs */}
-      <Grid container spacing={2}>
+      <Grid container spacing={2} alignItems='center'>
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='area-select'>Área</InputLabel>
             <Select
+              labelId='area-select'
               label='Área'
               value={selectedAreaId?.toString() || ''}
               onChange={e => handleAreaChange(e.target.value)}
-              labelId='area-select'
             >
               <MenuItem value=''>Todas las áreas</MenuItem>
               {areaOptions.map(area => (
@@ -176,10 +172,10 @@ const Header = () => {
           <FormControl fullWidth size='small'>
             <InputLabel id='familia-select'>Familia</InputLabel>
             <Select
+              labelId='familia-select'
               label='Familia'
               value={selectedFamilia}
               onChange={e => setSelectedFamilia(e.target.value)}
-              labelId='familia-select'
               disabled={!selectedAreaId}
             >
               <MenuItem value=''>Todas las familias</MenuItem>
@@ -192,27 +188,24 @@ const Header = () => {
           </FormControl>
         </Grid>
 
-        {/* Estado Operativo */}
         <Grid item xs={12} sm={3}>
-          <FormControl fullWidth size='small'>
-            <InputLabel id='estado-op-select'>Estado Operativo</InputLabel>
-            <Select
-              labelId='estado-op-select'
-              label='Estado Operativo'
-              value={selectedEstadoOp}
-              onChange={e => setSelectedEstadoOp(e.target.value)}
-            >
-              <MenuItem value=''>Todos</MenuItem>
-              {ESTADOS_OPERATIVO.map(s => (
-                <MenuItem key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <TextField
+            label='Estado Operativo'
+            size='small'
+            fullWidth
+            select
+            value={selectedEstadoOp}
+            onChange={(e) => setSelectedEstadoOp(e.target.value)}
+          >
+            <MenuItem value=''>Todos</MenuItem>
+            {OPERATIONAL_STATES.map((s) => (
+              <MenuItem key={s.value} value={s.value}>
+                {s.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </Grid>
 
-        {/* Estado Administrativo */}
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='estado-ad-select'>Estado Administrativo</InputLabel>
@@ -223,9 +216,9 @@ const Header = () => {
               onChange={e => setSelectedEstadoAd(e.target.value)}
             >
               <MenuItem value=''>Todos</MenuItem>
-              {ESTADOS_ADMINISTRATIVO.map(s => (
-                <MenuItem key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
+              {ADMINISTRATIVE_STATES.map(s => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
                 </MenuItem>
               ))}
             </Select>
