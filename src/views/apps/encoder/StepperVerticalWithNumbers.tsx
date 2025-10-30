@@ -46,7 +46,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Switch,
+  FormControlLabel
 } from '@mui/material'
 
 // Component Imports
@@ -173,6 +175,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [tipos, setTipos] = useState<string[]>([])
   const [areas, setAreas] = useState<string[]>([])
   const [familias, setFamilias] = useState<string[]>([])
+  const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
 
   // Estados para paginación
   const [productsPage, setProductsPage] = useState(0)
@@ -186,7 +189,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       .then(response => {
         const data = response.productos || []
 
-        // Filtrar solo los que no son paquetes
+        // Filtrar solo productos simples (no paquetes) para los filtros iniciales
         const productosSimples = data.filter((p: any) => !p.esPaquete)
 
         // Obtener valores únicos para filtros
@@ -205,7 +208,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         setTipos(uniqueTipos as string[])
         setAreas(uniqueAreas as string[])
         setFamilias(uniqueFamilias as string[])
-        setProductos(productosSimples)
+        setProductos(data) // Guardar todos los productos (incluidos paquetes)
       })
       .catch(error => {
         console.error('Error al cargar productos:', error)
@@ -213,17 +216,42 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       })
   }, [])
 
+  // Filtrar familias según el área seleccionada
+  const familiasFiltradasPorArea = selectedArea
+    ? Array.from(
+      new Set(
+        productos
+          .filter(p => {
+            // Si showOnlyPaquetes está activado, filtrar solo paquetes
+            if (showOnlyPaquetes) {
+              return p.area === selectedArea && p.esPaquete
+            }
+            // Si hay tipo seleccionado, filtrar por ese tipo
+            if (selectedTipo) {
+              return p.area === selectedArea && p.tipo === selectedTipo && !p.esPaquete
+            }
+            // Si no hay tipo seleccionado, filtrar solo por área (sin paquetes)
+            return p.area === selectedArea && !p.esPaquete
+          })
+          .map(p => p.familia || 'Sin familia')
+      )
+    )
+      .filter(familia => familia)
+      .sort()
+    : familias
+
   // Cargar productos paginados cuando el popover está abierto
   useEffect(() => {
     if (anchorEl) {
       const params = new URLSearchParams()
       params.append('page', (productsPage + 1).toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
-      params.append('esPaquete', 'false') // Solo productos simples
+
       if (searchTerm) params.append('search', searchTerm)
       if (selectedArea) params.append('area', selectedArea)
       if (selectedTipo) params.append('tipo', selectedTipo)
       if (selectedFamilia) params.append('familia', selectedFamilia)
+      if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
       fetch(`/api/productos?${params.toString()}`)
         .then(res => res.json())
@@ -238,14 +266,25 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
           setTotalProductos(0)
         })
     }
-  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, anchorEl])
+  }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes, anchorEl])
 
   // Resetear página cuando cambien los filtros
   useEffect(() => {
     if (anchorEl) {
       setProductsPage(0)
     }
-  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
+  }, [selectedArea, selectedTipo, selectedFamilia, searchTerm, showOnlyPaquetes])
+
+  // Limpiar familia cuando cambie el área o showOnlyPaquetes
+  useEffect(() => {
+    if (selectedArea && selectedFamilia) {
+      // Verificar si la familia seleccionada existe en el área actual
+      const familiaExiste = familiasFiltradasPorArea.includes(selectedFamilia)
+      if (!familiaExiste) {
+        setSelectedFamilia('')
+      }
+    }
+  }, [selectedArea, showOnlyPaquetes])
 
   // Efecto para cargar un servicio predeterminado basado en el tipo de OT
   /* useEffect(() => {
@@ -495,6 +534,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     setSelectedArea('')
     setSelectedFamilia('')
     setSearchTerm('')
+    setShowOnlyPaquetes(false)
     setProductsPage(0)
   }
 
@@ -795,7 +835,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           renderValue={selected => selected === '' ? 'Todas' : selected}
                                         >
                                           <MenuItem value=''>Todas</MenuItem>
-                                          {familias.map((familia: string) => (
+                                          {familiasFiltradasPorArea.map((familia: string) => (
                                             <MenuItem key={familia} value={familia}>
                                               {familia}
                                             </MenuItem>
@@ -807,10 +847,21 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                   <Box
                                     sx={{
                                       display: 'flex',
-                                      justifyContent: 'flex-end',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
                                       mt: 1
                                     }}
                                   >
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          checked={showOnlyPaquetes}
+                                          onChange={e => setShowOnlyPaquetes(e.target.checked)}
+                                          size='small'
+                                        />
+                                      }
+                                      label='Solo Paquetes'
+                                    />
                                     <Button
                                       size='small'
                                       onClick={handleClearFilters}
@@ -1370,7 +1421,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                               renderValue={selected => selected === '' ? 'Todas' : selected}
                                             >
                                               <MenuItem value=''>Todas</MenuItem>
-                                              {familias.map((familia: string) => (
+                                              {familiasFiltradasPorArea.map((familia: string) => (
                                                 <MenuItem key={familia} value={familia}>
                                                   {familia}
                                                 </MenuItem>
@@ -1382,10 +1433,21 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       <Box
                                         sx={{
                                           display: 'flex',
-                                          justifyContent: 'flex-end',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
                                           mt: 1
                                         }}
                                       >
+                                        <FormControlLabel
+                                          control={
+                                            <Switch
+                                              checked={showOnlyPaquetes}
+                                              onChange={e => setShowOnlyPaquetes(e.target.checked)}
+                                              size='small'
+                                            />
+                                          }
+                                          label='Solo Paquetes'
+                                        />
                                         <Button
                                           size='small'
                                           onClick={handleClearFilters}
