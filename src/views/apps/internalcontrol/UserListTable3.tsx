@@ -159,7 +159,7 @@ const UserListTable3 = ({
   }, [areaFilter, areas])
 
   // Efecto para cargar los servicios asociados a la OT
-  useEffect(() => {
+  /* useEffect(() => {
     if (otData?.agenda?.servicios) {
       console.log('Frontend - Datos de servicios recibidos:', otData.agenda.servicios)
       console.log('Frontend - Primer servicio:', otData.agenda.servicios[0])
@@ -172,7 +172,7 @@ const UserListTable3 = ({
       setServiciosData([])
       setLoadingServicios(false)
     }
-  }, [otData])
+  }, [otData]) */
 
   const columns = useMemo<ColumnDef<ServicioOT, any>[]>(
     () => [

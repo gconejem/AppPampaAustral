@@ -248,7 +248,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   }, [selectedArea, selectedTipo, selectedFamilia, searchTerm])
 
   // Efecto para cargar un servicio predeterminado basado en el tipo de OT
-  useEffect(() => {
+  /* useEffect(() => {
     if (otData && tipoOT) {
       // Generar un servicio según el tipo de OT
       let servicioDefault = {
@@ -276,7 +276,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       // Agregar el servicio predeterminado
       setServicios([servicioDefault])
     }
-  }, [otData, tipoOT])
+  }, [otData, tipoOT]) */
 
   const handleNext = () => {
     if (activeStep === 0) {
