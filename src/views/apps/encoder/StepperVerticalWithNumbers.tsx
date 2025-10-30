@@ -64,6 +64,7 @@ interface Producto {
   familia: string
   precio: number
   tipo?: string
+  esPaquete?: boolean
 }
 
 interface Servicio {
