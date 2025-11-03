@@ -139,7 +139,14 @@ interface RCM {
 // Component
 const columnHelper = createColumnHelper<RCM>()
 
-const UserListTable2 = () => {
+interface Filters {
+  dateField?: 'fecha_codificacion' | 'fecha_muestreo'
+  start?: string
+  end?: string
+  estadoOperativo?: string
+}
+
+const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState<RCM[]>([])
@@ -176,6 +183,19 @@ const UserListTable2 = () => {
     if (s.includes('pend')) return 'warning'
     if (s.includes('pag')) return 'default'
     return 'default'
+  }
+
+  // estilo "pill" para usar en el popup de Historial
+  const statusPillStyle = (s?: string) => {
+    if (!s) return { bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.75)' }
+    const k = String(s).toLowerCase()
+    if (k.includes('codific')) return { bgcolor: '#E3F2FD', color: '#0D47A1' }
+    if (k.includes('ensay') || k.includes('ensayo')) return { bgcolor: '#E8F5E9', color: '#1B5E20' }
+    if (k.includes('pend')) return { bgcolor: '#FFF3E0', color: '#EF6C00' }
+    if (k.includes('firm') || k.includes('firmado')) return { bgcolor: '#E8F5E9', color: '#2E7D32' }
+    if (k.includes('factur') || k.includes('pag')) return { bgcolor: '#E8F5E9', color: '#2E7D32' }
+    if (k.includes('rechaz') || k.includes('cancel')) return { bgcolor: '#FFEBEE', color: '#C62828' }
+    return { bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.75)' }
   }
 
   const getMockHistEntries = (rowId: number | null) => {
@@ -303,13 +323,45 @@ const UserListTable2 = () => {
 
 
 
-  const handleHistorial = (rowId: number | null) => {
-    // carga mock y abre dialog
-    setHistRowId(rowId)
-    setHistRows(getMockHistEntries(rowId))
-    setHistDialogOpen(true)
-    // cerrar menu de fila si aplica
-    try { handleCloseRowMenu?.() } catch { }
+  const handleHistorial = async (rowId: number | null) => {
+    if (!rowId) return
+    try {
+      // intenta cargar historial real desde la API
+      const res = await fetch(`/api/rcm/${rowId}/history`)
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(`History API error ${res.status}: ${txt}`)
+      }
+      const json = await res.json()
+
+      // mapear respuesta API a la forma que usa el diálogo (aplicadoA / ensayo pueden venir vacíos)
+      const mapped = Array.isArray(json)
+        ? json.map((r: any) => ({
+          registro: r.registro ?? '',
+          funcionario: r.funcionario ?? '',
+          // usar aplicadoA desde la entidad RCMHistory si viene, si no fallback a informe
+          aplicadoA: r.aplicadoA ?? (r.informe && r.informe !== '---' ? `Informe ${r.informe}` : ''),
+          ensayo: r.ensayo ?? '',
+          tipo: r.tipo ?? '',
+          estAnterior: r.estAnterior ?? '',
+          estNuevo: r.estNuevo ?? '',
+          fechaAccion: r.fechaAccion ?? '',
+          observacion: r.observacion ?? ''
+        }))
+        : []
+
+      setHistRowId(rowId)
+      setHistRows(mapped)
+      setHistDialogOpen(true)
+    } catch (err) {
+      console.error('Error loading history from API, falling back to mock:', err)
+      // fallback al mock para no bloquear la experiencia
+      setHistRowId(rowId)
+      setHistRows(getMockHistEntries(rowId))
+      setHistDialogOpen(true)
+    } finally {
+      try { handleCloseRowMenu?.() } catch { }
+    }
   }
 
   const handleCloseHistDialog = () => {
@@ -334,6 +386,131 @@ const UserListTable2 = () => {
     }
     fetchRCMs()
   }, [])
+
+  // normalizar string/Date a date-only (local) para comparar sin zone shifts
+  const toDateOnly = (input: any): Date | null => {
+    if (!input) return null
+
+    // Si ya es Date => mantener parte fecha local
+    if (input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate())
+
+    const s = String(input).trim()
+
+    // 1) YYYY-MM-DD (posible prefijo ISO) -> parsear como LOCAL sin timezone shift
+    const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/)
+    if (isoMatch) {
+      const y = Number(isoMatch[1]), m = Number(isoMatch[2]) - 1, d = Number(isoMatch[3])
+      return new Date(y, m, d)
+    }
+
+    // 2) DD/MM/YYYY o DD-MM-YYYY
+    const ddmmyMatch = s.match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/)
+    if (ddmmyMatch) {
+      const d = Number(ddmmyMatch[1]), m = Number(ddmmyMatch[2]) - 1, y = Number(ddmmyMatch[3])
+      return new Date(y, m, d)
+    }
+
+    // 3) Fallback: crear Date y tomar parte local (si es válido)
+    const fallback = new Date(s)
+    if (!isNaN(fallback.getTime())) {
+      return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate())
+    }
+
+    return null
+  }
+
+  // aplicar filtros de fecha/estado sobre data (no sobre filteredData)
+  const applyFilters = (rows: RCM[], filters?: Filters) => {
+    if (!filters) {
+      setFilteredData(rows)
+      return
+    }
+
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const formatLocalYMD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('applyFilters called', { rowsCount: rows.length, filters })
+    }
+
+    let result = rows.slice()
+
+    // date filtering (usar startOfDay / endOfDay para incluir mismo día)
+    if (filters.dateField && filters.start && filters.end) {
+      const startRaw = toDateOnly(filters.start)
+      const endRaw = toDateOnly(filters.end)
+
+      if (!startRaw || !endRaw) {
+        if (process.env.NODE_ENV === 'development')
+          console.warn('applyFilters: start/end parse failed', { startRaw: filters.start, endRaw: filters.end })
+      } else {
+        // start at 00:00 local
+        const startDt = new Date(startRaw.getFullYear(), startRaw.getMonth(), startRaw.getDate(), 0, 0, 0, 0)
+        // end at 23:59:59.999 local
+        const endDt = new Date(endRaw.getFullYear(), endRaw.getMonth(), endRaw.getDate(), 23, 59, 59, 999)
+
+        if (process.env.NODE_ENV === 'development')
+          console.log('applyFilters -> date range (ms)', { start: startDt.toISOString(), end: endDt.toISOString() })
+
+        const field = filters.dateField === 'fecha_codificacion' ? 'fechaCodificacion' : 'fechaMuestreo'
+
+        result = result.filter(r => {
+          const raw = (r as any)[field]
+          const d = toDateOnly(raw)
+          if (!d) return false
+          const dTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0).getTime() // use midday to be safe
+          const matched = dTime >= startDt.getTime() && dTime <= endDt.getTime()
+
+          if (!matched && process.env.NODE_ENV === 'development') {
+            console.log('applyFilters -> row NOT matched by date', {
+              rowId: r.id,
+              field,
+              raw,
+              parsedYMD: formatLocalYMD(d),
+              startYMD: formatLocalYMD(startRaw),
+              endYMD: formatLocalYMD(endRaw)
+            })
+          }
+
+          return matched
+        })
+      }
+    }
+
+    // estadoOperativo filter (if present)
+    if (filters.estadoOperativo) {
+      const q = String(filters.estadoOperativo).toLowerCase().trim()
+
+      const getRowOperativeState = (r: RCM) => {
+        const s1 = (r.estadoOperativo ?? '')
+        if (s1 && String(s1).trim().length > 0) return String(s1).toLowerCase().trim()
+        // fallback to servicios[0].estado like the cell renderer does
+        if (Array.isArray((r as any).servicios) && (r as any).servicios.length) {
+          const svcState = (r as any).servicios[0]?.estado
+          if (svcState) return String(svcState).toLowerCase().trim()
+        }
+        return ''
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        const sample = Array.from(new Set(rows.map(r => getRowOperativeState(r)).filter(Boolean))).slice(0, 20)
+        console.log('applyFilters -> operative state sample', sample, 'filterQ=', q)
+      }
+
+      result = result.filter(r => {
+        const rowState = getRowOperativeState(r)
+        return rowState.includes(q)
+      })
+    }
+
+    if (process.env.NODE_ENV === 'development') console.log('applyFilters -> result count', result.length)
+    setFilteredData(result)
+  }
+
+  // re-aplicar cuando cambian filters o data (el filtro de estado viene desde Header)
+  useEffect(() => {
+    applyFilters(data, filters)
+  }, [data, filters])
 
   const { lang: locale } = useParams()
 
@@ -391,7 +568,7 @@ const UserListTable2 = () => {
         cell: ({ row }) => <span>{row.original.fechaMuestreo ? new Date(row.original.fechaMuestreo).toLocaleDateString() : '-'}</span>
       },
       {
-        id: 'ot',
+        id: 'n_tar', // cambiado para evitar key duplicado
         header: 'N° TAR',
         accessorFn: r => r.ot ?? r['ordenTrabajo'] ?? r['ot'],
         cell: ({ row }) => <Typography variant='body2'>{row.original.ot ?? row.original['ordenTrabajo'] ?? '-'}</Typography>
@@ -418,7 +595,25 @@ const UserListTable2 = () => {
         id: 'estOp',
         header: 'EST. OP',
         accessorKey: 'estadoOperativo',
-        cell: ({ row }) => <Chip label={row.original.estadoOperativo ?? '-'} size='small' color={statusColor(row.original.estadoOperativo)} />
+        cell: ({ row }) => {
+          const op = row.original.estadoOperativo ?? (Array.isArray(row.original.servicios) && row.original.servicios.length ? row.original.servicios[0].estado : null)
+          return (
+            <Chip
+              label={op ?? '-'}
+              size='small'
+              color={statusColor(op)}
+              variant='filled'
+              sx={{
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+                borderRadius: 2,
+                px: 1,
+                py: 0.4
+              }}
+            />
+          )
+        }
       },
 
       {
@@ -575,11 +770,6 @@ const UserListTable2 = () => {
     <Card>
       <Divider />
 
-      {/* Indicadores eliminados (solo en rcmdetallenavigator) */}
-
-      <Divider />
-
-      {/* toolbar / filtros / tabla siguen aquí */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
@@ -593,7 +783,6 @@ const UserListTable2 = () => {
             Exportar
           </Button>
 
-          {/* contador de seleccionados (visible solo si hay al menos 1) */}
           {selectedCount > 0 && (
             <Typography variant='body2' color='text.secondary'>
               {selectedCount} fila{selectedCount > 1 ? 's' : ''} seleccionada{selectedCount > 1 ? 's' : ''}
@@ -601,34 +790,36 @@ const UserListTable2 = () => {
           )}
         </Box>
 
-        <Box sx={{ width: 300 }}>
-          <DebouncedInput
-            value={globalFilter}
-            onChange={(v: any) => {
-              setGlobalFilter(String(v))
-              const q = String(v).toLowerCase()
-              if (!q) {
-                setFilteredData(data)
-                return
-              }
-              const filtered = data.filter(item =>
-                [
-                  item.numeroRcm,
-                  item.ot,
-                  item.area,
-                  item.familia,
-                  item.obra?.numeroObra,
-                  item.cliente?.nombreCliente
-                ]
-                  .filter(Boolean)
-                  .some(s => String(s).toLowerCase().includes(q))
-              )
-              setFilteredData(filtered)
-            }}
-            placeholder='Buscar Muestra, OT, ÁREA, FAMILIA...'
-            fullWidth
-            size='small'
-          />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ width: 300 }}>
+            <DebouncedInput
+              value={globalFilter}
+              onChange={(v: any) => {
+                setGlobalFilter(String(v))
+                const q = String(v).toLowerCase()
+                if (!q) {
+                  setFilteredData(data)
+                  return
+                }
+                const filtered = data.filter(item =>
+                  [
+                    item.numeroRcm,
+                    item.ot,
+                    item.area,
+                    item.familia,
+                    item.obra?.numeroObra,
+                    item.cliente?.nombreCliente
+                  ]
+                    .filter(Boolean)
+                    .some(s => String(s).toLowerCase().includes(q))
+                )
+                setFilteredData(filtered)
+              }}
+              placeholder='Buscar Muestra, OT, ÁREA, FAMILIA...'
+              fullWidth
+              size='small'
+            />
+          </Box>
         </Box>
       </Box>
 
@@ -668,22 +859,22 @@ const UserListTable2 = () => {
         rowsPerPage={table.getState().pagination.pageSize}
         page={table.getState().pagination.pageIndex}
         onPageChange={(_, page) => table.setPageIndex(page)}
-        onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+        onRowsPerPageChange={e => table.setPageSize(Number((e.target as HTMLInputElement).value))}
       />
 
-      {/* Menu contextual (por fila) - 3 puntos */}
+      {/* Menu contextual por fila */}
       <Menu
         anchorEl={menuAnchorEl}
         open={Boolean(menuAnchorEl)}
         onClose={handleCloseRowMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar</MenuItem>
-        <MenuItem onClick={() => handleHistorial(menuRowId)}>Historial</MenuItem>
+        <MenuItem onClick={() => { handleEdit(menuRowId); handleCloseRowMenu(); }}>Editar</MenuItem>
+        <MenuItem onClick={() => { handleHistorial(menuRowId); handleCloseRowMenu(); }}>Historial</MenuItem>
       </Menu>
 
-      {/* Historial - dialog mock */}
+      {/* Dialog Historial */}
       <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
         <DialogTitle>Historial</DialogTitle>
         <DialogContent>
@@ -703,29 +894,56 @@ const UserListTable2 = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {histRows.map((h, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{h.registro}</TableCell>
-                    <TableCell>{h.funcionario}</TableCell>
-                    <TableCell>{h.aplicadoA}</TableCell>
-                    <TableCell>{h.ensayo}</TableCell>
-                    <TableCell>{h.tipo}</TableCell>
-                    <TableCell>
-                      <Chip label={h.estAnterior} size='small' color={statusColorHistorial(h.estAnterior)} />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={h.estNuevo} size='small' color={statusColorHistorial(h.estNuevo)} />
-                    </TableCell>
-                    <TableCell>{h.fechaAccion}</TableCell>
-                    <TableCell>{h.observacion}</TableCell>
-                  </TableRow>
-                ))}
-                {histRows.length === 0 && (
+                {histRows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align='center' sx={{ py: 4 }}>
                       No hay registros
                     </TableCell>
                   </TableRow>
+                ) : (
+                  histRows.map((h, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{h.registro}</TableCell>
+                      <TableCell>{h.funcionario}</TableCell>
+                      <TableCell>{h.aplicadoA}</TableCell>
+                      <TableCell>{h.ensayo}</TableCell>
+                      <TableCell>{h.tipo}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={h.estAnterior ?? '-'}
+                          size='small'
+                          variant='filled'
+                          sx={{
+                            ...statusPillStyle(h.estAnterior),
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            borderRadius: 2,
+                            px: 1,
+                            py: 0.4
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={h.estNuevo ?? '-'}
+                          size='small'
+                          variant='filled'
+                          sx={{
+                            ...statusPillStyle(h.estNuevo),
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            borderRadius: 2,
+                            px: 1,
+                            py: 0.4
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{h.fechaAccion}</TableCell>
+                      <TableCell>{h.observacion}</TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -739,5 +957,4 @@ const UserListTable2 = () => {
     </Card>
   )
 }
-
 export default UserListTable2

@@ -848,6 +848,7 @@ model RCMHistory {
   fechaAccion DateTime?
   observacion String?
   createdAt   DateTime  @default(now())
+  aplicadoA   String?
 
   @@index([rcmId])
 }

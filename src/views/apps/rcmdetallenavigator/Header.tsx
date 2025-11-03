@@ -27,7 +27,9 @@ interface Familia {
 
 // (se eliminó array local de estados administrativos; se usa ADMINISTRATIVE_STATES)
 
-const Header = () => {
+type FiltersPartial = { dateField?: 'fecha_codificacion' | 'fecha_muestreo'; start?: string; end?: string; estadoOperativo?: string }
+
+const Header = ({ onFiltersChange }: { onFiltersChange?: (f?: FiltersPartial) => void }) => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
@@ -96,8 +98,8 @@ const Header = () => {
     setSelectedFamilia('') // Resetear familia cuando cambia el área
   }
 
-  // Añadir estado para la opción seleccionada en "Fecha Codificación"
-  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'fecha_codificacion' | 'fecha_muestreo'>('fecha_muestreo')
+  // Añadir estado para la opción seleccionada en "Fecha Codificacion" ('' = Seleccione)
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('')
   const [operationalState, setOperationalState] = useState<OperationalState>('CODIFICADO')
 
   return (
@@ -146,8 +148,16 @@ const Header = () => {
               fullWidth
               select
               value={fechaCodificacionOption}
-              onChange={(e) => setFechaCodificacionOption(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value as '' | 'fecha_codificacion' | 'fecha_muestreo'
+                setFechaCodificacionOption(v)
+                // si no hay selección, enviar undefined (sin filtro)
+                if (!v) { onFiltersChange?.(undefined); return }
+                // emitir con rango actual (PickersRange emitirá también cuando cambie)
+                onFiltersChange?.({ dateField: v })
+              }}
             >
+              <MenuItem value=''>Seleccione</MenuItem>
               <MenuItem value='fecha_codificacion'>Fecha Codificación</MenuItem>
               <MenuItem value='fecha_muestreo'>Fecha de Muestreo</MenuItem>
             </TextField>
@@ -164,7 +174,27 @@ const Header = () => {
                 '& input#date-range-picker': { width: '100%' }
               }}
             >
-              <PickersRange />
+              <PickersRange onChange={(range: [Date | null, Date | null]) => {
+                const [sDate, eDate] = range
+                // si el rango está incompleto (end null) no emitir filtro todavía
+                if (!sDate || !eDate) {
+                  console.log('Header -> PickersRange: rango incompleto, esperando end', { sDate, eDate })
+                  return
+                }
+
+                // construir YYYY-MM-DD usando valores LOCALES (evitar toISOString())
+                const pad = (n: number) => String(n).padStart(2, '0')
+                const start = `${sDate.getFullYear()}-${pad(sDate.getMonth() + 1)}-${pad(sDate.getDate())}`
+                const end = `${eDate.getFullYear()}-${pad(eDate.getMonth() + 1)}-${pad(eDate.getDate())}`
+
+                // si no hay campo seleccionado no aplicar filtro por fechas
+                if (!fechaCodificacionOption) {
+                  onFiltersChange?.(undefined)
+                  return
+                }
+                console.log('Header -> emitting date filter (local)', { dateField: fechaCodificacionOption, start, end })
+                onFiltersChange?.({ dateField: fechaCodificacionOption as 'fecha_codificacion' | 'fecha_muestreo', start, end })
+              }} />
             </Box>
           </Grid>
 
@@ -230,7 +260,12 @@ const Header = () => {
             fullWidth
             select
             value={selectedEstadoOp}
-            onChange={(e) => setSelectedEstadoOp(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value
+              setSelectedEstadoOp(v)
+              // emitir filtro parcial; index.tsx lo mergeará con los filtros previos
+              onFiltersChange?.({ estadoOperativo: v || undefined })
+            }}
           >
             <MenuItem value=''>Todos</MenuItem>
             {OPERATIONAL_STATES.map((s) => (

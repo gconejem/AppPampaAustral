@@ -1,27 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { format } from 'date-fns'
-
-// IMPORT: usar named import porque your lib/prisma no exporta default
-import { prisma } from '@/lib/prisma' // <-- asegúrate que lib/prisma exporta `prisma`
+import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { id } = req.query
     const rcmId = Number(id)
     if (Number.isNaN(rcmId)) return res.status(400).json({ error: 'Invalid RCM id' })
 
-    if (!prisma) {
-        console.error('Prisma client not available from @/lib/prisma')
-        return res.status(500).json({ error: 'Prisma client not configured' })
-    }
-
     try {
-        // Nombre del cliente generado para el modelo RCMHistory suele ser rCMHistory (basado en el modelo)
-        const historyClient = (prisma as any).rCMHistory ?? (prisma as any).rcmHistory ?? (prisma as any).rcm_history
-
-        if (!historyClient) {
-            console.error('Prisma client does not expose a history model property. Prisma client keys:', Object.keys(prisma as any))
-            return res.status(500).json({ error: 'History model not available on Prisma client' })
-        }
+        const historyClient = (prisma as any).rCMHistory ?? (prisma as any).rcmHistory
+        if (!historyClient) return res.status(500).json({ error: 'History model not available on Prisma client' })
 
         if (req.method === 'GET') {
             const rows = await historyClient.findMany({
@@ -36,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 tipo: r.tipo ?? '',
                 estAnterior: r.estAnterior ?? '',
                 estNuevo: r.estNuevo ?? '',
-                informe: r.informe ?? '---',
+                informe: r.informe ?? null,
+                aplicadoA: r.aplicadoA ?? null, // <- nuevo campo
                 fechaAccion: r.fechaAccion ? format(new Date(r.fechaAccion), 'dd/MM/yyyy') : '',
                 observacion: r.observacion ?? ''
             }))
@@ -51,13 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 estAnterior,
                 estNuevo,
                 informe,
+                aplicadoA, // <- aceptar aplicadoA en body
                 fechaAccion,
                 observacion
             } = req.body
 
-            if (!tipo || !estNuevo) {
-                return res.status(400).json({ error: 'tipo and estNuevo are required' })
-            }
+            if (!tipo || !estNuevo) return res.status(400).json({ error: 'tipo and estNuevo are required' })
 
             const created = await historyClient.create({
                 data: {
@@ -67,6 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     estAnterior: estAnterior ?? null,
                     estNuevo,
                     informe: informe ? Number(informe) : null,
+                    aplicadoA: aplicadoA ?? null, // <- guardar aplicadoA
                     fechaAccion: fechaAccion ? new Date(fechaAccion) : null,
                     observacion: observacion ?? null
                 }
@@ -79,7 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 tipo: created.tipo ?? '',
                 estAnterior: created.estAnterior ?? '',
                 estNuevo: created.estNuevo ?? '',
-                informe: created.informe ?? '---',
+                informe: created.informe ?? null,
+                aplicadoA: created.aplicadoA ?? null, // <- devolver aplicadoA
                 fechaAccion: created.fechaAccion ? format(new Date(created.fechaAccion), 'dd/MM/yyyy') : '',
                 observacion: created.observacion ?? ''
             }
