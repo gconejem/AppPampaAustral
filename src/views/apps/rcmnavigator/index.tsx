@@ -1,27 +1,19 @@
+'use client'
 // MUI Imports
 import Grid from '@mui/material/Grid'
+import { useState } from 'react'
 
 // Component Imports
-import UserListTable from './UserListTable'
 import Header from './Header'
+import UserListTable2 from './UserListTable'
 
-// Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
+export default function RcmNavigatorPage() {
+  const [filters, setFilters] = useState<{ dateField: 'fecha_codificacion' | 'fecha_muestreo', start?: string, end?: string } | undefined>()
 
-const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
-    <Grid container spacing={6}>
-      {/* Header */}
-      <Grid item xs={12}>
-        <Header />
-      </Grid>
-
-      {/* Primera Tabla: Ocupa todo el ancho */}
-      <Grid item xs={12}>
-        <UserListTable tableData={userData} />
-      </Grid>
-    </Grid>
+    <div>
+      <Header onFiltersChange={(f) => setFilters(f)} />
+      <UserListTable2 filters={filters} />
+    </div>
   )
 }
-
-export default UserList

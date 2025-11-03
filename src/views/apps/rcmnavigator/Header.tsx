@@ -22,12 +22,20 @@ interface Familia {
   }
 }
 
-const Header = () => {
+interface HeaderProps {
+  onFiltersChange?: (filters?: {
+    dateField?: 'fecha_codificacion' | 'fecha_muestreo'
+    start?: string
+    end?: string
+    estadoOperativo?: string
+  }) => void
+}
+
+const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
-  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
   const [selectedEstadoAd, setSelectedEstadoAd] = useState<string>('')
 
   // Menu Informes
@@ -84,9 +92,69 @@ const Header = () => {
     setSelectedFamilia('') // Resetear familia cuando cambia el área
   }
 
-  // Estado para opción de Fecha Codificación (por defecto 'fecha_muestreo')
-  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'fecha_codificacion' | 'fecha_muestreo'>('fecha_muestreo')
-  const [operationalState, setOperationalState] = useState<OperationalState>('CODIFICADO')
+  // permitir valor vacío '' = "Seleccione"
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('')
+
+  const [dateRange, setDateRange] = useState<{ start?: string, end?: string }>({})
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
+
+  const emitFilters = (
+    df = fechaCodificacionOption,
+    dr = dateRange,
+    estOp = selectedEstadoOp
+  ) => {
+    // si no hay nada seleccionado, limpiar filtros
+    if (!df && !estOp) {
+      console.log('Header -> emitFilters: no filters selected, clearing')
+      onFiltersChange?.(undefined)
+      return
+    }
+    const payload: any = {}
+    if (df) payload.dateField = df
+    if (dr.start) payload.start = dr.start
+    if (dr.end) payload.end = dr.end
+    if (estOp) payload.estadoOperativo = estOp
+    console.log('Header -> emitFilters', payload)
+    onFiltersChange?.(payload)
+  }
+
+  const handleFechaCodOptionChange = (value: string) => {
+    const v = value as '' | 'fecha_codificacion' | 'fecha_muestreo'
+    setFechaCodificacionOption(v)
+    // emitir con rango actual (si v === '' no incluye dateField)
+    emitFilters(v, dateRange)
+  }
+
+  const handleEstadoOpChange = (value: string) => {
+    setSelectedEstadoOp(value)
+    // emitir con los filtros actuales (incluirá estadoOperativo aunque no haya dateField)
+    emitFilters(fechaCodificacionOption, dateRange, value)
+  }
+
+  // handler que espera [Date|null, Date|null] o {start,end} o strings
+  const handleRangeChangeFlexible = (range: any) => {
+    let start = ''
+    let end = ''
+    if (Array.isArray(range)) {
+      const s = range[0], e = range[1]
+      start = s ? (s instanceof Date ? s.toISOString().slice(0, 10) : String(s).slice(0, 10)) : ''
+      end = e ? (e instanceof Date ? e.toISOString().slice(0, 10) : String(e).slice(0, 10)) : ''
+    } else if (range && (range.start || range.end)) {
+      start = range.start ? (new Date(range.start)).toISOString().slice(0, 10) : ''
+      end = range.end ? (new Date(range.end)).toISOString().slice(0, 10) : ''
+    } else {
+      start = ''; end = ''
+    }
+
+    const next = { start, end }
+    setDateRange(next)
+    emitFilters(fechaCodificacionOption, next)
+  }
+
+  useEffect(() => {
+    // emitir valores iniciales (por si ya hay un rango preseleccionado)
+    emitFilters()
+  }, [])
 
   return (
     <Box
@@ -126,23 +194,23 @@ const Header = () => {
 
       {/* Primera Fila de Inputs */}
       <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+        <Grid item xs={12} sm={4}>
           <TextField
             label='Fecha Codificación'
             size='small'
             fullWidth
             select
             value={fechaCodificacionOption}
-            onChange={(e) => setFechaCodificacionOption(e.target.value)}
+            onChange={(e) => handleFechaCodOptionChange(e.target.value)}
           >
+            <MenuItem value=''>Seleccione</MenuItem>
             <MenuItem value='fecha_codificacion'>Fecha Codificación</MenuItem>
             <MenuItem value='fecha_muestreo'>Fecha de Muestreo</MenuItem>
           </TextField>
         </Grid>
-
         <Grid item xs={12} sm={4}>
-          {/* Rango de Fechas usando PickersRange */}
-          <PickersRange />
+          {/* Rango de Fechas: pasar onChange */}
+          <PickersRange onChange={handleRangeChangeFlexible} />
         </Grid>
 
       </Grid>
@@ -195,9 +263,9 @@ const Header = () => {
             fullWidth
             select
             value={selectedEstadoOp}
-            onChange={(e) => setSelectedEstadoOp(e.target.value)}
+            onChange={(e) => handleEstadoOpChange(e.target.value)}
           >
-            <MenuItem value=''>Todos</MenuItem>
+            <MenuItem value=''>Seleccione</MenuItem>
             {OPERATIONAL_STATES.map((s) => (
               <MenuItem key={s.value} value={s.value}>
                 {s.label}
@@ -215,7 +283,7 @@ const Header = () => {
               value={selectedEstadoAd}
               onChange={e => setSelectedEstadoAd(e.target.value)}
             >
-              <MenuItem value=''>Todos</MenuItem>
+              <MenuItem value=''>Seleccione</MenuItem>
               {ADMINISTRATIVE_STATES.map(s => (
                 <MenuItem key={s.value} value={s.value}>
                   {s.label}

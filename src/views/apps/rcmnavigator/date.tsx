@@ -1,5 +1,5 @@
 // React Imports
-import { useState, forwardRef } from 'react'
+import { useState, useEffect, forwardRef } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -14,38 +14,49 @@ import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 
 type CustomInputProps = TextFieldProps & {
   label: string
-  end: Date | number
-  start: Date | number
+  end: Date | number | null | undefined
+  start: Date | number | null | undefined
 }
 
-const PickersRange = () => {
-  // States
-  const [startDate, setStartDate] = useState<Date | null | undefined>(new Date())
-  const [endDate, setEndDate] = useState<Date | null | undefined>(addDays(new Date(), 15))
+interface PickersRangeProps {
+  onChange?: (range: [Date | null, Date | null]) => void
+  initialStart?: Date | null
+  initialEnd?: Date | null
+  maxWidth?: number | string
+}
+
+const PickersRange = ({ onChange, initialStart = new Date(), initialEnd = addDays(new Date(), 15), maxWidth = '250px' }: PickersRangeProps) => {
+  const [startDate, setStartDate] = useState<Date | null | undefined>(initialStart)
+  const [endDate, setEndDate] = useState<Date | null | undefined>(initialEnd)
 
   const handleOnChange = (dates: any) => {
     const [start, end] = dates
-
     setStartDate(start)
     setEndDate(end)
+    // emitir hacia el padre en formato [Date|null,Date|null]
+    onChange?.([start ?? null, end ?? null])
+    console.log('PickersRange -> onChange emitted', { start, end })
   }
 
-  const CustomInput = forwardRef((props: CustomInputProps, ref) => {
+  // emitir el valor inicial al montar (útil para que Header reciba filtro inicial)
+  useEffect(() => {
+    onChange?.([startDate ?? null, endDate ?? null])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const CustomInput = forwardRef<any, CustomInputProps>((props, ref) => {
     const { label, start, end, ...rest } = props
-
-    const startDate = format(start, 'MM/dd/yyyy')
-    const endDate = end !== null ? ` - ${format(end, 'MM/dd/yyyy')}` : null
-
-    const value = `${startDate}${endDate !== null ? endDate : ''}`
-
+    // formato dia/mes/año
+    const startDateStr = start ? format(start as Date, 'dd/MM/yyyy') : ''
+    const endDateStr = end ? ` - ${format(end as Date, 'dd/MM/yyyy')}` : ''
+    const value = `${startDateStr}${endDateStr}`
     return <TextField fullWidth inputRef={ref} {...rest} label={label} value={value} />
   })
+  CustomInput.displayName = 'PickersRangeCustomInput'
 
   return (
     <Grid container spacing={6}>
       <Grid item xs={12}>
-        {/* Ajustar el tamaño y la alineación del Datepicker */}
-        <div style={{ maxWidth: '250px', marginLeft: '0px' }}>
+        <div style={{ maxWidth: maxWidth, marginLeft: 0 }}>
           <AppReactDatepicker
             selectsRange
             endDate={endDate}
@@ -54,9 +65,7 @@ const PickersRange = () => {
             id='date-range-picker'
             onChange={handleOnChange}
             shouldCloseOnSelect={false}
-            customInput={
-              <CustomInput label='Rango de Fechas' start={startDate as Date | number} end={endDate as Date | number} />
-            }
+            customInput={<CustomInput label='Rango de Fechas' start={startDate as Date | number} end={endDate as Date | number} />}
           />
         </div>
       </Grid>

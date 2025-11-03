@@ -136,10 +136,17 @@ interface RCM {
   }>
 }
 
+interface Filters {
+  dateField?: 'fecha_codificacion' | 'fecha_muestreo'
+  start?: string
+  end?: string
+  estadoOperativo?: string
+}
+
 // Component
 const columnHelper = createColumnHelper<RCM>()
 
-const UserListTable2 = () => {
+const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState<RCM[]>([])
@@ -308,18 +315,96 @@ const UserListTable2 = () => {
   useEffect(() => {
     const fetchRCMs = async () => {
       try {
-        const response = await fetch('/api/rcm')
-        const result = await response.json()
-        setData(result)
-        setFilteredData(result)
-      } catch (error) {
-        console.error('Error fetching RCMs:', error)
+        const res = await fetch('/api/rcm')
+        const result = await res.json()
+        console.log('API /api/rcm result sample:', Array.isArray(result) ? result.slice(0, 5) : result)
+
+        const normalized = (Array.isArray(result) ? result : []).map((r: any) => ({
+          ...r,
+          ot: r.ot ?? r.ordenTrabajo?.correlativ ?? r.orden_trabajo?.correlativ ?? null,
+          estadoOperativo: r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ?? ''
+        }))
+
+        setData(normalized)
+        // aplicar filtro inicial si vienen filters
+        applyDateFilter(normalized, filters)
+      } catch (err) {
+        console.error('Error fetching RCMs:', err)
       } finally {
         setLoading(false)
       }
     }
+
     fetchRCMs()
   }, [])
+
+  // aplicar filtro cuando cambian filters
+  useEffect(() => {
+    console.log('UserListTable - filters changed:', filters)
+    applyDateFilter(data, filters)
+  }, [filters, data])
+
+  const toDateOnly = (input: any): Date | null => {
+    if (!input) return null
+    // Si ya es Date
+    if (input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate())
+    const s = String(input)
+
+    // Si viene en formato YYYY-MM-DD (o empieza así), parsearlo directamente para evitar shift por timezone
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) {
+      return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    }
+
+    // Fallback: crear Date y tomar sólo la parte fecha local
+    const d = new Date(s)
+    if (isNaN(d.getTime())) return null
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  }
+
+  const applyDateFilter = (rows: RCM[], filters?: Filters) => {
+    console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
+
+    // start with all rows
+    let result = rows.slice()
+
+    // determine which property to use for date filtering
+    const dfRaw = filters?.dateField ? String(filters.dateField).toLowerCase() : ''
+    let fieldName: 'fechaCodificacion' | 'fechaMuestreo' | null = null
+    if (dfRaw === 'fecha_codificacion' || dfRaw === 'fechacodificacion' || dfRaw === 'fecha-codificacion') {
+      fieldName = 'fechaCodificacion'
+    } else if (dfRaw === 'fecha_muestreo' || dfRaw === 'fechamuestreo' || dfRaw === 'fecha-muestreo') {
+      fieldName = 'fechaMuestreo'
+    }
+
+    console.log('applyDateFilter -> using date field:', fieldName)
+
+    // Date filtering (only if fieldName + start+end provided)
+    if (fieldName && filters && filters.start && filters.end) {
+      const start = toDateOnly(filters.start)
+      const end = toDateOnly(filters.end)
+      if (start && end) {
+        result = result.filter(r => {
+          const raw = (r as any)[fieldName]
+          const dOnly = toDateOnly(raw)
+          if (!dOnly) return false
+          return dOnly.getTime() >= start.getTime() && dOnly.getTime() <= end.getTime()
+        })
+      }
+    }
+
+    // Estado Operativo filtering (if provided) — case-insensitive contains
+    if (filters && filters.estadoOperativo) {
+      const q = String(filters.estadoOperativo).toLowerCase()
+      result = result.filter(r => {
+        const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ?? '')
+        return String(op).toLowerCase().includes(q)
+      })
+    }
+
+    console.log('applyDateFilter result count:', result.length)
+    setFilteredData(result)
+  }
 
   const { lang: locale } = useParams()
 
@@ -361,8 +446,12 @@ const UserListTable2 = () => {
       {
         id: 'ot',
         header: 'OT',
-        accessorFn: r => r.ot ?? r['ordenTrabajo'] ?? r['ot'],
-        cell: ({ row }) => <Typography variant='body2'>{row.original.ot ?? row.original['ordenTrabajo'] ?? '-'}</Typography>
+        accessorFn: (r: any) => r.ot ?? r.ordenTrabajo?.correlativ ?? null,
+        cell: ({ row }: any) => (
+          <Typography variant='body2'>
+            {row.original.ot ?? row.original.ordenTrabajo?.correlativ ?? '-'}
+          </Typography>
+        )
       },
       {
         id: 'fechaCod',
@@ -398,7 +487,10 @@ const UserListTable2 = () => {
         id: 'estOp',
         header: 'EST. OP',
         accessorKey: 'estadoOperativo',
-        cell: ({ row }) => <Chip label={row.original.estadoOperativo ?? '-'} size='small' color={statusColor(row.original.estadoOperativo)} />
+        cell: ({ row }) => {
+          const op = row.original.estadoOperativo ?? (Array.isArray(row.original.servicios) && row.original.servicios.length ? row.original.servicios[0].estado : null)
+          return <Chip label={op ?? '-'} size='small' color={statusColor(op)} />
+        }
       },
       {
         id: 'estAd',
@@ -491,53 +583,38 @@ const UserListTable2 = () => {
     }
   }
 
-  // reemplazado: indicadores ampliados y heurísticos
+  // reemplazado: indicadores ampliados y heurísticos (usar filteredData para contar los visibles)
   const indicators = useMemo(() => {
-    const total = data.length
+    const total = filteredData.length
     const lower = (s?: string) => (s ?? '').toString().toLowerCase()
 
-    const porEnsayar = data.filter(d =>
-      lower(d.estadoOperativo).includes('ensayar') ||
-      lower(d.estadoAdministrativo).includes('ensayar')
-    ).length
+    const countIf = (pred: (op: string, adm: string) => boolean) =>
+      filteredData.reduce((acc, d) => {
+        const op = lower(d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? d.servicios[0].estado : ''))
+        const adm = lower(d.estadoAdministrativo)
+        return acc + (pred(op, adm) ? 1 : 0)
+      }, 0)
 
-    const porDigitar = data.filter(d =>
-      lower(d.estadoOperativo).includes('digitar') ||
-      lower(d.estadoAdministrativo).includes('digitar') ||
-      lower(d.estadoAdministrativo).includes('digitacion') ||
-      lower(d.estadoAdministrativo).includes('digitación')
-    ).length
-
-    const porEnviarDigitacion = data.filter(d =>
-      lower(d.estadoAdministrativo).includes('enviar') && lower(d.estadoAdministrativo).includes('digit')
-    ).length
-
-    const porRevisar = data.filter(d =>
-      lower(d.estadoOperativo).includes('revisar') ||
-      lower(d.estadoAdministrativo).includes('revisar')
-    ).length
-
-    const porCorregir = data.filter(d =>
-      lower(d.estadoOperativo).includes('corregir') ||
-      lower(d.estadoAdministrativo).includes('corregir')
-    ).length
-
-    const porFirmar = data.filter(d =>
-      lower(d.estadoAdministrativo).includes('firmar') ||
-      lower(d.estadoAdministrativo).includes('firmado') ||
-      lower(d.estadoOperativo).includes('firmar')
-    ).length
-
-    const porEnviarFirmados = data.filter(d =>
-      (lower(d.estadoAdministrativo).includes('firmado') || lower(d.estadoAdministrativo).includes('firmados')) &&
-      lower(d.estadoAdministrativo).includes('enviar')
-    ).length
-
-    const firmadosPagados = data.filter(d => {
-      const adm = lower(d.estadoAdministrativo)
-      return (adm.includes('firmado') || adm.includes('firmados')) &&
-        (adm.includes('pagado') || adm.includes('pagados') || adm.includes('pag'))
-    }).length
+    const porEnsayar = countIf((op, adm) => op.includes('ensayar') || adm.includes('ensayar'))
+    const porDigitar = countIf((op, adm) =>
+      op.includes('digitar') || adm.includes('digitar') || adm.includes('digitacion') || adm.includes('digitación')
+    )
+    const porEnviarDigitacion = countIf((op, adm) =>
+      adm.includes('enviar') && adm.includes('digit')
+    )
+    const porRevisar = countIf((op, adm) => op.includes('revisar') || adm.includes('revisar'))
+    const porCorregir = countIf((op, adm) => op.includes('corregir') || adm.includes('corregir'))
+    const porFirmar = countIf((op, adm) =>
+      adm.includes('firmar') || adm.includes('firmado') || op.includes('firmar')
+    )
+    const porEnviarFirmados = countIf((op, adm) =>
+      (adm.includes('firmado') || adm.includes('firmados')) && adm.includes('enviar')
+    )
+    const firmadosPagados = countIf((op, adm) => {
+      const admHasFirmado = adm.includes('firmado') || adm.includes('firmados')
+      const admHasPagado = adm.includes('pagado') || adm.includes('pagados') || adm.includes('pag')
+      return admHasFirmado && admHasPagado
+    })
 
     return {
       total,
@@ -550,7 +627,7 @@ const UserListTable2 = () => {
       porEnviarFirmados,
       firmadosPagados
     }
-  }, [data])
+  }, [filteredData])
 
   if (loading) return <div>Cargando...</div>
 
