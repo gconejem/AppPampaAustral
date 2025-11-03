@@ -678,6 +678,7 @@ model RCM {
   cliente           Cliente?      @relation(fields: [clienteId], references: [clienteId])
   obra              Obra?         @relation(fields: [obraId], references: [obraId])
   servicios         ServicioRCM[]
+  RCMHistory        RCMHistory[]
 }
 
 model ServicioRCM {
@@ -833,4 +834,20 @@ model EstadoOT {
   tipoJSON       String?
   estado         String?
   ordenesTrabajo OrdenTrabajo[]
+}
+
+model RCMHistory {
+  id          Int       @id @default(autoincrement())
+  rcmId       Int
+  rcm         RCM       @relation(fields: [rcmId], references: [id])
+  tipo        String // 'Ope' | 'Adm'
+  funcionario String?
+  estAnterior String?
+  estNuevo    String
+  informe     Int?
+  fechaAccion DateTime?
+  observacion String?
+  createdAt   DateTime  @default(now())
+
+  @@index([rcmId])
 }

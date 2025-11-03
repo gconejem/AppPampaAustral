@@ -213,23 +213,40 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleSaveMarkDialog = async () => {
-    // Guardar la acción según el tipo de diálogo
     try {
-      if (markDialogAction === 'DIGITADO') {
-        console.log('Guardar DIGITADO', { rowId: markDialogRowId, informe: informeNumber })
-        // POST a API: { action: 'DIGITADO', informe: informeNumber }
-      } else if (markDialogAction === 'EN_CORRECCION') {
-        console.log('Guardar EN_CORRECCION', {
-          rowId: markDialogRowId,
-          motivo: correctionMotivo,
-          observaciones: correctionObservaciones
-        })
-        // POST a API: { action: 'EN_CORRECCION', motivo: correctionMotivo, observaciones: correctionObservaciones }
-      } else {
-        console.log('Guardar acción', markDialogAction)
+      if (markDialogRowId == null) return
+
+      // ejemplo: actualizar estado en RCM (si tu API tiene endpoint para marcar, llama aquí)
+      // await fetch(`/api/rcm/${markDialogRowId}/marcar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: markDialogAction, informe: informeNumber, motivo: correctionMotivo, observaciones: correctionObservaciones }) })
+
+      // Crear entrada en historial
+      const payload: any = {
+        tipo: markDialogAction === 'DIGITADO' ? 'Ope' : 'Adm',
+        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : 'Usuario',
+        estAnterior: undefined,
+        estNuevo: markDialogAction === 'DIGITADO' ? 'DIGITADO' : markDialogAction,
+        informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null,
+        fechaAccion: new Date().toISOString(),
+        observacion: markDialogAction === 'EN_CORRECCION' ? correctionObservaciones ?? '' : ''
       }
+
+      const res = await fetch(`/api/rcm/${markDialogRowId}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) throw new Error('Error saving history')
+
+      // refrescar historial si está abierto para la misma fila
+      if (histDialogOpen && histRowId === markDialogRowId) {
+        const r = await fetch(`/api/rcm/${markDialogRowId}/history`)
+        if (r.ok) setHistRows(await r.json())
+      }
+
+      // opcional: refrescar listado principal (re-fetch)
     } catch (err) {
-      console.error('Error guardar marcación', err)
+      console.error('Error saving mark & history', err)
     } finally {
       setMarkDialogOpen(false)
       setMarkDialogAction(null)
@@ -237,7 +254,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setInformeNumber('')
       setCorrectionMotivo('')
       setCorrectionObservaciones('')
-      // opcional: refrescar tabla
     }
   }
 
@@ -297,12 +313,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     ]
   }
 
-  const handleHistorial = (rowId: number | null) => {
-    // cargar mock y abrir dialog
-    setHistRowId(rowId)
-    setHistRows(getMockHistEntries(rowId))
-    setHistDialogOpen(true)
-    handleCloseRowMenu()
+  const handleHistorial = async (rowId: number | null) => {
+    console.log('handleHistorial called, rowId=', rowId)
+    if (!rowId) {
+      console.warn('handleHistorial: no rowId provided')
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/rcm/${rowId}/history`)
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('History API returned not ok:', res.status, txt)
+        throw new Error('Error loading history')
+      }
+      const json = await res.json()
+      console.log('History API success, rows:', Array.isArray(json) ? json.length : json)
+      setHistRowId(rowId)
+      setHistRows(Array.isArray(json) ? json : [])
+      setHistDialogOpen(true)
+    } catch (err) {
+      console.error('Error loading history (fallback to mock):', err)
+      // fallback a mock para que puedas ver el dialog mientras arreglas la API
+      setHistRowId(rowId)
+      setHistRows(getMockHistEntries(rowId))
+      setHistDialogOpen(true)
+    } finally {
+      handleCloseRowMenu()
+    }
   }
 
   const handleCloseHistDialog = () => {
