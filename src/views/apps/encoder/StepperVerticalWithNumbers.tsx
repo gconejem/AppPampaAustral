@@ -372,9 +372,13 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
           return
         }
 
+        // Generar número de muestra automáticamente
+        const numeroMuestra = `Muestra-${muestras.length + 1}`
+
         // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
         const muestraConCotas = {
           ...muestraActual,
+          numeroMuestra: numeroMuestra,
           cotas: muestraActual.cota1 && muestraActual.cota2
             ? `${muestraActual.cota1} - ${muestraActual.cota2}`
             : muestraActual.cota1 || muestraActual.cota2 || ''
@@ -444,9 +448,13 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       return
     }
 
+    // Generar número de muestra automáticamente
+    const numeroMuestra = `Muestra-${muestras.length + 1}`
+
     // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
     const muestraConCotas = {
       ...muestraActual,
+      numeroMuestra: numeroMuestra,
       cotas: muestraActual.cota1 && muestraActual.cota2
         ? `${muestraActual.cota1} - ${muestraActual.cota2}`
         : muestraActual.cota1 || muestraActual.cota2 || ''
