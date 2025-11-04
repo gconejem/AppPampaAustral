@@ -398,6 +398,63 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     setAnchorEl(null)
   }
 
+  // Función para agregar una muestra y limpiar los campos
+  const handleAddMuestra = () => {
+    // Validar que los campos requeridos de la muestra estén completos
+    if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
+      toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+      return
+    }
+
+    // Validar que haya al menos un servicio en la muestra
+    if (muestraActual.servicios.length === 0) {
+      toast.error('Por favor agregue al menos un servicio a la muestra')
+      return
+    }
+
+    // Si tiene vencimiento, validar que haya al menos una probeta
+    if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
+      toast.error('Por favor agregue al menos una probeta')
+      return
+    }
+
+    // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
+    const muestraConCotas = {
+      ...muestraActual,
+      cotas: muestraActual.cota1 && muestraActual.cota2
+        ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+        : muestraActual.cota1 || muestraActual.cota2 || ''
+    }
+    setMuestras([...muestras, muestraConCotas])
+
+    // Limpiar los campos para agregar una nueva muestra
+    setMuestraActual({
+      numeroMuestra: '',
+      tipoMaterial: '',
+      elemento: '',
+      item: '',
+      grado: '',
+      procedencia: '',
+      cota1: '',
+      cota2: '',
+      ubicacionSector: '',
+      vencimiento: false,
+      observaciones: '',
+      servicios: [],
+      probetas: []
+    })
+
+    // Limpiar el estado de vencimiento
+    setVencimiento(false)
+
+    // Limpiar el campo de servicio
+    setServicio('')
+    setCantidad('1')
+    setSelectedProduct(null)
+
+    toast.success('Muestra agregada exitosamente')
+  }
+
   // Seleccionar un producto
   const handleSelectProduct = (producto: Producto) => {
     setSelectedProduct(producto)
@@ -1107,20 +1164,182 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                       {/* Observación y Botón Codificar */}
                       <Box display='flex' alignItems='center' justifyContent='space-between' sx={{ mt: 2 }}>
                         <TextField label='Observación' fullWidth />
-                        <Button
+                        {/* <Button
                           variant='outlined'
                           color='primary'
                           startIcon={<i className='ri-check-line' />}
                           sx={{ ml: 2 }}
                         >
                           Codificar
-                        </Button>
+                        </Button> */}
                       </Box>
                     </>
                   )}
                   {index === 1 && (
                     <>
-                      {/* Acordeón para Muestra */}
+                      {/* Lista de muestras agregadas */}
+                      {muestras.length > 0 && (
+                        <Box sx={{ mt: 3, mb: 3 }}>
+                          <Typography variant='h6' sx={{ mb: 2, fontWeight: 'bold' }}>
+                            Muestras Agregadas
+                          </Typography>
+                          {muestras.map((muestra, idx) => (
+                            <Accordion key={idx} sx={{ mb: 1 }}>
+                              <AccordionSummary
+                                expandIcon={<i className='ri-add-line' />}
+                                sx={{
+                                  backgroundColor: '#fafafa',
+                                  border: '1px solid #e0e0e0',
+                                  '&:hover': {
+                                    backgroundColor: '#f5f5f5'
+                                  }
+                                }}
+                              >
+                                <Box display='flex' alignItems='center' gap={2}>
+                                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                                    Muestra #{idx + 1}
+                                  </Typography>
+                                  <Chip
+                                    label={muestra.numeroMuestra || `Muestra-${idx + 1}`}
+                                    sx={{
+                                      backgroundColor: '#e0e0e0',
+                                      color: '#424242',
+                                      fontWeight: 'bold'
+                                    }}
+                                  />
+                                  <Typography variant='body2' color='text.secondary'>
+                                    {muestra.tipoMaterial} - {muestra.elemento}
+                                  </Typography>
+                                </Box>
+                              </AccordionSummary>
+                              <AccordionDetails>
+                                <Grid container spacing={2}>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Tipo Material
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.tipoMaterial || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Elemento
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.elemento || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Ítem
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.item || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Grado
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.grado || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Procedencia
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.procedencia || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Cotas
+                                    </Typography>
+                                    <Typography variant='body1'>
+                                      {muestra.cota1 && muestra.cota2
+                                        ? `${muestra.cota1} - ${muestra.cota2}`
+                                        : muestra.cota1 || muestra.cota2 || '-'}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Ubicación / Sector
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.ubicacionSector || '-'}</Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      Vencimiento
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.vencimiento ? 'Sí' : 'No'}</Typography>
+                                  </Grid>
+                                  {muestra.observaciones && (
+                                    <Grid item xs={12}>
+                                      <Typography variant='body2' color='text.secondary'>
+                                        Observaciones
+                                      </Typography>
+                                      <Typography variant='body1'>{muestra.observaciones}</Typography>
+                                    </Grid>
+                                  )}
+                                  <Grid item xs={12}>
+                                    <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
+                                      Servicios ({muestra.servicios.length})
+                                    </Typography>
+                                    <TableContainer component={Paper} variant='outlined'>
+                                      <Table size='small'>
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell>Código</TableCell>
+                                            <TableCell>Nombre</TableCell>
+                                            <TableCell>Cantidad</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {muestra.servicios.map((serv, servIdx) => (
+                                            <TableRow key={servIdx}>
+                                              <TableCell>{serv.codigo}</TableCell>
+                                              <TableCell>{serv.nombre}</TableCell>
+                                              <TableCell>{serv.cantidad}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </TableContainer>
+                                  </Grid>
+                                  {muestra.probetas && muestra.probetas.length > 0 && (
+                                    <Grid item xs={12}>
+                                      <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
+                                        Probetas ({muestra.probetas.length})
+                                      </Typography>
+                                      <TableContainer component={Paper} variant='outlined'>
+                                        <Table size='small'>
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell>Número</TableCell>
+                                              <TableCell>Fecha Confección</TableCell>
+                                              <TableCell>Cantidad</TableCell>
+                                              <TableCell>Días</TableCell>
+                                              <TableCell>Fecha Vencimiento</TableCell>
+                                              <TableCell>Estado</TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {muestra.probetas.map((probeta, probIdx) => (
+                                              <TableRow key={probIdx}>
+                                                <TableCell>{probeta.numero}</TableCell>
+                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                                <TableCell>{probeta.cantidad}</TableCell>
+                                                <TableCell>{probeta.dias}</TableCell>
+                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                                <TableCell>{probeta.estado}</TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </TableContainer>
+                                    </Grid>
+                                  )}
+                                </Grid>
+                              </AccordionDetails>
+                            </Accordion>
+                          ))}
+                        </Box>
+                      )}
+
+                      {/* Acordeón para Muestra Actual */}
                       <Accordion defaultExpanded sx={{ mt: 3 }}>
                         <AccordionSummary
                           expandIcon={<i className='ri-arrow-down-s-line' />}
@@ -1134,10 +1353,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                         >
                           <Box display='flex' alignItems='center' gap={2}>
                             <Typography variant='h6' sx={{ fontWeight: 'bold' }}>
-                              Muestra #1
+                              Muestra #{muestras.length + 1}
                             </Typography>
                             <Chip
-                              label='180280-1'
+                              label='Nueva Muestra'
                               sx={{
                                 backgroundColor: '#e0e0e0',
                                 color: '#424242',
@@ -1272,7 +1491,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 />
                               </Grid>
                             </Grid>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
+                            <Grid item xs={8} sx={{ mb: 4 }}>
                               <TextField
                                 label='Ubicación / Sector'
                                 size='small'
@@ -1285,6 +1504,20 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                   }))
                                 }
                               />
+                            </Grid>
+                            <Grid item xs={4} sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <Button
+                                variant='contained'
+                                color='primary'
+                                size='small'
+                                startIcon={<i className='ri-add-line' />}
+                                onClick={handleAddMuestra}
+                                sx={{
+                                  padding: '6px 12px'
+                                }}
+                              >
+                                Agregar muestra
+                              </Button>
                             </Grid>
                             <Grid item xs={8} sx={{ mb: 4 }}>
                               <TextField
