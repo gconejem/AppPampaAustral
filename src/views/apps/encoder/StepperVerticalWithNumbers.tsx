@@ -76,6 +76,7 @@ interface Servicio {
 
 interface Muestra {
   numeroMuestra: string
+  numeroTarjeta: string
   tipoMaterial: string
   elemento: string
   item: string
@@ -144,6 +145,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
+    numeroTarjeta: '',
     tipoMaterial: '',
     elemento: '',
     item: '',
@@ -332,35 +334,53 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         return
       }
     } else if (activeStep === 1) {
-      // Validar que los campos requeridos de la muestra estén completos
-      if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
-        toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+      // Verificar si hay datos ingresados en la muestra actual
+      const hayDatosEnMuestra =
+        muestraActual.numeroTarjeta ||
+        muestraActual.tipoMaterial ||
+        muestraActual.elemento ||
+        muestraActual.item ||
+        muestraActual.grado ||
+        muestraActual.procedencia ||
+        muestraActual.cota1 ||
+        muestraActual.cota2 ||
+        muestraActual.ubicacionSector ||
+        muestraActual.observaciones ||
+        muestraActual.servicios.length > 0 ||
+        muestraActual.probetas.length > 0
 
-        return
+      // Solo validar si hay datos ingresados
+      if (hayDatosEnMuestra) {
+        // Validar que los campos requeridos de la muestra estén completos
+        if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
+          toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+
+          return
+        }
+
+        // Validar que haya al menos un servicio en la muestra
+        if (muestraActual.servicios.length === 0) {
+          toast.error('Por favor agregue al menos un servicio a la muestra')
+
+          return
+        }
+
+        // Si tiene vencimiento, validar que haya al menos una probeta
+        if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
+          toast.error('Por favor agregue al menos una probeta')
+
+          return
+        }
+
+        // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
+        const muestraConCotas = {
+          ...muestraActual,
+          cotas: muestraActual.cota1 && muestraActual.cota2
+            ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+            : muestraActual.cota1 || muestraActual.cota2 || ''
+        }
+        setMuestras([...muestras, muestraConCotas])
       }
-
-      // Validar que haya al menos un servicio en la muestra
-      if (muestraActual.servicios.length === 0) {
-        toast.error('Por favor agregue al menos un servicio a la muestra')
-
-        return
-      }
-
-      // Si tiene vencimiento, validar que haya al menos una probeta
-      if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
-        toast.error('Por favor agregue al menos una probeta')
-
-        return
-      }
-
-      // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
-      const muestraConCotas = {
-        ...muestraActual,
-        cotas: muestraActual.cota1 && muestraActual.cota2
-          ? `${muestraActual.cota1} - ${muestraActual.cota2}`
-          : muestraActual.cota1 || muestraActual.cota2 || ''
-      }
-      setMuestras([...muestras, muestraConCotas])
     }
 
     setActiveStep(prevActiveStep => prevActiveStep + 1)
@@ -400,6 +420,12 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Función para agregar una muestra y limpiar los campos
   const handleAddMuestra = () => {
+    // Validar que se haya ingresado el número de tarjeta
+    if (!muestraActual.numeroTarjeta || muestraActual.numeroTarjeta.trim() === '') {
+      toast.error('Por favor ingrese el N° Tarjeta')
+      return
+    }
+
     // Validar que los campos requeridos de la muestra estén completos
     if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
       toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
@@ -430,6 +456,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     // Limpiar los campos para agregar una nueva muestra
     setMuestraActual({
       numeroMuestra: '',
+      numeroTarjeta: '',
       tipoMaterial: '',
       elemento: '',
       item: '',
@@ -1207,6 +1234,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       fontWeight: 'bold'
                                     }}
                                   />
+                                  {muestra.numeroTarjeta && (
+                                    <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
+                                      N° Tarjeta: {muestra.numeroTarjeta}
+                                    </Typography>
+                                  )}
                                   <Typography variant='body2' color='text.secondary'>
                                     {muestra.tipoMaterial} - {muestra.elemento}
                                   </Typography>
@@ -1214,6 +1246,12 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                               </AccordionSummary>
                               <AccordionDetails>
                                 <Grid container spacing={2}>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      N° Tarjeta
+                                    </Typography>
+                                    <Typography variant='body1'>{muestra.numeroTarjeta || '-'}</Typography>
+                                  </Grid>
                                   <Grid item xs={6}>
                                     <Typography variant='body2' color='text.secondary'>
                                       Tipo Material
@@ -1363,6 +1401,19 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 fontWeight: 'bold',
                                 height: '24px'
                               }}
+                            />
+                            <TextField
+                              label='N° Tarjeta'
+                              size='small'
+                              value={muestraActual.numeroTarjeta}
+                              onChange={e =>
+                                setMuestraActual(prev => ({
+                                  ...prev,
+                                  numeroTarjeta: e.target.value
+                                }))
+                              }
+                              onClick={e => e.stopPropagation()}
+                              sx={{ width: '200px' }}
                             />
                           </Box>
                           <Box
