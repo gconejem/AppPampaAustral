@@ -27,6 +27,7 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import CircularProgress from '@mui/material/CircularProgress'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
@@ -39,6 +40,7 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
+import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -147,12 +149,46 @@ interface Filters {
 const columnHelper = createColumnHelper<RCM>()
 
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
-  // States
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+
+
+  // helper: convertir hex -> rgba
+  const hexToRgba = (hex: string, alpha = 0.36) => {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16)
+    const g = parseInt(h.substring(2, 4), 16)
+    const b = parseInt(h.substring(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
+  // devuelve información visual para un estado operativo
+  const getOperationalInfo = (s?: string) => {
+    if (!s) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
+    const key = String(s).toUpperCase().trim()
+    const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
+    const hex = st?.color ?? '#9E9E9E'
+    const bgcolor = hexToRgba(hex, 0.32) // fondo con más presencia
+    const border = hexToRgba(hex, 0.42) // borde sutil más visible
+    const colorText = '#7c7778' // texto siempre negro para mayor nitidez
+    return { hex, bgcolor, colorText, border }
+  }
+  // ...existing code...
+
+
+  // helper para usar color de OPERATIONAL_STATES en sx
+  const getOperationalSx = (s?: string) => {
+    if (!s) return { bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.75)' }
+    const key = String(s).toUpperCase().trim()
+    const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
+    const color = st?.color ?? '#9E9E9E'
+    // bg en formato #RRGGBBAA (20 hex = ~12% alpha)
+    const bg = `${color}20`
+    return { bgcolor: bg, color }
+  }
 
   // menu contextual por fila
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
@@ -167,14 +203,45 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [markDialogAction, setMarkDialogAction] = useState<string | null>(null)
   const [markDialogRowId, setMarkDialogRowId] = useState<number | null>(null)
   const [informeNumber, setInformeNumber] = useState<string>('')
-  // campos para "En Corrección"
+  // campos para "En Corrección" / EVENTO
   const [correctionMotivo, setCorrectionMotivo] = useState<string>('')
   const [correctionObservaciones, setCorrectionObservaciones] = useState<string>('')
+  // Tipo de Evento: 'INFO_PENDIENTE' | 'ERROR_INTERNO' | 'CORRECCION'
+  const [eventType, setEventType] = useState<string>('')
+
+  // ---- Helpers que dependen de `data` (dentro del componente) ----
+  const normalizeState = (s?: string) => (s ?? '').toString().toUpperCase().trim()
+
+  const getCurrentStateForRow = (rowId?: number | null) => {
+    if (rowId == null) return ''
+    const r = data.find(d => d.id === rowId)
+    if (!r) return ''
+    const s = r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
+    return normalizeState(s)
+  }
+
+  // Devuelve la lista completa de estados operativos.
+  // El estado actual aparece como disabled; si estamos en ENVIADO, no se muestran EVENTO ni CERRADO_OP.
+  const getStatesForRow = (rowId?: number | null) => {
+    const current = getCurrentStateForRow(rowId)
+
+    // Mapear todos los estados -> marcar el actual como disabled
+    let items = OPERATIONAL_STATES.map(st => ({ ...st, disabled: st.value === current }))
+
+    // Si el estado actual es ENVIADO, remover EVENTO y CERRADO_OP
+    // if (current === 'ENVIADO') {
+    //items = items.filter(s => s.value !== 'EVENTO' && s.value !== 'CERRADO_OP')
+    //}
+
+    return items
+  }
+  // ---------------------------------------------------
 
   // Historial dialog
   const [histDialogOpen, setHistDialogOpen] = useState(false)
   const [histRowId, setHistRowId] = useState<number | null>(null)
   const [histRows, setHistRows] = useState<any[]>([])
+  const [histLoading, setHistLoading] = useState(false)
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
@@ -186,14 +253,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleMarkAction = async (action: string, rowId: number | null) => {
-    // acciones que requieren diálogo: DIGITADO y EN_CORRECCION
-    if (action === 'DIGITADO' || action === 'EN_CORRECCION') {
+    // acciones que requieren diálogo: DIGITADO y EVENTO (EN_CORRECCION → EVENTO)
+    if (action === 'DIGITADO' || action === 'EVENTO') {
       setMarkDialogAction(action)
       setMarkDialogRowId(rowId)
       // reset campos del diálogo según acción
       setInformeNumber('')
       setCorrectionMotivo('')
       setCorrectionObservaciones('')
+      setEventType('')
       handleCloseMarkMenu()
       setMarkDialogOpen(true)
       return
@@ -226,8 +294,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         estAnterior: undefined,
         estNuevo: markDialogAction === 'DIGITADO' ? 'DIGITADO' : markDialogAction,
         informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null,
+        // nuevo campo para tipo de EVENTO
+        eventoTipo: markDialogAction === 'EVENTO' ? (eventType || null) : null,
         fechaAccion: new Date().toISOString(),
-        observacion: markDialogAction === 'EN_CORRECCION' ? correctionObservaciones ?? '' : ''
+        observacion: markDialogAction === 'EVENTO' ? correctionObservaciones ?? '' : ''
       }
 
       const res = await fetch(`/api/rcm/${markDialogRowId}/history`, {
@@ -264,6 +334,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setInformeNumber('')
     setCorrectionMotivo('')
     setCorrectionObservaciones('')
+    setEventType('')
   }
 
   const handleOpenRowMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
@@ -314,13 +385,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleHistorial = async (rowId: number | null) => {
-    console.log('handleHistorial called, rowId=', rowId)
     if (!rowId) {
       console.warn('handleHistorial: no rowId provided')
       return
     }
 
+    // UX: abrir diálogo de inmediato y mostrar spinner mientras carga
+    setHistRowId(rowId)
+    setHistRows([])
+    setHistDialogOpen(true)
+
+    // revisar caché primero
+    const cached = historyCache.get(rowId)
+    if (cached) {
+      setHistRows(cached)
+      setHistLoading(false)
+      return
+    }
+
+    setHistLoading(true)
     try {
+      // si tu API soporta limitar campos/registros, añade query params (?limit=20)
       const res = await fetch(`/api/rcm/${rowId}/history`)
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
@@ -328,17 +413,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         throw new Error('Error loading history')
       }
       const json = await res.json()
-      console.log('History API success, rows:', Array.isArray(json) ? json.length : json)
-      setHistRowId(rowId)
-      setHistRows(Array.isArray(json) ? json : [])
-      setHistDialogOpen(true)
+      const rows = Array.isArray(json) ? json : []
+      // guardar en caché para evitar refetchs posteriores
+      historyCache.set(rowId, rows)
+      setHistRows(rows)
     } catch (err) {
       console.error('Error loading history (fallback to mock):', err)
-      // fallback a mock para que puedas ver el dialog mientras arreglas la API
-      setHistRowId(rowId)
       setHistRows(getMockHistEntries(rowId))
-      setHistDialogOpen(true)
     } finally {
+      setHistLoading(false)
       handleCloseRowMenu()
     }
   }
@@ -523,11 +606,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       },
       {
         id: 'estOp',
-        header: 'EST. OP',
+        header: 'EST. OPERATIVO',
         accessorKey: 'estadoOperativo',
         cell: ({ row }) => {
-          const op = row.original.estadoOperativo ?? (Array.isArray(row.original.servicios) && row.original.servicios.length ? row.original.servicios[0].estado : null)
-          return <Chip label={op ?? '-'} size='small' color={statusColor(op)} />
+          const op =
+            row.original.estadoOperativo ??
+            (Array.isArray(row.original.servicios) && row.original.servicios.length
+              ? (row.original.servicios[0] as any).estado
+              : null)
+          const info = getOperationalInfo(op)
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Chip
+                label={op ?? '-'}
+                title={info.hex ?? ''}
+                size='small'
+                variant='filled'
+                sx={{
+                  bgcolor: info.bgcolor,
+                  color: info.colorText,
+                  border: `1px solid ${info.border}`,
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  borderRadius: 2,
+                  px: 1,
+                  py: 0.4,
+                  minWidth: 84,
+                  justifyContent: 'center'
+                }}
+              />
+            </Box>
+          )
         }
       },
       {
@@ -818,7 +928,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
 
-      {/* Menu "Marcar" con opciones (popup) */}
+      {/* Menu "Marcar" dinámico: sólo el siguiente estado permitido */}
       <Menu
         anchorEl={markAnchorEl}
         open={Boolean(markAnchorEl)}
@@ -826,12 +936,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleMarkAction('ENVIADO_DIGITACION', markRowId)}>Enviado a Digitación</MenuItem>
-        <MenuItem onClick={() => handleMarkAction('DIGITADO', markRowId)}>Digitado</MenuItem>
-        <MenuItem onClick={() => handleMarkAction('INFORME_OK', markRowId)}>Informe OK</MenuItem>
-        <MenuItem onClick={() => handleMarkAction('EN_CORRECCION', markRowId)}>En Corrección</MenuItem>
-        <MenuItem onClick={() => handleMarkAction('FIRMADO', markRowId)}>Firmado</MenuItem>
-        <MenuItem onClick={() => handleMarkAction('ENVIADO_CLIENTE', markRowId)}>Enviado a Cliente</MenuItem>
+        {(() => {
+          const opts = getStatesForRow(markRowId)
+          if (!opts || opts.length === 0) return <MenuItem disabled>No hay acciones disponibles</MenuItem>
+          return opts.map(opt => (
+            <MenuItem
+              key={opt.value}
+              disabled={Boolean((opt as any).disabled)}
+              onClick={() => {
+                // no ejecutar acción si es el estado actual (disabled)
+                if ((opt as any).disabled) return
+                handleMarkAction(opt.value, markRowId)
+              }}
+            >
+              {opt.label}
+            </MenuItem>
+          ))
+        })()}
       </Menu>
 
       {/* Dialog: Form "Estado Muestra" para acciones (Digitado, En Corrección, ...) */}
@@ -857,29 +978,44 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </Box>
           )}
 
-          {markDialogAction === 'EN_CORRECCION' && (
+          {markDialogAction === 'EVENTO' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <FormControl fullWidth size='small'>
                   <InputLabel id='correction-action-label'>Estado</InputLabel>
                   <Select
                     labelId='correction-action-label'
-                    value={'EN_CORRECCION'}
+                    value={'EVENTO'}
                     label='Estado'
                     disabled
                   >
-                    <MenuItemMUI value='EN_CORRECCION'>En Corrección</MenuItemMUI>
+                    <MenuItemMUI value='EVENTO'>Evento</MenuItemMUI>
                   </Select>
                 </FormControl>
 
-                <TextField
-                  label='Motivo'
-                  value={correctionMotivo}
-                  onChange={e => setCorrectionMotivo(e.target.value)}
-                  size='small'
-                  fullWidth
-                />
+                <FormControl fullWidth size='small'>
+                  <InputLabel id='event-type-label'>Tipo</InputLabel>
+                  <Select
+                    labelId='event-type-label'
+                    value={eventType}
+                    label='Tipo'
+                    onChange={e => setEventType(String(e.target.value))}
+                    size='small'
+                  >
+                    <MenuItemMUI value='INFO_PENDIENTE'>Información Pendiente</MenuItemMUI>
+                    <MenuItemMUI value='ERROR_INTERNO'>Error Interno</MenuItemMUI>
+                    <MenuItemMUI value='CORRECCION'>Corrección</MenuItemMUI>
+                  </Select>
+                </FormControl>
               </Box>
+
+              <TextField
+                label='Motivo'
+                value={correctionMotivo}
+                onChange={e => setCorrectionMotivo(e.target.value)}
+                size='small'
+                fullWidth
+              />
 
               <TextField
                 label='Observaciones'
@@ -918,47 +1054,79 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
         <DialogTitle>Historial</DialogTitle>
         <DialogContent>
-          <TableContainer component={Paper} variant='outlined'>
-            <Table size='small'>
-              <TableHead>
-                <TableRow>
-                  <TableCell>REGISTRO</TableCell>
-                  <TableCell>FUNCIONARIO</TableCell>
-                  <TableCell>TIPO</TableCell>
-                  <TableCell>EST. ANTERIOR</TableCell>
-                  <TableCell>EST. NUEVO</TableCell>
-                  <TableCell>INFORME</TableCell>
-                  <TableCell>FECHA ACCIÓN</TableCell>
-                  <TableCell>OBSERVACIÓN</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {histRows.map((h, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{h.registro}</TableCell>
-                    <TableCell>{h.funcionario}</TableCell>
-                    <TableCell>{h.tipo}</TableCell>
-                    <TableCell>
-                      <Chip label={h.estAnterior} size='small' color={statusColor(h.estAnterior)} />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={h.estNuevo} size='small' color={statusColor(h.estNuevo)} />
-                    </TableCell>
-                    <TableCell>{h.informe}</TableCell>
-                    <TableCell>{h.fechaAccion}</TableCell>
-                    <TableCell>{h.observacion}</TableCell>
-                  </TableRow>
-                ))}
-                {histRows.length === 0 && (
+          {histLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant='outlined'>
+              <Table size='small'>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={8} align='center' sx={{ py: 4 }}>
-                      No hay registros
-                    </TableCell>
+                    <TableCell>REGISTRO</TableCell>
+                    <TableCell>FUNCIONARIO</TableCell>
+                    <TableCell>TIPO</TableCell>
+                    <TableCell>EST. ANTERIOR</TableCell>
+                    <TableCell>EST. NUEVO</TableCell>
+                    <TableCell>INFORME</TableCell>
+                    <TableCell>FECHA ACCIÓN</TableCell>
+                    <TableCell>OBSERVACIÓN</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {histRows.map((h, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{h.registro}</TableCell>
+                      <TableCell>{h.funcionario}</TableCell>
+                      <TableCell>{h.tipo}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={h.estAnterior ?? '-'}
+                          size='small'
+                          variant='filled'
+                          sx={{
+                            ...getOperationalSx(h.estAnterior),
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            borderRadius: 2,
+                            px: 1,
+                            py: 0.4
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={h.estNuevo ?? '-'}
+                          size='small'
+                          variant='filled'
+                          sx={{
+                            ...getOperationalSx(h.estNuevo),
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            borderRadius: 2,
+                            px: 1,
+                            py: 0.4
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{h.informe}</TableCell>
+                      <TableCell>{h.fechaAccion}</TableCell>
+                      <TableCell>{h.observacion}</TableCell>
+                    </TableRow>
+                  ))}
+                  {histRows.length === 0 && !histLoading && (
+                    <TableRow>
+                      <TableCell colSpan={8} align='center' sx={{ py: 4 }}>
+                        No hay registros
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseHistDialog}>Cerrar</Button>
@@ -967,6 +1135,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       </Dialog>
     </Card>
   )
+
 }
 
+// Simple in-memory cache para historiales (persiste durante la sesión del proceso)
+const historyCache = new Map<number, any[]>()
+
 export default UserListTable2
+
+
