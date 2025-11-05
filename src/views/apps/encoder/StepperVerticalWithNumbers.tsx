@@ -388,7 +388,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         }
 
         // Generar número de muestra automáticamente
-        const numeroMuestra = `Muestra-${muestras.length + 1}`
+        const numeroMuestra = `${numeroRcm}-${muestras.length + 1}`
 
         // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
         const muestraConCotas = {
@@ -464,7 +464,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     }
 
     // Generar número de muestra automáticamente
-    const numeroMuestra = `Muestra-${muestras.length + 1}`
+    const numeroMuestra = `${numeroRcm}-${muestras.length + 1}`
 
     // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
     const muestraConCotas = {
@@ -1249,7 +1249,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     Muestra #{idx + 1}
                                   </Typography>
                                   <Chip
-                                    label={muestra.numeroMuestra || `Muestra-${idx + 1}`}
+                                    label={muestra.numeroMuestra || `${numeroRcm}-${idx + 1}`}
                                     sx={{
                                       backgroundColor: '#e0e0e0',
                                       color: '#424242',
@@ -1285,7 +1285,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                               Muestra #{muestras.length + 1}
                             </Typography>
                             <Chip
-                              label='Nueva Muestra'
+                              label={`${numeroRcm}-${muestras.length + 1}`}
                               sx={{
                                 backgroundColor: '#e0e0e0',
                                 color: '#424242',
