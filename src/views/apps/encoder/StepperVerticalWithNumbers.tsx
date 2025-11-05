@@ -123,6 +123,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
 
+  // Estado para el número de RCM
+  const [numeroRcm, setNumeroRcm] = useState<string>('')
+
   // Estados para el paso 1
   const [fechaCodificacion, setFechaCodificacion] = useState<string>(new Date().toISOString().split('T')[0])
   const [fechaMuestreo, setFechaMuestreo] = useState<string>(new Date().toISOString().split('T')[0])
@@ -184,6 +187,18 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [productsPage, setProductsPage] = useState(0)
   const [totalProductos, setTotalProductos] = useState(0)
   const ITEMS_PER_PAGE = 10
+
+  // Obtener el próximo número de RCM al cargar el componente
+  useEffect(() => {
+    fetch('/api/rcm/proximo-numero')
+      .then(res => res.json())
+      .then(data => {
+        setNumeroRcm(data.numeroRcm)
+      })
+      .catch(error => {
+        console.error('Error al obtener próximo número de RCM:', error)
+      })
+  }, [])
 
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
@@ -712,7 +727,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
       const data = await response.json()
 
-      toast.success('RCM guardado exitosamente')
+      toast.success(`RCM ${data.numeroRcm} guardado exitosamente`)
       router.push('/en/apps/rcmnavigator')
     } catch (error) {
       console.error('Error:', error)
@@ -738,7 +753,6 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   return (
     <Card>
-      <CardHeader title={`Codificación de ${tipoOT || 'Servicio'}`} />
       <CardContent>
         <StepperWrapper>
           <Stepper activeStep={activeStep} orientation='vertical'>
@@ -1247,139 +1261,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       N° Tarjeta: {muestra.numeroTarjeta}
                                     </Typography>
                                   )}
-                                  <Typography variant='body2' color='text.secondary'>
-                                    {muestra.tipoMaterial} - {muestra.elemento}
-                                  </Typography>
                                 </Box>
                               </AccordionSummary>
-                              <AccordionDetails>
-                                <Grid container spacing={2}>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      N° Tarjeta
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.numeroTarjeta || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Tipo Material
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.tipoMaterial || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Elemento
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.elemento || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Ítem
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.item || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Grado
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.grado || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Procedencia
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.procedencia || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Cotas
-                                    </Typography>
-                                    <Typography variant='body1'>
-                                      {muestra.cota1 && muestra.cota2
-                                        ? `${muestra.cota1} - ${muestra.cota2}`
-                                        : muestra.cota1 || muestra.cota2 || '-'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Ubicación / Sector
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.ubicacionSector || '-'}</Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      Vencimiento
-                                    </Typography>
-                                    <Typography variant='body1'>{muestra.vencimiento ? 'Sí' : 'No'}</Typography>
-                                  </Grid>
-                                  {muestra.observaciones && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='body2' color='text.secondary'>
-                                        Observaciones
-                                      </Typography>
-                                      <Typography variant='body1'>{muestra.observaciones}</Typography>
-                                    </Grid>
-                                  )}
-                                  <Grid item xs={12}>
-                                    <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-                                      Servicios ({muestra.servicios.length})
-                                    </Typography>
-                                    <TableContainer component={Paper} variant='outlined'>
-                                      <Table size='small'>
-                                        <TableHead>
-                                          <TableRow>
-                                            <TableCell>Código</TableCell>
-                                            <TableCell>Nombre</TableCell>
-                                            <TableCell>Cantidad</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {muestra.servicios.map((serv, servIdx) => (
-                                            <TableRow key={servIdx}>
-                                              <TableCell>{serv.codigo}</TableCell>
-                                              <TableCell>{serv.nombre}</TableCell>
-                                              <TableCell>{serv.cantidad}</TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
-                                  </Grid>
-                                  {muestra.probetas && muestra.probetas.length > 0 && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-                                        Probetas ({muestra.probetas.length})
-                                      </Typography>
-                                      <TableContainer component={Paper} variant='outlined'>
-                                        <Table size='small'>
-                                          <TableHead>
-                                            <TableRow>
-                                              <TableCell>Número</TableCell>
-                                              <TableCell>Fecha Confección</TableCell>
-                                              <TableCell>Cantidad</TableCell>
-                                              <TableCell>Días</TableCell>
-                                              <TableCell>Fecha Vencimiento</TableCell>
-                                              <TableCell>Estado</TableCell>
-                                            </TableRow>
-                                          </TableHead>
-                                          <TableBody>
-                                            {muestra.probetas.map((probeta, probIdx) => (
-                                              <TableRow key={probIdx}>
-                                                <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
-                                                <TableCell>{probeta.cantidad}</TableCell>
-                                                <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                                <TableCell>{probeta.estado}</TableCell>
-                                              </TableRow>
-                                            ))}
-                                          </TableBody>
-                                        </Table>
-                                      </TableContainer>
-                                    </Grid>
-                                  )}
-                                </Grid>
-                              </AccordionDetails>
                             </Accordion>
                           ))}
                         </Box>

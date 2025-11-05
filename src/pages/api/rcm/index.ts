@@ -56,16 +56,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return acc
       }, {})
 
-      // Generar número de RCM único
+      // Generar número de RCM único (correlativo numérico)
       const ultimoRCM = await prisma.rCM.findFirst({
         orderBy: {
-          numeroRcm: 'desc'
+          id: 'desc'
+        },
+        select: {
+          numeroRcm: true
         }
       })
 
-      const numeroBase = ultimoRCM ? parseInt(ultimoRCM.numeroRcm.split('-')[0]) : 0
-      const nuevoNumero = (numeroBase + 1).toString().padStart(6, '0')
-      const numeroRcm = `${nuevoNumero}-${new Date().getFullYear()}`
+      let numeroRcm = '1'
+      if (ultimoRCM && ultimoRCM.numeroRcm) {
+        const ultimoNumero = parseInt(ultimoRCM.numeroRcm)
+        numeroRcm = (ultimoNumero + 1).toString()
+      }
 
       // Crear el RCM
       const rcm = await prisma.rCM.create({
@@ -94,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           muestras: {
             create: muestras.map((muestra: Muestra, index: number) => ({
-              numeroMuestra: muestra.numeroMuestra || `${nuevoNumero}-${(index + 1).toString().padStart(2, '0')}`,
+              numeroMuestra: muestra.numeroMuestra || `${numeroRcm}-${(index + 1).toString().padStart(2, '0')}`,
               tipoMaterial: muestra.tipoMaterial,
               elemento: muestra.elemento,
               item: muestra.item,

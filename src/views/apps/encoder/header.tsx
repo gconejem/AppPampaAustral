@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { Grid, Card, CardContent, Typography, Button, Chip, Skeleton } from '@mui/material'
 
@@ -9,6 +9,21 @@ interface HeaderProps {
 }
 
 const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
+  // Estado para el número de RCM
+  const [numeroRcm, setNumeroRcm] = useState<string>('')
+
+  // Obtener el próximo número de RCM al cargar el componente
+  useEffect(() => {
+    fetch('/api/rcm/proximo-numero')
+      .then(res => res.json())
+      .then(data => {
+        setNumeroRcm(data.numeroRcm)
+      })
+      .catch(error => {
+        console.error('Error al obtener próximo número de RCM:', error)
+      })
+  }, [])
+
   // Si está cargando, mostrar esqueletos
   if (loading) {
     return (
@@ -77,7 +92,7 @@ const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
               RCM
             </Typography>
             <Chip
-              label={otData.clave || 'Sin OT'}
+              label={numeroRcm || 'Cargando...'}
               sx={{ backgroundColor: '#e0e0e0', color: '#424242', fontWeight: 'bold' }}
             />
             <Chip label='Codificando' sx={{ backgroundColor: '#e3f2fd', color: '#1976d2', fontWeight: 'bold' }} />
