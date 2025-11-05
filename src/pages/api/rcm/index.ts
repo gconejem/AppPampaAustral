@@ -34,7 +34,7 @@ interface Muestra {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { fechaCodificacion, fechaMuestreo, fechaIngreso, servicios, muestras, observaciones, clienteId, obraId } = req.body
+      const { fechaCodificacion, fechaMuestreo, fechaIngreso, servicios, muestras, observaciones, clienteId, obraId, ordenTrabajoId } = req.body
 
       // Obtener los productos por su código
       const codigosServicios = [
@@ -83,6 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           observaciones,
           clienteId: clienteId || null,
           obraId: obraId || null,
+          ordenTrabajoId: ordenTrabajoId || null,
           servicios: {
             create: servicios
               .filter((servicio: Servicio) => productosMap[servicio.codigo]) // Only create services that have a matching product
