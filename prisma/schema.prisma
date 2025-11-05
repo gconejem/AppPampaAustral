@@ -559,6 +559,7 @@ model OrdenTrabajo {
   estadoOT            EstadoOT?            @relation(fields: [estadoOTId], references: [id])
   retiroProbeta       RetiroProbeta?
   testigos            Testigos?
+  RCM                 RCM[]
 
   @@index([tipoOrdenTrabajoId])
   @@index([estadoOTId])
@@ -673,10 +674,12 @@ model RCM {
   updatedAt         DateTime      @updatedAt
   clienteId         Int?
   obraId            Int?
+  ordenTrabajoId    String?
   observaciones     String?
   muestras          Muestra[]
   cliente           Cliente?      @relation(fields: [clienteId], references: [clienteId])
   obra              Obra?         @relation(fields: [obraId], references: [obraId])
+  ordenTrabajo      OrdenTrabajo? @relation(fields: [ordenTrabajoId], references: [id])
   servicios         ServicioRCM[]
   RCMHistory        RCMHistory[]
 }
