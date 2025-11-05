@@ -272,22 +272,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setMarkRowId(null)
   }
 
-  const handleMarkAction = async (action: string, rowId: number | null) => {
-    // acciones que requieren diálogo: DIGITADO, EVENTO y CERRADO_OP
+  const openMarkDialogForRow = (action: string, rowId?: number | null) => {
+    setMarkDialogAction(action)
+    setMarkDialogRowId(rowId ?? null) // importante: setear el id aquí
+    // reset campos del diálogo
+    setInformeNumber('')
+    setCorrectionMotivo('')
+    setCorrectionObservaciones('')
+    setEventType('')
+    handleCloseMarkMenu()
+    setMarkDialogOpen(true)
+  }
+
+  const handleMarkAction = async (action: string, rowId?: number | null) => {
+    // acciones que requieren diálogo
     if (action === 'DIGITADO' || action === 'EVENTO' || action === 'CERRADO_OP') {
-      setMarkDialogAction(action)
-      setMarkDialogRowId(rowId)
-      // reset campos del diálogo según acción
-      setInformeNumber('')
-      setCorrectionMotivo('')
-      setCorrectionObservaciones('')
-      setEventType('')
-      handleCloseMarkMenu()
-      setMarkDialogOpen(true)
+      // si no se pasó rowId, intenta usar el state existente (evita error)
+      openMarkDialogForRow(action, rowId ?? markDialogRowId ?? null)
       return
     }
 
-    // Acciones que se ejecutan inmediatamente (placeholder - ajustar API)
+    // acciones que se ejecutan inmediatamente (placeholder)
     try {
       console.log('Marcar acción inmediata', action, 'fila', rowId)
     } catch (err) {
@@ -299,48 +304,49 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const handleSaveMarkDialog = async () => {
     try {
-      if (markDialogRowId == null) return
+      const rcmId = markDialogRowId
+      if (!rcmId) throw new Error('No RCM selected')
 
-      // ejemplo: actualizar estado en RCM (si tu API tiene endpoint para marcar, llama aquí)
-      // await fetch(`/api/rcm/${markDialogRowId}/marcar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: markDialogAction, informe: informeNumber, motivo: correctionMotivo, observaciones: correctionObservaciones }) })
-
-      // Crear entrada en historial
       const payload: any = {
-        tipo: markDialogAction === 'DIGITADO' ? 'Ope' : 'Adm',
-        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : 'Usuario',
-        estAnterior: undefined,
-        estNuevo: markDialogAction === 'DIGITADO' ? 'DIGITADO' : markDialogAction,
-        informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null,
-        // nuevo campo para tipo de EVENTO/CERRADO_OP
-        eventoTipo: (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') ? (eventType || null) : null,
-        fechaAccion: new Date().toISOString(),
-        observacion: (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') ? correctionObservaciones ?? '' : ''
+        tipo: 'Ope', // <- forzar 'Ope' por defecto desde esta pantalla
+        tipoEstado: markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP' ? eventType || markDialogAction : markDialogAction,
+        motivo: correctionMotivo ?? null,
+        observacion: correctionObservaciones ?? null,
+        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : null,
+        estPrev: getCurrentStateForRow(markDialogRowId) ?? null,
+        estNuevo: markDialogAction ?? null,
+        informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null
       }
 
-      const res = await fetch(`/api/rcm/${markDialogRowId}/history`, {
+      const res = await fetch(`/api/rcm/${rcmId}/history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
 
-      if (!res.ok) throw new Error('Error saving history')
-
-      // refrescar historial si está abierto para la misma fila
-      if (histDialogOpen && histRowId === markDialogRowId) {
-        const r = await fetch(`/api/rcm/${markDialogRowId}/history`)
-        if (r.ok) setHistRows(await r.json())
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        // eslint-disable-next-line no-console
+        console.error('Failed to save RCMHistory:', res.status, txt)
+        throw new Error('Error saving history')
       }
 
-      // opcional: refrescar listado principal (re-fetch)
-    } catch (err) {
-      console.error('Error saving mark & history', err)
-    } finally {
+      // success: cerrar diálogo y refrescar UI
       setMarkDialogOpen(false)
-      setMarkDialogAction(null)
-      setMarkDialogRowId(null)
-      setInformeNumber('')
-      setCorrectionMotivo('')
-      setCorrectionObservaciones('')
+      // intentar llamar a una función de recarga si existe, si no recargar la página
+      try {
+        if (typeof (window as any).__REFRESH_RCMS__ === 'function') {
+          (window as any).__REFRESH_RCMS__()
+        } else {
+          // recarga simple si no hay refetch disponible
+          window.location.reload()
+        }
+      } catch (e) {
+        window.location.reload()
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('handleSaveMarkDialog error', err)
     }
   }
 
@@ -476,7 +482,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
         const ordenMap: Record<string | number, any> = {}
         if (ordenIds.length) {
-          // intentar endpoint batch primero (mejor rendimiento si existe)
           try {
             const q = ordenIds.map(encodeURIComponent).join(',')
             const br = await fetch(`/api/ordenes?ids=${q}`)
@@ -489,7 +494,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     const key = o.id ?? o._id ?? o.key ?? o.ordenTrabajoId ?? o.correlativ ?? o.correlativo
                     if (key) {
                       ordenMap[String(key)] = o
-                      // indexar también por id string y por correl (si existe) para mayor robustez
                       if (o.id) ordenMap[String(o.id)] = o
                       const correl = o.correlativ ?? o.correlativo ?? o.numero ?? o.nro
                       if (correl) ordenMap[String(correl)] = o
@@ -1176,7 +1180,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               onClick={() => {
                 // no ejecutar acción si es el estado actual (disabled)
                 if ((opt as any).disabled) return
-                handleMarkAction(opt.value, markDialogRowId)
+                // usar el id de la fila donde se abrió el menu (markRowId), no markDialogRowId
+                handleMarkAction(opt.value, markRowId)
               }}
             >
               {opt.label}

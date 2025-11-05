@@ -853,6 +853,8 @@ model RCMHistory {
   observacion String?
   createdAt   DateTime  @default(now())
   aplicadoA   String?
+  tipoEstado  String?   @map("tipo_estado")
+  motivo      String?   @map("motivo")
 
   @@index([rcmId])
 }

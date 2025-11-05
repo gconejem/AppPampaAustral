@@ -1,86 +1,85 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { format } from 'date-fns'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+/**
+ * Use a singleton PrismaClient to avoid multiple instances in dev (HMR)
+ */
+const prisma: PrismaClient = (global as any).prisma || new PrismaClient()
+    ; (global as any).prisma = prisma
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { id } = req.query
+    if (!id) return res.status(400).json({ error: 'Missing rcm id' })
     const rcmId = Number(id)
-    if (Number.isNaN(rcmId)) return res.status(400).json({ error: 'Invalid RCM id' })
+    if (Number.isNaN(rcmId)) return res.status(400).json({ error: 'Invalid rcm id' })
 
     try {
-        const historyClient = (prisma as any).rCMHistory ?? (prisma as any).rcmHistory
-        if (!historyClient) return res.status(500).json({ error: 'History model not available on Prisma client' })
-
         if (req.method === 'GET') {
-            const rows = await historyClient.findMany({
+            // devolver historial para el RCM
+            const rows = await prisma.rCMHistory.findMany({
                 where: { rcmId },
-                orderBy: { createdAt: 'desc' }
+                orderBy: { id: 'asc' }
             })
-
-            const mapped = rows.map((r: any) => ({
-                id: r.id,
-                registro: r.createdAt ? format(new Date(r.createdAt), 'dd/MM/yyyy-HH:mm') : null,
-                funcionario: r.funcionario ?? '',
-                tipo: r.tipo ?? '',
-                estAnterior: r.estAnterior ?? '',
-                estNuevo: r.estNuevo ?? '',
-                informe: r.informe ?? null,
-                aplicadoA: r.aplicadoA ?? null, // <- nuevo campo
-                fechaAccion: r.fechaAccion ? format(new Date(r.fechaAccion), 'dd/MM/yyyy') : '',
-                observacion: r.observacion ?? ''
-            }))
-
-            return res.status(200).json(mapped)
+            return res.status(200).json(rows)
         }
 
         if (req.method === 'POST') {
             const {
                 tipo,
+                tipoEstado,
+                motivo,
+                observacion,
+                usuario,
                 funcionario,
-                estAnterior,
+                estPrev,
                 estNuevo,
-                informe,
-                aplicadoA, // <- aceptar aplicadoA en body
-                fechaAccion,
-                observacion
-            } = req.body
+                informe
+            } = req.body ?? {}
 
-            if (!tipo || !estNuevo) return res.status(400).json({ error: 'tipo and estNuevo are required' })
+            const finalTipo = typeof tipo === 'string' && tipo.trim() ? tipo : 'Ope'
+            const finalFuncionario =
+                (typeof funcionario === 'string' && funcionario.trim())
+                    ? funcionario
+                    : (typeof usuario === 'string' && usuario.trim())
+                        ? usuario
+                        : 'Usuario'
 
-            const created = await historyClient.create({
+            const created = await prisma.rCMHistory.create({
                 data: {
                     rcmId,
-                    tipo,
-                    funcionario: funcionario ?? null,
-                    estAnterior: estAnterior ?? null,
-                    estNuevo,
-                    informe: informe ? Number(informe) : null,
-                    aplicadoA: aplicadoA ?? null, // <- guardar aplicadoA
-                    fechaAccion: fechaAccion ? new Date(fechaAccion) : null,
-                    observacion: observacion ?? null
+                    ...(typeof finalTipo === 'string' ? { tipo: finalTipo } : {}),
+                    funcionario: finalFuncionario,
+                    fechaAccion: new Date(),
+                    estAnterior: estPrev ?? null,
+                    estNuevo: estNuevo ?? null,
+                    observacion: observacion ?? motivo ?? null,
+                    informe: informe ?? null,
+                    ...(typeof tipoEstado === 'string' ? { tipoEstado } : {}),
+                    ...(typeof motivo === 'string' ? { motivo } : {})
                 }
             })
 
-            const mapped = {
-                id: created.id,
-                registro: created.createdAt ? format(new Date(created.createdAt), 'dd/MM/yyyy-HH:mm') : null,
-                funcionario: created.funcionario ?? '',
-                tipo: created.tipo ?? '',
-                estAnterior: created.estAnterior ?? '',
-                estNuevo: created.estNuevo ?? '',
-                informe: created.informe ?? null,
-                aplicadoA: created.aplicadoA ?? null, // <- devolver aplicadoA
-                fechaAccion: created.fechaAccion ? format(new Date(created.fechaAccion), 'dd/MM/yyyy') : '',
-                observacion: created.observacion ?? ''
+            // actualizar estado operativo en RCM si corresponde (no fatal)
+            if (estNuevo) {
+                try {
+                    await prisma.rCM.update({
+                        where: { id: rcmId },
+                        data: { estadoOperativo: estNuevo }
+                    })
+                } catch (e) {
+                    // no bloquear la creación del historial si falla la actualización del RCM
+                    // eslint-disable-next-line no-console
+                    console.warn('Warning: failed to update RCM.estadoOperativo', e)
+                }
             }
 
-            return res.status(201).json(mapped)
+            return res.status(201).json(created)
         }
 
-        res.setHeader('Allow', ['GET', 'POST'])
-        return res.status(405).end(`Method ${req.method} Not Allowed`)
+        return res.status(405).json({ error: 'Method not allowed' })
     } catch (err) {
-        console.error('RCM history API error', err)
-        return res.status(500).json({ error: 'server error' })
+        // eslint-disable-next-line no-console
+        console.error('Error creating/reading RCMHistory', err)
+        return res.status(500).json({ error: 'Server error', details: String(err) })
     }
 }
