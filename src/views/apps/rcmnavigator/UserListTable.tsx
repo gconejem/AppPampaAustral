@@ -639,6 +639,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             ot: otCorrel,
             ordenTrabajo: ordenTrabajoNormalized,
             otDisplay,
+            // Normalizar y asegurar estadoAdministrativo en cada fila (fallbacks comunes)
+            estadoAdministrativo:
+              r.estadoAdministrativo ??
+              r.estado_administrativo ??
+              r.estadoAdm ??
+              r.estado_adm ??
+              r.administrativo ??
+              '',
             estadoOperativo:
               r.estadoOperativo ??
               (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ??
@@ -819,7 +827,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       },
       {
         id: 'estOp',
-        header: 'EST. OPERATIVO',
+        header: 'Est. Operativo',
         accessorKey: 'estadoOperativo',
         cell: ({ row }) => {
           const op =
@@ -855,7 +863,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       },
       {
         id: 'estAd',
-        header: 'EST. AD.',
+        header: 'Est. Administrativo',
         accessorKey: 'estadoAdministrativo',
         cell: ({ row }) => <Chip label={row.original.estadoAdministrativo ?? '-'} size='small' color={statusColor(row.original.estadoAdministrativo)} />
       },
@@ -1168,7 +1176,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               onClick={() => {
                 // no ejecutar acción si es el estado actual (disabled)
                 if ((opt as any).disabled) return
-                handleMarkAction(opt.value, markRowId)
+                handleMarkAction(opt.value, markDialogRowId)
               }}
             >
               {opt.label}

@@ -664,24 +664,25 @@ model RetiroProbeta {
 }
 
 model RCM {
-  id                Int           @id @default(autoincrement())
-  numeroRcm         String        @unique
-  fechaCodificacion DateTime
-  fechaMuestreo     DateTime
-  fechaIngreso      DateTime
-  estado            String        @default("ACTIVO")
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  clienteId         Int?
-  obraId            Int?
-  ordenTrabajoId    String?
-  observaciones     String?
-  muestras          Muestra[]
-  cliente           Cliente?      @relation(fields: [clienteId], references: [clienteId])
-  obra              Obra?         @relation(fields: [obraId], references: [obraId])
-  ordenTrabajo      OrdenTrabajo? @relation(fields: [ordenTrabajoId], references: [id])
-  servicios         ServicioRCM[]
-  RCMHistory        RCMHistory[]
+  id                   Int           @id @default(autoincrement())
+  numeroRcm            String        @unique
+  fechaCodificacion    DateTime
+  fechaMuestreo        DateTime
+  fechaIngreso         DateTime
+  estadoOperativo      String?       @map("estado_operativo")
+  estadoAdministrativo String?       @map("estado_administrativo")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  clienteId            Int?
+  obraId               Int?          @map("obraId")
+  ordenTrabajoId       String?       @map("ordenTrabajoId")
+  observaciones        String?
+  muestras             Muestra[]
+  cliente              Cliente?      @relation(fields: [clienteId], references: [clienteId])
+  obra                 Obra?         @relation(fields: [obraId], references: [obraId])
+  ordenTrabajo         OrdenTrabajo? @relation(fields: [ordenTrabajoId], references: [id])
+  servicios            ServicioRCM[]
+  RCMHistory           RCMHistory[]
 }
 
 model ServicioRCM {
