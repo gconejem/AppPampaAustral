@@ -220,18 +220,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return normalizeState(s)
   }
 
-  // Devuelve la lista completa de estados operativos.
-  // El estado actual aparece como disabled; si estamos en ENVIADO, no se muestran EVENTO ni CERRADO_OP.
+  // Devuelve los estados para el popup "marcar"
+  // Reglas:
+  // 1) Si el estado actual es EVENTO o CERRADO_OP -> mostrar todos los estados (el actual disabled)
+  // 2) En cualquier otro caso -> mostrar: estado actual (disabled), el siguiente inmediato (si existe),
+  //    y además EVENTO y CERRADO_OP (sin duplicados)
   const getStatesForRow = (rowId?: number | null) => {
     const current = getCurrentStateForRow(rowId)
 
-    // Mapear todos los estados -> marcar el actual como disabled
-    let items = OPERATIONAL_STATES.map(st => ({ ...st, disabled: st.value === current }))
+    // helper para buscar item por value
+    const findState = (v?: string) => OPERATIONAL_STATES.find(s => s.value === v)
 
-    // Si el estado actual es ENVIADO, remover EVENTO y CERRADO_OP
-    // if (current === 'ENVIADO') {
-    //items = items.filter(s => s.value !== 'EVENTO' && s.value !== 'CERRADO_OP')
-    //}
+    // Caso 1: si estamos en EVENTO o CERRADO_OP, mostrar todos (marcar el actual como disabled)
+    if (current === 'EVENTO' || current === 'CERRADO_OP') {
+      return OPERATIONAL_STATES.map(st => ({ ...st, disabled: st.value === current }))
+    }
+
+    // Caso 2: mostrar current (disabled), siguiente inmediato (si existe), y EVENTO + CERRADO_OP
+    const idx = OPERATIONAL_STATES.findIndex(st => st.value === current)
+    const currentItem = findState(current)
+    const nextItem = OPERATIONAL_STATES[idx + 1]
+
+    const evento = findState('EVENTO')
+    const cerrado = findState('CERRADO_OP')
+
+    const items: Array<typeof OPERATIONAL_STATES[number] & { disabled?: boolean }> = []
+
+    if (currentItem) items.push({ ...currentItem, disabled: true })
+    if (nextItem) items.push({ ...nextItem, disabled: false })
+
+    // añadir EVENTO y CERRADO_OP si existen y no están ya en la lista
+    if (evento && !items.some(i => i.value === evento.value)) items.push({ ...evento, disabled: false })
+    if (cerrado && !items.some(i => i.value === cerrado.value)) items.push({ ...cerrado, disabled: false })
 
     return items
   }
@@ -253,8 +273,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleMarkAction = async (action: string, rowId: number | null) => {
-    // acciones que requieren diálogo: DIGITADO y EVENTO (EN_CORRECCION → EVENTO)
-    if (action === 'DIGITADO' || action === 'EVENTO') {
+    // acciones que requieren diálogo: DIGITADO, EVENTO y CERRADO_OP
+    if (action === 'DIGITADO' || action === 'EVENTO' || action === 'CERRADO_OP') {
       setMarkDialogAction(action)
       setMarkDialogRowId(rowId)
       // reset campos del diálogo según acción
@@ -270,13 +290,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     // Acciones que se ejecutan inmediatamente (placeholder - ajustar API)
     try {
       console.log('Marcar acción inmediata', action, 'fila', rowId)
-      // ejemplo de llamada:
-      // await fetch(`/api/rcm/${rowId}/marcar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) })
     } catch (err) {
       console.error('Error marcar', err)
     } finally {
       handleCloseMarkMenu()
-      // opcional: refrescar datos
     }
   }
 
@@ -294,10 +311,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         estAnterior: undefined,
         estNuevo: markDialogAction === 'DIGITADO' ? 'DIGITADO' : markDialogAction,
         informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null,
-        // nuevo campo para tipo de EVENTO
-        eventoTipo: markDialogAction === 'EVENTO' ? (eventType || null) : null,
+        // nuevo campo para tipo de EVENTO/CERRADO_OP
+        eventoTipo: (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') ? (eventType || null) : null,
         fechaAccion: new Date().toISOString(),
-        observacion: markDialogAction === 'EVENTO' ? correctionObservaciones ?? '' : ''
+        observacion: (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') ? correctionObservaciones ?? '' : ''
       }
 
       const res = await fetch(`/api/rcm/${markDialogRowId}/history`, {
@@ -438,16 +455,199 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       try {
         const res = await fetch('/api/rcm')
         const result = await res.json()
-        console.log('API /api/rcm result sample:', Array.isArray(result) ? result.slice(0, 5) : result)
+        const raw = Array.isArray(result) ? result : []
 
-        const normalized = (Array.isArray(result) ? result : []).map((r: any) => ({
-          ...r,
-          ot: r.ot ?? r.ordenTrabajo?.correlativ ?? r.orden_trabajo?.correlativ ?? null,
-          estadoOperativo: r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ?? ''
-        }))
+        // --- fetch obras (igual que ya tienes) ---
+        const obraIds = Array.from(new Set(raw.map((r: any) => (r.obraId ?? r.obra?.id) as number).filter(Boolean))) as number[]
+        const obraMap: Record<number, any> = {}
+        await Promise.all(
+          obraIds.map(async id => {
+            try {
+              const or = await fetch(`/api/obra/${id}`)
+              if (!or.ok) return
+              obraMap[id] = await or.json()
+            } catch (e) {
+              console.warn('No se pudo cargar obra', id, e)
+            }
+          })
+        )
+
+        // --- fetch ordenes de trabajo por id (para obtener correlativ) ---
+        const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
+        const ordenMap: Record<string | number, any> = {}
+        if (ordenIds.length) {
+          // intentar endpoint batch primero (mejor rendimiento si existe)
+          try {
+            const q = ordenIds.map(encodeURIComponent).join(',')
+            const br = await fetch(`/api/ordenes?ids=${q}`)
+            if (br.ok) {
+              const ct = (br.headers.get('content-type') || '').toLowerCase()
+              if (ct.includes('application/json')) {
+                const list = await br.json()
+                if (Array.isArray(list)) {
+                  list.forEach((o: any) => {
+                    const key = o.id ?? o._id ?? o.key ?? o.ordenTrabajoId ?? o.correlativ ?? o.correlativo
+                    if (key) {
+                      ordenMap[String(key)] = o
+                      // indexar también por id string y por correl (si existe) para mayor robustez
+                      if (o.id) ordenMap[String(o.id)] = o
+                      const correl = o.correlativ ?? o.correlativo ?? o.numero ?? o.nro
+                      if (correl) ordenMap[String(correl)] = o
+                    }
+                  })
+                }
+              } else {
+                const txt = await br.text().catch(() => '')
+                // eslint-disable-next-line no-console
+                console.warn('Batch /api/ordenes responded with non-json. sample:', txt.slice(0, 400))
+                // fallback a fetch individual
+                await Promise.all(
+                  ordenIds.map(async id => {
+                    try {
+                      const or = await fetch(`/api/ordenTrabajo/${id}`)
+                      if (!or.ok) return
+                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                      if (ct2.includes('application/json')) {
+                        ordenMap[String(id)] = await or.json()
+                      } else {
+                        const t = await or.text().catch(() => '')
+                        // eslint-disable-next-line no-console
+                        console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
+                      }
+                    } catch (err) {
+                      // eslint-disable-next-line no-console
+                      console.warn('No se pudo cargar ordenTrabajo', id, err)
+                    }
+                  })
+                )
+              }
+            } else {
+              // batch endpoint responded not ok -> fallback individual
+              await Promise.all(
+                ordenIds.map(async id => {
+                  try {
+                    const or = await fetch(`/api/ordenTrabajo/${id}`)
+                    if (!or.ok) return
+                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                    if (ct2.includes('application/json')) {
+                      ordenMap[String(id)] = await or.json()
+                    } else {
+                      const t = await or.text().catch(() => '')
+                      // eslint-disable-next-line no-console
+                      console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
+                    }
+                  } catch (err) {
+                    // eslint-disable-next-line no-console
+                    console.warn('No se pudo cargar ordenTrabajo', id, err)
+                  }
+                })
+              )
+            }
+          } catch (err) {
+            // en error, fallback a fetch individual
+            await Promise.all(
+              ordenIds.map(async id => {
+                try {
+                  const or = await fetch(`/api/ordenTrabajo/${id}`)
+                  if (!or.ok) return
+                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                  if (ct2.includes('application/json')) {
+                    ordenMap[String(id)] = await or.json()
+                  } else {
+                    const t = await or.text().catch(() => '')
+                    // eslint-disable-next-line no-console
+                    console.warn(`ordenTrabajo ${id} returned non-json (fallback):`, t.slice(0, 300))
+                  }
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.warn('No se pudo cargar ordenTrabajo', id, e)
+                }
+              })
+            )
+          }
+        }
+
+        // --- helper para extraer correlativo de un objeto orden (busca keys comunes y en nested 1 nivel) ---
+        const findOrderCorrel = (o: any) => {
+          if (!o || typeof o !== 'object') return undefined
+          const keys = Object.keys(o)
+          // prioridad por nombres comunes
+          const prefer = ['correlativ', 'correlativo', 'correlacion', 'correl', 'correlativoNumero', 'numero', 'nro', 'nroOrden', 'correl_id']
+          for (const p of prefer) {
+            if (p in o && (o[p] || o[p] === 0)) return o[p]
+          }
+          // buscar cualquier key que contenga 'correl' o 'numero'
+          for (const k of keys) {
+            if (/correl|numero|nro/i.test(k) && (o[k] || o[k] === 0)) return o[k]
+          }
+          // buscar 1 nivel nested
+          for (const k of keys) {
+            const v = o[k]
+            if (v && typeof v === 'object') {
+              const nested = findOrderCorrel(v)
+              if (nested) return nested
+            }
+          }
+          return undefined
+        }
+
+        // DEBUG: mostrar muestra de ordenMap para inspección (temporal)
+        try {
+          if (Object.keys(ordenMap).length) {
+            const sampleKey = Object.keys(ordenMap)[0]
+            // eslint-disable-next-line no-console
+            console.debug('ordenMap sample key:', sampleKey, 'value:', ordenMap[sampleKey])
+            // eslint-disable-next-line no-console
+            console.debug('extracted correl (sample):', findOrderCorrel(ordenMap[sampleKey]))
+          }
+        } catch (e) {
+          /* ignore debug errors */
+        }
+
+        // normalizar y enriquecer
+        const normalized = raw.map((r: any) => {
+          const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
+          const numeroObra =
+            obraObj?.numeroObra ??
+            obraObj?.numero_obra ??
+            obraObj?.numero ??
+            obraObj?.numeroobra ??
+            (r.obraId ? String(r.obraId) : undefined)
+
+          // intentar obtener correlativo desde varios posibles campos del objeto orden
+          const orderKey = r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? ''
+          const orderObj = ordenMap[orderKey] ?? ordenMap[String(orderKey)] ?? ordenMap[r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? ''] ?? null
+          const orderCorrel = orderObj ? findOrderCorrel(orderObj) : undefined
+
+          // Normalizar ordenTrabajo: incluir correlativo si se encuentra; mantener ordenTrabajoId como fallback
+          const ordenTrabajoNormalized = {
+            ...(r.ordenTrabajo ?? orderObj ?? {}),
+            correlativo: orderCorrel ?? r.ordenTrabajo?.correlativ ?? r.ordenTrabajo?.correlativo ?? undefined,
+            id: r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? undefined
+          }
+
+          // otDisplay: mostrar correlativo real si existe, sino null (para mostrar '-' en UI)
+          const otDisplay = ordenTrabajoNormalized.correlativo ?? (r.ot && typeof r.ot === 'string' && !/[a-zA-Z]/.test(r.ot) ? r.ot : null)
+
+          const otCorrel =
+            // mantener campo ot original por compatibilidad, pero preferir otDisplay para mostrar
+            r.ot ?? ordenTrabajoNormalized.correlativo ?? orderCorrel ?? orderObj?.correlativ ?? orderObj?.correlativo ?? orderObj?.numero ?? r.ordenTrabajoId ?? null
+
+          return {
+            ...r,
+            // preserve original ot, add normalized ordenTrabajo and otDisplay
+            ot: otCorrel,
+            ordenTrabajo: ordenTrabajoNormalized,
+            otDisplay,
+            estadoOperativo:
+              r.estadoOperativo ??
+              (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ??
+              '',
+            obra: { ...(obraObj ?? {}), numeroObra }
+          }
+        })
 
         setData(normalized)
-        // aplicar filtro inicial si vienen filters
         applyDateFilter(normalized, filters)
       } catch (err) {
         console.error('Error fetching RCMs:', err)
@@ -567,12 +767,25 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'ot',
         header: 'OT',
-        accessorFn: (r: any) => r.ot ?? r.ordenTrabajo?.correlativ ?? null,
-        cell: ({ row }: any) => (
-          <Typography variant='body2'>
-            {row.original.ot ?? row.original.ordenTrabajo?.correlativ ?? '-'}
-          </Typography>
-        )
+        accessorFn: (r: any) => r.otDisplay ?? r.ot ?? r.ordenTrabajo?.correlativo ?? r.ordenTrabajoId ?? null,
+        cell: ({ row }: any) => {
+          const display = row.original.otDisplay ?? null
+          const ordenId = row.original.ordenTrabajo?.id ?? row.original.ordenTrabajoId ?? null
+          if (display) {
+            return <Typography variant='body2'>{display}</Typography>
+          }
+          // no correlativo: mostrar '-' pero dejar ordenTrabajoId en tooltip para rastreo
+          if (ordenId) {
+            // eslint-disable-next-line no-console
+            console.debug('No correlativo for row', row.original.id, 'ordenTrabajoId:', ordenId)
+            return (
+              <Typography variant='body2' title={`ordenTrabajoId: ${ordenId}`}>
+                -
+              </Typography>
+            )
+          }
+          return <Typography variant='body2'>-</Typography>
+        }
       },
       {
         id: 'fechaCod',
@@ -649,8 +862,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'nobra',
         header: 'N° OBRA',
-        accessorFn: r => r.obra?.numeroObra ?? '-',
-        cell: ({ row }) => <span>{row.original.obra?.numeroObra ?? '-'}</span>
+        accessorFn: r =>
+          r.obra?.numeroObra ??
+          r.obra?.numero_obra ??
+          r.obra?.numero ??
+          r.obra?.numeroobra ??
+          r.obraId ??
+          '-',
+        cell: ({ row }) => {
+          const val = row.getValue('nobra') as string
+          return <span>{val ?? '-'}</span>
+        }
       },
       {
         id: 'acciones',
@@ -897,7 +1119,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id}>
+                  <th key={header.id} style={{ textAlign: 'center' }}>
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
@@ -908,7 +1130,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             {table.getRowModel().rows.map(row => (
               <tr key={row.id}>
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} style={{ verticalAlign: 'middle' }}>
+                  <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -955,7 +1177,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         })()}
       </Menu>
 
-      {/* Dialog: Form "Estado Muestra" para acciones (Digitado, En Corrección, ...) */}
+      {/* Dialog: Form "Estado Muestra" para acciones (Digitado, EVENTO, CERRADO_OP, ...) */}
       <Dialog open={markDialogOpen} onClose={handleCancelMarkDialog} maxWidth='sm' fullWidth>
         <DialogTitle>Estado Muestra</DialogTitle>
         <DialogContent>
@@ -978,18 +1200,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </Box>
           )}
 
-          {markDialogAction === 'EVENTO' && (
+          {(markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <FormControl fullWidth size='small'>
-                  <InputLabel id='correction-action-label'>Estado</InputLabel>
+                  <InputLabel id='mark-action-state-label'>Estado</InputLabel>
                   <Select
-                    labelId='correction-action-label'
-                    value={'EVENTO'}
+                    labelId='mark-action-state-label'
+                    value={markDialogAction ?? ''}
                     label='Estado'
                     disabled
                   >
-                    <MenuItemMUI value='EVENTO'>Evento</MenuItemMUI>
+                    <MenuItemMUI value={markDialogAction}>
+                      {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
+                    </MenuItemMUI>
                   </Select>
                 </FormControl>
 
