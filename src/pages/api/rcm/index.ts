@@ -79,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           fechaCodificacion: new Date(fechaCodificacion),
           fechaMuestreo: new Date(fechaMuestreo),
           fechaIngreso: new Date(fechaIngreso),
+          estado: 'CODIFICADO',
           observaciones,
           clienteId: clienteId || null,
           obraId: obraId || null,
