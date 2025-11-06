@@ -417,7 +417,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         throw new Error('Error saving history')
       }
 
-      // success: cerrar diálogo y refrescar UI
+      // success: obtener registro creado (si API lo devuelve)
+      const created = await res.json().catch(() => null)
+
+      // actualizar sólo el registro afectado en el estado local (optimista / definitivo)
+      setData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
+      setFilteredData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
+
+      // actualizar caché de historial y vistas abiertas
+      const newHistEntry = created ?? {
+        tipo: payload.tipo,
+        funcionario: payload.funcionario ?? 'Usuario',
+        estAnterior: payload.estPrev ?? null,
+        estNuevo: payload.estNuevo ?? null,
+        informe: payload.informe ?? null,
+        fechaAccion: new Date().toISOString(),
+        observacion: payload.observacion ?? null
+      }
+      historyCache.set(rcmId, [newHistEntry, ...(historyCache.get(rcmId) ?? [])])
+      if (histDialogOpen && histRowId === rcmId) {
+        setHistRows(prev => [newHistEntry, ...prev])
+      }
+
+      // cerrar diálogo y limpiar formulario (sin recargar toda la tabla)
       setMarkDialogOpen(false)
       setFormErrors({})
       setMarkDialogAction(null)
@@ -427,16 +449,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setCorrectionObservaciones('')
       setEventType('')
       setSavingHistory(false)
-      // intentar llamar a una función de recarga si existe, si no recargar la página
-      try {
-        if (typeof (window as any).__REFRESH_RCMS__ === 'function') {
-          (window as any).__REFRESH_RCMS__()
-        } else {
-          // recarga simple si no hay refetch disponible
-          window.location.reload()
+      // ya actualizamos localmente setData/setFilteredData.
+      // Opcional: si el host expone una función para refrescar solo una fila, llámala
+      if (typeof (window as any).__REFRESH_RCM_ROW__ === 'function') {
+        try {
+          ; (window as any).__REFRESH_RCM_ROW__(rcmId, { estadoOperativo: payload.estNuevo ?? null })
+        } catch (e) {
+          /* noop */
         }
-      } catch (e) {
-        window.location.reload()
       }
     } catch (err) {
       // eslint-disable-next-line no-console
