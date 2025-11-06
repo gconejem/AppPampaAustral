@@ -28,11 +28,30 @@ interface HeaderProps {
     start?: string
     end?: string
     estadoOperativo?: string
+    estadoAdministrativo?: string
+    areaId?: number | null
+    familia?: string
   }) => void
 }
 
 const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
+  const [selectedAreaName, setSelectedAreaName] = useState<string>('')
+
+  const handleAreaChange = (value: string) => {
+    const areaId = value ? Number(value) : null
+    setSelectedAreaId(areaId)
+    setSelectedFamilia('') // Resetear familia cuando cambia el área
+
+    // obtener nombre desde areaOptions (no usar variable indefinida)
+    const found = (areaOptions ?? []).find((a: any) => String(a.id) === String(value) || String(a.value) === String(value))
+    const name = found ? (found.nombre ?? found.name ?? found.label ?? found.text ?? '') : ''
+    setSelectedAreaName(name)
+
+    // emitir inmediatamente con id + nombre (familia reseteada)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, areaId, '', selectedEstadoAd, name)
+  }
+
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
@@ -86,25 +105,17 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     }
   }, [selectedAreaId])
 
-  const handleAreaChange = (value: string) => {
-    const areaId = value ? Number(value) : null
-    setSelectedAreaId(areaId)
-    setSelectedFamilia('') // Resetear familia cuando cambia el área
-  }
-
-  // permitir valor vacío '' = "Seleccione"
-  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('')
-
-  const [dateRange, setDateRange] = useState<{ start?: string, end?: string }>({})
-  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
-
   const emitFilters = (
     df = fechaCodificacionOption,
     dr = dateRange,
-    estOp = selectedEstadoOp
+    estOp = selectedEstadoOp,
+    areaId = selectedAreaId,
+    familia = selectedFamilia,
+    estAd = selectedEstadoAd,
+    areaName = selectedAreaName
   ) => {
     // si no hay nada seleccionado, limpiar filtros
-    if (!df && !estOp) {
+    if (!df && !estOp && !areaId && !familia && !estAd && !areaName) {
       console.log('Header -> emitFilters: no filters selected, clearing')
       onFiltersChange?.(undefined)
       return
@@ -114,9 +125,25 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (dr.start) payload.start = dr.start
     if (dr.end) payload.end = dr.end
     if (estOp) payload.estadoOperativo = estOp
+    if (estAd) payload.estadoAdministrativo = estAd
+    if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
+    if (areaName) payload.areaName = areaName
+    if (familia) payload.familia = familia
     console.log('Header -> emitFilters', payload)
     onFiltersChange?.(payload)
   }
+
+  const handleFamiliaChange = (value: string) => {
+    setSelectedFamilia(value)
+    // emitir con area actual y nueva familia
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, value)
+  }
+
+  // permitir valor vacío '' = "Seleccione"
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('')
+
+  const [dateRange, setDateRange] = useState<{ start?: string, end?: string }>({})
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
 
   const handleFechaCodOptionChange = (value: string) => {
     const v = value as '' | 'fecha_codificacion' | 'fecha_muestreo'
@@ -129,6 +156,11 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedEstadoOp(value)
     // emitir con los filtros actuales (incluirá estadoOperativo aunque no haya dateField)
     emitFilters(fechaCodificacionOption, dateRange, value)
+  }
+
+  const handleEstadoAdChange = (value: string) => {
+    setSelectedEstadoAd(value)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, value)
   }
 
   // handler que espera [Date|null, Date|null] o {start,end} o strings
@@ -243,7 +275,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               labelId='familia-select'
               label='Familia'
               value={selectedFamilia}
-              onChange={e => setSelectedFamilia(e.target.value)}
+              onChange={e => handleFamiliaChange(e.target.value)}
               disabled={!selectedAreaId}
             >
               <MenuItem value=''>Todas las familias</MenuItem>
@@ -281,7 +313,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               labelId='estado-ad-select'
               label='Estado Administrativo'
               value={selectedEstadoAd}
-              onChange={e => setSelectedEstadoAd(e.target.value)}
+              onChange={e => handleEstadoAdChange(e.target.value)}
             >
               <MenuItem value=''>Seleccione</MenuItem>
               {ADMINISTRATIVE_STATES.map(s => (

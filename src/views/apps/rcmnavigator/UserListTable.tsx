@@ -144,6 +144,9 @@ interface Filters {
   start?: string
   end?: string
   estadoOperativo?: string
+  estadoAdministrativo?: string
+  areaId?: number | null
+  areaName?: string | null
 }
 
 // Component
@@ -835,6 +838,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return `${dd}/${mm}/${yyyy}`
   }
 
+  // normalizar texto: quitar diacríticos, pasar a minúsculas y trim
+  const normalizeText = (v: any) => {
+    if (v === null || v === undefined) return ''
+    try {
+      const s = String(v)
+      return s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    } catch (e) {
+      return String(v).toLowerCase().trim()
+    }
+  }
+
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
@@ -872,6 +886,80 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       result = result.filter(r => {
         const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ?? '')
         return String(op).toLowerCase().includes(q)
+      })
+    }
+
+    // Estado Administrativo filtering (if provided) — case-insensitive contains
+    if (filters && filters.estadoAdministrativo) {
+      const qAdm = String(filters.estadoAdministrativo).toLowerCase()
+      result = result.filter(r => {
+        const adm =
+          r.estadoAdministrativo ??
+          r.estado_administrativo ??
+          r.estadoAdm ??
+          r.estado_adm ??
+          r.administrativo ??
+          (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estadoAdministrativo ?? '' : '') ??
+          ''
+        return String(adm).toLowerCase().includes(qAdm)
+      })
+    }
+
+    // Area filtering: prefer header.areaName, fallback to header.area or areaId.
+    // Compara por nombre normalizado (quita acentos, case-insensitive). Si se envía id numérico, lo acepta.
+    const areaValue = (filters as any)?.areaName ?? (filters as any)?.area ?? (filters as any)?.areaId ?? null
+    if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).toString().trim() !== '') {
+      const raw = areaValue
+      const rawNorm = normalizeText(raw)
+      const isNumeric = /^[0-9]+$/.test(String(raw).trim())
+      const targetNum = isNumeric ? Number(raw) : null
+
+      result = result.filter((r: any) => {
+        // quick arrays if present
+        const areaNamesArr = Array.isArray(r._areaNames) ? r._areaNames.map((x: any) => normalizeText(x)) : []
+        const areaIdsArr = Array.isArray(r._areaIds) ? r._areaIds.map((x: any) => Number(x)) : []
+        if (isNumeric) {
+          if (areaIdsArr.some((id: number) => Number(id) === targetNum)) return true
+        } else {
+          if (areaNamesArr.some((nm: string) => nm.includes(rawNorm))) return true
+        }
+
+        // check common top-level fields
+        try {
+          // r.area puede ser string o objeto { nombre | name }
+          const topAreaName = r.area?.nombre ?? r.area?.name ?? r.area
+          if (!isNumeric && topAreaName && normalizeText(topAreaName).includes(rawNorm)) return true
+          if (isNumeric) {
+            if (r.area && !isNaN(Number(r.area)) && Number(r.area) === targetNum) return true
+            if (r.areaId && Number(r.areaId) === targetNum) return true
+          }
+        } catch (e) {
+          // noop
+        }
+
+        // check servicios.producto.area fields (robusto)
+        if (Array.isArray(r.servicios)) {
+          for (const s of r.servicios) {
+            const p: any = s?.producto ?? s?.product ?? null
+            if (!p) continue
+            // textual candidates
+            const candNames = [
+              p.area?.nombre ?? p.area?.name ?? p.area ?? p.productoArea ?? p.producto_area ?? null
+            ]
+            for (const cn of candNames) {
+              if (!cn) continue
+              if (!isNumeric && normalizeText(cn).includes(rawNorm)) return true
+            }
+            // numeric candidates
+            const candIds = [p.area?.id ?? p.areaId ?? p.area_id ?? p.productoArea?.id ?? null]
+            for (const cid of candIds) {
+              if (cid === null || typeof cid === 'undefined') continue
+              if (isNumeric && Number(cid) === targetNum) return true
+            }
+          }
+        }
+
+        return false
       })
     }
 
