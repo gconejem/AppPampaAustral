@@ -40,6 +40,7 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
+import FormHelperText from '@mui/material/FormHelperText'
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 
 // Icons
@@ -154,6 +155,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [savingHistory, setSavingHistory] = useState(false)
+  const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
 
 
   // helper: convertir hex -> rgba
@@ -263,6 +266,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [histRows, setHistRows] = useState<any[]>([])
   const [histLoading, setHistLoading] = useState(false)
 
+  // simple cache en memoria para historial por RCM (evita refetchs)
+  const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
+    ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
+
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
     setMarkRowId(rowId)
@@ -292,20 +299,99 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
-    // acciones que se ejecutan inmediatamente (placeholder)
+    // acciones que se ejecutan inmediatamente: crear historial y actualizar estado
+    if (!rowId) {
+      console.warn('handleMarkAction: missing rowId for immediate action', action)
+      handleCloseMarkMenu()
+      return
+    }
+
+    const prevState = getCurrentStateForRow(rowId)
+    const finalFuncionario = (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : 'Usuario'
+
+    const payload: any = {
+      tipo: 'Ope',
+      tipoEstado: action,
+      motivo: null,
+      observacion: null,
+      funcionario: finalFuncionario,
+      estPrev: prevState ?? null,
+      estNuevo: action,
+      informe: null
+    }
+
     try {
-      console.log('Marcar acción inmediata', action, 'fila', rowId)
+      // optimista: actualizar UI localmente
+      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: action } : d)))
+
+      const res = await fetch(`/api/rcm/${rowId}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('Failed to create history for immediate action:', res.status, txt)
+        throw new Error('Error creating history')
+      }
+
+      const created = await res.json().catch(() => null)
+
+      // mantener cache local de historial
+      try {
+        const existing = historyCache.get(rowId) ?? []
+        if (created) {
+          historyCache.set(rowId, [created, ...existing])
+          // si el dialogo de historial está abierto para la misma fila, actualizarlo también
+          if (histDialogOpen && histRowId === rowId) {
+            setHistRows(prev => [created, ...prev])
+          }
+        }
+      } catch (e) {
+        // noop
+      }
     } catch (err) {
-      console.error('Error marcar', err)
+      // revertir optimista en caso de error
+      console.error('Error marcar (inmediato):', err)
+      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: prevState } : d)))
+      // opcional: mostrar aviso al usuario
+      alert('No se pudo actualizar el estado. Ver consola para detalles.')
     } finally {
       handleCloseMarkMenu()
     }
   }
 
+  const validateMarkDialog = (setErrors = true) => {
+    const errors: Record<string, string> = {}
+    if (!markDialogRowId) {
+      errors.general = 'RCM no seleccionado'
+    }
+
+    if (markDialogAction === 'DIGITADO') {
+      if (!informeNumber || String(informeNumber).trim() === '') errors.informeNumber = 'Ingrese N° de informe'
+      else if (Number.isNaN(Number(informeNumber))) errors.informeNumber = 'Debe ser un número'
+    }
+
+    if (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') {
+      if (!eventType) errors.eventType = 'Seleccione tipo'
+      if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Ingrese motivo'
+    }
+
+    if (setErrors) setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSaveMarkDialog = async () => {
     try {
       const rcmId = markDialogRowId
-      if (!rcmId) throw new Error('No RCM selected')
+      if (!validateMarkDialog()) {
+        // mostrar feedback rápido en consola / UI
+        console.warn('Validation failed', formErrors)
+        return
+      }
+
+      setSavingHistory(true)
 
       const payload: any = {
         tipo: 'Ope', // <- forzar 'Ope' por defecto desde esta pantalla
@@ -333,6 +419,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       // success: cerrar diálogo y refrescar UI
       setMarkDialogOpen(false)
+      setFormErrors({})
+      setMarkDialogAction(null)
+      setMarkDialogRowId(null)
+      setInformeNumber('')
+      setCorrectionMotivo('')
+      setCorrectionObservaciones('')
+      setEventType('')
+      setSavingHistory(false)
       // intentar llamar a una función de recarga si existe, si no recargar la página
       try {
         if (typeof (window as any).__REFRESH_RCMS__ === 'function') {
@@ -347,6 +441,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('handleSaveMarkDialog error', err)
+      setSavingHistory(false)
     }
   }
 
@@ -695,6 +790,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate())
   }
 
+  // helper: formatear fecha a DD/MM/AAAA (ahora incluye HH:MM:SS)
+  const formatDateDDMMYYYY = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const hh = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    const ss = String(d.getSeconds()).padStart(2, '0')
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`
+  }
+
+  // helper: formatear sólo fecha a DD/MM/AAAA (sin hora)
+  const formatDateDDMMYYYYDateOnly = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    return `${dd}/${mm}/${yyyy}`
+  }
+
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
@@ -814,14 +934,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'area',
         header: 'ÁREA',
-        accessorFn: r => r.area ?? r.cliente?.nombreCliente ?? '-',
-        cell: ({ row }) => <span>{row.original.area ?? row.original.cliente?.nombreCliente ?? '-'}</span>
+        accessorFn: (r: any) => {
+          const svc = Array.isArray(r.servicios) ? r.servicios.find((s: any) => s?.producto && (s.producto.area || s.producto?.area)) : undefined
+          return svc?.producto?.area ?? r.area ?? r.cliente?.nombreCliente ?? '-'
+        },
+        cell: ({ row }: any) => {
+          const svc = Array.isArray(row.original.servicios)
+            ? row.original.servicios.find((s: any) => s?.producto && s.producto.area)
+            : null
+          const areaVal = svc?.producto?.area ?? row.original.area ?? row.original.cliente?.nombreCliente ?? '-'
+          return <span>{areaVal}</span>
+        }
       },
       {
         id: 'familia',
         header: 'FAMILIA',
-        accessorKey: 'familia',
-        cell: ({ row }) => <span>{row.original.familia ?? '-'}</span>
+        accessorFn: (r: any) => {
+          const svc = Array.isArray(r.servicios)
+            ? r.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
+            : undefined
+          return svc?.producto?.familia ?? r.familia ?? '-'
+        },
+        cell: ({ row }: any) => {
+          const svc = Array.isArray(row.original.servicios)
+            ? row.original.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
+            : null
+          const fam = svc?.producto?.familia ?? row.original.familia ?? '-'
+          return <span>{fam}</span>
+        }
       },
       {
         id: 'muestras',
@@ -1014,22 +1154,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   if (loading) return <div>Cargando...</div>
 
   return (
-
-
-
     <Card>
-
-
       {/* Card header: only title */}
-      < CardHeader
+      <CardHeader
         title={
-          < Box display='flex' alignItems='center' justifyContent='space-between' gap={2} >
+          <Box display='flex' alignItems='center' justifyContent='space-between' gap={2}>
             <Typography variant='h6'>RCMs</Typography>
-          </Box >
+          </Box>
         }
       />
 
-      < Divider />
+      <Divider />
 
       {/* ROW: Dashboard indicadores (fila superior) */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
@@ -1067,8 +1202,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       </Box>
 
       <Divider />
-
-
 
       {/* New toolbar row: Exportar + contador + Buscar (separate row under title) */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
@@ -1209,6 +1342,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 onChange={e => setInformeNumber(e.target.value)}
                 size='small'
                 fullWidth
+                error={!!formErrors.informeNumber}
+                helperText={formErrors.informeNumber}
               />
             </Box>
           )}
@@ -1230,7 +1365,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   </Select>
                 </FormControl>
 
-                <FormControl fullWidth size='small'>
+                <FormControl fullWidth size='small' error={!!formErrors.eventType}>
                   <InputLabel id='event-type-label'>Tipo</InputLabel>
                   <Select
                     labelId='event-type-label'
@@ -1243,6 +1378,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     <MenuItemMUI value='ERROR_INTERNO'>Error Interno</MenuItemMUI>
                     <MenuItemMUI value='CORRECCION'>Corrección</MenuItemMUI>
                   </Select>
+                  {formErrors.eventType && <FormHelperText>{formErrors.eventType}</FormHelperText>}
                 </FormControl>
               </Box>
 
@@ -1252,6 +1388,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 onChange={e => setCorrectionMotivo(e.target.value)}
                 size='small'
                 fullWidth
+                error={!!formErrors.motivo}
+                helperText={formErrors.motivo}
               />
 
               <TextField
@@ -1270,7 +1408,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancelMarkDialog}>Cerrar</Button>
-          <Button variant='contained' onClick={handleSaveMarkDialog}>Guardar</Button>
+          <Button variant='contained' onClick={handleSaveMarkDialog} disabled={savingHistory || !validateMarkDialog(false)}>
+            {savingHistory ? 'Guardando...' : 'Guardar'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1313,7 +1453,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 <TableBody>
                   {histRows.map((h, i) => (
                     <TableRow key={i}>
-                      <TableCell>{h.registro}</TableCell>
+                      {/* REGISTRO: keep datetime */}
+                      <TableCell>{formatDateDDMMYYYY(h.fechaAccion)}</TableCell>
                       <TableCell>{h.funcionario}</TableCell>
                       <TableCell>{h.tipo}</TableCell>
                       <TableCell>
@@ -1349,17 +1490,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         />
                       </TableCell>
                       <TableCell>{h.informe}</TableCell>
-                      <TableCell>{h.fechaAccion}</TableCell>
+                      {/* FECHA ACCIÓN: only date DD/MM/AAAA */}
+                      <TableCell>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
                       <TableCell>{h.observacion}</TableCell>
                     </TableRow>
                   ))}
-                  {histRows.length === 0 && !histLoading && (
-                    <TableRow>
-                      <TableCell colSpan={8} align='center' sx={{ py: 4 }}>
-                        No hay registros
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1367,16 +1502,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseHistDialog}>Cerrar</Button>
-          <Button variant='contained' onClick={handleCloseHistDialog}>Aceptar</Button>
         </DialogActions>
       </Dialog>
     </Card>
   )
-
 }
-
-// Simple in-memory cache para historiales (persiste durante la sesión del proceso)
-const historyCache = new Map<number, any[]>()
 
 export default UserListTable2
 
