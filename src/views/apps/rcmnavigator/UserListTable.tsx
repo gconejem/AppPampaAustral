@@ -1364,12 +1364,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return false
     })
 
-    // Por Enviar Digitación: ENVIADO_DIGITACION o admin con 'enviar'+'digit'
-    const porEnviarDigitacion = countIf((op, adm) => {
-      if (op === S.ENVIADO_DIGITACION) return true
-      return adm.includes('enviar') && adm.includes('digit')
-    })
-
     // Por Revisar: REVISADO o admin menciona revisar/revisado
     const porRevisar = countIf((op, adm) => op === S.DIGITADO)
 
@@ -1383,13 +1377,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
 
     // Firmados Pagados: admin contiene 'firmad' y 'pag' (pagado/pagados)
-    const firmadosPagados = countIf((op, adm) => adm.includes('firmad') && (adm.includes('pag') || adm.includes('pagad')))
+    const firmadosPagados = countIf((op, adm) => adm.includes('PAGADO'))
 
     return {
       total,
       porEnsayar,
       porDigitar,
-      porEnviarDigitacion,
       porRevisar,
       porCorregir,
       porFirmar,
@@ -1418,12 +1411,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         {[
           { label: 'Por Ensayar', value: indicators.porEnsayar },
           { label: 'Por Digitar', value: indicators.porDigitar },
-          { label: 'Por Enviar Digitación', value: indicators.porEnviarDigitacion },
           { label: 'Por Revisar', value: indicators.porRevisar },
           { label: 'Por Corregir', value: indicators.porCorregir },
           { label: 'Por Firmar', value: indicators.porFirmar },
-          { label: 'Por Enviar(Firmados)', value: indicators.porEnviarFirmados },
-          { label: 'Firmados Pagados', value: indicators.firmadosPagados }
+          { label: 'Por Enviar Cliente', value: indicators.porEnviarFirmados },
+          { label: 'Pagados Pendiente de Envío', value: indicators.firmadosPagados }
         ].map(item => (
           <Box
             key={item.label}
