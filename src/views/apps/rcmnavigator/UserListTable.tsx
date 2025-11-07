@@ -147,6 +147,7 @@ interface Filters {
   estadoAdministrativo?: string
   areaId?: number | null
   areaName?: string | null
+  familia?: string | null
 }
 
 // Component
@@ -842,10 +843,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const normalizeText = (v: any) => {
     if (v === null || v === undefined) return ''
     try {
-      const s = String(v)
-      return s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+      let s = String(v)
+
+      // reemplazar entidades HTML comunes
+      s = s.replace(/&amp;+/g, 'y')
+
+      // normalizar NBSP y otros espacios raros a espacio normal
+      s = s.replace(/\u00A0/g, ' ')
+
+      // aplicar NFD para separar diacríticos y eliminarlos
+      s = s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '') ?? s
+
+      // eliminar caracteres que no sean letras/números/espacios (puntuación, símbolos)
+      // usa Unicode property escapes para soportar letras acentuadas internacionalmente
+      s = s.replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+
+      // colapsar múltiples espacios y trim
+      s = s.replace(/\s+/g, ' ').trim()
+
+      return s.toLowerCase()
     } catch (e) {
-      return String(v).toLowerCase().trim()
+      return String(v).toLowerCase().replace(/\s+/g, ' ').trim()
     }
   }
 
@@ -959,6 +977,80 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           }
         }
 
+        return false
+      })
+    }
+
+    // Familia filtering: comparar por nombre (normalizado). Si se envía id numérico lo acepta como fallback.
+    const familiaValue = (filters as any)?.familia ?? null
+    if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).toString().trim() !== '') {
+      const rawF = familiaValue
+      const rawFNorm = normalizeText(rawF)
+      const rawFTokens = rawFNorm.split(' ').filter(Boolean)
+      const isNumF = /^[0-9]+$/.test(String(familiaValue).trim())
+      const targetF = isNumF ? Number(familiaValue) : null
+
+      const tokenMatch = (candidateNorm: string) => {
+        if (!candidateNorm) return false
+        if (candidateNorm.includes(rawFNorm)) return true
+        // require that every token in rawF is present in candidate (order-insensitive)
+        const candTokens = candidateNorm.split(' ').filter(Boolean)
+        return rawFTokens.every(t => candTokens.includes(t))
+      }
+
+      result = result.filter((r: any) => {
+        // gather textual and numeric candidates
+        const famNames = Array.isArray(r._familiaNames) ? r._familiaNames.map((x: any) => normalizeText(x)) : []
+        const famIds = Array.isArray(r._familiaIds) ? r._familiaIds.map((x: any) => Number(x)) : []
+
+        // 1) numeric match
+        if (isNumF) {
+          if (famIds.some(id => Number(id) === targetF)) return true
+        }
+
+        // 2) names in cached arrays
+        if (!isNumF && famNames.some(nm => tokenMatch(nm))) return true
+
+        // 3) top-level familia (string or object)
+        try {
+          const topFamRaw = r.familia?.nombre ?? r.familia?.name ?? r.familia ?? ''
+          const topFam = normalizeText(topFamRaw)
+          if (!isNumF && tokenMatch(topFam)) return true
+          if (isNumF && topFamRaw && !isNaN(Number(topFamRaw)) && Number(topFamRaw) === targetF) return true
+        } catch (e) {
+          /* noop */
+        }
+
+        // 4) servicios.producto.familia candidates
+        if (Array.isArray(r.servicios)) {
+          for (const s of r.servicios) {
+            const p: any = s?.producto ?? s?.product ?? null
+            if (!p) continue
+            const famCandidates = [
+              p.familia ?? p.familia?.nombre ?? p.familia?.name ?? p.productoFamilia ?? p.producto_familia ?? null
+            ]
+            for (const fc of famCandidates) {
+              if (!fc) continue
+              const fcNorm = normalizeText(fc)
+              if (!isNumF && tokenMatch(fcNorm)) return true
+              if (isNumF && !isNaN(Number(fc)) && Number(fc) === targetF) return true
+              if (isNumF && String(fc) === String(familiaValue)) return true
+            }
+          }
+        }
+
+        // DEBUG: no match for this row -> print diagnostic for investigation
+        // (mantener sólo mientras debuggeas)
+        // eslint-disable-next-line no-console
+        console.debug('Familia filter: row excluded', {
+          id: r.id,
+          requested: rawF,
+          requestedNorm: rawFNorm,
+          famNames,
+          famIds,
+          topFamilia: r.familia,
+          serviciosSample: Array.isArray(r.servicios) ? r.servicios.slice(0, 3).map((s: any) => ({ producto: s.producto ?? s.product })) : []
+        })
         return false
       })
     }
@@ -1213,38 +1305,85 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
-  // reemplazado: indicadores ampliados y heurísticos (usar filteredData para contar los visibles)
+  // reemplazado: indicadores usando OPERATIONAL_STATES.value para comparaciones
   const indicators = useMemo(() => {
     const total = filteredData.length
-    const lower = (s?: string) => (s ?? '').toString().toLowerCase()
 
-    const countIf = (pred: (op: string, adm: string) => boolean) =>
+    // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
+    const normOp = (raw?: string) => {
+      if (!raw) return ''
+      // usamos la función existente para normalizar (genera UPPERCASE)
+      const u = normalizeState(raw)
+      // si el usuario pasó una label en texto (p. ej. "Codificado"), intentar mapear a value
+      const byValue = OPERATIONAL_STATES.find(s => s.value === u)
+      if (byValue) return byValue.value
+      // intentar mapear por label (sin tildes / case)
+      const rawNorm = (raw ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() ?? String(raw).toLowerCase()
+      const byLabel = OPERATIONAL_STATES.find(s => (s.label ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() === rawNorm)
+      if (byLabel) return byLabel.value
+      // fallback: devolver UPPERCASE original para comparaciones textuales
+      return u
+    }
+
+    const normAdmText = (s?: string) => normalizeText(s ?? '')
+
+    // sets para cada tarjeta basadas en OPERATIONAL_STATES.value
+    const S = {
+      CODIFICADO: 'CODIFICADO',
+      EN_PROCESO: 'EN_PROCESO',
+      ENSAYADO: 'ENSAYADO',
+      ENVIADO_DIGITACION: 'ENVIADO_DIGITACION',
+      DIGITADO: 'DIGITADO',
+      REVISADO: 'REVISADO',
+      FIRMADO: 'FIRMADO',
+      ENVIADO: 'ENVIADO',
+      EVENTO: 'EVENTO',
+      CERRADO_OP: 'CERRADO_OP'
+    } as const
+
+    const countIf = (pred: (opVal: string, adm: string) => boolean) =>
       filteredData.reduce((acc, d) => {
-        const op = lower(d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? d.servicios[0].estado : ''))
-        const adm = lower(d.estadoAdministrativo)
-        return acc + (pred(op, adm) ? 1 : 0)
+        const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
+        const admRaw = d.estadoAdministrativo ?? ''
+        const opVal = normOp(opRaw)
+        const adm = normAdmText(admRaw)
+        return acc + (pred(opVal, adm) ? 1 : 0)
       }, 0)
 
-    const porEnsayar = countIf((op, adm) => op.includes('ensayar') || adm.includes('ensayar'))
-    const porDigitar = countIf((op, adm) =>
-      op.includes('digitar') || adm.includes('digitar') || adm.includes('digitacion') || adm.includes('digitación')
-    )
-    const porEnviarDigitacion = countIf((op, adm) =>
-      adm.includes('enviar') && adm.includes('digit')
-    )
-    const porRevisar = countIf((op, adm) => op.includes('revisar') || adm.includes('revisar'))
-    const porCorregir = countIf((op, adm) => op.includes('corregir') || adm.includes('corregir'))
-    const porFirmar = countIf((op, adm) =>
-      adm.includes('firmar') || adm.includes('firmado') || op.includes('firmar')
-    )
-    const porEnviarFirmados = countIf((op, adm) =>
-      (adm.includes('firmado') || adm.includes('firmados')) && adm.includes('enviar')
-    )
-    const firmadosPagados = countIf((op, adm) => {
-      const admHasFirmado = adm.includes('firmado') || adm.includes('firmados')
-      const admHasPagado = adm.includes('pagado') || adm.includes('pagados') || adm.includes('pag')
-      return admHasFirmado && admHasPagado
+    // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado')
+    const porEnsayar = countIf((op, adm) => {
+      if ([S.CODIFICADO, S.EN_PROCESO].includes(op as any)) return true
+      return adm.includes('ensayar') || adm.includes('codificad') || adm.includes('en proceso')
     })
+
+    // Por Digitar: estado ENSAYADO o ENVIADO_DIGITACION (pendiente digitación) y NO estar ya DIGITADO
+    const porDigitar = countIf((op, adm) => {
+      if (op === S.ENSAYADO || op === S.ENVIADO_DIGITACION) return true
+      // fallback por administrativa que indique digitación pendiente (no digitado aún)
+      if (adm.includes('digit') && !adm.includes('digitad')) return true
+      return false
+    })
+
+    // Por Enviar Digitación: ENVIADO_DIGITACION o admin con 'enviar'+'digit'
+    const porEnviarDigitacion = countIf((op, adm) => {
+      if (op === S.ENVIADO_DIGITACION) return true
+      return adm.includes('enviar') && adm.includes('digit')
+    })
+
+    // Por Revisar: REVISADO o admin menciona revisar/revisado
+    const porRevisar = countIf((op, adm) => op === S.DIGITADO)
+
+    // Por Corregir: estado EVENTO 
+    const porCorregir = countIf((op, adm) => op === S.EVENTO)
+
+    // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
+    const porFirmar = countIf((op, adm) => op === S.REVISADO)
+
+    // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
+    const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
+
+    // Firmados Pagados: admin contiene 'firmad' y 'pag' (pagado/pagados)
+    const firmadosPagados = countIf((op, adm) => adm.includes('firmad') && (adm.includes('pag') || adm.includes('pagad')))
 
     return {
       total,
