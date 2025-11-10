@@ -158,7 +158,7 @@ Costos Adicionales contra evento:
 • La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
   Para Estudio con Ingeniería: 3 UF + IVA.
   Para Estudio sin Ingeniería: 1,5 UF + IVA.
-• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0,25 UF neto + IVA.
 
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente.`
@@ -167,9 +167,9 @@ Consideraciones adicionales y requisitos especiales
     return `Notas:
 * Valor Neto (sin IVA incluido)
 * Adicionales contra evento:
-  • Copia digital adicional tiene un costo de 0.15 UF neto.
-  • Anexo de Informe, tendrá un costo de 0.42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
-  • Informe con firma y timbres físicos tiene un costo de 0.58 UF neto
+  • Copia digital adicional tiene un costo de 0,15 UF neto.
+  • Anexo de Informe, tendrá un costo de 0,42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
+  • Informe con firma y timbres físicos tiene un costo de 0,58 UF neto
   • Recargos por jornadas extraordinarias (a todos los ítem de la cotización).
     50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
     100% Adicional Sábado, Domingo o Festivo.
@@ -181,15 +181,15 @@ Consideraciones adicionales y requisitos especiales
 (2) Adicionales en Terreno (contra evento):
 • Km Adicional: 0,013 UF
 • Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
-• Jornada completa de Laboratorista (8 horas): 8.4 UF
+• Jornada completa de Laboratorista (8 horas): 8,4 UF
 • Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
   - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
   - 100% Adicional: Sábado, Domingo o Festivo.
 
 (3) Adicionales relacionados a los Informes de Laboratorio:
-• Copia digital adicional: 0.15 UF neto
-• Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
-• Informe con firma y timbres físicos: 0.58 UF neto
+• Copia digital adicional: 0,15 UF neto
+• Anexo de Informe: 0,42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
+• Informe con firma y timbres físicos: 0,58 UF neto
 
 (4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
   }
@@ -1190,7 +1190,7 @@ const EditCard = ({ id }: { id: string }) => {
   // Al cargar la cotización o cambiar a tipo C, si el campo está vacío, poner el valor por defecto
   useEffect(() => {
     if (formData?.tipoCotizacion === 'C' && !formData.alcanceServicio) {
-      setFormData(prev => prev ? { ...prev, alcanceServicio: `General:\n\n• xx Laboratoristas clase C en obra.\n• xx Ayudante en obra. Considera alimentación para nuestros técnicos en Obra.\n• Oficina móvil en obra (2 container: oficina y para instalación de equipamiento).\n• Camioneta estándar minero y combustible.\n• Equipamiento completo para ensayos de suelo y hormigón.\n• Envío digital de Órdenes de Trabajo y emisión de Informes Oficiales digitales con firma electrónica bajo sistema de acreditación MINVU-INN (LES40, LES41, LES42 y LES44).\n• Trazabilidad digital y almacenamiento de datos, respaldados por protocolos de calidad y seguridad.\n\nImplementación Laboratorio en Obra:\n• Área Hormigón: prensa prensa ensayo a compresión, probetas cilíndricas, cono de Abrams, piscina portátil con calefactor, vibrador portátil, termómetros.\n• Área Suelo: tamices de 3" a N°200, balanzas (0.1 gr y 1 kg), palas, densímetro nuclear, moldes y pisones Proctor y CBR, horno eléctrico, colinela, lavador de muestras, enrasador, pipetas de 1.000 ml y 250 ml, prensa CBR, piscina portátil para molde de CBR.\n\nCondiciones requeridas por el cliente:\n• Autorizaciones y acreditaciones del personal.\n• Accesos expeditos y seguros, además de protección contra riesgos laborales, actos vandálicos u otros hechos adversos.\n• Provisión de energía eléctrica, iluminación, agua y servicios higiénicos para oficina móvil en obra.\n• Prevencionista de Riesgo.\n• Se considerará Bunker para densímetro nuclear en Casa Matriz, de ser solicitado por el mandante se cotiza construcción y autorización de bunker previa solicitud.\n• Comunicar programación semanal de actividades de laboratorio, de tal manera de asignar al personal de terreno tareas adicionales si correspondiera.` } : prev)
+      setFormData(prev => prev ? { ...prev, alcanceServicio: `General:\n\n• xx Laboratoristas clase C en obra.\n• xx Ayudante en obra. Considera alimentación para nuestros técnicos en Obra.\n• Oficina móvil en obra (2 container: oficina y para instalación de equipamiento).\n• Camioneta estándar minero y combustible.\n• Equipamiento completo para ensayos de suelo y hormigón.\n• Envío digital de Órdenes de Trabajo y emisión de Informes Oficiales digitales con firma electrónica bajo sistema de acreditación MINVU-INN (LES40, LES41, LES42 y LES44).\n• Trazabilidad digital y almacenamiento de datos, respaldados por protocolos de calidad y seguridad.\n\nImplementación Laboratorio en Obra:\n• Área Hormigón: prensa prensa ensayo a compresión, probetas cilíndricas, cono de Abrams, piscina portátil con calefactor, vibrador portátil, termómetros.\n• Área Suelo: tamices de 3" a N°200, balanzas (0,1 gr y 1 kg), palas, densímetro nuclear, moldes y pisones Proctor y CBR, horno eléctrico, colinela, lavador de muestras, enrasador, pipetas de 1.000 ml y 250 ml, prensa CBR, piscina portátil para molde de CBR.\n\nCondiciones requeridas por el cliente:\n• Autorizaciones y acreditaciones del personal.\n• Accesos expeditos y seguros, además de protección contra riesgos laborales, actos vandálicos u otros hechos adversos.\n• Provisión de energía eléctrica, iluminación, agua y servicios higiénicos para oficina móvil en obra.\n• Prevencionista de Riesgo.\n• Se considerará Bunker para densímetro nuclear en Casa Matriz, de ser solicitado por el mandante se cotiza construcción y autorización de bunker previa solicitud.\n• Comunicar programación semanal de actividades de laboratorio, de tal manera de asignar al personal de terreno tareas adicionales si correspondiera.` } : prev)
     }
   }, [formData?.tipoCotizacion])
 
