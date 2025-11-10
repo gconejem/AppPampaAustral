@@ -226,6 +226,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const colorText = '#7c7778' // texto siempre negro para mayor nitidez
     return { hex, bgcolor, colorText, border }
   }
+
+  // devuelve información visual para un estado administrativo (usa ADMINISTRATIVE_STATES)
+  const getAdministrativeInfo = (raw?: string) => {
+    if (!raw) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
+    const sVal = String(raw).trim()
+    // intentar mapear por value o por label
+    const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === sVal.toLowerCase())
+    const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === normalizeText(sVal))
+    const st = byValue ?? byLabel
+    const hex = st?.color ?? '#9E9E9E'
+    const bgcolor = hexToRgba(hex, 0.32)
+    const border = hexToRgba(hex, 0.42)
+    const colorText = '#7c7778'
+    return { hex, bgcolor, colorText, border }
+  }
   // ...existing code...
 
 
@@ -1327,24 +1342,28 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         cell: ({ row }) => {
           const raw = row.original.estadoAdministrativo ?? row.original.estado_administrativo ?? ''
           const label = (typeof raw === 'string' && raw.trim()) ? raw : String(raw)
-          const color = getAdministrativeStateColor(label)
+          const info = getAdministrativeInfo(label)
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  background: color,
-                  display: 'inline-block',
-                  boxShadow: '0 0 0 1px rgba(0,0,0,0.05) inset'
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Chip
+                label={label || '-'}
+                size='small'
+                variant='filled'
+                sx={{
+                  bgcolor: info.bgcolor,
+                  color: info.colorText,
+                  border: `1px solid ${info.border}`,
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  borderRadius: 2,
+                  px: 1,
+                  py: 0.4,
+                  minWidth: 84,
+                  justifyContent: 'center'
                 }}
-                aria-hidden
               />
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {label || '-'}
-              </span>
-            </div>
+            </Box>
           )
         }
       },
@@ -1859,11 +1878,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   <TableRow>
                     <TableCell>REGISTRO</TableCell>
                     <TableCell>FUNCIONARIO</TableCell>
-                    <TableCell>TIPO</TableCell>
-                    <TableCell>EST. ANTERIOR</TableCell>
-                    <TableCell>EST. NUEVO</TableCell>
-                    <TableCell>INFORME</TableCell>
-                    <TableCell>FECHA ACCIÓN</TableCell>
+                    <TableCell align='center'>TIPO</TableCell>
+                    <TableCell align='center'>EST. ANTERIOR</TableCell>
+                    <TableCell align='center'>EST. NUEVO</TableCell>
+                    <TableCell align='center'>INFORME</TableCell>
+                    <TableCell align='center'>FECHA ACCIÓN</TableCell>
                     <TableCell>OBSERVACIÓN</TableCell>
                   </TableRow>
                 </TableHead>
@@ -1873,42 +1892,58 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       {/* REGISTRO: keep datetime */}
                       <TableCell>{formatDateDDMMYYYY(h.fechaAccion)}</TableCell>
                       <TableCell>{h.funcionario}</TableCell>
-                      <TableCell>{h.tipo}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={h.estAnterior ?? '-'}
-                          size='small'
-                          variant='filled'
-                          sx={{
-                            ...getOperationalSx(h.estAnterior),
-                            textTransform: 'uppercase',
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                            borderRadius: 2,
-                            px: 1,
-                            py: 0.4
-                          }}
-                        />
+                      <TableCell align='center'>{h.tipo}</TableCell>
+                      <TableCell align='center'>
+                        {(() => {
+                          const info = getOperationalInfo(h.estAnterior)
+                          return (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                              <Chip
+                                label={h.estAnterior ?? '-'}
+                                size='small'
+                                variant='filled'
+                                sx={{
+                                  bgcolor: info.bgcolor,
+                                  color: info.colorText,
+                                  border: `1px solid ${info.border}`,
+                                  textTransform: 'uppercase',
+                                  fontWeight: 700,
+                                  fontSize: '0.72rem',
+                                  borderRadius: 2,
+                                  px: 1,
+                                  py: 0.4
+                                }}
+                              />
+                            </Box>
+                          )
+                        })()}
                       </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={h.estNuevo ?? '-'}
-                          size='small'
-                          variant='filled'
-                          sx={{
-                            ...getOperationalSx(h.estNuevo),
-                            textTransform: 'uppercase',
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                            borderRadius: 2,
-                            px: 1,
-                            py: 0.4
-                          }}
-                        />
+                      <TableCell align='center'>
+                        {(() => {
+                          const info = getOperationalInfo(h.estNuevo)
+                          return (
+                            <Chip
+                              label={h.estNuevo ?? '-'}
+                              size='small'
+                              variant='filled'
+                              sx={{
+                                bgcolor: info.bgcolor,
+                                color: info.colorText,
+                                border: `1px solid ${info.border}`,
+                                textTransform: 'uppercase',
+                                fontWeight: 700,
+                                fontSize: '0.72rem',
+                                borderRadius: 2,
+                                px: 1,
+                                py: 0.4
+                              }}
+                            />
+                          )
+                        })()}
                       </TableCell>
-                      <TableCell>{h.informe}</TableCell>
+                      <TableCell align='center'>{h.informe}</TableCell>
                       {/* FECHA ACCIÓN: only date DD/MM/AAAA */}
-                      <TableCell>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
+                      <TableCell align='center'>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
                       <TableCell>{h.observacion}</TableCell>
                     </TableRow>
                   ))}
