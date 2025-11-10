@@ -2458,7 +2458,7 @@ const AddCard = ({
                         size='small'
                         disabled
                         label='Total Neto UF'
-                        value={row.totalNetoUF || 0}
+                        value={formData.tipoCotizacion === 'B' ? (row.totalNetoUF || 0).toFixed(2) : (row.totalNetoUF || 0)}
                         InputProps={{
                           startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                           readOnly: true

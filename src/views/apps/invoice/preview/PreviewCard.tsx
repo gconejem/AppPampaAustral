@@ -19,12 +19,12 @@ import Logo from '@components/layout/shared/Logo'
 // Style Imports
 import './print.css'
 
-// Función para formatear números UF con formato español (coma decimal y 3 decimales)
-const formatUF = (value: number | undefined | null): string => {
-  if (value === undefined || value === null || isNaN(value)) return '0,000';
+// Función para formatear números UF con formato español (coma decimal y 3 decimales por defecto, 2 para EMS)
+const formatUF = (value: number | undefined | null, decimals: number = 3): string => {
+  if (value === undefined || value === null || isNaN(value)) return decimals === 2 ? '0,00' : '0,000';
 
-  // Usar toFixed(3) para asegurar exactamente 3 decimales
-  const formatted = Number(value).toFixed(3);
+  // Usar toFixed con el número de decimales especificado
+  const formatted = Number(value).toFixed(decimals);
 
   // Reemplazar punto por coma para formato español
   return formatted.replace('.', ',');
@@ -384,7 +384,7 @@ const PreviewCard = () => {
                     <>
                       <TableCell align='right'>{item.cantidad || 0}</TableCell>
                       <TableCell align='right'>UF {formatUF(item.precioUnitarioUF)}</TableCell>
-                      <TableCell align='right'>UF {formatUF(item.totalNetoUF)}</TableCell>
+                      <TableCell align='right'>UF {formatUF(item.totalNetoUF, previewData.tipoCotizacion === 'B' ? 2 : 3)}</TableCell>
                     </>
                   );
                 };

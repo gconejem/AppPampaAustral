@@ -19,12 +19,12 @@ const formatearFormaPago = (formaPago: string): string => {
   return FORMAS_PAGO[formaPago as keyof typeof FORMAS_PAGO] || formaPago
 }
 
-// Función para formatear números UF con formato español (coma decimal y 3 decimales)
-const formatUF = (value: number | undefined | null): string => {
-  if (value === undefined || value === null || isNaN(value)) return '0,000';
+// Función para formatear números UF con formato español (coma decimal y 3 decimales por defecto, 2 para EMS)
+const formatUF = (value: number | undefined | null, decimals: number = 3): string => {
+  if (value === undefined || value === null || isNaN(value)) return decimals === 2 ? '0,00' : '0,000';
 
-  // Usar toFixed(3) para asegurar exactamente 3 decimales
-  const formatted = Number(value).toFixed(3);
+  // Usar toFixed con el número de decimales especificado
+  const formatted = Number(value).toFixed(decimals);
 
   // Reemplazar punto por coma para formato español
   return formatted.replace('.', ',');
@@ -374,7 +374,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal);
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, cotizacion.tipoCotizacion === 'B' ? 2 : 3);
               })()}</td>
                       </tr>`;
           } else if (!detalle.esSubProducto) {
@@ -450,7 +450,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal)
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, cotizacion.tipoCotizacion === 'B' ? 2 : 3)
               })()}</td>
                       </tr>`;
           }
