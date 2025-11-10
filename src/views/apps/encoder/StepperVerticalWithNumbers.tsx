@@ -348,6 +348,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
         return
       }
+
+      // Avanzar al paso 1 (Muestras)
+      setActiveStep(1)
     } else if (activeStep === 1) {
       // Verificar si hay datos ingresados en la muestra actual
       const hayDatosEnMuestra =
@@ -400,9 +403,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         }
         setMuestras([...muestras, muestraConCotas])
       }
-    }
 
-    setActiveStep(prevActiveStep => prevActiveStep + 1)
+      // Avanzar al paso 2 (Cierre) - aunque ya está visible
+      setActiveStep(2)
+    }
   }
 
   const handleBack = () => {
@@ -757,16 +761,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     <Card>
       <CardContent>
         <StepperWrapper>
-          <Stepper activeStep={activeStep} orientation='vertical'>
+          <Stepper activeStep={activeStep} orientation='vertical' nonLinear>
             {steps.map((step, index) => (
-              <Step key={index}>
+              <Step key={index} active={index === 2 ? true : activeStep === index} completed={activeStep > index && index !== 2}>
                 <StepLabel StepIconComponent={StepperCustomDot}>
                   <Typography className='step-number' color='text.primary'>{`0${index + 1}`}</Typography>
                   <Typography className='step-title' color='text.primary'>
                     {step.title}
                   </Typography>
                 </StepLabel>
-                <StepContent>
+                <StepContent TransitionProps={{ in: index === 2 ? true : activeStep === index }}>
                   {index === 0 && (
                     <>
                       {/* RCM Details */}
@@ -1994,27 +1998,38 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             startIcon={<i className='ri-save-line' />}
                             onClick={handleSaveRCM}
                           >
-                            Guardar
+                            Codificar
                           </Button>
                         </Grid>
                       </Grid>
                     </Box>
                   )}
 
-                  <div className='flex gap-4 mt-4'>
-                    <Button variant='contained' onClick={handleNext} size='small'>
-                      {index === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
-                    </Button>
-                    <Button
-                      size='small'
-                      color='secondary'
-                      variant='outlined'
-                      onClick={handleBack}
-                      disabled={index === 0}
-                    >
-                      Atrás
-                    </Button>
-                  </div>
+                  {index !== 2 && (
+                    <div className='flex gap-4 mt-4'>
+                      <Button variant='contained' onClick={handleNext} size='small'>
+                        Siguiente
+                      </Button>
+                      <Button
+                        size='small'
+                        color='secondary'
+                        variant='outlined'
+                        onClick={handleBack}
+                        disabled={index === 0}
+                      >
+                        Atrás
+                      </Button>
+                      {index === 0 && (
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          onClick={() => setActiveStep(2)}
+                        >
+                          Saltar a Cierre
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </StepContent>
               </Step>
             ))}
