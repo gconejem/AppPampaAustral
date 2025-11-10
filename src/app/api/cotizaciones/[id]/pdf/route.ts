@@ -79,7 +79,7 @@ Costos Adicionales contra evento:
 • La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
   Para Estudio con Ingeniería: 3 UF + IVA.
   Para Estudio sin Ingeniería: 1,5 UF + IVA.
-• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0,25 UF neto + IVA.
 
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente. Cualquier requerimiento adicional deberá ser informado previamente para su evaluación y eventual recotización.

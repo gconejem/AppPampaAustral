@@ -80,9 +80,9 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: 
         </li>
         <li><b>Adicionales relacionados a los Informes de Laboratorio.</b>
           <ul style="margin-top: 4px; margin-bottom: 8px;">
-            <li>Copia digital adicional: 0.15 UF neto.</li>
-            <li>Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.</li>
-            <li>Informe con firma y timbres físicos: 0.58 UF neto</li>
+            <li>Copia digital adicional: 0,15 UF neto.</li>
+            <li>Anexo de Informe: 0,42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.</li>
+            <li>Informe con firma y timbres físicos: 0,58 UF neto</li>
           </ul>
         </li>
         <li><b>Requisitos adicionales:</b> Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.</li>
@@ -100,7 +100,7 @@ Costos Adicionales contra evento:
 • La solicitud de copia de un Estudio, con firma y timbres en original, tendrá un costo de:
   Para Estudio con Ingeniería: 3 UF + IVA.
   Para Estudio sin Ingeniería: 1,5 UF + IVA.
-• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0.25 UF neto + IVA.
+• Cuando el cliente lo solicita, los estudios podrán ser distribuidos a domicilio indicado, con un costo de envío 0,25 UF neto + IVA.
 
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente. Cualquier requerimiento adicional deberá ser informado previamente para su evaluación y eventual recotización.
@@ -120,9 +120,9 @@ Condiciones para terreno y accesos
         <li><strong>Valor Neto (<span style='text-decoration: underline;'>sin IVA incluido</span>)</strong></li>
         <li><strong>Adicionales contra evento:</strong>
           <ul style="margin-top: 4px; margin-bottom: 8px;">
-            <li><span style='text-decoration: underline;'>Copia</span> digital adicional tiene un costo de <strong>0.15 UF neto.</strong></li>
-            <li>Anexo de Informe, tendrá un costo de <strong>0.42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
-            <li>Informe con firma y timbres físicos tiene un costo de <strong>0.58 UF neto</strong></li>
+            <li><span style='text-decoration: underline;'>Copia</span> digital adicional tiene un costo de <strong>0,15 UF neto.</strong></li>
+            <li>Anexo de Informe, tendrá un costo de <strong>0,42 UF neto</strong>, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.</li>
+            <li>Informe con firma y timbres físicos tiene un costo de <strong>0,58 UF neto</strong></li>
             <li><strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
               <ul style="margin-top: 2px; margin-bottom: 2px;">
                 <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
