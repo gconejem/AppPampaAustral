@@ -121,7 +121,7 @@ const Header = ({ onFiltersChange }: { onFiltersChange?: (f?: FiltersPartial) =>
         </Grid>
         <Grid item xs={6} />
         <Grid item xs={3} sx={{ textAlign: 'right' }}>
-          <Button variant='contained' color='primary' size='large' sx={{ fontWeight: '' }} onClick={handleMenuOpen}>
+          <Button variant='contained' color='primary' disabled size='large' sx={{ fontWeight: '' }} onClick={handleMenuOpen}>
             Informes
           </Button>
 

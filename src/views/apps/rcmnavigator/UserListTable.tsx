@@ -42,6 +42,7 @@ import Select from '@mui/material/Select'
 import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
 import FormHelperText from '@mui/material/FormHelperText'
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
+import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -112,6 +113,48 @@ const statusColor = (s?: string) => {
   if (['pendiente', 'p', 'pend'].some(k => key.includes(k))) return 'warning'
   if (['rechazado', 'cancelado', 'inactivo'].some(k => key.includes(k))) return 'error'
   return 'default'
+}
+
+// normalizar texto: quitar diacríticos, pasar a minúsculas y trim
+function normalizeText(v: any) {
+  if (v === null || v === undefined) return ''
+  try {
+    let s = String(v)
+
+    // reemplazar entidades HTML comunes
+    s = s.replace(/&amp;+/g, 'y')
+
+    // normalizar NBSP y otros espacios raros a espacio normal
+    s = s.replace(/\u00A0/g, ' ')
+
+    // aplicar NFD para separar diacríticos y eliminarlos
+    s = s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '') ?? s
+
+    // eliminar caracteres que no sean letras/números/espacios (puntuación, símbolos)
+    s = s.replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+
+    // colapsar múltiples espacios y trim
+    s = s.replace(/\s+/g, ' ').trim()
+
+    return s.toLowerCase()
+  } catch (e) {
+    return String(v).toLowerCase().replace(/\s+/g, ' ').trim()
+  }
+}
+
+// helper: obtener color de estado administrativo (acepta value o label)
+const getAdministrativeStateColor = (raw?: string) => {
+  if (!raw) return '#cccccc'
+  const s = normalizeText(raw)
+  // buscar por value exacto (value es mayúsculas)
+  const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === String(raw).toLowerCase())
+  if (byValue) return byValue.color ?? '#cccccc'
+  // buscar por label normalizado
+  const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === s)
+  if (byLabel) return byLabel.color ?? '#cccccc'
+  // fallback: si raw contiene 'pag' devolver verde
+  if (s.includes('pag')) return '#2E7D32ff'
+  return '#cccccc'
 }
 
 // RCM type (kept)
@@ -488,10 +531,94 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setMenuRowId(null)
   }
 
-  const handleEdit = (rowId: number | null) => {
-    console.log('Editar', rowId)
+  // helper robusto para localizar una fila por id (acepta number/string y _id)
+  const findRowById = (rowId: any) => {
+    if (rowId === null || typeof rowId === 'undefined') return null
+    const sid = String(rowId).trim()
+    // 1) buscar en data por id o _id (string/number)
+    let r = data.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
+    if (r) return r
+    // 2) buscar en filteredData (por si data no está sincronizada)
+    r = filteredData.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
+    if (r) return r
+    // 3) intentar comparación numérica (si rowId convertible a número) contra id/_id
+    const n = Number(rowId)
+    if (!Number.isNaN(n)) {
+      r = data.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
+      if (r) return r
+      r = filteredData.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
+      if (r) return r
+    }
+    // 4) Fallback: si rowId es el índice interno de react-table (ej '0','1',...), devolver filteredData[idx]
+    if (!Number.isNaN(n) && Number.isInteger(n) && n >= 0 && n < filteredData.length) {
+      // eslint-disable-next-line no-console
+      console.debug('findRowById: using index-fallback for react-table row id ->', n)
+      return filteredData[n]
+    }
+    return null
+  }
+
+  const handleEdit = (rowId: number | null, opts?: { readonly?: boolean }) => {
+    if (!rowId && rowId !== 0) {
+      console.warn('handleEdit: missing rowId')
+      handleCloseRowMenu()
+      return
+    }
+
+    const row = findRowById(rowId)
+    if (!row) {
+      console.warn('handleEdit: row not found', rowId, {
+        dataIds: data.map(d => (d as any).id ?? (d as any)._id),
+        filteredIds: filteredData.map(d => (d as any).id ?? (d as any)._id)
+      })
+      handleCloseRowMenu()
+      return
+    }
+
+    const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
+    const tipo = row.ordenTrabajo?.tipo ?? row.tipo ?? row.tipoOT ?? ''
+    let servicioId = ''
+    if (Array.isArray(row.servicios) && row.servicios.length) {
+      const s0: any = row.servicios[0]
+      servicioId = s0.id ?? s0.servicioId ?? s0._id ?? ''
+    }
+
+    const params = new URLSearchParams()
+    if (otId) params.set('otId', String(otId))
+    if (tipo) params.set('tipo', String(tipo))
+    params.set('servicioId', String(servicioId ?? ''))
+    if (opts?.readonly) params.set('readonly', '1')
+
+    const target = `${window.location.origin}/en/apps/encoder?${params.toString()}`
+    try {
+      const newWin = window.open(target, '_blank')
+      if (newWin) {
+        // intentar prevenir reference al opener y traer foco
+        try {
+          newWin.opener = null
+        } catch (e) {
+          /* noop */
+        }
+        try {
+          newWin.focus()
+        } catch (e) {
+          /* noop */
+        }
+      } else {
+        // fallback: asignar href si window.open bloqueado
+        window.location.href = target
+      }
+    } catch (e) {
+      // último recurso
+      window.location.href = target
+    }
     handleCloseRowMenu()
-    // TODO: abrir drawer/editar con rowId
+  }
+
+  // Igual que handleEdit pero abre en modo solo lectura (readonly=1)
+  const handleView = (rowId: number | null) => {
+    // reutilizar handleEdit en modo readonly para comportamiento idéntico
+    handleEdit(rowId, { readonly: true })
   }
 
   const handleGenerateInforme = (rowId: number | null) => {
@@ -839,34 +966,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return `${dd}/${mm}/${yyyy}`
   }
 
-  // normalizar texto: quitar diacríticos, pasar a minúsculas y trim
-  const normalizeText = (v: any) => {
-    if (v === null || v === undefined) return ''
-    try {
-      let s = String(v)
-
-      // reemplazar entidades HTML comunes
-      s = s.replace(/&amp;+/g, 'y')
-
-      // normalizar NBSP y otros espacios raros a espacio normal
-      s = s.replace(/\u00A0/g, ' ')
-
-      // aplicar NFD para separar diacríticos y eliminarlos
-      s = s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '') ?? s
-
-      // eliminar caracteres que no sean letras/números/espacios (puntuación, símbolos)
-      // usa Unicode property escapes para soportar letras acentuadas internacionalmente
-      s = s.replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-
-      // colapsar múltiples espacios y trim
-      s = s.replace(/\s+/g, ' ').trim()
-
-      return s.toLowerCase()
-    } catch (e) {
-      return String(v).toLowerCase().replace(/\s+/g, ' ').trim()
-    }
-  }
-
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
@@ -902,7 +1001,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (filters && filters.estadoOperativo) {
       const q = String(filters.estadoOperativo).toLowerCase()
       result = result.filter(r => {
-        const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ?? '')
+        const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ?? '')
         return String(op).toLowerCase().includes(q)
       })
     }
@@ -1206,10 +1305,32 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
-        id: 'estAd',
-        header: 'Est. Administrativo',
+        id: 'estadoAdministrativo',
+        header: 'EST. ADMINISTRATIVO',
         accessorKey: 'estadoAdministrativo',
-        cell: ({ row }) => <Chip label={row.original.estadoAdministrativo ?? '-'} size='small' color={statusColor(row.original.estadoAdministrativo)} />
+        cell: ({ row }) => {
+          const raw = row.original.estadoAdministrativo ?? row.original.estado_administrativo ?? ''
+          const label = (typeof raw === 'string' && raw.trim()) ? raw : String(raw)
+          const color = getAdministrativeStateColor(label)
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  background: color,
+                  display: 'inline-block',
+                  boxShadow: '0 0 0 1px rgba(0,0,0,0.05) inset'
+                }}
+                aria-hidden
+              />
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {label || '-'}
+              </span>
+            </div>
+          )
+        }
       },
       {
         id: 'nobra',
@@ -1231,7 +1352,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         header: 'ACCIONES',
         cell: ({ row }) => (
           <Stack direction='row' spacing={1}>
-            <IconButton size='small' title='Ver'>
+            <IconButton size='small' title='Ver' onClick={() => handleEdit(row.original.id, { readonly: true })}>
               <VisibilityIcon fontSize='small' />
             </IconButton>
 
@@ -1314,7 +1435,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       if (!raw) return ''
       // usamos la función existente para normalizar (genera UPPERCASE)
       const u = normalizeState(raw)
-      // si el usuario pasó una label en texto (p. ej. "Codificado"), intentar mapear a value
+      // si el usuario pasó una label en texto (g. ej. "Codificado"), intentar mapear a value
       const byValue = OPERATIONAL_STATES.find(s => s.value === u)
       if (byValue) return byValue.value
       // intentar mapear por label (sin tildes / case)
@@ -1376,8 +1497,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
     const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
 
-    // Firmados Pagados: admin contiene 'firmad' y 'pag' (pagado/pagados)
-    const firmadosPagados = countIf((op, adm) => adm.includes('PAGADO'))
+    // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
+    const firmadosPagados = countIf((op, adm) => {
+      // requiere operativo exactamente FIRMADO (valor de OPERATIONAL_STATES)
+      if (op !== S.FIRMADO) return false
+
+      // adm viene normalizado (lowercase, sin tildes) por normalizeText
+      // 1) comprobar por label mapeando ADMINISTRATIVE_STATES
+      const admMatch = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === adm)
+      if (admMatch) return admMatch.value === 'PAGADO'
+
+      // 2) fallback textual (acepta 'pag', 'pagad', 'pagado')
+      return adm.includes('pag') || adm.includes('pagad') || adm.includes('pagado')
+    })
 
     return {
       total,
@@ -1599,6 +1731,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     disabled
                   >
                     <MenuItemMUI value={markDialogAction}>
+
                       {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
                     </MenuItemMUI>
                   </Select>
@@ -1663,7 +1796,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       >
         <MenuItem onClick={() => handleEdit(menuRowId)}>Editar</MenuItem>
         <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
-        <MenuItem onClick={() => handleGenerateInforme(menuRowId)}>Generar Informe</MenuItem>
+        <MenuItem disabled title="Generar Informe deshabilitado">Generar Informe</MenuItem>
       </Menu>
 
       {/* Dialog: Historial (mock) */}
