@@ -747,8 +747,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           obraIds.map(async id => {
             try {
               const or = await fetch(`/api/obra/${id}`)
-              if (!or.ok) return
-              obraMap[id] = await or.json()
+              if (!or.ok) {
+                const txt = await or.text().catch(() => '')
+                // eslint-disable-next-line no-console
+                console.warn(`obra ${id} responded not ok:`, or.status, txt.slice(0, 300))
+                return
+              }
+              const ct = (or.headers.get('content-type') || '').toLowerCase()
+              if (ct.includes('application/json')) {
+                obraMap[id] = await or.json()
+              } else {
+                const txt = await or.text().catch(() => '')
+                // eslint-disable-next-line no-console
+                console.warn(`obra ${id} returned non-json:`, txt.slice(0, 400))
+                return
+              }
             } catch (e) {
               console.warn('No se pudo cargar obra', id, e)
             }
@@ -885,6 +898,107 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           /* ignore debug errors */
         }
 
+        // --- fetch clientes por clienteId (batch + fallback individual) ---
+        const clienteIds = Array.from(
+          new Set(
+            raw
+              .map((r: any) => r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id)
+              .filter(Boolean)
+              .map((x: any) => String(x))
+          )
+        )
+        const clienteMap: Record<string, any> = {}
+        if (clienteIds.length) {
+          try {
+            const q = clienteIds.map(encodeURIComponent).join(',')
+            const br = await fetch(`/api/clientes?ids=${q}`)
+            if (br.ok) {
+              const ct = (br.headers.get('content-type') || '').toLowerCase()
+              if (ct.includes('application/json')) {
+                const list = await br.json()
+                if (Array.isArray(list)) {
+                  list.forEach((c: any) => {
+                    const key = c.id ?? c._id ?? c.clienteId ?? c.cliente_id
+                    if (key) clienteMap[String(key)] = c
+                  })
+                }
+              } else {
+                const txt = await br.text().catch(() => '')
+                // eslint-disable-next-line no-console
+                console.warn('Batch /api/clientes responded with non-json. sample:', txt.slice(0, 400))
+                // fallback individual
+                await Promise.all(
+                  clienteIds.map(async id => {
+                    try {
+                      const or = await fetch(`/api/cliente/${id}`)
+                      if (!or.ok) return
+                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                      if (ct2.includes('application/json')) {
+                        clienteMap[String(id)] = await or.json()
+                      } else {
+                        const t = await or.text().catch(() => '')
+                        // eslint-disable-next-line no-console
+                        console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
+                      }
+                    } catch (err) {
+                      // eslint-disable-next-line no-console
+                      console.warn('No se pudo cargar cliente', id, err)
+                    }
+                  })
+                )
+              }
+            } else {
+              // batch endpoint not ok -> fallback individual
+              await Promise.all(
+                clienteIds.map(async id => {
+                  try {
+                    const or = await fetch(`/api/cliente/${id}`)
+                    if (!or.ok) return
+                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                    if (ct2.includes('application/json')) {
+                      clienteMap[String(id)] = await or.json()
+                    } else {
+                      const t = await or.text().catch(() => '')
+                      // eslint-disable-next-line no-console
+                      console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
+                    }
+                  } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.warn('No se pudo cargar cliente', id, e)
+                  }
+                })
+              )
+            }
+          } catch (err) {
+            // on error -> try individual
+            await Promise.all(
+              clienteIds.map(async id => {
+                try {
+                  const or = await fetch(`/api/cliente/${id}`)
+                  if (!or.ok) return
+                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
+                  if (ct2.includes('application/json')) {
+                    clienteMap[String(id)] = await or.json()
+                  } else {
+                    const t = await or.text().catch(() => '')
+                    // eslint-disable-next-line no-console
+                    console.warn(`cliente ${id} returned non-json (fallback):`, t.slice(0, 300))
+                  }
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.warn('No se pudo cargar cliente (fallback)', id, e)
+                }
+              })
+            )
+          }
+        }
+
+        // DEBUG: mostrar muestra de clienteMap
+        if (Object.keys(clienteMap).length) {
+          // eslint-disable-next-line no-console
+          console.debug('clienteMap sample:', Object.keys(clienteMap)[0], clienteMap[Object.keys(clienteMap)[0]])
+        }
+
         // normalizar y enriquecer
         const normalized = raw.map((r: any) => {
           const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
@@ -894,6 +1008,44 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             obraObj?.numero ??
             obraObj?.numeroobra ??
             (r.obraId ? String(r.obraId) : undefined)
+
+          // normalizar cliente: puede venir como string, objeto con keys distintas o en raíz
+          let rawCliente = r.cliente ?? r.clienteData ?? r.clienteInfo ?? null
+          // si no hay objeto cliente, intentar resolver desde clienteMap usando clienteId
+          if (!rawCliente) {
+            const cid = r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id ?? null
+            if (cid != null) {
+              rawCliente = clienteMap[String(cid)] ?? rawCliente
+            }
+          }
+          let clienteNombre: string | undefined = undefined
+          let clienteComuna: string | undefined = undefined
+          if (rawCliente) {
+            if (typeof rawCliente === 'string') {
+              clienteNombre = rawCliente
+            } else if (typeof rawCliente === 'object') {
+              clienteNombre = rawCliente.nombreCliente ?? rawCliente.nombre ?? rawCliente.name ?? rawCliente.razonSocial ?? rawCliente.razon_social ?? rawCliente.nombre_cliente
+              clienteComuna = rawCliente.comuna ?? rawCliente.comunaName ?? rawCliente.comuna_nombre ?? rawCliente.city ?? rawCliente.localidad
+            }
+          }
+          // fallback a campos en raíz si existen
+          clienteNombre = clienteNombre ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente_name ?? r.cliente_nombre ?? r.nombre
+          clienteComuna = clienteComuna ?? r.clienteComuna ?? r.comuna ?? r.comunaCliente ?? null
+
+          // DEBUG: logear información para investigar por qué cliente/comuna quedan vacíos
+          // eslint-disable-next-line no-console
+          console.debug('normalizeCliente:', {
+            rowId: r.id ?? r._id ?? null,
+            rawCliente,
+            resolvedNombre: clienteNombre,
+            resolvedComuna: clienteComuna,
+            fallbacks: {
+              r_cliente: r.cliente,
+              r_clienteNombre: r.clienteNombre,
+              r_comuna: r.comuna,
+              r_clienteComuna: r.clienteComuna
+            }
+          })
 
           // intentar obtener correlativo desde varios posibles campos del objeto orden
           const orderKey = r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? ''
@@ -920,6 +1072,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             ot: otCorrel,
             ordenTrabajo: ordenTrabajoNormalized,
             otDisplay,
+            // normalizar cliente en estructura uniforme
+            cliente: {
+              nombreCliente: clienteNombre ?? null,
+              comuna: clienteComuna ?? null,
+              // mantener el raw por si hace falta
+              raw: rawCliente ?? null
+            },
             // Normalizar y asegurar estadoAdministrativo en cada fila (fallbacks comunes)
             estadoAdministrativo:
               r.estadoAdministrativo ??
@@ -930,7 +1089,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               '',
             estadoOperativo:
               r.estadoOperativo ??
-              (Array.isArray(r.servicios) && r.servicios.length ? r.servicios[0].estado : '') ??
+              (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ??
               '',
             obra: { ...(obraObj ?? {}), numeroObra }
           }
@@ -1274,6 +1433,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             : null
           const areaVal = svc?.producto?.area ?? row.original.area ?? row.original.cliente?.nombreCliente ?? '-'
           return <span>{areaVal}</span>
+        }
+      },
+
+      {
+        id: 'cliente',
+        header: 'CLIENTE',
+        accessorFn: (r: any) =>
+          r.cliente?.nombreCliente ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente ?? (typeof r.cliente === 'string' ? r.cliente : '-') ?? '-',
+        cell: ({ row }: any) => {
+          const val =
+            row.original.cliente?.nombreCliente ??
+            row.original.clienteNombre ??
+            row.original.nombreCliente ??
+            (typeof row.original.cliente === 'string' ? row.original.cliente : undefined) ??
+            '-'
+          // eslint-disable-next-line no-console
+          console.debug('cliente cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedCliente: val })
+          return <Typography variant='body2'>{val}</Typography>
+        }
+      },
+
+      {
+        id: 'comuna',
+        header: 'COMUNA',
+        accessorFn: (r: any) =>
+          r.cliente?.comuna ?? r.comuna ?? r.clienteComuna ?? r.comunaCliente ?? '-',
+        cell: ({ row }: any) => {
+          const val =
+            row.original.cliente?.comuna ??
+            row.original.comuna ??
+            row.original.clienteComuna ??
+            row.original.comunaCliente ??
+            '-'
+          // eslint-disable-next-line no-console
+          console.debug('comuna cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedComuna: val })
+          return <Typography variant='body2'>{val}</Typography>
         }
       },
       {
