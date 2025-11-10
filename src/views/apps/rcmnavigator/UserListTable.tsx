@@ -339,8 +339,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleMarkAction = async (action: string, rowId?: number | null) => {
-    // acciones que requieren diálogo
-    if (action === 'DIGITADO' || action === 'EVENTO' || action === 'CERRADO_OP') {
+    // acciones que requieren diálogo (incluye las que ahora exigen observación obligatoria)
+    const ACTIONS_REQUIRING_DIALOG = new Set([
+      'DIGITADO',
+      'EVENTO',
+      'CERRADO_OP',
+      'ENVIADO_DIGITACION',
+      'REVISADO',
+      'FIRMADO',
+      'ENVIADO'
+    ])
+    if (ACTIONS_REQUIRING_DIALOG.has(action)) {
       // si no se pasó rowId, intenta usar el state existente (evita error)
       openMarkDialogForRow(action, rowId ?? markDialogRowId ?? null)
       return
@@ -423,6 +432,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') {
       if (!eventType) errors.eventType = 'Seleccione tipo'
       if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Ingrese motivo'
+    }
+
+    // Para estos estados la observación es obligatoria
+    if (['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? ''))) {
+      if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
+        errors.observacion = 'Ingrese observación obligatoria'
+      }
     }
 
     if (setErrors) setFormErrors(errors)
@@ -1772,6 +1788,35 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 fullWidth
                 multiline
                 minRows={3}
+              />
+            </Box>
+          )}
+
+          {/* Estados que requieren observación obligatoria */}
+          {['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <FormControl fullWidth size='small'>
+                <InputLabel id='mark-action-label-obs'>Acción</InputLabel>
+                <Select labelId='mark-action-label-obs' value={markDialogAction ?? ''} label='Acción' disabled>
+                  <MenuItemMUI value={markDialogAction}>
+                    {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
+                  </MenuItemMUI>
+                </Select>
+              </FormControl>
+
+              <TextField
+                label='Observación (obligatoria)'
+                value={correctionObservaciones}
+                onChange={e => {
+                  setCorrectionObservaciones(e.target.value)
+                  if (formErrors.observacion) setFormErrors(prev => ({ ...prev, observacion: undefined }))
+                }}
+                size='small'
+                fullWidth
+                multiline
+                minRows={3}
+                error={!!formErrors.observacion}
+                helperText={formErrors.observacion || 'Ingrese una observación antes de confirmar el cambio de estado.'}
               />
             </Box>
           )}
