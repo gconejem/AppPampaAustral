@@ -2002,6 +2002,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                           </Button>
                         </Grid>
                       </Grid>
+                      <div className='flex gap-4 mt-4'>
+                        <Button
+                          size='small'
+                          color='secondary'
+                          variant='outlined'
+                          onClick={handleBack}
+                        >
+                          Atrás
+                        </Button>
+                      </div>
                     </Box>
                   )}
 
