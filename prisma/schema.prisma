@@ -669,6 +669,7 @@ model RCM {
   fechaCodificacion    DateTime
   fechaMuestreo        DateTime
   fechaIngreso         DateTime
+  fechaEntrega         DateTime?
   estadoOperativo      String?       @map("estado_operativo")
   estadoAdministrativo String?       @map("estado_administrativo")
   createdAt            DateTime      @default(now())
