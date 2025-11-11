@@ -157,7 +157,7 @@ const getAdministrativeStateColor = (raw?: string) => {
   return '#cccccc'
 }
 
-// RCM type (kept)
+// RCM type - actualizar para reflejar estructura de muestras
 interface RCM {
   id: number
   numeroRcm: string
@@ -175,11 +175,26 @@ interface RCM {
   obra?: {
     numeroObra?: string
   }
-  servicios?: Array<{
-    codigo: string
-    nombre: string
+  muestra?: {
+    id?: number
+    numeroMuestra: string
     cantidad: number
-  }>
+    estado?: string
+    servicioRCM?: {
+      id?: number
+      estado?: string
+      servicio?: {
+        id?: number
+        codigo: string
+        nombre: string
+        producto?: {
+          area?: string
+          familia?: string
+        }
+      }
+    }
+  }
+  rcmOriginalId?: number
 }
 
 interface Filters {
@@ -205,6 +220,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [savingHistory, setSavingHistory] = useState(false)
   const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
 
+  // Reemplazar estados del dialog (línea ~224)
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
+  const [serviciosMuestra, setServiciosMuestra] = useState<any[]>([])
+  const [loadingServicios, setLoadingServicios] = useState(false)
 
   // helper: convertir hex -> rgba
   const hexToRgba = (hex: string, alpha = 0.36) => {
@@ -647,9 +666,72 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   // Igual que handleEdit pero abre en modo solo lectura (readonly=1)
-  const handleView = (rowId: number | null) => {
-    // reutilizar handleEdit en modo readonly para comportamiento idéntico
-    handleEdit(rowId, { readonly: true })
+  const handleView = async (rowId: number | null) => {
+    if (!rowId) {
+      console.warn('handleView: no rowId provided')
+      return
+    }
+
+    const row = findRowById(rowId)
+    console.log('🔍 DEBUG handleView - row encontrada:', row)
+
+    if (!row || !row.muestra?.id) {
+      console.warn('handleView: muestra not found for rowId', rowId)
+      console.log('row completo:', row)
+      console.log('row.muestra:', row?.muestra)
+      return
+    }
+
+    const muestraId = row.muestra.id
+    console.log('📍 Muestra ID para fetch:', muestraId)
+
+    // Si se clickea la misma fila, colapsar
+    if (selectedRowId === rowId) {
+      setSelectedRowId(null)
+      setServiciosMuestra([])
+      return
+    }
+
+    // Seleccionar nueva fila y mostrar loading
+    setSelectedRowId(rowId)
+    setServiciosMuestra([])
+    setLoadingServicios(true)
+
+    try {
+      const url = `/api/muestra/${muestraId}/servicios`
+      console.log('🌐 Fetching URL:', url)
+
+      const res = await fetch(url)
+      console.log('📡 Response status:', res.status)
+      console.log('📡 Response headers:', Object.fromEntries(res.headers.entries()))
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('❌ Failed to fetch servicios:', res.status, txt.slice(0, 500))
+        throw new Error('Error loading servicios')
+      }
+
+      const contentType = res.headers.get('content-type')
+      console.log('📄 Content-Type:', contentType)
+
+      if (!contentType?.includes('application/json')) {
+        const txt = await res.text()
+        console.error('⚠️ Response is not JSON:', txt.slice(0, 500))
+        throw new Error('Response is not JSON')
+      }
+
+      const servicios = await res.json()
+      console.log('✅ Servicios recibidos:', servicios)
+      console.log('📊 Cantidad de servicios:', Array.isArray(servicios) ? servicios.length : 'No es array')
+
+      setServiciosMuestra(Array.isArray(servicios) ? servicios : [])
+    } catch (err) {
+      console.error('💥 Error loading servicios:', err)
+      setServiciosMuestra([])
+    } finally {
+      setLoadingServicios(false)
+      handleCloseRowMenu()
+    }
   }
 
   const handleGenerateInforme = (rowId: number | null) => {
@@ -748,19 +830,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             try {
               const or = await fetch(`/api/obra/${id}`)
               if (!or.ok) {
-                const txt = await or.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn(`obra ${id} responded not ok:`, or.status, txt.slice(0, 300))
+                console.warn(`obra ${id} responded not ok:`, or.status)
                 return
               }
               const ct = (or.headers.get('content-type') || '').toLowerCase()
               if (ct.includes('application/json')) {
                 obraMap[id] = await or.json()
               } else {
-                const txt = await or.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn(`obra ${id} returned non-json:`, txt.slice(0, 400))
-                return
+                console.warn(`obra ${id} returned non-json`)
               }
             } catch (e) {
               console.warn('No se pudo cargar obra', id, e)
@@ -768,97 +845,80 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           })
         )
 
-        // --- fetch ordenes de trabajo por id (para obtener correlativ) ---
+        // ✅ AGREGAR: fetch clientes
+        const clienteIds = Array.from(new Set(raw.map((r: any) => r.clienteId ?? r.cliente?.id).filter(Boolean)))
+        const clienteMap: Record<string, any> = {}
+        if (clienteIds.length > 0) {
+          console.log('🔍 Fetching clientes:', clienteIds)
+          await Promise.all(
+            clienteIds.map(async id => {
+              try {
+                const res = await fetch(`/api/cliente/${id}`)
+                if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                  const data = await res.json()
+                  clienteMap[String(id)] = data
+                  console.log(`✅ Loaded cliente ${id}:`, data)
+                }
+              } catch (e) {
+                console.warn('No se pudo cargar cliente', id, e)
+              }
+            })
+          )
+          console.log('📦 clienteMap final:', clienteMap)
+        }
+
+        // DEBUG: mostrar muestra de clienteMap
+        if (Object.keys(clienteMap).length) {
+          console.debug('clienteMap sample:', Object.keys(clienteMap)[0], clienteMap[Object.keys(clienteMap)[0]])
+        }
+
+        // --- fetch ordenes de trabajo ---
         const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
         const ordenMap: Record<string | number, any> = {}
         if (ordenIds.length) {
-          try {
-            const q = ordenIds.map(encodeURIComponent).join(',')
-            const br = await fetch(`/api/ordenes?ids=${q}`)
-            if (br.ok) {
-              const ct = (br.headers.get('content-type') || '').toLowerCase()
-              if (ct.includes('application/json')) {
-                const list = await br.json()
-                if (Array.isArray(list)) {
-                  list.forEach((o: any) => {
-                    const key = o.id ?? o._id ?? o.key ?? o.ordenTrabajoId ?? o.correlativ ?? o.correlativo
-                    if (key) {
-                      ordenMap[String(key)] = o
-                      if (o.id) ordenMap[String(o.id)] = o
-                      const correl = o.correlativ ?? o.correlativo ?? o.numero ?? o.nro
-                      if (correl) ordenMap[String(correl)] = o
-                    }
-                  })
+          console.log('🔍 Fetching ordenes de trabajo:', ordenIds)
+          await Promise.all(
+            ordenIds.map(async id => {
+              try {
+                // ✅ CAMBIAR el endpoint si es incorrecto
+                const or = await fetch(`/api/ot/${id}`) // ← cambiar de /api/orden-trabajo/ a /api/ot/
+
+                if (!or.ok) {
+                  console.warn(`❌ ordenTrabajo ${id} responded ${or.status}`)
+                  return
                 }
-              } else {
-                const txt = await br.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn('Batch /api/ordenes responded with non-json. sample:', txt.slice(0, 400))
-                // fallback a fetch individual
-                await Promise.all(
-                  ordenIds.map(async id => {
-                    try {
-                      const or = await fetch(`/api/ordenTrabajo/${id}`)
-                      if (!or.ok) return
-                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                      if (ct2.includes('application/json')) {
-                        ordenMap[String(id)] = await or.json()
-                      } else {
-                        const t = await or.text().catch(() => '')
-                        // eslint-disable-next-line no-console
-                        console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
-                      }
-                    } catch (err) {
-                      // eslint-disable-next-line no-console
-                      console.warn('No se pudo cargar ordenTrabajo', id, err)
-                    }
-                  })
-                )
+
+                const ct = (or.headers.get('content-type') || '').toLowerCase()
+
+                if (!ct.includes('application/json')) {
+                  const txt = await or.text().catch(() => '')
+                  console.warn(`⚠️ ordenTrabajo ${id} returned non-json (${ct}):`, txt.slice(0, 200))
+                  return
+                }
+
+                const data = await or.json()
+                ordenMap[String(id)] = data
+                console.log(`✅ Loaded ordenTrabajo ${id}:`, data)
+
+              } catch (err) {
+                console.warn(`❌ Error loading ordenTrabajo ${id}:`, err)
               }
-            } else {
-              // batch endpoint responded not ok -> fallback individual
-              await Promise.all(
-                ordenIds.map(async id => {
-                  try {
-                    const or = await fetch(`/api/ordenTrabajo/${id}`)
-                    if (!or.ok) return
-                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                    if (ct2.includes('application/json')) {
-                      ordenMap[String(id)] = await or.json()
-                    } else {
-                      const t = await or.text().catch(() => '')
-                      // eslint-disable-next-line no-console
-                      console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
-                    }
-                  } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.warn('No se pudo cargar ordenTrabajo', id, err)
-                  }
-                })
-              )
-            }
-          } catch (err) {
-            // en error, fallback a fetch individual
-            await Promise.all(
-              ordenIds.map(async id => {
-                try {
-                  const or = await fetch(`/api/ordenTrabajo/${id}`)
-                  if (!or.ok) return
-                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                  if (ct2.includes('application/json')) {
-                    ordenMap[String(id)] = await or.json()
-                  } else {
-                    const t = await or.text().catch(() => '')
-                    // eslint-disable-next-line no-console
-                    console.warn(`ordenTrabajo ${id} returned non-json (fallback):`, t.slice(0, 300))
-                  }
-                } catch (e) {
-                  // eslint-disable-next-line no-console
-                  console.warn('No se pudo cargar ordenTrabajo', id, e)
-                }
-              })
-            )
-          }
+            })
+          )
+          console.log('📦 ordenMap final:', ordenMap)
+        }
+
+        // DEBUG: mostrar muestra de ordenMap
+        if (Object.keys(ordenMap).length) {
+          console.group('🔍 DEBUG ordenMap')
+          const sampleKeys = Object.keys(ordenMap).slice(0, 3)
+          sampleKeys.forEach(key => {
+            console.log(`Key: ${key}`, ordenMap[key])
+            console.log('  -> correlativo:', ordenMap[key]?.correlativo)
+            console.log('  -> correlativ:', ordenMap[key]?.correlativ)
+            console.log('  -> numero:', ordenMap[key]?.numero)
+          })
+          console.groupEnd()
         }
 
         // --- helper para extraer correlativo de un objeto orden (busca keys comunes y en nested 1 nivel) ---
@@ -885,122 +945,52 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           return undefined
         }
 
-        // DEBUG: mostrar muestra de ordenMap para inspección (temporal)
-        try {
-          if (Object.keys(ordenMap).length) {
-            const sampleKey = Object.keys(ordenMap)[0]
-            // eslint-disable-next-line no-console
-            console.debug('ordenMap sample key:', sampleKey, 'value:', ordenMap[sampleKey])
-            // eslint-disable-next-line no-console
-            console.debug('extracted correl (sample):', findOrderCorrel(ordenMap[sampleKey]))
-          }
-        } catch (e) {
-          /* ignore debug errors */
+        // DEBUG: mostrar muestra de ordenMap para inspección
+        if (Object.keys(ordenMap).length) {
+          console.group('🔍 DEBUG ordenMap')
+          const sampleKeys = Object.keys(ordenMap).slice(0, 3)
+          sampleKeys.forEach(key => {
+            console.log(`Key: ${key}`, ordenMap[key])
+            console.log('  -> correlativo:', ordenMap[key]?.correlativo)
+            console.log('  -> correlativ:', ordenMap[key]?.correlativ)
+            console.log('  -> numero:', ordenMap[key]?.numero)
+          })
+          console.groupEnd()
         }
 
-        // --- fetch clientes por clienteId (batch + fallback individual) ---
-        const clienteIds = Array.from(
-          new Set(
-            raw
-              .map((r: any) => r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id)
-              .filter(Boolean)
-              .map((x: any) => String(x))
-          )
-        )
-        const clienteMap: Record<string, any> = {}
-        if (clienteIds.length) {
-          try {
-            const q = clienteIds.map(encodeURIComponent).join(',')
-            const br = await fetch(`/api/clientes?ids=${q}`)
-            if (br.ok) {
-              const ct = (br.headers.get('content-type') || '').toLowerCase()
-              if (ct.includes('application/json')) {
-                const list = await br.json()
-                if (Array.isArray(list)) {
-                  list.forEach((c: any) => {
-                    const key = c.id ?? c._id ?? c.clienteId ?? c.cliente_id
-                    if (key) clienteMap[String(key)] = c
-                  })
+        // --- PRE-FETCH todos los servicioRCM faltantes ---
+        const allMuestras = raw.flatMap((r: any) => Array.isArray(r.muestras) ? r.muestras : [])
+
+        // CORRECCIÓN: buscar servicioId, NO servicioRCMId
+        const missingServiceIds = allMuestras
+          .filter((m: any) => !m.servicioRCM && (m.servicioRCMId || m.servicioId))
+          .map((m: any) => m.servicioRCMId || m.servicioId)
+          .filter(Boolean)
+
+        const servicioRCMMap: Record<string, any> = {}
+        if (missingServiceIds.length > 0) {
+          console.log('🔍 Fetching servicioRCM for IDs:', missingServiceIds)
+          await Promise.all(
+            missingServiceIds.map(async (id: any) => {
+              try {
+                const res = await fetch(`/api/servicioRCM/${id}`)
+                if (res.ok) {
+                  const data = await res.json()
+                  servicioRCMMap[String(id)] = data
+                  console.log(`✅ Loaded servicioRCM ${id}:`, data)
+                } else {
+                  console.warn(`❌ servicioRCM ${id} responded ${res.status}`)
                 }
-              } else {
-                const txt = await br.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn('Batch /api/clientes responded with non-json. sample:', txt.slice(0, 400))
-                // fallback individual
-                await Promise.all(
-                  clienteIds.map(async id => {
-                    try {
-                      const or = await fetch(`/api/cliente/${id}`)
-                      if (!or.ok) return
-                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                      if (ct2.includes('application/json')) {
-                        clienteMap[String(id)] = await or.json()
-                      } else {
-                        const t = await or.text().catch(() => '')
-                        // eslint-disable-next-line no-console
-                        console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
-                      }
-                    } catch (err) {
-                      // eslint-disable-next-line no-console
-                      console.warn('No se pudo cargar cliente', id, err)
-                    }
-                  })
-                )
+              } catch (e) {
+                console.warn('No se pudo cargar servicioRCM', id, e)
               }
-            } else {
-              // batch endpoint not ok -> fallback individual
-              await Promise.all(
-                clienteIds.map(async id => {
-                  try {
-                    const or = await fetch(`/api/cliente/${id}`)
-                    if (!or.ok) return
-                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                    if (ct2.includes('application/json')) {
-                      clienteMap[String(id)] = await or.json()
-                    } else {
-                      const t = await or.text().catch(() => '')
-                      // eslint-disable-next-line no-console
-                      console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
-                    }
-                  } catch (e) {
-                    // eslint-disable-next-line no-console
-                    console.warn('No se pudo cargar cliente', id, e)
-                  }
-                })
-              )
-            }
-          } catch (err) {
-            // on error -> try individual
-            await Promise.all(
-              clienteIds.map(async id => {
-                try {
-                  const or = await fetch(`/api/cliente/${id}`)
-                  if (!or.ok) return
-                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                  if (ct2.includes('application/json')) {
-                    clienteMap[String(id)] = await or.json()
-                  } else {
-                    const t = await or.text().catch(() => '')
-                    // eslint-disable-next-line no-console
-                    console.warn(`cliente ${id} returned non-json (fallback):`, t.slice(0, 300))
-                  }
-                } catch (e) {
-                  // eslint-disable-next-line no-console
-                  console.warn('No se pudo cargar cliente (fallback)', id, e)
-                }
-              })
-            )
-          }
+            })
+          )
+          console.log('📦 servicioRCMMap final:', servicioRCMMap)
         }
 
-        // DEBUG: mostrar muestra de clienteMap
-        if (Object.keys(clienteMap).length) {
-          // eslint-disable-next-line no-console
-          console.debug('clienteMap sample:', Object.keys(clienteMap)[0], clienteMap[Object.keys(clienteMap)[0]])
-        }
-
-        // normalizar y enriquecer
-        const normalized = raw.map((r: any) => {
+        // normalizar y enriquecer - EXPANDIR POR MUESTRAS
+        const normalized = raw.flatMap((r: any) => {
           const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
           const numeroObra =
             obraObj?.numeroObra ??
@@ -1047,60 +1037,208 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             }
           })
 
-          // intentar obtener correlativo desde varios posibles campos del objeto orden
-          const orderKey = r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? ''
-          const orderObj = ordenMap[orderKey] ?? ordenMap[String(orderKey)] ?? ordenMap[r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? ''] ?? null
-          const orderCorrel = orderObj ? findOrderCorrel(orderObj) : undefined
+          // --- CORRECCIÓN: NORMALIZAR ORDEN DE TRABAJO ---
+          const orderKey = r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? r.ordenTrabajo?._id ?? ''
+          const orderObj = orderKey ? (ordenMap[String(orderKey)] ?? null) : null
 
-          // Normalizar ordenTrabajo: incluir correlativo si se encuentra; mantener ordenTrabajoId como fallback
+          // ✅ CORRECCIÓN: priorizar 'correlativ' (sin 'o')
+          const orderCorrel =
+            orderObj?.correlativ ??           // ← PRIMERO: campo exacto de la BD
+            r.ordenTrabajo?.correlativ ??     // ← backup desde objeto anidado
+            orderObj?.correlativo ??          // ← fallback con 'o'
+            orderObj?.numero ??
+            r.ordenTrabajo?.correlativo ??
+            r.ot ??
+            null
+
+          // LOG DETALLADO para debugging - MOSTRAR TODOS LOS CAMPOS del orderObj
+          if (r.id <= 3) {
+            console.group(`🔧 DEBUG OT - RCM ${r.id}`)
+            console.log('orderKey:', orderKey)
+            console.log('📦 orderObj COMPLETO (todos los campos):', orderObj)
+            console.log('🔍 Object.keys(orderObj):', orderObj ? Object.keys(orderObj) : [])
+            console.log('✅ orderObj.correlativ (SIN o):', orderObj?.correlativ)
+            console.log('⚠️ orderObj.correlativo (CON o):', orderObj?.correlativo)
+            console.log('📋 orderCorrel final extraído:', orderCorrel)
+            console.log('---')
+            console.log('r.ordenTrabajo original:', r.ordenTrabajo)
+            console.log('r.ot original:', r.ot)
+            console.groupEnd()
+          }
+
+          // Normalizar objeto ordenTrabajo
           const ordenTrabajoNormalized = {
-            ...(r.ordenTrabajo ?? orderObj ?? {}),
-            correlativo: orderCorrel ?? r.ordenTrabajo?.correlativ ?? r.ordenTrabajo?.correlativo ?? undefined,
-            id: r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? undefined
+            ...(orderObj ?? r.ordenTrabajo ?? {}),
+            id: r.ordenTrabajoId ?? orderObj?.id ?? r.ordenTrabajo?.id ?? undefined,
+            correlativ: orderCorrel,  // ✅ usar 'correlativ' como campo principal
+            correlativo: orderCorrel  // mantener ambas versiones por compatibilidad
           }
 
-          // otDisplay: mostrar correlativo real si existe, sino null (para mostrar '-' en UI)
-          const otDisplay = ordenTrabajoNormalized.correlativo ?? (r.ot && typeof r.ot === 'string' && !/[a-zA-Z]/.test(r.ot) ? r.ot : null)
+          // otDisplay: usar correlativo si existe
+          const otDisplay = orderCorrel ? String(orderCorrel) : null
 
-          const otCorrel =
-            // mantener campo ot original por compatibilidad, pero preferir otDisplay para mostrar
-            r.ot ?? ordenTrabajoNormalized.correlativo ?? orderCorrel ?? orderObj?.correlativ ?? orderObj?.correlativo ?? orderObj?.numero ?? r.ordenTrabajoId ?? null
-
-          return {
-            ...r,
-            // preserve original ot, add normalized ordenTrabajo and otDisplay
-            ot: otCorrel,
-            ordenTrabajo: ordenTrabajoNormalized,
+          console.debug('OT Normalization:', {
+            rcmId: r.id,
+            orderKey,
+            orderObj: orderObj ? { id: orderObj.id, correlativo: orderObj.correlativo } : null,
+            orderCorrel,
             otDisplay,
-            // normalizar cliente en estructura uniforme
-            cliente: {
-              nombreCliente: clienteNombre ?? null,
-              comuna: clienteComuna ?? null,
-              // mantener el raw por si hace falta
-              raw: rawCliente ?? null
-            },
-            // Normalizar y asegurar estadoAdministrativo en cada fila (fallbacks comunes)
-            estadoAdministrativo:
-              r.estadoAdministrativo ??
-              r.estado_administrativo ??
-              r.estadoAdm ??
-              r.estado_adm ??
-              r.administrativo ??
-              '',
-            estadoOperativo:
-              r.estadoOperativo ??
-              (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ??
-              '',
-            obra: { ...(obraObj ?? {}), numeroObra }
-          }
+            raw_ot: r.ot,
+            raw_ordenTrabajoId: r.ordenTrabajoId
+          })
+
+          // EXPANDIR POR MUESTRAS
+          const muestras = Array.isArray(r.muestras) && r.muestras.length > 0
+            ? r.muestras
+            : [{ id: null, numeroMuestra: '-', servicio: null, cantidad: 0, estado: null }]
+
+          return muestras.map((muestra: any, idx: number) => {
+            // ✅ DEBUG: Verificar TODOS los campos de muestra
+            if (r.id <= 3) { // solo primeros 3 RCMs
+              console.group(`🔍 DEBUG MUESTRA COMPLETA - RCM ${r.id}-${idx}`)
+              console.log('📦 muestra RAW (todos los campos):', muestra)
+              console.log('📋 Keys disponibles en muestra:', Object.keys(muestra))
+              console.log('🔢 numeroTarjeta directo:', muestra.numeroTarjeta)
+              console.log('🔢 numero_tarjeta:', muestra.numero_tarjeta)
+              console.log('🔢 tarjeta.numero:', muestra.tarjeta?.numero)
+              console.log('🔢 tarjeta.numeroTarjeta:', muestra.tarjeta?.numeroTarjeta)
+              console.log('🔢 nroTarjeta:', muestra.nroTarjeta)
+              console.log('🔢 nro_tarjeta:', muestra.nro_tarjeta)
+              console.log('🔢 cardNumber:', muestra.cardNumber)
+              console.log('🔢 card_number:', muestra.card_number)
+              console.groupEnd()
+            }
+
+            // CASCADA DE FALLBACKS PARA PRODUCTO
+            let producto = null
+            // 1) Desde servicioRCM (si existe)
+            let servicioRCM = muestra.servicioRCM ?? muestra.servicio_rcm ?? null
+            if (!servicioRCM && (muestra.servicioRCMId || muestra.servicioId)) {
+              const serviceKey = muestra.servicioRCMId || muestra.servicioId
+              servicioRCM = servicioRCMMap[String(serviceKey)] ?? null
+            }
+            const servicio = servicioRCM?.servicio ?? null
+            producto = servicio?.producto ?? null
+
+            // 2) Fallback: servicio directo en muestra (sin pasar por servicioRCM)
+            if (!producto) {
+              const directServicio = muestra.servicio ?? muestra.servicioData ?? null
+              producto = directServicio?.producto ?? null
+            }
+
+            // 3) Fallback: array servicios en RCM raíz
+            if (!producto && Array.isArray(r.servicios) && r.servicios.length > 0) {
+              const svc = r.servicios[0]
+              producto = svc.producto ?? svc.servicio?.producto ?? null
+            }
+
+            // 4) Fallback: servicio directo en RCM raíz
+            if (!producto) {
+              producto = r.servicio?.producto ?? r.servicioData?.producto ?? r.producto ?? null
+            }
+
+            // Extraer área y familia del producto con múltiples fallbacks
+            const areaProducto = producto?.area?.nombre ??
+              producto?.area?.name ??
+              producto?.areaNombre ??
+              (typeof producto?.area === 'string' ? producto.area : null)
+
+            const familiaProducto = producto?.familia?.nombre ??
+              producto?.familia?.name ??
+              producto?.familiaNombre ??
+              (typeof producto?.familia === 'string' ? producto.familia : null)
+
+            // Fallbacks finales desde RCM raíz
+            const areaFinal = areaProducto ?? r.area ?? null
+            const familiaFinal = familiaProducto ?? r.familia ?? null
+
+            // LOG (mantener solo para debug)
+            console.group(`🔍 DEBUG Muestra ${r.id}-${idx}`)
+            console.log('📦 Muestra:', muestra)
+            console.log('🔗 servicioRCM:', servicioRCM)
+            console.log('⚙️ servicio:', servicio)
+            console.log('📋 producto final:', producto)
+            console.log('✅ area:', areaFinal)
+            console.log('✅ familia:', familiaFinal)
+            console.groupEnd()
+
+            return {
+              id: Number(`${r.id}${String(idx).padStart(3, '0')}`),
+              rcmOriginalId: r.id,
+              numeroRcm: r.numeroRcm,
+
+              // ✅ Agregar numeroTarjeta al objeto retornado
+              numeroTarjeta: muestra.numeroTarjeta ??
+                muestra.numero_tarjeta ??
+                muestra.nroTarjeta ??
+                muestra.nro_tarjeta ??
+                muestra.tarjeta?.numero ??
+                muestra.tarjeta?.numeroTarjeta ??
+                muestra.cardNumber ??
+                muestra.card_number ??
+                null,
+
+              ot: otDisplay,
+              otDisplay: otDisplay,
+              ordenTrabajo: ordenTrabajoNormalized,
+              ordenTrabajoId: ordenTrabajoNormalized.id,
+
+              fechaCodificacion: r.fechaCodificacion,
+              fechaMuestreo: r.fechaMuestreo,
+              estadoOperativo: muestra.estado ?? servicioRCM?.estado ?? r.estadoOperativo ?? '',
+              estadoAdministrativo: r.estadoAdministrativo ?? r.estado_administrativo ?? '',
+              cliente: {
+                nombreCliente: clienteNombre ?? null,
+                comuna: clienteComuna ?? null,
+                raw: rawCliente ?? null
+              },
+              area: areaFinal,
+              familia: familiaFinal,
+              muestra: {
+                id: muestra.id,
+                numeroMuestra: muestra.numeroMuestra || '-',
+                cantidad: muestra.cantidad ?? 1,
+                estado: muestra.estado,
+                numeroTarjeta: muestra.numeroTarjeta ?? muestra.numero_tarjeta ?? null, // ← agregar aquí también
+                servicioRCM: servicioRCM ? {
+                  id: servicioRCM.id,
+                  estado: servicioRCM.estado,
+                  servicio: servicio
+                } : null
+              }
+            }
+          })
         })
+
+        console.log('Normalized data sample with area/familia:', normalized.slice(0, 3))
+
+        // LOG ADICIONAL: Verificar estructura final
+        console.group('📊 VERIFICACIÓN FINAL DE DATOS')
+        console.log('Total registros normalizados:', normalized.length)
+        console.log('Primeros 3 registros completos:', JSON.stringify(normalized.slice(0, 3), null, 2))
+        console.log('---')
+        console.log('Áreas encontradas:', normalized.slice(0, 10).map((n, i) => ({
+          index: i,
+          id: n.id,
+          area: n.area,
+          areaEnMuestra: n.muestra?.servicioRCM?.servicio?.producto?.area
+        })))
+        console.log('---')
+        console.log('Familias encontradas:', normalized.slice(0, 10).map((n, i) => ({
+          index: i,
+          id: n.id,
+          familia: n.familia,
+          familiaEnMuestra: n.muestra?.servicioRCM?.servicio?.producto?.familia
+        })))
+        console.groupEnd()
 
         setData(normalized)
         applyDateFilter(normalized, filters)
       } catch (err) {
         console.error('Error fetching RCMs:', err)
       } finally {
-        setLoading(false)
+        setLoading(false
+        )
       }
     }
 
@@ -1365,13 +1503,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               checked={allSelected}
               indeterminate={!allSelected && someSelected}
               onChange={() => {
-                // si no están todos seleccionados => seleccionar todos visibles, si ya lo están => deseleccionar todo
                 if (!allSelected) {
                   const next: any = {}
                   visibleIds.forEach(id => (next[id] = true))
                   setRowSelection(next)
                 } else {
-                  setRowSelection({}) // deselecciona todo
+                  setRowSelection({})
                 }
               }}
             />
@@ -1380,28 +1517,46 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
       },
       {
+        id: 'muestra',
+        header: 'MUESTRA',
+        accessorFn: (r: any) => r.muestra?.numeroMuestra || '-',
+        cell: ({ row }: any) => {
+          const numeroMuestra = row.original.muestra?.numeroMuestra || '-'
+          return (
+            <Typography variant='body2' sx={{ fontSize: '0.875rem' }}>
+              {numeroMuestra}
+            </Typography>
+          )
+        }
+      },
+      {
         id: 'rcm',
         header: 'RCM',
         accessorKey: 'numeroRcm',
-        cell: ({ row }) => <Typography variant='body2'>{row.original.numeroRcm}</Typography>
+        cell: ({ row }) => {
+          const numeroRcm = row.original.numeroRcm || '-'
+          return (
+            <Typography variant='body2' sx={{ fontSize: '0.875rem' }}>
+              {numeroRcm}
+            </Typography>
+          )
+        }
       },
       {
         id: 'ot',
         header: 'OT',
-        accessorFn: (r: any) => r.otDisplay ?? r.ot ?? r.ordenTrabajo?.correlativo ?? r.ordenTrabajoId ?? null,
+        accessorKey: 'ot', // ✅ ahora usa 'ot' directamente (que es otDisplay)
         cell: ({ row }: any) => {
-          const display = row.original.otDisplay ?? null
-          const ordenId = row.original.ordenTrabajo?.id ?? row.original.ordenTrabajoId ?? null
-          if (display) {
-            return <Typography variant='body2'>{display}</Typography>
+          const ot = row.original.ot
+          if (ot) {
+            return <Typography variant='body2'>{ot}</Typography>
           }
-          // no correlativo: mostrar '-' pero dejar ordenTrabajoId en tooltip para rastreo
+          // Fallback: mostrar ID si existe pero sin correlativo
+          const ordenId = row.original.ordenTrabajoId
           if (ordenId) {
-            // eslint-disable-next-line no-console
-            console.debug('No correlativo for row', row.original.id, 'ordenTrabajoId:', ordenId)
             return (
-              <Typography variant='body2' title={`ordenTrabajoId: ${ordenId}`}>
-                -
+              <Typography variant='body2' color='text.secondary' title={`ID: ${ordenId}`}>
+                #{ordenId}
               </Typography>
             )
           }
@@ -1418,92 +1573,53 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         id: 'fechaMues',
         header: 'Fecha Mues.',
         accessorKey: 'fechaMuestreo',
-        cell: ({ row }) => <span>{row.original.fechaMuestreo ? new Date(row.original.fechaMuestreo).toLocaleDateString() : '-'}</span>
+        cell: ({ row }) => {
+          const val = row.original.fechaMuestreo ?? row.original.fecha_muestreo
+          return <span>{val ? new Date(val).toLocaleDateString('es-CL') : '-'}</span>
+        }
+      },
+      {
+        id: 'numeroTarjeta',
+        header: 'N° TAR',
+        accessorKey: 'numeroTarjeta', // ✅ cambiar a accessorKey simple
+        cell: ({ row }) => {
+          const val = row.original.numeroTarjeta
+          return <span>{val ?? '-'}</span>
+        }
       },
       {
         id: 'area',
         header: 'ÁREA',
-        accessorFn: (r: any) => {
-          const svc = Array.isArray(r.servicios) ? r.servicios.find((s: any) => s?.producto && (s.producto.area || s.producto?.area)) : undefined
-          return svc?.producto?.area ?? r.area ?? r.cliente?.nombreCliente ?? '-'
-        },
-        cell: ({ row }: any) => {
-          const svc = Array.isArray(row.original.servicios)
-            ? row.original.servicios.find((s: any) => s?.producto && s.producto.area)
-            : null
-          const areaVal = svc?.producto?.area ?? row.original.area ?? row.original.cliente?.nombreCliente ?? '-'
-          return <span>{areaVal}</span>
-        }
-      },
-
-      {
-        id: 'cliente',
-        header: 'CLIENTE',
-        accessorFn: (r: any) =>
-          r.cliente?.nombreCliente ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente ?? (typeof r.cliente === 'string' ? r.cliente : '-') ?? '-',
-        cell: ({ row }: any) => {
-          const val =
-            row.original.cliente?.nombreCliente ??
-            row.original.clienteNombre ??
-            row.original.nombreCliente ??
-            (typeof row.original.cliente === 'string' ? row.original.cliente : undefined) ??
-            '-'
-          // eslint-disable-next-line no-console
-          console.debug('cliente cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedCliente: val })
-          return <Typography variant='body2'>{val}</Typography>
-        }
-      },
-
-      {
-        id: 'comuna',
-        header: 'COMUNA',
-        accessorFn: (r: any) =>
-          r.cliente?.comuna ?? r.comuna ?? r.clienteComuna ?? r.comunaCliente ?? '-',
-        cell: ({ row }: any) => {
-          const val =
-            row.original.cliente?.comuna ??
-            row.original.comuna ??
-            row.original.clienteComuna ??
-            row.original.comunaCliente ??
-            '-'
-          // eslint-disable-next-line no-console
-          console.debug('comuna cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedComuna: val })
-          return <Typography variant='body2'>{val}</Typography>
+        accessorKey: 'area',
+        cell: ({ row }) => {
+          const val = row.original.area
+          return <span>{val ?? '-'}</span>
         }
       },
       {
         id: 'familia',
         header: 'FAMILIA',
-        accessorFn: (r: any) => {
-          const svc = Array.isArray(r.servicios)
-            ? r.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
-            : undefined
-          return svc?.producto?.familia ?? r.familia ?? '-'
-        },
-        cell: ({ row }: any) => {
-          const svc = Array.isArray(row.original.servicios)
-            ? row.original.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
-            : null
-          const fam = svc?.producto?.familia ?? row.original.familia ?? '-'
-          return <span>{fam}</span>
+        accessorKey: 'familia',
+        cell: ({ row }) => {
+          const val = row.original.familia
+          return <span>{val ?? '-'}</span>
         }
       },
       {
-        id: 'muestras',
+        id: 'cantidadMuestras',
         header: '# MUES.',
-        accessorFn: r => (Array.isArray(r.servicios) ? r.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0),
-        cell: ({ row }) => <span>{Array.isArray(row.original.servicios) ? row.original.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0}</span>
+        accessorFn: r => r.muestra?.cantidad ?? 1,
+        cell: ({ row }) => {
+          const val = row.original.muestra?.cantidad ?? 1
+          return <span>{val}</span>
+        }
       },
       {
         id: 'estOp',
-        header: 'Est. Operativo',
+        header: 'EST. OPERATIVO',
         accessorKey: 'estadoOperativo',
         cell: ({ row }) => {
-          const op =
-            row.original.estadoOperativo ??
-            (Array.isArray(row.original.servicios) && row.original.servicios.length
-              ? (row.original.servicios[0] as any).estado
-              : null)
+          const op = row.original.estadoOperativo ?? row.original.muestra?.estado ?? row.original.muestra?.servicio?.estado
           const info = getOperationalInfo(op)
           return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -1531,58 +1647,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
-        id: 'estadoAdministrativo',
-        header: 'EST. ADMINISTRATIVO',
-        accessorKey: 'estadoAdministrativo',
-        cell: ({ row }) => {
-          const raw = row.original.estadoAdministrativo ?? row.original.estado_administrativo ?? ''
-          const label = (typeof raw === 'string' && raw.trim()) ? raw : String(raw)
-          const info = getAdministrativeInfo(label)
-          return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Chip
-                label={label || '-'}
-                size='small'
-                variant='filled'
-                sx={{
-                  bgcolor: info.bgcolor,
-                  color: info.colorText,
-                  border: `1px solid ${info.border}`,
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  fontSize: '0.72rem',
-                  borderRadius: 2,
-                  px: 1,
-                  py: 0.4,
-                  minWidth: 84,
-                  justifyContent: 'center'
-                }}
-              />
-            </Box>
-          )
-        }
-      },
-      {
-        id: 'nobra',
-        header: 'N° OBRA',
-        accessorFn: r =>
-          r.obra?.numeroObra ??
-          r.obra?.numero_obra ??
-          r.obra?.numero ??
-          r.obra?.numeroobra ??
-          r.obraId ??
-          '-',
-        cell: ({ row }) => {
-          const val = row.getValue('nobra') as string
-          return <span>{val ?? '-'}</span>
-        }
-      },
-      {
         id: 'acciones',
         header: 'ACCIONES',
         cell: ({ row }) => (
           <Stack direction='row' spacing={1}>
-            <IconButton size='small' title='Ver' onClick={() => handleEdit(row.original.id, { readonly: true })}>
+            {/* ✅ CAMBIO: Ver ahora muestra servicios de la muestra */}
+            <IconButton
+              size='small'
+              title='Ver Servicios'
+              onClick={() => handleView(row.original.id)}
+            >
               <VisibilityIcon fontSize='small' />
             </IconButton>
 
@@ -1594,7 +1668,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               <CheckBoxOutlinedIcon fontSize='small' />
             </IconButton>
 
-            <IconButton size='small' title='Más' onClick={e => handleOpenRowMenu(e, row.original.id)}>
+            <IconButton size='small' title='Más' onClick={e => handleOpenRowMenu(e, row.original.rcmOriginalId ?? row.original.id)}>
               <MoreVertIcon fontSize='small' />
             </IconButton>
           </Stack>
@@ -1617,32 +1691,48 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return Object.values(rowSelection as any).filter(Boolean).length
   }, [rowSelection])
 
-  // EXPORT: exportar sólo filas seleccionadas a CSV (si no hay selección, no hace nada)
   const handleExport = () => {
     try {
-      const selectedIds = Object.keys(rowSelection).filter(id => (rowSelection as any)[id])
-      if (!selectedIds.length) return
+      const selectedRows = Object.keys(rowSelection)
+        .filter(id => (rowSelection as any)[id])
+        .map(id => findRowById(id))
+        .filter(Boolean)
 
-      // columnas visibles (excluir columnas no deseadas como select/acciones)
-      const cols = table.getAllLeafColumns().filter(c => !['select', 'acciones'].includes(c.id))
-      const headers = cols.map(c => (typeof c.columnDef.header === 'string' ? c.columnDef.header : c.id))
+      if (selectedRows.length === 0) {
+        console.warn('No rows selected for export')
+        return
+      }
 
-      // construir filas para los ids seleccionados
-      const rows = selectedIds.map(id => {
-        const row = table.getRowModel().rows.find(r => r.id === id)
-        return cols
-          .map(c => {
-            const v = row ? row.getValue(c.id) : ''
-            if (v === null || v === undefined) return '""'
-            const s = typeof v === 'object' ? JSON.stringify(v) : String(v)
-            // escapar comillas dobles para CSV y envolver en comillas
-            return '"' + s.replace(/"/g, '""') + '"'
-          })
-          .join(',')
-      })
+      const headers = [
+        'MUESTRA',
+        'RCM',
+        'OT',
+        'Fecha Cod.',
+        'Fecha Mues.',
+        'N° TAR',
+        'ÁREA',
+        'FAMILIA',
+        '# MUES.',
+        'EST. OPERATIVO'
+        // ELIMINADO: 'EST. ADM'
+      ]
+
+      const rows = selectedRows.map((row: any) => [
+        row.muestra?.numeroMuestra ?? '-',
+        row.numeroRcm ?? '-',
+        row.ot ?? '-',
+        row.fechaCodificacion ? new Date(row.fechaCodificacion).toLocaleDateString('es-CL') : '-',
+        row.fechaMuestreo ? new Date(row.fechaMuestreo).toLocaleDateString('es-CL') : '-',
+        row.numeroTarjeta ?? '-',
+        row.area ?? '-',
+        row.familia ?? '-',
+        row.muestra?.cantidad ?? 1,
+        row.estadoOperativo ?? '-'
+        // ELIMINADO: row.estadoAdministrativo ?? '-'
+      ].map(v => '"' + String(v).replace(/"/g, '""') + ''))
 
       const headerRow = headers.map(h => '"' + String(h).replace(/"/g, '""') + '"').join(',')
-      const csv = [headerRow, ...rows].join('\r\n')
+      const csv = [headerRow, ...rows.map(r => r.join(','))].join('\r\n')
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -1657,29 +1747,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   // reemplazado: indicadores usando OPERATIONAL_STATES.value para comparaciones
+  /*
   const indicators = useMemo(() => {
     const total = filteredData.length
-
+  
     // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
-    const normOp = (raw?: string) => {
-      if (!raw) return ''
-      // usamos la función existente para normalizar (genera UPPERCASE)
-      const u = normalizeState(raw)
-      // si el usuario pasó una label en texto (g. ej. "Codificado"), intentar mapear a value
-      const byValue = OPERATIONAL_STATES.find(s => s.value === u)
-      if (byValue) return byValue.value
-      // intentar mapear por label (sin tildes / case)
-      const rawNorm = (raw ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() ?? String(raw).toLowerCase()
-      const byLabel = OPERATIONAL_STATES.find(s => (s.label ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() === rawNorm)
-      if (byLabel) return byLabel.value
-      // fallback: devolver UPPERCASE original para comparaciones textuales
-      return u
+  
     }
-
-    const normAdmText = (s?: string) => normalizeText(s ?? '')
-
-    // sets para cada tarjeta basadas en OPERATIONAL_STATES.value
-    const S = {
       CODIFICADO: 'CODIFICADO',
       EN_PROCESO: 'EN_PROCESO',
       ENSAYADO: 'ENSAYADO',
@@ -1691,7 +1765,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       EVENTO: 'EVENTO',
       CERRADO_OP: 'CERRADO_OP'
     } as const
-
+  
     const countIf = (pred: (opVal: string, adm: string) => boolean) =>
       filteredData.reduce((acc, d) => {
         const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
@@ -1700,13 +1774,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const adm = normAdmText(admRaw)
         return acc + (pred(opVal, adm) ? 1 : 0)
       }, 0)
-
-    // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado')
+  
+    // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado'/'en proceso')
     const porEnsayar = countIf((op, adm) => {
       if ([S.CODIFICADO, S.EN_PROCESO].includes(op as any)) return true
       return adm.includes('ensayar') || adm.includes('codificad') || adm.includes('en proceso')
     })
-
+  
     // Por Digitar: estado ENSAYADO o ENVIADO_DIGITACION (pendiente digitación) y NO estar ya DIGITADO
     const porDigitar = countIf((op, adm) => {
       if (op === S.ENSAYADO || op === S.ENVIADO_DIGITACION) return true
@@ -1714,33 +1788,33 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       if (adm.includes('digit') && !adm.includes('digitad')) return true
       return false
     })
-
+  
     // Por Revisar: REVISADO o admin menciona revisar/revisado
     const porRevisar = countIf((op, adm) => op === S.DIGITADO)
-
+  
     // Por Corregir: estado EVENTO 
     const porCorregir = countIf((op, adm) => op === S.EVENTO)
-
+  
     // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
     const porFirmar = countIf((op, adm) => op === S.REVISADO)
-
+  
     // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
     const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
-
+  
     // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
     const firmadosPagados = countIf((op, adm) => {
       // requiere operativo exactamente FIRMADO (valor de OPERATIONAL_STATES)
       if (op !== S.FIRMADO) return false
-
+  
       // adm viene normalizado (lowercase, sin tildes) por normalizeText
       // 1) comprobar por label mapeando ADMINISTRATIVE_STATES
       const admMatch = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === adm)
       if (admMatch) return admMatch.value === 'PAGADO'
-
+  
       // 2) fallback textual (acepta 'pag', 'pagad', 'pagado')
       return adm.includes('pag') || adm.includes('pagad') || adm.includes('pagado')
     })
-
+  
     return {
       total,
       porEnsayar,
@@ -1752,109 +1826,47 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       firmadosPagados
     }
   }, [filteredData])
+  */
 
   if (loading) return <div>Cargando...</div>
 
   return (
     <Card>
-      {/* Card header: only title */}
-      <CardHeader
-        title={
-          <Box display='flex' alignItems='center' justifyContent='space-between' gap={2}>
-            <Typography variant='h6'>RCMs</Typography>
-          </Box>
-        }
-      />
+      <CardHeader />
 
       <Divider />
 
-      {/* ROW: Dashboard indicadores (fila superior) */}
+      {/* ELIMINADO: ROW de Dashboard indicadores */}
+      {/* 
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
-        {[
-          { label: 'Por Ensayar', value: indicators.porEnsayar },
-          { label: 'Por Digitar', value: indicators.porDigitar },
-          { label: 'Por Revisar', value: indicators.porRevisar },
-          { label: 'Por Corregir', value: indicators.porCorregir },
-          { label: 'Por Firmar', value: indicators.porFirmar },
-          { label: 'Por Enviar Cliente', value: indicators.porEnviarFirmados },
-          { label: 'Pagados Pendiente de Envío', value: indicators.firmadosPagados }
-        ].map(item => (
-          <Box
-            key={item.label}
-            sx={{
-              minWidth: 140,
-              backgroundColor: '#fff',
-              borderRadius: 1,
-              boxShadow: 1,
-              p: 1.25,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start'
-            }}
-          >
-            <Typography variant='caption' color='text.secondary'>
-              {item.label}
-            </Typography>
-            <Typography variant='h6' sx={{ fontWeight: 700 }}>
-              {item.value}
-            </Typography>
-          </Box>
-        ))}
+        <Card sx={{ flex: 1, minWidth: 120 }}>
+          <CardContent>
+            <Typography variant='subtitle2'>Por Ensayar</Typography>
+            <Typography variant='h6'>{indicators.porEnsayar}</Typography>
+          </CardContent>
+        </Card>
+        // ... resto de tarjetas
       </Box>
-
       <Divider />
+      */}
 
-      {/* New toolbar row: Exportar + contador + Buscar (separate row under title) */}
+      {/* New toolbar row: Exportar + contador + Buscar */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            variant='outlined'
-            startIcon={<DownloadIcon />}
-            size='small'
-            onClick={handleExport}
-            disabled={selectedCount === 0}
-            title={selectedCount === 0 ? 'Seleccione filas para exportar' : 'Exportar filas seleccionadas'}
-          >
-            Exportar
-          </Button>
+        <Button
+          variant='contained'
+          startIcon={<i className='ri-download-line' />}
+          onClick={handleExport}
+          disabled={selectedCount === 0}
+        >
+          Exportar ({selectedCount})
+        </Button>
 
-          {/* contador de seleccionados (visible solo si hay al menos 1) */}
-          {selectedCount > 0 && (
-            <Typography variant='body2' color='text.secondary'>
-              {selectedCount} fila{selectedCount > 1 ? 's' : ''} seleccionada{selectedCount > 1 ? 's' : ''}
-            </Typography>
-          )}
-        </Box>
-
-        <Box sx={{ width: 300 }}>
-          <DebouncedInput
-            value={globalFilter}
-            onChange={(v: any) => {
-              setGlobalFilter(String(v))
-              const q = String(v).toLowerCase()
-              if (!q) {
-                setFilteredData(data)
-                return
-              }
-              const filtered = data.filter(item =>
-                [
-                  item.numeroRcm,
-                  item.ot,
-                  item.area,
-                  item.familia,
-                  item.obra?.numeroObra,
-                  item.cliente?.nombreCliente
-                ]
-                  .filter(Boolean)
-                  .some(s => String(s).toLowerCase().includes(q))
-              )
-              setFilteredData(filtered)
-            }}
-            placeholder='Buscar RCM, OT, ÁREA, FAMILIA...'
-            fullWidth
-            size='small'
-          />
-        </Box>
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onChange={value => setGlobalFilter(String(value))}
+          placeholder='Buscar Muestras...'
+          sx={{ width: 300 }}
+        />
       </Box>
 
       <Divider />
@@ -1895,6 +1907,201 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         onPageChange={(_, page) => table.setPageIndex(page)}
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
+
+      {/* Tabla de Servicios - Mostrar debajo de la tabla principal */}
+      {selectedRowId && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Box sx={{ px: 3, pb: 3 }}>
+            {/* Header con título y botón cerrar */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant='h6'>
+                Muestra #{findRowById(selectedRowId)?.muestra?.numeroMuestra ?? selectedRowId}
+              </Typography>
+              <IconButton
+                size='small'
+                onClick={() => {
+                  setSelectedRowId(null)
+                  setServiciosMuestra([])
+                }}
+                title='Cerrar'
+              >
+                <i className='ri-close-line' />
+              </IconButton>
+            </Box>
+
+            {/* Formulario de información de la muestra - RELLENADO CON DATOS REALES */}
+            {(() => {
+              const row = findRowById(selectedRowId)
+              const muestra = row?.muestra ?? {}
+
+              // ✅ Dividir cotas DENTRO del scope donde se usa
+              const [cota1, cota2] = (muestra.cotas ?? '').split('-').map(c => c.trim())
+
+              return (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
+                  {/* ELIMINADO: N° Tarjeta */}
+
+                  {/* Fila 1 */}
+                  <TextField
+                    label='Tipo Material'
+                    value={muestra.tipoMaterial ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label='Elemento'
+                    value={muestra.elemento ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label='Item'
+                    value={muestra.item ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+
+                  {/* Fila 2 */}
+                  <TextField
+                    label='Grado'
+                    value={muestra.grado ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label='Procedencia'
+                    value={muestra.procedencia ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label='Cota 1'
+                    value={cota1 ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+
+                  {/* Fila 3 - Cotas y ubicación */}
+                  <TextField
+                    label='Cota 2'
+                    value={cota2 ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label='Ubicación / Sector'
+                    value={muestra.ubicacionSector ?? ''}
+                    size='small'
+                    disabled
+                    fullWidth
+                    sx={{ gridColumn: 'span 2' }} // ← ocupa 2 columnas
+                  />
+                </Box>
+              )
+            })()}
+
+            {/* ELIMINADO: Botón Agregar muestra */}
+
+            {/* Tabla de servicios - SIN columna ACCIONES */}
+            {loadingServicios ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer component={Paper} variant='outlined'>
+                <Table size='small'>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'action.hover' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>CÓD. INT.</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>ENSAYO / ANÁLISIS</TableCell>
+                      <TableCell align='center' sx={{ fontWeight: 600 }}>CANTIDAD</TableCell>
+                      <TableCell align='center' sx={{ fontWeight: 600 }}>ESTADO</TableCell>
+                      {/* ELIMINADO: columna ACCIONES */}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {serviciosMuestra.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                          <Typography color='text.secondary'>
+                            No hay servicios agregados
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      serviciosMuestra.map((servicio, idx) => (
+                        <TableRow
+                          key={servicio.id ?? idx}
+                          sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                        >
+                          <TableCell>
+                            {servicio.codigo ?? servicio.codigoInterno ?? servicio.servicio?.codigo ?? servicio.id ?? '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='body2'>
+                              {servicio.tipo === 'Ensayo' ? 'Ensayo - ' : 'Análisis - '}
+                              {servicio.nombre ?? servicio.servicio?.nombre ?? servicio.descripcion ?? '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align='center'>
+                            {servicio.cantidad ?? 1}
+                          </TableCell>
+                          <TableCell align='center'>
+                            {(() => {
+                              const estado = servicio.estado ?? servicio.estadoServicio ?? 'Codificado'
+                              const info = getOperationalInfo(estado)
+                              return (
+                                <Chip
+                                  label={estado}
+                                  size='small'
+                                  variant='filled'
+                                  sx={{
+                                    bgcolor: info.bgcolor,
+                                    color: info.colorText,
+                                    border: `1px solid ${info.border}`,
+                                    textTransform: 'capitalize',
+                                    fontWeight: 600,
+                                    fontSize: '0.72rem',
+                                    borderRadius: 2,
+                                    px: 1,
+                                    py: 0.4
+                                  }}
+                                />
+                              )
+                            })()}
+                          </TableCell>
+                          {/* ELIMINADO: celda de ACCIONES */}
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {/* Campo de observaciones */}
+            <Box sx={{ mt: 3 }}>
+              <TextField
+                label='Observaciones Muestra'
+                value={findRowById(selectedRowId)?.muestra?.observaciones ?? ''}
+                multiline
+                minRows={3}
+                fullWidth
+                size='small'
+                disabled
+              />
+            </Box>
+          </Box>
+        </>
+      )}
 
       {/* Menu "Marcar" dinámico: sólo el siguiente estado permitido */}
       <Menu
@@ -2053,13 +2260,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar</MenuItem>
+        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar en Encoder</MenuItem>
+        <MenuItem onClick={() => handleView(menuRowId)}>Ver Servicios</MenuItem>
         <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
-        <MenuItem disabled title="Generar Informe deshabilitado">Generar Informe</MenuItem>
       </Menu>
 
       {/* Dialog: Historial (mock) */}
-      <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
+      <Dialog
+        maxWidth='lg'
+        open={histDialogOpen}
+        onClose={handleCloseHistDialog}
+      >
         <DialogTitle>Historial</DialogTitle>
         <DialogContent>
           {histLoading ? (
@@ -2151,7 +2362,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           <Button onClick={handleCloseHistDialog}>Cerrar</Button>
         </DialogActions>
       </Dialog>
-    </Card>
+    </Card >
   )
 }
 
