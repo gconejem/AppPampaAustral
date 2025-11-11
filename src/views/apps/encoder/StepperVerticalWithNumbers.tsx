@@ -362,59 +362,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       // Avanzar al paso 1 (Muestras)
       setActiveStep(1)
     } else if (activeStep === 1) {
-      // Verificar si hay datos ingresados en la muestra actual
-      const hayDatosEnMuestra =
-        muestraActual.numeroTarjeta ||
-        muestraActual.tipoMaterial ||
-        muestraActual.elemento ||
-        muestraActual.item ||
-        muestraActual.grado ||
-        muestraActual.procedencia ||
-        muestraActual.cota1 ||
-        muestraActual.cota2 ||
-        muestraActual.ubicacionSector ||
-        muestraActual.observaciones ||
-        muestraActual.servicios.length > 0 ||
-        muestraActual.probetas.length > 0
-
-      // Solo validar si hay datos ingresados
-      if (hayDatosEnMuestra) {
-        // Validar que los campos requeridos de la muestra estén completos
-        if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
-          toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
-
-          return
-        }
-
-        // Validar que haya al menos un servicio en la muestra
-        if (muestraActual.servicios.length === 0) {
-          toast.error('Por favor agregue al menos un servicio a la muestra')
-
-          return
-        }
-
-        // Si tiene vencimiento, validar que haya al menos una probeta
-        if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
-          toast.error('Por favor agregue al menos una probeta')
-
-          return
-        }
-
-        // Generar número de muestra automáticamente
-        const numeroMuestra = `${numeroRcm}-${muestras.length + 1}`
-
-        // Agregar la muestra actual al array de muestras, combinando cota1 y cota2 en cotas
-        const muestraConCotas = {
-          ...muestraActual,
-          numeroMuestra: numeroMuestra,
-          cotas: muestraActual.cota1 && muestraActual.cota2
-            ? `${muestraActual.cota1} - ${muestraActual.cota2}`
-            : muestraActual.cota1 || muestraActual.cota2 || ''
-        }
-        setMuestras([...muestras, muestraConCotas])
-      }
-
-      // Avanzar al paso 2 (Cierre) - aunque ya está visible
+      // Simplemente avanzar al paso 2 (Cierre) sin agregar la muestra
       setActiveStep(2)
     }
   }
@@ -738,57 +686,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Función para guardar el RCM
   const handleSaveRCM = async () => {
     try {
-      // Verificar si hay datos en la muestra actual que no se han agregado
-      const hayDatosEnMuestraActual =
-        muestraActual.numeroTarjeta ||
-        muestraActual.tipoMaterial ||
-        muestraActual.elemento ||
-        muestraActual.item ||
-        muestraActual.grado ||
-        muestraActual.procedencia ||
-        muestraActual.cota1 ||
-        muestraActual.cota2 ||
-        muestraActual.ubicacionSector ||
-        muestraActual.observaciones ||
-        muestraActual.servicios.length > 0 ||
-        muestraActual.probetas.length > 0
-
-      let muestrasFinales = [...muestras]
-
-      // Si hay datos en la muestra actual, agregarla antes de guardar
-      if (hayDatosEnMuestraActual) {
-        // Validar campos requeridos
-        if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
-          toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
-          return
-        }
-
-        if (muestraActual.servicios.length === 0) {
-          toast.error('Por favor agregue al menos un servicio a la muestra')
-          return
-        }
-
-        if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
-          toast.error('Por favor agregue al menos una probeta')
-          return
-        }
-
-        // Generar número de muestra
-        const numeroMuestra = `${numeroRcm}-${muestras.length + 1}`
-
-        // Agregar la muestra actual
-        const muestraConCotas = {
-          ...muestraActual,
-          numeroMuestra: numeroMuestra,
-          cotas: muestraActual.cota1 && muestraActual.cota2
-            ? `${muestraActual.cota1} - ${muestraActual.cota2}`
-            : muestraActual.cota1 || muestraActual.cota2 || ''
-        }
-        muestrasFinales = [...muestras, muestraConCotas]
-      }
+      // Solo enviar las muestras que han sido agregadas explícitamente
+      // No agregar automáticamente la muestra actual
 
       // Transformar las muestras para combinar cota1 y cota2 en cotas
-      const muestrasTransformadas = muestrasFinales.map(muestra => ({
+      const muestrasTransformadas = muestras.map(muestra => ({
         ...muestra,
         cotas: muestra.cota1 && muestra.cota2
           ? `${muestra.cota1} - ${muestra.cota2}`
