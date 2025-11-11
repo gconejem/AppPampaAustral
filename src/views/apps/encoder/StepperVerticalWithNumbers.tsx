@@ -144,9 +144,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Estados disponibles con sus colores
   const estadosDisponibles = [
-    { nombre: 'Codificado', color: '#f3f3f3', textColor: '#424242' },
-    /* { nombre: 'En Proceso', color: '#c9daf8', textColor: '#1155cc' }, */
-    { nombre: 'Ensayado', color: '#1155cc', textColor: '#ffffff' }
+    { nombre: 'Codificado', valor: 'CODIFICADO', color: '#f3f3f3', textColor: '#424242' },
+    /* { nombre: 'En Proceso', valor: 'EN_PROCESO', color: '#c9daf8', textColor: '#1155cc' }, */
+    { nombre: 'Ensayado', valor: 'ENSAYADO', color: '#1155cc', textColor: '#ffffff' }
   ]
 
   // Estados para el paso 3
@@ -557,7 +557,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         nombre: servicio,
         cantidad: parseInt(cantidad) || 1,
         productoId: selectedProduct.productoId,
-        estado: 'Codificado'
+        estado: 'CODIFICADO'
       }
 
       // Si estamos en el paso 1, agregar al array de servicios general
@@ -660,11 +660,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     setEstadoAnchorEl(prev => ({ ...prev, [index]: null }))
   }
 
-  const handleChangeEstado = (index: number, nuevoEstado: string) => {
+  const handleChangeEstado = (index: number, nuevoEstadoValor: string) => {
     const nuevosServicios = [...muestraActual.servicios]
     nuevosServicios[index] = {
       ...nuevosServicios[index],
-      estado: nuevoEstado
+      estado: nuevoEstadoValor
     }
     setMuestraActual(prev => ({
       ...prev,
@@ -674,9 +674,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   }
 
   // Función para obtener el color del estado
-  const getEstadoColor = (estado: string) => {
-    const estadoEncontrado = estadosDisponibles.find(e => e.nombre === estado)
-    return estadoEncontrado || { color: '#f3f3f3', textColor: '#424242' }
+  const getEstadoColor = (estadoValor: string) => {
+    const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
+    return estadoEncontrado || { nombre: 'Codificado', valor: 'CODIFICADO', color: '#f3f3f3', textColor: '#424242' }
+  }
+
+  // Función para obtener el nombre del estado desde el valor
+  const getEstadoNombre = (estadoValor: string) => {
+    const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
+    return estadoEncontrado?.nombre || 'Codificado'
   }
 
   // Limpiar filtros
@@ -732,8 +738,57 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Función para guardar el RCM
   const handleSaveRCM = async () => {
     try {
+      // Verificar si hay datos en la muestra actual que no se han agregado
+      const hayDatosEnMuestraActual =
+        muestraActual.numeroTarjeta ||
+        muestraActual.tipoMaterial ||
+        muestraActual.elemento ||
+        muestraActual.item ||
+        muestraActual.grado ||
+        muestraActual.procedencia ||
+        muestraActual.cota1 ||
+        muestraActual.cota2 ||
+        muestraActual.ubicacionSector ||
+        muestraActual.observaciones ||
+        muestraActual.servicios.length > 0 ||
+        muestraActual.probetas.length > 0
+
+      let muestrasFinales = [...muestras]
+
+      // Si hay datos en la muestra actual, agregarla antes de guardar
+      if (hayDatosEnMuestraActual) {
+        // Validar campos requeridos
+        if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
+          toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+          return
+        }
+
+        if (muestraActual.servicios.length === 0) {
+          toast.error('Por favor agregue al menos un servicio a la muestra')
+          return
+        }
+
+        if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
+          toast.error('Por favor agregue al menos una probeta')
+          return
+        }
+
+        // Generar número de muestra
+        const numeroMuestra = `${numeroRcm}-${muestras.length + 1}`
+
+        // Agregar la muestra actual
+        const muestraConCotas = {
+          ...muestraActual,
+          numeroMuestra: numeroMuestra,
+          cotas: muestraActual.cota1 && muestraActual.cota2
+            ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+            : muestraActual.cota1 || muestraActual.cota2 || ''
+        }
+        muestrasFinales = [...muestras, muestraConCotas]
+      }
+
       // Transformar las muestras para combinar cota1 y cota2 en cotas
-      const muestrasTransformadas = muestras.map(muestra => ({
+      const muestrasTransformadas = muestrasFinales.map(muestra => ({
         ...muestra,
         cotas: muestra.cota1 && muestra.cota2
           ? `${muestra.cota1} - ${muestra.cota2}`
@@ -748,22 +803,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       const obraId = otData?.agenda?.obra?.obraId || null
       const ordenTrabajoId = otData?.id || null
 
+      const dataToSend = {
+        fechaCodificacion,
+        fechaMuestreo,
+        fechaIngreso,
+        servicios,
+        muestras: muestrasTransformadas,
+        observaciones,
+        clienteId,
+        obraId,
+        ordenTrabajoId
+      }
+
+      console.log('Datos a enviar:', dataToSend)
+      console.log('Servicios:', servicios)
+      console.log('Muestras transformadas:', muestrasTransformadas)
+
       const response = await fetch('/api/rcm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          fechaCodificacion,
-          fechaMuestreo,
-          fechaIngreso,
-          servicios,
-          muestras: muestrasTransformadas,
-          observaciones,
-          clienteId,
-          obraId,
-          ordenTrabajoId
-        })
+        body: JSON.stringify(dataToSend)
       })
 
       if (!response.ok) {
@@ -1820,11 +1881,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         </TableCell>
                                         <TableCell>
                                           <Chip
-                                            label={serv.estado || 'Codificado'}
+                                            label={getEstadoNombre(serv.estado || 'CODIFICADO')}
                                             onClick={(e) => handleOpenEstadoMenu(e, index)}
                                             sx={{
-                                              backgroundColor: getEstadoColor(serv.estado || 'Codificado').color,
-                                              color: getEstadoColor(serv.estado || 'Codificado').textColor,
+                                              backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
+                                              color: getEstadoColor(serv.estado || 'CODIFICADO').textColor,
                                               cursor: 'pointer',
                                               '&:hover': {
                                                 opacity: 0.8
@@ -1847,9 +1908,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             <List sx={{ p: 0 }}>
                                               {estadosDisponibles.map((estado) => (
                                                 <ListItem
-                                                  key={estado.nombre}
+                                                  key={estado.valor}
                                                   button
-                                                  onClick={() => handleChangeEstado(index, estado.nombre)}
+                                                  onClick={() => handleChangeEstado(index, estado.valor)}
                                                   sx={{
                                                     py: 1,
                                                     px: 2,
