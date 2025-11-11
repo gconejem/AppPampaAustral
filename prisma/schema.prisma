@@ -703,6 +703,7 @@ model Muestra {
   id              Int               @id @default(autoincrement())
   rcmId           Int
   numeroMuestra   String            @unique
+  numeroTarjeta   String?
   tipoMaterial    String?
   elemento        String?
   item            String?

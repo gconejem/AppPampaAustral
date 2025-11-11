@@ -18,6 +18,7 @@ interface Probeta {
 
 interface Muestra {
   numeroMuestra?: string
+  numeroTarjeta?: string
   tipoMaterial: string
   elemento: string
   item: string
@@ -103,6 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           muestras: {
             create: muestras.map((muestra: Muestra, index: number) => ({
               numeroMuestra: muestra.numeroMuestra || `${numeroRcm}-${(index + 1).toString().padStart(2, '0')}`,
+              numeroTarjeta: muestra.numeroTarjeta || null,
               tipoMaterial: muestra.tipoMaterial,
               elemento: muestra.elemento,
               item: muestra.item,
