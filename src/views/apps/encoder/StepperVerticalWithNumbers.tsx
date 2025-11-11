@@ -72,6 +72,7 @@ interface Servicio {
   nombre: string
   cantidad: string
   productoId?: number
+  estado?: string
 }
 
 interface Muestra {
@@ -92,6 +93,7 @@ interface Muestra {
     nombre: string
     cantidad: number
     productoId: number
+    estado?: string
   }>
   probetas: Array<{
     numero: number
@@ -138,6 +140,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [editingCantidad, setEditingCantidad] = useState<string>('1')
   const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
   const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
+  const [estadoAnchorEl, setEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+
+  // Estados disponibles con sus colores
+  const estadosDisponibles = [
+    { nombre: 'Codificado', color: '#f3f3f3', textColor: '#424242' },
+    /* { nombre: 'En Proceso', color: '#c9daf8', textColor: '#1155cc' }, */
+    { nombre: 'Ensayado', color: '#1155cc', textColor: '#ffffff' }
+  ]
 
   // Estados para el paso 3
   const [muestras, setMuestras] = useState<Muestra[]>([])
@@ -546,7 +556,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         codigo: selectedProduct.sku,
         nombre: servicio,
         cantidad: parseInt(cantidad) || 1,
-        productoId: selectedProduct.productoId
+        productoId: selectedProduct.productoId,
+        estado: 'Codificado'
       }
 
       // Si estamos en el paso 1, agregar al array de servicios general
@@ -638,6 +649,34 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       ...prev,
       servicios: nuevosServicios
     }))
+  }
+
+  // Funciones para manejar el cambio de estado
+  const handleOpenEstadoMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
+    setEstadoAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
+  }
+
+  const handleCloseEstadoMenu = (index: number) => {
+    setEstadoAnchorEl(prev => ({ ...prev, [index]: null }))
+  }
+
+  const handleChangeEstado = (index: number, nuevoEstado: string) => {
+    const nuevosServicios = [...muestraActual.servicios]
+    nuevosServicios[index] = {
+      ...nuevosServicios[index],
+      estado: nuevoEstado
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      servicios: nuevosServicios
+    }))
+    handleCloseEstadoMenu(index)
+  }
+
+  // Función para obtener el color del estado
+  const getEstadoColor = (estado: string) => {
+    const estadoEncontrado = estadosDisponibles.find(e => e.nombre === estado)
+    return estadoEncontrado || { color: '#f3f3f3', textColor: '#424242' }
   }
 
   // Limpiar filtros
@@ -1781,12 +1820,57 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         </TableCell>
                                         <TableCell>
                                           <Chip
-                                            label='Codificado'
+                                            label={serv.estado || 'Codificado'}
+                                            onClick={(e) => handleOpenEstadoMenu(e, index)}
                                             sx={{
-                                              backgroundColor: '#daf3ff',
-                                              color: '#16b1ff'
+                                              backgroundColor: getEstadoColor(serv.estado || 'Codificado').color,
+                                              color: getEstadoColor(serv.estado || 'Codificado').textColor,
+                                              cursor: 'pointer',
+                                              '&:hover': {
+                                                opacity: 0.8
+                                              }
                                             }}
                                           />
+                                          <Popover
+                                            open={Boolean(estadoAnchorEl[index])}
+                                            anchorEl={estadoAnchorEl[index]}
+                                            onClose={() => handleCloseEstadoMenu(index)}
+                                            anchorOrigin={{
+                                              vertical: 'bottom',
+                                              horizontal: 'center'
+                                            }}
+                                            transformOrigin={{
+                                              vertical: 'top',
+                                              horizontal: 'center'
+                                            }}
+                                          >
+                                            <List sx={{ p: 0 }}>
+                                              {estadosDisponibles.map((estado) => (
+                                                <ListItem
+                                                  key={estado.nombre}
+                                                  button
+                                                  onClick={() => handleChangeEstado(index, estado.nombre)}
+                                                  sx={{
+                                                    py: 1,
+                                                    px: 2,
+                                                    '&:hover': {
+                                                      backgroundColor: '#f5f5f5'
+                                                    }
+                                                  }}
+                                                >
+                                                  <Chip
+                                                    label={estado.nombre}
+                                                    size='small'
+                                                    sx={{
+                                                      backgroundColor: estado.color,
+                                                      color: estado.textColor,
+                                                      width: '120px'
+                                                    }}
+                                                  />
+                                                </ListItem>
+                                              ))}
+                                            </List>
+                                          </Popover>
                                         </TableCell>
                                         <TableCell>
                                           {editingMuestraServiceIndex === index ? (
