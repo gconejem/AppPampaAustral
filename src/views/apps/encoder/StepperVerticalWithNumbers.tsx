@@ -132,6 +132,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [fechaCodificacion, setFechaCodificacion] = useState<string>(new Date().toISOString().split('T')[0])
   const [fechaMuestreo, setFechaMuestreo] = useState<string>(new Date().toISOString().split('T')[0])
   const [fechaIngreso, setFechaIngreso] = useState<string>(new Date().toISOString().split('T')[0])
+  const [fechaEntrega, setFechaEntrega] = useState<string>(new Date().toISOString().split('T')[0])
 
   // Estados para el paso 2
   const [servicios, setServicios] = useState<Servicio[]>([])
@@ -347,7 +348,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   const handleNext = () => {
     if (activeStep === 0) {
-      if (!fechaCodificacion || !fechaMuestreo || !fechaIngreso) {
+      if (!fechaCodificacion || !fechaMuestreo || !fechaIngreso || !fechaEntrega) {
         toast.error('Por favor complete todas las fechas')
 
         return
@@ -376,6 +377,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     setFechaCodificacion(new Date().toISOString().split('T')[0])
     setFechaMuestreo(new Date().toISOString().split('T')[0])
     setFechaIngreso(new Date().toISOString().split('T')[0])
+    setFechaEntrega(new Date().toISOString().split('T')[0])
     setServicios([])
     setCantidad('1')
     setMuestras([])
@@ -646,7 +648,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Función para validar los campos requeridos
   const validateFields = () => {
     // Validar campos del paso 1
-    if (!fechaCodificacion || !fechaMuestreo || !fechaIngreso) {
+    if (!fechaCodificacion || !fechaMuestreo || !fechaIngreso || !fechaEntrega) {
       toast.error('Por favor complete todas las fechas en el paso 1')
 
       return false
@@ -709,6 +711,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         fechaCodificacion,
         fechaMuestreo,
         fechaIngreso,
+        fechaEntrega,
         servicios,
         muestras: muestrasTransformadas,
         observaciones,
@@ -777,7 +780,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                     <>
                       {/* RCM Details */}
                       <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={4}>
+                        <Grid item xs={3}>
                           <TextField
                             label='Fecha de Codificación'
                             size='small'
@@ -788,7 +791,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             fullWidth
                           />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid item xs={3}>
                           <TextField
                             label='Fecha de Muestreo'
                             size='small'
@@ -799,13 +802,24 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             fullWidth
                           />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid item xs={3}>
                           <TextField
                             label='Fecha de Ingreso'
                             size='small'
                             type='date'
                             value={fechaIngreso}
                             onChange={e => setFechaIngreso(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={3}>
+                          <TextField
+                            label='Fecha de Entrega'
+                            size='small'
+                            type='date'
+                            value={fechaEntrega}
+                            onChange={e => setFechaEntrega(e.target.value)}
                             InputLabelProps={{ shrink: true }}
                             fullWidth
                           />
