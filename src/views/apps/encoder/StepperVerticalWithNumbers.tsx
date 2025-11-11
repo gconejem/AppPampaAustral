@@ -711,7 +711,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         fechaCodificacion,
         fechaMuestreo,
         fechaIngreso,
-        fechaEntrega,
+        fechaEntrega: fechaEntrega || null,
         servicios,
         muestras: muestrasTransformadas,
         observaciones,

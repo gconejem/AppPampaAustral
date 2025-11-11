@@ -35,7 +35,7 @@ interface Muestra {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { fechaCodificacion, fechaMuestreo, fechaIngreso, servicios, muestras, observaciones, clienteId, obraId, ordenTrabajoId } = req.body
+      const { fechaCodificacion, fechaMuestreo, fechaIngreso, fechaEntrega, servicios, muestras, observaciones, clienteId, obraId, ordenTrabajoId } = req.body
 
       // Obtener los productos por su código
       const codigosServicios = [
@@ -80,6 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           fechaCodificacion: new Date(fechaCodificacion),
           fechaMuestreo: new Date(fechaMuestreo),
           fechaIngreso: new Date(fechaIngreso),
+          fechaEntrega: fechaEntrega ? new Date(fechaEntrega) : null,
           estadoOperativo: 'CODIFICADO',
           estadoAdministrativo: 'SIN_INICIO',
           observaciones,
