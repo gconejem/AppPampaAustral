@@ -1257,7 +1257,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                           {muestras.map((muestra, idx) => (
                             <Accordion key={idx} sx={{ mb: 1 }}>
                               <AccordionSummary
-                                expandIcon={<i className='ri-add-line' />}
+                                expandIcon={<i className='ri-arrow-down-s-line' />}
                                 sx={{
                                   backgroundColor: '#fafafa',
                                   border: '1px solid #e0e0e0',
@@ -1285,6 +1285,130 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                   )}
                                 </Box>
                               </AccordionSummary>
+                              <AccordionDetails>
+                                <Grid container spacing={2}>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Tipo Material:</strong> {muestra.tipoMaterial}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Elemento:</strong> {muestra.elemento}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Ítem:</strong> {muestra.item}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Grado:</strong> {muestra.grado || 'N/A'}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Procedencia:</strong> {muestra.procedencia || 'N/A'}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={6}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Cotas:</strong> {muestra.cota1 && muestra.cota2 ? `${muestra.cota1} - ${muestra.cota2}` : muestra.cota1 || muestra.cota2 || 'N/A'}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12}>
+                                    <Typography variant='body2' color='text.secondary'>
+                                      <strong>Ubicación/Sector:</strong> {muestra.ubicacionSector || 'N/A'}
+                                    </Typography>
+                                  </Grid>
+                                  {muestra.observaciones && (
+                                    <Grid item xs={12}>
+                                      <Typography variant='body2' color='text.secondary'>
+                                        <strong>Observaciones:</strong> {muestra.observaciones}
+                                      </Typography>
+                                    </Grid>
+                                  )}
+                                  <Grid item xs={12}>
+                                    <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
+                                      Servicios:
+                                    </Typography>
+                                    <TableContainer component={Paper} variant='outlined'>
+                                      <Table size='small'>
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell>Código</TableCell>
+                                            <TableCell>Nombre</TableCell>
+                                            <TableCell>Cantidad</TableCell>
+                                            <TableCell>Estado</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {muestra.servicios.map((serv, servIdx) => (
+                                            <TableRow key={servIdx}>
+                                              <TableCell>{serv.codigo}</TableCell>
+                                              <TableCell>{serv.nombre}</TableCell>
+                                              <TableCell>{serv.cantidad}</TableCell>
+                                              <TableCell>
+                                                <Chip
+                                                  label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                                  size='small'
+                                                  sx={{
+                                                    backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
+                                                    color: getEstadoColor(serv.estado || 'CODIFICADO').textColor
+                                                  }}
+                                                />
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </TableContainer>
+                                  </Grid>
+                                  {muestra.vencimiento && muestra.probetas.length > 0 && (
+                                    <Grid item xs={12}>
+                                      <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
+                                        Probetas:
+                                      </Typography>
+                                      <TableContainer component={Paper} variant='outlined'>
+                                        <Table size='small'>
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell>N°</TableCell>
+                                              <TableCell>Confección</TableCell>
+                                              <TableCell>Cantidad</TableCell>
+                                              <TableCell>Días</TableCell>
+                                              <TableCell>Vencimiento</TableCell>
+                                              <TableCell>Estado</TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {muestra.probetas.map((probeta, probIdx) => (
+                                              <TableRow key={probIdx}>
+                                                <TableCell>{probeta.numero}</TableCell>
+                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                                <TableCell>{probeta.cantidad}</TableCell>
+                                                <TableCell>{probeta.dias}</TableCell>
+                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                                <TableCell>
+                                                  <Chip
+                                                    label={probeta.estado}
+                                                    size='small'
+                                                    sx={{
+                                                      backgroundColor: '#daf3ff',
+                                                      color: '#16b1ff'
+                                                    }}
+                                                  />
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </TableContainer>
+                                    </Grid>
+                                  )}
+                                </Grid>
+                              </AccordionDetails>
                             </Accordion>
                           ))}
                         </Box>
