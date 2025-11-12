@@ -67,20 +67,16 @@ const InvoiceCard = ({ refreshTrigger = 0, filteredData }: InvoiceCardProps) => 
     }
 
     if (filteredData) {
+      // Usar los datos filtrados que vienen de la tabla
       calculateStats(filteredData)
     } else {
-      // Si no hay datos filtrados, cargar todos
-      const fetchStats = async () => {
-        try {
-          const response = await fetch('/api/cotizaciones')
-          const cotizaciones = await response.json()
-          calculateStats(cotizaciones)
-        } catch (error) {
-          console.error('Error al cargar estadísticas:', error)
-        }
-      }
-
-      fetchStats()
+      // Inicializar con valores en 0 mientras se cargan los datos
+      setStats({
+        totalCreadas: 0,
+        totalActivas: 0,
+        totalCerradas: 0,
+        totalCotizado: 0
+      })
     }
   }, [refreshTrigger, filteredData])
 

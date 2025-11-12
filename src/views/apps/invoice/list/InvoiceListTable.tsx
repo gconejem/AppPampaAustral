@@ -116,19 +116,28 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  // Obtener el primer y último día del mes actual
+  // Obtener el primer y último día del mes actual en formato YYYY-MM-DD
   const getFirstAndLastDayOfMonth = () => {
     const now = new Date()
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    return { firstDay, lastDay }
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    // Primer día del mes
+    const firstDay = new Date(year, month, 1)
+    const firstDayStr = `${year}-${String(month + 1).padStart(2, '0')}-01`
+
+    // Último día del mes
+    const lastDay = new Date(year, month + 1, 0)
+    const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
+
+    return { firstDayStr, lastDayStr }
   }
 
-  const { firstDay, lastDay } = getFirstAndLastDayOfMonth()
+  const { firstDayStr, lastDayStr } = getFirstAndLastDayOfMonth()
 
   // Estados de filtros
-  const [filtroFecha, setFiltroFecha] = useState<string>(firstDay.toISOString().split('T')[0])
-  const [filtroFechaFin, setFiltroFechaFin] = useState<string>(lastDay.toISOString().split('T')[0])
+  const [filtroFecha, setFiltroFecha] = useState<string>(firstDayStr)
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>(lastDayStr)
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [filtroEstado, setFiltroEstado] = useState<string>('')
 
@@ -198,11 +207,26 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
       if (fechaInicio) params.append('fechaInicio', fechaInicio)
       if (fechaFin) params.append('fechaFin', fechaFin)
 
+      console.log('=== FRONTEND: Enviando filtros ===')
+      console.log('Fecha Inicio:', fechaInicio)
+      console.log('Fecha Fin:', fechaFin)
+      console.log('URL:', `/api/cotizaciones?${params.toString()}`)
+
       const response = await fetch(`/api/cotizaciones?${params.toString()}`)
       if (!response.ok) throw new Error('Error al cargar cotizaciones')
 
       const data = await response.json()
+      console.log('=== FRONTEND: Datos recibidos ===')
+      console.log('Total cotizaciones:', data.length)
+      if (data.length > 0) {
+        console.log('Todas las cotizaciones recibidas:')
+        data.forEach((c: any) => {
+          console.log(`  - ${c.numeroCotizacion}: ${c.fecha}`)
+        })
+      }
+
       setLocalData(data)
+      // Notificar inmediatamente con los datos cargados
       onDataFiltered?.(data)
     } catch (error) {
       console.error('Error:', error)
@@ -218,6 +242,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
       setLocalData(invoiceData)
       onDataFiltered?.(invoiceData)
     } else {
+      // Cargar datos del mes actual al iniciar
       fetchCotizaciones(filtroFecha, filtroFechaFin)
     }
   }, [invoiceData])
@@ -226,6 +251,13 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
   useEffect(() => {
     resetPage()
   }, [filtroTipo, filtroEstado, globalFilter])
+
+  // Aplicar filtros combinados cuando cambien tipo o estado
+  useEffect(() => {
+    if (filteredData) {
+      onDataFiltered?.(filteredData)
+    }
+  }, [filtroTipo, filtroEstado, globalFilter, localData])
 
   // Modificar los manejadores de cambio de fecha
   const handleFechaInicioChange = (date: Date | null) => {

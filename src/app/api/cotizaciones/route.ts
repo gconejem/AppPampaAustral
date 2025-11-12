@@ -42,22 +42,23 @@ export async function GET(request: Request) {
     if (fechaInicio || fechaFin) {
       whereClause.fechaCreacion = {}
       if (fechaInicio) {
-        // Establecer la hora de inicio al comienzo del día (00:00:00)
-        const inicioDate = new Date(fechaInicio)
-        inicioDate.setHours(0, 0, 0, 0)
+        // Parsear la fecha y crear un rango que cubra todo el día
+        // Usamos el inicio del día en la zona horaria local del servidor
+        const inicioDate = new Date(fechaInicio + 'T00:00:00')
         whereClause.fechaCreacion.gte = inicioDate
       }
       if (fechaFin) {
-        // Establecer la hora de fin al final del día (23:59:59)
-        const finDate = new Date(fechaFin)
-        finDate.setHours(23, 59, 59, 999)
+        // Usamos el final del día en la zona horaria local del servidor
+        const finDate = new Date(fechaFin + 'T23:59:59.999')
         whereClause.fechaCreacion.lte = finDate
       }
     }
 
-    console.log('Filtros de fecha:', {
-      fechaInicio: whereClause.fechaCreacion?.gte,
-      fechaFin: whereClause.fechaCreacion?.lte
+    console.log('=== FILTROS DE FECHA ===')
+    console.log('Parámetros recibidos:', { fechaInicio, fechaFin })
+    console.log('Rango UTC aplicado:', {
+      desde: whereClause.fechaCreacion?.gte?.toISOString(),
+      hasta: whereClause.fechaCreacion?.lte?.toISOString()
     })
 
     const cotizaciones = await prisma.cotizacion.findMany({
@@ -76,7 +77,16 @@ export async function GET(request: Request) {
       }
     })
 
-    console.log('Cotizaciones encontradas:', cotizaciones.length)
+    console.log('=== RESULTADOS ===')
+    console.log('Total cotizaciones encontradas:', cotizaciones.length)
+
+    // Log detallado de todas las cotizaciones para debug
+    if (cotizaciones.length > 0) {
+      console.log('Cotizaciones encontradas:')
+      cotizaciones.forEach(c => {
+        console.log(`  - ${c.numeroCotizacion}: ${c.fechaCreacion.toISOString()} (${c.fechaCreacion.toLocaleDateString('es-CL')})`)
+      })
+    }
 
     const formattedCotizaciones = cotizaciones.map(cotizacion => {
       return {

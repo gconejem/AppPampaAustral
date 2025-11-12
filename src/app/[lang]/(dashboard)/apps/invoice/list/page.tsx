@@ -78,11 +78,11 @@ async function getCotizaciones() {
 }
 
 export default async function Page() {
-  const invoiceData = await getCotizaciones()
-
+  // No cargar datos en el servidor, dejar que el componente cliente
+  // los cargue con los filtros de fecha del mes actual
   return (
     <Suspense fallback={<div>Cargando...</div>}>
-      <InvoiceList invoiceData={invoiceData as any} />
+      <InvoiceList />
     </Suspense>
   )
 }
