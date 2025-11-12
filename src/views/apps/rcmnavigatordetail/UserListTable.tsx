@@ -1680,10 +1680,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const table = useReactTable({
     data: filteredData,
     columns,
+    filterFns: {
+      fuzzy: fuzzyFilter
+    },
+    state: {
+      globalFilter
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel()
+    getPaginationRowModel: getPaginationRowModel(),
+    filterFromLeafRows: true, // ← AGREGAR esto
+    maxLeafRowFilterDepth: 0 // ← AGREGAR esto
   })
 
   // <-- añadir: conteo de filas seleccionadas

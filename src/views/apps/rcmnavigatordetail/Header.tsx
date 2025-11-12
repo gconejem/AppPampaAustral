@@ -6,7 +6,11 @@ import { Box, Grid, TextField, MenuItem, Typography, Button, FormControl, InputL
 // Importa el componente PickersRange
 import PickersRange from './date'
 import OPERATIONAL_STATES from '../../../constants/operationalStates'
-import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
+
+// Añadidos para DatePicker (date-fns, locale ES)
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { es } from 'date-fns/locale'
 
 interface Area {
   id: number
@@ -28,15 +32,16 @@ interface HeaderProps {
     start?: string
     end?: string
     estadoOperativo?: string
-    estadoAdministrativo?: string
     areaId?: number | null
     familia?: string
+    fechaVencimiento?: string
   }) => void
 }
 
 const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedAreaName, setSelectedAreaName] = useState<string>('')
+  const [fechaVencimiento, setFechaVencimiento] = useState<string>('')
 
   const handleAreaChange = (value: string) => {
     const areaId = value ? Number(value) : null
@@ -49,13 +54,12 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedAreaName(name)
 
     // emitir inmediatamente con id + nombre (familia reseteada)
-    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, areaId, '', selectedEstadoAd, name)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, areaId, '', name, fechaVencimiento)
   }
 
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
-  const [selectedEstadoAd, setSelectedEstadoAd] = useState<string>('')
 
   // Menu Informes
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -111,11 +115,11 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     estOp = selectedEstadoOp,
     areaId = selectedAreaId,
     familia = selectedFamilia,
-    estAd = selectedEstadoAd,
-    areaName = selectedAreaName
+    areaName = selectedAreaName,
+    fVenc = fechaVencimiento
   ) => {
     // si no hay nada seleccionado, limpiar filtros
-    if (!df && !estOp && !areaId && !familia && !estAd && !areaName) {
+    if (!df && !estOp && !areaId && !familia && !areaName && !fVenc) {
       console.log('Header -> emitFilters: no filters selected, clearing')
       onFiltersChange?.(undefined)
       return
@@ -125,10 +129,10 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (dr.start) payload.start = dr.start
     if (dr.end) payload.end = dr.end
     if (estOp) payload.estadoOperativo = estOp
-    if (estAd) payload.estadoAdministrativo = estAd
     if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
     if (areaName) payload.areaName = areaName
     if (familia) payload.familia = familia
+    if (fVenc) payload.fechaVencimiento = fVenc
     console.log('Header -> emitFilters', payload)
     onFiltersChange?.(payload)
   }
@@ -136,7 +140,12 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   const handleFamiliaChange = (value: string) => {
     setSelectedFamilia(value)
     // emitir con area actual y nueva familia
-    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, value)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, value, selectedAreaName, fechaVencimiento)
+  }
+
+  const handleFechaVencimientoChange = (value: string) => {
+    setFechaVencimiento(value)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, selectedAreaName, value)
   }
 
   // permitir valor vacío '' = "Seleccione"
@@ -149,18 +158,13 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const v = value as '' | 'fecha_codificacion' | 'fecha_muestreo'
     setFechaCodificacionOption(v)
     // emitir con rango actual (si v === '' no incluye dateField)
-    emitFilters(v, dateRange)
+    emitFilters(v, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, selectedAreaName, fechaVencimiento)
   }
 
   const handleEstadoOpChange = (value: string) => {
     setSelectedEstadoOp(value)
     // emitir con los filtros actuales (incluirá estadoOperativo aunque no haya dateField)
-    emitFilters(fechaCodificacionOption, dateRange, value)
-  }
-
-  const handleEstadoAdChange = (value: string) => {
-    setSelectedEstadoAd(value)
-    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, value)
+    emitFilters(fechaCodificacionOption, dateRange, value, selectedAreaId, selectedFamilia, selectedAreaName, fechaVencimiento)
   }
 
   // handler que espera [Date|null, Date|null] o {start,end} o strings
@@ -180,7 +184,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
     const next = { start, end }
     setDateRange(next)
-    emitFilters(fechaCodificacionOption, next)
+    emitFilters(fechaCodificacionOption, next, selectedEstadoOp, selectedAreaId, selectedFamilia, selectedAreaName, fechaVencimiento)
   }
 
   useEffect(() => {
@@ -226,7 +230,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
       {/* Primera Fila de Inputs */}
       <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={3}>
           <TextField
             label='Fecha Codificación'
             size='small'
@@ -240,16 +244,30 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
             <MenuItem value='fecha_muestreo'>Fecha de Muestreo</MenuItem>
           </TextField>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={3}>
           {/* Rango de Fechas: pasar onChange */}
           <PickersRange onChange={handleRangeChangeFlexible} />
         </Grid>
-
+        <Grid item xs={12} sm={3}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+            <DatePicker
+              label='Fecha Vencimiento'
+              value={fechaVencimiento ? new Date(fechaVencimiento + 'T00:00:00') : null}
+              onChange={(newValue) => {
+                const dateStr = newValue ? newValue.toISOString().slice(0, 10) : ''
+                handleFechaVencimientoChange(dateStr)
+              }}
+              slotProps={{
+                textField: { fullWidth: true, size: 'small' }
+              }}
+            />
+          </LocalizationProvider>
+        </Grid>
       </Grid>
 
       {/* Segunda Fila de Inputs */}
       <Grid container spacing={2} alignItems='center'>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={4}>
           <FormControl fullWidth size='small'>
             <InputLabel id='area-select'>Área</InputLabel>
             <Select
@@ -268,7 +286,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={4}>
           <FormControl fullWidth size='small'>
             <InputLabel id='familia-select'>Familia</InputLabel>
             <Select
@@ -288,7 +306,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={4}>
           <TextField
             label='Estado Operativo'
             size='small'
@@ -304,25 +322,6 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
-
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth size='small'>
-            <InputLabel id='estado-ad-select'>Estado Administrativo</InputLabel>
-            <Select
-              labelId='estado-ad-select'
-              label='Estado Administrativo'
-              value={selectedEstadoAd}
-              onChange={e => handleEstadoAdChange(e.target.value)}
-            >
-              <MenuItem value=''>Seleccione</MenuItem>
-              {ADMINISTRATIVE_STATES.map(s => (
-                <MenuItem key={s.value} value={s.value}>
-                  {s.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Grid>
       </Grid>
     </Box>
