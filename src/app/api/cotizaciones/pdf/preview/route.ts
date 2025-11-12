@@ -16,8 +16,8 @@ const formatearFormaPago = (formaPago: string): string => {
 }
 
 // Función para formatear números UF con formato español (coma decimal y 3 decimales por defecto, 2 para EMS)
-const formatUF = (value: number | undefined | null, decimals: number = 3): string => {
-  if (value === undefined || value === null || isNaN(value)) return decimals === 2 ? '0,00' : '0,000';
+const formatUF = (value: number | undefined | null, decimals: number = 2): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,00';
 
   // Usar toFixed con el número de decimales especificado
   const formatted = Number(value).toFixed(decimals);
@@ -390,7 +390,7 @@ Condiciones para terreno y accesos
         return `
                     <td style='text-align:right;'>${detalle.cantidad || 0}</td>
                     <td style='text-align:right;'>UF ${formatUF(detalle.precioUnitarioUF)}</td>
-                    <td style='text-align:right;'>UF ${formatUF(detalle.totalNetoUF, cotizacion.tipoCotizacion === 'B' ? 2 : 3)}</td>
+                    <td style='text-align:right;'>UF ${formatUF(detalle.totalNetoUF, 2)}</td>
                   `;
       };
 

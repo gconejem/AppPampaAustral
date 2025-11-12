@@ -20,8 +20,8 @@ const formatearFormaPago = (formaPago: string): string => {
 }
 
 // Función para formatear números UF con formato español (coma decimal y 3 decimales por defecto, 2 para EMS)
-const formatUF = (value: number | undefined | null, decimals: number = 3): string => {
-  if (value === undefined || value === null || isNaN(value)) return decimals === 2 ? '0,00' : '0,000';
+const formatUF = (value: number | undefined | null, decimals: number = 2): string => {
+  if (value === undefined || value === null || isNaN(value)) return '0,00';
 
   // Usar toFixed con el número de decimales especificado
   const formatted = Number(value).toFixed(decimals);
@@ -374,7 +374,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, cotizacion.tipoCotizacion === 'B' ? 2 : 3);
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, 2);
               })()}</td>
                       </tr>`;
           } else if (!detalle.esSubProducto) {
@@ -450,7 +450,7 @@ Condiciones para terreno y accesos
                   return '-';
                 }
                 // Para todos los demás casos, mostrar total
-                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, cotizacion.tipoCotizacion === 'B' ? 2 : 3)
+                return !detalle.cantidad ? '-' : 'UF ' + formatUF(detalle.subtotal, 2)
               })()}</td>
                       </tr>`;
           }

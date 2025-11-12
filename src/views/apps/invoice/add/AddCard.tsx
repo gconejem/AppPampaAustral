@@ -55,12 +55,12 @@ const generateUniqueId = () => {
   return Date.now() + idCounter + Math.random() * 1000;
 };
 
-// Función para formatear números UF con formato español (coma decimal y 3 decimales)
+// Función para formatear números UF con formato español (coma decimal y 2 decimales)
 const formatUF = (value: number | undefined | null): string => {
-  if (value === undefined || value === null || isNaN(value)) return '0,000';
+  if (value === undefined || value === null || isNaN(value)) return '0,00';
 
-  // Usar toFixed(3) para asegurar exactamente 3 decimales
-  const formatted = Number(value).toFixed(3);
+  // Usar toFixed(2) para asegurar exactamente 2 decimales
+  const formatted = Number(value).toFixed(2);
 
   // Reemplazar punto por coma para formato español
   return formatted.replace('.', ',');
@@ -2458,7 +2458,7 @@ const AddCard = ({
                         size='small'
                         disabled
                         label='Total Neto UF'
-                        value={formData.tipoCotizacion === 'B' ? (row.totalNetoUF || 0).toFixed(2) : (row.totalNetoUF || 0)}
+                        value={(row.totalNetoUF || 0).toFixed(2)}
                         InputProps={{
                           startAdornment: <InputAdornment position='start'>UF</InputAdornment>,
                           readOnly: true
