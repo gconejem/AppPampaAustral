@@ -58,8 +58,8 @@ const InvoiceCard = ({ refreshTrigger = 0, filteredData }: InvoiceCardProps) => 
         totalCerradas: cotizaciones.filter((c: any) => ['ACEPTADA', 'RECHAZADA', 'SIN_RESPUESTA'].includes(c.estado))
           .length,
         totalCotizado: cotizaciones.reduce((acc: number, c: any) => {
-          const subtotal = parseFloat(c.subtotal?.toString() || '0')
-          return acc + subtotal
+          const total = parseFloat(c.total?.toString() || '0')
+          return acc + total
         }, 0)
       }
 

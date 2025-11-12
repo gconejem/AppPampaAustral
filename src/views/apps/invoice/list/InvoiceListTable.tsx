@@ -254,10 +254,32 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
 
   // Aplicar filtros combinados cuando cambien tipo o estado
   useEffect(() => {
-    if (filteredData) {
-      onDataFiltered?.(filteredData)
+    // Recalcular filteredData aquí para asegurar que se use el valor más reciente
+    const filtered = localData?.filter(row => {
+      if (filtroTipo && row.tipo !== filtroTipo) return false
+      if (filtroEstado && row.estado !== filtroEstado) return false
+
+      if (!globalFilter) return true
+
+      const searchStr = globalFilter.toLowerCase()
+      return (
+        row.numeroCotizacion?.toLowerCase().includes(searchStr) ||
+        row.comuna?.toLowerCase().includes(searchStr) ||
+        row.empresa?.toLowerCase().includes(searchStr) ||
+        row.contacto?.nombre?.toLowerCase().includes(searchStr)
+      )
+    })
+
+    if (filtered) {
+      console.log('=== FILTROS APLICADOS ===')
+      console.log('Tipo:', filtroTipo || 'Todos')
+      console.log('Estado:', filtroEstado || 'Todos')
+      console.log('Búsqueda:', globalFilter || 'Sin búsqueda')
+      console.log('Total después de filtrar:', filtered.length)
+      console.log('Total cotizado:', filtered.reduce((acc, c) => acc + (c.total || 0), 0))
+      onDataFiltered?.(filtered)
     }
-  }, [filtroTipo, filtroEstado, globalFilter, localData])
+  }, [filtroTipo, filtroEstado, globalFilter, localData, onDataFiltered])
 
   // Modificar los manejadores de cambio de fecha
   const handleFechaInicioChange = (date: Date | null) => {
