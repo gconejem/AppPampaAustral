@@ -26,29 +26,29 @@ export async function GET(
             return NextResponse.json({ error: 'Muestra no encontrada' }, { status: 404 })
         }
 
-        // ✅ 2. Cargar servicios desde el RCM padre
-        const servicios = await prisma.servicioRCM.findMany({
+        // ✅ 2. Cargar servicioMuestra relacionados con esta muestra
+        const servicios = await prisma.servicioMuestra.findMany({
             where: {
-                rcmId: muestra.rcmId
+                muestraId: muestraId
             },
             include: {
-                producto: true // ✅ SIN include de area/familia (son campos, no relaciones)
+                producto: true
             }
         })
 
-        // ✅ 3. Mapear servicios - area y familia vienen directamente del producto
+        // ✅ 3. Mapear servicios - SKU como código
         const serviciosEnriquecidos = servicios.map(s => ({
             id: s.id,
-            codigo: s.codigo,
-            nombre: s.nombre,
+            codigo: s.producto?.sku ?? s.producto?.SKU ?? s.producto?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
+            nombre: s.producto?.nombre ?? 'Sin nombre',
             tipo: s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis',
             cantidad: s.cantidad ?? 1,
             estado: s.estado ?? 'CODIFICADO',
-            area: s.producto?.area, // ✅ campo directo
-            familia: s.producto?.familia // ✅ campo directo
+            area: s.producto?.area,
+            familia: s.producto?.familia
         }))
 
-        // ✅ 4. Retornar muestra + servicios
+        // ✅ 4. Retornar muestra + servicios (observaciones incluido)
         return NextResponse.json({
             muestra: {
                 id: muestra.id,
@@ -61,7 +61,7 @@ export async function GET(
                 procedencia: muestra.procedencia,
                 cotas: muestra.cotas,
                 ubicacionSector: muestra.ubicacionSector,
-                observaciones: muestra.observaciones
+                observaciones: muestra.observaciones ?? muestra.observacion ?? '' // ✅ agregar fallback a 'observacion' (sin 'es')
             },
             servicios: serviciosEnriquecidos
         })

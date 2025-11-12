@@ -311,36 +311,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   // Devuelve los estados para el popup "marcar"
   // Reglas:
-  // 1) Si el estado actual es EVENTO o CERRADO_OP -> mostrar todos los estados (el actual disabled)
+  // 1) Si el estado actual es EVENTO -> mostrar todos los estados (el actual disabled)
   // 2) En cualquier otro caso -> mostrar: estado actual (disabled), el siguiente inmediato (si existe),
-  //    y además EVENTO y CERRADO_OP (sin duplicados)
+  //    y además EVENTO (sin duplicados)
   const getStatesForRow = (rowId?: number | null) => {
     const current = getCurrentStateForRow(rowId)
 
     // helper para buscar item por value
     const findState = (v?: string) => OPERATIONAL_STATES.find(s => s.value === v)
 
-    // Caso 1: si estamos en EVENTO o CERRADO_OP, mostrar todos (marcar el actual como disabled)
-    if (current === 'EVENTO' || current === 'CERRADO_OP') {
+    // Caso 1: si estamos en EVENTO, mostrar todos (marcar el actual como disabled)
+    if (current === 'EVENTO') {
       return OPERATIONAL_STATES.map(st => ({ ...st, disabled: st.value === current }))
     }
 
-    // Caso 2: mostrar current (disabled), siguiente inmediato (si existe), y EVENTO + CERRADO_OP
+    // Caso 2: mostrar current (disabled), siguiente inmediato (si existe), y EVENTO
     const idx = OPERATIONAL_STATES.findIndex(st => st.value === current)
     const currentItem = findState(current)
     const nextItem = OPERATIONAL_STATES[idx + 1]
 
     const evento = findState('EVENTO')
-    const cerrado = findState('CERRADO_OP')
 
     const items: Array<typeof OPERATIONAL_STATES[number] & { disabled?: boolean }> = []
 
     if (currentItem) items.push({ ...currentItem, disabled: true })
     if (nextItem) items.push({ ...nextItem, disabled: false })
 
-    // añadir EVENTO y CERRADO_OP si existen y no están ya en la lista
+    // añadir EVENTO si existe y no está ya en la lista
     if (evento && !items.some(i => i.value === evento.value)) items.push({ ...evento, disabled: false })
-    if (cerrado && !items.some(i => i.value === cerrado.value)) items.push({ ...cerrado, disabled: false })
 
     return items
   }
@@ -378,11 +376,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleMarkAction = async (action: string, rowId?: number | null) => {
-    // acciones que requieren diálogo (incluye las que ahora exigen observación obligatoria)
+    // acciones que requieren diálogo (ELIMINADO CERRADO_OP)
     const ACTIONS_REQUIRING_DIALOG = new Set([
       'DIGITADO',
       'EVENTO',
-      'CERRADO_OP',
       'ENVIADO_DIGITACION',
       'REVISADO',
       'FIRMADO',
@@ -468,7 +465,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       else if (Number.isNaN(Number(informeNumber))) errors.informeNumber = 'Debe ser un número'
     }
 
-    if (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') {
+    // ELIMINADO: validación para CERRADO_OP
+    if (markDialogAction === 'EVENTO') {
       if (!eventType) errors.eventType = 'Seleccione tipo'
       if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Ingrese motivo'
     }
@@ -620,7 +618,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
-    const row = findRowById(rowId)
+    // ✅ CORRECCIÓN: buscar por rcmOriginalId si menuRowId viene del menú contextual
+    let row = findRowById(rowId)
+
+    // Si no se encuentra, puede ser que rowId sea un rcmOriginalId
+    if (!row) {
+      row = data.find(r => r.rcmOriginalId === rowId) ?? filteredData.find(r => r.rcmOriginalId === rowId)
+    }
+
     if (!row) {
       console.warn('handleEdit: row not found', rowId, {
         dataIds: data.map(d => (d as any).id ?? (d as any)._id),
@@ -630,25 +635,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
+    // ✅ Usar rcmOriginalId para construir la URL
+    const rcmId = row.rcmOriginalId ?? row.id
     const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
-    const tipo = row.ordenTrabajo?.tipo ?? row.tipo ?? row.tipoOT ?? ''
-    let servicioId = ''
-    if (Array.isArray(row.servicios) && row.servicios.length) {
-      const s0: any = row.servicios[0]
-      servicioId = s0.id ?? s0.servicioId ?? s0._id ?? ''
-    }
 
+    console.log('🔍 handleEdit - Datos para encoder:', {
+      rowId,
+      rcmId,
+      rcmOriginalId: row.rcmOriginalId,
+      otId,
+      ordenTrabajo: row.ordenTrabajo
+    })
+
+    // ✅ CORRECCIÓN: construir URL correcta para encoder
     const params = new URLSearchParams()
+    params.set('rcmId', String(rcmId))
     if (otId) params.set('otId', String(otId))
-    if (tipo) params.set('tipo', String(tipo))
-    params.set('servicioId', String(servicioId ?? ''))
     if (opts?.readonly) params.set('readonly', '1')
 
     const target = `${window.location.origin}/en/apps/encoder?${params.toString()}`
+
+    console.log('🚀 Redirecting to encoder:', target)
+
     try {
       const newWin = window.open(target, '_blank')
       if (newWin) {
-        // intentar prevenir reference al opener y traer foco
         try {
           newWin.opener = null
         } catch (e) {
@@ -660,38 +671,48 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           /* noop */
         }
       } else {
-        // fallback: asignar href si window.open bloqueado
         window.location.href = target
       }
     } catch (e) {
-      // último recurso
       window.location.href = target
     }
     handleCloseRowMenu()
   }
 
   // Igual que handleEdit pero abre en modo solo lectura (readonly=1)
-  const handleView = async (rowId: number | null) => {
-    if (!rowId) {
-      console.warn('handleView: no rowId provided')
+  const handleView = async (row: RCM | null) => {
+    console.group('🔍 handleView called')
+    console.log('row recibido:', row)
+
+    if (!row) {
+      console.warn('handleView: no row provided')
+      console.groupEnd()
       return
     }
 
-    const row = findRowById(rowId)
+    console.log('row.id:', row.id)
+    console.log('row.muestra:', row.muestra)
+    console.log('row.muestra.id:', row.muestra?.id)
 
-    if (!row || !row.muestra?.id) {
-      console.warn('handleView: muestra not found for rowId', rowId)
+    if (!row.muestra?.id) {
+      console.warn('handleView: muestra sin ID', row.muestra)
+      console.groupEnd()
       return
     }
 
-    if (selectedRowId === rowId) {
+    // ✅ Si ya está abierto, cerrar
+    if (selectedRowId === row.id) {
+      console.log('🔒 Cerrando formulario')
       setSelectedRowId(null)
       setServiciosMuestra([])
       setMuestraDetalle(null)
+      console.groupEnd()
       return
     }
 
-    setSelectedRowId(rowId)
+    // ✅ Abrir formulario y cargar datos
+    console.log('🔓 Abriendo formulario')
+    setSelectedRowId(row.id)
     setServiciosMuestra([])
     setMuestraDetalle(null)
     setLoadingServicios(true)
@@ -699,6 +720,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     try {
       const muestraId = row.muestra.id
       const url = `/api/muestra/${muestraId}/servicios`
+
+      console.log('📡 Fetching:', url)
 
       const response = await fetch(url)
 
@@ -708,15 +731,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       const data = await response.json()
 
+      console.log('✅ Datos cargados:', data)
+
       setMuestraDetalle(data.muestra)
       setServiciosMuestra(data.servicios || [])
     } catch (err) {
-      console.error('Error loading servicios:', err)
+      console.error('❌ Error loading servicios:', err)
       setServiciosMuestra([])
       setMuestraDetalle(null)
     } finally {
       setLoadingServicios(false)
-      handleCloseRowMenu()
+      console.groupEnd()
     }
   }
 
@@ -1637,11 +1662,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         header: 'ACCIONES',
         cell: ({ row }) => (
           <Stack direction='row' spacing={1}>
-            {/* ✅ CAMBIO: Ver ahora muestra servicios de la muestra */}
             <IconButton
               size='small'
-              title='Ver Servicios'
-              onClick={() => handleView(row.original.id)}
+              title='Ver'
+              onClick={(e) => {
+                e.stopPropagation()
+                console.log('👁️ Ver clicked - row.original:', row.original)
+
+                // ✅ CORRECCIÓN: pasar row.original directamente (no el ID)
+                handleView(row.original)
+              }}
             >
               <VisibilityIcon fontSize='small' />
             </IconButton>
@@ -1649,19 +1679,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             <IconButton
               size='small'
               title='Marcar'
-              onClick={(e) => handleOpenMarkMenu(e, row.original.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenMarkMenu(e, row.original.id)
+              }}
             >
               <CheckBoxOutlinedIcon fontSize='small' />
             </IconButton>
 
-            <IconButton size='small' title='Más' onClick={e => handleOpenRowMenu(e, row.original.rcmOriginalId ?? row.original.id)}>
+            <IconButton
+              size='small'
+              title='Más'
+              onClick={e => {
+                e.stopPropagation()
+                handleOpenRowMenu(e, row.original.rcmOriginalId ?? row.original.id)
+              }}
+            >
               <MoreVertIcon fontSize='small' />
             </IconButton>
           </Stack>
         )
       }
     ]
-  }, [rowSelection])
+  }, []) // ✅ QUITAR 'rowSelection' de las dependencias
 
   const table = useReactTable({
     data: filteredData,
@@ -1909,11 +1949,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         <>
           <Divider sx={{ my: 2 }} />
           <Box sx={{ px: 3, pb: 3 }}>
-            {/* Header con título y botón cerrar */}
+            {/* Header con título, número de tarjeta y botón cerrar */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant='h6'>
-                Muestra #{findRowById(selectedRowId)?.muestra?.numeroMuestra ?? selectedRowId}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant='h6'>
+                  Muestra #{findRowById(selectedRowId)?.muestra?.numeroMuestra ?? selectedRowId}
+                </Typography>
+                {(() => {
+                  const row = findRowById(selectedRowId)
+                  const numeroTarjeta = row?.numeroTarjeta ?? row?.muestra?.numeroTarjeta
+
+                  if (numeroTarjeta) {
+                    return (
+                      <Chip
+                        label={`N° Tarjeta: ${numeroTarjeta}`}
+                        size='small'
+                        variant='outlined'
+                        color='primary'
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          px: 1
+                        }}
+                      />
+                    )
+                  }
+                  return null
+                })()}
+              </Box>
               <IconButton
                 size='small'
                 onClick={() => {
@@ -1930,20 +1993,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             {/* Formulario de información de la muestra - USAR muestraDetalle */}
             {(() => {
               const row = findRowById(selectedRowId)
-              const muestra = muestraDetalle ?? row?.muestra ?? {} // ✅ PRIORIZAR muestraDetalle
+              const muestra = muestraDetalle ?? row?.muestra ?? {}
 
-              // ✅ Dividir cotas DENTRO del scope donde se usa
               const [cota1, cota2] = (muestra.cotas ?? '').split('-').map(c => c.trim())
-
-              // ✅ DEBUG: verificar qué datos tenemos
-              console.log('🔍 Formulario muestra:', {
-                selectedRowId,
-                muestraDetalle,
-                muestra,
-                tipoMaterial: muestra.tipoMaterial,
-                elemento: muestra.elemento,
-                numeroTarjeta: muestra.numeroTarjeta
-              })
 
               return (
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
@@ -2096,7 +2148,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             <Box sx={{ mt: 3 }}>
               <TextField
                 label='Observaciones Muestra'
-                value={findRowById(selectedRowId)?.muestra?.observaciones ?? ''}
+                value={(() => {
+                  const row = findRowById(selectedRowId)
+                  const muestra = muestraDetalle ?? row?.muestra ?? {}
+                  return muestra.observaciones ?? muestra.observacion ?? ''
+                })()}
                 multiline
                 minRows={3}
                 fullWidth
@@ -2136,7 +2192,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         })()}
       </Menu>
 
-      {/* Dialog: Form "Estado Muestra" para acciones (Digitado, EVENTO, CERRADO_OP, ...) */}
+      {/* Dialog: Form "Estado Muestra" para acciones (Digitado, EVENTO, ...) */}
       <Dialog open={markDialogOpen} onClose={handleCancelMarkDialog} maxWidth='sm' fullWidth>
         <DialogTitle>Estado Muestra</DialogTitle>
         <DialogContent>
@@ -2161,7 +2217,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </Box>
           )}
 
-          {(markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') && (
+          {/* ELIMINADO: condición || markDialogAction === 'CERRADO_OP' */}
+          {markDialogAction === 'EVENTO' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <FormControl fullWidth size='small'>
@@ -2173,7 +2230,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     disabled
                   >
                     <MenuItemMUI value={markDialogAction}>
-
                       {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
                     </MenuItemMUI>
                   </Select>
@@ -2265,9 +2321,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar en Encoder</MenuItem>
-        <MenuItem onClick={() => handleView(menuRowId)}>Ver Servicios</MenuItem>
-        <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
+        <MenuItem onClick={() => {
+          console.log('📍 Editar clicked - menuRowId:', menuRowId)
+          handleEdit(menuRowId)
+        }}>
+          Editar
+        </MenuItem>
+        <MenuItem onClick={() => handleHistorial(menuRowId)}>Historial</MenuItem>
       </Menu>
 
       {/* Dialog: Historial (mock) */}
