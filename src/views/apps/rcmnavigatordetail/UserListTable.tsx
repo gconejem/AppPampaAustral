@@ -221,9 +221,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
 
   // Reemplazar estados del dialog (línea ~224)
+  // ...existing code...
+
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [serviciosMuestra, setServiciosMuestra] = useState<any[]>([])
+  const [muestraDetalle, setMuestraDetalle] = useState<any>(null)
   const [loadingServicios, setLoadingServicios] = useState(false)
+
+  // ...existing code...
 
   // helper: convertir hex -> rgba
   const hexToRgba = (hex: string, alpha = 0.36) => {
@@ -673,61 +678,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
 
     const row = findRowById(rowId)
-    console.log('🔍 DEBUG handleView - row encontrada:', row)
 
     if (!row || !row.muestra?.id) {
       console.warn('handleView: muestra not found for rowId', rowId)
-      console.log('row completo:', row)
-      console.log('row.muestra:', row?.muestra)
       return
     }
 
-    const muestraId = row.muestra.id
-    console.log('📍 Muestra ID para fetch:', muestraId)
-
-    // Si se clickea la misma fila, colapsar
     if (selectedRowId === rowId) {
       setSelectedRowId(null)
       setServiciosMuestra([])
+      setMuestraDetalle(null)
       return
     }
 
-    // Seleccionar nueva fila y mostrar loading
     setSelectedRowId(rowId)
     setServiciosMuestra([])
+    setMuestraDetalle(null)
     setLoadingServicios(true)
 
     try {
+      const muestraId = row.muestra.id
       const url = `/api/muestra/${muestraId}/servicios`
-      console.log('🌐 Fetching URL:', url)
 
-      const res = await fetch(url)
-      console.log('📡 Response status:', res.status)
-      console.log('📡 Response headers:', Object.fromEntries(res.headers.entries()))
+      const response = await fetch(url)
 
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '')
-        console.error('❌ Failed to fetch servicios:', res.status, txt.slice(0, 500))
-        throw new Error('Error loading servicios')
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
       }
 
-      const contentType = res.headers.get('content-type')
-      console.log('📄 Content-Type:', contentType)
+      const data = await response.json()
 
-      if (!contentType?.includes('application/json')) {
-        const txt = await res.text()
-        console.error('⚠️ Response is not JSON:', txt.slice(0, 500))
-        throw new Error('Response is not JSON')
-      }
-
-      const servicios = await res.json()
-      console.log('✅ Servicios recibidos:', servicios)
-      console.log('📊 Cantidad de servicios:', Array.isArray(servicios) ? servicios.length : 'No es array')
-
-      setServiciosMuestra(Array.isArray(servicios) ? servicios : [])
+      setMuestraDetalle(data.muestra)
+      setServiciosMuestra(data.servicios || [])
     } catch (err) {
-      console.error('💥 Error loading servicios:', err)
+      console.error('Error loading servicios:', err)
       setServiciosMuestra([])
+      setMuestraDetalle(null)
     } finally {
       setLoadingServicios(false)
       handleCloseRowMenu()
@@ -1933,6 +1919,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 onClick={() => {
                   setSelectedRowId(null)
                   setServiciosMuestra([])
+                  setMuestraDetalle(null)
                 }}
                 title='Cerrar'
               >
@@ -1940,22 +1927,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               </IconButton>
             </Box>
 
-            {/* Formulario de información de la muestra - RELLENADO CON DATOS REALES */}
+            {/* Formulario de información de la muestra - USAR muestraDetalle */}
             {(() => {
               const row = findRowById(selectedRowId)
-              const muestra = row?.muestra ?? {}
+              const muestra = muestraDetalle ?? row?.muestra ?? {} // ✅ PRIORIZAR muestraDetalle
 
               // ✅ Dividir cotas DENTRO del scope donde se usa
               const [cota1, cota2] = (muestra.cotas ?? '').split('-').map(c => c.trim())
 
+              // ✅ DEBUG: verificar qué datos tenemos
+              console.log('🔍 Formulario muestra:', {
+                selectedRowId,
+                muestraDetalle,
+                muestra,
+                tipoMaterial: muestra.tipoMaterial,
+                elemento: muestra.elemento,
+                numeroTarjeta: muestra.numeroTarjeta
+              })
+
               return (
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
-                  {/* ELIMINADO: N° Tarjeta */}
-
                   {/* Fila 1 */}
                   <TextField
                     label='Tipo Material'
-                    value={muestra.tipoMaterial ?? ''}
+                    value={muestra.tipoMaterial ?? muestra.tipo_material ?? ''}
                     size='small'
                     disabled
                     fullWidth
@@ -2008,11 +2003,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   />
                   <TextField
                     label='Ubicación / Sector'
-                    value={muestra.ubicacionSector ?? ''}
+                    value={muestra.ubicacionSector ?? muestra.ubicacion_sector ?? muestra.ubicacion ?? ''}
                     size='small'
                     disabled
                     fullWidth
-                    sx={{ gridColumn: 'span 2' }} // ← ocupa 2 columnas
+                    sx={{ gridColumn: 'span 2' }}
                   />
                 </Box>
               )
