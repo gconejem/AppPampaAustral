@@ -211,7 +211,7 @@ Condiciones para terreno y accesos
           <div class="header-left">
             <div class="logo-title">
               <img src="${logoBase64}" class="logo" />
-              <span class="title">Laboratorio Pampa Austral</span>
+              <span class="title">Laboratorio Oficial Pampa Austral</span>
             </div>
             <div class="subtitle">Laboratorio Acreditado INN - Chile ISO/IEC 17025-2017</div>
           </div>
@@ -657,7 +657,7 @@ export async function POST(request: Request) {
       `
     })
     await browser.close()
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="cotizacion-preview.pdf"`
