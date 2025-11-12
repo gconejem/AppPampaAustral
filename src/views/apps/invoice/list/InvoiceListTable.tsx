@@ -56,35 +56,12 @@ import { ROLES_CONTACTO } from '@/constants/roles'
 import CircularProgress from '@mui/material/CircularProgress'
 
 // Type Imports
-// import type { InvoiceType } from '@/types/apps/invoiceTypes'
-
-// Agregar después de las importaciones y antes del componente
-interface Contacto {
-  nombre: string
-  cargo?: string
-  email?: string
-  telefono1?: string
-}
-
-interface InvoiceType {
-  id: number
-  numeroCotizacion: string
-  tipoCotizacion: string
-  estado: string
-  contacto: Contacto | null
-  fecha: string
-  comuna: string
-  tipo: string
-  empresa: string
-  detalles: any[]
-  total: number
-  observacionGestion?: string
-  // ... otros campos necesarios
-}
+import type { InvoiceType } from '@/types/apps/invoiceTypes'
 
 interface InvoiceListTableProps {
   invoiceData?: InvoiceType[]
   onCotizacionDeleted?: () => void
+  onDataFiltered?: (data: any[]) => void
 }
 
 const tiposCotizacion = [
@@ -104,7 +81,7 @@ const estadosCotizacion = [
   { value: 'RECHAZADA', label: 'Rechazada' }
 ]
 
-const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTableProps) => {
+const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: InvoiceListTableProps) => {
   // Configuración de localización
   const locale = 'es'
 
@@ -226,6 +203,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
 
       const data = await response.json()
       setLocalData(data)
+      onDataFiltered?.(data)
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al cargar cotizaciones')
@@ -238,6 +216,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
   useEffect(() => {
     if (invoiceData) {
       setLocalData(invoiceData)
+      onDataFiltered?.(invoiceData)
     } else {
       fetchCotizaciones(filtroFecha, filtroFechaFin)
     }
@@ -496,20 +475,14 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
       // Si la actualización en el servidor fue exitosa, actualizamos la UI
       const updatedData = await response.json()
 
-      setLocalData(prevData =>
-        prevData.map(row => (row.id === selectedRowId ? { ...row, estado: updatedData.estado } : row))
-      )
+      const newLocalData = localData.map(row => (row.id === selectedRowId ? { ...row, estado: updatedData.estado } : row))
+      setLocalData(newLocalData)
+      onDataFiltered?.(newLocalData)
 
       toast.success('Estado actualizado correctamente')
 
-      // Opcional: Recargar los datos completos
-      const refreshResponse = await fetch('/api/cotizaciones')
-
-      if (refreshResponse.ok) {
-        const freshData = await refreshResponse.json()
-
-        setLocalData(freshData)
-      }
+      // Opcional: Recargar los datos completos con los filtros actuales
+      fetchCotizaciones(filtroFecha, filtroFechaFin)
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al actualizar el estado: ' + (error as Error).message)
@@ -530,7 +503,9 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
         throw new Error('Error al eliminar la cotización')
       }
 
-      setLocalData(prev => prev.filter(row => row.id !== cotizacionToDelete))
+      const updatedData = localData.filter(row => row.id !== cotizacionToDelete)
+      setLocalData(updatedData)
+      onDataFiltered?.(updatedData)
       toast.success('Cotización eliminada correctamente')
       onCotizacionDeleted?.()
     } catch (error) {

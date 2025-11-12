@@ -21,14 +21,18 @@ import type { Theme } from '@mui/material/styles'
 // Third-party Imports
 import classnames from 'classnames'
 
+// Type Imports
+import type { InvoiceType } from '@/types/apps/invoiceTypes'
+
 // Component Imports
 import CustomAvatar from '@/@core/components/mui/Avatar'
 
 interface InvoiceCardProps {
   refreshTrigger?: number
+  filteredData?: InvoiceType[]
 }
 
-const InvoiceCard = ({ refreshTrigger = 0 }: InvoiceCardProps) => {
+const InvoiceCard = ({ refreshTrigger = 0, filteredData }: InvoiceCardProps) => {
   // Estados para los totales
   const [stats, setStats] = useState({
     totalCreadas: 0,
@@ -45,42 +49,40 @@ const InvoiceCard = ({ refreshTrigger = 0 }: InvoiceCardProps) => {
   const params = useParams()
   const locale = params?.lang as string || 'es'
 
-  // Cargar datos al montar el componente
+  // Calcular estadísticas cuando cambien los datos filtrados
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/cotizaciones')
-        const cotizaciones = await response.json()
-
-        console.log('Datos crudos recibidos:', cotizaciones)
-
-        // Calcular estadísticas
-        const stats = {
-          totalCreadas: cotizaciones.length,
-          totalActivas: cotizaciones.filter((c: any) => ['BORRADOR', 'COTIZADA', 'GESTIONADA'].includes(c.estado)).length,
-          totalCerradas: cotizaciones.filter((c: any) => ['ACEPTADA', 'RECHAZADA', 'SIN_RESPUESTA'].includes(c.estado))
-            .length,
-          totalCotizado: cotizaciones.reduce((acc: number, c: any) => {
-            /* console.log('Procesando cotización:', {
-              id: c.id,
-              subtotal: c.subtotal,
-              tipo: typeof c.subtotal
-            }) */
-            const subtotal = parseFloat(c.subtotal?.toString() || '0')
-
-            return acc + subtotal
-          }, 0)
-        }
-
-        console.log('Estadísticas calculadas:', stats)
-        setStats(stats)
-      } catch (error) {
-        console.error('Error al cargar estadísticas:', error)
+    const calculateStats = (cotizaciones: any[]) => {
+      const stats = {
+        totalCreadas: cotizaciones.length,
+        totalActivas: cotizaciones.filter((c: any) => ['BORRADOR', 'COTIZADA', 'GESTIONADA'].includes(c.estado)).length,
+        totalCerradas: cotizaciones.filter((c: any) => ['ACEPTADA', 'RECHAZADA', 'SIN_RESPUESTA'].includes(c.estado))
+          .length,
+        totalCotizado: cotizaciones.reduce((acc: number, c: any) => {
+          const subtotal = parseFloat(c.subtotal?.toString() || '0')
+          return acc + subtotal
+        }, 0)
       }
+
+      setStats(stats)
     }
 
-    fetchStats()
-  }, [refreshTrigger])
+    if (filteredData) {
+      calculateStats(filteredData)
+    } else {
+      // Si no hay datos filtrados, cargar todos
+      const fetchStats = async () => {
+        try {
+          const response = await fetch('/api/cotizaciones')
+          const cotizaciones = await response.json()
+          calculateStats(cotizaciones)
+        } catch (error) {
+          console.error('Error al cargar estadísticas:', error)
+        }
+      }
+
+      fetchStats()
+    }
+  }, [refreshTrigger, filteredData])
 
   const data = [
     {
