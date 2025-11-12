@@ -5,6 +5,7 @@ import { useState, useEffect, Fragment } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
+import * as XLSX from 'xlsx'
 
 // Función para formatear números UF con formato español (coma decimal y 2 decimales)
 const formatUF = (value: number | undefined | null): string => {
@@ -301,46 +302,49 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted }: InvoiceListTable
 
       if (selectedRows.length === 0) {
         toast.error('Por favor, seleccione al menos una cotización para exportar')
-
         return
       }
 
-      // Preparar los datos para CSV
-      const headers = ['N° COTIZACIÓN', 'FECHA', 'COMUNA', 'EMPRESA', 'TIPO', 'CONTACTO', 'ESTADO', 'TOTAL UF', 'OBSERVACIONES']
-
       const selectedData = localData?.filter(row => selectedRows.includes(row.id)) || []
 
-      console.log('selectedData', selectedData)
+      // Preparar los datos para Excel
+      const excelData = selectedData.map(row => ({
+        'N° COTIZACIÓN': row.numeroCotizacion,
+        'FECHA': formatDate(row.fecha),
+        'COMUNA': row.comuna,
+        'EMPRESA': row.empresa || 'No especificada',
+        'TIPO': getTipoLabel(row.tipo),
+        'CONTACTO': row.contacto?.nombre || '',
+        'ESTADO': row.estado,
+        'TOTAL UF': row.total,
+        'OBSERVACIONES': row.observacionGestion || ''
+      }))
 
-      const csvData = selectedData.map(row => [
-        row.numeroCotizacion,
-        row.fecha,
-        row.comuna,
-        row.empresa,
-        getTipoLabel(row.tipo),
-        row.contacto?.nombre || '',
-        row.estado,
-        row.total,
-        row.observacionGestion || ''
-      ])
+      // Crear el libro de trabajo
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Cotizaciones')
 
-      // Crear el contenido del CSV
-      const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
+      // Ajustar el ancho de las columnas
+      const columnWidths = [
+        { wch: 15 }, // N° COTIZACIÓN
+        { wch: 12 }, // FECHA
+        { wch: 15 }, // COMUNA
+        { wch: 25 }, // EMPRESA
+        { wch: 18 }, // TIPO
+        { wch: 25 }, // CONTACTO
+        { wch: 15 }, // ESTADO
+        { wch: 12 }, // TOTAL UF
+        { wch: 30 }  // OBSERVACIONES
+      ]
+      worksheet['!cols'] = columnWidths
 
-      const BOM = '\uFEFF'
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' })
-      const link = document.createElement('a')
+      // Generar el archivo Excel
+      const fileName = selectedData.length === 1
+        ? `Cotizacion_${selectedData[0].numeroCotizacion}.xlsx`
+        : `Cotizaciones_${new Date().toISOString().split('T')[0]}.xlsx`
 
-      link.href = URL.createObjectURL(blob)
-      link.download =
-        selectedData.length === 1
-          ? `Cotizacion_${selectedData[0].numeroCotizacion}.csv`
-          : `Cotizaciones_${new Date().toISOString().split('T')[0]}.csv`
-
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(link.href)
+      XLSX.writeFile(workbook, fileName)
 
       toast.success(`${selectedData.length} cotización(es) exportada(s) exitosamente`)
     } catch (error) {
