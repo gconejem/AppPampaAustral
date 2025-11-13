@@ -1,73 +1,76 @@
 'use client'
 
-// ...existing code...
-import { useEffect, useState, useMemo } from 'react'
+// React Imports
+import { useState, useMemo, useEffect } from 'react'
 
 // Next Imports
-import { useParams } from 'next/navigation'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
-import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
 import TablePagination from '@mui/material/TablePagination'
-import { styled } from '@mui/material/styles'
+import TextField from '@mui/material/TextField'
 import type { TextFieldProps } from '@mui/material/TextField'
 import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
+import MenuItem from '@mui/material/MenuItem'  // ✅ UNA SOLA IMPORTACIÓN
+import FormControl from '@mui/material/FormControl'
+import FormHelperText from '@mui/material/FormHelperText'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
+import Box from '@mui/material/Box'
+import Paper from '@mui/material/Paper'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import CircularProgress from '@mui/material/CircularProgress'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import Paper from '@mui/material/Paper'
-
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
-import FormHelperText from '@mui/material/FormHelperText'
-import { OPERATIONAL_STATES } from '@/constants/operationalStates'
-import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
+import { styled } from '@mui/material/styles'
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DownloadIcon from '@mui/icons-material/Download'
 
 // Third-party Imports
+import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
+import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-// ...existing code...
+// Custom imports
+import { OPERATIONAL_STATES } from '@/constants/operationalStates'
+import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
+
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
@@ -227,6 +230,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [serviciosMuestra, setServiciosMuestra] = useState<any[]>([])
   const [muestraDetalle, setMuestraDetalle] = useState<any>(null)
   const [loadingServicios, setLoadingServicios] = useState(false)
+
+  // ✅ AGREGAR: Estados para historial de servicioMuestra
+  const [histServicioDialogOpen, setHistServicioDialogOpen] = useState(false)
+  const [histServicioId, setHistServicioId] = useState<number | null>(null)
+  const [histServicioRows, setHistServicioRows] = useState<any[]>([])
+  const [histServicioLoading, setHistServicioLoading] = useState(false)
+
+  // Cache para historial de servicios
+  const servicioHistoryCache: Map<number, any[]> = (global as any).__SERVICIO_HISTORY_CACHE__ || new Map()
+    ; (global as any).__SERVICIO_HISTORY_CACHE__ = servicioHistoryCache
 
   // ...existing code...
 
@@ -733,6 +746,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       console.log('✅ Datos cargados:', data)
 
+      // ✅ AGREGAR: Log detallado de servicios
+      console.group('🔍 DEBUG servicios cargados')
+      console.log('Total servicios:', data.servicios?.length ?? 0)
+      if (data.servicios && data.servicios.length > 0) {
+        console.log('Primer servicio completo:', data.servicios[0])
+        console.log('IDs de servicios:', data.servicios.map((s: any) => ({
+          id: s.id,
+          servicioMuestraId: s.servicioMuestraId,
+          servicioId: s.servicioId,
+          _id: s._id,
+          nombre: s.nombre,
+          codigo: s.codigo
+        })))
+      }
+      console.groupEnd()
+
       setMuestraDetalle(data.muestra)
       setServiciosMuestra(data.servicios || [])
     } catch (err) {
@@ -819,10 +848,74 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
+  // ✅ AGREGAR: Función para manejar historial de servicioMuestra
+  const handleHistorialServicio = async (servicioMuestraId: number | null) => {
+    if (!servicioMuestraId) {
+      console.warn('handleHistorialServicio: no servicioMuestraId provided')
+      return
+    }
+
+    console.group('📋 handleHistorialServicio')
+    console.log('servicioMuestraId:', servicioMuestraId)
+
+    setHistServicioId(servicioMuestraId)
+    setHistServicioRows([])
+    setHistServicioDialogOpen(true)
+
+    // Revisar caché
+    const cached = servicioHistoryCache.get(servicioMuestraId)
+    if (cached) {
+      console.log('✅ Using cached data:', cached)
+      setHistServicioRows(cached)
+      setHistServicioLoading(false)
+      console.groupEnd()
+      return
+    }
+
+    setHistServicioLoading(true)
+    try {
+      const url = `/api/servicioMuestra/${servicioMuestraId}/history`
+      console.log('📡 Fetching:', url)
+
+      const res = await fetch(url)
+
+      console.log('📥 Response status:', res.status)
+      console.log('📥 Response headers:', Object.fromEntries(res.headers.entries()))
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('❌ API error:', res.status, txt)
+        throw new Error(`HTTP ${res.status}: ${txt}`)
+      }
+
+      const json = await res.json()
+      console.log('✅ Response JSON:', json)
+
+      const rows = Array.isArray(json) ? json : []
+      console.log('📊 Rows count:', rows.length)
+
+      // Guardar en caché
+      servicioHistoryCache.set(servicioMuestraId, rows)
+      setHistServicioRows(rows)
+    } catch (err) {
+      console.error('❌ Error loading servicio history:', err)
+      setHistServicioRows([])
+    } finally {
+      setHistServicioLoading(false)
+      console.groupEnd()
+    }
+  }
+
   const handleCloseHistDialog = () => {
     setHistDialogOpen(false)
     setHistRowId(null)
     setHistRows([])
+  }
+
+  const handleCloseHistServicioDialog = () => {
+    setHistServicioDialogOpen(false)
+    setHistServicioId(null)
+    setHistServicioRows([])
   }
 
   // Fetch RCMs
@@ -1635,6 +1728,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Chip
+
                 label={op ?? '-'}
                 title={info.hex ?? ''}
                 size='small'
@@ -2081,63 +2175,72 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       <TableCell sx={{ fontWeight: 600 }}>ENSAYO / ANÁLISIS</TableCell>
                       <TableCell align='center' sx={{ fontWeight: 600 }}>CANTIDAD</TableCell>
                       <TableCell align='center' sx={{ fontWeight: 600 }}>ESTADO</TableCell>
-                      {/* ELIMINADO: columna ACCIONES */}
+                      {/* ❌ ELIMINAR: <TableCell align='center' sx={{ fontWeight: 600 }}>ACCIONES</TableCell> */}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {serviciosMuestra.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}> {/* ❌ cambiar colSpan de 5 a 4 */}
                           <Typography color='text.secondary'>
                             No hay servicios agregados
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      serviciosMuestra.map((servicio, idx) => (
-                        <TableRow
-                          key={servicio.id ?? idx}
-                          sx={{ '&:hover': { bgcolor: 'action.hover' } }}
-                        >
-                          <TableCell>
-                            {servicio.codigo ?? servicio.codigoInterno ?? servicio.servicio?.codigo ?? servicio.id ?? '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant='body2'>
-                              {servicio.tipo === 'Ensayo' ? 'Ensayo - ' : 'Análisis - '}
-                              {servicio.nombre ?? servicio.servicio?.nombre ?? servicio.descripcion ?? '-'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align='center'>
-                            {servicio.cantidad ?? 1}
-                          </TableCell>
-                          <TableCell align='center'>
-                            {(() => {
-                              const estado = servicio.estado ?? servicio.estadoServicio ?? 'Codificado'
-                              const info = getOperationalInfo(estado)
-                              return (
-                                <Chip
-                                  label={estado}
-                                  size='small'
-                                  variant='filled'
-                                  sx={{
-                                    bgcolor: info.bgcolor,
-                                    color: info.colorText,
-                                    border: `1px solid ${info.border}`,
-                                    textTransform: 'capitalize',
-                                    fontWeight: 600,
-                                    fontSize: '0.72rem',
-                                    borderRadius: 2,
-                                    px: 1,
-                                    py: 0.4
-                                  }}
-                                />
-                              )
-                            })()}
-                          </TableCell>
-                          {/* ELIMINADO: celda de ACCIONES */}
-                        </TableRow>
-                      ))
+                      serviciosMuestra.map((servicio, idx) => {
+                        const servicioId = servicio.id ??
+                          servicio.servicioMuestraId ??
+                          servicio.servicioId ??
+                          servicio._id ??
+                          null
+
+                        return (
+                          <TableRow
+                            key={servicioId ?? idx}
+                            sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                          >
+                            <TableCell>
+                              {servicio.codigo ?? servicio.codigoInterno ?? servicio.servicio?.codigo ?? servicioId ?? '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant='body2'>
+                                {servicio.tipo === 'Ensayo' ? 'Ensayo - ' : 'Análisis - '}
+                                {servicio.nombre ?? servicio.servicio?.nombre ?? servicio.descripcion ?? '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align='center'>
+                              {servicio.cantidad ?? 1}
+                            </TableCell>
+                            <TableCell align='center'>
+                              {(() => {
+                                const estado = servicio.estado ?? servicio.estadoServicio ?? 'Codificado'
+                                const info = getOperationalInfo(estado)
+                                return (
+                                  <Chip
+                                    label={estado}
+                                    size='small'
+                                    variant='filled'
+                                    sx={{
+                                      bgcolor: info.bgcolor,
+                                      color: info.colorText,
+                                      border: `1px solid ${info.border}`,
+                                      textTransform: 'capitalize',
+                                      fontWeight: 600,
+                                      fontSize: '0.72rem',
+                                      borderRadius: 2,
+                                      px: 1,
+                                      py: 0.4
+                                    }}
+                                  />
+                                )
+                              })()}
+                            </TableCell>
+
+                            {/* ❌ ELIMINAR: columna ACCIONES completa */}
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -2201,7 +2304,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               <FormControl fullWidth size='small'>
                 <InputLabel id='mark-action-label'>Acción</InputLabel>
                 <Select labelId='mark-action-label' value={markDialogAction ?? ''} label='Acción' disabled>
-                  <MenuItemMUI value='DIGITADO'>Digitado</MenuItemMUI>
+                  <MenuItem value='DIGITADO'>Digitado</MenuItem>
                 </Select>
               </FormControl>
 
@@ -2229,9 +2332,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     label='Estado'
                     disabled
                   >
-                    <MenuItemMUI value={markDialogAction}>
+                    <MenuItem value={markDialogAction}>
                       {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
-                    </MenuItemMUI>
+                    </MenuItem>
                   </Select>
                 </FormControl>
 
@@ -2244,9 +2347,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     onChange={e => setEventType(String(e.target.value))}
                     size='small'
                   >
-                    <MenuItemMUI value='INFO_PENDIENTE'>Información Pendiente</MenuItemMUI>
-                    <MenuItemMUI value='ERROR_INTERNO'>Error Interno</MenuItemMUI>
-                    <MenuItemMUI value='CORRECCION'>Corrección</MenuItemMUI>
+                    <MenuItem value='INFO_PENDIENTE'>Información Pendiente</MenuItem>
+                    <MenuItem value='ERROR_INTERNO'>Error Interno</MenuItem>
+                    <MenuItem value='CORRECCION'>Corrección</MenuItem>
                   </Select>
                   {formErrors.eventType && <FormHelperText>{formErrors.eventType}</FormHelperText>}
                 </FormControl>
@@ -2280,9 +2383,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               <FormControl fullWidth size='small'>
                 <InputLabel id='mark-action-label-obs'>Acción</InputLabel>
                 <Select labelId='mark-action-label-obs' value={markDialogAction ?? ''} label='Acción' disabled>
-                  <MenuItemMUI value={markDialogAction}>
+                  <MenuItem value={markDialogAction}>
                     {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
-                  </MenuItemMUI>
+                  </MenuItem>
                 </Select>
               </FormControl>
 
@@ -2327,7 +2430,93 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }}>
           Editar
         </MenuItem>
-        <MenuItem onClick={() => handleHistorial(menuRowId)}>Historial</MenuItem>
+
+        {/* ✅ CORREGIR: Buscar por rcmOriginalId en lugar de id */}
+        <MenuItem onClick={() => {
+          handleCloseRowMenu()
+
+          // ✅ Buscar fila por rcmOriginalId
+          const row = data.find(r => r.rcmOriginalId === menuRowId) ??
+            filteredData.find(r => r.rcmOriginalId === menuRowId)
+
+          console.group('📋 Historial desde menú 3 puntos')
+          console.log('menuRowId (rcmOriginalId):', menuRowId)
+          console.log('row encontrado:', row)
+
+          if (!row) {
+            console.warn('❌ No se encontró la fila para rcmOriginalId:', menuRowId)
+            console.groupEnd()
+            alert('No se encontró la muestra')
+            return
+          }
+
+          // ✅ CORRECCIÓN CLAVE: Si los servicios de esta muestra ya están cargados, usar el primero
+          let servicioId: number | null = null
+
+          // 1) Intentar desde serviciosMuestra (si la fila abierta coincide)
+          if (selectedRowId === row.id && serviciosMuestra.length > 0) {
+            const primerServicio = serviciosMuestra[0]
+            servicioId = primerServicio.id ??
+              primerServicio.servicioMuestraId ??
+              primerServicio.servicioId ??
+              null
+            console.log('✅ Usando servicioId desde serviciosMuestra:', servicioId)
+          }
+
+          // 2) Si no hay servicios cargados, hacer fetch inline
+          if (!servicioId && row.muestra?.id) {
+            console.log('⏳ Cargando servicios de la muestra...')
+
+            fetch(`/api/muestra/${row.muestra.id}/servicios`)
+              .then(res => res.json())
+              .then(data => {
+                console.log('✅ Servicios cargados:', data)
+
+                if (data.servicios && data.servicios.length > 0) {
+                  const primerServicio = data.servicios[0]
+                  const id = primerServicio.id ??
+                    primerServicio.servicioMuestraId ??
+                    primerServicio.servicioId ??
+                    null
+
+                  console.log('✅ servicioId extraído:', id)
+
+                  if (id) {
+                    handleHistorialServicio(id)
+                  } else {
+                    console.warn('❌ No se pudo extraer servicioId')
+                    alert('No se encontró ID del servicio')
+                  }
+                } else {
+                  console.warn('❌ No hay servicios en la respuesta')
+                  alert('Esta muestra no tiene servicios asociados')
+                }
+              })
+              .catch(err => {
+                console.error('❌ Error loading servicios:', err)
+                alert('Error al cargar los servicios')
+              })
+              .finally(() => {
+                console.groupEnd()
+              })
+
+            return // Salir para esperar el fetch
+          }
+
+          console.log('servicioId final:', servicioId)
+          console.groupEnd()
+
+          if (!servicioId) {
+            console.warn('❌ No se pudo extraer servicioId')
+            alert('Esta muestra no tiene servicios asociados')
+            return
+          }
+
+          // Abrir historial del servicio
+          handleHistorialServicio(servicioId)
+        }}>
+          Historial
+        </MenuItem>
       </Menu>
 
       {/* Dialog: Historial (mock) */}
@@ -2415,7 +2604,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       <TableCell align='center'>{h.informe}</TableCell>
                       {/* FECHA ACCIÓN: only date DD/MM/AAAA */}
                       <TableCell align='center'>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
-                      <TableCell>{h.observacion}</TableCell>
+                      <TableCell>
+                        <Typography variant='body2' sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {h.observacion ?? '-'}
+                        </Typography>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -2427,6 +2620,142 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           <Button onClick={handleCloseHistDialog}>Cerrar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog: Historial de ServicioMuestra */}
+      <Dialog
+        maxWidth='lg'
+        fullWidth
+        open={histServicioDialogOpen}
+        onClose={handleCloseHistServicioDialog}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant='h6'>Historial del Servicio</Typography>
+            <IconButton size='small' onClick={handleCloseHistServicioDialog}>
+              <i className='ri-close-line' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {histServicioLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant='outlined'>
+              <Table size='small'>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>REGISTRO</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>FUNCIONARIO</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>APLICADO A</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>ENSAYO/SERVICIO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>TIPO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>EST. ANTERIOR</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>EST. NUEVO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>FECHA ACCIÓN</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>OBSERVACIÓN</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {histServicioRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align='center' sx={{ py: 4 }}>
+                        <Typography color='text.secondary'>
+                          No hay historial disponible
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    histServicioRows.map((h, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Typography variant='body2' sx={{ whiteSpace: 'nowrap' }}>
+                            {h.registro ? new Date(h.registro).toLocaleString('es-CL') : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{h.funcionario ?? '-'}</TableCell>
+                        <TableCell>{h.aplicadoA ?? '-'}</TableCell>
+                        <TableCell>{h.ensayoServicio ?? '-'}</TableCell>
+                        <TableCell align='center'>
+                          <Chip
+                            label={h.tipo ?? '-'}
+                            size='small'
+                            color={h.tipo === 'Ope' ? 'primary' : 'secondary'}
+                            variant='outlined'
+                          />
+                        </TableCell>
+                        <TableCell align='center'>
+                          {h.estAnterior ? (
+                            (() => {
+                              const info = getOperationalInfo(h.estAnterior)
+                              return (
+                                <Chip
+                                  label={h.estAnterior}
+                                  size='small'
+                                  variant='filled'
+                                  sx={{
+                                    bgcolor: info.bgcolor,
+                                    color: info.colorText,
+                                    border: `1px solid ${info.border}`,
+                                    textTransform: 'uppercase',
+                                    fontWeight: 600,
+                                    fontSize: '0.72rem'
+                                  }}
+                                />
+                              )
+                            })()
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align='center'>
+                          {h.estNuevo ? (
+                            (() => {
+                              const info = getOperationalInfo(h.estNuevo)
+                              return (
+                                <Chip
+                                  label={h.estNuevo}
+                                  size='small'
+                                  variant='filled'
+                                  sx={{
+                                    bgcolor: info.bgcolor,
+                                    color: info.colorText,
+                                    border: `1px solid ${info.border}`,
+                                    textTransform: 'uppercase',
+                                    fontWeight: 600,
+                                    fontSize: '0.72rem'
+                                  }}
+                                />
+                              )
+                            })()
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align='center'>
+                          <Typography variant='body2' sx={{ whiteSpace: 'nowrap' }}>
+                            {h.fechaAccion ? new Date(h.fechaAccion).toLocaleDateString('es-CL') : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant='body2' sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {h.observacion ?? '-'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHistServicioDialog}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
     </Card >
   )
 }
