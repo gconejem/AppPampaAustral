@@ -701,24 +701,25 @@ model ServicioRCM {
 }
 
 model Muestra {
-  id              Int               @id @default(autoincrement())
-  rcmId           Int
-  numeroMuestra   String            @unique
-  numeroTarjeta   String?
-  tipoMaterial    String?
-  elemento        String?
-  item            String?
-  grado           String?
-  procedencia     String?
-  cotas           String?
-  ubicacionSector String?
-  vencimiento     Boolean           @default(true)
-  observaciones   String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  rcm             RCM               @relation(fields: [rcmId], references: [id])
-  probetas        Probeta[]
-  servicios       ServicioMuestra[]
+  id               Int               @id @default(autoincrement())
+  rcmId            Int
+  numeroMuestra    String            @unique
+  numeroTarjeta    String?
+  tipoMaterial     String?
+  elemento         String?
+  item             String?
+  grado            String?
+  procedencia      String?
+  cotas            String?
+  ubicacionSector  String?
+  vencimiento      Boolean           @default(true)
+  observaciones    String?
+  cantidadMuestras Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  rcm              RCM               @relation(fields: [rcmId], references: [id])
+  probetas         Probeta[]
+  servicios        ServicioMuestra[]
 }
 
 model ServicioMuestra {
