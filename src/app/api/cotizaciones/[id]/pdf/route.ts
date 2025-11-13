@@ -92,13 +92,13 @@ Condiciones para terreno y accesos
 • Podrán generarse costos adicionales en las prospecciones solicitadas si: Los accesos no están expeditos o se generan retrasos por falta de autorizaciones u otras condiciones externas al laboratorio.`
 
   const notasHTML = cotizacion.notas
-    ? `<div><h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre></div>`
+    ? `<div><h3>Notas:</h3><div style='background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;'><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;margin:0;'>${cotizacion.notas}</pre></div></div>`
     : '';
 
   const observacionesYNotasHTML = (cotizacion.observaciones || cotizacion.notas) ? `
     <div style="page-break-before: always;">
       ${cotizacion.observaciones ? `<h3>Observaciones:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.observaciones}</pre>` : ''}
-      ${cotizacion.notas ? `<h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre>` : ''}
+      ${cotizacion.notas ? `<h3>Notas:</h3><div style='background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;'><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;margin:0;'>${cotizacion.notas}</pre></div>` : ''}
     </div>
   ` : '';
 
