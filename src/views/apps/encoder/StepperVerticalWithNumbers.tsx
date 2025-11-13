@@ -156,6 +156,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Estados para muestras
   const [vencimiento, setVencimiento] = useState<boolean>(false)
+  const [cantidadMuestras, setCantidadMuestras] = useState<string>('1')
 
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
@@ -1579,7 +1580,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 />
                               </Grid>
                             </Grid>
-                            <Grid item xs={8} sx={{ mb: 4 }}>
+                            <Grid item xs={6} sx={{ mb: 4 }}>
                               <TextField
                                 label='Ubicación / Sector'
                                 size='small'
@@ -1593,7 +1594,17 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 }
                               />
                             </Grid>
-                            <Grid item xs={4} sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <Grid item xs={4} sx={{ mb: 4 }}>
+                              <TextField
+                                label='Cantidad muestras'
+                                size='small'
+                                fullWidth
+                                value={cantidadMuestras}
+                                onChange={e => setCantidadMuestras(e.target.value)}
+                                type='number'
+                              />
+                            </Grid>
+                            <Grid item xs={2} sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                               <Button
                                 variant='contained'
                                 color='primary'
