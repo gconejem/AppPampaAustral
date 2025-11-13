@@ -804,11 +804,11 @@ const AddCard = ({
     const iva = baseImponible * 0.19
     const totalFinal = baseImponible + iva
 
-    // Usar 4 decimales para mayor precisión en UF
-    if (subtotal !== subtotalTotal) setSubtotal(Number(subtotalTotal.toFixed(3)))
-    if (descuentoTotal !== descuento) setDescuentoTotal(Number(descuento.toFixed(3)))
-    if (impuesto !== iva) setImpuesto(Number(iva.toFixed(3)))
-    if (total !== totalFinal) setTotal(Number(totalFinal.toFixed(3)))
+    // Usar 2 decimales para UF
+    if (subtotal !== subtotalTotal) setSubtotal(Number(subtotalTotal.toFixed(2)))
+    if (descuentoTotal !== descuento) setDescuentoTotal(Number(descuento.toFixed(2)))
+    if (impuesto !== iva) setImpuesto(Number(iva.toFixed(2)))
+    if (total !== totalFinal) setTotal(Number(totalFinal.toFixed(2)))
   }, [productRows, sinCantidad, formData.descuento, formData.tipoCotizacion, formData.precioProducto, formData.precioTotal])
 
   // Asegurarnos de que se recalculen los totales cuando cambian las filas
@@ -842,8 +842,8 @@ const AddCard = ({
           servicio: pp.nombre || pp.producto?.nombre || '',
           descripcion: pp.descripcion || pp.producto?.descripcion || '',
           cantidad: pp.cantidad || 1,
-          precioUnitarioUF: Number((pp.precio || pp.producto?.precio || 0).toFixed(3)),
-          totalNetoUF: Number(((pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1)).toFixed(3)),
+          precioUnitarioUF: Number((pp.precio || pp.producto?.precio || 0).toFixed(2)),
+          totalNetoUF: Number(((pp.precio || pp.producto?.precio || 0) * (pp.cantidad || 1)).toFixed(2)),
           area: pp.area || pp.producto?.area || '',
           esSubProducto: true,
           subproductos: []
@@ -924,8 +924,8 @@ const AddCard = ({
           servicio: nombreCompleto,
           descripcion: producto.descripcion || '',
           cantidad: 1,
-          precioUnitarioUF: Number(precioFinal.toFixed(3)),
-          totalNetoUF: Number(precioFinal.toFixed(3)),
+          precioUnitarioUF: Number(precioFinal.toFixed(2)),
+          totalNetoUF: Number(precioFinal.toFixed(2)),
           area: producto.area || '',
           esPaquete: true,
           subproductos: []
@@ -954,8 +954,8 @@ const AddCard = ({
 
         // Si es un subproducto, mantener precio en 0
         const isSubProducto = newRows[activeRowIndex].esSubProducto
-        const precioUnitario = isSubProducto ? 0 : Number(precioFinal.toFixed(3))
-        const totalNeto = isSubProducto ? 0 : Number((precioFinal * (newRows[activeRowIndex].cantidad || 1)).toFixed(3))
+        const precioUnitario = isSubProducto ? 0 : Number(precioFinal.toFixed(2))
+        const totalNeto = isSubProducto ? 0 : Number((precioFinal * (newRows[activeRowIndex].cantidad || 1)).toFixed(2))
 
         newRows[activeRowIndex] = {
           ...newRows[activeRowIndex],
@@ -987,7 +987,7 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       precioUnitarioUF: precio,
-      totalNetoUF: Number((precio * cantidad).toFixed(3)), // Redondear a 3 decimales para UF
+      totalNetoUF: Number((precio * cantidad).toFixed(2)), // Redondear a 2 decimales para UF
       precioEditado: true // Marca como editado manualmente
     }
 
@@ -1003,7 +1003,7 @@ const AddCard = ({
     newRows[index] = {
       ...newRows[index],
       cantidad: cantidadNum,
-      totalNetoUF: Number((precioUF * cantidadNum).toFixed(3)) // Redondear a 3 decimales para UF
+      totalNetoUF: Number((precioUF * cantidadNum).toFixed(2)) // Redondear a 2 decimales para UF
     }
 
     setProductRows(newRows)
@@ -1579,8 +1579,8 @@ const AddCard = ({
         if (!row.precioEditado && row.precioUnitarioUF !== precioFinal) {
           return {
             ...row,
-            precioUnitarioUF: Number(precioFinal.toFixed(3)),
-            totalNetoUF: Number((precioFinal * (row.cantidad || 1)).toFixed(3))
+            precioUnitarioUF: Number(precioFinal.toFixed(2)),
+            totalNetoUF: Number((precioFinal * (row.cantidad || 1)).toFixed(2))
           }
         }
 
@@ -1644,7 +1644,7 @@ const AddCard = ({
         ...row,
         // Mantener los valores originales cuando sinCantidad es true, solo deshabilitar en UI
         cantidad: sinCantidad ? row.cantidad : (row.cantidad || 1),
-        totalNetoUF: sinCantidad ? row.totalNetoUF : Number((Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)).toFixed(3))
+        totalNetoUF: sinCantidad ? row.totalNetoUF : Number((Number(row.precioUnitarioUF || 0) * Number(row.cantidad || 1)).toFixed(2))
       }))
     )
   }, [sinCantidad])
@@ -2603,16 +2603,74 @@ const AddCard = ({
                           type='number'
                           value={formData.subtotal || ''}
                           onChange={e => {
-                            const total = parseFloat(e.target.value) || 0
-                            const impuesto = total * 0.19
+                            const subtotal = parseFloat(e.target.value) || 0
+                            const descuento = Number(formData.descuento || 0)
+                            const baseImponible = subtotal - descuento
+                            const impuesto = baseImponible * 0.19
+                            const total = baseImponible + impuesto
                             updateFormData({
-                              subtotal: total,
-                              impuesto: impuesto,
-                              total: total + impuesto
+                              subtotal: Number(subtotal.toFixed(2)),
+                              impuesto: Number(impuesto.toFixed(2)),
+                              total: Number(total.toFixed(2))
                             })
                           }}
                           InputProps={{
                             startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                          }}
+                          sx={{ width: '150px' }}
+                        />
+                      </div>
+                      <div className='flex justify-between mb-2'>
+                        <Typography>Descuento:</Typography>
+                        <TextField
+                          size='small'
+                          type='number'
+                          value={formData.descuento ?? ''}
+                          onChange={e => {
+                            const value = e.target.value
+                            if (value === '' || value === null) {
+                              const subtotal = Number(formData.subtotal || 0)
+                              const baseImponible = subtotal
+                              const impuesto = baseImponible * 0.19
+                              const total = baseImponible + impuesto
+                              updateFormData({
+                                descuento: 0,
+                                impuesto: Number(impuesto.toFixed(2)),
+                                total: Number(total.toFixed(2))
+                              })
+                            } else {
+                              const descuentoValue = parseFloat(value)
+                              if (!isNaN(descuentoValue) && descuentoValue >= 0) {
+                                const subtotal = Number(formData.subtotal || 0)
+                                const baseImponible = subtotal - descuentoValue
+                                const impuesto = baseImponible * 0.19
+                                const total = baseImponible + impuesto
+                                updateFormData({
+                                  descuento: Number(descuentoValue.toFixed(2)),
+                                  impuesto: Number(impuesto.toFixed(2)),
+                                  total: Number(total.toFixed(2))
+                                })
+                              }
+                            }
+                          }}
+                          onBlur={e => {
+                            const value = parseFloat(e.target.value) || 0
+                            const subtotal = Number(formData.subtotal || 0)
+                            const baseImponible = subtotal - value
+                            const impuesto = baseImponible * 0.19
+                            const total = baseImponible + impuesto
+                            updateFormData({
+                              descuento: Number(value.toFixed(2)),
+                              impuesto: Number(impuesto.toFixed(2)),
+                              total: Number(total.toFixed(2))
+                            })
+                          }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                          }}
+                          inputProps={{
+                            min: 0,
+                            step: 0.01
                           }}
                           sx={{ width: '150px' }}
                         />
@@ -2637,16 +2695,74 @@ const AddCard = ({
                             type='number'
                             value={formData.subtotal || ''}
                             onChange={e => {
-                              const total = parseFloat(e.target.value) || 0
-                              const impuesto = total * 0.19
+                              const subtotal = parseFloat(e.target.value) || 0
+                              const descuento = Number(formData.descuento || 0)
+                              const baseImponible = subtotal - descuento
+                              const impuesto = baseImponible * 0.19
+                              const total = baseImponible + impuesto
                               updateFormData({
-                                subtotal: total,
-                                impuesto: impuesto,
-                                total: total + impuesto
+                                subtotal: Number(subtotal.toFixed(2)),
+                                impuesto: Number(impuesto.toFixed(2)),
+                                total: Number(total.toFixed(2))
                               })
                             }}
                             InputProps={{
                               startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                            }}
+                            sx={{ width: '150px' }}
+                          />
+                        </div>
+                        <div className='flex justify-between mb-2'>
+                          <Typography>Descuento:</Typography>
+                          <TextField
+                            size='small'
+                            type='number'
+                            value={formData.descuento ?? ''}
+                            onChange={e => {
+                              const value = e.target.value
+                              if (value === '' || value === null) {
+                                const subtotal = Number(formData.subtotal || 0)
+                                const baseImponible = subtotal
+                                const impuesto = baseImponible * 0.19
+                                const total = baseImponible + impuesto
+                                updateFormData({
+                                  descuento: 0,
+                                  impuesto: Number(impuesto.toFixed(2)),
+                                  total: Number(total.toFixed(2))
+                                })
+                              } else {
+                                const descuentoValue = parseFloat(value)
+                                if (!isNaN(descuentoValue) && descuentoValue >= 0) {
+                                  const subtotal = Number(formData.subtotal || 0)
+                                  const baseImponible = subtotal - descuentoValue
+                                  const impuesto = baseImponible * 0.19
+                                  const total = baseImponible + impuesto
+                                  updateFormData({
+                                    descuento: Number(descuentoValue.toFixed(2)),
+                                    impuesto: Number(impuesto.toFixed(2)),
+                                    total: Number(total.toFixed(2))
+                                  })
+                                }
+                              }
+                            }}
+                            onBlur={e => {
+                              const value = parseFloat(e.target.value) || 0
+                              const subtotal = Number(formData.subtotal || 0)
+                              const baseImponible = subtotal - value
+                              const impuesto = baseImponible * 0.19
+                              const total = baseImponible + impuesto
+                              updateFormData({
+                                descuento: Number(value.toFixed(2)),
+                                impuesto: Number(impuesto.toFixed(2)),
+                                total: Number(total.toFixed(2))
+                              })
+                            }}
+                            InputProps={{
+                              startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                            }}
+                            inputProps={{
+                              min: 0,
+                              step: 0.01
                             }}
                             sx={{ width: '150px' }}
                           />
@@ -2669,7 +2785,40 @@ const AddCard = ({
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>UF {formatUF(descuentoTotal)}</Typography>
+                          <TextField
+                            size='small'
+                            type='number'
+                            value={formData.descuento ?? ''}
+                            onChange={e => {
+                              const value = e.target.value
+                              // Permitir valores vacíos y valores mientras se escribe
+                              if (value === '' || value === null) {
+                                updateFormData({ descuento: 0 })
+                              } else {
+                                const descuentoValue = parseFloat(value)
+                                if (!isNaN(descuentoValue) && descuentoValue >= 0) {
+                                  updateFormData({
+                                    descuento: Number(descuentoValue.toFixed(2))
+                                  })
+                                }
+                              }
+                            }}
+                            onBlur={e => {
+                              // Al perder el foco, asegurar formato correcto
+                              const value = parseFloat(e.target.value) || 0
+                              updateFormData({
+                                descuento: Number(value.toFixed(2))
+                              })
+                            }}
+                            InputProps={{
+                              startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                            }}
+                            inputProps={{
+                              min: 0,
+                              step: 0.01
+                            }}
+                            sx={{ width: '150px' }}
+                          />
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
