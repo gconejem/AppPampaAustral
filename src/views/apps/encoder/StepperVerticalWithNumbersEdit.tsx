@@ -113,17 +113,15 @@ const steps = [
 ]
 
 // Interface para las propiedades del componente
-interface StepperVerticalWithNumbersProps {
-  otData?: any
-  otId?: string | null
-  tipoOT?: string | null
-  servicioId?: string | null
+interface StepperVerticalWithNumbersEditProps {
+  rcmId: string
   loading?: boolean
 }
 
-const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVerticalWithNumbersProps) => {
+const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithNumbersEditProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
+  const [loadingData, setLoadingData] = useState(true)
 
   // Estado para el número de RCM
   const [numeroRcm, setNumeroRcm] = useState<string>('')
@@ -200,17 +198,82 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [totalProductos, setTotalProductos] = useState(0)
   const ITEMS_PER_PAGE = 10
 
-  // Obtener el próximo número de RCM al cargar el componente
+  // Cargar datos del RCM existente
   useEffect(() => {
-    fetch('/api/rcm/proximo-numero')
-      .then(res => res.json())
-      .then(data => {
-        setNumeroRcm(data.numeroRcm)
-      })
-      .catch(error => {
-        console.error('Error al obtener próximo número de RCM:', error)
-      })
-  }, [])
+    if (rcmId) {
+      setLoadingData(true)
+      fetch(`/api/rcm/${rcmId}`)
+        .then(res => res.json())
+        .then(data => {
+          // Cargar datos generales
+          setNumeroRcm(data.numeroRcm || '')
+          setFechaCodificacion(data.fechaCodificacion ? new Date(data.fechaCodificacion).toISOString().split('T')[0] : '')
+          setFechaMuestreo(data.fechaMuestreo ? new Date(data.fechaMuestreo).toISOString().split('T')[0] : '')
+          setFechaIngreso(data.fechaIngreso ? new Date(data.fechaIngreso).toISOString().split('T')[0] : '')
+          setFechaEntrega(data.fechaEntrega ? new Date(data.fechaEntrega).toISOString().split('T')[0] : '')
+          setObservaciones(data.observaciones || '')
+
+          // Cargar servicios generales
+          if (data.servicios && Array.isArray(data.servicios)) {
+            const serviciosMapeados = data.servicios.map((s: any) => ({
+              codigo: s.producto?.sku || s.codigo || '',
+              nombre: s.producto?.nombre || s.nombre || '',
+              cantidad: s.cantidad?.toString() || '1',
+              productoId: s.productoId,
+              estado: s.estado || 'CODIFICADO'
+            }))
+            setServicios(serviciosMapeados)
+          }
+
+          // Cargar muestras
+          if (data.muestras && Array.isArray(data.muestras)) {
+            const muestrasMapeadas = data.muestras.map((m: any) => {
+              // Separar cotas si vienen combinadas
+              const [cota1 = '', cota2 = ''] = m.cotas ? m.cotas.split(' - ') : ['', '']
+
+              return {
+                numeroMuestra: m.numeroMuestra || '',
+                numeroTarjeta: m.numeroTarjeta || '',
+                tipoMaterial: m.tipoMaterial || '',
+                elemento: m.elemento || '',
+                item: m.item || '',
+                grado: m.grado || '',
+                procedencia: m.procedencia || '',
+                cota1: cota1,
+                cota2: cota2,
+                ubicacionSector: m.ubicacionSector || '',
+                vencimiento: m.vencimiento || false,
+                observaciones: m.observaciones || '',
+                servicios: m.servicios?.map((s: any) => ({
+                  codigo: s.producto?.sku || s.codigo || '',
+                  nombre: s.producto?.nombre || s.nombre || '',
+                  cantidad: s.cantidad || 1,
+                  productoId: s.productoId,
+                  estado: s.estado || 'CODIFICADO'
+                })) || [],
+                probetas: m.probetas?.map((p: any) => ({
+                  numero: p.numero || 0,
+                  fechaConfeccion: p.fechaConfeccion ? new Date(p.fechaConfeccion).toISOString().split('T')[0] : '',
+                  cantidad: p.cantidad || 1,
+                  dias: p.dias || 0,
+                  fechaVencimiento: p.fechaVencimiento ? new Date(p.fechaVencimiento).toISOString().split('T')[0] : '',
+                  estado: p.estado || 'PENDIENTE'
+                })) || []
+              }
+            })
+            setMuestras(muestrasMapeadas)
+          }
+
+          setLoadingData(false)
+          toast.success('Datos del RCM cargados exitosamente')
+        })
+        .catch(error => {
+          console.error('Error al cargar datos del RCM:', error)
+          toast.error('Error al cargar los datos del RCM')
+          setLoadingData(false)
+        })
+    }
+  }, [rcmId])
 
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
@@ -686,27 +749,17 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     return true
   }
 
-  // Función para guardar el RCM
-  const handleSaveRCM = async () => {
+  // Función para actualizar el RCM
+  const handleUpdateRCM = async () => {
     try {
-      // Solo enviar las muestras que han sido agregadas explícitamente
-      // No agregar automáticamente la muestra actual
-
-      // Transformar las muestras para combinar cota1 y cota2 en cotas
       const muestrasTransformadas = muestras.map(muestra => ({
         ...muestra,
         cotas: muestra.cota1 && muestra.cota2
           ? `${muestra.cota1} - ${muestra.cota2}`
           : muestra.cota1 || muestra.cota2 || '',
-        // Remover los campos cota1 y cota2 ya que no existen en la API
         cota1: undefined,
         cota2: undefined
       }))
-
-      // Extraer clienteId, obraId y ordenTrabajoId del otData
-      const clienteId = otData?.agenda?.cliente?.clienteId || null
-      const obraId = otData?.agenda?.obra?.obraId || null
-      const ordenTrabajoId = otData?.id || null
 
       const dataToSend = {
         fechaCodificacion,
@@ -715,18 +768,13 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         fechaEntrega: fechaEntrega || null,
         servicios,
         muestras: muestrasTransformadas,
-        observaciones,
-        clienteId,
-        obraId,
-        ordenTrabajoId
+        observaciones
       }
 
-      console.log('Datos a enviar:', dataToSend)
-      console.log('Servicios:', servicios)
-      console.log('Muestras transformadas:', muestrasTransformadas)
+      console.log('Datos a actualizar:', dataToSend)
 
-      const response = await fetch('/api/rcm', {
-        method: 'POST',
+      const response = await fetch(`/api/rcm/${rcmId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -734,26 +782,26 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       })
 
       if (!response.ok) {
-        throw new Error('Error al guardar el RCM')
+        throw new Error('Error al actualizar el RCM')
       }
 
       const data = await response.json()
 
-      toast.success(`RCM ${data.numeroRcm} guardado exitosamente`)
+      toast.success(`RCM ${data.numeroRcm} actualizado exitosamente`)
       router.push('/en/apps/rcmnavigator')
     } catch (error) {
       console.error('Error:', error)
-      toast.error('Error al guardar el RCM')
+      toast.error('Error al actualizar el RCM')
     }
   }
 
   // Si está cargando, mostrar indicador de carga
-  if (loading) {
+  if (loading || loadingData) {
     return (
       <Card>
         <CardHeader title='Cargando datos...' />
         <CardContent>
-          <Typography>Preparando formulario de codificación...</Typography>
+          <Typography>Preparando formulario de edición...</Typography>
         </CardContent>
       </Card>
     )
@@ -766,6 +814,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   return (
     <Card>
       <CardContent>
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant='h5'>Editar RCM: {numeroRcm}</Typography>
+        </Box>
         <StepperWrapper>
           <Stepper activeStep={activeStep} orientation='vertical' nonLinear>
             {steps.map((step, index) => (
@@ -2192,9 +2243,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             color='primary'
                             size='medium'
                             startIcon={<i className='ri-save-line' />}
-                            onClick={handleSaveRCM}
+                            onClick={handleUpdateRCM}
                           >
-                            Codificar
+                            Actualizar RCM
                           </Button>
                         </Grid>
                       </Grid>
@@ -2254,4 +2305,4 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   )
 }
 
-export default StepperVerticalWithNumbers
+export default StepperVerticalWithNumbersEdit

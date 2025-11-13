@@ -251,10 +251,10 @@ const DuplicateCard = ({ id }: { id: string }) => {
     ) {
       setFormData(prev => ({
         ...prev!,
-        subtotal: Number(subtotalTotal.toFixed(3)),
-        descuento: Number(descuentoTotal.toFixed(3)),
-        impuesto: Number(impuesto.toFixed(3)),
-        total: Number(total.toFixed(3))
+        subtotal: Number(subtotalTotal.toFixed(2)),
+        descuento: Number(descuentoTotal.toFixed(2)),
+        impuesto: Number(impuesto.toFixed(2)),
+        total: Number(total.toFixed(2))
       }))
     }
   }, [productRows, formData])
@@ -442,7 +442,7 @@ const DuplicateCard = ({ id }: { id: string }) => {
     if (formData && productRows.length > 0) {
       calcularTotales()
     }
-  }, [productRows]) // Solo depender de productRows, no de calcularTotales ni formData
+  }, [productRows, formData?.descuento]) // Depender de productRows y descuento
 
   // Este useEffect ya no es necesario porque sinCantidad se inicializa correctamente en fetchData
 
@@ -1970,9 +1970,17 @@ Consideraciones adicionales y requisitos especiales
                               type='number'
                               value={formData.subtotal || ''}
                               onChange={e => {
-                                const total = parseFloat(e.target.value) || 0
-                                const impuesto = total * 0.19
-                                setFormData(prev => prev ? { ...prev, subtotal: total, impuesto: impuesto, total: total + impuesto } : null)
+                                const subtotal = parseFloat(e.target.value) || 0
+                                const descuento = Number(formData.descuento || 0)
+                                const baseImponible = subtotal - descuento
+                                const impuesto = baseImponible * 0.19
+                                const total = baseImponible + impuesto
+                                setFormData(prev => prev ? {
+                                  ...prev,
+                                  subtotal: Number(subtotal.toFixed(2)),
+                                  impuesto: Number(impuesto.toFixed(2)),
+                                  total: Number(total.toFixed(2))
+                                } : null)
                               }}
                               InputProps={{
                                 startAdornment: <InputAdornment position='start'>UF</InputAdornment>
@@ -1983,7 +1991,67 @@ Consideraciones adicionales y requisitos especiales
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>Descuento:</Typography>
-                          <Typography>{formData.tipoCotizacion === 'A' && formData.sinCantidad ? '-' : `UF ${formatUF(formData.descuento)}`}</Typography>
+                          {formData.tipoCotizacion === 'A' && formData.sinCantidad ? (
+                            <Typography>-</Typography>
+                          ) : (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={formData.descuento ?? ''}
+                              onChange={e => {
+                                const value = e.target.value
+                                // Permitir valores vacíos y valores mientras se escribe
+                                if (value === '' || value === null) {
+                                  const subtotal = Number(formData.subtotal || 0)
+                                  const baseImponible = subtotal
+                                  const impuesto = baseImponible * 0.19
+                                  const total = baseImponible + impuesto
+                                  setFormData(prev => prev ? {
+                                    ...prev,
+                                    descuento: 0,
+                                    impuesto: Number(impuesto.toFixed(2)),
+                                    total: Number(total.toFixed(2))
+                                  } : null)
+                                } else {
+                                  const descuentoValue = parseFloat(value)
+                                  if (!isNaN(descuentoValue) && descuentoValue >= 0) {
+                                    const subtotal = Number(formData.subtotal || 0)
+                                    const baseImponible = subtotal - descuentoValue
+                                    const impuesto = baseImponible * 0.19
+                                    const total = baseImponible + impuesto
+                                    setFormData(prev => prev ? {
+                                      ...prev,
+                                      descuento: Number(descuentoValue.toFixed(2)),
+                                      impuesto: Number(impuesto.toFixed(2)),
+                                      total: Number(total.toFixed(2))
+                                    } : null)
+                                  }
+                                }
+                              }}
+                              onBlur={e => {
+                                // Al perder el foco, asegurar formato correcto
+                                const value = parseFloat(e.target.value) || 0
+                                const subtotal = Number(formData.subtotal || 0)
+                                const baseImponible = subtotal - value
+                                const impuesto = baseImponible * 0.19
+                                const total = baseImponible + impuesto
+                                setFormData(prev => prev ? {
+                                  ...prev,
+                                  descuento: Number(value.toFixed(2)),
+                                  impuesto: Number(impuesto.toFixed(2)),
+                                  total: Number(total.toFixed(2))
+                                } : null)
+                              }}
+                              InputProps={{
+                                startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                              }}
+                              inputProps={{
+                                min: 0,
+                                step: 0.01
+                              }}
+                              sx={{ width: '150px' }}
+                            />
+                          )}
                         </div>
                         <div className='flex justify-between mb-2'>
                           <Typography>IVA (19%):</Typography>
@@ -2010,7 +2078,63 @@ Consideraciones adicionales y requisitos especiales
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>Descuento:</Typography>
-                        <Typography>UF {formatUF(formData.descuento)}</Typography>
+                        <TextField
+                          size='small'
+                          type='number'
+                          value={formData.descuento ?? ''}
+                          onChange={e => {
+                            const value = e.target.value
+                            // Permitir valores vacíos y valores mientras se escribe
+                            if (value === '' || value === null) {
+                              const subtotal = Number(formData.subtotal || 0)
+                              const baseImponible = subtotal
+                              const impuesto = baseImponible * 0.19
+                              const total = baseImponible + impuesto
+                              setFormData(prev => prev ? {
+                                ...prev,
+                                descuento: 0,
+                                impuesto: Number(impuesto.toFixed(2)),
+                                total: Number(total.toFixed(2))
+                              } : null)
+                            } else {
+                              const descuentoValue = parseFloat(value)
+                              if (!isNaN(descuentoValue) && descuentoValue >= 0) {
+                                const subtotal = Number(formData.subtotal || 0)
+                                const baseImponible = subtotal - descuentoValue
+                                const impuesto = baseImponible * 0.19
+                                const total = baseImponible + impuesto
+                                setFormData(prev => prev ? {
+                                  ...prev,
+                                  descuento: Number(descuentoValue.toFixed(2)),
+                                  impuesto: Number(impuesto.toFixed(2)),
+                                  total: Number(total.toFixed(2))
+                                } : null)
+                              }
+                            }
+                          }}
+                          onBlur={e => {
+                            // Al perder el foco, asegurar formato correcto
+                            const value = parseFloat(e.target.value) || 0
+                            const subtotal = Number(formData.subtotal || 0)
+                            const baseImponible = subtotal - value
+                            const impuesto = baseImponible * 0.19
+                            const total = baseImponible + impuesto
+                            setFormData(prev => prev ? {
+                              ...prev,
+                              descuento: Number(value.toFixed(2)),
+                              impuesto: Number(impuesto.toFixed(2)),
+                              total: Number(total.toFixed(2))
+                            } : null)
+                          }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position='start'>UF</InputAdornment>
+                          }}
+                          inputProps={{
+                            min: 0,
+                            step: 0.01
+                          }}
+                          sx={{ width: '150px' }}
+                        />
                       </div>
                       <div className='flex justify-between mb-2'>
                         <Typography>IVA (19%):</Typography>

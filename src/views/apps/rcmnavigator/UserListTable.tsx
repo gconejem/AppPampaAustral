@@ -606,6 +606,33 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
+    // Si es modo edición (no readonly), redirigir a la página de edición de RCM
+    if (!opts?.readonly) {
+      const target = `${window.location.origin}/en/apps/rcm-edit/${rowId}`
+      try {
+        const newWin = window.open(target, '_blank')
+        if (newWin) {
+          try {
+            newWin.opener = null
+          } catch (e) {
+            /* noop */
+          }
+          try {
+            newWin.focus()
+          } catch (e) {
+            /* noop */
+          }
+        } else {
+          window.location.href = target
+        }
+      } catch (e) {
+        window.location.href = target
+      }
+      handleCloseRowMenu()
+      return
+    }
+
+    // Modo readonly (ver): mantener comportamiento original
     const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
     const tipo = row.ordenTrabajo?.tipo ?? row.tipo ?? row.tipoOT ?? ''
     let servicioId = ''
@@ -618,13 +645,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (otId) params.set('otId', String(otId))
     if (tipo) params.set('tipo', String(tipo))
     params.set('servicioId', String(servicioId ?? ''))
-    if (opts?.readonly) params.set('readonly', '1')
+    params.set('readonly', '1')
 
     const target = `${window.location.origin}/en/apps/encoder?${params.toString()}`
     try {
       const newWin = window.open(target, '_blank')
       if (newWin) {
-        // intentar prevenir reference al opener y traer foco
         try {
           newWin.opener = null
         } catch (e) {
@@ -636,11 +662,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           /* noop */
         }
       } else {
-        // fallback: asignar href si window.open bloqueado
         window.location.href = target
       }
     } catch (e) {
-      // último recurso
       window.location.href = target
     }
     handleCloseRowMenu()

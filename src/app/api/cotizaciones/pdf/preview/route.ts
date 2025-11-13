@@ -63,7 +63,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: 
   // Notas para tipo A (Valores Unitarios)
   const notasTipoA = `
     <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
-    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify; background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
       <ol style="margin-top: 0; margin-bottom: 12px; padding-left: 18px;">
         <li><b>Valores unitarios Neto (<span style='text-decoration: underline;'>sin IVA incluido</span>)</b></li>
         <li><b>Adicionales en Terreno (contra evento):</b>
@@ -115,7 +115,7 @@ Condiciones para terreno y accesos
   // Notas para tipo C (Mensual), adaptadas al estilo del PDF
   const notasTipoC = `
     <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px;">Notas</h2>
-    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+    <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify; background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
       <ul style="margin-top: 0; margin-bottom: 12px; padding-left: 18px;">
         <li><strong>Valor Neto (<span style='text-decoration: underline;'>sin IVA incluido</span>)</strong></li>
         <li><strong>Adicionales contra evento:</strong>
@@ -138,13 +138,13 @@ Condiciones para terreno y accesos
 
   // Selección dinámica de notas
   const notasHTML = cotizacion.notas
-    ? `<div><h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre></div>`
+    ? `<div><h3>Notas:</h3><div style='background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;'><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;margin:0;'>${cotizacion.notas}</pre></div></div>`
     : '';
 
   const observacionesYNotasHTML = (cotizacion.observaciones || cotizacion.notas) ? `
     <div style="page-break-before: always;">
       ${cotizacion.observaciones ? `<h3>Observaciones:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.observaciones}</pre>` : ''}
-      ${cotizacion.notas ? `<h3>Notas:</h3><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;'>${cotizacion.notas}</pre>` : ''}
+      ${cotizacion.notas ? `<h3>Notas:</h3><div style='background-color: #eaeaea; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;'><pre style='font-family:inherit;white-space:pre-wrap;font-size:12px;margin:0;'>${cotizacion.notas}</pre></div>` : ''}
     </div>
   ` : '';
 
