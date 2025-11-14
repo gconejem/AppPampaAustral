@@ -70,6 +70,7 @@ import tableStyles from '@core/styles/table.module.css'
 // Custom imports
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
+import ENSAYO_STATES from '@/constants/ensayoStates'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -213,6 +214,43 @@ interface Filters {
 
 // Component
 const columnHelper = createColumnHelper<RCM>()
+
+// ✅ AGREGAR esta función antes del componente UserListTable2
+/**
+ * Obtiene los estados disponibles para un SERVICIO/ENSAYO
+ * Lógica independiente de la tabla principal
+ */
+const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]) => {
+  if (!servicioId) return ENSAYO_STATES.map(s => ({ ...s, disabled: false }))
+
+  // Buscar el servicio en serviciosMuestra
+  const servicio = serviciosMuestra.find(
+    s => (s.id ?? s.servicioMuestraId ?? s.servicioId) === servicioId
+  )
+
+  const estadoActual = servicio?.estado ?? servicio?.estadoServicio ?? 'CODIFICADO'
+
+  console.log('📊 getStatesForServicio:', {
+    servicioId,
+    estadoActual,
+    servicio
+  })
+
+  // Encontrar índice del estado actual
+  const currentIndex = ENSAYO_STATES.findIndex(s => s.value === estadoActual)
+
+  if (currentIndex === -1) {
+    // Si no se encuentra el estado actual, mostrar todos habilitados
+    return ENSAYO_STATES.map(s => ({ ...s, disabled: false }))
+  }
+
+  // Mostrar: estado actual (disabled) + siguiente (si existe)
+  return ENSAYO_STATES.map((state, idx) => ({
+    ...state,
+    disabled: idx === currentIndex, // Solo el actual está disabled
+    hidden: idx < currentIndex || idx > currentIndex + 1 // Ocultar anteriores y >siguiente
+  })).filter(s => !s.hidden) // Filtrar los ocultos
+}
 
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
@@ -364,7 +402,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [histLoading, setHistLoading] = useState(false)
 
   // simple cache en memoria para historial por RCM (evita refetchs)
-  const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
+  const historyCache: Map<number, any> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
@@ -906,6 +944,91 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
+
+  // En handleMarkAs, después de invalidar servicioHistoryCache.delete(markRowId)
+  const handleMarkAs = async (nuevoEstado: string) => {
+    if (!markRowId) {
+      console.warn('handleMarkAs: no markRowId')
+      return
+    }
+
+    console.group('🔄 handleMarkAs')
+    console.log('servicioMuestraId:', markRowId)
+    console.log('nuevo estado:', nuevoEstado)
+
+    // Buscar el servicio para obtener estado actual
+    const servicio = serviciosMuestra.find(
+      s => (s.id ?? s.servicioMuestraId ?? s.servicioId) === markRowId
+    )
+
+    const estadoActual = servicio?.estado ?? servicio?.estadoServicio ?? 'CODIFICADO'
+
+    try {
+      // ✅ CORRECCIÓN: Asegurar que servicioMuestraId se envíe correctamente
+      const payload = {
+        servicioMuestraId: markRowId,
+        tipo: 'CAMBIO_ESTADO',
+        estAnterior: estadoActual,
+        estNuevo: nuevoEstado,
+        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__)
+          ? (window as any).__USER_NAME__
+          : 'Usuario',
+        aplicadoA: 'SERVICIO',
+        ensayoServicio: servicio?.nombre ?? servicio?.servicio?.nombre ?? null,
+        observacion: `Cambio de estado de ${estadoActual} a ${nuevoEstado}`,
+        motivo: null,
+        informe: null
+      }
+
+      const url = `/api/servicioMuestra/${markRowId}/history`
+      console.log('📡 POST:', url, payload)
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      console.log('📥 Response status:', res.status)
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('❌ API error:', res.status, txt)
+        throw new Error(`HTTP ${res.status}: ${txt}`)
+      }
+
+      const result = await res.json()
+      console.log('✅ Estado actualizado:', result)
+
+      // Actualizar UI localmente
+      setServiciosMuestra(prev => prev.map(s => {
+        const id = s.id ?? s.servicioMuestraId ?? s.servicioId
+        return id === markRowId
+          ? { ...s, estado: nuevoEstado }
+          : s
+      }))
+
+      // ✅ INVALIDAR caché del servicio individual
+      servicioHistoryCache.delete(markRowId)
+
+      // ✅ AGREGAR: Invalidar caché combinada de la muestra
+      const row = findRowById(selectedRowId)
+      if (row?.muestra?.id) {
+        const cacheKey = `muestra-${row.muestra.id}`
+        console.log('🗑️ Invalidando caché combinada:', cacheKey)
+        servicioHistoryCache.delete(cacheKey)
+      }
+
+      handleCloseMarkMenu()
+    } catch (err) {
+      console.error('❌ Error updating servicio estado:', err)
+      alert('No se pudo actualizar el estado del servicio')
+    } finally {
+      console.groupEnd()
+    }
+  }
+
+
   const handleCloseHistDialog = () => {
     setHistDialogOpen(false)
     setHistRowId(null)
@@ -1150,9 +1273,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             orderObj?.correlativ ??           // ← PRIMERO: campo exacto de la BD
             r.ordenTrabajo?.correlativ ??     // ← backup desde objeto anidado
             orderObj?.correlativo ??          // ← fallback con 'o'
-            orderObj?.numero ??
-            r.ordenTrabajo?.correlativo ??
-            r.ot ??
+            orderObj?.numero ??               // ← agregar correlativo como último recurso
+            r.ordenTrabajo?.correlativo ??    // ← también desde r.ordenTrabajo
+            r.ot ??                           // ← último recurso: r.ot
             null
 
           // LOG DETALLADO para debugging - MOSTRAR TODOS LOS CAMPOS del orderObj
@@ -1244,12 +1367,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             // Extraer área y familia del producto con múltiples fallbacks
             const areaProducto = producto?.area?.nombre ??
               producto?.area?.name ??
-              producto?.areaNombre ??
+              producto?.areaNombre ??  // ← CORREGIDO
               (typeof producto?.area === 'string' ? producto.area : null)
 
             const familiaProducto = producto?.familia?.nombre ??
               producto?.familia?.name ??
-              producto?.familiaNombre ??
+              producto?.familiaNombre ??  // ← CORREGIDO
               (typeof producto?.familia === 'string' ? producto.familia : null)
 
             // Fallbacks finales desde RCM raíz
@@ -1606,6 +1729,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               size='small'
               checked={allSelected}
               indeterminate={!allSelected && someSelected}
+
               onChange={() => {
                 if (!allSelected) {
                   const next: any = {}
@@ -1786,7 +1910,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               title='Más'
               onClick={e => {
                 e.stopPropagation()
-                handleOpenRowMenu(e, row.original.rcmOriginalId ?? row.original.id)
+                // ✅ CORRECCIÓN: Pasar row.id (no rcmOriginalId)
+                handleOpenRowMenu(e, row.original.id)
               }}
             >
               <MoreVertIcon fontSize='small' />
@@ -2161,7 +2286,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             {/* ELIMINADO: Botón Agregar muestra */}
 
-            {/* Tabla de servicios - SIN columna ACCIONES */}
+            {/* Tabla de servicios - CON columna ACCIONES */}
             {loadingServicios ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
                 <CircularProgress />
@@ -2175,13 +2300,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       <TableCell sx={{ fontWeight: 600 }}>ENSAYO / ANÁLISIS</TableCell>
                       <TableCell align='center' sx={{ fontWeight: 600 }}>CANTIDAD</TableCell>
                       <TableCell align='center' sx={{ fontWeight: 600 }}>ESTADO</TableCell>
-                      {/* ❌ ELIMINAR: <TableCell align='center' sx={{ fontWeight: 600 }}>ACCIONES</TableCell> */}
+                      <TableCell align='center' sx={{ fontWeight: 600 }}>ACCIONES</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {serviciosMuestra.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}> {/* ❌ cambiar colSpan de 5 a 4 */}
+                        <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
                           <Typography color='text.secondary'>
                             No hay servicios agregados
                           </Typography>
@@ -2236,8 +2361,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                 )
                               })()}
                             </TableCell>
-
-                            {/* ❌ ELIMINAR: columna ACCIONES completa */}
+                            <TableCell align='center'>
+                              <IconButton
+                                size='small'
+                                title='Cambiar Estado'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (servicioId) {
+                                    // Abrir menú para cambiar estado del servicio
+                                    handleOpenMarkMenu(e, servicioId)
+                                  }
+                                }}
+                              >
+                                <CheckBoxOutlinedIcon fontSize='small' />
+                              </IconButton>
+                            </TableCell>
                           </TableRow>
                         )
                       })
@@ -2267,32 +2405,78 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         </>
       )}
 
-      {/* Menu "Marcar" dinámico: sólo el siguiente estado permitido */}
+      {/* Menu cambio de estado - TABLA PRINCIPAL (DISABLED) */}
       <Menu
         anchorEl={markAnchorEl}
-        open={Boolean(markAnchorEl)}
+        open={Boolean(markAnchorEl) && !selectedRowId} // ← solo si NO hay muestra abierta
         onClose={handleCloseMarkMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {(() => {
-          const opts = getStatesForRow(markRowId)
-          if (!opts || opts.length === 0) return <MenuItem disabled>No hay acciones disponibles</MenuItem>
-          return opts.map(opt => (
-            <MenuItem
-              key={opt.value}
-              disabled={Boolean((opt as any).disabled)}
-              onClick={() => {
-                // no ejecutar acción si es el estado actual (disabled)
-                if ((opt as any).disabled) return
-                // usar el id de la fila donde se abrió el menu (markRowId), no markDialogRowId
-                handleMarkAction(opt.value, markRowId)
+        {getStatesForRow(markRowId).map(state => (
+          <MenuItem
+            key={state.value}
+            disabled // ← SIEMPRE DESHABILITADO en tabla principal
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              opacity: 0.5
+            }}
+          >
+            <Box
+              sx={{
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                bgcolor: state.color,
+                border: '1px solid',
+                borderColor: 'divider'
               }}
-            >
-              {opt.label}
-            </MenuItem>
-          ))
-        })()}
+            />
+            {state.label}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Menu cambio de estado - TABLA SERVICIOS (FUNCIONAL) */}
+      <Menu
+        anchorEl={markAnchorEl}
+        open={Boolean(markAnchorEl) && Boolean(selectedRowId)} // ← solo si HAY muestra abierta
+        onClose={handleCloseMarkMenu}
+      >
+        {getStatesForServicio(markRowId, serviciosMuestra).map(state => (
+          <MenuItem
+            key={state.value}
+            onClick={() => {
+              if (!state.disabled) {
+                handleMarkAs(state.value)
+              }
+            }}
+            disabled={state.disabled}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              opacity: state.disabled ? 0.5 : 1
+            }}
+          >
+            <Box
+              sx={{
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                bgcolor: state.color,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            />
+            {state.label}
+            {state.disabled && (
+              <Typography variant='caption' color='text.secondary' sx={{ ml: 'auto' }}>
+                (actual)
+              </Typography>
+            )}
+          </MenuItem>
+        ))}
       </Menu>
 
       {/* Dialog: Form "Estado Muestra" para acciones (Digitado, EVENTO, ...) */}
@@ -2431,93 +2615,160 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           Editar
         </MenuItem>
 
-        {/* ✅ CORREGIR: Buscar por rcmOriginalId en lugar de id */}
-        <MenuItem onClick={() => {
+        {/* ✅ CORRECCIÓN COMPLETA: Restaurar TODO el código del historial */}
+        <MenuItem onClick={async () => {
           handleCloseRowMenu()
 
-          // ✅ Buscar fila por rcmOriginalId
-          const row = data.find(r => r.rcmOriginalId === menuRowId) ??
-            filteredData.find(r => r.rcmOriginalId === menuRowId)
+          const row = data.find(r => r.id === menuRowId) ??
+            filteredData.find(r => r.id === menuRowId)
 
           console.group('📋 Historial desde menú 3 puntos')
-          console.log('menuRowId (rcmOriginalId):', menuRowId)
+          console.log('menuRowId (fila ID):', menuRowId)
           console.log('row encontrado:', row)
 
-          if (!row) {
-            console.warn('❌ No se encontró la fila para rcmOriginalId:', menuRowId)
+          if (!row || !row.muestra?.id) {
+            console.warn('❌ No se encontró la muestra')
             console.groupEnd()
             alert('No se encontró la muestra')
             return
           }
 
-          // ✅ CORRECCIÓN CLAVE: Si los servicios de esta muestra ya están cargados, usar el primero
-          let servicioId: number | null = null
+          const muestraId = row.muestra.id
+          const cacheKey = `muestra-${muestraId}`
 
-          // 1) Intentar desde serviciosMuestra (si la fila abierta coincide)
-          if (selectedRowId === row.id && serviciosMuestra.length > 0) {
-            const primerServicio = serviciosMuestra[0]
-            servicioId = primerServicio.id ??
-              primerServicio.servicioMuestraId ??
-              primerServicio.servicioId ??
-              null
-            console.log('✅ Usando servicioId desde serviciosMuestra:', servicioId)
-          }
+          console.log(`🔑 Cache key:`, cacheKey)
+          console.log(`📦 Muestra ID:`, muestraId)
+          console.log(`📋 Número de muestra:`, row.muestra.numeroMuestra)
 
-          // 2) Si no hay servicios cargados, hacer fetch inline
-          if (!servicioId && row.muestra?.id) {
-            console.log('⏳ Cargando servicios de la muestra...')
+          try {
+            // ✅ Verificar caché ANTES de hacer fetch
+            const cached = servicioHistoryCache.get(cacheKey)
+            if (cached) {
+              console.log('✅ Usando historial cacheado para muestra', muestraId)
+              console.log('📊 Registros en caché:', cached.length)
+              setHistServicioRows(cached)
+              setHistServicioDialogOpen(true)
+              console.groupEnd()
+              return
+            }
 
-            fetch(`/api/muestra/${row.muestra.id}/servicios`)
-              .then(res => res.json())
-              .then(data => {
-                console.log('✅ Servicios cargados:', data)
+            console.log(`⏳ Cargando servicios de muestra ${muestraId}...`)
 
-                if (data.servicios && data.servicios.length > 0) {
-                  const primerServicio = data.servicios[0]
-                  const id = primerServicio.id ??
-                    primerServicio.servicioMuestraId ??
-                    primerServicio.servicioId ??
-                    null
+            const response = await fetch(`/api/muestra/${muestraId}/servicios`)
 
-                  console.log('✅ servicioId extraído:', id)
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`)
+            }
 
-                  if (id) {
-                    handleHistorialServicio(id)
-                  } else {
-                    console.warn('❌ No se pudo extraer servicioId')
-                    alert('No se encontró ID del servicio')
-                  }
-                } else {
-                  console.warn('❌ No hay servicios en la respuesta')
-                  alert('Esta muestra no tiene servicios asociados')
+            const data = await response.json()
+
+            console.log('✅ Servicios cargados:', data)
+
+            if (!data.servicios || data.servicios.length === 0) {
+              console.warn('❌ No hay servicios')
+              console.groupEnd()
+
+              // ✅ Guardar array vacío en caché para evitar refetchs
+              servicioHistoryCache.set(cacheKey, [])
+
+              setHistServicioRows([])
+              setHistServicioDialogOpen(true)
+              return
+            }
+
+            // ✅ Extraer IDs de TODOS los servicios
+            const servicioIds = data.servicios
+              .map((s: any) => s.id ?? s.servicioMuestraId ?? s.servicioId ?? null)
+              .filter(Boolean)
+
+            console.log(`📊 IDs de servicios a consultar:`, servicioIds)
+
+            if (servicioIds.length === 0) {
+              console.warn('❌ No se pudieron extraer IDs')
+              console.groupEnd()
+
+              // ✅ Guardar array vacío en caché
+              servicioHistoryCache.set(cacheKey, [])
+
+              setHistServicioRows([])
+              setHistServicioDialogOpen(true)
+              return
+            }
+
+            // ✅ Cargar historial de TODOS los servicios en paralelo
+            const historialPromises = servicioIds.map(async (servicioId: number) => {
+              try {
+                console.log(`📡 Fetching history for servicioId ${servicioId}`)
+                const res = await fetch(`/api/servicioMuestra/${servicioId}/history`)
+
+                if (!res.ok) {
+                  console.warn(`⚠️ Error al cargar historial del servicio ${servicioId}:`, res.status)
+                  return []
                 }
-              })
-              .catch(err => {
-                console.error('❌ Error loading servicios:', err)
-                alert('Error al cargar los servicios')
-              })
-              .finally(() => {
-                console.groupEnd()
-              })
 
-            return // Salir para esperar el fetch
+                const historial = await res.json()
+                console.log(`✅ Historial cargado para servicio ${servicioId}:`, historial.length, 'registros')
+
+                // Agregar información del servicio a cada registro
+                const servicio = data.servicios.find((s: any) =>
+                  (s.id ?? s.servicioMuestraId ?? s.servicioId) === servicioId
+                )
+
+                return historial.map((h: any) => ({
+                  ...h,
+                  servicioMuestraId: servicioId,
+                  servicioNombre: servicio?.nombre ?? h.ensayoServicio ?? 'N/A',
+                  servicioTipo: servicio?.tipo ?? 'N/A',
+                  servicioEstado: servicio?.estado ?? servicio?.estadoServicio ?? null
+                }))
+              } catch (err) {
+                console.error(`❌ Error loading historial for servicio ${servicioId}:`, err)
+                return []
+              }
+            })
+
+            // ✅ Esperar a que se carguen todos los historiales
+            const historialArrays = await Promise.all(historialPromises)
+
+            // ✅ Combinar todos los historiales en un solo array
+            const historialCombinado = historialArrays.flat()
+
+            // ✅ Ordenar por fecha descendente
+            historialCombinado.sort((a, b) => {
+              const dateA = new Date(a.registro || a.fechaAccion).getTime()
+              const dateB = new Date(b.registro || b.fechaAccion).getTime()
+              return dateB - dateA
+            })
+
+            console.log(`📊 Total registros de historial combinado:`, historialCombinado.length)
+            console.log(`📋 Desglose por servicio:`)
+            servicioIds.forEach(id => {
+              const count = historialCombinado.filter(h => h.servicioMuestraId === id).length
+              const nombre = data.servicios.find((s: any) =>
+                (s.id ?? s.servicioMuestraId ?? s.servicioId) === id
+              )?.nombre
+              console.log(`  - Servicio ${id} (${nombre}): ${count} registros`)
+            })
+
+            // ✅ Guardar en caché usando clave única por muestra
+            servicioHistoryCache.set(cacheKey, historialCombinado)
+
+            // ✅ Abrir diálogo con el historial combinado
+            setHistServicioRows(historialCombinado)
+            setHistServicioDialogOpen(true)
+
+          } catch (err) {
+            console.error('❌ Error loading historial:', err)
+            alert('Error al cargar el historial')
+          } finally {
+            console.groupEnd()
           }
-
-          console.log('servicioId final:', servicioId)
-          console.groupEnd()
-
-          if (!servicioId) {
-            console.warn('❌ No se pudo extraer servicioId')
-            alert('Esta muestra no tiene servicios asociados')
-            return
-          }
-
-          // Abrir historial del servicio
-          handleHistorialServicio(servicioId)
         }}>
           Historial
         </MenuItem>
       </Menu>
+
+
 
       {/* Dialog: Historial (mock) */}
       <Dialog
@@ -2525,7 +2776,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         open={histDialogOpen}
         onClose={handleCloseHistDialog}
       >
-        <DialogTitle>Historial</DialogTitle>
+        <DialogTitle>Historial de Cambios</DialogTitle>
         <DialogContent>
           {histLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
@@ -2535,82 +2786,107 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             <TableContainer component={Paper} variant='outlined'>
               <Table size='small'>
                 <TableHead>
-                  <TableRow>
-                    <TableCell>REGISTRO</TableCell>
-                    <TableCell>FUNCIONARIO</TableCell>
-                    <TableCell align='center'>TIPO</TableCell>
-                    <TableCell align='center'>EST. ANTERIOR</TableCell>
-                    <TableCell align='center'>EST. NUEVO</TableCell>
-                    <TableCell align='center'>INFORME</TableCell>
-                    <TableCell align='center'>FECHA ACCIÓN</TableCell>
-                    <TableCell>OBSERVACIÓN</TableCell>
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>REGISTRO</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>FUNCIONARIO</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>APLICADO A</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>ENSAYO/SERVICIO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>TIPO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>EST. ANTERIOR</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>EST. NUEVO</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 600 }}>FECHA ACCIÓN</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>OBSERVACIÓN</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {histRows.map((h, i) => (
-                    <TableRow key={i}>
-                      {/* REGISTRO: keep datetime */}
-                      <TableCell>{formatDateDDMMYYYY(h.fechaAccion)}</TableCell>
-                      <TableCell>{h.funcionario}</TableCell>
-                      <TableCell align='center'>{h.tipo}</TableCell>
-                      <TableCell align='center'>
-                        {(() => {
-                          const info = getOperationalInfo(h.estAnterior)
-                          return (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                              <Chip
-                                label={h.estAnterior ?? '-'}
-                                size='small'
-                                variant='filled'
-                                sx={{
-                                  bgcolor: info.bgcolor,
-                                  color: info.colorText,
-                                  border: `1px solid ${info.border}`,
-                                  textTransform: 'uppercase',
-                                  fontWeight: 700,
-                                  fontSize: '0.72rem',
-                                  borderRadius: 2,
-                                  px: 1,
-                                  py: 0.4
-                                }}
-                              />
-                            </Box>
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell align='center'>
-                        {(() => {
-                          const info = getOperationalInfo(h.estNuevo)
-                          return (
-                            <Chip
-                              label={h.estNuevo ?? '-'}
-                              size='small'
-                              variant='filled'
-                              sx={{
-                                bgcolor: info.bgcolor,
-                                color: info.colorText,
-                                border: `1px solid ${info.border}`,
-                                textTransform: 'uppercase',
-                                fontWeight: 700,
-                                fontSize: '0.72rem',
-                                borderRadius: 2,
-                                px: 1,
-                                py: 0.4
-                              }}
-                            />
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell align='center'>{h.informe}</TableCell>
-                      {/* FECHA ACCIÓN: only date DD/MM/AAAA */}
-                      <TableCell align='center'>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
-                      <TableCell>
-                        <Typography variant='body2' sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {h.observacion ?? '-'}
+                  {histRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align='center' sx={{ py: 4 }}>
+                        <Typography color='text.secondary'>
+                          No hay historial disponible
                         </Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    histRows.map((h, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Typography variant='body2' sx={{ whiteSpace: 'nowrap' }}>
+                            {h.registro ? new Date(h.registro).toLocaleString('es-CL') : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{h.funcionario ?? '-'}</TableCell>
+                        <TableCell>{h.aplicadoA ?? '-'}</TableCell>
+                        <TableCell>{h.ensayoServicio ?? '-'}</TableCell>
+                        <TableCell align='center'>
+                          <Chip
+                            label={h.tipo ?? '-'}
+                            size='small'
+                            color={h.tipo === 'Ope' ? 'primary' : 'secondary'}
+                            variant='outlined'
+                          />
+                        </TableCell>
+                        <TableCell align='center'>
+                          {h.estAnterior ? (
+                            (() => {
+                              const info = getOperationalInfo(h.estAnterior)
+                              return (
+                                <Chip
+                                  label={h.estAnterior}
+                                  size='small'
+                                  variant='filled'
+                                  sx={{
+                                    bgcolor: info.bgcolor,
+                                    color: info.colorText,
+                                    border: `1px solid ${info.border}`,
+                                    textTransform: 'uppercase',
+                                    fontWeight: 600,
+                                    fontSize: '0.72rem'
+                                  }}
+                                />
+                              )
+                            })()
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align='center'>
+                          {h.estNuevo ? (
+                            (() => {
+                              const info = getOperationalInfo(h.estNuevo)
+                              return (
+                                <Chip
+                                  label={h.estNuevo}
+                                  size='small'
+                                  variant='filled'
+                                  sx={{
+                                    bgcolor: info.bgcolor,
+                                    color: info.colorText,
+                                    border: `1px solid ${info.border}`,
+                                    textTransform: 'uppercase',
+                                    fontWeight: 600,
+                                    fontSize: '0.72rem'
+                                  }}
+                                />
+                              )
+                            })()
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align='center'>
+                          <Typography variant='body2' sx={{ whiteSpace: 'nowrap' }}>
+                            {h.fechaAccion ? new Date(h.fechaAccion).toLocaleDateString('es-CL') : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant='body2' sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {h.observacion ?? '-'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -2647,9 +2923,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'action.hover' }}>
                     <TableCell sx={{ fontWeight: 600 }}>REGISTRO</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>SERVICIO</TableCell> {/* ← NUEVA COLUMNA */}
                     <TableCell sx={{ fontWeight: 600 }}>FUNCIONARIO</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>APLICADO A</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>ENSAYO/SERVICIO</TableCell>
                     <TableCell align='center' sx={{ fontWeight: 600 }}>TIPO</TableCell>
                     <TableCell align='center' sx={{ fontWeight: 600 }}>EST. ANTERIOR</TableCell>
                     <TableCell align='center' sx={{ fontWeight: 600 }}>EST. NUEVO</TableCell>
@@ -2674,9 +2950,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             {h.registro ? new Date(h.registro).toLocaleString('es-CL') : '-'}
                           </Typography>
                         </TableCell>
+
+                        {/* ✅ NUEVA CELDA: Mostrar nombre del servicio */}
+                        <TableCell>
+                          <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {h.servicioNombre ?? '-'}
+                          </Typography>
+                          <Typography variant='caption' color='text.secondary'>
+                            ID: {h.servicioMuestraId ?? '-'}
+                          </Typography>
+                        </TableCell>
+
                         <TableCell>{h.funcionario ?? '-'}</TableCell>
                         <TableCell>{h.aplicadoA ?? '-'}</TableCell>
-                        <TableCell>{h.ensayoServicio ?? '-'}</TableCell>
                         <TableCell align='center'>
                           <Chip
                             label={h.tipo ?? '-'}
