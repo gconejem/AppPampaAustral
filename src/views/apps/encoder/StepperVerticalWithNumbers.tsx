@@ -158,6 +158,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [vencimiento, setVencimiento] = useState<boolean>(false)
   const [cantidadMuestras, setCantidadMuestras] = useState<string>('1')
 
+  // Estados para probetas
+  const [probetaMuestra, setProbetaMuestra] = useState<string>('')
+  const [probetaNumero, setProbetaNumero] = useState<string>('')
+  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(new Date().toISOString().split('T')[0])
+  const [probetaCantidad, setProbetaCantidad] = useState<string>('1')
+  const [probetaDias, setProbetaDias] = useState<string>('7')
+  const [probetaFechaVencimiento, setProbetaFechaVencimiento] = useState<string>('')
+
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
     numeroTarjeta: '',
@@ -1444,12 +1452,18 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                               label='N° Tarjeta'
                               size='small'
                               value={muestraActual.numeroTarjeta}
-                              onChange={e =>
+                              onChange={e => {
+                                const newValue = e.target.value
                                 setMuestraActual(prev => ({
                                   ...prev,
-                                  numeroTarjeta: e.target.value
+                                  numeroTarjeta: newValue
                                 }))
-                              }
+
+                                // Si vencimiento está activo, actualizar el campo muestra automáticamente
+                                if (vencimiento) {
+                                  setProbetaMuestra(newValue)
+                                }
+                              }}
                               onClick={e => e.stopPropagation()}
                               sx={{ width: '200px' }}
                             />
@@ -1467,11 +1481,24 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                 checked={vencimiento}
                                 color='primary'
                                 onChange={e => {
-                                  setVencimiento(e.target.checked)
+                                  const isChecked = e.target.checked
+
+                                  // Validar si hay número de tarjeta cuando se activa vencimiento
+                                  if (isChecked && !muestraActual.numeroTarjeta) {
+                                    toast.error('Por favor ingrese el N° Tarjeta antes de activar Vencimiento')
+                                    return
+                                  }
+
+                                  setVencimiento(isChecked)
                                   setMuestraActual(prev => ({
                                     ...prev,
-                                    vencimiento: e.target.checked
+                                    vencimiento: isChecked
                                   }))
+
+                                  // Poblar el campo muestra con el número de tarjeta
+                                  if (isChecked && muestraActual.numeroTarjeta) {
+                                    setProbetaMuestra(muestraActual.numeroTarjeta)
+                                  }
                                 }}
                               />
                             </Box>
@@ -2040,10 +2067,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             <>
                               <Grid container spacing={2} sx={{ mt: 2 }}>
                                 <Grid item xs={2}>
-                                  <TextField label='Muestra' size='small' fullWidth />
+                                  <TextField
+                                    label='Muestra'
+                                    size='small'
+                                    fullWidth
+                                    value={probetaMuestra}
+                                    onChange={e => setProbetaMuestra(e.target.value)}
+                                    disabled
+                                    InputProps={{
+                                      readOnly: true
+                                    }}
+                                  />
                                 </Grid>
                                 <Grid item xs={1}>
-                                  <TextField label='N°' size='small' fullWidth />
+                                  <TextField
+                                    label='N°'
+                                    size='small'
+                                    fullWidth
+                                    value={probetaNumero}
+                                    onChange={e => setProbetaNumero(e.target.value)}
+                                    type='number'
+                                    inputProps={{ min: 1 }}
+                                  />
                                 </Grid>
                                 <Grid item xs={2}>
                                   <TextField
@@ -2051,6 +2096,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='date'
                                     size='small'
                                     fullWidth
+                                    value={probetaFechaConfeccion}
+                                    onChange={e => {
+                                      setProbetaFechaConfeccion(e.target.value)
+                                      // Calcular fecha de vencimiento si hay días especificados
+                                      if (probetaDias) {
+                                        const fecha = new Date(e.target.value)
+                                        fecha.setDate(fecha.getDate() + parseInt(probetaDias))
+                                        setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+                                      }
+                                    }}
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
@@ -2060,6 +2115,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='number'
                                     size='small'
                                     fullWidth
+                                    value={probetaCantidad}
+                                    onChange={e => setProbetaCantidad(e.target.value)}
                                     inputProps={{ min: 1 }}
                                   />
                                 </Grid>
@@ -2069,6 +2126,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='number'
                                     size='small'
                                     fullWidth
+                                    value={probetaDias}
+                                    onChange={e => {
+                                      setProbetaDias(e.target.value)
+                                      // Calcular fecha de vencimiento automáticamente
+                                      if (probetaFechaConfeccion && e.target.value) {
+                                        const fecha = new Date(probetaFechaConfeccion)
+                                        fecha.setDate(fecha.getDate() + parseInt(e.target.value))
+                                        setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+                                      }
+                                    }}
                                     inputProps={{ min: 1 }}
                                   />
                                 </Grid>
@@ -2078,6 +2145,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='date'
                                     size='small'
                                     fullWidth
+                                    value={probetaFechaVencimiento}
+                                    onChange={e => setProbetaFechaVencimiento(e.target.value)}
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
@@ -2087,6 +2156,37 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     color='primary'
                                     size='small'
                                     startIcon={<i className='ri-add-line' />}
+                                    onClick={() => {
+                                      // Validar campos requeridos
+                                      if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
+                                        toast.error('Por favor complete todos los campos de la probeta')
+                                        return
+                                      }
+
+                                      // Agregar probeta
+                                      const nuevaProbeta = {
+                                        numero: parseInt(probetaNumero),
+                                        fechaConfeccion: probetaFechaConfeccion,
+                                        cantidad: parseInt(probetaCantidad),
+                                        dias: parseInt(probetaDias),
+                                        fechaVencimiento: probetaFechaVencimiento,
+                                        estado: 'Pendiente'
+                                      }
+
+                                      setMuestraActual(prev => ({
+                                        ...prev,
+                                        probetas: [...prev.probetas, nuevaProbeta]
+                                      }))
+
+                                      // Limpiar campos excepto muestra
+                                      setProbetaNumero('')
+                                      setProbetaFechaConfeccion(new Date().toISOString().split('T')[0])
+                                      setProbetaCantidad('1')
+                                      setProbetaDias('7')
+                                      setProbetaFechaVencimiento('')
+
+                                      toast.success('Probeta agregada exitosamente')
+                                    }}
                                     sx={{
                                       maxWidth: '150px',
                                       width: '100%',
