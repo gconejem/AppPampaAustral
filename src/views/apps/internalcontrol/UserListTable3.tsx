@@ -289,7 +289,7 @@ const UserListTable3 = ({
             <IconButton
               size='small'
               color='secondary'
-              onClick={() => window.open(`/en/apps/encoder/edit?rcmId=${row.original.id}`, '_blank')}
+              onClick={() => window.open(`/en/apps/rcm-edit/${row.original.id}`, '_blank')}
             >
               <i className='ri-edit-line' />
             </IconButton>
