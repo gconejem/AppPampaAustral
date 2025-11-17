@@ -154,6 +154,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
   const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
   const [estadoAnchorEl, setEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [probetaEstadoAnchorEl, setProbetaEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
 
   // Estados disponibles con sus colores
   const estadosDisponibles = [
@@ -622,7 +623,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     }))
   }
 
-  // Funciones para manejar el cambio de estado
+  // Funciones para manejar el cambio de estado de servicios
   const handleOpenEstadoMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
     setEstadoAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
   }
@@ -642,6 +643,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       servicios: nuevosServicios
     }))
     handleCloseEstadoMenu(index)
+  }
+
+  // Funciones para manejar el cambio de estado de probetas
+  const handleOpenProbetaEstadoMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
+    setProbetaEstadoAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
+  }
+
+  const handleCloseProbetaEstadoMenu = (index: number) => {
+    setProbetaEstadoAnchorEl(prev => ({ ...prev, [index]: null }))
+  }
+
+  const handleChangeProbetaEstado = (index: number, nuevoEstadoValor: string) => {
+    const nuevasProbetas = [...muestraActual.probetas]
+    nuevasProbetas[index] = {
+      ...nuevasProbetas[index],
+      estado: nuevoEstadoValor
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: nuevasProbetas
+    }))
+    handleCloseProbetaEstadoMenu(index)
   }
 
   // Función para obtener el color del estado
@@ -2182,7 +2205,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                         cantidad: parseInt(probetaCantidad),
                                         dias: parseInt(probetaDias),
                                         fechaVencimiento: probetaFechaVencimiento,
-                                        estado: 'Pendiente'
+                                        estado: 'CODIFICADO'
                                       }
 
                                       setMuestraActual(prev => ({
@@ -2237,12 +2260,57 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             <TableCell>{probeta.fechaVencimiento}</TableCell>
                                             <TableCell>
                                               <Chip
-                                                label={probeta.estado}
+                                                label={getEstadoNombre(probeta.estado || 'CODIFICADO')}
+                                                onClick={(e) => handleOpenProbetaEstadoMenu(e, index)}
                                                 sx={{
-                                                  backgroundColor: '#daf3ff',
-                                                  color: '#16b1ff'
+                                                  backgroundColor: getEstadoColor(probeta.estado || 'CODIFICADO').color,
+                                                  color: getEstadoColor(probeta.estado || 'CODIFICADO').textColor,
+                                                  cursor: 'pointer',
+                                                  '&:hover': {
+                                                    opacity: 0.8
+                                                  }
                                                 }}
                                               />
+                                              <Popover
+                                                open={Boolean(probetaEstadoAnchorEl[index])}
+                                                anchorEl={probetaEstadoAnchorEl[index]}
+                                                onClose={() => handleCloseProbetaEstadoMenu(index)}
+                                                anchorOrigin={{
+                                                  vertical: 'bottom',
+                                                  horizontal: 'center'
+                                                }}
+                                                transformOrigin={{
+                                                  vertical: 'top',
+                                                  horizontal: 'center'
+                                                }}
+                                              >
+                                                <List sx={{ p: 0 }}>
+                                                  {estadosDisponibles.map((estado) => (
+                                                    <ListItem
+                                                      key={estado.valor}
+                                                      button
+                                                      onClick={() => handleChangeProbetaEstado(index, estado.valor)}
+                                                      sx={{
+                                                        py: 1,
+                                                        px: 2,
+                                                        '&:hover': {
+                                                          backgroundColor: '#f5f5f5'
+                                                        }
+                                                      }}
+                                                    >
+                                                      <Chip
+                                                        label={estado.nombre}
+                                                        size='small'
+                                                        sx={{
+                                                          backgroundColor: estado.color,
+                                                          color: estado.textColor,
+                                                          width: '120px'
+                                                        }}
+                                                      />
+                                                    </ListItem>
+                                                  ))}
+                                                </List>
+                                              </Popover>
                                             </TableCell>
                                           </TableRow>
                                         ))
