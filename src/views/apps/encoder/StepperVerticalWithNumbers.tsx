@@ -233,6 +233,18 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       })
   }, [])
 
+  // Calcular fecha de vencimiento automáticamente cuando cambian fecha de confección o días
+  useEffect(() => {
+    if (probetaFechaConfeccion && probetaDias) {
+      const fecha = new Date(probetaFechaConfeccion)
+      fecha.setDate(fecha.getDate() + parseInt(probetaDias))
+      const year = fecha.getFullYear()
+      const month = String(fecha.getMonth() + 1).padStart(2, '0')
+      const day = String(fecha.getDate()).padStart(2, '0')
+      setProbetaFechaVencimiento(`${year}-${month}-${day}`)
+    }
+  }, [probetaFechaConfeccion, probetaDias])
+
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
     fetch('/api/productos?limit=1000')
