@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 
 // Utils
-import { formatDateForInput } from '@/utils/dateUtils'
+import { formatDateForInput, formatDateForDisplay } from '@/utils/dateUtils'
 
 // MUI Imports
 import IconButton from '@mui/material/IconButton'
@@ -1442,10 +1442,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             {muestra.probetas.map((probeta, probIdx) => (
                                               <TableRow key={probIdx}>
                                                 <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                                <TableCell>{formatDateForDisplay(probeta.fechaConfeccion)}</TableCell>
                                                 <TableCell>{probeta.cantidad}</TableCell>
                                                 <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                                <TableCell>{formatDateForDisplay(probeta.fechaVencimiento)}</TableCell>
                                                 <TableCell>
                                                   <Chip
                                                     label={probeta.estado}

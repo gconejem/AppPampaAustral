@@ -77,3 +77,24 @@ export const formatBackendDateForInput = (dateString: string): string => {
     const localDate = parseDateFromBackend(dateString)
     return formatDateForInput(localDate)
 }
+
+/**
+ * Formatea una fecha en formato dd-mm-yyyy para mostrar en la UI
+ */
+export const formatDateForDisplay = (dateString: string): string => {
+    if (!dateString) return ''
+
+    // Si la fecha ya está en formato YYYY-MM-DD, convertirla
+    const date = new Date(dateString)
+
+    if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida:', dateString)
+        return dateString
+    }
+
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+
+    return `${day}-${month}-${year}`
+}
