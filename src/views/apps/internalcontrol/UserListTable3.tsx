@@ -35,6 +35,9 @@ import {
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
+// Utils Imports
+import { formatDateOnly } from '@/utils/dateUtils'
+
 // Interface para RCM
 interface RCMData {
   id: number
@@ -236,8 +239,7 @@ const UserListTable3 = ({
         header: 'FECHA CODIFICACIÓN',
         cell: ({ row }) => {
           if (!row.original.fechaCodificacion) return <Typography color='text.primary'>-</Typography>
-          const fecha = new Date(row.original.fechaCodificacion)
-          const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}-${fecha.getFullYear()}`
+          const fechaFormateada = formatDateOnly(row.original.fechaCodificacion)
           return <Typography color='text.primary'>{fechaFormateada}</Typography>
         }
       }),
@@ -245,8 +247,7 @@ const UserListTable3 = ({
         header: 'FECHA MUESTREO',
         cell: ({ row }) => {
           if (!row.original.fechaMuestreo) return <Typography color='text.primary'>-</Typography>
-          const fecha = new Date(row.original.fechaMuestreo)
-          const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}-${fecha.getFullYear()}`
+          const fechaFormateada = formatDateOnly(row.original.fechaMuestreo)
           return <Typography color='text.primary'>{fechaFormateada}</Typography>
         }
       }),
