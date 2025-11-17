@@ -159,7 +159,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     try {
+      const { ordenTrabajoId } = req.query
+
+      const whereClause = ordenTrabajoId
+        ? { ordenTrabajoId: ordenTrabajoId as string }
+        : {}
+
       const rcms = await prisma.rCM.findMany({
+        where: whereClause,
         include: {
           servicios: {
             include: {

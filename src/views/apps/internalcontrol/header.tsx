@@ -28,7 +28,7 @@ const Header = ({ otData, loading }: HeaderProps) => {
   if (!otData) {
     return (
       <Card>
-        <CardHeader title='Control de Muestras' />
+        <CardHeader title='Codificación' />
         <CardContent>
           <Box textAlign='center' py={3}>
             <Typography variant='h6'>No se ha seleccionado ninguna orden de trabajo</Typography>
@@ -108,7 +108,7 @@ const Header = ({ otData, loading }: HeaderProps) => {
 
   return (
     <Card>
-      <CardHeader title='Control de Muestras' action={<Chip label={chipProps.label} sx={chipProps.sx} />} />
+      <CardHeader title='Codificación' action={<Chip label={chipProps.label} sx={chipProps.sx} />} />
       <CardContent>
         <Grid container spacing={3}>
           {/* Primera fila */}

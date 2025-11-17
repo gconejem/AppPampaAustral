@@ -9,7 +9,6 @@ import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
@@ -36,20 +35,30 @@ import {
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
-// Interface para servicios de OT
-interface ServicioOT {
+// Interface para RCM
+interface RCMData {
   id: number
-  agendaId?: number
-  codigo?: string
-  servicio?: string
-  cantidad?: number
-  area?: string
-  familia?: string
-  nombreProducto?: string
-  fechaCodificacion?: string
-  fechaMuestreo?: string
-  observacion?: string
-  estadoOP?: string
+  numeroRcm: string
+  fechaCodificacion: string
+  fechaMuestreo: string
+  estadoOperativo?: string
+  estadoAdministrativo?: string
+  observaciones?: string
+  servicios?: Array<{
+    id: number
+    codigo: string
+    nombre: string
+    cantidad: number
+    estado: string
+    producto?: {
+      area?: string
+      familia?: string
+    }
+  }>
+  muestras?: Array<{
+    id: number
+    numeroMuestra: string
+  }>
 }
 
 // Definición básica para UsersType
@@ -84,7 +93,7 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 }
 
 // Column Definitions
-const columnHelper = createColumnHelper<ServicioOT>()
+const columnHelper = createColumnHelper<RCMData>()
 
 const UserListTable3 = ({
   otId,
@@ -98,9 +107,9 @@ const UserListTable3 = ({
 }) => {
   // States
   const [rowSelection, setRowSelection] = useState({})
-  const [serviciosData, setServiciosData] = useState<ServicioOT[]>([])
+  const [rcmsData, setRcmsData] = useState<RCMData[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [loadingServicios, setLoadingServicios] = useState(false)
+  const [loadingRcms, setLoadingRcms] = useState(false)
   const [areaFilter, setAreaFilter] = useState('')
   const [familiaFilter, setFamiliaFilter] = useState('')
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
@@ -158,23 +167,37 @@ const UserListTable3 = ({
     setFamiliaFilter('')
   }, [areaFilter, areas])
 
-  // Efecto para cargar los servicios asociados a la OT
-  /* useEffect(() => {
-    if (otData?.agenda?.servicios) {
-      console.log('Frontend - Datos de servicios recibidos:', otData.agenda.servicios)
-      console.log('Frontend - Primer servicio:', otData.agenda.servicios[0])
+  // Efecto para cargar los RCMs asociados a la OT
+  useEffect(() => {
+    const fetchRcms = async () => {
+      if (!otId) {
+        setRcmsData([])
+        return
+      }
 
-      // Usar los servicios reales de la agenda asociada a la OT
-      setServiciosData(otData.agenda.servicios)
-      setLoadingServicios(false)
-    } else {
-      // Si no hay servicios, limpiar el array
-      setServiciosData([])
-      setLoadingServicios(false)
+      setLoadingRcms(true)
+      try {
+        const response = await fetch(`/api/rcm?ordenTrabajoId=${otId}`)
+        if (response.ok) {
+          const rcms = await response.json()
+          console.log('RCMs cargados:', rcms)
+          setRcmsData(rcms)
+        } else {
+          console.error('Error al cargar RCMs')
+          setRcmsData([])
+        }
+      } catch (error) {
+        console.error('Error al cargar RCMs:', error)
+        setRcmsData([])
+      } finally {
+        setLoadingRcms(false)
+      }
     }
-  }, [otData]) */
 
-  const columns = useMemo<ColumnDef<ServicioOT, any>[]>(
+    fetchRcms()
+  }, [otId])
+
+  const columns = useMemo<ColumnDef<RCMData, any>[]>(
     () => [
       {
         id: 'select',
@@ -205,47 +228,57 @@ const UserListTable3 = ({
           />
         )
       },
-      columnHelper.accessor('codigo', {
-        header: 'CÓDIGO',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.codigo || '-'}</Typography>
+      columnHelper.accessor('numeroRcm', {
+        header: 'CÓDIGO RCM',
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.numeroRcm || '-'}</Typography>
       }),
       columnHelper.accessor('fechaCodificacion', {
         header: 'FECHA CODIFICACIÓN',
         cell: ({ row }) => {
-          // Mostrar la fecha de hoy en formato dd-mm-aaaa
-          const today = new Date()
-          const fechaHoy = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`
-          return <Typography color='text.primary'>{fechaHoy}</Typography>
+          if (!row.original.fechaCodificacion) return <Typography color='text.primary'>-</Typography>
+          const fecha = new Date(row.original.fechaCodificacion)
+          const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}-${fecha.getFullYear()}`
+          return <Typography color='text.primary'>{fechaFormateada}</Typography>
         }
       }),
       columnHelper.accessor('fechaMuestreo', {
         header: 'FECHA MUESTREO',
         cell: ({ row }) => {
-          // Mostrar la fecha de hoy en formato dd-mm-aaaa
-          const today = new Date()
-          const fechaHoy = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`
-          return <Typography color='text.primary'>{fechaHoy}</Typography>
+          if (!row.original.fechaMuestreo) return <Typography color='text.primary'>-</Typography>
+          const fecha = new Date(row.original.fechaMuestreo)
+          const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}-${fecha.getFullYear()}`
+          return <Typography color='text.primary'>{fechaFormateada}</Typography>
         }
       }),
-      columnHelper.accessor('area', {
+      {
+        id: 'area',
         header: 'ÁREA',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.area || '-'}</Typography>
-      }),
-      columnHelper.accessor('familia', {
+        cell: ({ row }) => {
+          const areas = row.original.servicios?.map(s => s.producto?.area).filter(Boolean)
+          const areaUnica = areas && areas.length > 0 ? [...new Set(areas)].join(', ') : '-'
+          return <Typography color='text.primary'>{areaUnica}</Typography>
+        }
+      },
+      {
+        id: 'familia',
         header: 'FAMILIA',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.familia || '-'}</Typography>
-      }),
-      columnHelper.accessor('observacion', {
+        cell: ({ row }) => {
+          const familias = row.original.servicios?.map(s => s.producto?.familia).filter(Boolean)
+          const familiaUnica = familias && familias.length > 0 ? [...new Set(familias)].join(', ') : '-'
+          return <Typography color='text.primary'>{familiaUnica}</Typography>
+        }
+      },
+      columnHelper.accessor('observaciones', {
         header: 'OBSERVACIÓN',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.observacion || '-'}</Typography>
+        cell: ({ row }) => <Typography color='text.primary'>{row.original.observaciones || '-'}</Typography>
       }),
-      columnHelper.accessor('estadoOP', {
+      columnHelper.accessor('estadoOperativo', {
         header: 'ESTADO OP',
         cell: ({ row }) => (
           <Chip
-            label={row.original.estadoOP || 'Pendiente'}
+            label={row.original.estadoOperativo || 'CODIFICADO'}
             size='small'
-            color={row.original.estadoOP === 'Completado' ? 'success' : 'default'}
+            color={row.original.estadoOperativo === 'COMPLETADO' ? 'success' : 'default'}
           />
         )
       }),
@@ -253,7 +286,11 @@ const UserListTable3 = ({
         header: 'ACCIONES',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            <IconButton size='small' color='secondary' onClick={() => console.log('Editar', row.original)}>
+            <IconButton
+              size='small'
+              color='secondary'
+              onClick={() => window.open(`/en/apps/encoder/edit?rcmId=${row.original.id}`, '_blank')}
+            >
               <i className='ri-edit-line' />
             </IconButton>
             <IconButton size='small' color='info' onClick={() => console.log('Clonar', row.original)}>
@@ -270,7 +307,7 @@ const UserListTable3 = ({
   )
 
   const table = useReactTable({
-    data: serviciosData,
+    data: rcmsData,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter,
@@ -294,7 +331,7 @@ const UserListTable3 = ({
   })
 
   // Si está cargando
-  if (loading || loadingServicios) {
+  if (loading || loadingRcms) {
     return (
       <Card>
         <Typography p={4} textAlign='center'>
@@ -309,7 +346,7 @@ const UserListTable3 = ({
     return (
       <Card>
         <Typography p={4} textAlign='center'>
-          Seleccione una orden de trabajo para ver sus servicios asociados
+          Seleccione una orden de trabajo para ver los RCMs asociados
         </Typography>
       </Card>
     )
@@ -370,7 +407,7 @@ const UserListTable3 = ({
                 startIcon={<i className='ri-add-line' />}
                 onClick={() =>
                   window.open(
-                    `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}&servicioId=${serviciosData.length > 0 ? serviciosData[0].id : ''}`,
+                    `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}`,
                     '_blank'
                   )
                 }
@@ -402,7 +439,7 @@ const UserListTable3 = ({
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className='text-center'>
-                  No se encontraron servicios para esta OT
+                  No se encontraron RCMs para esta OT
                 </td>
               </tr>
             ) : (
@@ -420,7 +457,7 @@ const UserListTable3 = ({
 
       <TablePagination
         component='div'
-        count={serviciosData.length}
+        count={rcmsData.length}
         rowsPerPage={table.getState().pagination.pageSize}
         page={table.getState().pagination.pageIndex}
         onPageChange={(_, page) => table.setPageIndex(page)}
