@@ -77,3 +77,46 @@ export const formatBackendDateForInput = (dateString: string): string => {
     const localDate = parseDateFromBackend(dateString)
     return formatDateForInput(localDate)
 }
+
+/**
+ * Formatea una fecha en formato dd-mm-yyyy para mostrar en la UI
+ */
+export const formatDateForDisplay = (dateString: string): string => {
+    if (!dateString) return ''
+
+    // Si la fecha ya está en formato YYYY-MM-DD, convertirla
+    const date = new Date(dateString)
+
+    if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida:', dateString)
+        return dateString
+    }
+
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+
+    return `${day}-${month}-${year}`
+}
+
+/**
+ * Formatea una fecha en formato dd-mm-yyyy sin conversión de zona horaria
+ * Útil para fechas que vienen del backend en formato YYYY-MM-DD o YYYY-MM-DD HH:mm:ss
+ * y deben mostrarse exactamente como están almacenadas
+ */
+export const formatDateOnly = (dateString: string): string => {
+    if (!dateString) return ''
+
+    // Extraer la parte de la fecha directamente del string para evitar problemas de zona horaria
+    // Soporta formatos: "YYYY-MM-DD", "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DDTHH:mm:ss.sssZ"
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+    if (dateMatch) {
+        const [, year, month, day] = dateMatch
+        return `${day}-${month}-${year}`
+    }
+
+    // Si no coincide con el patrón esperado, devolver el string original
+    console.warn('Formato de fecha no reconocido:', dateString)
+    return dateString
+}

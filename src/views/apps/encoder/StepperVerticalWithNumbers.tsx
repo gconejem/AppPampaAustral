@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation'
 
 import { toast } from 'react-hot-toast'
 
+// Utils
+import { formatDateForInput, formatDateForDisplay } from '@/utils/dateUtils'
+
 // MUI Imports
 import IconButton from '@mui/material/IconButton'
 import Checkbox from '@mui/material/Checkbox'
@@ -105,6 +108,15 @@ interface Muestra {
   }>
 }
 
+// Helper function to get today's date in YYYY-MM-DD format (local timezone)
+const getTodayDateString = (): string => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // Constants
 const steps = [
   { title: 'General', subtitle: '' },
@@ -129,10 +141,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [numeroRcm, setNumeroRcm] = useState<string>('')
 
   // Estados para el paso 1
-  const [fechaCodificacion, setFechaCodificacion] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaMuestreo, setFechaMuestreo] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaIngreso, setFechaIngreso] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaEntrega, setFechaEntrega] = useState<string>(new Date().toISOString().split('T')[0])
+  const [fechaCodificacion, setFechaCodificacion] = useState<string>(getTodayDateString())
+  const [fechaMuestreo, setFechaMuestreo] = useState<string>(getTodayDateString())
+  const [fechaIngreso, setFechaIngreso] = useState<string>(getTodayDateString())
+  const [fechaEntrega, setFechaEntrega] = useState<string>(getTodayDateString())
 
   // Estados para el paso 2
   const [servicios, setServicios] = useState<Servicio[]>([])
@@ -142,6 +154,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
   const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
   const [estadoAnchorEl, setEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [probetaEstadoAnchorEl, setProbetaEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
 
   // Estados disponibles con sus colores
   const estadosDisponibles = [
@@ -157,6 +170,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Estados para muestras
   const [vencimiento, setVencimiento] = useState<boolean>(false)
   const [cantidadMuestras, setCantidadMuestras] = useState<string>('1')
+
+  // Estados para probetas
+  const [probetaMuestra, setProbetaMuestra] = useState<string>('')
+  const [probetaNumero, setProbetaNumero] = useState<string>('')
+  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(getTodayDateString())
+  const [probetaCantidad, setProbetaCantidad] = useState<string>('1')
+  const [probetaDias, setProbetaDias] = useState<string>('7')
+  const [probetaFechaVencimiento, setProbetaFechaVencimiento] = useState<string>('')
 
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
@@ -211,6 +232,18 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         console.error('Error al obtener próximo número de RCM:', error)
       })
   }, [])
+
+  // Calcular fecha de vencimiento automáticamente cuando cambian fecha de confección o días
+  useEffect(() => {
+    if (probetaFechaConfeccion && probetaDias) {
+      const fecha = new Date(probetaFechaConfeccion)
+      fecha.setDate(fecha.getDate() + parseInt(probetaDias))
+      const year = fecha.getFullYear()
+      const month = String(fecha.getMonth() + 1).padStart(2, '0')
+      const day = String(fecha.getDate()).padStart(2, '0')
+      setProbetaFechaVencimiento(`${year}-${month}-${day}`)
+    }
+  }, [probetaFechaConfeccion, probetaDias])
 
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
@@ -375,10 +408,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   const handleReset = () => {
     setActiveStep(0)
-    setFechaCodificacion(new Date().toISOString().split('T')[0])
-    setFechaMuestreo(new Date().toISOString().split('T')[0])
-    setFechaIngreso(new Date().toISOString().split('T')[0])
-    setFechaEntrega(new Date().toISOString().split('T')[0])
+    setFechaCodificacion(getTodayDateString())
+    setFechaMuestreo(getTodayDateString())
+    setFechaIngreso(getTodayDateString())
+    setFechaEntrega(getTodayDateString())
     setServicios([])
     setCantidad('1')
     setMuestras([])
@@ -602,7 +635,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     }))
   }
 
-  // Funciones para manejar el cambio de estado
+  // Funciones para manejar el cambio de estado de servicios
   const handleOpenEstadoMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
     setEstadoAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
   }
@@ -622,6 +655,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       servicios: nuevosServicios
     }))
     handleCloseEstadoMenu(index)
+  }
+
+  // Funciones para manejar el cambio de estado de probetas
+  const handleOpenProbetaEstadoMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
+    setProbetaEstadoAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
+  }
+
+  const handleCloseProbetaEstadoMenu = (index: number) => {
+    setProbetaEstadoAnchorEl(prev => ({ ...prev, [index]: null }))
+  }
+
+  const handleChangeProbetaEstado = (index: number, nuevoEstadoValor: string) => {
+    const nuevasProbetas = [...muestraActual.probetas]
+    nuevasProbetas[index] = {
+      ...nuevasProbetas[index],
+      estado: nuevoEstadoValor
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: nuevasProbetas
+    }))
+    handleCloseProbetaEstadoMenu(index)
   }
 
   // Función para obtener el color del estado
@@ -1345,23 +1400,26 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {muestra.servicios.map((serv, servIdx) => (
-                                            <TableRow key={servIdx}>
-                                              <TableCell>{serv.codigo}</TableCell>
-                                              <TableCell>{serv.nombre}</TableCell>
-                                              <TableCell>{serv.cantidad}</TableCell>
-                                              <TableCell>
-                                                <Chip
-                                                  label={getEstadoNombre(serv.estado || 'CODIFICADO')}
-                                                  size='small'
-                                                  sx={{
-                                                    backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
-                                                    color: getEstadoColor(serv.estado || 'CODIFICADO').textColor
-                                                  }}
-                                                />
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
+                                          {muestra.servicios.map((serv, servIdx) => {
+                                            const estadoInfo = getEstadoColor(serv.estado || 'CODIFICADO')
+                                            return (
+                                              <TableRow key={servIdx}>
+                                                <TableCell>{serv.codigo}</TableCell>
+                                                <TableCell>{serv.nombre}</TableCell>
+                                                <TableCell>{serv.cantidad}</TableCell>
+                                                <TableCell>
+                                                  <Chip
+                                                    label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                                    size='small'
+                                                    sx={{
+                                                      backgroundColor: estadoInfo.color,
+                                                      color: estadoInfo.textColor
+                                                    }}
+                                                  />
+                                                </TableCell>
+                                              </TableRow>
+                                            )
+                                          })}
                                         </TableBody>
                                       </Table>
                                     </TableContainer>
@@ -1384,25 +1442,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
-                                            {muestra.probetas.map((probeta, probIdx) => (
-                                              <TableRow key={probIdx}>
-                                                <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
-                                                <TableCell>{probeta.cantidad}</TableCell>
-                                                <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                                <TableCell>
-                                                  <Chip
-                                                    label={probeta.estado}
-                                                    size='small'
-                                                    sx={{
-                                                      backgroundColor: '#daf3ff',
-                                                      color: '#16b1ff'
-                                                    }}
-                                                  />
-                                                </TableCell>
-                                              </TableRow>
-                                            ))}
+                                            {muestra.probetas.map((probeta, probIdx) => {
+                                              const estadoInfo = getEstadoColor(probeta.estado || 'CODIFICADO')
+                                              return (
+                                                <TableRow key={probIdx}>
+                                                  <TableCell>{probeta.numero}</TableCell>
+                                                  <TableCell>{formatDateForDisplay(probeta.fechaConfeccion)}</TableCell>
+                                                  <TableCell>{probeta.cantidad}</TableCell>
+                                                  <TableCell>{probeta.dias}</TableCell>
+                                                  <TableCell>{formatDateForDisplay(probeta.fechaVencimiento)}</TableCell>
+                                                  <TableCell>
+                                                    <Chip
+                                                      label={getEstadoNombre(probeta.estado || 'CODIFICADO')}
+                                                      size='small'
+                                                      sx={{
+                                                        backgroundColor: estadoInfo.color,
+                                                        color: estadoInfo.textColor
+                                                      }}
+                                                    />
+                                                  </TableCell>
+                                                </TableRow>
+                                              )
+                                            })}
                                           </TableBody>
                                         </Table>
                                       </TableContainer>
@@ -1444,12 +1505,18 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                               label='N° Tarjeta'
                               size='small'
                               value={muestraActual.numeroTarjeta}
-                              onChange={e =>
+                              onChange={e => {
+                                const newValue = e.target.value
                                 setMuestraActual(prev => ({
                                   ...prev,
-                                  numeroTarjeta: e.target.value
+                                  numeroTarjeta: newValue
                                 }))
-                              }
+
+                                // Si vencimiento está activo, actualizar el campo muestra automáticamente
+                                if (vencimiento) {
+                                  setProbetaMuestra(newValue)
+                                }
+                              }}
                               onClick={e => e.stopPropagation()}
                               sx={{ width: '200px' }}
                             />
@@ -1461,17 +1528,40 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             sx={{ marginLeft: 'auto' }}
                             onClick={e => e.stopPropagation()}
                           >
+                            <Chip
+                              label='CODIFICADO'
+                              size='small'
+                              sx={{
+                                backgroundColor: '#f3f3f3',
+                                color: '#424242',
+                                fontWeight: 'bold',
+                                height: '24px'
+                              }}
+                            />
                             <Box display='flex' alignItems='center' gap={1}>
                               <Typography variant='body2'>Vencimiento</Typography>
                               <Checkbox
                                 checked={vencimiento}
                                 color='primary'
                                 onChange={e => {
-                                  setVencimiento(e.target.checked)
+                                  const isChecked = e.target.checked
+
+                                  // Validar si hay número de tarjeta cuando se activa vencimiento
+                                  if (isChecked && !muestraActual.numeroTarjeta) {
+                                    toast.error('Por favor ingrese el N° Tarjeta antes de activar Vencimiento')
+                                    return
+                                  }
+
+                                  setVencimiento(isChecked)
                                   setMuestraActual(prev => ({
                                     ...prev,
-                                    vencimiento: e.target.checked
+                                    vencimiento: isChecked
                                   }))
+
+                                  // Poblar el campo muestra con el número de tarjeta
+                                  if (isChecked && muestraActual.numeroTarjeta) {
+                                    setProbetaMuestra(muestraActual.numeroTarjeta)
+                                  }
                                 }}
                               />
                             </Box>
@@ -2040,10 +2130,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             <>
                               <Grid container spacing={2} sx={{ mt: 2 }}>
                                 <Grid item xs={2}>
-                                  <TextField label='Muestra' size='small' fullWidth />
+                                  <TextField
+                                    label='Muestra'
+                                    size='small'
+                                    fullWidth
+                                    value={probetaMuestra}
+                                    onChange={e => setProbetaMuestra(e.target.value)}
+                                    disabled
+                                    InputProps={{
+                                      readOnly: true
+                                    }}
+                                  />
                                 </Grid>
                                 <Grid item xs={1}>
-                                  <TextField label='N°' size='small' fullWidth />
+                                  <TextField
+                                    label='N°'
+                                    size='small'
+                                    fullWidth
+                                    value={probetaNumero}
+                                    onChange={e => setProbetaNumero(e.target.value)}
+                                    type='number'
+                                    inputProps={{ min: 1 }}
+                                  />
                                 </Grid>
                                 <Grid item xs={2}>
                                   <TextField
@@ -2051,6 +2159,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='date'
                                     size='small'
                                     fullWidth
+                                    value={probetaFechaConfeccion}
+                                    onChange={e => {
+                                      setProbetaFechaConfeccion(e.target.value)
+                                      // Calcular fecha de vencimiento si hay días especificados
+                                      if (probetaDias) {
+                                        const fecha = new Date(e.target.value)
+                                        fecha.setDate(fecha.getDate() + parseInt(probetaDias))
+                                        setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+                                      }
+                                    }}
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
@@ -2060,6 +2178,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='number'
                                     size='small'
                                     fullWidth
+                                    value={probetaCantidad}
+                                    onChange={e => setProbetaCantidad(e.target.value)}
                                     inputProps={{ min: 1 }}
                                   />
                                 </Grid>
@@ -2069,6 +2189,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='number'
                                     size='small'
                                     fullWidth
+                                    value={probetaDias}
+                                    onChange={e => {
+                                      setProbetaDias(e.target.value)
+                                      // Calcular fecha de vencimiento automáticamente
+                                      if (probetaFechaConfeccion && e.target.value) {
+                                        const fecha = new Date(probetaFechaConfeccion)
+                                        fecha.setDate(fecha.getDate() + parseInt(e.target.value))
+                                        setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+                                      }
+                                    }}
                                     inputProps={{ min: 1 }}
                                   />
                                 </Grid>
@@ -2078,6 +2208,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     type='date'
                                     size='small'
                                     fullWidth
+                                    value={probetaFechaVencimiento}
+                                    onChange={e => setProbetaFechaVencimiento(e.target.value)}
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
@@ -2087,6 +2219,37 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                     color='primary'
                                     size='small'
                                     startIcon={<i className='ri-add-line' />}
+                                    onClick={() => {
+                                      // Validar campos requeridos
+                                      if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
+                                        toast.error('Por favor complete todos los campos de la probeta')
+                                        return
+                                      }
+
+                                      // Agregar probeta
+                                      const nuevaProbeta = {
+                                        numero: parseInt(probetaNumero),
+                                        fechaConfeccion: probetaFechaConfeccion,
+                                        cantidad: parseInt(probetaCantidad),
+                                        dias: parseInt(probetaDias),
+                                        fechaVencimiento: probetaFechaVencimiento,
+                                        estado: 'CODIFICADO'
+                                      }
+
+                                      setMuestraActual(prev => ({
+                                        ...prev,
+                                        probetas: [...prev.probetas, nuevaProbeta]
+                                      }))
+
+                                      // Limpiar campos excepto muestra
+                                      setProbetaNumero('')
+                                      setProbetaFechaConfeccion(getTodayDateString())
+                                      setProbetaCantidad('1')
+                                      setProbetaDias('7')
+                                      setProbetaFechaVencimiento('')
+
+                                      toast.success('Probeta agregada exitosamente')
+                                    }}
                                     sx={{
                                       maxWidth: '150px',
                                       width: '100%',
@@ -2125,12 +2288,57 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             <TableCell>{probeta.fechaVencimiento}</TableCell>
                                             <TableCell>
                                               <Chip
-                                                label={probeta.estado}
+                                                label={getEstadoNombre(probeta.estado || 'CODIFICADO')}
+                                                onClick={(e) => handleOpenProbetaEstadoMenu(e, index)}
                                                 sx={{
-                                                  backgroundColor: '#daf3ff',
-                                                  color: '#16b1ff'
+                                                  backgroundColor: getEstadoColor(probeta.estado || 'CODIFICADO').color,
+                                                  color: getEstadoColor(probeta.estado || 'CODIFICADO').textColor,
+                                                  cursor: 'pointer',
+                                                  '&:hover': {
+                                                    opacity: 0.8
+                                                  }
                                                 }}
                                               />
+                                              <Popover
+                                                open={Boolean(probetaEstadoAnchorEl[index])}
+                                                anchorEl={probetaEstadoAnchorEl[index]}
+                                                onClose={() => handleCloseProbetaEstadoMenu(index)}
+                                                anchorOrigin={{
+                                                  vertical: 'bottom',
+                                                  horizontal: 'center'
+                                                }}
+                                                transformOrigin={{
+                                                  vertical: 'top',
+                                                  horizontal: 'center'
+                                                }}
+                                              >
+                                                <List sx={{ p: 0 }}>
+                                                  {estadosDisponibles.map((estado) => (
+                                                    <ListItem
+                                                      key={estado.valor}
+                                                      button
+                                                      onClick={() => handleChangeProbetaEstado(index, estado.valor)}
+                                                      sx={{
+                                                        py: 1,
+                                                        px: 2,
+                                                        '&:hover': {
+                                                          backgroundColor: '#f5f5f5'
+                                                        }
+                                                      }}
+                                                    >
+                                                      <Chip
+                                                        label={estado.nombre}
+                                                        size='small'
+                                                        sx={{
+                                                          backgroundColor: estado.color,
+                                                          color: estado.textColor,
+                                                          width: '120px'
+                                                        }}
+                                                      />
+                                                    </ListItem>
+                                                  ))}
+                                                </List>
+                                              </Popover>
                                             </TableCell>
                                           </TableRow>
                                         ))
