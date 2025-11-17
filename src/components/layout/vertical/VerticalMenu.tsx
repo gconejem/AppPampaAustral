@@ -129,6 +129,10 @@ const VerticalMenu = () => {
               <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-calendar-schedule-line' />}>
                 API Agenda
               </MenuItem>
+
+              <MenuItem href={`/${locale}/apps/send-email`} icon={<i className='ri-calendar-schedule-line' />}>
+                Send Email
+              </MenuItem>
             </MenuSection>
 
             <MenuSection label={labels.appsPages}>
