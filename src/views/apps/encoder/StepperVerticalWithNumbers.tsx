@@ -1528,6 +1528,16 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             sx={{ marginLeft: 'auto' }}
                             onClick={e => e.stopPropagation()}
                           >
+                            <Chip
+                              label='CODIFICADO'
+                              size='small'
+                              sx={{
+                                backgroundColor: '#f3f3f3',
+                                color: '#424242',
+                                fontWeight: 'bold',
+                                height: '24px'
+                              }}
+                            />
                             <Box display='flex' alignItems='center' gap={1}>
                               <Typography variant='body2'>Vencimiento</Typography>
                               <Checkbox
