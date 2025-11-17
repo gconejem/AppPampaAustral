@@ -1400,23 +1400,26 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {muestra.servicios.map((serv, servIdx) => (
-                                            <TableRow key={servIdx}>
-                                              <TableCell>{serv.codigo}</TableCell>
-                                              <TableCell>{serv.nombre}</TableCell>
-                                              <TableCell>{serv.cantidad}</TableCell>
-                                              <TableCell>
-                                                <Chip
-                                                  label={getEstadoNombre(serv.estado || 'CODIFICADO')}
-                                                  size='small'
-                                                  sx={{
-                                                    backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
-                                                    color: getEstadoColor(serv.estado || 'CODIFICADO').textColor
-                                                  }}
-                                                />
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
+                                          {muestra.servicios.map((serv, servIdx) => {
+                                            const estadoInfo = getEstadoColor(serv.estado || 'CODIFICADO')
+                                            return (
+                                              <TableRow key={servIdx}>
+                                                <TableCell>{serv.codigo}</TableCell>
+                                                <TableCell>{serv.nombre}</TableCell>
+                                                <TableCell>{serv.cantidad}</TableCell>
+                                                <TableCell>
+                                                  <Chip
+                                                    label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                                    size='small'
+                                                    sx={{
+                                                      backgroundColor: estadoInfo.color,
+                                                      color: estadoInfo.textColor
+                                                    }}
+                                                  />
+                                                </TableCell>
+                                              </TableRow>
+                                            )
+                                          })}
                                         </TableBody>
                                       </Table>
                                     </TableContainer>
@@ -1439,25 +1442,28 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
-                                            {muestra.probetas.map((probeta, probIdx) => (
-                                              <TableRow key={probIdx}>
-                                                <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{formatDateForDisplay(probeta.fechaConfeccion)}</TableCell>
-                                                <TableCell>{probeta.cantidad}</TableCell>
-                                                <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{formatDateForDisplay(probeta.fechaVencimiento)}</TableCell>
-                                                <TableCell>
-                                                  <Chip
-                                                    label={probeta.estado}
-                                                    size='small'
-                                                    sx={{
-                                                      backgroundColor: '#daf3ff',
-                                                      color: '#16b1ff'
-                                                    }}
-                                                  />
-                                                </TableCell>
-                                              </TableRow>
-                                            ))}
+                                            {muestra.probetas.map((probeta, probIdx) => {
+                                              const estadoInfo = getEstadoColor(probeta.estado || 'CODIFICADO')
+                                              return (
+                                                <TableRow key={probIdx}>
+                                                  <TableCell>{probeta.numero}</TableCell>
+                                                  <TableCell>{formatDateForDisplay(probeta.fechaConfeccion)}</TableCell>
+                                                  <TableCell>{probeta.cantidad}</TableCell>
+                                                  <TableCell>{probeta.dias}</TableCell>
+                                                  <TableCell>{formatDateForDisplay(probeta.fechaVencimiento)}</TableCell>
+                                                  <TableCell>
+                                                    <Chip
+                                                      label={getEstadoNombre(probeta.estado || 'CODIFICADO')}
+                                                      size='small'
+                                                      sx={{
+                                                        backgroundColor: estadoInfo.color,
+                                                        color: estadoInfo.textColor
+                                                      }}
+                                                    />
+                                                  </TableCell>
+                                                </TableRow>
+                                              )
+                                            })}
                                           </TableBody>
                                         </Table>
                                       </TableContainer>
