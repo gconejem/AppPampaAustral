@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation'
 
 import { toast } from 'react-hot-toast'
 
+// Utils
+import { formatDateForInput } from '@/utils/dateUtils'
+
 // MUI Imports
 import IconButton from '@mui/material/IconButton'
 import Checkbox from '@mui/material/Checkbox'
@@ -105,6 +108,15 @@ interface Muestra {
   }>
 }
 
+// Helper function to get today's date in YYYY-MM-DD format (local timezone)
+const getTodayDateString = (): string => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // Constants
 const steps = [
   { title: 'General', subtitle: '' },
@@ -129,10 +141,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const [numeroRcm, setNumeroRcm] = useState<string>('')
 
   // Estados para el paso 1
-  const [fechaCodificacion, setFechaCodificacion] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaMuestreo, setFechaMuestreo] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaIngreso, setFechaIngreso] = useState<string>(new Date().toISOString().split('T')[0])
-  const [fechaEntrega, setFechaEntrega] = useState<string>(new Date().toISOString().split('T')[0])
+  const [fechaCodificacion, setFechaCodificacion] = useState<string>(getTodayDateString())
+  const [fechaMuestreo, setFechaMuestreo] = useState<string>(getTodayDateString())
+  const [fechaIngreso, setFechaIngreso] = useState<string>(getTodayDateString())
+  const [fechaEntrega, setFechaEntrega] = useState<string>(getTodayDateString())
 
   // Estados para el paso 2
   const [servicios, setServicios] = useState<Servicio[]>([])
@@ -161,7 +173,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   // Estados para probetas
   const [probetaMuestra, setProbetaMuestra] = useState<string>('')
   const [probetaNumero, setProbetaNumero] = useState<string>('')
-  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(new Date().toISOString().split('T')[0])
+  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(getTodayDateString())
   const [probetaCantidad, setProbetaCantidad] = useState<string>('1')
   const [probetaDias, setProbetaDias] = useState<string>('7')
   const [probetaFechaVencimiento, setProbetaFechaVencimiento] = useState<string>('')
@@ -383,10 +395,10 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   const handleReset = () => {
     setActiveStep(0)
-    setFechaCodificacion(new Date().toISOString().split('T')[0])
-    setFechaMuestreo(new Date().toISOString().split('T')[0])
-    setFechaIngreso(new Date().toISOString().split('T')[0])
-    setFechaEntrega(new Date().toISOString().split('T')[0])
+    setFechaCodificacion(getTodayDateString())
+    setFechaMuestreo(getTodayDateString())
+    setFechaIngreso(getTodayDateString())
+    setFechaEntrega(getTodayDateString())
     setServicios([])
     setCantidad('1')
     setMuestras([])
@@ -2180,7 +2192,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
                                       // Limpiar campos excepto muestra
                                       setProbetaNumero('')
-                                      setProbetaFechaConfeccion(new Date().toISOString().split('T')[0])
+                                      setProbetaFechaConfeccion(getTodayDateString())
                                       setProbetaCantidad('1')
                                       setProbetaDias('7')
                                       setProbetaFechaVencimiento('')
