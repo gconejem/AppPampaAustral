@@ -1,82 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email-simple'
+import { getServiceCompletionEmailTemplate } from '@/lib/email-templates'
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { to, subject, message, attachments } = body
+        const {
+            to,
+            attachments,
+            // ✅ AGREGAR ESTOS CAMPOS
+            clientName,
+            fecha,
+            hora,
+            projectName,
+            projectLocation,
+            tecnicoName,
+            recepcionName,
+            orders
+        } = body
 
-        if (!to || !subject || !message) {
+        console.log('📧 Preparando email para:', to)
+        console.log('📎 Archivos adjuntos recibidos:', attachments?.length || 0)
+
+        // Validar email
+        if (!to) {
             return NextResponse.json(
-                { error: 'Campos requeridos: to, subject, message' },
+                { error: 'Falta campo requerido: to' },
                 { status: 400 }
             )
         }
 
-        const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 10px 10px 0 0;
-            text-align: center;
-          }
-          .content {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 0 0 10px 10px;
-          }
-          .message {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            font-size: 14px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Pampa Austral</h1>
-          <p style="margin: 0; opacity: 0.9;">Control de Calidad</p>
-        </div>
-        <div class="content">
-          <div class="message">
-            ${message.replace(/\n/g, '<br>')}
-          </div>
-        </div>
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} Pampa Austral. Todos los derechos reservados.</p>
-        </div>
-      </body>
-      </html>
-    `
+        // Asunto fijo
+        const subject = 'Laboratorio Pampa Austral - Notificación de servicio'
 
-        const emailAttachments = attachments?.map((att: any) => ({
-            filename: att.filename,
-            content: Buffer.from(att.content, 'base64'),
-            contentType: att.contentType || 'application/octet-stream',
-            encoding: 'base64'
-        })) || []
+        // ✅ GENERAR HTML CON DATOS DINÁMICOS
+        const htmlContent = getServiceCompletionEmailTemplate({
+            clientName,
+            fecha,
+            hora,
+            projectName,
+            projectLocation,
+            tecnicoName,
+            recepcionName,
+            orders
+        })
 
+        // Procesar attachments
+        const emailAttachments = attachments?.map((att: any) => {
+            console.log('📎 Procesando adjunto:', att.filename)
+            return {
+                filename: att.filename,
+                content: att.content,
+                contentType: att.contentType || 'application/pdf',
+                encoding: 'base64'
+            }
+        }) || []
+
+        console.log('📤 Enviando email con', emailAttachments.length, 'adjunto(s)...')
+
+        // Enviar email
         const info = await sendEmail({
             to,
             subject,
@@ -84,10 +66,13 @@ export async function POST(request: NextRequest) {
             attachments: emailAttachments
         })
 
+        console.log('✅ Email enviado:', info.messageId)
+
         return NextResponse.json({
             success: true,
             messageId: info.messageId,
-            message: 'Email enviado correctamente'
+            message: 'Email enviado correctamente',
+            attachmentsCount: emailAttachments.length
         })
     } catch (error: any) {
         console.error('❌ Error enviando email:', error)

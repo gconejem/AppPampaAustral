@@ -25,8 +25,6 @@ import SendIcon from '@mui/icons-material/Send'
 export default function SendEmailPage() {
     const [recipients, setRecipients] = useState<string[]>([])
     const [currentEmail, setCurrentEmail] = useState('')
-    const [subject, setSubject] = useState('')
-    const [message, setMessage] = useState('')
     const [attachments, setAttachments] = useState<File[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -76,22 +74,12 @@ export default function SendEmailPage() {
             return
         }
 
-        if (!subject.trim()) {
-            setError('El asunto es requerido')
-            return
-        }
-
-        if (!message.trim()) {
-            setError('El mensaje es requerido')
-            return
-        }
-
         setLoading(true)
 
         try {
             console.log('📎 Procesando', attachments.length, 'archivo(s)...')
 
-            // ✅ CORRECCIÓN: Mejorar conversión a base64
+            // Convertir archivos a base64
             const attachmentsData = await Promise.all(
                 attachments.map(async (file) => {
                     return new Promise<any>((resolve, reject) => {
@@ -121,13 +109,12 @@ export default function SendEmailPage() {
 
             console.log('📤 Enviando email con', attachmentsData.length, 'adjunto(s)...')
 
+            // Enviar a cada destinatario
             const response = await fetch('/api/send-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    to: recipients,
-                    subject,
-                    message,
+                    to: recipients.join(', '),
                     attachments: attachmentsData
                 })
             })
@@ -140,15 +127,14 @@ export default function SendEmailPage() {
 
             console.log('✅ Email enviado:', data)
 
-            setSuccess(`✅ Email enviado correctamente ${data.attachmentsCount > 0 ? `con ${data.attachmentsCount} archivo(s) adjunto(s)` : ''}`)
+            setSuccess(`✅ Email enviado correctamente a ${recipients.length} destinatario(s)${data.attachmentsCount > 0 ? ` con ${data.attachmentsCount} archivo(s) adjunto(s)` : ''}`)
 
+            // Limpiar formulario después de 3 segundos
             setTimeout(() => {
                 setRecipients([])
-                setSubject('')
-                setMessage('')
                 setAttachments([])
                 setSuccess('')
-            }, 5000)
+            }, 3000)
         } catch (err: any) {
             console.error('❌ Error:', err)
             setError(err.message)
@@ -161,8 +147,8 @@ export default function SendEmailPage() {
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Card>
                 <CardHeader
-                    title="📧 Enviar Email"
-                    subheader="Enviar correos electrónicos con archivos adjuntos"
+                    title="📧 Notificación de Servicio"
+                    subheader="Laboratorio Pampa Austral - Envío de confirmación de servicios"
                 />
                 <CardContent>
                     {error && (
@@ -176,6 +162,20 @@ export default function SendEmailPage() {
                         </Alert>
                     )}
 
+                    {/* Info sobre el email */}
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        <Typography variant="body2" gutterBottom>
+                            <strong>📋 Email que se enviará:</strong>
+                        </Typography>
+                        <Typography variant="caption" component="div" sx={{ mt: 1 }}>
+                            <strong>Asunto:</strong> Laboratorio Pampa Austral - Notificación de servicio
+                        </Typography>
+                        <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                            <strong>Contenido:</strong> Plantilla de confirmación de servicios completados
+                        </Typography>
+                    </Alert>
+
+                    {/* Destinatarios */}
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle2" gutterBottom>
                             Destinatarios *
@@ -212,28 +212,10 @@ export default function SendEmailPage() {
                         </Box>
                     </Box>
 
-                    <TextField
-                        fullWidth
-                        label="Asunto *"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                        sx={{ mb: 3 }}
-                    />
-
-                    <TextField
-                        fullWidth
-                        label="Mensaje *"
-                        multiline
-                        rows={8}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        sx={{ mb: 3 }}
-                        placeholder="Escribe tu mensaje aquí..."
-                    />
-
+                    {/* Archivos Adjuntos */}
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle2" gutterBottom>
-                            Archivos Adjuntos
+                            Archivos Adjuntos (Órdenes de Trabajo)
                         </Typography>
                         <Button
                             variant="outlined"
@@ -241,11 +223,12 @@ export default function SendEmailPage() {
                             startIcon={<AttachFileIcon />}
                             sx={{ mb: 2 }}
                         >
-                            Seleccionar Archivos
+                            Seleccionar Archivos PDF
                             <input
                                 type="file"
                                 hidden
                                 multiple
+                                accept=".pdf"
                                 onChange={handleFileChange}
                             />
                         </Button>
@@ -272,13 +255,12 @@ export default function SendEmailPage() {
                         )}
                     </Box>
 
+                    {/* Botones */}
                     <Box display="flex" justifyContent="flex-end" gap={2}>
                         <Button
                             variant="outlined"
                             onClick={() => {
                                 setRecipients([])
-                                setSubject('')
-                                setMessage('')
                                 setAttachments([])
                                 setError('')
                                 setSuccess('')
@@ -293,7 +275,7 @@ export default function SendEmailPage() {
                             disabled={loading || recipients.length === 0}
                             startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
                         >
-                            {loading ? 'Enviando...' : 'Enviar Email'}
+                            {loading ? 'Enviando...' : 'Enviar Notificación'}
                         </Button>
                     </Box>
                 </CardContent>

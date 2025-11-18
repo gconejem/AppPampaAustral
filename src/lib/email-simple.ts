@@ -1,13 +1,13 @@
 import nodemailer from 'nodemailer'
 
 interface EmailOptions {
-    to: string | string[]
+    to: string
     subject: string
     html: string
     attachments?: Array<{
         filename: string
-        path?: string
-        content?: Buffer | string
+        content: string | Buffer
+        contentType?: string
         encoding?: string
     }>
 }
@@ -16,8 +16,9 @@ export async function sendEmail(options: EmailOptions) {
     console.log('📧 Iniciando envío de email...')
     console.log('📧 Usuario:', process.env.GMAIL_USER)
     console.log('📧 Destinatarios:', options.to)
+    console.log('📎 Adjuntos:', options.attachments?.length || 0)
 
-    // ✅ CAMBIO: Usar nodemailer.createTransport (sin "er" al final)
+    // Configurar transporte con TLS config
     const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 587,
@@ -27,6 +28,7 @@ export async function sendEmail(options: EmailOptions) {
             pass: process.env.GMAIL_APP_PASSWORD
         },
         tls: {
+            // No rechazar certificados no autorizados (solo para desarrollo)
             rejectUnauthorized: false
         }
     })
@@ -40,20 +42,25 @@ export async function sendEmail(options: EmailOptions) {
         throw error
     }
 
+    // Preparar mensaje
     const mailOptions = {
-        from: {
-            name: process.env.EMAIL_FROM_NAME || 'Pampa Austral',
-            address: process.env.GMAIL_USER || ''
-        },
-        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+        from: `"${process.env.EMAIL_FROM_NAME || 'Pampa Austral'}" <${process.env.GMAIL_USER}>`,
+        to: options.to,
         subject: options.subject,
         html: options.html,
         attachments: options.attachments || []
     }
 
     console.log('📤 Enviando email...')
+
+    // Enviar email
     const info = await transporter.sendMail(mailOptions)
+
     console.log('✅ Email enviado. Message ID:', info.messageId)
+
+    if (options.attachments && options.attachments.length > 0) {
+        console.log('📎 Adjuntos enviados:', options.attachments.map(a => a.filename).join(', '))
+    }
 
     return info
 }
