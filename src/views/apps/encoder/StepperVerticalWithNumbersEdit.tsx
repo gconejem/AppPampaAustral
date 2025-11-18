@@ -85,6 +85,7 @@ interface Muestra {
   procedencia: string
   cota1: string
   cota2: string
+  cotas?: string
   ubicacionSector: string
   vencimiento: boolean
   observaciones: string
