@@ -140,6 +140,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
   const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
   const [estadoAnchorEl, setEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [estadoProbetaAnchorEl, setEstadoProbetaAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
 
   // Estados disponibles con sus colores
   const estadosDisponibles = [
@@ -155,6 +156,18 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   // Estados para muestras
   const [vencimiento, setVencimiento] = useState<boolean>(false)
   const [cantidadMuestras, setCantidadMuestras] = useState<string>('1')
+  const [editingMuestraIndex, setEditingMuestraIndex] = useState<number | null>(null)
+
+  // Estados para probetas
+  const [probetaNumero, setProbetaNumero] = useState<string>('')
+  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(new Date().toISOString().split('T')[0])
+  const [probetaCantidad, setProbetaCantidad] = useState<string>('1')
+  const [probetaDias, setProbetaDias] = useState<string>('7')
+  const [probetaFechaVencimiento, setProbetaFechaVencimiento] = useState<string>(() => {
+    const fecha = new Date()
+    fecha.setDate(fecha.getDate() + 7)
+    return fecha.toISOString().split('T')[0]
+  })
 
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
@@ -533,6 +546,156 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     toast.success('Muestra agregada exitosamente')
   }
 
+  // Función para editar una muestra existente
+  const handleEditMuestra = (index: number) => {
+    const muestra = muestras[index]
+    setEditingMuestraIndex(index)
+    setMuestraActual({
+      ...muestra,
+      cota1: muestra.cota1 || '',
+      cota2: muestra.cota2 || ''
+    })
+    setVencimiento(muestra.vencimiento)
+  }
+
+  // Función para guardar los cambios de una muestra editada
+  const handleSaveMuestra = () => {
+    if (editingMuestraIndex === null) return
+
+    // Validar que se haya ingresado el número de tarjeta
+    if (!muestraActual.numeroTarjeta || muestraActual.numeroTarjeta.trim() === '') {
+      toast.error('Por favor ingrese el N° Tarjeta')
+      return
+    }
+
+    // Validar que los campos requeridos de la muestra estén completos
+    if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
+      toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+      return
+    }
+
+    // Validar que haya al menos un servicio en la muestra
+    if (muestraActual.servicios.length === 0) {
+      toast.error('Por favor agregue al menos un servicio a la muestra')
+      return
+    }
+
+    // Si tiene vencimiento, validar que haya al menos una probeta
+    if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
+      toast.error('Por favor agregue al menos una probeta')
+      return
+    }
+
+    const muestrasActualizadas = [...muestras]
+    muestrasActualizadas[editingMuestraIndex] = {
+      ...muestraActual,
+      cotas: muestraActual.cota1 && muestraActual.cota2
+        ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+        : muestraActual.cota1 || muestraActual.cota2 || ''
+    }
+    setMuestras(muestrasActualizadas)
+    setEditingMuestraIndex(null)
+
+    // Limpiar los campos
+    setMuestraActual({
+      numeroMuestra: '',
+      numeroTarjeta: '',
+      tipoMaterial: '',
+      elemento: '',
+      item: '',
+      grado: '',
+      procedencia: '',
+      cota1: '',
+      cota2: '',
+      ubicacionSector: '',
+      vencimiento: false,
+      observaciones: '',
+      servicios: [],
+      probetas: []
+    })
+    setVencimiento(false)
+    setServicio('')
+    setCantidad('1')
+    setSelectedProduct(null)
+
+    toast.success('Muestra actualizada exitosamente')
+  }
+
+  // Función para cancelar la edición de una muestra
+  const handleCancelEditMuestra = () => {
+    setEditingMuestraIndex(null)
+    setMuestraActual({
+      numeroMuestra: '',
+      numeroTarjeta: '',
+      tipoMaterial: '',
+      elemento: '',
+      item: '',
+      grado: '',
+      procedencia: '',
+      cota1: '',
+      cota2: '',
+      ubicacionSector: '',
+      vencimiento: false,
+      observaciones: '',
+      servicios: [],
+      probetas: []
+    })
+    setVencimiento(false)
+    setServicio('')
+    setCantidad('1')
+    setSelectedProduct(null)
+  }
+
+  // Función para eliminar una muestra
+  const handleDeleteMuestra = (index: number) => {
+    const nuevasMuestras = muestras.filter((_, i) => i !== index)
+    setMuestras(nuevasMuestras)
+    toast.success('Muestra eliminada exitosamente')
+  }
+
+  // Función para añadir probeta
+  const handleAddProbeta = () => {
+    if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
+      toast.error('Por favor complete todos los campos de la probeta')
+      return
+    }
+
+    const nuevaProbeta = {
+      numero: parseInt(probetaNumero),
+      fechaConfeccion: probetaFechaConfeccion,
+      cantidad: parseInt(probetaCantidad),
+      dias: parseInt(probetaDias),
+      fechaVencimiento: probetaFechaVencimiento,
+      estado: 'CODIFICADO'
+    }
+
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: [...prev.probetas, nuevaProbeta]
+    }))
+
+    // Limpiar campos
+    setProbetaNumero('')
+    const fechaActual = new Date()
+    setProbetaFechaConfeccion(fechaActual.toISOString().split('T')[0])
+    setProbetaCantidad('1')
+    setProbetaDias('7')
+    const fechaVenc = new Date()
+    fechaVenc.setDate(fechaVenc.getDate() + 7)
+    setProbetaFechaVencimiento(fechaVenc.toISOString().split('T')[0])
+
+    toast.success('Probeta agregada exitosamente')
+  }
+
+  // Función para calcular fecha de vencimiento basada en días
+  const handleCalcularFechaVencimiento = (fechaConfeccion: string, dias: string) => {
+    if (fechaConfeccion && dias) {
+      const fecha = new Date(fechaConfeccion)
+      fecha.setDate(fecha.getDate() + parseInt(dias))
+      setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+    }
+  }
+
   // Seleccionar un producto
   const handleSelectProduct = (producto: Producto) => {
     setSelectedProduct(producto)
@@ -574,7 +737,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         estado: 'CODIFICADO'
       }
 
-      // Si estamos en el paso 1, agregar al array de servicios general
+      // Si estamos en el paso 0 (General), agregar al array de servicios general
       if (activeStep === 0) {
         setServicios([
           ...servicios,
@@ -586,7 +749,8 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         ])
       }
 
-      // Si estamos en el paso 2, agregar al array de servicios de la muestra actual
+      // Si estamos en el paso 1 (Muestras), agregar al array de servicios de la muestra actual
+      // Esto aplica tanto para nueva muestra como para edición
       else if (activeStep === 1) {
         setMuestraActual(prev => ({
           ...prev,
@@ -697,6 +861,28 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const getEstadoNombre = (estadoValor: string) => {
     const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
     return estadoEncontrado?.nombre || 'Codificado'
+  }
+
+  // Funciones para manejar el cambio de estado de probetas
+  const handleOpenEstadoProbetaMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
+    setEstadoProbetaAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
+  }
+
+  const handleCloseEstadoProbetaMenu = (index: number) => {
+    setEstadoProbetaAnchorEl(prev => ({ ...prev, [index]: null }))
+  }
+
+  const handleChangeEstadoProbeta = (index: number, nuevoEstadoValor: string) => {
+    const nuevasProbetas = [...muestraActual.probetas]
+    nuevasProbetas[index] = {
+      ...nuevasProbetas[index],
+      estado: nuevoEstadoValor
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: nuevasProbetas
+    }))
+    handleCloseEstadoProbetaMenu(index)
   }
 
   // Limpiar filtros
@@ -1307,159 +1493,621 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                             Muestras Agregadas
                           </Typography>
                           {muestras.map((muestra, idx) => (
-                            <Accordion key={idx} sx={{ mb: 1 }}>
+                            <Accordion
+                              key={idx}
+                              sx={{ mb: 1 }}
+                              expanded={editingMuestraIndex === idx}
+                              onChange={(e, isExpanded) => {
+                                if (isExpanded) {
+                                  handleEditMuestra(idx)
+                                } else {
+                                  handleCancelEditMuestra()
+                                }
+                              }}
+                            >
                               <AccordionSummary
                                 expandIcon={<i className='ri-arrow-down-s-line' />}
                                 sx={{
-                                  backgroundColor: '#fafafa',
+                                  backgroundColor: editingMuestraIndex === idx ? '#e3f2fd' : '#fafafa',
                                   border: '1px solid #e0e0e0',
                                   '&:hover': {
-                                    backgroundColor: '#f5f5f5'
+                                    backgroundColor: editingMuestraIndex === idx ? '#e3f2fd' : '#f5f5f5'
                                   }
                                 }}
                               >
-                                <Box display='flex' alignItems='center' gap={2}>
-                                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                                    Muestra #{idx + 1}
-                                  </Typography>
-                                  <Chip
-                                    label={muestra.numeroMuestra || `${numeroRcm}-${idx + 1}`}
-                                    sx={{
-                                      backgroundColor: '#e0e0e0',
-                                      color: '#424242',
-                                      fontWeight: 'bold'
-                                    }}
-                                  />
-                                  {muestra.numeroTarjeta && (
-                                    <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
-                                      N° Tarjeta: {muestra.numeroTarjeta}
+                                <Box display='flex' alignItems='center' justifyContent='space-between' width='100%'>
+                                  <Box display='flex' alignItems='center' gap={2}>
+                                    <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                                      Muestra #{idx + 1}
                                     </Typography>
-                                  )}
+                                    <Chip
+                                      label={muestra.numeroMuestra || `${numeroRcm}-${idx + 1}`}
+                                      sx={{
+                                        backgroundColor: '#e0e0e0',
+                                        color: '#424242',
+                                        fontWeight: 'bold'
+                                      }}
+                                    />
+                                    {muestra.numeroTarjeta && (
+                                      <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
+                                        N° Tarjeta: {muestra.numeroTarjeta}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                  <IconButton
+                                    size='small'
+                                    color='error'
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteMuestra(idx)
+                                    }}
+                                    sx={{ mr: 1 }}
+                                  >
+                                    <DeleteIcon fontSize='small' />
+                                  </IconButton>
                                 </Box>
                               </AccordionSummary>
                               <AccordionDetails>
-                                <Grid container spacing={2}>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Tipo Material:</strong> {muestra.tipoMaterial}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Elemento:</strong> {muestra.elemento}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Ítem:</strong> {muestra.item}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Grado:</strong> {muestra.grado || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Procedencia:</strong> {muestra.procedencia || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Cotas:</strong> {muestra.cota1 && muestra.cota2 ? `${muestra.cota1} - ${muestra.cota2}` : muestra.cota1 || muestra.cota2 || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={12}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Ubicación/Sector:</strong> {muestra.ubicacionSector || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  {muestra.observaciones && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='body2' color='text.secondary'>
-                                        <strong>Observaciones:</strong> {muestra.observaciones}
-                                      </Typography>
+                                {editingMuestraIndex === idx ? (
+                                  // Formulario de edición (igual al de creación)
+                                  <>
+                                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='N° Tarjeta'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.numeroTarjeta}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              numeroTarjeta: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <Box display='flex' alignItems='center' gap={1}>
+                                          <Typography variant='body2'>Vencimiento</Typography>
+                                          <Checkbox
+                                            checked={vencimiento}
+                                            color='primary'
+                                            onChange={e => {
+                                              setVencimiento(e.target.checked)
+                                              setMuestraActual(prev => ({
+                                                ...prev,
+                                                vencimiento: e.target.checked
+                                              }))
+                                            }}
+                                          />
+                                        </Box>
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Tipo Material'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.tipoMaterial}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              tipoMaterial: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Elemento'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.elemento}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              elemento: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Ítem'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.item}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              item: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Grado'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.grado}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              grado: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Procedencia'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.procedencia}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              procedencia: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                        <TextField
+                                          fullWidth
+                                          label='Cota 1'
+                                          value={muestraActual.cota1}
+                                          onChange={e => setMuestraActual({ ...muestraActual, cota1: e.target.value })}
+                                          size='small'
+                                        />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                        <TextField
+                                          fullWidth
+                                          label='Cota 2'
+                                          value={muestraActual.cota2}
+                                          onChange={e => setMuestraActual({ ...muestraActual, cota2: e.target.value })}
+                                          size='small'
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Ubicación / Sector'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.ubicacionSector}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              ubicacionSector: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Observaciones'
+                                          size='small'
+                                          fullWidth
+                                          multiline
+                                          rows={2}
+                                          value={muestraActual.observaciones}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              observaciones: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={8}>
+                                        <TextField
+                                          label='Servicio / Ensayo'
+                                          size='small'
+                                          fullWidth
+                                          value={servicio}
+                                          onChange={handleSearchChange}
+                                          onClick={handleOpenPopover}
+                                          onKeyDown={handleSearchKeyDown}
+                                          InputProps={{
+                                            startAdornment: (
+                                              <InputAdornment position='start'>
+                                                <i className='ri-search-line' style={{ marginRight: 8 }} />
+                                              </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                              <InputAdornment position='end'>
+                                                {loadingProductos && <CircularProgress size={20} />}
+                                                {selectedProduct && (
+                                                  <IconButton
+                                                    size='small'
+                                                    onClick={e => {
+                                                      e.stopPropagation()
+                                                      setSelectedProduct(null)
+                                                      setServicio('')
+                                                    }}
+                                                  >
+                                                    <i className='ri-close-line' />
+                                                  </IconButton>
+                                                )}
+                                              </InputAdornment>
+                                            )
+                                          }}
+                                        />
+                                      </Grid>
+                                      <Grid item xs={2}>
+                                        <TextField
+                                          label='Cantidad'
+                                          size='small'
+                                          fullWidth
+                                          value={cantidad}
+                                          onChange={e => setCantidad(e.target.value)}
+                                          type='number'
+                                          inputProps={{ min: 1 }}
+                                        />
+                                      </Grid>
+                                      <Grid item xs={2}>
+                                        <Button
+                                          variant='contained'
+                                          color='primary'
+                                          size='small'
+                                          startIcon={<i className='ri-add-line' />}
+                                          onClick={handleAddServicio}
+                                          fullWidth
+                                        >
+                                          Añadir
+                                        </Button>
+                                      </Grid>
                                     </Grid>
-                                  )}
-                                  <Grid item xs={12}>
-                                    <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
-                                      Servicios:
-                                    </Typography>
-                                    <TableContainer component={Paper} variant='outlined'>
-                                      <Table size='small'>
-                                        <TableHead>
-                                          <TableRow>
-                                            <TableCell>Código</TableCell>
-                                            <TableCell>Nombre</TableCell>
-                                            <TableCell>Cantidad</TableCell>
-                                            <TableCell>Estado</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {muestra.servicios.map((serv, servIdx) => (
-                                            <TableRow key={servIdx}>
-                                              <TableCell>{serv.codigo}</TableCell>
-                                              <TableCell>{serv.nombre}</TableCell>
-                                              <TableCell>{serv.cantidad}</TableCell>
-                                              <TableCell>
-                                                <Chip
-                                                  label={getEstadoNombre(serv.estado || 'CODIFICADO')}
-                                                  size='small'
-                                                  sx={{
-                                                    backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
-                                                    color: getEstadoColor(serv.estado || 'CODIFICADO').textColor
-                                                  }}
-                                                />
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
-                                  </Grid>
-                                  {muestra.vencimiento && muestra.probetas.length > 0 && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
-                                        Probetas:
-                                      </Typography>
-                                      <TableContainer component={Paper} variant='outlined'>
-                                        <Table size='small'>
-                                          <TableHead>
+
+                                    {/* Tabla de Servicios */}
+                                    <Box sx={{ mt: 3 }}>
+                                      <TableContainer component={Paper}>
+                                        <Table>
+                                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                                             <TableRow>
-                                              <TableCell>N°</TableCell>
-                                              <TableCell>Confección</TableCell>
-                                              <TableCell>Cantidad</TableCell>
-                                              <TableCell>Días</TableCell>
-                                              <TableCell>Vencimiento</TableCell>
-                                              <TableCell>Estado</TableCell>
+                                              <TableCell>CÓD. INT.</TableCell>
+                                              <TableCell>ENSAYO / ANÁLISIS</TableCell>
+                                              <TableCell>CANTIDAD</TableCell>
+                                              <TableCell>ESTADO</TableCell>
+                                              <TableCell>ACCIONES</TableCell>
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
-                                            {muestra.probetas.map((probeta, probIdx) => (
-                                              <TableRow key={probIdx}>
-                                                <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
-                                                <TableCell>{probeta.cantidad}</TableCell>
-                                                <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                                <TableCell>
-                                                  <Chip
-                                                    label={probeta.estado}
-                                                    size='small'
-                                                    sx={{
-                                                      backgroundColor: '#daf3ff',
-                                                      color: '#16b1ff'
-                                                    }}
-                                                  />
+                                            {muestraActual.servicios.length > 0 ? (
+                                              muestraActual.servicios.map((serv, index) => (
+                                                <TableRow key={index}>
+                                                  <TableCell>{serv.codigo}</TableCell>
+                                                  <TableCell>{serv.nombre}</TableCell>
+                                                  <TableCell>
+                                                    {editingMuestraServiceIndex === index ? (
+                                                      <TextField
+                                                        size='small'
+                                                        type='number'
+                                                        value={editingMuestraCantidad}
+                                                        onChange={e => setEditingMuestraCantidad(e.target.value)}
+                                                        inputProps={{ min: 1 }}
+                                                        sx={{ width: '80px' }}
+                                                      />
+                                                    ) : (
+                                                      serv.cantidad
+                                                    )}
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <Chip
+                                                      label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                                      onClick={(e) => handleOpenEstadoMenu(e, index)}
+                                                      sx={{
+                                                        backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
+                                                        color: getEstadoColor(serv.estado || 'CODIFICADO').textColor,
+                                                        cursor: 'pointer',
+                                                        '&:hover': {
+                                                          opacity: 0.8
+                                                        }
+                                                      }}
+                                                    />
+                                                    <Popover
+                                                      open={Boolean(estadoAnchorEl[index])}
+                                                      anchorEl={estadoAnchorEl[index]}
+                                                      onClose={() => handleCloseEstadoMenu(index)}
+                                                      anchorOrigin={{
+                                                        vertical: 'bottom',
+                                                        horizontal: 'center'
+                                                      }}
+                                                      transformOrigin={{
+                                                        vertical: 'top',
+                                                        horizontal: 'center'
+                                                      }}
+                                                    >
+                                                      <List sx={{ p: 0 }}>
+                                                        {estadosDisponibles.map((estado) => (
+                                                          <ListItem
+                                                            key={estado.valor}
+                                                            button
+                                                            onClick={() => handleChangeEstado(index, estado.valor)}
+                                                            sx={{
+                                                              py: 1,
+                                                              px: 2,
+                                                              '&:hover': {
+                                                                backgroundColor: '#f5f5f5'
+                                                              }
+                                                            }}
+                                                          >
+                                                            <Chip
+                                                              label={estado.nombre}
+                                                              size='small'
+                                                              sx={{
+                                                                backgroundColor: estado.color,
+                                                                color: estado.textColor,
+                                                                width: '120px'
+                                                              }}
+                                                            />
+                                                          </ListItem>
+                                                        ))}
+                                                      </List>
+                                                    </Popover>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {editingMuestraServiceIndex === index ? (
+                                                      <>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='success'
+                                                          onClick={() => handleSaveEditMuestraServicio(index)}
+                                                        >
+                                                          <i className='ri-check-line' />
+                                                        </IconButton>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='secondary'
+                                                          onClick={handleCancelEditMuestraServicio}
+                                                        >
+                                                          <i className='ri-close-line' />
+                                                        </IconButton>
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='primary'
+                                                          onClick={() => handleEditMuestraServicio(index)}
+                                                        >
+                                                          <EditIcon fontSize='small' />
+                                                        </IconButton>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='error'
+                                                          onClick={() => handleDeleteMuestraServicio(index)}
+                                                        >
+                                                          <DeleteIcon fontSize='small' />
+                                                        </IconButton>
+                                                      </>
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))
+                                            ) : (
+                                              <TableRow>
+                                                <TableCell colSpan={5} align='center'>
+                                                  No hay servicios agregados
                                                 </TableCell>
                                               </TableRow>
-                                            ))}
+                                            )}
                                           </TableBody>
                                         </Table>
                                       </TableContainer>
-                                    </Grid>
-                                  )}
-                                </Grid>
+                                    </Box>
+
+                                    {/* Sección de probetas (solo si vencimiento está activo) */}
+                                    {vencimiento && (
+                                      <>
+                                        <Grid container spacing={2} sx={{ mt: 3 }}>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Muestra'
+                                              size='small'
+                                              fullWidth
+                                              value={muestraActual.numeroTarjeta}
+                                              InputProps={{
+                                                readOnly: true
+                                              }}
+                                              sx={{
+                                                '& .MuiInputBase-input': {
+                                                  backgroundColor: '#f5f5f5'
+                                                }
+                                              }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={1}>
+                                            <TextField
+                                              label='N°'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaNumero}
+                                              onChange={e => setProbetaNumero(e.target.value)}
+                                              type='number'
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Fecha Confección'
+                                              type='date'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaFechaConfeccion}
+                                              onChange={e => {
+                                                setProbetaFechaConfeccion(e.target.value)
+                                                handleCalcularFechaVencimiento(e.target.value, probetaDias)
+                                              }}
+                                              InputLabelProps={{ shrink: true }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Cantidad'
+                                              type='number'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaCantidad}
+                                              onChange={e => setProbetaCantidad(e.target.value)}
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={1}>
+                                            <TextField
+                                              label='Días'
+                                              type='number'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaDias}
+                                              onChange={e => {
+                                                setProbetaDias(e.target.value)
+                                                handleCalcularFechaVencimiento(probetaFechaConfeccion, e.target.value)
+                                              }}
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Fecha Vencimiento'
+                                              type='date'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaFechaVencimiento}
+                                              onChange={e => setProbetaFechaVencimiento(e.target.value)}
+                                              InputLabelProps={{ shrink: true }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <Button
+                                              variant='contained'
+                                              color='primary'
+                                              size='small'
+                                              startIcon={<i className='ri-add-line' />}
+                                              onClick={handleAddProbeta}
+                                              fullWidth
+                                            >
+                                              Añadir
+                                            </Button>
+                                          </Grid>
+                                        </Grid>
+
+                                        {/* Tabla de probetas */}
+                                        <Box sx={{ mt: 3 }}>
+                                          <TableContainer component={Paper}>
+                                            <Table>
+                                              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                                <TableRow>
+                                                  <TableCell>#</TableCell>
+                                                  <TableCell>Muestra</TableCell>
+                                                  <TableCell>Confección</TableCell>
+                                                  <TableCell>Cantidad</TableCell>
+                                                  <TableCell>Días</TableCell>
+                                                  <TableCell>Vencimiento</TableCell>
+                                                  <TableCell>Estado</TableCell>
+                                                </TableRow>
+                                              </TableHead>
+                                              <TableBody>
+                                                {muestraActual.probetas.length > 0 ? (
+                                                  muestraActual.probetas.map((probeta, index) => (
+                                                    <TableRow key={index}>
+                                                      <TableCell>{index + 1}</TableCell>
+                                                      <TableCell>{probeta.numero}</TableCell>
+                                                      <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                                      <TableCell>{probeta.cantidad}</TableCell>
+                                                      <TableCell>{probeta.dias}</TableCell>
+                                                      <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                                      <TableCell>
+                                                        <Chip
+                                                          label={getEstadoNombre(probeta.estado)}
+                                                          onClick={(e) => handleOpenEstadoProbetaMenu(e, index)}
+                                                          size='small'
+                                                          sx={{
+                                                            backgroundColor: getEstadoColor(probeta.estado).color,
+                                                            color: getEstadoColor(probeta.estado).textColor,
+                                                            cursor: 'pointer',
+                                                            '&:hover': {
+                                                              opacity: 0.8
+                                                            }
+                                                          }}
+                                                        />
+                                                        <Popover
+                                                          open={Boolean(estadoProbetaAnchorEl[index])}
+                                                          anchorEl={estadoProbetaAnchorEl[index]}
+                                                          onClose={() => handleCloseEstadoProbetaMenu(index)}
+                                                          anchorOrigin={{
+                                                            vertical: 'bottom',
+                                                            horizontal: 'center'
+                                                          }}
+                                                          transformOrigin={{
+                                                            vertical: 'top',
+                                                            horizontal: 'center'
+                                                          }}
+                                                        >
+                                                          <List sx={{ p: 0 }}>
+                                                            {estadosDisponibles.map((estado) => (
+                                                              <ListItem
+                                                                key={estado.valor}
+                                                                button
+                                                                onClick={() => handleChangeEstadoProbeta(index, estado.valor)}
+                                                                sx={{
+                                                                  py: 1,
+                                                                  px: 2,
+                                                                  '&:hover': {
+                                                                    backgroundColor: '#f5f5f5'
+                                                                  }
+                                                                }}
+                                                              >
+                                                                <Chip
+                                                                  label={estado.nombre}
+                                                                  size='small'
+                                                                  sx={{
+                                                                    backgroundColor: estado.color,
+                                                                    color: estado.textColor,
+                                                                    width: '120px'
+                                                                  }}
+                                                                />
+                                                              </ListItem>
+                                                            ))}
+                                                          </List>
+                                                        </Popover>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))
+                                                ) : (
+                                                  <TableRow>
+                                                    <TableCell colSpan={7} align='center'>
+                                                      No hay probetas agregadas
+                                                    </TableCell>
+                                                  </TableRow>
+                                                )}
+                                              </TableBody>
+                                            </Table>
+                                          </TableContainer>
+                                        </Box>
+                                      </>
+                                    )}
+
+                                    {/* Botones de acción */}
+                                    <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                                      <Button
+                                        variant='outlined'
+                                        color='secondary'
+                                        onClick={handleCancelEditMuestra}
+                                      >
+                                        Cancelar
+                                      </Button>
+                                      <Button
+                                        variant='contained'
+                                        color='primary'
+                                        onClick={handleSaveMuestra}
+                                      >
+                                        Guardar Cambios
+                                      </Button>
+                                    </Box>
+                                  </>
+                                ) : null}
                               </AccordionDetails>
                             </Accordion>
                           ))}
