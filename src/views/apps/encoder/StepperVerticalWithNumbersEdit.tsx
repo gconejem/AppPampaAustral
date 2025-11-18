@@ -85,6 +85,7 @@ interface Muestra {
   procedencia: string
   cota1: string
   cota2: string
+  cotas?: string
   ubicacionSector: string
   vencimiento: boolean
   observaciones: string
@@ -140,6 +141,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const [editingMuestraServiceIndex, setEditingMuestraServiceIndex] = useState<number | null>(null)
   const [editingMuestraCantidad, setEditingMuestraCantidad] = useState<string>('1')
   const [estadoAnchorEl, setEstadoAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
+  const [estadoProbetaAnchorEl, setEstadoProbetaAnchorEl] = useState<{ [key: number]: HTMLElement | null }>({})
 
   // Estados disponibles con sus colores
   const estadosDisponibles = [
@@ -155,6 +157,18 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   // Estados para muestras
   const [vencimiento, setVencimiento] = useState<boolean>(false)
   const [cantidadMuestras, setCantidadMuestras] = useState<string>('1')
+  const [editingMuestraIndex, setEditingMuestraIndex] = useState<number | null>(null)
+
+  // Estados para probetas
+  const [probetaNumero, setProbetaNumero] = useState<string>('')
+  const [probetaFechaConfeccion, setProbetaFechaConfeccion] = useState<string>(new Date().toISOString().split('T')[0])
+  const [probetaCantidad, setProbetaCantidad] = useState<string>('1')
+  const [probetaDias, setProbetaDias] = useState<string>('7')
+  const [probetaFechaVencimiento, setProbetaFechaVencimiento] = useState<string>(() => {
+    const fecha = new Date()
+    fecha.setDate(fecha.getDate() + 7)
+    return fecha.toISOString().split('T')[0]
+  })
 
   const [muestraActual, setMuestraActual] = useState<Muestra>({
     numeroMuestra: '',
@@ -183,6 +197,13 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const [searchTerm, setSearchTerm] = useState('')
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null)
+
+  // Estados adicionales para el popover de edición de muestra
+  const [anchorElEdit, setAnchorElEdit] = useState<HTMLElement | null>(null)
+  const [searchTermEdit, setSearchTermEdit] = useState('')
+  const [filteredProductosEdit, setFilteredProductosEdit] = useState<Producto[]>([])
+  const [productsPageEdit, setProductsPageEdit] = useState(0)
+  const [totalProductosEdit, setTotalProductosEdit] = useState(0)
 
   // Estados para filtros
   const [selectedArea, setSelectedArea] = useState<string>('')
@@ -361,6 +382,34 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     }
   }, [productsPage, searchTerm, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes, anchorEl])
 
+  // Cargar productos paginados para el popover de edición
+  useEffect(() => {
+    if (anchorElEdit) {
+      const params = new URLSearchParams()
+      params.append('page', (productsPageEdit + 1).toString())
+      params.append('limit', ITEMS_PER_PAGE.toString())
+
+      if (searchTermEdit) params.append('search', searchTermEdit)
+      if (selectedArea) params.append('area', selectedArea)
+      if (selectedTipo) params.append('tipo', selectedTipo)
+      if (selectedFamilia) params.append('familia', selectedFamilia)
+      if (showOnlyPaquetes) params.append('esPaquete', 'true')
+
+      fetch(`/api/productos?${params.toString()}`)
+        .then(res => res.json())
+        .then(response => {
+          const data = response.productos || []
+          setFilteredProductosEdit(data)
+          setTotalProductosEdit(Number.isFinite(response.total) ? Number(response.total) : 0)
+        })
+        .catch(error => {
+          console.error('Error al cargar productos paginados:', error)
+          setFilteredProductosEdit([])
+          setTotalProductosEdit(0)
+        })
+    }
+  }, [productsPageEdit, searchTermEdit, selectedArea, selectedTipo, selectedFamilia, showOnlyPaquetes, anchorElEdit])
+
   // Resetear página cuando cambien los filtros
   useEffect(() => {
     if (anchorEl) {
@@ -465,6 +514,41 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     setAnchorEl(null)
   }
 
+  // Abrir el popover de edición
+  const handleOpenPopoverEdit = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElEdit(event.currentTarget)
+    setLoadingProductos(true)
+    setProductsPageEdit(0)
+    setSearchTermEdit('')
+    setSelectedArea('')
+    setSelectedTipo('')
+    setSelectedFamilia('')
+    setLoadingProductos(false)
+  }
+
+  // Cerrar el popover de edición
+  const handleClosePopoverEdit = () => {
+    setAnchorElEdit(null)
+  }
+
+  // Controlar cambios en el campo de búsqueda de edición
+  const handleSearchChangeEdit = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value
+    setServicio(value)
+    clearTimeout((window as any).searchTimeoutEdit)
+      ; (window as any).searchTimeoutEdit = setTimeout(() => {
+        setSearchTermEdit(value)
+      }, 300)
+  }
+
+  // Manejar teclas especiales en el buscador de edición
+  const handleSearchKeyDownEdit = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && filteredProductosEdit.length > 0 && anchorElEdit) {
+      handleSelectProduct(filteredProductosEdit[0])
+      event.preventDefault()
+    }
+  }
+
   // Función para agregar una muestra y limpiar los campos
   const handleAddMuestra = () => {
     // Validar que se haya ingresado el número de tarjeta
@@ -533,6 +617,192 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     toast.success('Muestra agregada exitosamente')
   }
 
+  // Función para editar una muestra existente
+  const handleEditMuestra = (index: number) => {
+    const muestra = muestras[index]
+    setEditingMuestraIndex(index)
+    setMuestraActual({
+      ...muestra,
+      cota1: muestra.cota1 || '',
+      cota2: muestra.cota2 || ''
+    })
+    setVencimiento(muestra.vencimiento)
+  }
+
+  // Función para guardar los cambios de una muestra editada
+  const handleSaveMuestra = () => {
+    if (editingMuestraIndex === null) return
+
+    // Validar que se haya ingresado el número de tarjeta
+    if (!muestraActual.numeroTarjeta || muestraActual.numeroTarjeta.trim() === '') {
+      toast.error('Por favor ingrese el N° Tarjeta')
+      return
+    }
+
+    // Validar que los campos requeridos de la muestra estén completos
+    if (!muestraActual.tipoMaterial || !muestraActual.elemento || !muestraActual.item) {
+      toast.error('Por favor complete los campos requeridos de la muestra (Tipo Material, Elemento, Item)')
+      return
+    }
+
+    // Validar que haya al menos un servicio en la muestra
+    if (muestraActual.servicios.length === 0) {
+      toast.error('Por favor agregue al menos un servicio a la muestra')
+      return
+    }
+
+    // Si tiene vencimiento, validar que haya al menos una probeta
+    if (muestraActual.vencimiento && muestraActual.probetas.length === 0) {
+      toast.error('Por favor agregue al menos una probeta')
+      return
+    }
+
+    const muestrasActualizadas = [...muestras]
+    muestrasActualizadas[editingMuestraIndex] = {
+      ...muestraActual,
+      cotas: muestraActual.cota1 && muestraActual.cota2
+        ? `${muestraActual.cota1} - ${muestraActual.cota2}`
+        : muestraActual.cota1 || muestraActual.cota2 || ''
+    }
+    setMuestras(muestrasActualizadas)
+    setEditingMuestraIndex(null)
+
+    // Limpiar los campos
+    setMuestraActual({
+      numeroMuestra: '',
+      numeroTarjeta: '',
+      tipoMaterial: '',
+      elemento: '',
+      item: '',
+      grado: '',
+      procedencia: '',
+      cota1: '',
+      cota2: '',
+      ubicacionSector: '',
+      vencimiento: false,
+      observaciones: '',
+      servicios: [],
+      probetas: []
+    })
+    setVencimiento(false)
+    setServicio('')
+    setCantidad('1')
+    setSelectedProduct(null)
+
+    // Limpiar estados de probetas
+    setProbetaNumero('')
+    setProbetaFechaConfeccion(new Date().toISOString().split('T')[0])
+    setProbetaCantidad('1')
+    setProbetaDias('7')
+    const fechaVenc = new Date()
+    fechaVenc.setDate(fechaVenc.getDate() + 7)
+    setProbetaFechaVencimiento(fechaVenc.toISOString().split('T')[0])
+
+    toast.success('Muestra actualizada exitosamente')
+  }
+
+  // Función para cancelar la edición de una muestra
+  const handleCancelEditMuestra = () => {
+    setEditingMuestraIndex(null)
+    setMuestraActual({
+      numeroMuestra: '',
+      numeroTarjeta: '',
+      tipoMaterial: '',
+      elemento: '',
+      item: '',
+      grado: '',
+      procedencia: '',
+      cota1: '',
+      cota2: '',
+      ubicacionSector: '',
+      vencimiento: false,
+      observaciones: '',
+      servicios: [],
+      probetas: []
+    })
+    setVencimiento(false)
+    setServicio('')
+    setCantidad('1')
+    setSelectedProduct(null)
+
+    // Limpiar estados de probetas
+    setProbetaNumero('')
+    setProbetaFechaConfeccion(new Date().toISOString().split('T')[0])
+    setProbetaCantidad('1')
+    setProbetaDias('7')
+    const fechaVenc = new Date()
+    fechaVenc.setDate(fechaVenc.getDate() + 7)
+    setProbetaFechaVencimiento(fechaVenc.toISOString().split('T')[0])
+  }
+
+  // Función para eliminar una muestra
+  const handleDeleteMuestra = (index: number) => {
+    const nuevasMuestras = muestras.filter((_, i) => i !== index)
+    setMuestras(nuevasMuestras)
+    toast.success('Muestra eliminada exitosamente')
+  }
+
+  // Función para duplicar una muestra
+  const handleDuplicateMuestra = (index: number) => {
+    const muestraOriginal = muestras[index]
+
+    // Crear una copia de la muestra sin número de tarjeta, sin vencimiento y sin probetas
+    const muestraDuplicada: Muestra = {
+      ...muestraOriginal,
+      numeroMuestra: `${numeroRcm}-${muestras.length + 1}`,
+      numeroTarjeta: '', // Limpiar número de tarjeta
+      vencimiento: false, // Desactivar vencimiento
+      probetas: [] // Sin probetas
+    }
+
+    // Agregar la muestra duplicada al array
+    setMuestras([...muestras, muestraDuplicada])
+    toast.success('Muestra duplicada exitosamente')
+  }
+
+  // Función para añadir probeta
+  const handleAddProbeta = () => {
+    if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
+      toast.error('Por favor complete todos los campos de la probeta')
+      return
+    }
+
+    const nuevaProbeta = {
+      numero: parseInt(probetaNumero),
+      fechaConfeccion: probetaFechaConfeccion,
+      cantidad: parseInt(probetaCantidad),
+      dias: parseInt(probetaDias),
+      fechaVencimiento: probetaFechaVencimiento,
+      estado: 'CODIFICADO'
+    }
+
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: [...prev.probetas, nuevaProbeta]
+    }))
+
+    // Limpiar campos
+    setProbetaNumero('')
+    const fechaActual = new Date()
+    setProbetaFechaConfeccion(fechaActual.toISOString().split('T')[0])
+    setProbetaCantidad('1')
+    setProbetaDias('7')
+    const fechaVenc = new Date()
+    fechaVenc.setDate(fechaVenc.getDate() + 7)
+    setProbetaFechaVencimiento(fechaVenc.toISOString().split('T')[0])
+
+    toast.success('Probeta agregada exitosamente')
+  }
+
+  // Función para calcular fecha de vencimiento basada en días
+  const handleCalcularFechaVencimiento = (fechaConfeccion: string, dias: string) => {
+    if (fechaConfeccion && dias) {
+      const fecha = new Date(fechaConfeccion)
+      fecha.setDate(fecha.getDate() + parseInt(dias))
+      setProbetaFechaVencimiento(fecha.toISOString().split('T')[0])
+    }
+  }
+
   // Seleccionar un producto
   const handleSelectProduct = (producto: Producto) => {
     setSelectedProduct(producto)
@@ -574,7 +844,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         estado: 'CODIFICADO'
       }
 
-      // Si estamos en el paso 1, agregar al array de servicios general
+      // Si estamos en el paso 0 (General), agregar al array de servicios general
       if (activeStep === 0) {
         setServicios([
           ...servicios,
@@ -586,7 +856,8 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         ])
       }
 
-      // Si estamos en el paso 2, agregar al array de servicios de la muestra actual
+      // Si estamos en el paso 1 (Muestras), agregar al array de servicios de la muestra actual
+      // Esto aplica tanto para nueva muestra como para edición
       else if (activeStep === 1) {
         setMuestraActual(prev => ({
           ...prev,
@@ -697,6 +968,28 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const getEstadoNombre = (estadoValor: string) => {
     const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
     return estadoEncontrado?.nombre || 'Codificado'
+  }
+
+  // Funciones para manejar el cambio de estado de probetas
+  const handleOpenEstadoProbetaMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
+    setEstadoProbetaAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
+  }
+
+  const handleCloseEstadoProbetaMenu = (index: number) => {
+    setEstadoProbetaAnchorEl(prev => ({ ...prev, [index]: null }))
+  }
+
+  const handleChangeEstadoProbeta = (index: number, nuevoEstadoValor: string) => {
+    const nuevasProbetas = [...muestraActual.probetas]
+    nuevasProbetas[index] = {
+      ...nuevasProbetas[index],
+      estado: nuevoEstadoValor
+    }
+    setMuestraActual(prev => ({
+      ...prev,
+      probetas: nuevasProbetas
+    }))
+    handleCloseEstadoProbetaMenu(index)
   }
 
   // Limpiar filtros
@@ -1307,919 +1600,1665 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                             Muestras Agregadas
                           </Typography>
                           {muestras.map((muestra, idx) => (
-                            <Accordion key={idx} sx={{ mb: 1 }}>
+                            <Accordion
+                              key={idx}
+                              sx={{ mb: 1 }}
+                              expanded={editingMuestraIndex === idx}
+                              onChange={(e, isExpanded) => {
+                                if (isExpanded) {
+                                  handleEditMuestra(idx)
+                                } else {
+                                  handleCancelEditMuestra()
+                                }
+                              }}
+                            >
                               <AccordionSummary
                                 expandIcon={<i className='ri-arrow-down-s-line' />}
                                 sx={{
-                                  backgroundColor: '#fafafa',
+                                  backgroundColor: editingMuestraIndex === idx ? '#e3f2fd' : '#fafafa',
                                   border: '1px solid #e0e0e0',
                                   '&:hover': {
-                                    backgroundColor: '#f5f5f5'
+                                    backgroundColor: editingMuestraIndex === idx ? '#e3f2fd' : '#f5f5f5'
                                   }
                                 }}
                               >
-                                <Box display='flex' alignItems='center' gap={2}>
-                                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                                    Muestra #{idx + 1}
-                                  </Typography>
-                                  <Chip
-                                    label={muestra.numeroMuestra || `${numeroRcm}-${idx + 1}`}
-                                    sx={{
-                                      backgroundColor: '#e0e0e0',
-                                      color: '#424242',
-                                      fontWeight: 'bold'
-                                    }}
-                                  />
-                                  {muestra.numeroTarjeta && (
-                                    <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
-                                      N° Tarjeta: {muestra.numeroTarjeta}
+                                <Box display='flex' alignItems='center' justifyContent='space-between' width='100%'>
+                                  <Box display='flex' alignItems='center' gap={2}>
+                                    <Typography variant='h6' sx={{ fontWeight: 'bold' }}>
+                                      Muestra #{idx + 1}
                                     </Typography>
-                                  )}
+                                    <Chip
+                                      label={muestra.numeroMuestra || `${numeroRcm}-${idx + 1}`}
+                                      sx={{
+                                        backgroundColor: '#e0e0e0',
+                                        color: '#424242',
+                                        fontWeight: 'bold',
+                                        height: '24px'
+                                      }}
+                                    />
+                                    <TextField
+                                      label='N° Tarjeta'
+                                      size='small'
+                                      value={editingMuestraIndex === idx ? muestraActual.numeroTarjeta : muestra.numeroTarjeta}
+                                      onChange={e => {
+                                        if (editingMuestraIndex === idx) {
+                                          setMuestraActual(prev => ({
+                                            ...prev,
+                                            numeroTarjeta: e.target.value
+                                          }))
+                                        }
+                                      }}
+                                      disabled={editingMuestraIndex !== idx}
+                                      onClick={e => e.stopPropagation()}
+                                      sx={{
+                                        width: '200px',
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                          WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)'
+                                        }
+                                      }}
+                                    />
+                                  </Box>
+                                  <Box
+                                    display='flex'
+                                    alignItems='center'
+                                    gap={2}
+                                    sx={{ marginLeft: 'auto' }}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Chip
+                                      label='CODIFICADO'
+                                      size='small'
+                                      sx={{
+                                        backgroundColor: '#f3f3f3',
+                                        color: '#424242',
+                                        fontWeight: 'bold',
+                                        height: '24px'
+                                      }}
+                                    />
+                                    <Box display='flex' alignItems='center' gap={1}>
+                                      <Typography variant='body2'>Vencimiento</Typography>
+                                      <Checkbox
+                                        checked={editingMuestraIndex === idx ? vencimiento : muestra.vencimiento}
+                                        disabled={editingMuestraIndex !== idx}
+                                        color='primary'
+                                        onChange={e => {
+                                          if (editingMuestraIndex === idx) {
+                                            const isChecked = e.target.checked
+                                            setVencimiento(isChecked)
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              vencimiento: isChecked
+                                            }))
+                                          }
+                                        }}
+                                        sx={{ padding: '4px' }}
+                                      />
+                                    </Box>
+                                    <IconButton
+                                      size='small'
+                                      color='primary'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDuplicateMuestra(idx)
+                                      }}
+                                      title='Duplicar muestra'
+                                    >
+                                      <i className='ri-file-copy-line' />
+                                    </IconButton>
+                                    <IconButton
+                                      size='small'
+                                      color='primary'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDeleteMuestra(idx)
+                                      }}
+                                      title='Eliminar muestra'
+                                    >
+                                      <i className='ri-delete-bin-line' />
+                                    </IconButton>
+                                  </Box>
                                 </Box>
                               </AccordionSummary>
                               <AccordionDetails>
-                                <Grid container spacing={2}>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Tipo Material:</strong> {muestra.tipoMaterial}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Elemento:</strong> {muestra.elemento}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Ítem:</strong> {muestra.item}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Grado:</strong> {muestra.grado || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Procedencia:</strong> {muestra.procedencia || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={6}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Cotas:</strong> {muestra.cota1 && muestra.cota2 ? `${muestra.cota1} - ${muestra.cota2}` : muestra.cota1 || muestra.cota2 || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={12}>
-                                    <Typography variant='body2' color='text.secondary'>
-                                      <strong>Ubicación/Sector:</strong> {muestra.ubicacionSector || 'N/A'}
-                                    </Typography>
-                                  </Grid>
-                                  {muestra.observaciones && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='body2' color='text.secondary'>
-                                        <strong>Observaciones:</strong> {muestra.observaciones}
-                                      </Typography>
-                                    </Grid>
-                                  )}
-                                  <Grid item xs={12}>
-                                    <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
-                                      Servicios:
-                                    </Typography>
-                                    <TableContainer component={Paper} variant='outlined'>
-                                      <Table size='small'>
-                                        <TableHead>
-                                          <TableRow>
-                                            <TableCell>Código</TableCell>
-                                            <TableCell>Nombre</TableCell>
-                                            <TableCell>Cantidad</TableCell>
-                                            <TableCell>Estado</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {muestra.servicios.map((serv, servIdx) => (
-                                            <TableRow key={servIdx}>
-                                              <TableCell>{serv.codigo}</TableCell>
-                                              <TableCell>{serv.nombre}</TableCell>
-                                              <TableCell>{serv.cantidad}</TableCell>
-                                              <TableCell>
-                                                <Chip
-                                                  label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                {editingMuestraIndex === idx ? (
+                                  // Formulario de edición (igual al de creación)
+                                  <>
+                                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='N° Tarjeta'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.numeroTarjeta}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              numeroTarjeta: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <Box display='flex' alignItems='center' gap={1}>
+                                          <Typography variant='body2'>Vencimiento</Typography>
+                                          <Checkbox
+                                            checked={vencimiento}
+                                            color='primary'
+                                            onChange={e => {
+                                              setVencimiento(e.target.checked)
+                                              setMuestraActual(prev => ({
+                                                ...prev,
+                                                vencimiento: e.target.checked
+                                              }))
+                                            }}
+                                          />
+                                        </Box>
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Tipo Material'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.tipoMaterial}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              tipoMaterial: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Elemento'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.elemento}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              elemento: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Ítem'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.item}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              item: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Grado'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.grado}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              grado: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Procedencia'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.procedencia}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              procedencia: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                        <TextField
+                                          fullWidth
+                                          label='Cota 1'
+                                          value={muestraActual.cota1}
+                                          onChange={e => setMuestraActual({ ...muestraActual, cota1: e.target.value })}
+                                          size='small'
+                                        />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                        <TextField
+                                          fullWidth
+                                          label='Cota 2'
+                                          value={muestraActual.cota2}
+                                          onChange={e => setMuestraActual({ ...muestraActual, cota2: e.target.value })}
+                                          size='small'
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Ubicación / Sector'
+                                          size='small'
+                                          fullWidth
+                                          value={muestraActual.ubicacionSector}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              ubicacionSector: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={6}>
+                                        <TextField
+                                          label='Observaciones'
+                                          size='small'
+                                          fullWidth
+                                          multiline
+                                          rows={2}
+                                          value={muestraActual.observaciones}
+                                          onChange={e =>
+                                            setMuestraActual(prev => ({
+                                              ...prev,
+                                              observaciones: e.target.value
+                                            }))
+                                          }
+                                        />
+                                      </Grid>
+                                      <Grid item xs={8}>
+                                        <TextField
+                                          label='Servicio / Ensayo'
+                                          size='small'
+                                          fullWidth
+                                          value={servicio}
+                                          onChange={handleSearchChangeEdit}
+                                          onClick={handleOpenPopoverEdit}
+                                          onKeyDown={handleSearchKeyDownEdit}
+                                          InputProps={{
+                                            startAdornment: (
+                                              <InputAdornment position='start'>
+                                                <i className='ri-search-line' style={{ marginRight: 8 }} />
+                                              </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                              <InputAdornment position='end'>
+                                                {loadingProductos && <CircularProgress size={20} />}
+                                                {selectedProduct && (
+                                                  <IconButton
+                                                    size='small'
+                                                    onClick={e => {
+                                                      e.stopPropagation()
+                                                      setSelectedProduct(null)
+                                                      setServicio('')
+                                                    }}
+                                                  >
+                                                    <i className='ri-close-line' />
+                                                  </IconButton>
+                                                )}
+                                              </InputAdornment>
+                                            )
+                                          }}
+                                        />
+                                        <Popover
+                                          id='productos-popover-edit'
+                                          open={Boolean(anchorElEdit)}
+                                          anchorEl={anchorElEdit}
+                                          onClose={handleClosePopoverEdit}
+                                          anchorOrigin={{
+                                            vertical: 'bottom',
+                                            horizontal: 'left'
+                                          }}
+                                          transformOrigin={{
+                                            vertical: 'top',
+                                            horizontal: 'left'
+                                          }}
+                                          PaperProps={{
+                                            style: {
+                                              maxHeight: 500,
+                                              width: '100%',
+                                              maxWidth: anchorElEdit && anchorElEdit.offsetWidth > 600 ? anchorElEdit.offsetWidth : 600
+                                            }
+                                          }}
+                                        >
+                                          {loadingProductos ? (
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                                              <CircularProgress size={24} />
+                                            </Box>
+                                          ) : (
+                                            <>
+                                              <Box
+                                                sx={{
+                                                  position: 'sticky',
+                                                  top: 0,
+                                                  zIndex: 10,
+                                                  backgroundColor: '#fff',
+                                                  borderBottom: '1px solid #eee',
+                                                  p: 2
+                                                }}
+                                              >
+                                                <TextField
+                                                  fullWidth
                                                   size='small'
-                                                  sx={{
-                                                    backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
-                                                    color: getEstadoColor(serv.estado || 'CODIFICADO').textColor
+                                                  placeholder='Buscar por nombre, SKU o descripción...'
+                                                  value={searchTermEdit}
+                                                  onChange={e => setSearchTermEdit(e.target.value)}
+                                                  InputProps={{
+                                                    startAdornment: (
+                                                      <InputAdornment position='start'>
+                                                        <i className='ri-search-line' />
+                                                      </InputAdornment>
+                                                    )
                                                   }}
+                                                  sx={{ mb: 2 }}
                                                 />
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
-                                  </Grid>
-                                  {muestra.vencimiento && muestra.probetas.length > 0 && (
-                                    <Grid item xs={12}>
-                                      <Typography variant='subtitle2' sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
-                                        Probetas:
-                                      </Typography>
-                                      <TableContainer component={Paper} variant='outlined'>
-                                        <Table size='small'>
-                                          <TableHead>
+                                                <Grid container spacing={2}>
+                                                  <Grid item xs={4}>
+                                                    <FormControl size='small' fullWidth>
+                                                      <InputLabel shrink>Tipo</InputLabel>
+                                                      <Select
+                                                        value={selectedTipo}
+                                                        label='Tipo'
+                                                        onChange={e => setSelectedTipo(e.target.value)}
+                                                        displayEmpty
+                                                        renderValue={selected => selected === '' ? 'Todos' : selected}
+                                                      >
+                                                        <MenuItem value=''>Todos</MenuItem>
+                                                        {tipos.map((tipo: string) => (
+                                                          <MenuItem key={tipo} value={tipo}>
+                                                            {tipo}
+                                                          </MenuItem>
+                                                        ))}
+                                                      </Select>
+                                                    </FormControl>
+                                                  </Grid>
+                                                  <Grid item xs={4}>
+                                                    <FormControl size='small' fullWidth>
+                                                      <InputLabel shrink>Área</InputLabel>
+                                                      <Select
+                                                        value={selectedArea}
+                                                        label='Área'
+                                                        onChange={e => setSelectedArea(e.target.value)}
+                                                        displayEmpty
+                                                        renderValue={selected => selected === '' ? 'Todas' : selected}
+                                                      >
+                                                        <MenuItem value=''>Todas</MenuItem>
+                                                        {areas.map((area: string) => (
+                                                          <MenuItem key={area} value={area}>
+                                                            {area}
+                                                          </MenuItem>
+                                                        ))}
+                                                      </Select>
+                                                    </FormControl>
+                                                  </Grid>
+                                                  <Grid item xs={4}>
+                                                    <FormControl size='small' fullWidth>
+                                                      <InputLabel shrink>Familia</InputLabel>
+                                                      <Select
+                                                        value={selectedFamilia}
+                                                        label='Familia'
+                                                        onChange={e => setSelectedFamilia(e.target.value)}
+                                                        displayEmpty
+                                                        renderValue={selected => selected === '' ? 'Todas' : selected}
+                                                      >
+                                                        <MenuItem value=''>Todas</MenuItem>
+                                                        {familiasFiltradasPorArea.map((familia: string) => (
+                                                          <MenuItem key={familia} value={familia}>
+                                                            {familia}
+                                                          </MenuItem>
+                                                        ))}
+                                                      </Select>
+                                                    </FormControl>
+                                                  </Grid>
+                                                </Grid>
+                                                <Box
+                                                  sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    mt: 1
+                                                  }}
+                                                >
+                                                  <FormControlLabel
+                                                    control={
+                                                      <Switch
+                                                        checked={showOnlyPaquetes}
+                                                        onChange={e => setShowOnlyPaquetes(e.target.checked)}
+                                                        size='small'
+                                                      />
+                                                    }
+                                                    label='Solo Paquetes'
+                                                  />
+                                                  <Button
+                                                    size='small'
+                                                    onClick={handleClearFilters}
+                                                    startIcon={<i className='ri-filter-off-line' />}
+                                                    variant='text'
+                                                  >
+                                                    Limpiar filtros
+                                                  </Button>
+                                                </Box>
+                                              </Box>
+                                              <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                                                <List>
+                                                  {filteredProductosEdit.length > 0 ? (
+                                                    filteredProductosEdit.map(producto => (
+                                                      <ListItem
+                                                        button
+                                                        key={producto.productoId}
+                                                        onClick={() => {
+                                                          handleSelectProduct(producto)
+                                                          handleClosePopoverEdit()
+                                                        }}
+                                                        divider
+                                                        sx={{
+                                                          '&:hover': {
+                                                            backgroundColor: '#f5f5f5'
+                                                          }
+                                                        }}
+                                                      >
+                                                        <ListItemText
+                                                          primary={<Typography fontWeight='medium'>{producto.nombre}</Typography>}
+                                                          secondary={
+                                                            <Box>
+                                                              <Typography
+                                                                variant='body2'
+                                                                component='span'
+                                                                sx={{ fontWeight: 'bold' }}
+                                                              >
+                                                                SKU: {producto.sku}
+                                                              </Typography>
+                                                              {' | '}
+                                                              <Typography variant='body2' component='span'>
+                                                                Tipo: {producto.tipo || 'N/A'}
+                                                              </Typography>
+                                                              {' | '}
+                                                              <Typography variant='body2' component='span'>
+                                                                Área: {producto.area || 'N/A'}
+                                                              </Typography>
+                                                              {' | '}
+                                                              <Typography variant='body2' component='span'>
+                                                                Familia: {producto.familia || 'N/A'}
+                                                              </Typography>
+                                                            </Box>
+                                                          }
+                                                        />
+                                                      </ListItem>
+                                                    ))
+                                                  ) : (
+                                                    <ListItem>
+                                                      <ListItemText
+                                                        primary='No se encontraron productos'
+                                                        secondary='Intenta con otros términos o limpia los filtros'
+                                                      />
+                                                    </ListItem>
+                                                  )}
+                                                </List>
+                                              </Box>
+                                              <Box sx={{ p: 1, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                                <Button
+                                                  size='small'
+                                                  onClick={() => setProductsPageEdit(prev => Math.max(0, prev - 1))}
+                                                  disabled={productsPageEdit === 0}
+                                                >
+                                                  Anterior
+                                                </Button>
+                                                <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                                                  Página {productsPageEdit + 1} de {Math.max(1, Math.ceil(totalProductosEdit / ITEMS_PER_PAGE))}
+                                                </Typography>
+                                                <Button
+                                                  size='small'
+                                                  onClick={() => setProductsPageEdit(prev => Math.min(Math.ceil(totalProductosEdit / ITEMS_PER_PAGE) - 1, prev + 1))}
+                                                  disabled={productsPageEdit >= Math.ceil(totalProductosEdit / ITEMS_PER_PAGE) - 1}
+                                                >
+                                                  Siguiente
+                                                </Button>
+                                              </Box>
+                                            </>
+                                          )}
+                                        </Popover>
+                                      </Grid>
+                                      <Grid item xs={2}>
+                                        <TextField
+                                          label='Cantidad'
+                                          size='small'
+                                          fullWidth
+                                          value={cantidad}
+                                          onChange={e => setCantidad(e.target.value)}
+                                          type='number'
+                                          inputProps={{ min: 1 }}
+                                        />
+                                      </Grid>
+                                      <Grid item xs={2}>
+                                        <Button
+                                          variant='contained'
+                                          color='primary'
+                                          size='small'
+                                          startIcon={<i className='ri-add-line' />}
+                                          onClick={handleAddServicio}
+                                          fullWidth
+                                        >
+                                          Añadir
+                                        </Button>
+                                      </Grid>
+                                    </Grid>
+
+                                    {/* Tabla de Servicios */}
+                                    <Box sx={{ mt: 3 }}>
+                                      <TableContainer component={Paper}>
+                                        <Table>
+                                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                                             <TableRow>
-                                              <TableCell>N°</TableCell>
-                                              <TableCell>Confección</TableCell>
-                                              <TableCell>Cantidad</TableCell>
-                                              <TableCell>Días</TableCell>
-                                              <TableCell>Vencimiento</TableCell>
-                                              <TableCell>Estado</TableCell>
+                                              <TableCell>CÓD. INT.</TableCell>
+                                              <TableCell>ENSAYO / ANÁLISIS</TableCell>
+                                              <TableCell>CANTIDAD</TableCell>
+                                              <TableCell>ESTADO</TableCell>
+                                              <TableCell>ACCIONES</TableCell>
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
-                                            {muestra.probetas.map((probeta, probIdx) => (
-                                              <TableRow key={probIdx}>
-                                                <TableCell>{probeta.numero}</TableCell>
-                                                <TableCell>{probeta.fechaConfeccion}</TableCell>
-                                                <TableCell>{probeta.cantidad}</TableCell>
-                                                <TableCell>{probeta.dias}</TableCell>
-                                                <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                                <TableCell>
-                                                  <Chip
-                                                    label={probeta.estado}
-                                                    size='small'
-                                                    sx={{
-                                                      backgroundColor: '#daf3ff',
-                                                      color: '#16b1ff'
-                                                    }}
-                                                  />
+                                            {muestraActual.servicios.length > 0 ? (
+                                              muestraActual.servicios.map((serv, index) => (
+                                                <TableRow key={index}>
+                                                  <TableCell>{serv.codigo}</TableCell>
+                                                  <TableCell>{serv.nombre}</TableCell>
+                                                  <TableCell>
+                                                    {editingMuestraServiceIndex === index ? (
+                                                      <TextField
+                                                        size='small'
+                                                        type='number'
+                                                        value={editingMuestraCantidad}
+                                                        onChange={e => setEditingMuestraCantidad(e.target.value)}
+                                                        inputProps={{ min: 1 }}
+                                                        sx={{ width: '80px' }}
+                                                      />
+                                                    ) : (
+                                                      serv.cantidad
+                                                    )}
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <Chip
+                                                      label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                                      onClick={(e) => handleOpenEstadoMenu(e, index)}
+                                                      sx={{
+                                                        backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
+                                                        color: getEstadoColor(serv.estado || 'CODIFICADO').textColor,
+                                                        cursor: 'pointer',
+                                                        '&:hover': {
+                                                          opacity: 0.8
+                                                        }
+                                                      }}
+                                                    />
+                                                    <Popover
+                                                      open={Boolean(estadoAnchorEl[index])}
+                                                      anchorEl={estadoAnchorEl[index]}
+                                                      onClose={() => handleCloseEstadoMenu(index)}
+                                                      anchorOrigin={{
+                                                        vertical: 'bottom',
+                                                        horizontal: 'center'
+                                                      }}
+                                                      transformOrigin={{
+                                                        vertical: 'top',
+                                                        horizontal: 'center'
+                                                      }}
+                                                    >
+                                                      <List sx={{ p: 0 }}>
+                                                        {estadosDisponibles.map((estado) => (
+                                                          <ListItem
+                                                            key={estado.valor}
+                                                            button
+                                                            onClick={() => handleChangeEstado(index, estado.valor)}
+                                                            sx={{
+                                                              py: 1,
+                                                              px: 2,
+                                                              '&:hover': {
+                                                                backgroundColor: '#f5f5f5'
+                                                              }
+                                                            }}
+                                                          >
+                                                            <Chip
+                                                              label={estado.nombre}
+                                                              size='small'
+                                                              sx={{
+                                                                backgroundColor: estado.color,
+                                                                color: estado.textColor,
+                                                                width: '120px'
+                                                              }}
+                                                            />
+                                                          </ListItem>
+                                                        ))}
+                                                      </List>
+                                                    </Popover>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {editingMuestraServiceIndex === index ? (
+                                                      <>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='success'
+                                                          onClick={() => handleSaveEditMuestraServicio(index)}
+                                                        >
+                                                          <i className='ri-check-line' />
+                                                        </IconButton>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='secondary'
+                                                          onClick={handleCancelEditMuestraServicio}
+                                                        >
+                                                          <i className='ri-close-line' />
+                                                        </IconButton>
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='primary'
+                                                          onClick={() => handleEditMuestraServicio(index)}
+                                                        >
+                                                          <EditIcon fontSize='small' />
+                                                        </IconButton>
+                                                        <IconButton
+                                                          size='small'
+                                                          color='error'
+                                                          onClick={() => handleDeleteMuestraServicio(index)}
+                                                        >
+                                                          <DeleteIcon fontSize='small' />
+                                                        </IconButton>
+                                                      </>
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))
+                                            ) : (
+                                              <TableRow>
+                                                <TableCell colSpan={5} align='center'>
+                                                  No hay servicios agregados
                                                 </TableCell>
                                               </TableRow>
-                                            ))}
+                                            )}
                                           </TableBody>
                                         </Table>
                                       </TableContainer>
-                                    </Grid>
-                                  )}
-                                </Grid>
+                                    </Box>
+
+                                    {/* Sección de probetas (solo si vencimiento está activo) */}
+                                    {vencimiento && (
+                                      <>
+                                        <Grid container spacing={2} sx={{ mt: 3 }}>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Muestra'
+                                              size='small'
+                                              fullWidth
+                                              value={muestraActual.numeroTarjeta}
+                                              InputProps={{
+                                                readOnly: true
+                                              }}
+                                              sx={{
+                                                '& .MuiInputBase-input': {
+                                                  backgroundColor: '#f5f5f5'
+                                                }
+                                              }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={1}>
+                                            <TextField
+                                              label='N°'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaNumero}
+                                              onChange={e => setProbetaNumero(e.target.value)}
+                                              type='number'
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Fecha Confección'
+                                              type='date'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaFechaConfeccion}
+                                              onChange={e => {
+                                                setProbetaFechaConfeccion(e.target.value)
+                                                handleCalcularFechaVencimiento(e.target.value, probetaDias)
+                                              }}
+                                              InputLabelProps={{ shrink: true }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Cantidad'
+                                              type='number'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaCantidad}
+                                              onChange={e => setProbetaCantidad(e.target.value)}
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={1}>
+                                            <TextField
+                                              label='Días'
+                                              type='number'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaDias}
+                                              onChange={e => {
+                                                setProbetaDias(e.target.value)
+                                                handleCalcularFechaVencimiento(probetaFechaConfeccion, e.target.value)
+                                              }}
+                                              inputProps={{ min: 1 }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <TextField
+                                              label='Fecha Vencimiento'
+                                              type='date'
+                                              size='small'
+                                              fullWidth
+                                              value={probetaFechaVencimiento}
+                                              onChange={e => setProbetaFechaVencimiento(e.target.value)}
+                                              InputLabelProps={{ shrink: true }}
+                                            />
+                                          </Grid>
+                                          <Grid item xs={2}>
+                                            <Button
+                                              variant='contained'
+                                              color='primary'
+                                              size='small'
+                                              startIcon={<i className='ri-add-line' />}
+                                              onClick={handleAddProbeta}
+                                              fullWidth
+                                            >
+                                              Añadir
+                                            </Button>
+                                          </Grid>
+                                        </Grid>
+
+                                        {/* Tabla de probetas */}
+                                        <Box sx={{ mt: 3 }}>
+                                          <TableContainer component={Paper}>
+                                            <Table>
+                                              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                                <TableRow>
+                                                  <TableCell>#</TableCell>
+                                                  <TableCell>Muestra</TableCell>
+                                                  <TableCell>Confección</TableCell>
+                                                  <TableCell>Cantidad</TableCell>
+                                                  <TableCell>Días</TableCell>
+                                                  <TableCell>Vencimiento</TableCell>
+                                                  <TableCell>Estado</TableCell>
+                                                </TableRow>
+                                              </TableHead>
+                                              <TableBody>
+                                                {muestraActual.probetas.length > 0 ? (
+                                                  muestraActual.probetas.map((probeta, index) => (
+                                                    <TableRow key={index}>
+                                                      <TableCell>{index + 1}</TableCell>
+                                                      <TableCell>{probeta.numero}</TableCell>
+                                                      <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                                      <TableCell>{probeta.cantidad}</TableCell>
+                                                      <TableCell>{probeta.dias}</TableCell>
+                                                      <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                                      <TableCell>
+                                                        <Chip
+                                                          label={getEstadoNombre(probeta.estado)}
+                                                          onClick={(e) => handleOpenEstadoProbetaMenu(e, index)}
+                                                          size='small'
+                                                          sx={{
+                                                            backgroundColor: getEstadoColor(probeta.estado).color,
+                                                            color: getEstadoColor(probeta.estado).textColor,
+                                                            cursor: 'pointer',
+                                                            '&:hover': {
+                                                              opacity: 0.8
+                                                            }
+                                                          }}
+                                                        />
+                                                        <Popover
+                                                          open={Boolean(estadoProbetaAnchorEl[index])}
+                                                          anchorEl={estadoProbetaAnchorEl[index]}
+                                                          onClose={() => handleCloseEstadoProbetaMenu(index)}
+                                                          anchorOrigin={{
+                                                            vertical: 'bottom',
+                                                            horizontal: 'center'
+                                                          }}
+                                                          transformOrigin={{
+                                                            vertical: 'top',
+                                                            horizontal: 'center'
+                                                          }}
+                                                        >
+                                                          <List sx={{ p: 0 }}>
+                                                            {estadosDisponibles.map((estado) => (
+                                                              <ListItem
+                                                                key={estado.valor}
+                                                                button
+                                                                onClick={() => handleChangeEstadoProbeta(index, estado.valor)}
+                                                                sx={{
+                                                                  py: 1,
+                                                                  px: 2,
+                                                                  '&:hover': {
+                                                                    backgroundColor: '#f5f5f5'
+                                                                  }
+                                                                }}
+                                                              >
+                                                                <Chip
+                                                                  label={estado.nombre}
+                                                                  size='small'
+                                                                  sx={{
+                                                                    backgroundColor: estado.color,
+                                                                    color: estado.textColor,
+                                                                    width: '120px'
+                                                                  }}
+                                                                />
+                                                              </ListItem>
+                                                            ))}
+                                                          </List>
+                                                        </Popover>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))
+                                                ) : (
+                                                  <TableRow>
+                                                    <TableCell colSpan={7} align='center'>
+                                                      No hay probetas agregadas
+                                                    </TableCell>
+                                                  </TableRow>
+                                                )}
+                                              </TableBody>
+                                            </Table>
+                                          </TableContainer>
+                                        </Box>
+                                      </>
+                                    )}
+
+                                    {/* Botones de acción */}
+                                    <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                                      <Button
+                                        variant='outlined'
+                                        color='secondary'
+                                        onClick={handleCancelEditMuestra}
+                                      >
+                                        Cancelar
+                                      </Button>
+                                      <Button
+                                        variant='contained'
+                                        color='primary'
+                                        onClick={handleSaveMuestra}
+                                      >
+                                        Guardar Cambios
+                                      </Button>
+                                    </Box>
+                                  </>
+                                ) : null}
                               </AccordionDetails>
                             </Accordion>
                           ))}
                         </Box>
                       )}
 
-                      {/* Acordeón para Muestra Actual */}
-                      <Accordion defaultExpanded sx={{ mt: 3 }}>
-                        <AccordionSummary
-                          expandIcon={<i className='ri-arrow-down-s-line' />}
-                          sx={{
-                            backgroundColor: '#f5f5f5',
-                            borderBottom: '1px solid #ddd',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <Box display='flex' alignItems='center' gap={2}>
-                            <Typography variant='h6' sx={{ fontWeight: 'bold' }}>
-                              Muestra #{muestras.length + 1}
-                            </Typography>
-                            <Chip
-                              label={`${numeroRcm}-${muestras.length + 1}`}
-                              sx={{
-                                backgroundColor: '#e0e0e0',
-                                color: '#424242',
-                                fontWeight: 'bold',
-                                height: '24px'
-                              }}
-                            />
-                            <TextField
-                              label='N° Tarjeta'
-                              size='small'
-                              value={muestraActual.numeroTarjeta}
-                              onChange={e =>
-                                setMuestraActual(prev => ({
-                                  ...prev,
-                                  numeroTarjeta: e.target.value
-                                }))
-                              }
-                              onClick={e => e.stopPropagation()}
-                              sx={{ width: '200px' }}
-                            />
-                          </Box>
-                          <Box
-                            display='flex'
-                            alignItems='center'
-                            gap={2}
-                            sx={{ marginLeft: 'auto' }}
-                            onClick={e => e.stopPropagation()}
+                      {/* Acordeón para Muestra Actual (solo si no estamos editando) */}
+                      {editingMuestraIndex === null && (
+                        <Accordion defaultExpanded sx={{ mt: 3 }}>
+                          <AccordionSummary
+                            expandIcon={<i className='ri-arrow-down-s-line' />}
+                            sx={{
+                              backgroundColor: '#f5f5f5',
+                              borderBottom: '1px solid #ddd',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
                           >
-                            <Box display='flex' alignItems='center' gap={1}>
-                              <Typography variant='body2'>Vencimiento</Typography>
-                              <Checkbox
-                                checked={vencimiento}
-                                color='primary'
-                                onChange={e => {
-                                  setVencimiento(e.target.checked)
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    vencimiento: e.target.checked
-                                  }))
+                            <Box display='flex' alignItems='center' gap={2}>
+                              <Typography variant='h6' sx={{ fontWeight: 'bold' }}>
+                                Muestra #{muestras.length + 1}
+                              </Typography>
+                              <Chip
+                                label={`${numeroRcm}-${muestras.length + 1}`}
+                                sx={{
+                                  backgroundColor: '#e0e0e0',
+                                  color: '#424242',
+                                  fontWeight: 'bold',
+                                  height: '24px'
                                 }}
                               />
+                              <TextField
+                                label='N° Tarjeta'
+                                size='small'
+                                value={muestraActual.numeroTarjeta}
+                                onChange={e =>
+                                  setMuestraActual(prev => ({
+                                    ...prev,
+                                    numeroTarjeta: e.target.value
+                                  }))
+                                }
+                                onClick={e => e.stopPropagation()}
+                                sx={{ width: '200px' }}
+                              />
                             </Box>
-                            <IconButton color='primary' onClick={() => console.log('Editar clickeado')}>
-                              <i className='ri-edit-line' />
-                            </IconButton>
-                            <IconButton color='primary' onClick={() => console.log('Duplicar clickeado')}>
-                              <i className='ri-file-copy-line' />
-                            </IconButton>
-                            <IconButton color='primary' onClick={() => console.log('Eliminar clickeado')}>
-                              <i className='ri-delete-bin-line' />
-                            </IconButton>
-                          </Box>
-                        </AccordionSummary>
+                            <Box
+                              display='flex'
+                              alignItems='center'
+                              gap={2}
+                              sx={{ marginLeft: 'auto' }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <Box display='flex' alignItems='center' gap={1}>
+                                <Typography variant='body2'>Vencimiento</Typography>
+                                <Checkbox
+                                  checked={vencimiento}
+                                  color='primary'
+                                  onChange={e => {
+                                    setVencimiento(e.target.checked)
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      vencimiento: e.target.checked
+                                    }))
+                                  }}
+                                />
+                              </Box>
+                              <IconButton color='primary' onClick={() => console.log('Editar clickeado')}>
+                                <i className='ri-edit-line' />
+                              </IconButton>
+                              <IconButton color='primary' onClick={() => console.log('Duplicar clickeado')}>
+                                <i className='ri-file-copy-line' />
+                              </IconButton>
+                              <IconButton color='primary' onClick={() => console.log('Eliminar clickeado')}>
+                                <i className='ri-delete-bin-line' />
+                              </IconButton>
+                            </Box>
+                          </AccordionSummary>
 
-                        <AccordionDetails>
-                          {/* Campos organizados */}
-                          <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Tipo Material'
-                                size='small'
-                                fullWidth
-                                value={muestraActual.tipoMaterial}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    tipoMaterial: e.target.value
-                                  }))
-                                }
-                              />
-                            </Grid>
-                            <Grid item xs={6} sx={{ mb: 2 }}>
-                              <TextField
-                                label='Elemento'
-                                size='small'
-                                fullWidth
-                                value={muestraActual.elemento}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    elemento: e.target.value
-                                  }))
-                                }
-                              />
-                            </Grid>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Ítem'
-                                size='small'
-                                fullWidth
-                                value={muestraActual.item}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    item: e.target.value
-                                  }))
-                                }
-                              />
-                            </Grid>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Grado'
-                                size='small'
-                                fullWidth
-                                value={muestraActual.grado}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    grado: e.target.value
-                                  }))
-                                }
-                              />
-                            </Grid>
-                            <Grid container item xs={12} spacing={2}>
-                              <Grid item xs={6}>
+                          <AccordionDetails>
+                            {/* Campos organizados */}
+                            <Grid container spacing={2} sx={{ mt: 2 }}>
+                              <Grid item xs={6} sx={{ mb: 4 }}>
                                 <TextField
-                                  label='Procedencia'
+                                  label='Tipo Material'
                                   size='small'
                                   fullWidth
-                                  value={muestraActual.procedencia}
+                                  value={muestraActual.tipoMaterial}
                                   onChange={e =>
                                     setMuestraActual(prev => ({
                                       ...prev,
-                                      procedencia: e.target.value
+                                      tipoMaterial: e.target.value
                                     }))
                                   }
                                 />
                               </Grid>
-                              <Grid item xs={3}>
+                              <Grid item xs={6} sx={{ mb: 2 }}>
                                 <TextField
-                                  fullWidth
-                                  label='Cota 1'
-                                  value={muestraActual.cota1}
-                                  onChange={e => setMuestraActual({ ...muestraActual, cota1: e.target.value })}
+                                  label='Elemento'
                                   size='small'
-                                />
-                              </Grid>
-                              <Grid item xs={3}>
-                                <TextField
                                   fullWidth
-                                  label='Cota 2'
-                                  value={muestraActual.cota2}
-                                  onChange={e => setMuestraActual({ ...muestraActual, cota2: e.target.value })}
-                                  size='small'
-                                />
-                              </Grid>
-                            </Grid>
-                            <Grid item xs={6} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Ubicación / Sector'
-                                size='small'
-                                fullWidth
-                                value={muestraActual.ubicacionSector}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    ubicacionSector: e.target.value
-                                  }))
-                                }
-                              />
-                            </Grid>
-                            <Grid item xs={4} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Cantidad muestras'
-                                size='small'
-                                fullWidth
-                                value={cantidadMuestras}
-                                onChange={e => setCantidadMuestras(e.target.value)}
-                                type='number'
-                              />
-                            </Grid>
-                            <Grid item xs={2} sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                              <Button
-                                variant='contained'
-                                color='primary'
-                                size='small'
-                                startIcon={<i className='ri-add-line' />}
-                                onClick={handleAddMuestra}
-                                sx={{
-                                  padding: '6px 12px'
-                                }}
-                              >
-                                Agregar muestra
-                              </Button>
-                            </Grid>
-                            <Grid item xs={8} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Servicio / Ensayo'
-                                size='small'
-                                fullWidth
-                                value={servicio}
-                                onChange={handleSearchChange}
-                                onClick={handleOpenPopover}
-                                onKeyDown={handleSearchKeyDown}
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position='start'>
-                                      <i className='ri-search-line' style={{ marginRight: 8 }} />
-                                    </InputAdornment>
-                                  ),
-                                  endAdornment: (
-                                    <InputAdornment position='end'>
-                                      {loadingProductos && <CircularProgress size={20} />}
-                                      {selectedProduct && (
-                                        <IconButton
-                                          size='small'
-                                          onClick={e => {
-                                            e.stopPropagation()
-                                            setSelectedProduct(null)
-                                            setServicio('')
-                                          }}
-                                        >
-                                          <i className='ri-close-line' />
-                                        </IconButton>
-                                      )}
-                                    </InputAdornment>
-                                  )
-                                }}
-                              />
-                              <Popover
-                                id={id}
-                                open={open}
-                                anchorEl={anchorEl}
-                                onClose={handleClosePopover}
-                                anchorOrigin={{
-                                  vertical: 'bottom',
-                                  horizontal: 'left'
-                                }}
-                                transformOrigin={{
-                                  vertical: 'top',
-                                  horizontal: 'left'
-                                }}
-                                PaperProps={{
-                                  style: {
-                                    maxHeight: 500,
-                                    width: '100%',
-                                    maxWidth: anchorEl && anchorEl.offsetWidth > 600 ? anchorEl.offsetWidth : 600
+                                  value={muestraActual.elemento}
+                                  onChange={e =>
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      elemento: e.target.value
+                                    }))
                                   }
-                                }}
-                              >
-                                {loadingProductos ? (
-                                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                                    <CircularProgress size={24} />
-                                  </Box>
-                                ) : (
-                                  <>
-                                    <Box
-                                      sx={{
-                                        position: 'sticky',
-                                        top: 0,
-                                        zIndex: 10,
-                                        backgroundColor: '#fff',
-                                        borderBottom: '1px solid #eee',
-                                        p: 2
-                                      }}
-                                    >
-                                      <TextField
-                                        fullWidth
-                                        size='small'
-                                        placeholder='Buscar por nombre, SKU o descripción...'
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        InputProps={{
-                                          startAdornment: (
-                                            <InputAdornment position='start'>
-                                              <i className='ri-search-line' />
-                                            </InputAdornment>
-                                          )
-                                        }}
-                                        sx={{ mb: 2 }}
-                                      />
-                                      <Grid container spacing={2}>
-                                        <Grid item xs={4}>
-                                          <FormControl size='small' fullWidth>
-                                            <InputLabel shrink>Tipo</InputLabel>
-                                            <Select
-                                              value={selectedTipo}
-                                              label='Tipo'
-                                              onChange={e => setSelectedTipo(e.target.value)}
-                                              displayEmpty
-                                              renderValue={selected => selected === '' ? 'Todos' : selected}
-                                            >
-                                              <MenuItem value=''>Todos</MenuItem>
-                                              {tipos.map((tipo: string) => (
-                                                <MenuItem key={tipo} value={tipo}>
-                                                  {tipo}
-                                                </MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                        <Grid item xs={4}>
-                                          <FormControl size='small' fullWidth>
-                                            <InputLabel shrink>Área</InputLabel>
-                                            <Select
-                                              value={selectedArea}
-                                              label='Área'
-                                              onChange={e => setSelectedArea(e.target.value)}
-                                              displayEmpty
-                                              renderValue={selected => selected === '' ? 'Todas' : selected}
-                                            >
-                                              <MenuItem value=''>Todas</MenuItem>
-                                              {areas.map((area: string) => (
-                                                <MenuItem key={area} value={area}>
-                                                  {area}
-                                                </MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                        <Grid item xs={4}>
-                                          <FormControl size='small' fullWidth>
-                                            <InputLabel shrink>Familia</InputLabel>
-                                            <Select
-                                              value={selectedFamilia}
-                                              label='Familia'
-                                              onChange={e => setSelectedFamilia(e.target.value)}
-                                              displayEmpty
-                                              renderValue={selected => selected === '' ? 'Todas' : selected}
-                                            >
-                                              <MenuItem value=''>Todas</MenuItem>
-                                              {familiasFiltradasPorArea.map((familia: string) => (
-                                                <MenuItem key={familia} value={familia}>
-                                                  {familia}
-                                                </MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                      </Grid>
-                                      <Box
-                                        sx={{
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                          alignItems: 'center',
-                                          mt: 1
-                                        }}
-                                      >
-                                        <FormControlLabel
-                                          control={
-                                            <Switch
-                                              checked={showOnlyPaquetes}
-                                              onChange={e => setShowOnlyPaquetes(e.target.checked)}
-                                              size='small'
-                                            />
-                                          }
-                                          label='Solo Paquetes'
-                                        />
-                                        <Button
-                                          size='small'
-                                          onClick={handleClearFilters}
-                                          startIcon={<i className='ri-filter-off-line' />}
-                                          variant='text'
-                                        >
-                                          Limpiar filtros
-                                        </Button>
-                                      </Box>
-                                    </Box>
-                                    <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                                      <List>
-                                        {filteredProductos.length > 0 ? (
-                                          filteredProductos.map(producto => (
-                                            <ListItem
-                                              button
-                                              key={producto.productoId}
-                                              onClick={() => handleSelectProduct(producto)}
-                                              divider
-                                              sx={{
-                                                '&:hover': {
-                                                  backgroundColor: '#f5f5f5'
-                                                }
-                                              }}
-                                            >
-                                              <ListItemText
-                                                primary={<Typography fontWeight='medium'>{producto.nombre}</Typography>}
-                                                secondary={
-                                                  <Box>
-                                                    <Typography
-                                                      variant='body2'
-                                                      component='span'
-                                                      sx={{ fontWeight: 'bold' }}
-                                                    >
-                                                      SKU: {producto.sku}
-                                                    </Typography>
-                                                    {' | '}
-                                                    <Typography variant='body2' component='span'>
-                                                      Tipo: {producto.tipo || 'N/A'}
-                                                    </Typography>
-                                                    {' | '}
-                                                    <Typography variant='body2' component='span'>
-                                                      Área: {producto.area || 'N/A'}
-                                                    </Typography>
-                                                    {' | '}
-                                                    <Typography variant='body2' component='span'>
-                                                      Familia: {producto.familia || 'N/A'}
-                                                    </Typography>
-                                                  </Box>
-                                                }
-                                              />
-                                            </ListItem>
-                                          ))
-                                        ) : (
-                                          <ListItem>
-                                            <ListItemText
-                                              primary='No se encontraron productos'
-                                              secondary='Intenta con otros términos o limpia los filtros'
-                                            />
-                                          </ListItem>
-                                        )}
-
-                                      </List>
-                                    </Box>
-                                    <Box sx={{ p: 1, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: 1 }}>
-                                      <Button
-                                        size='small'
-                                        onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
-                                        disabled={productsPage === 0}
-                                      >
-                                        Anterior
-                                      </Button>
-                                      <Typography variant='body2' sx={{ alignSelf: 'center' }}>
-                                        Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
-                                      </Typography>
-                                      <Button
-                                        size='small'
-                                        onClick={() => setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))}
-                                        disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
-                                      >
-                                        Siguiente
-                                      </Button>
-                                    </Box>
-                                  </>
-                                )}
-                              </Popover>
-                            </Grid>
-                            <Grid item xs={2} sx={{ mb: 4 }}>
-                              <TextField
-                                label='Cantidad'
-                                size='small'
-                                fullWidth
-                                value={cantidad}
-                                onChange={e => setCantidad(e.target.value)}
-                                type='number'
-                                inputProps={{ min: 1 }}
-                              />
-                            </Grid>
-                            <Grid item xs={2} sx={{ mb: 2 }}>
-                              <Button
-                                variant='contained'
-                                color='primary'
-                                size='small'
-                                startIcon={<i className='ri-add-line' />}
-                                onClick={handleAddServicio}
-                                sx={{
-                                  maxWidth: '150px',
-                                  width: '100%',
-                                  padding: '6px 12px'
-                                }}
-                              >
-                                Añadir Servicio
-                              </Button>
-                            </Grid>
-                          </Grid>
-
-                          {/* Tabla de Servicios */}
-                          <Box sx={{ mt: 4 }}>
-                            <TableContainer component={Paper}>
-                              <Table>
-                                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                                  <TableRow>
-                                    <TableCell>CÓD. INT.</TableCell>
-                                    <TableCell>ENSAYO / ANÁLISIS</TableCell>
-                                    <TableCell>CANTIDAD</TableCell>
-                                    <TableCell>ESTADO</TableCell>
-                                    <TableCell>ACCIONES</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {muestraActual.servicios.length > 0 ? (
-                                    muestraActual.servicios.map((serv, index) => (
-                                      <TableRow key={index}>
-                                        <TableCell>{serv.codigo}</TableCell>
-                                        <TableCell>{serv.nombre}</TableCell>
-                                        <TableCell>
-                                          {editingMuestraServiceIndex === index ? (
-                                            <TextField
-                                              size='small'
-                                              type='number'
-                                              value={editingMuestraCantidad}
-                                              onChange={e => setEditingMuestraCantidad(e.target.value)}
-                                              inputProps={{ min: 1 }}
-                                              sx={{ width: '80px' }}
-                                            />
-                                          ) : (
-                                            serv.cantidad
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          <Chip
-                                            label={getEstadoNombre(serv.estado || 'CODIFICADO')}
-                                            onClick={(e) => handleOpenEstadoMenu(e, index)}
-                                            sx={{
-                                              backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
-                                              color: getEstadoColor(serv.estado || 'CODIFICADO').textColor,
-                                              cursor: 'pointer',
-                                              '&:hover': {
-                                                opacity: 0.8
-                                              }
-                                            }}
-                                          />
-                                          <Popover
-                                            open={Boolean(estadoAnchorEl[index])}
-                                            anchorEl={estadoAnchorEl[index]}
-                                            onClose={() => handleCloseEstadoMenu(index)}
-                                            anchorOrigin={{
-                                              vertical: 'bottom',
-                                              horizontal: 'center'
-                                            }}
-                                            transformOrigin={{
-                                              vertical: 'top',
-                                              horizontal: 'center'
+                                />
+                              </Grid>
+                              <Grid item xs={6} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Ítem'
+                                  size='small'
+                                  fullWidth
+                                  value={muestraActual.item}
+                                  onChange={e =>
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      item: e.target.value
+                                    }))
+                                  }
+                                />
+                              </Grid>
+                              <Grid item xs={6} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Grado'
+                                  size='small'
+                                  fullWidth
+                                  value={muestraActual.grado}
+                                  onChange={e =>
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      grado: e.target.value
+                                    }))
+                                  }
+                                />
+                              </Grid>
+                              <Grid container item xs={12} spacing={2}>
+                                <Grid item xs={6}>
+                                  <TextField
+                                    label='Procedencia'
+                                    size='small'
+                                    fullWidth
+                                    value={muestraActual.procedencia}
+                                    onChange={e =>
+                                      setMuestraActual(prev => ({
+                                        ...prev,
+                                        procedencia: e.target.value
+                                      }))
+                                    }
+                                  />
+                                </Grid>
+                                <Grid item xs={3}>
+                                  <TextField
+                                    fullWidth
+                                    label='Cota 1'
+                                    value={muestraActual.cota1}
+                                    onChange={e => setMuestraActual({ ...muestraActual, cota1: e.target.value })}
+                                    size='small'
+                                  />
+                                </Grid>
+                                <Grid item xs={3}>
+                                  <TextField
+                                    fullWidth
+                                    label='Cota 2'
+                                    value={muestraActual.cota2}
+                                    onChange={e => setMuestraActual({ ...muestraActual, cota2: e.target.value })}
+                                    size='small'
+                                  />
+                                </Grid>
+                              </Grid>
+                              <Grid item xs={6} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Ubicación / Sector'
+                                  size='small'
+                                  fullWidth
+                                  value={muestraActual.ubicacionSector}
+                                  onChange={e =>
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      ubicacionSector: e.target.value
+                                    }))
+                                  }
+                                />
+                              </Grid>
+                              <Grid item xs={4} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Cantidad muestras'
+                                  size='small'
+                                  fullWidth
+                                  value={cantidadMuestras}
+                                  onChange={e => setCantidadMuestras(e.target.value)}
+                                  type='number'
+                                />
+                              </Grid>
+                              <Grid item xs={2} sx={{ mb: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <Button
+                                  variant='contained'
+                                  color='primary'
+                                  size='small'
+                                  startIcon={<i className='ri-add-line' />}
+                                  onClick={handleAddMuestra}
+                                  sx={{
+                                    padding: '6px 12px'
+                                  }}
+                                >
+                                  Agregar muestra
+                                </Button>
+                              </Grid>
+                              <Grid item xs={8} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Servicio / Ensayo'
+                                  size='small'
+                                  fullWidth
+                                  value={servicio}
+                                  onChange={handleSearchChange}
+                                  onClick={handleOpenPopover}
+                                  onKeyDown={handleSearchKeyDown}
+                                  InputProps={{
+                                    startAdornment: (
+                                      <InputAdornment position='start'>
+                                        <i className='ri-search-line' style={{ marginRight: 8 }} />
+                                      </InputAdornment>
+                                    ),
+                                    endAdornment: (
+                                      <InputAdornment position='end'>
+                                        {loadingProductos && <CircularProgress size={20} />}
+                                        {selectedProduct && (
+                                          <IconButton
+                                            size='small'
+                                            onClick={e => {
+                                              e.stopPropagation()
+                                              setSelectedProduct(null)
+                                              setServicio('')
                                             }}
                                           >
-                                            <List sx={{ p: 0 }}>
-                                              {estadosDisponibles.map((estado) => (
-                                                <ListItem
-                                                  key={estado.valor}
-                                                  button
-                                                  onClick={() => handleChangeEstado(index, estado.valor)}
-                                                  sx={{
-                                                    py: 1,
-                                                    px: 2,
-                                                    '&:hover': {
-                                                      backgroundColor: '#f5f5f5'
-                                                    }
-                                                  }}
-                                                >
-                                                  <Chip
-                                                    label={estado.nombre}
-                                                    size='small'
-                                                    sx={{
-                                                      backgroundColor: estado.color,
-                                                      color: estado.textColor,
-                                                      width: '120px'
-                                                    }}
-                                                  />
-                                                </ListItem>
-                                              ))}
-                                            </List>
-                                          </Popover>
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingMuestraServiceIndex === index ? (
-                                            <>
-                                              <IconButton
-                                                size='small'
-                                                color='success'
-                                                onClick={() => handleSaveEditMuestraServicio(index)}
-                                              >
-                                                <i className='ri-check-line' />
-                                              </IconButton>
-                                              <IconButton
-                                                size='small'
-                                                color='secondary'
-                                                onClick={handleCancelEditMuestraServicio}
-                                              >
-                                                <i className='ri-close-line' />
-                                              </IconButton>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <IconButton
-                                                size='small'
-                                                color='primary'
-                                                onClick={() => handleEditMuestraServicio(index)}
-                                              >
-                                                <EditIcon fontSize='small' />
-                                              </IconButton>
-                                              <IconButton
-                                                size='small'
-                                                color='error'
-                                                onClick={() => handleDeleteMuestraServicio(index)}
-                                              >
-                                                <DeleteIcon fontSize='small' />
-                                              </IconButton>
-                                            </>
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))
-                                  ) : (
-                                    <TableRow>
-                                      <TableCell colSpan={5} align='center'>
-                                        No hay servicios agregados
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </Box>
-
-                          {/* Sección condicional de probetas */}
-                          {vencimiento && (
-                            <>
-                              <Grid container spacing={2} sx={{ mt: 2 }}>
-                                <Grid item xs={2}>
-                                  <TextField label='Muestra' size='small' fullWidth />
-                                </Grid>
-                                <Grid item xs={1}>
-                                  <TextField label='N°' size='small' fullWidth />
-                                </Grid>
-                                <Grid item xs={2}>
-                                  <TextField
-                                    label='Fecha Confección'
-                                    type='date'
-                                    size='small'
-                                    fullWidth
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                </Grid>
-                                <Grid item xs={2}>
-                                  <TextField
-                                    label='Cantidad'
-                                    type='number'
-                                    size='small'
-                                    fullWidth
-                                    inputProps={{ min: 1 }}
-                                  />
-                                </Grid>
-                                <Grid item xs={1}>
-                                  <TextField
-                                    label='Días'
-                                    type='number'
-                                    size='small'
-                                    fullWidth
-                                    inputProps={{ min: 1 }}
-                                  />
-                                </Grid>
-                                <Grid item xs={2}>
-                                  <TextField
-                                    label='Fecha Vencimiento'
-                                    type='date'
-                                    size='small'
-                                    fullWidth
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                </Grid>
-                                <Grid item xs={2}>
-                                  <Button
-                                    variant='contained'
-                                    color='primary'
-                                    size='small'
-                                    startIcon={<i className='ri-add-line' />}
-                                    sx={{
-                                      maxWidth: '150px',
+                                            <i className='ri-close-line' />
+                                          </IconButton>
+                                        )}
+                                      </InputAdornment>
+                                    )
+                                  }}
+                                />
+                                <Popover
+                                  id={id}
+                                  open={open}
+                                  anchorEl={anchorEl}
+                                  onClose={handleClosePopover}
+                                  anchorOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'left'
+                                  }}
+                                  transformOrigin={{
+                                    vertical: 'top',
+                                    horizontal: 'left'
+                                  }}
+                                  PaperProps={{
+                                    style: {
+                                      maxHeight: 500,
                                       width: '100%',
-                                      padding: '6px 12px'
-                                    }}
-                                  >
-                                    Añadir
-                                  </Button>
-                                </Grid>
-                              </Grid>
-
-                              {/* Tabla de probetas */}
-                              <Box sx={{ mt: 4 }}>
-                                <TableContainer component={Paper}>
-                                  <Table>
-                                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                                      <TableRow>
-                                        <TableCell>#</TableCell>
-                                        <TableCell>Muestra</TableCell>
-                                        <TableCell>Confección</TableCell>
-                                        <TableCell>Cantidad</TableCell>
-                                        <TableCell>Días</TableCell>
-                                        <TableCell>Vencimiento</TableCell>
-                                        <TableCell>Estado</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {muestraActual.probetas.length > 0 ? (
-                                        muestraActual.probetas.map((probeta, index) => (
-                                          <TableRow key={index}>
-                                            <TableCell>{index + 1}</TableCell>
-                                            <TableCell>{probeta.numero}</TableCell>
-                                            <TableCell>{probeta.fechaConfeccion}</TableCell>
-                                            <TableCell>{probeta.cantidad}</TableCell>
-                                            <TableCell>{probeta.dias}</TableCell>
-                                            <TableCell>{probeta.fechaVencimiento}</TableCell>
-                                            <TableCell>
-                                              <Chip
-                                                label={probeta.estado}
-                                                sx={{
-                                                  backgroundColor: '#daf3ff',
-                                                  color: '#16b1ff'
-                                                }}
+                                      maxWidth: anchorEl && anchorEl.offsetWidth > 600 ? anchorEl.offsetWidth : 600
+                                    }
+                                  }}
+                                >
+                                  {loadingProductos ? (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                                      <CircularProgress size={24} />
+                                    </Box>
+                                  ) : (
+                                    <>
+                                      <Box
+                                        sx={{
+                                          position: 'sticky',
+                                          top: 0,
+                                          zIndex: 10,
+                                          backgroundColor: '#fff',
+                                          borderBottom: '1px solid #eee',
+                                          p: 2
+                                        }}
+                                      >
+                                        <TextField
+                                          fullWidth
+                                          size='small'
+                                          placeholder='Buscar por nombre, SKU o descripción...'
+                                          value={searchTerm}
+                                          onChange={e => setSearchTerm(e.target.value)}
+                                          InputProps={{
+                                            startAdornment: (
+                                              <InputAdornment position='start'>
+                                                <i className='ri-search-line' />
+                                              </InputAdornment>
+                                            )
+                                          }}
+                                          sx={{ mb: 2 }}
+                                        />
+                                        <Grid container spacing={2}>
+                                          <Grid item xs={4}>
+                                            <FormControl size='small' fullWidth>
+                                              <InputLabel shrink>Tipo</InputLabel>
+                                              <Select
+                                                value={selectedTipo}
+                                                label='Tipo'
+                                                onChange={e => setSelectedTipo(e.target.value)}
+                                                displayEmpty
+                                                renderValue={selected => selected === '' ? 'Todos' : selected}
+                                              >
+                                                <MenuItem value=''>Todos</MenuItem>
+                                                {tipos.map((tipo: string) => (
+                                                  <MenuItem key={tipo} value={tipo}>
+                                                    {tipo}
+                                                  </MenuItem>
+                                                ))}
+                                              </Select>
+                                            </FormControl>
+                                          </Grid>
+                                          <Grid item xs={4}>
+                                            <FormControl size='small' fullWidth>
+                                              <InputLabel shrink>Área</InputLabel>
+                                              <Select
+                                                value={selectedArea}
+                                                label='Área'
+                                                onChange={e => setSelectedArea(e.target.value)}
+                                                displayEmpty
+                                                renderValue={selected => selected === '' ? 'Todas' : selected}
+                                              >
+                                                <MenuItem value=''>Todas</MenuItem>
+                                                {areas.map((area: string) => (
+                                                  <MenuItem key={area} value={area}>
+                                                    {area}
+                                                  </MenuItem>
+                                                ))}
+                                              </Select>
+                                            </FormControl>
+                                          </Grid>
+                                          <Grid item xs={4}>
+                                            <FormControl size='small' fullWidth>
+                                              <InputLabel shrink>Familia</InputLabel>
+                                              <Select
+                                                value={selectedFamilia}
+                                                label='Familia'
+                                                onChange={e => setSelectedFamilia(e.target.value)}
+                                                displayEmpty
+                                                renderValue={selected => selected === '' ? 'Todas' : selected}
+                                              >
+                                                <MenuItem value=''>Todas</MenuItem>
+                                                {familiasFiltradasPorArea.map((familia: string) => (
+                                                  <MenuItem key={familia} value={familia}>
+                                                    {familia}
+                                                  </MenuItem>
+                                                ))}
+                                              </Select>
+                                            </FormControl>
+                                          </Grid>
+                                        </Grid>
+                                        <Box
+                                          sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            mt: 1
+                                          }}
+                                        >
+                                          <FormControlLabel
+                                            control={
+                                              <Switch
+                                                checked={showOnlyPaquetes}
+                                                onChange={e => setShowOnlyPaquetes(e.target.checked)}
+                                                size='small'
                                               />
-                                            </TableCell>
-                                          </TableRow>
-                                        ))
-                                      ) : (
-                                        <TableRow>
-                                          <TableCell colSpan={7} align='center'>
-                                            No hay probetas agregadas
+                                            }
+                                            label='Solo Paquetes'
+                                          />
+                                          <Button
+                                            size='small'
+                                            onClick={handleClearFilters}
+                                            startIcon={<i className='ri-filter-off-line' />}
+                                            variant='text'
+                                          >
+                                            Limpiar filtros
+                                          </Button>
+                                        </Box>
+                                      </Box>
+                                      <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                                        <List>
+                                          {filteredProductos.length > 0 ? (
+                                            filteredProductos.map(producto => (
+                                              <ListItem
+                                                button
+                                                key={producto.productoId}
+                                                onClick={() => handleSelectProduct(producto)}
+                                                divider
+                                                sx={{
+                                                  '&:hover': {
+                                                    backgroundColor: '#f5f5f5'
+                                                  }
+                                                }}
+                                              >
+                                                <ListItemText
+                                                  primary={<Typography fontWeight='medium'>{producto.nombre}</Typography>}
+                                                  secondary={
+                                                    <Box>
+                                                      <Typography
+                                                        variant='body2'
+                                                        component='span'
+                                                        sx={{ fontWeight: 'bold' }}
+                                                      >
+                                                        SKU: {producto.sku}
+                                                      </Typography>
+                                                      {' | '}
+                                                      <Typography variant='body2' component='span'>
+                                                        Tipo: {producto.tipo || 'N/A'}
+                                                      </Typography>
+                                                      {' | '}
+                                                      <Typography variant='body2' component='span'>
+                                                        Área: {producto.area || 'N/A'}
+                                                      </Typography>
+                                                      {' | '}
+                                                      <Typography variant='body2' component='span'>
+                                                        Familia: {producto.familia || 'N/A'}
+                                                      </Typography>
+                                                    </Box>
+                                                  }
+                                                />
+                                              </ListItem>
+                                            ))
+                                          ) : (
+                                            <ListItem>
+                                              <ListItemText
+                                                primary='No se encontraron productos'
+                                                secondary='Intenta con otros términos o limpia los filtros'
+                                              />
+                                            </ListItem>
+                                          )}
+
+                                        </List>
+                                      </Box>
+                                      <Box sx={{ p: 1, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                        <Button
+                                          size='small'
+                                          onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                                          disabled={productsPage === 0}
+                                        >
+                                          Anterior
+                                        </Button>
+                                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                                          Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                                        </Typography>
+                                        <Button
+                                          size='small'
+                                          onClick={() => setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))}
+                                          disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                                        >
+                                          Siguiente
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  )}
+                                </Popover>
+                              </Grid>
+                              <Grid item xs={2} sx={{ mb: 4 }}>
+                                <TextField
+                                  label='Cantidad'
+                                  size='small'
+                                  fullWidth
+                                  value={cantidad}
+                                  onChange={e => setCantidad(e.target.value)}
+                                  type='number'
+                                  inputProps={{ min: 1 }}
+                                />
+                              </Grid>
+                              <Grid item xs={2} sx={{ mb: 2 }}>
+                                <Button
+                                  variant='contained'
+                                  color='primary'
+                                  size='small'
+                                  startIcon={<i className='ri-add-line' />}
+                                  onClick={handleAddServicio}
+                                  sx={{
+                                    maxWidth: '150px',
+                                    width: '100%',
+                                    padding: '6px 12px'
+                                  }}
+                                >
+                                  Añadir Servicio
+                                </Button>
+                              </Grid>
+                            </Grid>
+
+                            {/* Tabla de Servicios */}
+                            <Box sx={{ mt: 4 }}>
+                              <TableContainer component={Paper}>
+                                <Table>
+                                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                    <TableRow>
+                                      <TableCell>CÓD. INT.</TableCell>
+                                      <TableCell>ENSAYO / ANÁLISIS</TableCell>
+                                      <TableCell>CANTIDAD</TableCell>
+                                      <TableCell>ESTADO</TableCell>
+                                      <TableCell>ACCIONES</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {muestraActual.servicios.length > 0 ? (
+                                      muestraActual.servicios.map((serv, index) => (
+                                        <TableRow key={index}>
+                                          <TableCell>{serv.codigo}</TableCell>
+                                          <TableCell>{serv.nombre}</TableCell>
+                                          <TableCell>
+                                            {editingMuestraServiceIndex === index ? (
+                                              <TextField
+                                                size='small'
+                                                type='number'
+                                                value={editingMuestraCantidad}
+                                                onChange={e => setEditingMuestraCantidad(e.target.value)}
+                                                inputProps={{ min: 1 }}
+                                                sx={{ width: '80px' }}
+                                              />
+                                            ) : (
+                                              serv.cantidad
+                                            )}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Chip
+                                              label={getEstadoNombre(serv.estado || 'CODIFICADO')}
+                                              onClick={(e) => handleOpenEstadoMenu(e, index)}
+                                              sx={{
+                                                backgroundColor: getEstadoColor(serv.estado || 'CODIFICADO').color,
+                                                color: getEstadoColor(serv.estado || 'CODIFICADO').textColor,
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                  opacity: 0.8
+                                                }
+                                              }}
+                                            />
+                                            <Popover
+                                              open={Boolean(estadoAnchorEl[index])}
+                                              anchorEl={estadoAnchorEl[index]}
+                                              onClose={() => handleCloseEstadoMenu(index)}
+                                              anchorOrigin={{
+                                                vertical: 'bottom',
+                                                horizontal: 'center'
+                                              }}
+                                              transformOrigin={{
+                                                vertical: 'top',
+                                                horizontal: 'center'
+                                              }}
+                                            >
+                                              <List sx={{ p: 0 }}>
+                                                {estadosDisponibles.map((estado) => (
+                                                  <ListItem
+                                                    key={estado.valor}
+                                                    button
+                                                    onClick={() => handleChangeEstado(index, estado.valor)}
+                                                    sx={{
+                                                      py: 1,
+                                                      px: 2,
+                                                      '&:hover': {
+                                                        backgroundColor: '#f5f5f5'
+                                                      }
+                                                    }}
+                                                  >
+                                                    <Chip
+                                                      label={estado.nombre}
+                                                      size='small'
+                                                      sx={{
+                                                        backgroundColor: estado.color,
+                                                        color: estado.textColor,
+                                                        width: '120px'
+                                                      }}
+                                                    />
+                                                  </ListItem>
+                                                ))}
+                                              </List>
+                                            </Popover>
+                                          </TableCell>
+                                          <TableCell>
+                                            {editingMuestraServiceIndex === index ? (
+                                              <>
+                                                <IconButton
+                                                  size='small'
+                                                  color='success'
+                                                  onClick={() => handleSaveEditMuestraServicio(index)}
+                                                >
+                                                  <i className='ri-check-line' />
+                                                </IconButton>
+                                                <IconButton
+                                                  size='small'
+                                                  color='secondary'
+                                                  onClick={handleCancelEditMuestraServicio}
+                                                >
+                                                  <i className='ri-close-line' />
+                                                </IconButton>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <IconButton
+                                                  size='small'
+                                                  color='primary'
+                                                  onClick={() => handleEditMuestraServicio(index)}
+                                                >
+                                                  <EditIcon fontSize='small' />
+                                                </IconButton>
+                                                <IconButton
+                                                  size='small'
+                                                  color='error'
+                                                  onClick={() => handleDeleteMuestraServicio(index)}
+                                                >
+                                                  <DeleteIcon fontSize='small' />
+                                                </IconButton>
+                                              </>
+                                            )}
                                           </TableCell>
                                         </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </TableContainer>
-                              </Box>
-                            </>
-                          )}
+                                      ))
+                                    ) : (
+                                      <TableRow>
+                                        <TableCell colSpan={5} align='center'>
+                                          No hay servicios agregados
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Box>
 
-                          {/* Campo de Observaciones */}
-                          <Grid container spacing={2} sx={{ mt: 4 }}>
-                            <Grid item xs={12}>
-                              <TextField
-                                label='Observaciones Muestra'
-                                size='small'
-                                fullWidth
-                                multiline
-                                rows={1}
-                                value={muestraActual.observaciones}
-                                onChange={e =>
-                                  setMuestraActual(prev => ({
-                                    ...prev,
-                                    observaciones: e.target.value
-                                  }))
-                                }
-                              />
+                            {/* Sección condicional de probetas */}
+                            {vencimiento && (
+                              <>
+                                <Grid container spacing={2} sx={{ mt: 2 }}>
+                                  <Grid item xs={2}>
+                                    <TextField label='Muestra' size='small' fullWidth />
+                                  </Grid>
+                                  <Grid item xs={1}>
+                                    <TextField label='N°' size='small' fullWidth />
+                                  </Grid>
+                                  <Grid item xs={2}>
+                                    <TextField
+                                      label='Fecha Confección'
+                                      type='date'
+                                      size='small'
+                                      fullWidth
+                                      InputLabelProps={{ shrink: true }}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={2}>
+                                    <TextField
+                                      label='Cantidad'
+                                      type='number'
+                                      size='small'
+                                      fullWidth
+                                      inputProps={{ min: 1 }}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={1}>
+                                    <TextField
+                                      label='Días'
+                                      type='number'
+                                      size='small'
+                                      fullWidth
+                                      inputProps={{ min: 1 }}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={2}>
+                                    <TextField
+                                      label='Fecha Vencimiento'
+                                      type='date'
+                                      size='small'
+                                      fullWidth
+                                      InputLabelProps={{ shrink: true }}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={2}>
+                                    <Button
+                                      variant='contained'
+                                      color='primary'
+                                      size='small'
+                                      startIcon={<i className='ri-add-line' />}
+                                      sx={{
+                                        maxWidth: '150px',
+                                        width: '100%',
+                                        padding: '6px 12px'
+                                      }}
+                                    >
+                                      Añadir
+                                    </Button>
+                                  </Grid>
+                                </Grid>
+
+                                {/* Tabla de probetas */}
+                                <Box sx={{ mt: 4 }}>
+                                  <TableContainer component={Paper}>
+                                    <Table>
+                                      <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                        <TableRow>
+                                          <TableCell>#</TableCell>
+                                          <TableCell>Muestra</TableCell>
+                                          <TableCell>Confección</TableCell>
+                                          <TableCell>Cantidad</TableCell>
+                                          <TableCell>Días</TableCell>
+                                          <TableCell>Vencimiento</TableCell>
+                                          <TableCell>Estado</TableCell>
+                                        </TableRow>
+                                      </TableHead>
+                                      <TableBody>
+                                        {muestraActual.probetas.length > 0 ? (
+                                          muestraActual.probetas.map((probeta, index) => (
+                                            <TableRow key={index}>
+                                              <TableCell>{index + 1}</TableCell>
+                                              <TableCell>{probeta.numero}</TableCell>
+                                              <TableCell>{probeta.fechaConfeccion}</TableCell>
+                                              <TableCell>{probeta.cantidad}</TableCell>
+                                              <TableCell>{probeta.dias}</TableCell>
+                                              <TableCell>{probeta.fechaVencimiento}</TableCell>
+                                              <TableCell>
+                                                <Chip
+                                                  label={probeta.estado}
+                                                  sx={{
+                                                    backgroundColor: '#daf3ff',
+                                                    color: '#16b1ff'
+                                                  }}
+                                                />
+                                              </TableCell>
+                                            </TableRow>
+                                          ))
+                                        ) : (
+                                          <TableRow>
+                                            <TableCell colSpan={7} align='center'>
+                                              No hay probetas agregadas
+                                            </TableCell>
+                                          </TableRow>
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </Box>
+                              </>
+                            )}
+
+                            {/* Campo de Observaciones */}
+                            <Grid container spacing={2} sx={{ mt: 4 }}>
+                              <Grid item xs={12}>
+                                <TextField
+                                  label='Observaciones Muestra'
+                                  size='small'
+                                  fullWidth
+                                  multiline
+                                  rows={1}
+                                  value={muestraActual.observaciones}
+                                  onChange={e =>
+                                    setMuestraActual(prev => ({
+                                      ...prev,
+                                      observaciones: e.target.value
+                                    }))
+                                  }
+                                />
+                              </Grid>
                             </Grid>
-                          </Grid>
-                        </AccordionDetails>
-                      </Accordion>
+                          </AccordionDetails>
+                        </Accordion>
+                      )}
                     </>
                   )}
 
