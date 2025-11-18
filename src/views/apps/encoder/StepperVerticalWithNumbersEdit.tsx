@@ -741,6 +741,24 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     toast.success('Muestra eliminada exitosamente')
   }
 
+  // Función para duplicar una muestra
+  const handleDuplicateMuestra = (index: number) => {
+    const muestraOriginal = muestras[index]
+
+    // Crear una copia de la muestra sin número de tarjeta, sin vencimiento y sin probetas
+    const muestraDuplicada: Muestra = {
+      ...muestraOriginal,
+      numeroMuestra: `${numeroRcm}-${muestras.length + 1}`,
+      numeroTarjeta: '', // Limpiar número de tarjeta
+      vencimiento: false, // Desactivar vencimiento
+      probetas: [] // Sin probetas
+    }
+
+    // Agregar la muestra duplicada al array
+    setMuestras([...muestras, muestraDuplicada])
+    toast.success('Muestra duplicada exitosamente')
+  }
+
   // Función para añadir probeta
   const handleAddProbeta = () => {
     if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
@@ -1680,8 +1698,20 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                                       color='primary'
                                       onClick={(e) => {
                                         e.stopPropagation()
+                                        handleDuplicateMuestra(idx)
+                                      }}
+                                      title='Duplicar muestra'
+                                    >
+                                      <i className='ri-file-copy-line' />
+                                    </IconButton>
+                                    <IconButton
+                                      size='small'
+                                      color='primary'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
                                         handleDeleteMuestra(idx)
                                       }}
+                                      title='Eliminar muestra'
                                     >
                                       <i className='ri-delete-bin-line' />
                                     </IconButton>
