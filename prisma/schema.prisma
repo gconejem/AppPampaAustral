@@ -715,6 +715,7 @@ model Muestra {
   vencimiento      Boolean           @default(true)
   observaciones    String?
   cantidadMuestras Int?
+  estadoMuestra    String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   rcm              RCM               @relation(fields: [rcmId], references: [id])
