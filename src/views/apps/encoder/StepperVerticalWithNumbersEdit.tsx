@@ -2604,15 +2604,6 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                                   }}
                                 />
                               </Box>
-                              <IconButton color='primary' onClick={() => console.log('Editar clickeado')}>
-                                <i className='ri-edit-line' />
-                              </IconButton>
-                              <IconButton color='primary' onClick={() => console.log('Duplicar clickeado')}>
-                                <i className='ri-file-copy-line' />
-                              </IconButton>
-                              <IconButton color='primary' onClick={() => console.log('Eliminar clickeado')}>
-                                <i className='ri-delete-bin-line' />
-                              </IconButton>
                             </Box>
                           </AccordionSummary>
 
