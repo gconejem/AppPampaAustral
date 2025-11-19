@@ -760,6 +760,35 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     toast.success('Muestra duplicada exitosamente')
   }
 
+  // Función para ensayar todos los ensayos de una muestra
+  const handleEnsayarMuestra = (index: number) => {
+    setMuestras(prevMuestras => {
+      const muestrasActualizadas = [...prevMuestras]
+
+      // Actualizar servicios a ENSAYADO
+      muestrasActualizadas[index] = {
+        ...muestrasActualizadas[index],
+        servicios: muestrasActualizadas[index].servicios.map(servicio => ({
+          ...servicio,
+          estado: 'ENSAYADO'
+        })),
+        /* probetas: muestrasActualizadas[index].probetas.map(probeta => ({
+          ...probeta,
+          estado: 'ENSAYADO'
+        })) */
+      }
+
+      // Si estamos editando esta muestra, también actualizar muestraActual
+      if (editingMuestraIndex === index) {
+        setMuestraActual(muestrasActualizadas[index])
+      }
+
+      return muestrasActualizadas
+    })
+
+    toast.success('Todos los ensayos han sido marcados como ENSAYADO')
+  }
+
   // Función para añadir probeta
   const handleAddProbeta = () => {
     if (!probetaNumero || !probetaFechaConfeccion || !probetaCantidad || !probetaDias || !probetaFechaVencimiento) {
@@ -1704,6 +1733,17 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                                       title='Duplicar muestra'
                                     >
                                       <i className='ri-file-copy-line' />
+                                    </IconButton>
+                                    <IconButton
+                                      size='small'
+                                      color='success'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleEnsayarMuestra(idx)
+                                      }}
+                                      title='Ensayar todos los ensayos'
+                                    >
+                                      <i className='ri-flask-line' />
                                     </IconButton>
                                     <IconButton
                                       size='small'
