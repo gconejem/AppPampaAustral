@@ -1288,18 +1288,6 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                         </Table>
                       </TableContainer>
 
-                      {/* Observación y Botón Codificar */}
-                      <Box display='flex' alignItems='center' justifyContent='space-between' sx={{ mt: 2 }}>
-                        <TextField label='Observación' fullWidth />
-                        {/* <Button
-                          variant='outlined'
-                          color='primary'
-                          startIcon={<i className='ri-check-line' />}
-                          sx={{ ml: 2 }}
-                        >
-                          Codificar
-                        </Button> */}
-                      </Box>
                     </>
                   )}
                   {index === 1 && (

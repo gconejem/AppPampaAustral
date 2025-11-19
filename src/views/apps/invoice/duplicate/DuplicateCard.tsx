@@ -1223,7 +1223,7 @@ Consideraciones adicionales y requisitos especiales
       return `(1) Valores unitarios Neto (sin IVA incluido)
   
   (2) Adicionales en Terreno (contra evento):
-  • Km Adicional: 0,013 UF
+  • Km Adicional: 0,02 UF
   • Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
   • Jornada completa de Laboratorista (8 horas): 8,4 UF
   • Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
