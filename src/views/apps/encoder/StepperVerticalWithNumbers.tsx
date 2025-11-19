@@ -91,6 +91,7 @@ interface Muestra {
   ubicacionSector: string
   vencimiento: boolean
   observaciones: string
+  estado?: string
   servicios: Array<{
     codigo: string
     nombre: string
@@ -192,6 +193,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     ubicacionSector: '',
     vencimiento: false,
     observaciones: '',
+    estado: 'CODIFICADO',
     servicios: [],
     probetas: []
   })
@@ -488,6 +490,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       ubicacionSector: '',
       vencimiento: false,
       observaciones: '',
+      estado: 'CODIFICADO',
       servicios: [],
       probetas: []
     })
@@ -558,9 +561,12 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
       // Si estamos en el paso 2, agregar al array de servicios de la muestra actual
       else if (activeStep === 1) {
+        const nuevosServicios = [...muestraActual.servicios, nuevoServicio]
+        const nuevoEstado = calculateSampleState(nuevosServicios)
         setMuestraActual(prev => ({
           ...prev,
-          servicios: [...prev.servicios, nuevoServicio]
+          servicios: nuevosServicios,
+          estado: nuevoEstado
         }))
       }
 
@@ -629,9 +635,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const handleDeleteMuestraServicio = (index: number) => {
     const nuevosServicios = [...muestraActual.servicios]
     nuevosServicios.splice(index, 1)
+    const nuevoEstado = calculateSampleState(nuevosServicios)
     setMuestraActual(prev => ({
       ...prev,
-      servicios: nuevosServicios
+      servicios: nuevosServicios,
+      estado: nuevoEstado
     }))
   }
 
@@ -650,9 +658,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       ...nuevosServicios[index],
       estado: nuevoEstadoValor
     }
+    const nuevoEstado = calculateSampleState(nuevosServicios)
     setMuestraActual(prev => ({
       ...prev,
-      servicios: nuevosServicios
+      servicios: nuevosServicios,
+      estado: nuevoEstado
     }))
     handleCloseEstadoMenu(index)
   }
@@ -689,6 +699,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
   const getEstadoNombre = (estadoValor: string) => {
     const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
     return estadoEncontrado?.nombre || 'Codificado'
+  }
+
+  // Función para calcular el estado de la muestra basado en los servicios
+  const calculateSampleState = (servicios: Array<{ estado?: string }>) => {
+    if (servicios.length === 0) {
+      return 'CODIFICADO'
+    }
+    const todosEnsayados = servicios.every(serv => serv.estado === 'ENSAYADO')
+    return todosEnsayados ? 'ENSAYADO' : 'CODIFICADO'
   }
 
   // Limpiar filtros
@@ -1327,6 +1346,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                                       N° Tarjeta: {muestra.numeroTarjeta}
                                     </Typography>
                                   )}
+                                  <Chip
+                                    label={getEstadoNombre(muestra.estado || 'CODIFICADO')}
+                                    size='small'
+                                    sx={{
+                                      backgroundColor: getEstadoColor(muestra.estado || 'CODIFICADO').color,
+                                      color: getEstadoColor(muestra.estado || 'CODIFICADO').textColor,
+                                      fontWeight: 'bold'
+                                    }}
+                                  />
                                 </Box>
                               </AccordionSummary>
                               <AccordionDetails>
@@ -1517,11 +1545,11 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
                             onClick={e => e.stopPropagation()}
                           >
                             <Chip
-                              label='CODIFICADO'
+                              label={getEstadoNombre(muestraActual.estado || 'CODIFICADO')}
                               size='small'
                               sx={{
-                                backgroundColor: '#f3f3f3',
-                                color: '#424242',
+                                backgroundColor: getEstadoColor(muestraActual.estado || 'CODIFICADO').color,
+                                color: getEstadoColor(muestraActual.estado || 'CODIFICADO').textColor,
                                 fontWeight: 'bold',
                                 height: '24px'
                               }}
