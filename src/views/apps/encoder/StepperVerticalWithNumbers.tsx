@@ -772,6 +772,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         cotas: muestra.cota1 && muestra.cota2
           ? `${muestra.cota1} - ${muestra.cota2}`
           : muestra.cota1 || muestra.cota2 || '',
+        estadoMuestra: muestra.estado || 'CODIFICADO',
         // Remover los campos cota1 y cota2 ya que no existen en la API
         cota1: undefined,
         cota2: undefined
