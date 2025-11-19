@@ -519,6 +519,101 @@ const OtListTable = ({
     }
   }
 
+  const handleSendNotification = async (ot: OrdenTrabajo) => {
+    console.log('📧 Enviando notificación para OT:', ot.id)
+
+    try {
+
+      // 1. Obtener PDF
+      const pdfResponse = await fetch(`/api/ot/${ot.id}/pdf`)
+      if (!pdfResponse.ok) throw new Error('Error al obtener el PDF')
+
+      const blob = await pdfResponse.blob()
+
+      // 2. Convertir a base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const base64data = (reader.result as string).split(',')[1]
+          resolve(base64data)
+        }
+        reader.readAsDataURL(blob)
+      })
+
+      const tipoCode = ot.tipoOT?.codigo || 'OT'
+      const fileName = `${tipoCode}_${ot.id}.pdf`
+
+      // 3. Obtener información
+      const clienteObraInfo = getClienteObraFromOT(ot)
+
+      console.log('🔍 Estructura de la agenda/obra:', {
+        agenda: ot.agenda,
+        obra: ot.agenda?.obra,
+        camposDisponibles: ot.agenda?.obra ? Object.keys(ot.agenda.obra) : []
+      })
+
+      const projectLocation = ot.agenda?.obra?.direccion ||
+        ot.agenda?.obra?.ubicacion ||
+        'Dirección no especificada'
+
+      console.log('📍 Dirección de la obra:', projectLocation)
+
+      // 🔍 Determinar qué campo usar para el correlativo
+      // Probar en este orden de prioridad:
+      const correlativo = ot.numeroTarjeta ||           // 1. numeroTarjeta (más común)
+        ot.correlativ ||               // 2. correlativ (sin 'o')
+        (ot as any).correlativo ||     // 3. correlativo (con 'o')
+        ot.clave ||                    // 4. clave
+        ot.fklbdocver ||               // 5. fklbdocver
+        ot.id.toString()               // 6. Fallback: ID de la OT
+
+      console.log('📋 Correlativo seleccionado:', correlativo)
+
+
+      // 4. Enviar email
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: ot.agenda?.cliente?.email || 'guidoconejeros@gmail.com',
+          clientName: clienteObraInfo.cliente,
+          fecha: new Date().toLocaleDateString('es-CL'),
+          hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+          projectName: clienteObraInfo.nombreObra,
+          projectLocation: projectLocation,
+          tecnicoName: ot.user?.name || 'Sin asignar',
+          recepcionName: 'Cliente',
+          orders: [{
+            correlativo: correlativo,
+            descripcion: getServiceName(ot.tipoOT),
+            formato: 'Formato Digital'
+          }],
+          attachments: [{
+            filename: fileName,
+            content: base64,
+            contentType: 'application/pdf',
+            encoding: 'base64'
+          }]
+        })
+      })
+
+      if (!response.ok) throw new Error('Error al enviar email')
+
+      // 5. Marcar como enviado en BD
+      await fetch(`/api/ot/${ot.id}/mark-notification-sent`, {
+        method: 'PATCH'
+      })
+
+      toast.success('✅ Notificación enviada correctamente')
+
+      // 6. Recargar datos
+      handleJsonSave() // Reutilizar función existente
+
+    } catch (error: any) {
+      console.error('❌ Error:', error)
+      toast.error('Error al enviar notificación')
+    }
+  }
 
   // Columns Definition
   const columns = useMemo(
@@ -679,28 +774,53 @@ const OtListTable = ({
       }),
       columnHelper.accessor('id', {
         header: 'ACCIONES',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <IconButton onClick={() => handlePDFClick(row.original)}>
-              <i className='ri-file-pdf-line' style={{ fontSize: '1.2rem', color: '#FF0000' }} />
-            </IconButton>
-            <IconButton
-              onClick={() => handleEditClick(row.original)}
-            >
-              <i className='ri-edit-line' style={{ fontSize: '1.2rem', color: '#1976d2' }} />
-            </IconButton>
-            <IconButton
-              onClick={() =>
-                window.open(`${window.location.origin}/en/apps/internalcontrol?otId=${row.original.id}`, '_blank')
-              }
-            >
-              <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} />
-            </IconButton>
-            <IconButton>
-              <i className='ri-more-2-fill' style={{ fontSize: '1.2rem' }} />
-            </IconButton>
-          </div>
-        )
+        cell: ({ row }) => {
+          const ot = row.original
+          const puedeEnviarNotificacion = ot.estado === 'COMPLETADA'
+          const yaEnviado = ot.notificacionEnviada // Campo nuevo en BD
+
+          return (
+            <div className='flex items-center gap-2'>
+              {/* Botón PDF existente */}
+              <IconButton onClick={() => handlePDFClick(ot)}>
+                <i className='ri-file-pdf-line' style={{ fontSize: '1.2rem', color: '#FF0000' }} />
+              </IconButton>
+
+              {/* Botón Editar existente */}
+              <IconButton onClick={() => handleEditClick(ot)}>
+                <i className='ri-edit-line' style={{ fontSize: '1.2rem', color: '#1976d2' }} />
+              </IconButton>
+
+              {/* ✅ NUEVO: Botón Enviar Notificación */}
+              {puedeEnviarNotificacion && (
+                <Tooltip title={yaEnviado ? 'Notificación ya enviada' : 'Enviar notificación al cliente'}>
+                  <IconButton
+                    onClick={() => handleSendNotification(ot)}
+                    disabled={yaEnviado}
+                  >
+                    {yaEnviado ? (
+                      <i className='ri-checkbox-circle-line' style={{ fontSize: '1.2rem', color: '#4caf50' }} />
+                    ) : (
+                      <i className='ri-mail-send-line' style={{ fontSize: '1.2rem', color: '#2196F3' }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              {/* Botones existentes */}
+              <IconButton
+                onClick={() =>
+                  window.open(`${window.location.origin}/en/apps/internalcontrol?otId=${ot.id}`, '_blank')
+                }
+              >
+                <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} />
+              </IconButton>
+              <IconButton>
+                <i className='ri-more-2-fill' style={{ fontSize: '1.2rem' }} />
+              </IconButton>
+            </div>
+          )
+        }
       })
     ],
     [selectedVisit, agendas]

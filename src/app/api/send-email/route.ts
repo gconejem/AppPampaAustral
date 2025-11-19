@@ -8,7 +8,6 @@ export async function POST(request: NextRequest) {
         const {
             to,
             attachments,
-            // ✅ AGREGAR ESTOS CAMPOS
             clientName,
             fecha,
             hora,
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
             projectLocation,
             tecnicoName,
             recepcionName,
-            orders
+            orders  // ✅ Ya viene con correlativo desde el frontend
         } = body
 
         console.log('📧 Preparando email para:', to)
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
             projectLocation,
             tecnicoName,
             recepcionName,
-            orders
+            orders  // ✅ Se pasa tal cual (con correlativo)
         })
 
         // Procesar attachments

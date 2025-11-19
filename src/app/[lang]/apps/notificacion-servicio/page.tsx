@@ -46,10 +46,26 @@ const SERVICIO = {
 }
 
 const ORDENES = [
-    { numero: '152023', descripcion: 'Muestreo de Hormigón', formato: 'Formato Digital', estado: 'Completado' },
-    { numero: '152024', descripcion: 'Densidades con Método Nuclear', formato: 'Formato Digital', estado: 'Completado' },
-    { numero: '152025', descripcion: 'Retiro de Probetas', formato: 'Formato Digital', estado: 'Completado' },
-    { numero: '207', descripcion: 'Hi-Lo', formato: 'Formato Papel', estado: 'Completado' }
+    {
+        correlativo: '152023',  // ✅ CAMBIO: usar correlativo
+        descripcion: 'Muestreo de Hormigón',
+        formato: 'Formato Digital'
+    },
+    {
+        correlativo: '152024',  // ✅ CAMBIO
+        descripcion: 'Densidades con Método Nuclear',
+        formato: 'Formato Digital'
+    },
+    {
+        correlativo: '152025',  // ✅ CAMBIO
+        descripcion: 'Retiro de Probetas',
+        formato: 'Formato Digital'
+    },
+    {
+        correlativo: '207',     // ✅ CAMBIO
+        descripcion: 'Hi-Lo',
+        formato: 'Formato Papel'
+    }
 ]
 
 export default function NotificacionServicioPage() {
@@ -113,7 +129,6 @@ export default function NotificacionServicioPage() {
                 body: JSON.stringify({
                     to: CLIENTE.email,
                     attachments: attachmentsData,
-                    // ✅ AGREGAR DATOS DEL SERVICIO
                     clientName: CLIENTE.nombre,
                     fecha: SERVICIO.fecha,
                     hora: SERVICIO.hora,
@@ -122,7 +137,7 @@ export default function NotificacionServicioPage() {
                     tecnicoName: SERVICIO.tecnico,
                     recepcionName: SERVICIO.recepcion,
                     orders: ORDENES.map(o => ({
-                        numero: o.numero,
+                        correlativo: o.correlativo,  // ✅ CAMBIO: enviar correlativo
                         descripcion: o.descripcion,
                         formato: o.formato
                     }))
@@ -241,38 +256,20 @@ export default function NotificacionServicioPage() {
                         <TableContainer component={Paper} variant="outlined">
                             <Table>
                                 <TableHead>
-                                    <TableRow sx={{ bgcolor: 'primary.main' }}>
-                                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>N°</TableCell>
-                                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Descripción</TableCell>
-                                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Formato</TableCell>
-                                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">Estado</TableCell>
+                                    <TableRow>
+                                        <TableCell align="center" sx={{ fontWeight: 600 }}>
+                                            N° Correlativo  {/* ✅ CAMBIO */}
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 600 }}>Descripción</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 600 }}>Formato</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {ORDENES.map((orden) => (
-                                        <TableRow key={orden.numero} hover>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight="bold">
-                                                    {orden.numero}
-                                                </Typography>
-                                            </TableCell>
+                                    {ORDENES.map((orden, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell align="center">{orden.correlativo}</TableCell>  {/* ✅ CAMBIO */}
                                             <TableCell>{orden.descripcion}</TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={orden.formato}
-                                                    size="small"
-                                                    color={orden.formato.includes('Digital') ? 'primary' : 'default'}
-                                                    variant="outlined"
-                                                />
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Chip
-                                                    icon={<CheckCircleIcon />}
-                                                    label={orden.estado}
-                                                    size="small"
-                                                    color="success"
-                                                />
-                                            </TableCell>
+                                            <TableCell align="center">{orden.formato}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

@@ -7,7 +7,7 @@ interface ServiceCompletionEmailProps {
   tecnicoName: string
   recepcionName: string
   orders: Array<{
-    numero: string
+    correlativo: string
     descripcion: string
     formato: string
   }>
@@ -27,7 +27,7 @@ export function getServiceCompletionEmailTemplate(props: ServiceCompletionEmailP
 
   const ordersTableRows = orders.map(order => `
     <tr>
-      <td style="padding: 12px; border: 1px solid #dee2e6; text-align: center; background-color: #f8f9fa;">${order.numero}</td>
+      <td style="padding: 12px; border: 1px solid #dee2e6; text-align: center; background-color: #f8f9fa;">${order.correlativo}</td>
       <td style="padding: 12px; border: 1px solid #dee2e6;">${order.descripcion}</td>
       <td style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">${order.formato}</td>
     </tr>
