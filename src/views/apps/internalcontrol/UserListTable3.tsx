@@ -95,6 +95,23 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
+// Función para formatear estados de RCM
+const formatEstadoRCM = (estado: string | undefined): string => {
+  if (!estado) return 'CODIFICADO'
+
+  // Mapeo de estados con guion bajo a formato legible
+  const estadosMap: Record<string, string> = {
+    'CODIFICADO': 'CODIFICADO',
+    'EN_PROCESO': 'EN PROCESO',
+    'EN_MUESTREO': 'EN MUESTREO',
+    'COMPLETADO': 'COMPLETADO',
+    'CANCELADO': 'CANCELADO',
+    'PENDIENTE': 'PENDIENTE'
+  }
+
+  return estadosMap[estado] || estado.replace(/_/g, ' ')
+}
+
 // Column Definitions
 const columnHelper = createColumnHelper<RCMData>()
 
@@ -275,13 +292,16 @@ const UserListTable3 = ({
       }),
       columnHelper.accessor('estadoOperativo', {
         header: 'ESTADO OP',
-        cell: ({ row }) => (
-          <Chip
-            label={row.original.estadoOperativo || 'CODIFICADO'}
-            size='small'
-            color={row.original.estadoOperativo === 'COMPLETADO' ? 'success' : 'default'}
-          />
-        )
+        cell: ({ row }) => {
+          const estadoFormateado = formatEstadoRCM(row.original.estadoOperativo)
+          return (
+            <Chip
+              label={estadoFormateado}
+              size='small'
+              color={row.original.estadoOperativo === 'COMPLETADO' ? 'success' : 'default'}
+            />
+          )
+        }
       }),
       columnHelper.accessor('id', {
         header: 'ACCIONES',
