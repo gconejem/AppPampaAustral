@@ -35,7 +35,7 @@ const CLIENTE = {
     nombre: 'Constructora Ejemplo S.A.',
     obra: 'Edificio Los Aromos',
     direccion: 'Av. Pedro de Valdivia 850, Temuco',
-    email: 'guidoconejeros@gmail.com'
+    email: 'contactopampaustral@gmail.com'
 }
 
 const SERVICIO = {

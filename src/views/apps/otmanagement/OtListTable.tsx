@@ -575,7 +575,7 @@ const OtListTable = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: ot.agenda?.cliente?.email || 'guidoconejeros@gmail.com',
+          to: ot.agenda?.cliente?.email || 'contactopampaustral@gmail.com',
           clientName: clienteObraInfo.cliente,
           fecha: new Date().toLocaleDateString('es-CL'),
           hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
