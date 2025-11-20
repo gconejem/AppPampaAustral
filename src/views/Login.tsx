@@ -2,8 +2,7 @@
 
 // React Imports
 import { useState } from 'react'
-
-// Next Imports
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -11,12 +10,8 @@ import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
-import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Divider from '@mui/material/Divider'
-
-// Third-party Imports
+import Alert from '@mui/material/Alert'
 import classnames from 'classnames'
 
 // Type Imports
@@ -37,6 +32,10 @@ import { useSettings } from '@core/hooks/useSettings'
 const LoginV2 = ({ mode }: { mode: Mode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // Vars
   const darkImg = '/images/pages/auth-v2-mask-dark.png'
@@ -59,7 +58,30 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
     borderedDarkIllustration
   )
 
-  const handleClickShowPassword = () => setIsPasswordShown(show => !show)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Credenciales inválidas')
+      } else {
+        router.push('/')
+        router.refresh()
+      }
+    } catch (err) {
+      setError('Error al iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className='flex bs-full justify-center'>
@@ -93,27 +115,37 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
             <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}!👋🏻`}</Typography>
             <Typography className='mbs-1'>Please sign-in to your account and start the adventure</Typography>
           </div>
-          <form
-            noValidate
-            autoComplete='off'
-            onSubmit={e => {
-              e.preventDefault()
-              router.push('/')
-            }}
-            className='flex flex-col gap-5'
-          >
-            <TextField autoFocus fullWidth label='Email' />
+
+          {error && (
+            <Alert severity='error' onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+
+          <form noValidate autoComplete='off' onSubmit={handleSubmit} className='flex flex-col gap-5'>
+            <TextField
+              autoFocus
+              fullWidth
+              label='Email'
+              type='email'
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
             <TextField
               fullWidth
               label='Password'
               type={isPasswordShown ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position='end'>
                     <IconButton
                       size='small'
                       edge='end'
-                      onClick={handleClickShowPassword}
+                      onClick={() => setIsPasswordShown(!isPasswordShown)}
                       onMouseDown={e => e.preventDefault()}
                     >
                       <i className={isPasswordShown ? 'ri-eye-off-line' : 'ri-eye-line'} />
@@ -122,36 +154,9 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
                 )
               }}
             />
-            <div className='flex justify-between items-center flex-wrap gap-x-3 gap-y-1'>
-              <FormControlLabel control={<Checkbox />} label='Remember me' />
-              <Typography className='text-end' color='primary' component={Link}>
-                Forgot password?
-              </Typography>
-            </div>
-            <Button fullWidth variant='contained' type='submit'>
-              Log In
+            <Button fullWidth variant='contained' type='submit' disabled={loading}>
+              {loading ? 'Logging in...' : 'Log In'}
             </Button>
-            <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>New on our platform?</Typography>
-              <Typography component={Link} color='primary'>
-                Create an account
-              </Typography>
-            </div>
-            <Divider className='gap-3'>or</Divider>
-            <div className='flex justify-center items-center gap-2'>
-              <IconButton size='small' className='text-facebook'>
-                <i className='ri-facebook-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-twitter'>
-                <i className='ri-twitter-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-github'>
-                <i className='ri-github-fill' />
-              </IconButton>
-              <IconButton size='small' className='text-googlePlus'>
-                <i className='ri-google-fill' />
-              </IconButton>
-            </div>
           </form>
         </div>
       </div>

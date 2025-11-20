@@ -15,6 +15,7 @@
     "prisma:seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@emotion/cache": "11.13.0",
     "@emotion/react": "11.13.0",
     "@emotion/styled": "11.13.0",
@@ -35,11 +36,10 @@
     "@reduxjs/toolkit": "^2.5.1",
     "@tanstack/match-sorter-utils": "^8.19.4",
     "@tanstack/react-table": "^8.20.6",
-    "@types/bcryptjs": "^2.4.6",
     "@types/file-saver": "^2.0.7",
     "@types/react-datepicker": "^7.0.0",
     "@types/react-dropzone": "^4.2.2",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^3.0.3",
     "classnames": "^2.5.1",
     "date-fns": "^2.30.0",
     "dotenv": "^16.5.0",
@@ -74,6 +74,7 @@
     "@iconify/tools": "4.0.4",
     "@iconify/types": "2.0.0",
     "@iconify/utils": "2.1.25",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.11",
     "@types/nodemailer": "^7.0.3",
     "@types/react": "^18.3.3",
