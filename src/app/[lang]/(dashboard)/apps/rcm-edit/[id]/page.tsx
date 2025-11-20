@@ -15,6 +15,7 @@ export default function EditRCMPage() {
     const [rcmEstado, setRcmEstado] = useState<string>('CODIFICADO')
     const [otData, setOtData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [numeroRcm, setNumeroRcm] = useState<string>('')
 
     const handleRcmEstadoChange = (estado: string) => {
         setRcmEstado(estado)
@@ -25,6 +26,11 @@ export default function EditRCMPage() {
         setLoading(false)
     }
 
+    const handleNumeroRcmLoad = (numero: string) => {
+        console.log('📥 Página recibió número RCM:', numero)
+        setNumeroRcm(numero)
+    }
+
     return (
         <Grid container spacing={6}>
             {/* Header */}
@@ -33,6 +39,8 @@ export default function EditRCMPage() {
                     otData={otData}
                     rcmEstado={rcmEstado}
                     loading={loading}
+                    numeroRcmProp={numeroRcm}
+                    isEditMode={true}
                 />
             </Grid>
 
@@ -42,6 +50,7 @@ export default function EditRCMPage() {
                     rcmId={rcmId}
                     onRcmEstadoChange={handleRcmEstadoChange}
                     onOtDataLoad={handleOtDataLoad}
+                    onNumeroRcmLoad={handleNumeroRcmLoad}
                 />
             </Grid>
         </Grid>

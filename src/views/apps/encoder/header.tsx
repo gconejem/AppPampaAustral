@@ -7,23 +7,39 @@ interface HeaderProps {
   tipoOT?: string | null
   loading?: boolean
   rcmEstado?: string
+  numeroRcmProp?: string // Número de RCM cuando se está editando
+  isEditMode?: boolean // Indica si estamos en modo edición
 }
 
-const Header = ({ otData, tipoOT, loading, rcmEstado = 'CODIFICADO' }: HeaderProps) => {
+const Header = ({ otData, tipoOT, loading, rcmEstado = 'CODIFICADO', numeroRcmProp, isEditMode = false }: HeaderProps) => {
   // Estado para el número de RCM
   const [numeroRcm, setNumeroRcm] = useState<string>('')
 
-  // Obtener el próximo número de RCM al cargar el componente
+  // Obtener el próximo número de RCM al cargar el componente (solo si NO estamos en modo edición)
   useEffect(() => {
-    fetch('/api/rcm/proximo-numero')
-      .then(res => res.json())
-      .then(data => {
-        setNumeroRcm(data.numeroRcm)
-      })
-      .catch(error => {
-        console.error('Error al obtener próximo número de RCM:', error)
-      })
-  }, [])
+    console.log('🎯 Header useEffect - isEditMode:', isEditMode, 'numeroRcmProp:', numeroRcmProp)
+    if (isEditMode) {
+      // Si estamos editando, usar el número proporcionado cuando esté disponible
+      if (numeroRcmProp) {
+        console.log('✅ Header estableciendo número RCM:', numeroRcmProp)
+        setNumeroRcm(numeroRcmProp)
+      } else {
+        console.log('⏳ Header esperando número RCM...')
+      }
+    } else {
+      // Si estamos creando, obtener el próximo número
+      console.log('🆕 Header obteniendo próximo número RCM...')
+      fetch('/api/rcm/proximo-numero')
+        .then(res => res.json())
+        .then(data => {
+          console.log('📊 Header recibió próximo número:', data.numeroRcm)
+          setNumeroRcm(data.numeroRcm)
+        })
+        .catch(error => {
+          console.error('Error al obtener próximo número de RCM:', error)
+        })
+    }
+  }, [isEditMode, numeroRcmProp])
 
   // Si está cargando, mostrar esqueletos
   if (loading) {

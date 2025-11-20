@@ -120,9 +120,10 @@ interface StepperVerticalWithNumbersEditProps {
   loading?: boolean
   onRcmEstadoChange?: (estado: string) => void
   onOtDataLoad?: (otData: any) => void
+  onNumeroRcmLoad?: (numeroRcm: string) => void
 }
 
-const StepperVerticalWithNumbersEdit = ({ rcmId, loading, onRcmEstadoChange, onOtDataLoad }: StepperVerticalWithNumbersEditProps) => {
+const StepperVerticalWithNumbersEdit = ({ rcmId, loading, onRcmEstadoChange, onOtDataLoad, onNumeroRcmLoad }: StepperVerticalWithNumbersEditProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
   const [loadingData, setLoadingData] = useState(true)
@@ -245,7 +246,18 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading, onRcmEstadoChange, onO
           }
 
           // Cargar datos generales
-          setNumeroRcm(data.numeroRcm || '')
+          const numeroRcmCargado = data.numeroRcm || ''
+          console.log('🔢 Número RCM cargado desde BD:', numeroRcmCargado)
+          setNumeroRcm(numeroRcmCargado)
+
+          // Notificar al componente padre sobre el número de RCM
+          if (onNumeroRcmLoad) {
+            console.log('📤 Enviando número RCM al padre:', numeroRcmCargado)
+            onNumeroRcmLoad(numeroRcmCargado)
+          } else {
+            console.warn('⚠️ onNumeroRcmLoad callback no está definido')
+          }
+
           setFechaCodificacion(data.fechaCodificacion ? new Date(data.fechaCodificacion).toISOString().split('T')[0] : '')
           setFechaMuestreo(data.fechaMuestreo ? new Date(data.fechaMuestreo).toISOString().split('T')[0] : '')
           setFechaIngreso(data.fechaIngreso ? new Date(data.fechaIngreso).toISOString().split('T')[0] : '')
