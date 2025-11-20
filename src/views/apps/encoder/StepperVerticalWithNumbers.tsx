@@ -132,9 +132,10 @@ interface StepperVerticalWithNumbersProps {
   tipoOT?: string | null
   servicioId?: string | null
   loading?: boolean
+  onRcmEstadoChange?: (estado: string) => void
 }
 
-const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVerticalWithNumbersProps) => {
+const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange }: StepperVerticalWithNumbersProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
 
@@ -166,6 +167,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
 
   // Estados para el paso 3
   const [muestras, setMuestras] = useState<Muestra[]>([])
+  const [rcmEstado, setRcmEstado] = useState<string>('CODIFICADO')
   const [observaciones, setObservaciones] = useState<string>('')
 
   // Estados para muestras
@@ -246,6 +248,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
       setProbetaFechaVencimiento(`${year}-${month}-${day}`)
     }
   }, [probetaFechaConfeccion, probetaDias])
+
+  // Actualizar el estado del RCM cuando cambian las muestras
+  useEffect(() => {
+    const nuevoEstadoRcm = calculateRcmState(muestras)
+    setRcmEstado(nuevoEstadoRcm)
+    if (onRcmEstadoChange) {
+      onRcmEstadoChange(nuevoEstadoRcm)
+    }
+  }, [muestras])
 
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
@@ -710,6 +721,23 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
     return todosEnsayados ? 'ENSAYADO' : 'CODIFICADO'
   }
 
+  // Función para calcular el estado del RCM basado en los estados de las muestras
+  const calculateRcmState = (muestras: Muestra[]) => {
+    if (muestras.length === 0) {
+      return 'CODIFICADO'
+    }
+    const todasEnsayadas = muestras.every(muestra => muestra.estado === 'ENSAYADO')
+    const algunaEnsayada = muestras.some(muestra => muestra.estado === 'ENSAYADO')
+
+    if (todasEnsayadas) {
+      return 'ENSAYADO'
+    } else if (algunaEnsayada) {
+      return 'EN_PROCESO'
+    } else {
+      return 'CODIFICADO'
+    }
+  }
+
   // Limpiar filtros
   const handleClearFilters = () => {
     setSelectedTipo('')
@@ -793,7 +821,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading }: StepperVertical
         observaciones,
         clienteId,
         obraId,
-        ordenTrabajoId
+        ordenTrabajoId,
+        estadoRcm: rcmEstado
       }
 
       console.log('Datos a enviar:', dataToSend)

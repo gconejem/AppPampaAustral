@@ -19,6 +19,7 @@ const UserList = () => {
   const [servicioId, setServicioId] = useState<string | null>(null)
   const [tipoOT, setTipoOT] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [rcmEstado, setRcmEstado] = useState<string>('CODIFICADO')
 
   useEffect(() => {
     if (!searchParams) return
@@ -55,11 +56,15 @@ const UserList = () => {
     }
   }, [searchParams])
 
+  const handleRcmEstadoChange = (estado: string) => {
+    setRcmEstado(estado)
+  }
+
   return (
     <Grid container spacing={6}>
       {/* Agregamos el Header */}
       <Grid item xs={12}>
-        <Header otData={otData} tipoOT={tipoOT} loading={loading} />
+        <Header otData={otData} tipoOT={tipoOT} loading={loading} rcmEstado={rcmEstado} />
       </Grid>
 
       {/* Integración del Stepper Vertical */}
@@ -70,6 +75,7 @@ const UserList = () => {
           tipoOT={tipoOT}
           servicioId={servicioId}
           loading={loading}
+          onRcmEstadoChange={handleRcmEstadoChange}
         />
       </Grid>
 

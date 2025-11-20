@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     } else if (req.method === 'PUT') {
         try {
-            const { fechaCodificacion, fechaMuestreo, fechaIngreso, fechaEntrega, servicios, muestras, observaciones } = req.body
+            const { fechaCodificacion, fechaMuestreo, fechaIngreso, fechaEntrega, servicios, muestras, observaciones, estadoOperativo } = req.body
 
             // Obtener el RCM actual
             const rcmActual = await prisma.rCM.findUnique({
@@ -152,6 +152,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 where: { rcmId }
             })
 
+            // Calcular el estado operativo basado en las muestras si no se proporciona
+            let estadoOperativoFinal = estadoOperativo
+            if (!estadoOperativoFinal) {
+                const todasEnsayadas = muestras.every((m: Muestra) => m.estadoMuestra === 'ENSAYADO')
+                const algunaEnsayada = muestras.some((m: Muestra) => m.estadoMuestra === 'ENSAYADO')
+
+                if (todasEnsayadas) {
+                    estadoOperativoFinal = 'ENSAYADO'
+                } else if (algunaEnsayada) {
+                    estadoOperativoFinal = 'EN_PROCESO'
+                } else {
+                    estadoOperativoFinal = 'CODIFICADO'
+                }
+            }
+
             // Actualizar el RCM
             const rcmActualizado = await prisma.rCM.update({
                 where: { id: rcmId },
@@ -161,6 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     fechaIngreso: new Date(fechaIngreso),
                     fechaEntrega: fechaEntrega ? new Date(fechaEntrega) : null,
                     observaciones,
+                    estadoOperativo: estadoOperativoFinal,
                     servicios: {
                         create: servicios
                             .filter((servicio: Servicio) => productosMap[servicio.codigo])

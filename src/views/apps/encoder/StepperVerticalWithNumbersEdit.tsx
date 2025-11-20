@@ -118,9 +118,11 @@ const steps = [
 interface StepperVerticalWithNumbersEditProps {
   rcmId: string
   loading?: boolean
+  onRcmEstadoChange?: (estado: string) => void
+  onOtDataLoad?: (otData: any) => void
 }
 
-const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithNumbersEditProps) => {
+const StepperVerticalWithNumbersEdit = ({ rcmId, loading, onRcmEstadoChange, onOtDataLoad }: StepperVerticalWithNumbersEditProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
   const [loadingData, setLoadingData] = useState(true)
@@ -157,6 +159,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
 
   // Estados para el paso 3
   const [muestras, setMuestras] = useState<Muestra[]>([])
+  const [rcmEstado, setRcmEstado] = useState<string>('CODIFICADO')
   const [observaciones, setObservaciones] = useState<string>('')
 
   // Estados para muestras
@@ -235,6 +238,12 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         .then(res => res.json())
         .then(data => {
           console.log('✅ Datos del RCM cargados exitosamente')
+
+          // Pasar los datos de la OT al componente padre si existe el callback
+          if (onOtDataLoad && data.ordenTrabajo) {
+            onOtDataLoad(data.ordenTrabajo)
+          }
+
           // Cargar datos generales
           setNumeroRcm(data.numeroRcm || '')
           setFechaCodificacion(data.fechaCodificacion ? new Date(data.fechaCodificacion).toISOString().split('T')[0] : '')
@@ -293,6 +302,13 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
               }
             })
             setMuestras(muestrasMapeadas)
+
+            // Calcular el estado del RCM basado en las muestras cargadas
+            const estadoRcmCalculado = calculateRcmState(muestrasMapeadas)
+            setRcmEstado(estadoRcmCalculado)
+            if (onRcmEstadoChange) {
+              onRcmEstadoChange(estadoRcmCalculado)
+            }
           }
 
           setLoadingData(false)
@@ -346,6 +362,15 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         })
     }
   }, [])
+
+  // Actualizar el estado del RCM cuando cambian las muestras
+  useEffect(() => {
+    const nuevoEstadoRcm = calculateRcmState(muestras)
+    setRcmEstado(nuevoEstadoRcm)
+    if (onRcmEstadoChange) {
+      onRcmEstadoChange(nuevoEstadoRcm)
+    }
+  }, [muestras])
 
   // Filtrar familias según el área seleccionada
   const familiasFiltradasPorArea = selectedArea
@@ -683,6 +708,14 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         : muestraActual.cota1 || muestraActual.cota2 || ''
     }
     setMuestras(muestrasActualizadas)
+
+    // Calcular y actualizar el estado del RCM inmediatamente
+    const nuevoEstadoRcm = calculateRcmState(muestrasActualizadas)
+    setRcmEstado(nuevoEstadoRcm)
+    if (onRcmEstadoChange) {
+      onRcmEstadoChange(nuevoEstadoRcm)
+    }
+
     setEditingMuestraIndex(null)
 
     // Limpiar los campos
@@ -785,12 +818,16 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       const muestrasActualizadas = [...prevMuestras]
 
       // Actualizar servicios a ENSAYADO
+      const todosEnsayados = muestrasActualizadas[index].servicios.every(s => s.estado === 'ENSAYADO')
+      const nuevoEstadoMuestra = todosEnsayados ? 'ENSAYADO' : 'CODIFICADO'
+
       muestrasActualizadas[index] = {
         ...muestrasActualizadas[index],
         servicios: muestrasActualizadas[index].servicios.map(servicio => ({
           ...servicio,
           estado: 'ENSAYADO'
         })),
+        estado: 'ENSAYADO' // Actualizar el estado de la muestra también
         /* probetas: muestrasActualizadas[index].probetas.map(probeta => ({
           ...probeta,
           estado: 'ENSAYADO'
@@ -800,6 +837,13 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       // Si estamos editando esta muestra, también actualizar muestraActual
       if (editingMuestraIndex === index) {
         setMuestraActual(muestrasActualizadas[index])
+      }
+
+      // Calcular y actualizar el estado del RCM inmediatamente
+      const nuevoEstadoRcm = calculateRcmState(muestrasActualizadas)
+      setRcmEstado(nuevoEstadoRcm)
+      if (onRcmEstadoChange) {
+        onRcmEstadoChange(nuevoEstadoRcm)
       }
 
       return muestrasActualizadas
@@ -1034,6 +1078,23 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     return todosEnsayados ? 'ENSAYADO' : 'CODIFICADO'
   }
 
+  // Función para calcular el estado del RCM basado en los estados de las muestras
+  const calculateRcmState = (muestras: Muestra[]) => {
+    if (muestras.length === 0) {
+      return 'CODIFICADO'
+    }
+    const todasEnsayadas = muestras.every(muestra => muestra.estado === 'ENSAYADO')
+    const algunaEnsayada = muestras.some(muestra => muestra.estado === 'ENSAYADO')
+
+    if (todasEnsayadas) {
+      return 'ENSAYADO'
+    } else if (algunaEnsayada) {
+      return 'EN_PROCESO'
+    } else {
+      return 'CODIFICADO'
+    }
+  }
+
   // Funciones para manejar el cambio de estado de probetas
   const handleOpenEstadoProbetaMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
     setEstadoProbetaAnchorEl(prev => ({ ...prev, [index]: event.currentTarget }))
@@ -1119,6 +1180,9 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         cota2: undefined
       }))
 
+      // Calcular el estado operativo del RCM basado en las muestras
+      const estadoOperativoCalculado = calculateRcmState(muestras)
+
       const dataToSend = {
         fechaCodificacion,
         fechaMuestreo,
@@ -1126,7 +1190,8 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
         fechaEntrega: fechaEntrega || null,
         servicios,
         muestras: muestrasTransformadas,
-        observaciones
+        observaciones,
+        estadoOperativo: estadoOperativoCalculado
       }
 
       console.log('Datos a actualizar:', dataToSend)

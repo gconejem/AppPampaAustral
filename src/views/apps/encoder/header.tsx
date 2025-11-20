@@ -6,9 +6,10 @@ interface HeaderProps {
   otData?: any
   tipoOT?: string | null
   loading?: boolean
+  rcmEstado?: string
 }
 
-const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
+const Header = ({ otData, tipoOT, loading, rcmEstado = 'CODIFICADO' }: HeaderProps) => {
   // Estado para el número de RCM
   const [numeroRcm, setNumeroRcm] = useState<string>('')
 
@@ -82,6 +83,26 @@ const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
 
   const areaOT = getAreaOT(otData?.tipoOT)
 
+  // Función para obtener las propiedades de visualización del estado del RCM
+  const getRcmEstadoProps = (estado: string) => {
+    switch (estado) {
+      case 'CODIFICADO':
+        return { label: 'Codificado', backgroundColor: '#e3f2fd', color: '#1976d2' }
+      case 'EN_PROCESO':
+        return { label: 'En Proceso', backgroundColor: '#fff3e0', color: '#f57c00' }
+      case 'ENSAYADO':
+        return { label: 'Ensayado', backgroundColor: '#e8f5e9', color: '#388e3c' }
+      case 'ENVIADO_DIGITACION':
+        return { label: 'Enviado a Digitación', backgroundColor: '#f3e5f5', color: '#7b1fa2' }
+      case 'DIGITADO':
+        return { label: 'Digitado', backgroundColor: '#e0f2f1', color: '#00796b' }
+      default:
+        return { label: 'Codificado', backgroundColor: '#e3f2fd', color: '#1976d2' }
+    }
+  }
+
+  const estadoProps = getRcmEstadoProps(rcmEstado)
+
   return (
     <Card sx={{ marginBottom: 4, padding: 2 }}>
       <CardContent>
@@ -95,7 +116,10 @@ const Header = ({ otData, tipoOT, loading }: HeaderProps) => {
               label={numeroRcm || 'Cargando...'}
               sx={{ backgroundColor: '#e0e0e0', color: '#424242', fontWeight: 'bold' }}
             />
-            <Chip label='Codificando' sx={{ backgroundColor: '#e3f2fd', color: '#1976d2', fontWeight: 'bold' }} />
+            <Chip
+              label={estadoProps.label}
+              sx={{ backgroundColor: estadoProps.backgroundColor, color: estadoProps.color, fontWeight: 'bold' }}
+            />
             <Chip label='Sin Inicio' sx={{ backgroundColor: '#e8f5e9', color: '#388e3c', fontWeight: 'bold' }} />
           </Grid>
 
