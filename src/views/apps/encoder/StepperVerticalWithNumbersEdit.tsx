@@ -89,6 +89,7 @@ interface Muestra {
   ubicacionSector: string
   vencimiento: boolean
   observaciones: string
+  estado?: string
   servicios: Array<{
     codigo: string
     nombre: string
@@ -183,6 +184,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     ubicacionSector: '',
     vencimiento: false,
     observaciones: '',
+    estado: 'CODIFICADO',
     servicios: [],
     probetas: []
   })
@@ -265,6 +267,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                 ubicacionSector: m.ubicacionSector || '',
                 vencimiento: m.vencimiento || false,
                 observaciones: m.observaciones || '',
+                estado: m.estadoMuestra || 'CODIFICADO',
                 servicios: m.servicios?.map((s: any) => ({
                   codigo: s.producto?.sku || s.codigo || '',
                   nombre: s.producto?.nombre || s.nombre || '',
@@ -602,6 +605,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       ubicacionSector: '',
       vencimiento: false,
       observaciones: '',
+      estado: 'CODIFICADO',
       servicios: [],
       probetas: []
     })
@@ -681,6 +685,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       ubicacionSector: '',
       vencimiento: false,
       observaciones: '',
+      estado: 'CODIFICADO',
       servicios: [],
       probetas: []
     })
@@ -888,9 +893,12 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       // Si estamos en el paso 1 (Muestras), agregar al array de servicios de la muestra actual
       // Esto aplica tanto para nueva muestra como para edición
       else if (activeStep === 1) {
+        const nuevosServicios = [...muestraActual.servicios, nuevoServicio]
+        const nuevoEstado = calculateSampleState(nuevosServicios)
         setMuestraActual(prev => ({
           ...prev,
-          servicios: [...prev.servicios, nuevoServicio]
+          servicios: nuevosServicios,
+          estado: nuevoEstado
         }))
       }
 
@@ -959,9 +967,11 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const handleDeleteMuestraServicio = (index: number) => {
     const nuevosServicios = [...muestraActual.servicios]
     nuevosServicios.splice(index, 1)
+    const nuevoEstado = calculateSampleState(nuevosServicios)
     setMuestraActual(prev => ({
       ...prev,
-      servicios: nuevosServicios
+      servicios: nuevosServicios,
+      estado: nuevoEstado
     }))
   }
 
@@ -980,9 +990,11 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
       ...nuevosServicios[index],
       estado: nuevoEstadoValor
     }
+    const nuevoEstado = calculateSampleState(nuevosServicios)
     setMuestraActual(prev => ({
       ...prev,
-      servicios: nuevosServicios
+      servicios: nuevosServicios,
+      estado: nuevoEstado
     }))
     handleCloseEstadoMenu(index)
   }
@@ -997,6 +1009,15 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const getEstadoNombre = (estadoValor: string) => {
     const estadoEncontrado = estadosDisponibles.find(e => e.valor === estadoValor)
     return estadoEncontrado?.nombre || 'Codificado'
+  }
+
+  // Función para calcular el estado de la muestra basado en los servicios
+  const calculateSampleState = (servicios: Array<{ estado?: string }>) => {
+    if (servicios.length === 0) {
+      return 'CODIFICADO'
+    }
+    const todosEnsayados = servicios.every(serv => serv.estado === 'ENSAYADO')
+    return todosEnsayados ? 'ENSAYADO' : 'CODIFICADO'
   }
 
   // Funciones para manejar el cambio de estado de probetas
@@ -1076,6 +1097,7 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
     try {
       const muestrasTransformadas = muestras.map(muestra => ({
         ...muestra,
+        estadoMuestra: muestra.estado || 'CODIFICADO',
         cotas: muestra.cota1 && muestra.cota2
           ? `${muestra.cota1} - ${muestra.cota2}`
           : muestra.cota1 || muestra.cota2 || '',
@@ -1683,11 +1705,11 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
                                     onClick={e => e.stopPropagation()}
                                   >
                                     <Chip
-                                      label='CODIFICADO'
+                                      label={getEstadoNombre(editingMuestraIndex === idx ? (muestraActual.estado || 'CODIFICADO') : (muestra.estado || 'CODIFICADO'))}
                                       size='small'
                                       sx={{
-                                        backgroundColor: '#f3f3f3',
-                                        color: '#424242',
+                                        backgroundColor: getEstadoColor(editingMuestraIndex === idx ? (muestraActual.estado || 'CODIFICADO') : (muestra.estado || 'CODIFICADO')).color,
+                                        color: getEstadoColor(editingMuestraIndex === idx ? (muestraActual.estado || 'CODIFICADO') : (muestra.estado || 'CODIFICADO')).textColor,
                                         fontWeight: 'bold',
                                         height: '24px'
                                       }}

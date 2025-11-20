@@ -31,6 +31,7 @@ interface Muestra {
     ubicacionSector: string
     vencimiento: boolean
     observaciones: string
+    estadoMuestra?: string
     servicios: Servicio[]
     probetas: Probeta[]
 }
@@ -188,6 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             ubicacionSector: muestra.ubicacionSector,
                             vencimiento: muestra.vencimiento,
                             observaciones: muestra.observaciones,
+                            estadoMuestra: muestra.estadoMuestra || 'CODIFICADO',
                             servicios: {
                                 create: muestra.servicios
                                     .filter(servicio => productosMap[servicio.codigo])
