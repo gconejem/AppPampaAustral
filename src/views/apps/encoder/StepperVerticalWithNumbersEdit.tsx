@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -125,6 +125,10 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
   const [activeStep, setActiveStep] = useState(0)
   const [loadingData, setLoadingData] = useState(true)
 
+  // Refs para prevenir llamadas duplicadas en desarrollo
+  const hasFetchedRcm = useRef(false)
+  const hasFetchedProducts = useRef(false)
+
   // Estado para el número de RCM
   const [numeroRcm, setNumeroRcm] = useState<string>('')
 
@@ -223,11 +227,14 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
 
   // Cargar datos del RCM existente
   useEffect(() => {
-    if (rcmId) {
+    if (rcmId && !hasFetchedRcm.current) {
+      hasFetchedRcm.current = true
       setLoadingData(true)
+      console.log('🔄 Cargando datos del RCM:', rcmId)
       fetch(`/api/rcm/${rcmId}`)
         .then(res => res.json())
         .then(data => {
+          console.log('✅ Datos del RCM cargados exitosamente')
           // Cargar datos generales
           setNumeroRcm(data.numeroRcm || '')
           setFechaCodificacion(data.fechaCodificacion ? new Date(data.fechaCodificacion).toISOString().split('T')[0] : '')
@@ -292,45 +299,52 @@ const StepperVerticalWithNumbersEdit = ({ rcmId, loading }: StepperVerticalWithN
           toast.success('Datos del RCM cargados exitosamente')
         })
         .catch(error => {
-          console.error('Error al cargar datos del RCM:', error)
+          console.error('❌ Error al cargar datos del RCM:', error)
           toast.error('Error al cargar los datos del RCM')
           setLoadingData(false)
+          hasFetchedRcm.current = false // Permitir reintentar en caso de error
         })
     }
   }, [rcmId])
 
   // Cargar todos los productos al inicio para obtener filtros
   useEffect(() => {
-    fetch('/api/productos?limit=1000')
-      .then(res => res.json())
-      .then(response => {
-        const data = response.productos || []
+    if (!hasFetchedProducts.current) {
+      hasFetchedProducts.current = true
+      console.log('🔄 Cargando productos para filtros')
+      fetch('/api/productos?limit=1000')
+        .then(res => res.json())
+        .then(response => {
+          console.log('✅ Productos cargados exitosamente')
+          const data = response.productos || []
 
-        // Filtrar solo productos simples (no paquetes) para los filtros iniciales
-        const productosSimples = data.filter((p: any) => !p.esPaquete)
+          // Filtrar solo productos simples (no paquetes) para los filtros iniciales
+          const productosSimples = data.filter((p: any) => !p.esPaquete)
 
-        // Obtener valores únicos para filtros
-        const uniqueTipos = Array.from(new Set(productosSimples.map((p: any) => p.tipo || 'Sin tipo')))
-          .filter(tipo => tipo)
-          .sort()
+          // Obtener valores únicos para filtros
+          const uniqueTipos = Array.from(new Set(productosSimples.map((p: any) => p.tipo || 'Sin tipo')))
+            .filter(tipo => tipo)
+            .sort()
 
-        const uniqueAreas = Array.from(new Set(productosSimples.map((p: any) => p.area || 'Sin área')))
-          .filter(area => area)
-          .sort()
+          const uniqueAreas = Array.from(new Set(productosSimples.map((p: any) => p.area || 'Sin área')))
+            .filter(area => area)
+            .sort()
 
-        const uniqueFamilias = Array.from(new Set(productosSimples.map((p: any) => p.familia || 'Sin familia')))
-          .filter(familia => familia)
-          .sort()
+          const uniqueFamilias = Array.from(new Set(productosSimples.map((p: any) => p.familia || 'Sin familia')))
+            .filter(familia => familia)
+            .sort()
 
-        setTipos(uniqueTipos as string[])
-        setAreas(uniqueAreas as string[])
-        setFamilias(uniqueFamilias as string[])
-        setProductos(data) // Guardar todos los productos (incluidos paquetes)
-      })
-      .catch(error => {
-        console.error('Error al cargar productos:', error)
-        setProductos([])
-      })
+          setTipos(uniqueTipos as string[])
+          setAreas(uniqueAreas as string[])
+          setFamilias(uniqueFamilias as string[])
+          setProductos(data) // Guardar todos los productos (incluidos paquetes)
+        })
+        .catch(error => {
+          console.error('❌ Error al cargar productos:', error)
+          setProductos([])
+          hasFetchedProducts.current = false // Permitir reintentar en caso de error
+        })
+    }
   }, [])
 
   // Filtrar familias según el área seleccionada
