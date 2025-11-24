@@ -5,7 +5,7 @@ import { compare } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export default NextAuth({
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -95,33 +95,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string
-        session.user.email = token.email as string
-        session.user.name = token.name as string
+      console.log('🔐 [session] token recibido:', token)
+      if (token?.id && session.user) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          include: {
+            roles: {
+              include: {
+                rol: {
+                  include: {
+                    permisos: {
+                      include: { permission: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        })
+        console.log('🔐 [session] usuario en BD:', dbUser)
+
+        session.user.id = dbUser?.id
+        session.user.email = dbUser?.email
+        session.user.name = dbUser?.name
+        session.user.roles = dbUser?.roles.map(r => r.rol.nombre) ?? []
+        session.user.permissions = dbUser?.roles
+          .flatMap(r => r.rol.permisos.map(p => p.permission.name)) ?? []
+
+        console.log('🔐 [session] roles:', session.user.roles)
+        console.log('🔐 [session] permisos:', session.user.permissions)
       }
       return session
     }
   },
-  // ⚠️ SOLO debug en desarrollo, NUNCA en producción
-  debug: process.env.NODE_ENV === 'development',
-  
-  // 🔒 Configuración adicional de seguridad
-  logger: {
-    error(code, metadata) {
-      // Solo log en desarrollo
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Auth Error:', code)
-      }
-    },
-    warn(code) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Auth Warning:', code)
-      }
-    },
-    debug(code, metadata) {
-      // Comentar para reducir logs en desarrollo
-      // console.log('Auth Debug:', code)
-    }
-  }
+  debug: process.env.NODE_ENV === 'development'
 })
