@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
-    const roles = ['ADMIN', 'VIEWER', 'ENCODER', 'SUPERVISOR']
-    console.log('🔐 [API] GET roles:', roles)
+    const roles = await prisma.rol.findMany({
+        include: {
+            permisos: {
+                include: { permission: true }
+            }
+        }
+    })
     return NextResponse.json(roles)
 }

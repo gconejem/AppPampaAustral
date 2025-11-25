@@ -8,7 +8,7 @@ export default function AdminPage() {
     console.log('🔐 [AdminPage] permisos:', session?.user?.permissions)
 
     if (status === 'loading') return <div>Cargando...</div>
-    if (!hasRole('ADMIN')) return <div>No tienes acceso de administrador</div>
+    if (!hasRole('Administrador')) return <div>No tienes acceso de administrador</div>
 
     return (
         <div>

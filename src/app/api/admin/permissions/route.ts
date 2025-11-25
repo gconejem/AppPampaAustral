@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
-    const permissions = [
-        'users.read', 'users.write', 'users.delete',
-        'roles.read', 'roles.write'
-    ]
-    console.log('🔐 [API] GET permisos:', permissions)
-    return NextResponse.json(permissions)
+    const permisos = await prisma.permission.findMany()
+    return NextResponse.json(permisos)
 }

@@ -33,10 +33,10 @@ async function main() {
       { usuario: "mperez", name: "Marcela Perez", rut: "17.755.838-9", rol: "Administrador" },
       { usuario: "msepulveda", name: "Marvin Sepulveda", rut: "14.025.121-6", rol: "Laboratorista" },
       { usuario: "ochandia", name: "Olga Chandia", rut: "15.699.637-8", rol: "E. Comercial" },
-      { usuario: "pmena", name: "Paola Mena", rut: "15.878.320-7", rol: "No definido" },
+      { usuario: "pmena", name: "Paola Mena", rut: "15.878.320-7", rol: "Consulta" },
       { usuario: "rvargas", name: "Roberto Vargas", rut: "12.376.550-8", rol: "Laboratorista" },
-      { usuario: "vmartinez", name: "Victor Martinez", rut: "12.551.595-9", rol: "No definido" },
-      { usuario: "jfigueroa", name: "Jonathan Figueroa", rut: "15.217.721-6", rol: "No definido" },
+      { usuario: "vmartinez", name: "Victor Martinez", rut: "12.551.595-9", rol: "Consulta" },
+      { usuario: "jfigueroa", name: "Jonathan Figueroa", rut: "15.217.721-6", rol: "Consulta" },
     ]
 
     // Obtener todos los roles existentes
@@ -80,4 +80,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
-  }) 
+  })
