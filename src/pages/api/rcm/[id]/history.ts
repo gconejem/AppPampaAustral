@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaClient } from '@prisma/client'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 /**
  * Use a singleton PrismaClient to avoid multiple instances in dev (HMR)
  */
