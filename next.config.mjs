@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  swcMinify: true,
+  compiler: {
+    removeConsole: true,
+  },
   typescript: {
     ignoreBuildErrors: true, // ignora errores de TypeScript
   },
