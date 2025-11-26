@@ -38,6 +38,7 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Menu from '@mui/material/Menu'
+import Alert from '@mui/material/Alert'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -73,6 +74,8 @@ import PreviewPackageForm from '../preview/PreviewPackageForm'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+import { permisos } from '@/permisos/permisos'
+import { usePermissions } from '@/hooks/usePermissions'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -246,7 +249,7 @@ const ProductListTable = () => {
   // Agregar estado para el modal de preview
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [previewProduct, setPreviewProduct] = useState<Producto | null>(null)
-  const [previewPackageModalOpen, setPreviewPackageModalOpen] = useState(false)
+  const [previewPackageModalOpen, setPreviewPackageModal] = useState(false)
   const [previewPackage, setPreviewPackage] = useState<any | null>(null)
 
   const params = useParams()
@@ -774,7 +777,7 @@ const ProductListTable = () => {
       }),
       columnHelper.accessor('esPaquete', {
         header: 'PAQUETE',
-        cell: ({ row }) => <Switch checked={row.original.esPaquete} readOnly />,
+        cell: ({ row }) => <Switch checked={row.original.esPaquete} readOnly disabled={soloLectura} />,
         enableSorting: false
       }),
       columnHelper.accessor('tipo', {
@@ -783,7 +786,7 @@ const ProductListTable = () => {
       }),
       columnHelper.accessor('estado', {
         header: 'ESTADO',
-        cell: ({ row }) => <Switch checked={row.original.estado === 'ACTIVO'} readOnly />,
+        cell: ({ row }) => <Switch checked={row.original.estado === 'ACTIVO'} readOnly disabled={soloLectura} />,
         enableSorting: false
       }),
       {
@@ -794,19 +797,19 @@ const ProductListTable = () => {
             <IconButton size='small' onClick={() => handlePreviewOpen(row.original)}>
               <i className='ri-eye-line text-[22px] text-textSecondary' />
             </IconButton>
-            <IconButton size='small' onClick={() => handleEditOpen(row.original)}>
+            <IconButton size='small' onClick={() => handleEditOpen(row.original)} disabled={soloLectura}>
               <i className='ri-edit-box-line text-[22px] text-textSecondary' />
             </IconButton>
             <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
+              iconButtonProps={{ size: 'medium', disabled: soloLectura }}
               iconClassName='text-textSecondary text-[22px]'
               options={[
                 {
                   text: row.original.estado === 'ACTIVO' ? 'Desactivar' : 'Activar',
-                  icon: <Switch checked={row.original.estado === 'ACTIVO'} size='small' />,
+                  icon: <Switch checked={row.original.estado === 'ACTIVO'} size='small' disabled={soloLectura} />,
                   menuItemProps: {
                     className: 'gap-2',
-                    onClick: () => handleToggleStatus(row.original)
+                    onClick: () => !soloLectura && handleToggleStatus(row.original)
                   }
                 },
                 {
@@ -814,7 +817,7 @@ const ProductListTable = () => {
                   icon: 'ri-file-copy-line',
                   menuItemProps: {
                     className: 'gap-2',
-                    onClick: () => duplicarProducto(row.original)
+                    onClick: () => !soloLectura && duplicarProducto(row.original)
                   }
                 },
                 {
@@ -822,7 +825,7 @@ const ProductListTable = () => {
                   icon: 'ri-delete-bin-7-line',
                   menuItemProps: {
                     className: 'gap-2',
-                    onClick: () => eliminarProducto(row.original.productoId)
+                    onClick: () => !soloLectura && eliminarProducto(row.original.productoId)
                   }
                 }
               ]}
@@ -886,6 +889,17 @@ const ProductListTable = () => {
   const handleOpenPackageModal = () => setOpenPackageModal(true)
   const handleClosePackageModal = () => setOpenPackageModal(false)
 
+  const { hasPermission } = usePermissions()
+  const soloLectura =
+    hasPermission(permisos.productos.ver) &&
+    !hasPermission(permisos.productos.crear) &&
+    !hasPermission(permisos.productos.editar) &&
+    !hasPermission(permisos.productos.eliminar)
+
+  if (!hasPermission(permisos.productos.ver)) {
+    return <Alert severity="warning">No tienes permiso para ver productos.</Alert>
+  }
+
   return (
     <>
       <Toaster
@@ -930,6 +944,7 @@ const ProductListTable = () => {
               variant='contained'
               onClick={handleOpenPackageModal}
               startIcon={<i className='ri-package-line text-[22px] text-textSecondary' />}
+              disabled={soloLectura}
             >
               Crear Paquete
             </Button>
@@ -939,6 +954,7 @@ const ProductListTable = () => {
               href={`/${locale}/apps/products/add`}
               startIcon={<i className='ri-add-line' />}
               className='max-sm:is-full is-auto'
+              disabled={soloLectura}
             >
               Agregar Ensayo
             </Button>
@@ -1012,7 +1028,7 @@ const ProductListTable = () => {
             table.setPageSize(newRowsPerPage)
           }}
         />
-        <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} />
+        <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} soloLectura={soloLectura} />
         <PreviewProductForm
           open={previewModalOpen}
           onClose={() => setPreviewModalOpen(false)}
@@ -1030,12 +1046,14 @@ const ProductListTable = () => {
           onSave={handleEditSave}
           areas={areas}
           familias={familias}
+          soloLectura={soloLectura}
         />
         <EditPackageModal
           open={editPackageModalOpen}
           onClose={() => setEditPackageModalOpen(false)}
           paquete={editingProduct}
           onSave={handleEditSave}
+          soloLectura={soloLectura}
         />
       </Card>
     </>

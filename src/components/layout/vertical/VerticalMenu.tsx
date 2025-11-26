@@ -18,6 +18,8 @@ import { Menu, SubMenu, MenuItem, MenuSection } from '@menu/vertical-menu'
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
+import { permisos } from '@/permisos/permisos'
+import { usePermissions } from '@/hooks/usePermissions'
 
 // Styled Component Imports
 import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNavExpandIcon'
@@ -55,6 +57,8 @@ const VerticalMenu = () => {
   const theme = useTheme()
   const verticalNavOptions = useVerticalNav()
   const params = useParams()
+  const { hasPermission, hasRole } = usePermissions()
+  const soloLectura = hasRole('Consulta')
 
   // Si el diccionario no está disponible, podemos mostrar valores por defecto
   const defaultLabels = {
@@ -75,12 +79,8 @@ const VerticalMenu = () => {
       <div className='nav-items'>
         <ScrollWrapper
           {...(isBreakpointReached
-            ? {
-              className: 'bs-full overflow-y-auto overflow-x-hidden'
-            }
-            : {
-              options: { wheelPropagation: false, suppressScrollX: true }
-            })}
+            ? { className: 'bs-full overflow-y-auto overflow-x-hidden' }
+            : { options: { wheelPropagation: false, suppressScrollX: true } })}
         >
           {/* Vertical Menu */}
           <Menu
@@ -89,89 +89,79 @@ const VerticalMenu = () => {
             renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
           >
             <MenuSection label={labels.formsAndTables}>
-              <MenuItem href={`/${locale}/apps/invoice/list`} icon={<i className='ri-file-list-3-line' />}>
-                Cotizaciones
-              </MenuItem>
+              {hasPermission(permisos.cotizaciones.ver) && (
+                <MenuItem href={`/${locale}/apps/invoice/list`} icon={<i className='ri-file-list-3-line' />}>
+                  Cotizaciones
+                </MenuItem>
+              )}
 
-              <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />}>
-                Solicitudes
-              </MenuItem>
+              {hasPermission(permisos.solicitudes.ver) && (
+                <MenuItem href={`/${locale}/apps/requests`} icon={<i className='ri-calendar-line' />}>
+                  Solicitudes
+                </MenuItem>
+              )}
 
-              <SubMenu label='Agenda' icon={<i className='ri-home-smile-line' />}>
-                <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
-                  Agenda
-                </MenuItem>
-                <MenuItem href={`/${locale}/apps/otmanagement`} icon={<i className='ri-pantone-line' />}>
-                  Gestión de Agenda
-                </MenuItem>
-              </SubMenu>
-              <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
-                <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
-                  Control Interno
-                </MenuItem>
-                <MenuItem href={`/${locale}/apps/rcmnavigator`} icon={<i className='ri-home-smile-line' />}>
-                  Navegador
-                </MenuItem>
-                <MenuItem href={`/${locale}/apps/rcmnavigatordetail`} icon={<i className='ri-home-smile-line' />}>
-                  Navegador Detalle
-                </MenuItem>
-              </SubMenu>
+              {hasPermission(permisos.agenda.ver) && (
+                <SubMenu label='Agenda' icon={<i className='ri-home-smile-line' />}>
+                  <MenuItem href={`/${locale}/apps/calendar`} icon={<i className='ri-calendar-line' />}>
+                    Agenda
+                  </MenuItem>
+                  <MenuItem href={`/${locale}/apps/otmanagement`} icon={<i className='ri-pantone-line' />}>
+                    Gestión de Agenda
+                  </MenuItem>
+                </SubMenu>
+              )}
 
-              {/* <MenuItem href={`/${locale}/apps/invoice2/list`} icon={<i className='ri-home-smile-line' />} disabled>
-                Facturación
-              </MenuItem> */}
+              {hasPermission(permisos.control.ver) && (
+                <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
+                  <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
+                    Control Interno
+                  </MenuItem>
+                  <MenuItem href={`/${locale}/apps/rcmnavigator`} icon={<i className='ri-home-smile-line' />}>
+                    Navegador
+                  </MenuItem>
+                  <MenuItem href={`/${locale}/apps/rcmnavigatordetail`} icon={<i className='ri-home-smile-line' />}>
+                    Navegador Detalle
+                  </MenuItem>
+                </SubMenu>
+              )}
 
               <MenuItem href={`/${locale}/apps/json-upload`} icon={<i className='ri-upload-2-line' />}>
                 App
               </MenuItem>
 
-              {/* Nueva entrada: lista de APIs - apunta a la página intermedia */}
               <MenuItem href={`/${locale}/apps/api`} icon={<i className='ri-calendar-schedule-line' />}>
                 API Agenda
               </MenuItem>
-              {/*
-              <MenuItem href={`/${locale}/apps/send-email`} icon={<i className='ri-calendar-schedule-line' />}>
-                Send Email
-              </MenuItem>
-            
-              <MenuItem href={`/${locale}/apps/notificacion-servicio`} icon={<i className='ri-calendar-schedule-line' />}>
-                Notificación Servicio
-              </MenuItem>
-              */}
             </MenuSection>
 
             <MenuSection label={labels.appsPages}>
-              <SubMenu label='Empresa' icon={<i className='ri-home-smile-line' />}>
-                <MenuItem href={`/${locale}/apps/clients`} icon={<i className='ri-book-line' />}>
-                  Clientes
-                </MenuItem>
-                <MenuItem href={`/${locale}/apps/works`} icon={<i className='ri-pantone-line' />}>
-                  Obras
-                </MenuItem>
-                <MenuItem href={`/${locale}/apps/contacts`} icon={<i className='ri-book-line' />}>
-                  Contactos
-                </MenuItem>
-                {/* <MenuItem href={`/${locale}/apps/equipos`} icon={<i className='ri-hammer-line' />}>
-                  Equipos
-                </MenuItem> */}
-              </SubMenu>
-              <SubMenu label='Productos' icon={<i className='ri-shopping-bag-line' />}>
-                <MenuItem href={`/${locale}/apps/products`} icon={<i className='ri-price-tag-3-line' />}>
-                  Productos
-                </MenuItem>
-                <MenuItem
-                  href={`/${locale}/apps/products/pricelist`}
-                  icon={<i className='ri-money-dollar-circle-line' />}
-                >
-                  Lista de Precios
-                </MenuItem>
-              </SubMenu>
-              {/* <MenuItem href={`/${locale}/apps/roles`} icon={<i className='ri-layout-left-line' />}>
-                Roles
-              </MenuItem>
-              <MenuItem href={`/${locale}/apps/permissions`} icon={<i className='ri-lock-2-line' />}>
-                Permisos
-              </MenuItem> */}
+              {hasPermission(permisos.empresa.ver) && (
+                <SubMenu label='Empresa' icon={<i className='ri-home-smile-line' />}>
+                  <MenuItem href={`/${locale}/apps/clients`} icon={<i className='ri-book-line' />}>
+                    Clientes
+                  </MenuItem>
+                  <MenuItem href={`/${locale}/apps/works`} icon={<i className='ri-pantone-line' />}>
+                    Obras
+                  </MenuItem>
+                  <MenuItem href={`/${locale}/apps/contacts`} icon={<i className='ri-book-line' />}>
+                    Contactos
+                  </MenuItem>
+                </SubMenu>
+              )}
+              {hasPermission(permisos.productos.ver) && (
+                <SubMenu label='Productos' icon={<i className='ri-shopping-bag-line' />}>
+                  <MenuItem href={`/${locale}/apps/products`} icon={<i className='ri-price-tag-3-line' />}>
+                    Productos
+                  </MenuItem>
+                  <MenuItem
+                    href={`/${locale}/apps/products/pricelist`}
+                    icon={<i className='ri-money-dollar-circle-line' />}
+                  >
+                    Lista de Precios
+                  </MenuItem>
+                </SubMenu>
+              )}
             </MenuSection>
           </Menu>
         </ScrollWrapper>

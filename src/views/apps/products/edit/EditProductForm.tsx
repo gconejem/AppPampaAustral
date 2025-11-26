@@ -39,6 +39,7 @@ interface EditProductFormProps {
   onSave: (updatedProduct: Producto) => void
   areas: string[]
   familias: string[]
+  soloLectura?: boolean
 }
 
 const style = {
@@ -53,7 +54,7 @@ const style = {
   p: 4
 }
 
-const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: EditProductFormProps) => {
+export default function EditProductForm({ open, onClose, product, onSave, areas, familias, soloLectura }: EditProductFormProps) {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null)
 
   // Cargar datos del producto cuando se abre el modal
@@ -132,6 +133,7 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               value={editingProduct.nombre}
               onChange={e => setEditingProduct({ ...editingProduct, nombre: e.target.value })}
               fullWidth
+              disabled={soloLectura}
             />
           </Grid>
           <Grid item xs={6}>
@@ -152,6 +154,7 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               fullWidth
               multiline
               rows={3}
+              disabled={soloLectura}
             />
           </Grid>
           <Grid item xs={6}>
@@ -161,6 +164,7 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               value={editingProduct.area}
               onChange={e => setEditingProduct({ ...editingProduct, area: e.target.value })}
               fullWidth
+              disabled={soloLectura}
             >
               <MenuItem value=''>
                 <em>Seleccione un área</em>
@@ -179,6 +183,7 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               value={editingProduct.familia}
               onChange={e => setEditingProduct({ ...editingProduct, familia: e.target.value })}
               fullWidth
+              disabled={soloLectura}
             >
               <MenuItem value=''>
                 <em>Seleccione una familia</em>
@@ -197,6 +202,7 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               value={editingProduct.tipo}
               onChange={e => setEditingProduct({ ...editingProduct, tipo: e.target.value })}
               fullWidth
+              disabled={soloLectura}
             >
               <MenuItem value='Ensayo'>Ensayo</MenuItem>
               <MenuItem value='Paquete'>Paquete</MenuItem>
@@ -209,14 +215,25 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
               value={editingProduct.norma || ''}
               onChange={e => setEditingProduct({ ...editingProduct, norma: e.target.value })}
               fullWidth
+              disabled={soloLectura}
             />
           </Grid>
         </Grid>
         <Box mt={4} display='flex' justifyContent='flex-end' gap={2}>
-          <Button onClick={onClose} color='secondary' variant='outlined'>
+          <Button
+            onClick={onClose}
+            color='secondary'
+            variant='outlined'
+            disabled={soloLectura}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSave} color='primary' variant='contained'>
+          <Button
+            onClick={handleSave}
+            color='primary'
+            variant='contained'
+            disabled={soloLectura}
+          >
             Guardar Cambios
           </Button>
         </Box>
@@ -224,5 +241,3 @@ const EditProductForm = ({ open, onClose, product, onSave, areas, familias }: Ed
     </Modal>
   )
 }
-
-export default EditProductForm

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { usePermissions } from '@/hooks/usePermissions'
 
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -58,6 +59,12 @@ const style = {
 }
 
 const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps) => {
+  const { hasPermission } = usePermissions()
+  const soloLectura =
+    !hasPermission('productos.create') &&
+    !hasPermission('productos.edit') &&
+    !hasPermission('productos.delete')
+
   const [previewPaquete, setPreviewPaquete] = useState<Paquete | null>(null)
 
   useEffect(() => {
@@ -157,7 +164,12 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
           </List>
         </Box>
         <Box mt={4} display='flex' justifyContent='flex-end'>
-          <Button onClick={onClose} color='primary' variant='contained'>
+          <Button
+            onClick={onClose}
+            color='primary'
+            variant='contained'
+            disabled={soloLectura}
+          >
             Cerrar
           </Button>
         </Box>

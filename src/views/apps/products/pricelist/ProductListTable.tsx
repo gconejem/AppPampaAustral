@@ -6,6 +6,13 @@ import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import { toast } from 'react-hot-toast'
 import classnames from 'classnames'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+
+import { permisos } from '@/permisos/permisos'
+import { usePermissions } from '@/hooks/usePermissions'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -21,7 +28,6 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Checkbox from '@mui/material/Checkbox'
-import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import Switch from '@mui/material/Switch'
@@ -71,6 +77,14 @@ const ProductListTable = () => {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+
+
+  const { hasPermission } = usePermissions()
+  const soloLectura =
+    hasPermission(permisos.productos.ver) &&
+    !hasPermission(permisos.productos.crear) &&
+    !hasPermission(permisos.productos.editar) &&
+    !hasPermission(permisos.productos.eliminar)
 
   // Cargar productos cuando se selecciona una lista
   useEffect(() => {
@@ -146,7 +160,7 @@ const ProductListTable = () => {
   const handlePriceUpdate = async (productoId: number, newPrice: string) => {
     try {
       const precioNumerico = newPrice === '' ? null : Number(newPrice)
-      
+
       const response = await fetch(`/api/productos/${productoId}`, {
         method: 'PATCH',
         headers: {
@@ -194,7 +208,7 @@ const ProductListTable = () => {
         prevProductos.map(producto => {
           if (producto.productoId === productoId) {
             const listaPrecioExistente = producto.listasPrecios.find(lp => lp.listaPrecio.id === parseInt(selectedList))
-            
+
             if (!listaPrecioExistente) {
               // Si no existe la lista, agregamos una nueva entrada
               return {
@@ -388,9 +402,9 @@ const ProductListTable = () => {
       cell: ({ row }) => {
         const listaPrecio = row.original.listasPrecios.find(lp => lp.listaPrecio.id === parseInt(selectedList))
         const estaActivo = listaPrecio?.activo ?? false
-        
+
         return (
-          <Switch
+          <Switch disabled={soloLectura}
             checked={estaActivo}
             onChange={() => {
               // Si el producto no tiene entrada en listasPrecios, creamos una nueva
@@ -485,6 +499,11 @@ const ProductListTable = () => {
                 ))}
               </Select>
             </FormControl>
+            <Button disabled={soloLectura}>Agregar Producto</Button>
+            <IconButton disabled={soloLectura}><EditIcon /></IconButton>
+            <IconButton disabled={soloLectura}><DeleteIcon /></IconButton>
+            <Switch disabled={soloLectura} />
+            {/* <OptionMenu iconButtonProps={{ disabled: soloLectura }} ... /> */}
           </Box>
         }
       />

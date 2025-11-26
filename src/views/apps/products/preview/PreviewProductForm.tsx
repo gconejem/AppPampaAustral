@@ -2,6 +2,7 @@
 
 // React Imports
 import { useState, useEffect } from 'react'
+import { usePermissions } from '@/hooks/usePermissions'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -11,6 +12,8 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Modal from '@mui/material/Modal'
 import Divider from '@mui/material/Divider'
+
+
 
 // Types
 interface Producto {
@@ -53,6 +56,13 @@ const style = {
 }
 
 const PreviewProductForm = ({ open, onClose, product }: PreviewProductFormProps) => {
+  const { hasPermission } = usePermissions()
+  // Solo lectura si no tiene permisos de edición, creación ni eliminación
+  const soloLectura =
+    !hasPermission('productos.create') &&
+    !hasPermission('productos.edit') &&
+    !hasPermission('productos.delete')
+
   const [previewProduct, setPreviewProduct] = useState<Producto | null>(null)
 
   useEffect(() => {
@@ -119,7 +129,12 @@ const PreviewProductForm = ({ open, onClose, product }: PreviewProductFormProps)
         </Grid>
 
         <Box mt={4} display='flex' justifyContent='flex-end'>
-          <Button onClick={onClose} color='primary' variant='contained'>
+          <Button
+            onClick={onClose}
+            color='primary'
+            variant='contained'
+            disabled={soloLectura}
+          >
             Cerrar
           </Button>
         </Box>

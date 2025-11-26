@@ -415,7 +415,7 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box sx={style}>
+      <Box>
         <Typography variant='h6' component='h2' sx={{ mb: 4 }}>
           Editar Paquete
         </Typography>

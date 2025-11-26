@@ -462,6 +462,20 @@ export default function UserRolePermissionManager() {
                                     value={newUser.email}
                                     onChange={e => setNewUser({ ...newUser, email: e.target.value })}
                                 />
+                                <TextField
+                                    label="Usuario"
+                                    fullWidth
+                                    margin="normal"
+                                    value={newUser.usuario}
+                                    onChange={e => setNewUser({ ...newUser, usuario: e.target.value })}
+                                />
+                                <TextField
+                                    label="RUT"
+                                    fullWidth
+                                    margin="normal"
+                                    value={newUser.rut}
+                                    onChange={e => setNewUser({ ...newUser, rut: e.target.value })}
+                                />
                                 <Typography variant="subtitle2" sx={{ mt: 2 }}>Roles:</Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                                     {roles.map((role: any) => (

@@ -42,6 +42,7 @@ const style = {
 interface CreatePackageModalProps {
   open: boolean
   handleClose: () => void
+  soloLectura?: boolean
 }
 
 interface Producto {
@@ -71,7 +72,7 @@ interface Familia {
   }
 }
 
-const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose }) => {
+const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose, soloLectura }) => {
   // Estados para el formulario
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
@@ -276,7 +277,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   }
 
   return (
-    <Modal open={open} onClose={handleCloseModal}>
+    <Modal open={open} onClose={handleClose}>
       <Box sx={style}>
         <Typography variant='h6' gutterBottom>
           Crear Paquete

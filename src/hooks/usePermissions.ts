@@ -12,3 +12,15 @@ export function usePermissions() {
         status
     }
 }
+
+export function usePermiso() {
+    const { data: session } = useSession()
+    // Cambia aquí para tomar los permisos de session.user.permissions
+    const permisos = session?.user?.permissions || []
+
+    function tienePermiso(permiso: string) {
+        return permisos.includes(permiso)
+    }
+
+    return { tienePermiso }
+}

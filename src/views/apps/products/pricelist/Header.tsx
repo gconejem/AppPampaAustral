@@ -8,6 +8,11 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import IconButton from '@mui/material/IconButton'
+import Switch from '@mui/material/Switch'
+import EditIcon from '@mui/icons-material/EditIcon'
+import DeleteIcon from '@mui/icons-material/DeleteIcon'
+import OptionMenu from '@mui/material/OptionMenu'
 
 const LISTAS_PRECIO = [
   { id: 1, nombre: 'Lista 1' },
@@ -27,7 +32,34 @@ const Header = ({ onSave, selectedCount }: HeaderProps) => {
     onSave(selectedLista)
   }
 
-  return <Card className='flex justify-between items-center p-6 mb-4'></Card>
+  return (
+    <Card className='flex justify-between items-center p-6 mb-4'>
+      <div>
+        <FormControl>
+          <InputLabel htmlFor='lista-select'>Lista de Precios</InputLabel>
+          <Select
+            id='lista-select'
+            value={selectedLista}
+            onChange={(e) => setSelectedLista(Number(e.target.value))}
+            disabled={soloLectura}
+          >
+            {LISTAS_PRECIO.map(lista => (
+              <MenuItem key={lista.id} value={lista.id}>
+                {lista.nombre}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </div>
+      <div>
+        <Button disabled={soloLectura}>Nuevo Producto</Button>
+        <IconButton disabled={soloLectura}><EditIcon /></IconButton>
+        <IconButton disabled={soloLectura}><DeleteIcon /></IconButton>
+        <Switch disabled={soloLectura} />
+        <OptionMenu iconButtonProps={{ disabled: soloLectura }} ... />
+      </div>
+    </Card>
+  )
 }
 
 export default Header
