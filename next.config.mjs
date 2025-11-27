@@ -2,7 +2,7 @@
 const nextConfig = {
   swcMinify: true,
   compiler: {
-    removeConsole: true,
+    removeConsole: { exclude: ["error"] },
   },
   typescript: {
     ignoreBuildErrors: true, // ignora errores de TypeScript
@@ -13,7 +13,7 @@ const nextConfig = {
     serverComponentsExternalPackages: [],
   },
   // Configuración de generación estática
-  output: 'standalone',
+  //output: 'standalone',
   redirects: async () => {
     return [
       {
