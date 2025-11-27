@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // PUT /api/agenda/[id]/servicios/[servicioId] - Actualizar un servicio de una visita
 export async function PUT(
     request: Request,

@@ -1,5 +1,8 @@
 import { prisma } from '../../../../lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 function normalizeKey(k: string) {
     return (k || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '')
 }

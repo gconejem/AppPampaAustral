@@ -4,6 +4,9 @@ import puppeteer from 'puppeteer'
 import { prisma } from '@/lib/prisma'
 import { parseDateFromBackend } from '@/utils/dateUtils'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Función para renderizar el HTML del PDF para Comprobante de Visita (R-12-47)
 function renderComprobanteVisitaHTML(agenda: any, logoBase64: string) {
     const comprobanteData = agenda.comprobanteVisitaJSON as any || {}

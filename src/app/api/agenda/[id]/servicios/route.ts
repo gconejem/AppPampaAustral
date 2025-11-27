@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST /api/agenda/[id]/servicios - Agregar un nuevo servicio a una visita
 export async function POST(request: Request, { params }: { params: { id: string } }) {
     try {
