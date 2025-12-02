@@ -12,6 +12,11 @@ import { es } from 'date-fns/locale'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 
+
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 // Types
 type DateRange = [Date | null, Date | null]
 
@@ -33,6 +38,16 @@ const TableFilters = ({ onDateRangeChange }: Props) => {
     setEndDate(date)
     onDateRangeChange([startDate, date])
   }
+
+      // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
 
   const handleClearFilters = () => {
     setStartDate(null)
@@ -74,7 +89,7 @@ const TableFilters = ({ onDateRangeChange }: Props) => {
           </Grid>
           <Grid item xs={12} md={2}>
             <Box display='flex' justifyContent='flex-end'>
-              <Button variant='outlined' color='secondary' onClick={handleClearFilters}>
+              <Button disabled={soloLectura} variant='outlined' color='secondary' onClick={handleClearFilters}>
                 Limpiar
               </Button>
             </Box>

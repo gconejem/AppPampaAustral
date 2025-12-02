@@ -50,6 +50,10 @@ import ContactPreview from '../preview/ContactPreview'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 type ContactTypeWithAction = ContactType & {
   action?: string
 }
@@ -114,6 +118,16 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
     setData(initialData)
     setFilteredData(initialData)
   }, [initialData])
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
 
   const handleToggleStatus = async () => {
     try {
@@ -352,14 +366,15 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
         id: 'actions',
         header: 'ACCIONES',
         cell: ({ row }: { row: any }) => (
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <IconButton color='info' onClick={() => handlePreviewContact(row.original)}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' , disabled: soloLectura }}>
+            <IconButton disabled={soloLectura} color='info' onClick={() => handlePreviewContact(row.original)}>
               <i className='ri-eye-line' />
             </IconButton>
-            <IconButton color='primary' onClick={() => handleEditContact(row.original)}>
+            <IconButton disabled={soloLectura} color='primary' onClick={() => handleEditContact(row.original)}>
               <i className='ri-edit-line' />
             </IconButton>
             <IconButton
+              disabled={soloLectura}
               color={row.original.estado === 'ACTIVO' ? 'error' : 'success'}
               onClick={() => handleClickOpenDialog(row.original)}
             >
@@ -425,7 +440,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
         <CardHeader
           title={<span className='text-xl'>Contactos</span>}
           action={
-            <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
+            <Button disabled={soloLectura} variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
               + Nuevo Contacto
             </Button>
           }
@@ -433,6 +448,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
           <Button
+            disabled={soloLectura}
             color='secondary'
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
@@ -565,7 +581,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
           <DialogContentText id='alert-dialog-description'>{dialogMessage}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} variant='outlined' color='secondary'>
+          <Button disabled={soloLectura} onClick={handleCloseDialog} variant='outlined' color='secondary'>
             Cancelar
           </Button>
           <Button
@@ -573,7 +589,7 @@ const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
             variant='contained'
             color={dialogAction === 'activate' ? 'success' : 'error'}
             autoFocus
-            disabled={isDeleteLoading}
+            disabled={isDeleteLoading || soloLectura}
             startIcon={isDeleteLoading && <i className='ri-loader-4-line animate-spin' />}
           >
             {dialogAction === 'activate' ? 'Activar' : 'Desactivar'}

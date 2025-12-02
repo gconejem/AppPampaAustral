@@ -33,6 +33,10 @@ import { useForm, Controller } from 'react-hook-form'
 // Types Imports
 import type { ContactType } from '@/types/apps/contactTypes'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 type Props = {
   open: boolean
   handleClose: () => void
@@ -84,6 +88,16 @@ const AddContact = (props: Props) => {
 
   // States
   const [formData, setFormData] = useState<FormNonValidateType>(initialData)
+
+      // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
 
   // Hooks
   const {
@@ -159,7 +173,7 @@ const AddContact = (props: Props) => {
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Añadir Nuevo Contacto</Typography>
-        <IconButton size='small' onClick={handleReset}>
+        <IconButton disabled={soloLectura} size='small' onClick={handleReset}>
           <i className='ri-close-line text-2xl' />
         </IconButton>
       </div>
@@ -325,10 +339,10 @@ const AddContact = (props: Props) => {
             </Grid>
           </Grid>
           <div className='flex items-center gap-4 mt-5'>
-            <Button variant='contained' type='submit'>
+            <Button disabled={soloLectura} variant='contained' type='submit'>
               Guardar
             </Button>
-            <Button variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
+            <Button disabled={soloLectura} variant='outlined' color='error' type='reset' onClick={() => handleReset()}>
               Cancelar
             </Button>
           </div>
