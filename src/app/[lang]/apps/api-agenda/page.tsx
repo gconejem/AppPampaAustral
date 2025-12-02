@@ -1,5 +1,7 @@
 "use client";
+
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 type Agenda = {
   id: number;
@@ -31,15 +33,22 @@ type Agenda = {
 export default function ApiAgendaPage() {
   const [agendas, setAgendas] = useState<Agenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const endpoint = searchParams?.get('endpoint') || 'api-get-lbrutas-check-integracion';
 
   useEffect(() => {
-    fetch('/api/agenda/app')
+    // Ahora la ruta NO necesita el parámetro lang
+    fetch(`/api/v1/lab/${endpoint}`)
       .then(res => res.json())
       .then(data => {
         setAgendas(data);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error al cargar agendas:', err);
+        setLoading(false);
       });
-  }, []);
+  }, [endpoint]);
 
 
   // Descargar JSON

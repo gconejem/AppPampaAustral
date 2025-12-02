@@ -1,88 +1,88 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
-type Equipo = { [k: string]: any };
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+type Equipo = {
+    [key: string]: any;
+};
 
 export default function ApiEquiposPage() {
-    const [columns, setColumns] = useState<string[]>([]);
-    const [rows, setRows] = useState<any[]>([]);
+    const [equipos, setEquipos] = useState<Equipo[]>([]);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
+    const [columns, setColumns] = useState<string[]>([]);
+    const searchParams = useSearchParams();
+    const endpoint = searchParams?.get('endpoint') || 'api-get-lbrutas-join-lbequipos';
 
     useEffect(() => {
-        let mounted = true;
-        fetch("/api/equipo/app")
-            .then(r => r.json())
+        fetch(`/api/v1/lab/${endpoint}`)
+            .then(res => res.json())
             .then(data => {
-                if (!mounted) return;
-                // aceptar formato { columns, rows } o array de objetos
-                if (data && Array.isArray(data.columns) && Array.isArray(data.rows)) {
-                    setColumns(data.columns);
-                    setRows(data.rows);
-                } else if (Array.isArray(data)) {
-                    const cols = Array.from(new Set(data.flatMap((o: any) => Object.keys(o))));
-                    setColumns(cols);
-                    setRows(data);
-                } else {
-                    setColumns([]);
-                    setRows([]);
-                }
-            })
-            .catch(() => { setColumns([]); setRows([]); })
-            .finally(() => mounted && setLoading(false));
-        return () => { mounted = false; };
-    }, []);
+                console.log('Equipos recibidos:', data);
 
-    const goHome = () => {
-        const lang = typeof window !== "undefined" ? window.location.pathname.split("/")[1] || "home" : "home";
-        router.push(`/home/apps/api`);
-    };
+                if (Array.isArray(data) && data.length > 0) {
+                    const allKeys = Object.keys(data[0]);
+                    setColumns(allKeys);
+                    setEquipos(data);
+                } else {
+                    setEquipos([]);
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error('Error al cargar equipos:', err);
+                setLoading(false);
+            });
+    }, [endpoint]);
 
     const handleDownload = () => {
-        const blob = new Blob([JSON.stringify({ columns, rows }, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(equipos, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        const a = document.createElement('a');
         a.href = url;
-        a.download = "equipos.json";
+        a.download = 'equipos.json';
         a.click();
         URL.revokeObjectURL(url);
     };
 
-    return (
-        <div style={{ padding: 32, maxWidth: 1200, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <button onClick={goHome} style={{ background: "transparent", color: "#1976d2", border: "1px solid #1976d2", borderRadius: 6, padding: "6px 12px", cursor: "pointer", fontWeight: 500 }}>
-                        ← Volver
-                    </button>
-                    <h2 style={{ margin: 0 }}>API - Equipos</h2>
-                </div>
+    const goHome = () => {
+        window.location.href = '/home/apps/api';
+    };
 
-                <button onClick={handleDownload} style={{ background: "#43a047", color: "#fff", border: "none", borderRadius: 6, padding: "8px 20px", fontWeight: 500, cursor: "pointer" }}>
+    return (
+        <div style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <button onClick={goHome} style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 20px', fontWeight: 500, cursor: 'pointer' }}>
+                    ← Volver
+                </button>
+                <h2 style={{ margin: 0 }}>Equipos API ({equipos.length} registros)</h2>
+                <button onClick={handleDownload} style={{ background: '#43a047', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 20px', fontWeight: 500, cursor: 'pointer' }}>
                     Descargar JSON
                 </button>
             </div>
-
-            <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.07)", padding: 18 }}>
+            <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', padding: 24 }}>
                 {loading ? (
-                    <div style={{ textAlign: "center", padding: 40 }}>Cargando...</div>
-                ) : columns.length === 0 ? (
-                    <div style={{ padding: 20 }}>No hay datos para mostrar.</div>
+                    <div style={{ textAlign: 'center', padding: 40 }}>Cargando...</div>
+                ) : equipos.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>No hay equipos disponibles</div>
                 ) : (
-                    <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                             <thead>
-                                <tr style={{ background: "#f5f5f5" }}>
-                                    {columns.map(col => <th key={col} style={{ padding: "10px 8px", fontWeight: 600, textAlign: "left" }}>{col}</th>)}
+                                <tr style={{ background: '#f5f5f5' }}>
+                                    {columns.map(col => (
+                                        <th key={col} style={{ padding: '12px 8px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                            {col}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row, i) => (
-                                    <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                                {equipos.map((equipo, index) => (
+                                    <tr key={equipo.CODIGO || equipo.codigo || index} style={{ borderBottom: '1px solid #eee' }}>
                                         {columns.map(col => (
-                                            <td key={col} style={{ padding: "10px 8px", verticalAlign: "top", whiteSpace: "pre-wrap" }}>
-                                                {row[col] === null || row[col] === undefined ? "-" : (typeof row[col] === "object" ? JSON.stringify(row[col]) : String(row[col]))}
+                                            <td key={col} style={{ padding: '10px 8px' }}>
+                                                {equipo[col] !== null && equipo[col] !== undefined ? String(equipo[col]) : '-'}
                                             </td>
                                         ))}
                                     </tr>
