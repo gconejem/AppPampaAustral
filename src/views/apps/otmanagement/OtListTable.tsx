@@ -49,6 +49,12 @@ interface OrdenTrabajo extends BaseOrdenTrabajo {
 // Utils Imports
 import { parseDateFromBackend } from '@/utils/dateUtils'
 
+
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 interface Agenda {
   id: number
   titulo: string
@@ -125,6 +131,18 @@ const OtListTable = ({
   const [filteredData, setFilteredData] = useState<OrdenTrabajo[]>([])
   // Estados disponibles para las órdenes de trabajo (se cargan todos desde la base de datos)
   const [estadosDisponibles, setEstadosDisponibles] = useState<string[]>([])
+
+
+  // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
 
   const [filters, setFilters] = useState({
     servicioId: '',
@@ -782,12 +800,12 @@ const OtListTable = ({
           return (
             <div className='flex items-center gap-2'>
               {/* Botón PDF existente */}
-              <IconButton onClick={() => handlePDFClick(ot)}>
+              <IconButton disabled={soloLectura} onClick={() => handlePDFClick(ot)}>
                 <i className='ri-file-pdf-line' style={{ fontSize: '1.2rem', color: '#FF0000' }} />
               </IconButton>
 
               {/* Botón Editar existente */}
-              <IconButton onClick={() => handleEditClick(ot)}>
+              <IconButton disabled={soloLectura} onClick={() => handleEditClick(ot)}>
                 <i className='ri-edit-line' style={{ fontSize: '1.2rem', color: '#1976d2' }} />
               </IconButton>
 
@@ -796,7 +814,7 @@ const OtListTable = ({
                 <Tooltip title={yaEnviado ? 'Notificación ya enviada' : 'Enviar notificación al cliente'}>
                   <IconButton
                     onClick={() => handleSendNotification(ot)}
-                    disabled={yaEnviado}
+                    disabled={yaEnviado || soloLectura}
                   >
                     {yaEnviado ? (
                       <i className='ri-checkbox-circle-line' style={{ fontSize: '1.2rem', color: '#4caf50' }} />
@@ -809,13 +827,14 @@ const OtListTable = ({
 
               {/* Botones existentes */}
               <IconButton
+                disabled={soloLectura}
                 onClick={() =>
                   window.open(`${window.location.origin}/en/apps/internalcontrol?otId=${ot.id}`, '_blank')
                 }
               >
                 <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} />
               </IconButton>
-              <IconButton>
+              <IconButton disabled={soloLectura}>
                 <i className='ri-more-2-fill' style={{ fontSize: '1.2rem' }} />
               </IconButton>
             </div>
@@ -917,7 +936,7 @@ const OtListTable = ({
                 variant='outlined'
                 size='small'
                 onClick={handleClearEstados}
-                disabled={filters.estadosSeleccionados.length === 0}
+                disabled={filters.estadosSeleccionados.length === 0 || soloLectura}
                 title='Limpiar estados seleccionados'
                 sx={{
                   minWidth: 'auto',
@@ -953,7 +972,7 @@ const OtListTable = ({
 
             {/* Segunda Fila */}
             <Grid item xs={12} sm={2}>
-              <Button variant='contained' fullWidth onClick={handleClearFilters}>
+              <Button disabled={soloLectura} variant='contained' fullWidth onClick={handleClearFilters}>
                 Limpiar Filtros
               </Button>
             </Grid>

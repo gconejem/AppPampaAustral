@@ -81,6 +81,11 @@ import { parseDateFromBackend } from '@/utils/dateUtils'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
@@ -252,6 +257,16 @@ const VisitListTable = ({
     'RECIBIDA_OK',
     'CODIFICADA'
   ]
+
+  // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.agenda.ver) &&
+    !hasPermission(permisos.agenda.crear) &&
+    !hasPermission(permisos.agenda.editar) &&
+    !hasPermission(permisos.agenda.eliminar)
 
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
@@ -2464,6 +2479,7 @@ const VisitListTable = ({
         cell: ({ row }) => (
           <div className='flex items-center'>
             <OptionMenu
+              disabled={soloLectura}
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
               options={[
@@ -2825,6 +2841,7 @@ const VisitListTable = ({
                     endAdornment: globalFilterValue && (
                       <InputAdornment position="end">
                         <IconButton
+                          disabled={soloLectura}
                           size="small"
                           onClick={() => setGlobalFilterValue('')}
                           edge="end"
@@ -2838,6 +2855,7 @@ const VisitListTable = ({
               </Grid>
               <Grid item xs={12} sm={2}>
                 <Button
+                  disabled={soloLectura}
                   variant='contained'
                   fullWidth
                   onClick={() => {
@@ -2884,6 +2902,7 @@ const VisitListTable = ({
                 >
                   <span>
                     <Button
+                      disabled={soloLectura}
                       variant='contained'
                       color='warning'
                       fullWidth
@@ -2928,6 +2947,7 @@ const VisitListTable = ({
               </Grid>
               <Grid item xs={12} sm={2}>
                 <Button
+                  disabled={soloLectura}
                   variant='outlined'
                   color='secondary'
                   fullWidth
@@ -2947,7 +2967,7 @@ const VisitListTable = ({
                   color='success'
                   fullWidth
                   onClick={handleExportToExcel}
-                  disabled={selectedVisits.length === 0}
+                  disabled={selectedVisits.length === 0 || soloLectura}
                   startIcon={<i className='ri-file-excel-2-line' />}
                 >
                   Exportar a Excel ({selectedVisits.length})
@@ -3055,6 +3075,7 @@ const VisitListTable = ({
         <DialogTitle>
           Comprobante de Visita
           <IconButton
+            disabled={soloLectura}
             aria-label="close"
             onClick={handleCloseComprobante}
             sx={{
@@ -3077,6 +3098,7 @@ const VisitListTable = ({
                     <Grid item xs={6} />
                     <Grid item xs={3}>
                       <Button
+                        disabled={soloLectura}
                         variant='contained'
                         color='success'
                         size='small'
@@ -3088,6 +3110,7 @@ const VisitListTable = ({
                     </Grid>
                     <Grid item xs={3}>
                       <Button
+                        disabled={soloLectura}
                         variant='contained'
                         color='error'
                         size='small'
@@ -3106,6 +3129,7 @@ const VisitListTable = ({
                     <Grid item xs={9} />
                     <Grid item xs={3} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                       <Button
+                        disabled={soloLectura}
                         variant='outlined'
                         color='primary'
                         size='small'
@@ -3253,6 +3277,7 @@ const VisitListTable = ({
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Button
+                    disabled={soloLectura}
                     variant='contained'
                     size='small'
                     onClick={(e) => handleOpenServiciosBuscador(e.currentTarget)}
@@ -3353,6 +3378,7 @@ const VisitListTable = ({
                               <>
                                 <Tooltip title="Guardar cambios">
                                   <IconButton
+                                    disabled={soloLectura}
                                     size='small'
                                     color='success'
                                     onClick={handleSaveServiceChanges}
@@ -3362,6 +3388,7 @@ const VisitListTable = ({
                                 </Tooltip>
                                 <Tooltip title="Cancelar edición">
                                   <IconButton
+                                    disabled={soloLectura}
                                     size='small'
                                     color='error'
                                     onClick={handleCancelEditingService}
@@ -3374,6 +3401,7 @@ const VisitListTable = ({
                               <>
                                 <Tooltip title="Editar servicio">
                                   <IconButton
+                                    disabled={soloLectura}
                                     size='small'
                                     color='primary'
                                     onClick={() => handleStartEditingService(servicio)}
@@ -3383,6 +3411,7 @@ const VisitListTable = ({
                                 </Tooltip>
                                 <Tooltip title="Eliminar servicio">
                                   <IconButton
+                                    disabled={soloLectura}
                                     size='small'
                                     color='error'
                                     onClick={() => handleDeleteService(servicio.id)}
@@ -3430,7 +3459,7 @@ const VisitListTable = ({
                     size='small'
                     onClick={handlePDFClick}
                     startIcon={<i className='ri-file-pdf-line' />}
-                    disabled={!selectedVisit?.comprobanteVisitaJSON}
+                    disabled={!selectedVisit?.comprobanteVisitaJSON || soloLectura}
                   >
                     PDF
                   </Button>
@@ -3443,7 +3472,7 @@ const VisitListTable = ({
                     fullWidth
                     size='small'
                     onClick={handleRecepcionarClick}
-                    disabled={!selectedVisit || selectedVisit.estado !== 'EN_REVISION'}
+                    disabled={!selectedVisit || selectedVisit.estado !== 'EN_REVISION' || soloLectura}
                   >
                     Recepcionar
                   </Button>
@@ -3463,6 +3492,7 @@ const VisitListTable = ({
 
                 <Grid item xs={1}>
                   <Button
+                  disabled={soloLectura}
                     variant='outlined'
                     color='info'
                     fullWidth
@@ -3565,6 +3595,7 @@ const VisitListTable = ({
         </DialogContent>
         <DialogActions>
           <Button
+            disabled={soloLectura}
             onClick={() => {
               setIsChangeStatusOpen(false)
               setSelectedVisitForStatus(null)
@@ -3576,7 +3607,7 @@ const VisitListTable = ({
           <Button
             variant='contained'
             onClick={handleChangeStatus}
-            disabled={!newStatus || newStatus === selectedVisitForStatus?.estado}
+            disabled={!newStatus || newStatus === selectedVisitForStatus?.estado || soloLectura}
           >
             Guardar
           </Button>
@@ -3702,7 +3733,7 @@ const VisitListTable = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseBulkEditModal}>
+          <Button onClick={handleCloseBulkEditModal} disabled={soloLectura}>
             Cancelar
           </Button>
           <Button
@@ -3714,6 +3745,7 @@ const VisitListTable = ({
               (bulkNewStatus === 'SUSPENDIDA' && !bulkMotivoSuspension) ||
               (bulkNewStatus === 'SUSPENDIDA' && bulkMotivoSuspension === 'OTRO' && !bulkObservacionSuspendida) ||
               ((bulkNewStatus === 'EN_REVISION' || bulkNewStatus === 'ANULADA' || bulkNewStatus === 'RECIBIDA_OK') && !bulkSpecialObservaciones)
+              || soloLectura
             }
           >
             Cambiar Estado
@@ -3840,7 +3872,7 @@ const VisitListTable = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseSpecialStatusModal}>
+          <Button disabled={soloLectura} onClick={handleCloseSpecialStatusModal}>
             Cancelar
           </Button>
           <Button
@@ -3852,6 +3884,7 @@ const VisitListTable = ({
               (specialStatus === 'SUSPENDIDA' && !motivoSuspension) ||
               (specialStatus === 'SUSPENDIDA' && motivoSuspension === 'OTRO' && !observacionSuspendida) ||
               ((specialStatus === 'EN_REVISION' || specialStatus === 'ANULADA' || specialStatus === 'RECIBIDA_OK') && !specialObservaciones)
+              || soloLectura
             }
           >
             Cambiar Estado
@@ -3883,10 +3916,11 @@ const VisitListTable = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseRecepcionarModal}>
+          <Button disabled={soloLectura} onClick={handleCloseRecepcionarModal}>
             Cancelar
           </Button>
           <Button
+            disabled={soloLectura}
             variant='contained'
             color='success'
             onClick={handleConfirmarRecepcion}
@@ -4066,7 +4100,7 @@ const VisitListTable = ({
               <Button
                 size='small'
                 onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
-                disabled={productsPage === 0}
+                disabled={productsPage === 0 || soloLectura}
               >
                 Anterior
               </Button>
@@ -4078,7 +4112,7 @@ const VisitListTable = ({
                 onClick={() =>
                   setProductsPage(prev => Math.min(Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1, prev + 1))
                 }
-                disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1}
+                disabled={productsPage >= Math.ceil(totalProductos / ITEMS_PER_PAGE) - 1 || soloLectura}
               >
                 Siguiente
               </Button>
