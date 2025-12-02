@@ -27,6 +27,11 @@ import { filterCalendarLabel, selectedEvent } from '@/redux-store/slices/calenda
 import { SECTORES_COMERCIALES } from '@/constants/sectoresComerciales'
 import { REGIONES_CHILE } from '@/data/clientData'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 // Interfaces
 interface Cliente {
   clienteId: number
@@ -71,6 +76,16 @@ const SidebarLeft = (props: SidebarLeftProps) => {
     onFilterChange,
     onClearAllFilters
   } = props
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
 
   // Estado para la lista de clientes y obras
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -274,6 +289,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
       {/* Botón Añadir Cita */}
       <div className='is-full p-5'>
         <Button
+          disabled={soloLectura}
           fullWidth
           variant='contained'
           onClick={handleSidebarToggleSidebar}
@@ -301,6 +317,7 @@ const SidebarLeft = (props: SidebarLeftProps) => {
             Filtros
           </Typography>
           <Button
+            disabled={soloLectura}
             variant='outlined'
             size='small'
             startIcon={<ClearIcon />}

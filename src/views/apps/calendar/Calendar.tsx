@@ -44,6 +44,10 @@ import type { CalendarProps } from '@/types/apps/calendarTypes'
 import { parseDateFromBackend } from '@/utils/dateUtils'
 import { getInitials } from '@/utils/getInitials'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 type CalenderProps = CalendarProps & {
   handleAddEventSidebarToggle: () => void
   addEventSidebarOpen: boolean
@@ -108,6 +112,25 @@ const Calendar = (props: CalenderProps) => {
     start: null,
     end: null
   })
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.agenda.ver) &&
+    !hasPermission(permisos.agenda.crear) &&
+    !hasPermission(permisos.agenda.editar) &&
+    !hasPermission(permisos.agenda.eliminar)
+
+// Debug - AGREGAR ESTO
+console.log('🔍 Permisos agenda:', {
+  ver: hasPermission(permisos.agenda.ver),
+  crear: hasPermission(permisos.agenda.crear),
+  editar: hasPermission(permisos.agenda.editar),
+  eliminar: hasPermission(permisos.agenda.eliminar),
+  soloLectura: soloLectura
+})
 
   const [reportsMenuAnchorEl, setReportsMenuAnchorEl] = useState<null | HTMLElement>(null)
 
@@ -3110,6 +3133,7 @@ const Calendar = (props: CalenderProps) => {
               >
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   <Button
+                    disabled={soloLectura}
                     variant='text'
                     color='primary'
                     onClick={handleSelectAll}
@@ -3129,6 +3153,7 @@ const Calendar = (props: CalenderProps) => {
                   {/* Botón de Reportes - solo visible en vista de lista */}
                   {currentView === 'listMonth' && (
                     <Button
+                      disabled={soloLectura}
                       variant='outlined'
                       color='primary'
                       startIcon={<i className='ri-file-chart-line'></i>}
@@ -3141,6 +3166,7 @@ const Calendar = (props: CalenderProps) => {
 
                   {selectedEvents.length > 1 && (
                     <Button
+                      disabled={soloLectura}
                       variant='contained'
                       color='primary'
                       startIcon={<i className='ri-edit-line'></i>}
@@ -3358,8 +3384,9 @@ const Calendar = (props: CalenderProps) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button disabled={soloLectura} onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
           <Button
+            disabled={soloLectura}
             onClick={selectedEventId ? handleEliminarEvento : (selectedEvents.length > 1 ? handleBulkEliminar : handleEliminarEvento)}
             color='error'
             variant='contained'
@@ -3485,15 +3512,15 @@ const Calendar = (props: CalenderProps) => {
           horizontal: 'right'
         }}
       >
-        <MenuItem onClick={() => handleReportAction('exportarAgenda')}>
+        <MenuItem disabled={soloLectura} onClick={() => handleReportAction('exportarAgenda')}>
           <ListItemIcon>
             <i className='ri-file-excel-line' style={{ fontSize: '1.25rem' }}></i>
           </ListItemIcon>
           <ListItemText>Exportar Agenda</ListItemText>
         </MenuItem>
-        <MenuItem
+        <MenuItem 
           onClick={() => handleReportAction('agendaDiaria')}
-          disabled={!agendaDiariaEnabled}
+          disabled={!agendaDiariaEnabled || soloLectura}
           sx={{
             opacity: agendaDiariaEnabled ? 1 : 0.5,
             cursor: agendaDiariaEnabled ? 'pointer' : 'not-allowed'
