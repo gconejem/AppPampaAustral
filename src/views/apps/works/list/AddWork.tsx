@@ -55,6 +55,10 @@ import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
 import AddContact from '@/views/apps/contacts/list/AddContact'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 // Agregar la constante para los cargos disponibles
 const CARGOS_OBRA = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
@@ -155,6 +159,17 @@ const AddObraDrawer = (props: Props) => {
     },
     mode: 'onChange'
   })
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
 
   // States
   const contactoVacio: ContactoObraForm = {
@@ -703,10 +718,10 @@ const AddObraDrawer = (props: Props) => {
         <div className='flex items-center justify-between pli-5 plb-4'>
           <Typography variant='h5'>Nueva Obra</Typography>
           <div className='flex gap-2'>
-            <Button size='small' variant='outlined' onClick={handleLoadDummyData} sx={{ marginRight: 2 }}>
+            <Button size='small' disabled={soloLectura} variant='outlined' onClick={handleLoadDummyData} sx={{ marginRight: 2 }}>
               Cargar Datos de Prueba
             </Button>
-            <IconButton size='small' onClick={handleDrawerClose}>
+            <IconButton size='small' disabled={soloLectura} onClick={handleDrawerClose}>
               <i className='ri-close-line text-2xl' />
             </IconButton>
           </div>
@@ -1060,6 +1075,7 @@ const AddObraDrawer = (props: Props) => {
                 <Grid container spacing={2} alignItems='center'>
                   <Grid item xs={12} sm={'auto'}>
                     <Button
+                     disabled={soloLectura}
                       variant='contained'
                       color='primary'
                       onClick={() => setAddContactOpen(true)}
@@ -1268,6 +1284,7 @@ const AddObraDrawer = (props: Props) => {
                       <TableCell>
                         <div className='flex items-center'>
                           <IconButton
+                            disabled={soloLectura}
                             onClick={() => {
                               const updatedContactos = contactos.map((c, i) => ({
                                 ...c,
@@ -1282,6 +1299,7 @@ const AddObraDrawer = (props: Props) => {
                           </IconButton>
                           {index === 0 ? (
                             <IconButton
+                              disabled={soloLectura}
                               color='primary'
                               onClick={() => {
                                 setContactos([contactoVacio, ...contactos.slice(1)])
@@ -1292,10 +1310,10 @@ const AddObraDrawer = (props: Props) => {
                             </IconButton>
                           ) : (
                             <>
-                              <IconButton color='info' onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
+                              <IconButton color='info ' disabled={soloLectura} onClick={() => editarContacto(index)} sx={{ mr: 1 }}>
                                 <i className='ri-edit-line' />
                               </IconButton>
-                              <IconButton color='error' onClick={() => eliminarContacto(index)}>
+                              <IconButton color='error' disabled={soloLectura} onClick={() => eliminarContacto(index)}>
                                 <i className='ri-delete-bin-line' />
                               </IconButton>
                             </>
@@ -1656,10 +1674,10 @@ const AddObraDrawer = (props: Props) => {
 
             {/* Botones de acción */}
             <div className='flex items-center gap-4 mt-5'>
-              <Button variant='contained' type='submit' disabled={isSubmitting}>
+              <Button variant='contained'  type='submit' disabled={isSubmitting || soloLectura}>
                 {isSubmitting ? 'Guardando...' : 'Guardar'}
               </Button>
-              <Button variant='outlined' color='error' onClick={handleReset} disabled={isSubmitting}>
+              <Button variant='outlined' color='error' onClick={handleReset} disabled={isSubmitting || soloLectura}>
                 Cancelar
               </Button>
             </div>
@@ -1687,10 +1705,10 @@ const AddObraDrawer = (props: Props) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color='primary'>
+          <Button onClick={handleCloseConfirmDialog} color='primary' disabled={soloLectura}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirmClose} color='error' autoFocus>
+          <Button onClick={handleConfirmClose} color='error' autoFocus disabled={soloLectura}>
             Sí, cerrar
           </Button>
         </DialogActions>

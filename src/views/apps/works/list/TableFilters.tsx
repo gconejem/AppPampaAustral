@@ -19,6 +19,10 @@ import MenuItem from '@mui/material/MenuItem'
 // Data Imports
 import { ESTADOS_OBRA } from '@/data/obraData'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 interface Estado {
   value: string
   label: string
@@ -35,6 +39,16 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [selectedEstado, setSelectedEstado] = useState<string>('')
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
 
   const handleStartDateChange = (date: Date | null) => {
     setStartDate(date)
@@ -133,7 +147,7 @@ const TableFilters = ({ workData, setFilteredData, estados = ESTADOS_OBRA }: Tab
           </Grid>
           <Grid item xs={12} md={2}>
             <Box display='flex' justifyContent='flex-end'>
-              <Button variant='outlined' color='secondary' onClick={handleClearFilters}>
+              <Button variant='outlined' color='secondary' onClick={handleClearFilters} disabled={soloLectura}>
                 Limpiar
               </Button>
             </Box>

@@ -41,6 +41,10 @@ import ContactSearch from '@/views/apps/clients/components/ContactSearch'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import ClientSearch from '@/views/apps/clients/components/ClientSearch'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 const CARGOS_OBRA = [
   { value: 'encargado_obra', label: 'Encargado de Obra' },
   { value: 'dueno', label: 'Dueño' },
@@ -149,6 +153,17 @@ const DuplicateWork = (props: Props) => {
     },
     mode: 'onChange'
   })
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
 
   const [lastObraNumber, setLastObraNumber] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -511,6 +526,7 @@ const DuplicateWork = (props: Props) => {
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Duplicar Obra</Typography>
         <IconButton size='small' onClick={() => {
+          disabled={soloLectura}
           resetForm()
           setContactos(contactosPrincipales)
           setValue('numeroObra', lastObraNumber)
@@ -940,13 +956,14 @@ const DuplicateWork = (props: Props) => {
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='success' onClick={guardarEdicion}>
+                            <IconButton color='success' onClick={guardarEdicion} disabled={soloLectura}>
                               <i className='ri-check-line' />
                             </IconButton>
-                            <IconButton color='error' onClick={handleCancelEdit}>
+                            <IconButton color='error' onClick={handleCancelEdit} disabled={soloLectura}>
                               <i className='ri-close-line' />
                             </IconButton>
                             <IconButton
+                              disabled={soloLectura}
                               color={editingContact.isPrincipal ? 'warning' : 'default'}
                               onClick={() =>
                                 setEditingContact({ ...editingContact, isPrincipal: !editingContact.isPrincipal })
@@ -966,13 +983,14 @@ const DuplicateWork = (props: Props) => {
                         <TableCell>{contacto.telefono1}</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='info' onClick={() => editarContacto(index)}>
+                            <IconButton color='info' onClick={() => editarContacto(index)} disabled={soloLectura}>
                               <i className='ri-edit-line' />
                             </IconButton>
-                            <IconButton color='error' onClick={() => eliminarContacto(index)}>
+                            <IconButton color='error' onClick={() => eliminarContacto(index)} disabled={soloLectura}>
                               <i className='ri-delete-bin-line' />
                             </IconButton>
                             <IconButton
+                              disabled={soloLectura}
                               color={contacto.isPrincipal ? 'warning' : 'default'}
                               onClick={() => {
                                 const updatedContactos = contactos.map(c => ({
@@ -1336,10 +1354,10 @@ const DuplicateWork = (props: Props) => {
           </Grid>
           {/* Botones de acción */}
           <div className='flex items-center gap-4 mt-5'>
-            <Button variant='contained' type='submit' disabled={isSubmitting}>
+            <Button variant='contained' type='submit' disabled={isSubmitting || soloLectura}>
               {isSubmitting ? 'Duplicando...' : 'Duplicar'}
             </Button>
-            <Button variant='outlined' color='error' onClick={() => {
+            <Button disabled={soloLectura} variant='outlined' color='error' onClick={() => {
               resetForm()
               setContactos(contactosPrincipales)
               setValue('numeroObra', lastObraNumber)

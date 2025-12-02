@@ -89,6 +89,10 @@ import tableStyles from '@core/styles/table.module.css'
 // Data Imports
 import { ESTADOS_OBRA } from '@/data/obraData'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
@@ -221,6 +225,16 @@ const WorkListTable = () => {
   const params = useParams()
   const locale = (params?.lang as string) || 'es'
 
+  // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
   useEffect(() => {
     const fetchObras = async () => {
       try {
@@ -336,7 +350,7 @@ const WorkListTable = () => {
         variant='outlined'
         startIcon={<i className='ri-file-download-line' />}
         onClick={handleExportCSV}
-        disabled={!table.getSelectedRowModel().rows.length} // Deshabilitar si no hay filas seleccionadas
+        disabled={!table.getSelectedRowModel().rows.length || soloLectura} // Deshabilitar si no hay filas seleccionadas
       >
         Exportar a CSV
       </Button>
@@ -739,6 +753,7 @@ const WorkListTable = () => {
         cell: ({ row }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <IconButton
+              disabled={soloLectura}
               size='small'
               color='info'
               onClick={() => handlePreview(row.original)}
@@ -747,6 +762,7 @@ const WorkListTable = () => {
               <i className='ri-eye-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
             <IconButton
+              disabled={soloLectura}
               size='small'
               color='warning'
               onClick={() => handleDuplicate(row.original)}
@@ -755,6 +771,7 @@ const WorkListTable = () => {
               <i className='ri-file-copy-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
             <IconButton
+              disabled={soloLectura}
               size='small'
               color='primary'
               onClick={() => handleEdit(row.original)}
@@ -770,6 +787,7 @@ const WorkListTable = () => {
               <i className='ri-file-preview-line' style={{ fontSize: '1.25rem' }} />
             </IconButton> */}
             <IconButton
+              disabled={soloLectura}
               size='small'
               color='primary'
               onClick={() => handleExportPDF(row.original)}
@@ -777,7 +795,7 @@ const WorkListTable = () => {
               <i className='ri-file-download-line' style={{ fontSize: '1.25rem' }} />
             </IconButton>
             <OptionMenu
-              iconButtonProps={{ className: 'cursor-pointer' }}
+              iconButtonProps={{ className: 'cursor-pointer', disabled: soloLectura }}
               options={[
                 {
                   text: 'Cambiar Estado',
@@ -897,7 +915,7 @@ const WorkListTable = () => {
       </Alert>
     )
   }
-
+              
   return (
     <>
       <Card>
@@ -905,7 +923,7 @@ const WorkListTable = () => {
           title='Lista de Obras'
           action={
             <div className='flex items-center gap-2'>
-              <Button variant='contained' onClick={() => { setAddObraOpen(true); }}>
+              <Button variant='contained' onClick={() => { setAddObraOpen(true); }} disabled={soloLectura}>
                 Agregar Obra
               </Button>
             </div>
@@ -1038,10 +1056,10 @@ const WorkListTable = () => {
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>¿Está seguro que desea eliminar esta obra? Esta acción no se puede deshacer.</DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color='primary'>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='primary' disabled={soloLectura}>
             Cancelar
           </Button>
-          <Button onClick={handleDeleteConfirm} color='error' variant='contained'>
+          <Button onClick={handleDeleteConfirm} color='error' variant='contained' disabled={soloLectura}>
             Eliminar
           </Button>
         </DialogActions>
@@ -1065,8 +1083,8 @@ const WorkListTable = () => {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setChangeStatusOpen(false)}>Cancelar</Button>
-          <Button onClick={handleStatusChange} variant='contained'>
+          <Button onClick={() => setChangeStatusOpen(false)} disabled={soloLectura}>Cancelar</Button>
+          <Button onClick={handleStatusChange} variant='contained' disabled={soloLectura}>
             Guardar
           </Button>
         </DialogActions>
@@ -1077,7 +1095,7 @@ const WorkListTable = () => {
           <WorkPreview obra={selectedObra} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewDialogOpen(false)} variant='contained'>
+          <Button onClick={() => setPreviewDialogOpen(false)} variant='contained' disabled={soloLectura}>
             Cerrar
           </Button>
         </DialogActions>
@@ -1107,7 +1125,7 @@ const WorkListTable = () => {
           </table>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setContactDialogOpen(false)} variant='contained'>
+          <Button onClick={() => setContactDialogOpen(false)} variant='contained' disabled={soloLectura}>
             Cerrar
           </Button>
         </DialogActions>
