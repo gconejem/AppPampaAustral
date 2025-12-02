@@ -7,11 +7,29 @@ import type { ColumnDef } from '@tanstack/react-table'
 import ContactPreview from '../../contacts/preview/ContactPreview'
 import { ContactType } from '@/types/apps/contactTypes'
 
+
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
+
 interface ContactListTableProps {
   data: ContactType[]
 }
 
 const ContactListTable = ({ data: initialData }: ContactListTableProps) => {
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+    
   const [previewOpen, setPreviewOpen] = useState(false)
   const [selectedContactPreview, setSelectedContactPreview] = useState<ContactType | null>(null)
 

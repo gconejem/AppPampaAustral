@@ -12,6 +12,10 @@ import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import CircularProgress from '@mui/material/CircularProgress'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 type Props = {
   open: boolean
   handleClose: () => void
@@ -19,6 +23,18 @@ type Props = {
 }
 
 const AddContact = (props: Props) => {
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
+
   const { open, handleClose, onContactCreated } = props
 
   const {
@@ -88,7 +104,7 @@ const AddContact = (props: Props) => {
     >
       <div className='flex items-center justify-between pli-5 plb-4'>
         <Typography variant='h5'>Añadir Nuevo Contacto</Typography>
-        <Button onClick={handleClose} color='error'>Cerrar</Button>
+        <Button onClick={handleClose} color='error' disabled={soloLectura}>Cerrar</Button>
       </div>
       <Divider />
       <div className='p-5'>
@@ -180,12 +196,12 @@ const AddContact = (props: Props) => {
             <Button
               variant='contained'
               type='submit'
-              disabled={isSubmitting}
+              disabled={isSubmitting ||solectura}
               startIcon={isSubmitting ? <CircularProgress size={20} color='inherit' /> : null}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button variant='outlined' color='error' disabled={isSubmitting} onClick={handleClose}>
+            <Button variant='outlined' color='error' disabled={isSubmitting || soloLectura} onClick={handleClose}>
               Cancelar
             </Button>
           </div>

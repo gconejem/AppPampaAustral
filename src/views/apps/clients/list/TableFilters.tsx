@@ -24,6 +24,12 @@ import 'react-datepicker/dist/react-datepicker.css'
 import { SEGMENTOS } from '@/data/clientData'
 import { useUbicacion } from '@/hooks/useUbicacion'
 
+
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 // Definir los nuevos segmentos
 const SEGMENTOS_NUEVOS = ['Corporativo Estratégico', 'Consolidado', 'Expansión', 'Ocasional', 'Nuevo prospecto']
 
@@ -59,6 +65,18 @@ const TableFilters = ({
   selectedRegion,
   handleRegionChange
 }: Props) => {
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
+
   const { regiones } = useUbicacion()
 
   const handleStartDateChange = (date: Date | null) => {
@@ -138,7 +156,7 @@ const TableFilters = ({
           </Grid>
 
           <Grid item xs={12} md={2}>
-            <Button fullWidth variant='outlined' color='secondary' onClick={handleClearFilters}>
+            <Button fullWidth variant='outlined' color='secondary' onClick={handleClearFilters} disabled={soloLectura}>
               Limpiar
             </Button>
           </Grid>

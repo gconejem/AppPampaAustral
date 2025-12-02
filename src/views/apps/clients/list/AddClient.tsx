@@ -42,6 +42,11 @@ import ContactSearch from '../components/ContactSearch'
 import { useUbicacion } from '@/hooks/useUbicacion'
 import AddContact from '@/views/apps/contacts/list/AddContact'
 
+
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
 type Props = {
   open: boolean
   handleClose: () => void
@@ -80,6 +85,18 @@ const CONDICIONES_VENTA = [
 ] as const
 
 const AddClienteDrawer = (props: Props) => {
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+
+
   // Props
   const { open, handleClose, setData } = props
 
@@ -813,6 +830,7 @@ const AddClienteDrawer = (props: Props) => {
         </Typography>
         <div className='flex gap-2'>
           <Button
+          disabled={soloLectura}
             variant='outlined'
             color='primary'
             onClick={cargarDatosPrueba}
@@ -820,7 +838,7 @@ const AddClienteDrawer = (props: Props) => {
           >
             Cargar Datos de Prueba
           </Button>
-          <IconButton size='small' onClick={handleReset}>
+          <IconButton size='small' onClick={handleReset} disabled={soloLectura}>
             <i className='ri-close-line text-2xl' />
           </IconButton>
         </div>
@@ -1194,7 +1212,8 @@ const AddClienteDrawer = (props: Props) => {
               </Typography>
               <Grid container spacing={2} alignItems='center'>
                 <Grid item xs={12} sm={'auto'}>
-                  <Button
+                  <Button 
+                  disabled={soloLectura}
                     variant='contained'
                     color='primary'
                     onClick={() => setAddContactOpen(true)}
@@ -1283,6 +1302,7 @@ const AddClienteDrawer = (props: Props) => {
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <IconButton
+                        disabled={soloLectura}
                           color='error'
                           onClick={() => {
                             const updatedContactos = contactos.filter((_, i) => i !== index)
@@ -1293,6 +1313,7 @@ const AddClienteDrawer = (props: Props) => {
                           <i className='ri-delete-bin-line' />
                         </IconButton>
                         <IconButton
+                        disabled={soloLectura}
                           color={contacto.isPrincipal ? 'warning' : 'default'}
                           onClick={() => {
                             const updatedContactos = contactos.map((c, i) => ({
@@ -1373,12 +1394,12 @@ const AddClienteDrawer = (props: Props) => {
             <Button
               variant='contained'
               type='submit'
-              disabled={Object.keys(errors).length > 0 || isSubmitting}
+              disabled={Object.keys(errors).length > 0 || isSubmitting || soloLectura}
               startIcon={isSubmitting ? <CircularProgress size={20} color='inherit' /> : null}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button variant='outlined' color='error' disabled={isSubmitting} onClick={handleReset}>
+            <Button variant='outlined' color='error' disabled={isSubmitting || soloLectura} onClick={handleReset}>
               Cancelar
             </Button>
           </div>

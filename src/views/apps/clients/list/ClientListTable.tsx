@@ -77,6 +77,11 @@ import type { Cliente } from '@/types/forms/cliente'
 import { useRegionesYComunas } from '@/hooks/useRegionesYComunas'
 import { ESTADOS_CLIENTE } from '@/data/constants'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 // Interface Props
 interface Props {
   userData: Cliente[]
@@ -200,7 +205,7 @@ const ContactsModal = ({
         ))}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cerrar</Button>
+        <Button onClick={handleClose}  disabled={soloLectura} >Cerrar</Button>
       </DialogActions>
     </Dialog>
   )
@@ -216,6 +221,16 @@ interface OptionMenuItemType {
 }
 
 const ClientListTable = ({ userData, setData }: Props) => {
+  // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.empresa.ver) &&
+    !hasPermission(permisos.empresa.crear) &&
+    !hasPermission(permisos.empresa.editar) &&
+    !hasPermission(permisos.empresa.eliminar)
+  
   // Asegurarnos de que userData siempre sea un array
   const safeUserData = Array.isArray(userData) ? userData : []
 
@@ -825,6 +840,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
         cell: ({ row }: { row: Row<Cliente> }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <IconButton
+            disabled={soloLectura}
               size='small'
               color='info'
               onClick={async () => {
@@ -850,6 +866,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
             </IconButton>
 
             <IconButton
+              disabled={soloLectura}
               size='small'
               color='primary'
               onClick={async () => {
@@ -877,6 +894,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
             </IconButton>
 
             <OptionMenu
+            iconButtonProps={{ size: 'medium', disabled: soloLectura }}
               options={[
                 {
                   text: 'Cambiar Estado',
@@ -992,20 +1010,14 @@ const ClientListTable = ({ userData, setData }: Props) => {
           title={<Typography variant='h5'>Clientes</Typography>}
           action={
             <div className='flex gap-2'>
-              {/* <Button
-                variant='outlined'
-                onClick={() => setImportDialogOpen(true)}
-                startIcon={<i className='ri-upload-2-line' />}
-              >
-                Importar
-              </Button> */}
-              <Button
-                variant='contained'
-                onClick={() => setAddUserOpen(true)}
-                startIcon={<i className='ri-add-line' />}
-              >
-                Nuevo Cliente
-              </Button>
+                <Button
+                  variant='contained'
+                  disabled={soloLectura}
+                  onClick={() => setAddUserOpen(true)}
+                  startIcon={<i className='ri-add-line' />}
+                >
+                  Nuevo Cliente
+                </Button>
             </div>
           }
         />
@@ -1026,16 +1038,18 @@ const ClientListTable = ({ userData, setData }: Props) => {
         <Divider />
 
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
-          <Button
-            color='secondary'
-            variant='outlined'
-            startIcon={<i className='ri-upload-2-line text-xl' />}
-            onClick={handleExport}
-            disabled={isLoading}
-            className='max-sm:is-full'
-          >
-            Exportar
-          </Button>
+          {hasPermission(permisos.empresa.ver) && (
+            <Button
+              color='secondary'
+              variant='outlined'
+              startIcon={<i className='ri-upload-2-line text-xl' />}
+              onClick={handleExport}
+              disabled={isLoading || soloLectura}
+              className='max-sm:is-full'
+            >
+              Exportar
+            </Button>
+          )}
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <TextField
               size='small'
@@ -1139,10 +1153,10 @@ const ClientListTable = ({ userData, setData }: Props) => {
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>¿Está seguro que desea eliminar este cliente? Esta acción no se puede deshacer.</DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color='primary'>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='primary'  disabled={soloLectura}>
             Cancelar
           </Button>
-          <Button onClick={handleDeleteConfirm} color='error' variant='contained'>
+          <Button onClick={handleDeleteConfirm} color='error' variant='contained'  disabled={soloLectura}>
             Eliminar
           </Button>
         </DialogActions>
@@ -1213,7 +1227,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           </MuiTableContainer>
         </DialogContent>
         <DialogActions sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-          <Button onClick={() => setContactsModalOpen(false)} variant='contained'>
+          <Button onClick={() => setContactsModalOpen(false)} variant='contained'  disabled={soloLectura}>
             Cerrar
           </Button>
         </DialogActions>
@@ -1272,6 +1286,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
               setChangeStatusOpen(false)
               setMotivoBloqueo('') // Limpiar el motivo al cancelar
             }}
+            
           >
             Cancelar
           </Button>
@@ -1292,7 +1307,7 @@ const ClientListTable = ({ userData, setData }: Props) => {
           <ClientPreview client={selectedUser} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewDialogOpen(false)} variant='contained'>
+          <Button  disabled={soloLectura} onClick={() => setPreviewDialogOpen(false)} variant='contained'>
             Cerrar
           </Button>
         </DialogActions>
