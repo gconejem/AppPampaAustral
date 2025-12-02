@@ -58,6 +58,11 @@ import CircularProgress from '@mui/material/CircularProgress'
 // Type Imports
 import type { InvoiceType } from '@/types/apps/invoiceTypes'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 interface InvoiceListTableProps {
   invoiceData?: InvoiceType[]
   onCotizacionDeleted?: () => void
@@ -85,6 +90,16 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
   // Configuración de localización
   const locale = 'es'
 
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.cotizaciones.ver) &&
+    !hasPermission(permisos.cotizaciones.crear) &&
+    !hasPermission(permisos.cotizaciones.editar) &&
+    !hasPermission(permisos.cotizaciones.eliminar)
+    
   // Estados de la tabla
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -640,7 +655,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cerrar</Button>
+          <Button onClick={handleClose} disabled={soloLectura} >Cerrar</Button>
         </DialogActions>
       </Dialog>
     )
@@ -766,7 +781,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
             variant='outlined'
             startIcon={<i className='ri-upload-2-line text-xl' />}
             onClick={handleExport}
-            disabled={isLoading}
+            disabled={isLoading || soloLectura}
             className='max-sm:is-full'
           >
             Exportar
@@ -875,17 +890,18 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
                     <Tooltip title='Ver'>
-                      <IconButton size='small' onClick={() => handlePreviewClick(row.id)}>
+                      <IconButton size='small' onClick={() => handlePreviewClick(row.id)} disabled={soloLectura} >
                         <i className='ri-eye-line' />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title='Editar'>
-                      <IconButton size='small' href={`/${locale}/apps/invoice/edit/${row.id}`}>
+                      <IconButton size='small' href={`/${locale}/apps/invoice/edit/${row.id}`} disabled={soloLectura}>
                         <i className='ri-pencil-line' />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title='Cambiar Estado'>
                       <IconButton
+                        disabled={soloLectura}
                         size='small'
                         onClick={e => handleEstadoClick(e, row.id)}
                         color={getEstadoColor(row.estado) === 'error' ? 'error' : 'default'}
@@ -895,6 +911,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
                     </Tooltip>
                     <Tooltip title='Descargar PDF'>
                       <IconButton
+                        disabled={soloLectura}
                         size='small'
                         onClick={() => handleDownloadPDF(row.id)}
                         color='primary'
@@ -913,6 +930,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
                     </Tooltip> */}
                     <Tooltip title='Duplicar'>
                       <IconButton
+                        disabled={soloLectura}
                         size='small'
                         color='info'
                         href={`/${locale}/apps/invoice/duplicate/${row.id}`}
@@ -923,6 +941,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
                     {row.estado === 'BORRADOR' && (
                       <Tooltip title='Eliminar'>
                         <IconButton
+                          disabled={soloLectura}
                           size='small'
                           color='error'
                           onClick={() => {
@@ -1373,7 +1392,7 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
           ) : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenPreview(false)} variant='contained'>
+          <Button disabled={soloLectura} onClick={() => setOpenPreview(false)} variant='contained'>
             Cerrar
           </Button>
         </DialogActions>
@@ -1462,10 +1481,11 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setGestionDialogOpen(false)} color='secondary'>
+          <Button disabled={soloLectura}  onClick={() => setGestionDialogOpen(false)} color='secondary'>
             Cancelar
           </Button>
           <Button
+            disabled={soloLectura}
             onClick={async () => {
               await updateEstadoCotizacion(pendingEstado || 'GESTIONADA', gestionText)
               setGestionDialogOpen(false)
@@ -1488,10 +1508,10 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>
+          <Button disabled={soloLectura} onClick={() => setDeleteDialogOpen(false)} color='secondary'>
             Cancelar
           </Button>
-          <Button onClick={handleDeleteCotizacion} color='error' variant='contained'>
+          <Button  disabled={soloLectura} onClick={handleDeleteCotizacion} color='error' variant='contained'>
             Eliminar
           </Button>
         </DialogActions>
@@ -1509,10 +1529,10 @@ const InvoiceListTable = ({ invoiceData, onCotizacionDeleted, onDataFiltered }: 
           <div className='flex justify-between items-center mb-4'>
             <h2 className='text-xl font-semibold'>Vista Previa PDF {selectedCotizacionForPDF ? `- ${selectedCotizacionForPDF.numeroCotizacion}` : ''}</h2>
             <div className='flex gap-2'>
-              <IconButton onClick={() => window.print()}>
+              <IconButton disabled={soloLectura} onClick={() => window.print()}>
                 <i className='ri-download-line' />
               </IconButton>
-              <IconButton onClick={() => setPdfPreviewOpen(false)}>
+              <IconButton disabled={soloLectura} onClick={() => setPdfPreviewOpen(false)}>
                 <i className='ri-close-line' />
               </IconButton>
             </div>

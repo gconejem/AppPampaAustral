@@ -27,6 +27,11 @@ import type { InvoiceType } from '@/types/apps/invoiceTypes'
 // Component Imports
 import CustomAvatar from '@/@core/components/mui/Avatar'
 
+// Imports para permisos - NUEVO
+import { usePermissions } from '@/hooks/usePermissions'
+import { permisos } from '@/permisos/permisos'
+
+
 interface InvoiceCardProps {
   refreshTrigger?: number
   filteredData?: InvoiceType[]
@@ -40,6 +45,16 @@ const InvoiceCard = ({ refreshTrigger = 0, filteredData }: InvoiceCardProps) => 
     totalCerradas: 0,
     totalCotizado: 0
   })
+
+    // Hook de permisos
+  const { hasPermission } = usePermissions()
+  
+  // Verificar si el usuario solo tiene permisos de lectura
+  const soloLectura =
+    hasPermission(permisos.cotizaciones.ver) &&
+    !hasPermission(permisos.cotizaciones.crear) &&
+    !hasPermission(permisos.cotizaciones.editar) &&
+    !hasPermission(permisos.cotizaciones.eliminar)
 
   // Hooks
   const isBelowMdScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'))
@@ -109,7 +124,7 @@ const InvoiceCard = ({ refreshTrigger = 0, filteredData }: InvoiceCardProps) => 
         {/* Contenedor para el título y el botón */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant='h6'>Cotizaciones</Typography>
-          <Button variant='contained' color='primary' component={Link} href={`/${locale}/apps/invoice/add`}>
+          <Button disabled={soloLectura} variant='contained' color='primary' component={Link} href={`/${locale}/apps/invoice/add`}>
             + Crear Cotización
           </Button>
         </Box>
