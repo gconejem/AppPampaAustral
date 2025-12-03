@@ -399,16 +399,19 @@ model Equipo {
   descripcion           String?
   serie                 String?
   funcionarioAsignadoId String?
+  areaId                Int?
   estado                String         @default("Activo")
   observaciones         String?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   tipoEquipo            TipoEquipo     @relation(fields: [tipoEquipoId], references: [id])
   funcionarioAsignado   User?          @relation("EquiposFuncionario", fields: [funcionarioAsignadoId], references: [id])
+  area                  Area?          @relation(fields: [areaId], references: [id])
   agendas               AgendaEquipo[]
 
   @@index([tipoEquipoId])
   @@index([funcionarioAsignadoId])
+  @@index([areaId])
 }
 
 model TipoEquipo {
@@ -777,6 +780,7 @@ model Area {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   familias  Familia[]
+  equipos   Equipo[]
 }
 
 model Familia {
