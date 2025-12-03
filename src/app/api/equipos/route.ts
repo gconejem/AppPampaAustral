@@ -15,7 +15,7 @@ export async function GET(request: Request) {
         const tipoEquipoIds = searchParams.getAll('tipoEquipoId')
         const estados = searchParams.getAll('estado')
         const areaIds = searchParams.getAll('areaId')
-        const funcionarioAsignadoId = searchParams.get('funcionarioAsignadoId')
+        const funcionarioAsignadoIds = searchParams.getAll('funcionarioAsignadoId')
 
         const skip = (page - 1) * limit
 
@@ -48,8 +48,10 @@ export async function GET(request: Request) {
             }
         }
 
-        if (funcionarioAsignadoId) {
-            where.funcionarioAsignadoId = funcionarioAsignadoId
+        if (funcionarioAsignadoIds.length > 0) {
+            where.funcionarioAsignadoId = {
+                in: funcionarioAsignadoIds
+            }
         }
 
         const [equipos, total] = await Promise.all([

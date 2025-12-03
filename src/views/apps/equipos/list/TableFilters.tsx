@@ -31,7 +31,7 @@ interface TableFiltersProps {
         tipoEquipoId: string | string[]
         estado: string | string[]
         areaId: string | string[]
-        funcionarioAsignadoId: string
+        funcionarioAsignadoId: string | string[]
     }) => void
     tiposEquipo: TipoEquipo[]
     laboratoristas: Laboratorista[]
@@ -56,7 +56,7 @@ const TableFilters = ({
     const [selectedTipo, setSelectedTipo] = useState<string[]>(['Todos'])
     const [selectedEstado, setSelectedEstado] = useState<string[]>(['Todos'])
     const [selectedArea, setSelectedArea] = useState<string[]>(['Todos'])
-    const [selectedFuncionario, setSelectedFuncionario] = useState<string>('')
+    const [selectedFuncionario, setSelectedFuncionario] = useState<string[]>([])
 
     // Notify parent of filter changes
     useEffect(() => {
@@ -65,7 +65,7 @@ const TableFilters = ({
             tipoEquipoId: selectedTipo.includes('Todos') ? '' : selectedTipo,
             estado: selectedEstado.includes('Todos') ? '' : selectedEstado,
             areaId: selectedArea.includes('Todos') ? '' : selectedArea,
-            funcionarioAsignadoId: selectedFuncionario
+            funcionarioAsignadoId: selectedFuncionario.length === 0 ? '' : selectedFuncionario
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTipo, selectedEstado, selectedArea, selectedFuncionario])
@@ -74,7 +74,7 @@ const TableFilters = ({
         setSelectedTipo(['Todos'])
         setSelectedEstado(['Todos'])
         setSelectedArea(['Todos'])
-        setSelectedFuncionario('')
+        setSelectedFuncionario([])
     }
 
     // Handler para multiselección
@@ -137,6 +137,27 @@ const TableFilters = ({
             return area?.nombre || id
         })
         return nombres.join(', ')
+    }
+
+    // Función para renderizar el valor seleccionado de Funcionario
+    const renderFuncionarioValue = (selected: string[]) => {
+        if (selected.length === 0) {
+            return 'Todos'
+        }
+        const nombres = selected.map(id => {
+            const laboratorista = laboratoristas.find(l => l.id === id)
+            return laboratorista?.name || id
+        })
+        return nombres.join(', ')
+    }
+
+    // Handler para multiselección sin "Todos"
+    const handleMultiSelectNoTodos = (
+        event: any,
+        setter: (value: string[]) => void
+    ) => {
+        const value = event.target.value as string[]
+        setter(value)
     }
 
     return (
@@ -222,14 +243,17 @@ const TableFilters = ({
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Funcionario asignado</InputLabel>
                             <Select
+                                multiple
                                 value={selectedFuncionario}
                                 label='Funcionario asignado'
-                                onChange={(e) => setSelectedFuncionario(e.target.value)}
+                                onChange={(e) => handleMultiSelectNoTodos(e, setSelectedFuncionario)}
+                                input={<OutlinedInput label='Funcionario asignado' />}
+                                renderValue={renderFuncionarioValue}
                             >
-                                <MenuItem value=''>Todos</MenuItem>
                                 {laboratoristas.map((laboratorista) => (
                                     <MenuItem key={laboratorista.id} value={laboratorista.id}>
-                                        {laboratorista.name}
+                                        <Checkbox checked={selectedFuncionario.includes(laboratorista.id)} />
+                                        <ListItemText primary={laboratorista.name} />
                                     </MenuItem>
                                 ))}
                             </Select>

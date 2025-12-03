@@ -112,7 +112,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         tipoEquipoId: string | string[]
         estado: string | string[]
         areaId: string | string[]
-        funcionarioAsignadoId: string
+        funcionarioAsignadoId: string | string[]
     }>({
         tipoEquipoId: '',
         estado: '',
@@ -167,7 +167,13 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                 }
             }
 
-            if (filters.funcionarioAsignadoId) params.append('funcionarioAsignadoId', filters.funcionarioAsignadoId)
+            if (filters.funcionarioAsignadoId) {
+                if (Array.isArray(filters.funcionarioAsignadoId)) {
+                    filters.funcionarioAsignadoId.forEach(id => params.append('funcionarioAsignadoId', id))
+                } else {
+                    params.append('funcionarioAsignadoId', filters.funcionarioAsignadoId)
+                }
+            }
 
             const response = await axios.get(`/api/equipos?${params.toString()}`)
             setData(response.data.equipos || [])
