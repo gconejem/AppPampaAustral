@@ -14,6 +14,9 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import CircularProgress from '@mui/material/CircularProgress'
+import Checkbox from '@mui/material/Checkbox'
+import ListItemText from '@mui/material/ListItemText'
+import OutlinedInput from '@mui/material/OutlinedInput'
 
 // Type Imports
 import type { TipoEquipo, Laboratorista } from '@/types/apps/equipoTypes'
@@ -25,9 +28,9 @@ export interface AreaUso {
 
 interface TableFiltersProps {
     onFilterChange: (filters: {
-        tipoEquipoId: string
-        estado: string
-        areaId: string
+        tipoEquipoId: string | string[]
+        estado: string | string[]
+        areaId: string | string[]
         funcionarioAsignadoId: string
     }) => void
     tiposEquipo: TipoEquipo[]
@@ -39,8 +42,7 @@ interface TableFiltersProps {
 const ESTADOS_EQUIPO = [
     { value: 'Activo', label: 'Activo' },
     { value: 'Inactivo', label: 'Inactivo' },
-    { value: 'En Mantención', label: 'En Mantención' },
-    { value: 'Fuera de Servicio', label: 'Fuera de Servicio' }
+    { value: 'Todos', label: 'Todos' },
 ]
 
 const TableFilters = ({
@@ -51,27 +53,90 @@ const TableFilters = ({
     isLoading = false
 }: TableFiltersProps) => {
     // States
-    const [selectedTipo, setSelectedTipo] = useState<string>('')
-    const [selectedEstado, setSelectedEstado] = useState<string>('')
-    const [selectedArea, setSelectedArea] = useState<string>('')
+    const [selectedTipo, setSelectedTipo] = useState<string[]>(['Todos'])
+    const [selectedEstado, setSelectedEstado] = useState<string[]>(['Todos'])
+    const [selectedArea, setSelectedArea] = useState<string[]>(['Todos'])
     const [selectedFuncionario, setSelectedFuncionario] = useState<string>('')
 
     // Notify parent of filter changes
     useEffect(() => {
+        // Si "Todos" está seleccionado, enviar string vacío, de lo contrario enviar array
         onFilterChange({
-            tipoEquipoId: selectedTipo,
-            estado: selectedEstado,
-            areaId: selectedArea,
+            tipoEquipoId: selectedTipo.includes('Todos') ? '' : selectedTipo,
+            estado: selectedEstado.includes('Todos') ? '' : selectedEstado,
+            areaId: selectedArea.includes('Todos') ? '' : selectedArea,
             funcionarioAsignadoId: selectedFuncionario
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTipo, selectedEstado, selectedArea, selectedFuncionario])
 
     const handleClearFilters = () => {
-        setSelectedTipo('')
-        setSelectedEstado('')
-        setSelectedArea('')
+        setSelectedTipo(['Todos'])
+        setSelectedEstado(['Todos'])
+        setSelectedArea(['Todos'])
         setSelectedFuncionario('')
+    }
+
+    // Handler para multiselección
+    const handleMultiSelectChange = (
+        event: any,
+        setter: (value: string[]) => void,
+        allOptions: any[]
+    ) => {
+        const value = event.target.value as string[]
+        const previousValue = event.target.name // No lo usamos pero está disponible
+
+        // Si se acaba de seleccionar "Todos"
+        if (value.includes('Todos') && value.length > 1) {
+            // Verificar si "Todos" es la última selección (recién clickeada)
+            // En ese caso, dejar solo "Todos"
+            const lastSelected = value[value.length - 1]
+            if (lastSelected === 'Todos') {
+                setter(['Todos'])
+            } else {
+                // Si "Todos" estaba previamente y se selecciona otro, quitar "Todos"
+                const newValue = value.filter(v => v !== 'Todos')
+                setter(newValue.length > 0 ? newValue : ['Todos'])
+            }
+        } else if (value.length === 0) {
+            // Si se intenta deseleccionar todo, mantener "Todos"
+            setter(['Todos'])
+        } else {
+            // Permitir selección normal
+            setter(value)
+        }
+    }
+
+    // Función para renderizar el valor seleccionado de Tipo
+    const renderTipoValue = (selected: string[]) => {
+        if (selected.includes('Todos')) {
+            return 'Todos'
+        }
+        const nombres = selected.map(id => {
+            const tipo = tiposEquipo.find(t => t.id.toString() === id)
+            return tipo?.tipo || id
+        })
+        return nombres.join(', ')
+    }
+
+    // Función para renderizar el valor seleccionado de Estado
+    const renderEstadoValue = (selected: string[]) => {
+        if (selected.includes('Todos')) {
+            return 'Todos'
+        }
+        return selected.join(', ')
+    }
+
+    // Función para renderizar el valor seleccionado de Área
+    const renderAreaValue = (selected: string[]) => {
+        if (selected.includes('Todos')) {
+            return 'Todos'
+        }
+        const nombres = selected.map(id => {
+            const area = areas.find(a => a.id.toString() === id)
+            return area?.nombre || id
+        })
+        return nombres.join(', ')
     }
 
     return (
@@ -82,14 +147,21 @@ const TableFilters = ({
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Tipo</InputLabel>
                             <Select
+                                multiple
                                 value={selectedTipo}
                                 label='Tipo'
-                                onChange={(e) => setSelectedTipo(e.target.value)}
+                                onChange={(e) => handleMultiSelectChange(e, setSelectedTipo, tiposEquipo)}
+                                input={<OutlinedInput label='Tipo' />}
+                                renderValue={renderTipoValue}
                             >
-                                <MenuItem value=''>Todos</MenuItem>
+                                <MenuItem value='Todos'>
+                                    <Checkbox checked={selectedTipo.includes('Todos')} />
+                                    <ListItemText primary='Todos' />
+                                </MenuItem>
                                 {tiposEquipo.map((tipo) => (
                                     <MenuItem key={tipo.id} value={tipo.id.toString()}>
-                                        {tipo.tipo}
+                                        <Checkbox checked={selectedTipo.includes(tipo.id.toString())} />
+                                        <ListItemText primary={tipo.tipo} />
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -100,14 +172,21 @@ const TableFilters = ({
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Estado</InputLabel>
                             <Select
+                                multiple
                                 value={selectedEstado}
                                 label='Estado'
-                                onChange={(e) => setSelectedEstado(e.target.value)}
+                                onChange={(e) => handleMultiSelectChange(e, setSelectedEstado, ESTADOS_EQUIPO.filter(e => e.value !== 'Todos'))}
+                                input={<OutlinedInput label='Estado' />}
+                                renderValue={renderEstadoValue}
                             >
-                                <MenuItem value=''>Todos</MenuItem>
-                                {ESTADOS_EQUIPO.map((estado) => (
+                                <MenuItem value='Todos'>
+                                    <Checkbox checked={selectedEstado.includes('Todos')} />
+                                    <ListItemText primary='Todos' />
+                                </MenuItem>
+                                {ESTADOS_EQUIPO.filter(e => e.value !== 'Todos').map((estado) => (
                                     <MenuItem key={estado.value} value={estado.value}>
-                                        {estado.label}
+                                        <Checkbox checked={selectedEstado.includes(estado.value)} />
+                                        <ListItemText primary={estado.label} />
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -118,14 +197,21 @@ const TableFilters = ({
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Área de uso</InputLabel>
                             <Select
+                                multiple
                                 value={selectedArea}
                                 label='Área de uso'
-                                onChange={(e) => setSelectedArea(e.target.value)}
+                                onChange={(e) => handleMultiSelectChange(e, setSelectedArea, areas)}
+                                input={<OutlinedInput label='Área de uso' />}
+                                renderValue={renderAreaValue}
                             >
-                                <MenuItem value=''>Todos</MenuItem>
+                                <MenuItem value='Todos'>
+                                    <Checkbox checked={selectedArea.includes('Todos')} />
+                                    <ListItemText primary='Todos' />
+                                </MenuItem>
                                 {areas.map((area) => (
                                     <MenuItem key={area.id} value={area.id.toString()}>
-                                        {area.nombre}
+                                        <Checkbox checked={selectedArea.includes(area.id.toString())} />
+                                        <ListItemText primary={area.nombre} />
                                     </MenuItem>
                                 ))}
                             </Select>

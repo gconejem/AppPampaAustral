@@ -108,7 +108,12 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const [areas, setAreas] = useState<Area[]>([])
 
     // Filter states
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<{
+        tipoEquipoId: string | string[]
+        estado: string | string[]
+        areaId: string | string[]
+        funcionarioAsignadoId: string
+    }>({
         tipoEquipoId: '',
         estado: '',
         areaId: '',
@@ -137,9 +142,31 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
             setIsLoading(true)
             const params = new URLSearchParams({ limit: '1000' })
 
-            if (filters.tipoEquipoId) params.append('tipoEquipoId', filters.tipoEquipoId)
-            if (filters.estado) params.append('estado', filters.estado)
-            if (filters.areaId) params.append('areaId', filters.areaId)
+            // Manejar filtros que pueden ser arrays
+            if (filters.tipoEquipoId) {
+                if (Array.isArray(filters.tipoEquipoId)) {
+                    filters.tipoEquipoId.forEach(id => params.append('tipoEquipoId', id))
+                } else {
+                    params.append('tipoEquipoId', filters.tipoEquipoId)
+                }
+            }
+
+            if (filters.estado) {
+                if (Array.isArray(filters.estado)) {
+                    filters.estado.forEach(estado => params.append('estado', estado))
+                } else {
+                    params.append('estado', filters.estado)
+                }
+            }
+
+            if (filters.areaId) {
+                if (Array.isArray(filters.areaId)) {
+                    filters.areaId.forEach(id => params.append('areaId', id))
+                } else {
+                    params.append('areaId', filters.areaId)
+                }
+            }
+
             if (filters.funcionarioAsignadoId) params.append('funcionarioAsignadoId', filters.funcionarioAsignadoId)
 
             const response = await axios.get(`/api/equipos?${params.toString()}`)

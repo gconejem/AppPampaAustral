@@ -10,9 +10,11 @@ export async function GET(request: Request) {
         const page = parseInt(searchParams.get('page') || '1')
         const limit = parseInt(searchParams.get('limit') || '10')
         const search = searchParams.get('search') || ''
-        const tipoEquipoId = searchParams.get('tipoEquipoId')
-        const estado = searchParams.get('estado')
-        const areaId = searchParams.get('areaId')
+
+        // Obtener filtros (pueden ser múltiples)
+        const tipoEquipoIds = searchParams.getAll('tipoEquipoId')
+        const estados = searchParams.getAll('estado')
+        const areaIds = searchParams.getAll('areaId')
         const funcionarioAsignadoId = searchParams.get('funcionarioAsignadoId')
 
         const skip = (page - 1) * limit
@@ -27,16 +29,23 @@ export async function GET(request: Request) {
             ]
         }
 
-        if (tipoEquipoId) {
-            where.tipoEquipoId = parseInt(tipoEquipoId)
+        // Filtros con multiselección
+        if (tipoEquipoIds.length > 0) {
+            where.tipoEquipoId = {
+                in: tipoEquipoIds.map(id => parseInt(id))
+            }
         }
 
-        if (estado) {
-            where.estado = estado
+        if (estados.length > 0) {
+            where.estado = {
+                in: estados
+            }
         }
 
-        if (areaId) {
-            where.areaId = parseInt(areaId)
+        if (areaIds.length > 0) {
+            where.areaId = {
+                in: areaIds.map(id => parseInt(id))
+            }
         }
 
         if (funcionarioAsignadoId) {
