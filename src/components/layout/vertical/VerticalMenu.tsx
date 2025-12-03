@@ -162,6 +162,8 @@ const VerticalMenu = () => {
                   </MenuItem>
                 </SubMenu>
               )}
+              <SubMenu label='Equipos' icon={<i className='ri-tools-line' />}>
+              </SubMenu>
             </MenuSection>
           </Menu>
         </ScrollWrapper>
