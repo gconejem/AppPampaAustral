@@ -36,6 +36,7 @@ import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
+import Grid from '@mui/material/Grid'
 
 // Importar los componentes de tabla con alias
 import {
@@ -67,11 +68,12 @@ import {
 } from '@tanstack/react-table'
 
 // Type Imports
-import type { Equipo, TipoEquipo, Laboratorista } from '@/types/apps/equipoTypes'
+import type { Equipo, TipoEquipo, Laboratorista, Area } from '@/types/apps/equipoTypes'
 
 // Component Imports
 import AddEquipo from './AddEquipo'
 import EditEquipo from '../edit/EditEquipo'
+import TableFilters from './TableFilters'
 import OptionMenu from '@core/components/option-menu'
 
 // Style Imports
@@ -92,33 +94,6 @@ const fuzzyFilter = (row: any, columnId: string, value: string, addMeta: any) =>
     return itemRank.passed
 }
 
-const DebouncedInput = ({
-    value: initialValue,
-    onChange,
-    debounce = 500,
-    ...props
-}: {
-    value: string | number
-    onChange: (value: string | number) => void
-    debounce?: number
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) => {
-    const [value, setValue] = useState(initialValue)
-
-    useEffect(() => {
-        setValue(initialValue)
-    }, [initialValue])
-
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            onChange(value)
-        }, debounce)
-
-        return () => clearTimeout(timeout)
-    }, [value, debounce, onChange])
-
-    return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
-}
-
 const EquipoListTable = ({ equipoData, setData }: Props) => {
     // States
     const [addEquipoOpen, setAddEquipoOpen] = useState(false)
@@ -127,25 +102,47 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const [deleteEquipoOpen, setDeleteEquipoOpen] = useState(false)
     const [equipoToDelete, setEquipoToDelete] = useState<Equipo | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [globalFilter, setGlobalFilter] = useState('')
-    const [sorting, setSorting] = useState<SortingState>([{ id: 'tipoEquipo', desc: false }])
+    const [sorting, setSorting] = useState<SortingState>([{ id: 'id', desc: false }])
     const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
     const [laboratoristas, setLaboratoristas] = useState<Laboratorista[]>([])
+    const [areas, setAreas] = useState<Area[]>([])
+
+    // Filter states
+    const [filters, setFilters] = useState({
+        tipoEquipoId: '',
+        estado: '',
+        areaId: '',
+        funcionarioAsignadoId: ''
+    })
 
     // Hooks
-    const { lang: locale } = useParams()
+    const params = useParams()
+    const locale = params?.lang as string | undefined
 
     // Fetch data on component mount
     useEffect(() => {
         fetchEquipos()
         fetchTiposEquipo()
         fetchLaboratoristas()
+        fetchAreas()
     }, [])
+
+    // Fetch equipos when filters change
+    useEffect(() => {
+        fetchEquipos()
+    }, [filters])
 
     const fetchEquipos = async () => {
         try {
             setIsLoading(true)
-            const response = await axios.get('/api/equipos?limit=100')
+            const params = new URLSearchParams({ limit: '1000' })
+
+            if (filters.tipoEquipoId) params.append('tipoEquipoId', filters.tipoEquipoId)
+            if (filters.estado) params.append('estado', filters.estado)
+            if (filters.areaId) params.append('areaId', filters.areaId)
+            if (filters.funcionarioAsignadoId) params.append('funcionarioAsignadoId', filters.funcionarioAsignadoId)
+
+            const response = await axios.get(`/api/equipos?${params.toString()}`)
             setData(response.data.equipos || [])
         } catch (error) {
             console.error('Error fetching equipos:', error)
@@ -170,6 +167,15 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
             setLaboratoristas(response.data)
         } catch (error) {
             console.error('Error fetching laboratoristas:', error)
+        }
+    }
+
+    const fetchAreas = async () => {
+        try {
+            const response = await axios.get('/api/equipos/areas')
+            setAreas(response.data)
+        } catch (error) {
+            console.error('Error fetching areas:', error)
         }
     }
 
@@ -199,43 +205,86 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         setDeleteEquipoOpen(true)
     }
 
+    const handleFilterChange = useCallback((newFilters: typeof filters) => {
+        setFilters(newFilters)
+    }, [])
+
     // Columns definition
     const columns = useMemo(
         () => [
+            columnHelper.accessor('id', {
+                header: '# CORRELATIVO',
+                cell: ({ row }) => (
+                    <Typography color='text.primary' className='font-medium'>
+                        {String(row.original.id).padStart(3, '0')}
+                    </Typography>
+                ),
+                size: 120
+            }),
             columnHelper.accessor('codigo', {
-                header: 'Código',
+                header: 'CÓDIGO',
                 cell: ({ row }) => (
                     <Typography color='text.primary' className='font-medium'>
                         {row.original.codigo}
                     </Typography>
-                )
-            }),
-            columnHelper.accessor('nombre', {
-                header: 'Nombre',
-                cell: ({ row }) => (
-                    <Typography color='text.primary'>
-                        {row.original.nombre}
-                    </Typography>
-                )
+                ),
+                size: 120
             }),
             columnHelper.accessor('tipoEquipo', {
-                header: 'Tipo',
+                header: 'TIPO',
                 cell: ({ row }) => (
-                    <Chip
-                        variant='tonal'
-                        label={row.original.tipoEquipo.tipo}
-                        size='small'
-                        color='info'
-                    />
+                    <Typography color='text.primary'>
+                        {row.original.tipoEquipo.tipo}
+                    </Typography>
                 ),
                 sortingFn: (rowA, rowB) => {
                     const tipoA = rowA.original.tipoEquipo.tipo
                     const tipoB = rowB.original.tipoEquipo.tipo
                     return tipoA.localeCompare(tipoB)
-                }
+                },
+                size: 150
+            }),
+            columnHelper.accessor('nombre', {
+                header: 'DESCRIPCIÓN',
+                cell: ({ row }) => (
+                    <Typography color='text.primary'>
+                        {row.original.nombre}
+                    </Typography>
+                ),
+                size: 250
+            }),
+            columnHelper.accessor('serie', {
+                header: 'N° SERIE',
+                cell: ({ row }) => (
+                    <Typography color='text.primary'>
+                        {row.original.serie || '-'}
+                    </Typography>
+                ),
+                size: 150
+            }),
+            columnHelper.accessor('area', {
+                header: 'ÁREA DE USO',
+                cell: ({ row }) => {
+                    const area = row.original.area
+                    return area ? (
+                        <Typography color='text.primary'>
+                            {area.nombre}
+                        </Typography>
+                    ) : (
+                        <Typography color='text.secondary'>
+                            -
+                        </Typography>
+                    )
+                },
+                sortingFn: (rowA, rowB) => {
+                    const areaA = rowA.original.area?.nombre || ''
+                    const areaB = rowB.original.area?.nombre || ''
+                    return areaA.localeCompare(areaB)
+                },
+                size: 150
             }),
             columnHelper.accessor('funcionarioAsignado', {
-                header: 'Asignado a',
+                header: 'FUNCIONARIO',
                 cell: ({ row }) => {
                     const funcionario = row.original.funcionarioAsignado
                     return funcionario ? (
@@ -243,17 +292,15 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                             {funcionario.name}
                         </Typography>
                     ) : (
-                        <Chip
-                            variant='tonal'
-                            label='Sin asignar'
-                            size='small'
-                            color='default'
-                        />
+                        <Typography color='text.secondary'>
+                            -
+                        </Typography>
                     )
-                }
+                },
+                size: 200
             }),
             columnHelper.accessor('estado', {
-                header: 'Estado',
+                header: 'ESTADO',
                 cell: ({ row }) => (
                     <Chip
                         variant='tonal'
@@ -261,30 +308,38 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                         size='small'
                         color={row.original.estado === 'Activo' ? 'success' : 'default'}
                     />
-                )
-            }),
-            columnHelper.accessor('serie', {
-                header: 'Serie',
-                cell: ({ row }) => (
-                    <Typography color='text.primary'>
-                        {row.original.serie || '-'}
-                    </Typography>
-                )
+                ),
+                size: 120
             }),
             columnHelper.display({
                 id: 'actions',
-                header: 'Acciones',
+                header: 'ACCIONES',
                 cell: ({ row }) => (
-                    <div className='flex items-center'>
-                        <IconButton size='small' onClick={() => handleEditEquipo(row.original)}>
-                            <i className='ri-edit-box-line text-[22px] text-textSecondary' />
-                        </IconButton>
-                        <IconButton size='small' onClick={() => handleDeleteClick(row.original)}>
-                            <i className='ri-delete-bin-7-line text-[22px] text-textSecondary' />
-                        </IconButton>
+                    <div className='flex items-center gap-1'>
+                        <Tooltip title='Ver detalles'>
+                            <IconButton size='small'>
+                                <i className='ri-eye-line text-[22px] text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title='Editar'>
+                            <IconButton size='small' onClick={() => handleEditEquipo(row.original)}>
+                                <i className='ri-edit-box-line text-[22px] text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title='Activar/Desactivar'>
+                            <IconButton size='small'>
+                                <i className='ri-power-line text-[22px] text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title='Eliminar'>
+                            <IconButton size='small' onClick={() => handleDeleteClick(row.original)}>
+                                <i className='ri-delete-bin-7-line text-[22px] text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
                     </div>
                 ),
-                enableSorting: false
+                enableSorting: false,
+                size: 150
             })
         ],
         [locale]
@@ -293,16 +348,15 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const table = useReactTable({
         data: equipoData || [],
         columns,
-        filterFns: {
-            fuzzy: fuzzyFilter
-        },
         state: {
-            globalFilter,
             sorting
         },
-        onGlobalFilterChange: setGlobalFilter,
+        initialState: {
+            pagination: {
+                pageSize: 10
+            }
+        },
         onSortingChange: setSorting,
-        globalFilterFn: fuzzyFilter,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -310,101 +364,118 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         getFacetedRowModel: getFacetedRowModel(),
         getFacetedUniqueValues: getFacetedUniqueValues(),
         getFacetedMinMaxValues: getFacetedMinMaxValues()
-    })
+    } as any)
 
     return (
         <>
-            <Card>
-                <CardHeader title='Listado de Equipos' className='pbe-4' />
-                <div className='flex justify-between gap-4 p-5 flex-col items-start sm:flex-row sm:items-center'>
-                    <DebouncedInput
-                        value={globalFilter ?? ''}
-                        onChange={value => setGlobalFilter(String(value))}
-                        placeholder='Buscar equipos...'
-                        className='is-full sm:is-auto'
+            <Grid container spacing={6}>
+                {/* Filters Card */}
+                <Grid item xs={12}>
+                    <TableFilters
+                        onFilterChange={handleFilterChange}
+                        tiposEquipo={tiposEquipo}
+                        laboratoristas={laboratoristas}
+                        areas={areas}
+                        isLoading={isLoading}
                     />
-                    <div className='flex gap-4'>
-                        <Button
-                            variant='contained'
-                            onClick={() => setAddEquipoOpen(!addEquipoOpen)}
-                            className='is-full sm:is-auto'
-                        >
-                            Agregar Equipo
-                        </Button>
-                    </div>
-                </div>
-                <div className='overflow-x-auto'>
-                    <MuiTable className={tableStyles.table}>
-                        <MuiTableHead>
-                            {table.getHeaderGroups().map(headerGroup => (
-                                <MuiTableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map(header => (
-                                        <MuiTableCell key={header.id}>
-                                            {header.isPlaceholder ? null : (
-                                                <div
-                                                    className={classnames({
-                                                        'flex items-center': header.column.getIsSorted(),
-                                                        'cursor-pointer select-none': header.column.getCanSort()
-                                                    })}
-                                                    onClick={header.column.getToggleSortingHandler()}
-                                                >
-                                                    {flexRender(header.column.columnDef.header, header.getContext())}
-                                                    {{
-                                                        asc: <i className='ri-arrow-up-s-line text-xl' />,
-                                                        desc: <i className='ri-arrow-down-s-line text-xl' />
-                                                    }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                                                </div>
-                                            )}
-                                        </MuiTableCell>
-                                    ))}
-                                </MuiTableRow>
-                            ))}
-                        </MuiTableHead>
-                        {table.getFilteredRowModel().rows.length === 0 ? (
-                            <MuiTableBody>
-                                <MuiTableRow>
-                                    <MuiTableCell colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                                        {isLoading ? (
-                                            <CircularProgress size={24} />
-                                        ) : (
-                                            'No se encontraron equipos'
-                                        )}
-                                    </MuiTableCell>
-                                </MuiTableRow>
-                            </MuiTableBody>
-                        ) : (
-                            <MuiTableBody>
-                                {table.getRowModel().rows.slice(0, table.getState().pagination.pageSize).map(row => {
-                                    return (
-                                        <MuiTableRow key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                                            {row.getVisibleCells().map(cell => (
-                                                <MuiTableCell key={cell.id}>
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </Grid>
+
+                {/* Main Table Card */}
+                <Grid item xs={12}>
+                    <Card>
+                        <div className='flex justify-between items-center p-5'>
+                            <Typography variant='body2' color='text.secondary'>
+                                Mostrando 1 a {table.getRowModel().rows.length} de {equipoData.length} resultados
+                            </Typography>
+                            <Button
+                                variant='contained'
+                                onClick={() => setAddEquipoOpen(!addEquipoOpen)}
+                                startIcon={<i className='ri-add-line' />}
+                            >
+                                Nuevo equipo
+                            </Button>
+                        </div>
+                        <Divider />
+                        <div className='overflow-x-auto'>
+                            <MuiTable className={tableStyles.table}>
+                                <MuiTableHead>
+                                    {table.getHeaderGroups().map(headerGroup => (
+                                        <MuiTableRow key={headerGroup.id}>
+                                            <MuiTableCell padding='checkbox'>
+                                                <Checkbox />
+                                            </MuiTableCell>
+                                            {headerGroup.headers.map(header => (
+                                                <MuiTableCell key={header.id}>
+                                                    {header.isPlaceholder ? null : (
+                                                        <div
+                                                            className={classnames({
+                                                                'flex items-center': header.column.getIsSorted(),
+                                                                'cursor-pointer select-none': header.column.getCanSort()
+                                                            })}
+                                                            onClick={header.column.getToggleSortingHandler()}
+                                                        >
+                                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                                            {{
+                                                                asc: <i className='ri-arrow-up-s-line text-xl' />,
+                                                                desc: <i className='ri-arrow-down-s-line text-xl' />
+                                                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                                                        </div>
+                                                    )}
                                                 </MuiTableCell>
                                             ))}
                                         </MuiTableRow>
-                                    )
-                                })}
-                            </MuiTableBody>
-                        )}
-                    </MuiTable>
-                </div>
-                <TablePagination
-                    rowsPerPageOptions={[10, 25, 50]}
-                    component='div'
-                    className='border-bs'
-                    count={table.getFilteredRowModel().rows.length}
-                    rowsPerPage={table.getState().pagination.pageSize}
-                    page={table.getState().pagination.pageIndex}
-                    SelectProps={{
-                        inputProps: { 'aria-label': 'rows per page' }
-                    }}
-                    onPageChange={(_, page) => {
-                        table.setPageIndex(page)
-                    }}
-                    onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-                />
-            </Card>
+                                    ))}
+                                </MuiTableHead>
+                                {table.getFilteredRowModel().rows.length === 0 ? (
+                                    <MuiTableBody>
+                                        <MuiTableRow>
+                                            <MuiTableCell colSpan={table.getVisibleFlatColumns().length + 1} className='text-center'>
+                                                {isLoading ? (
+                                                    <CircularProgress size={24} />
+                                                ) : (
+                                                    'No se encontraron equipos'
+                                                )}
+                                            </MuiTableCell>
+                                        </MuiTableRow>
+                                    </MuiTableBody>
+                                ) : (
+                                    <MuiTableBody>
+                                        {table.getRowModel().rows.slice(0, table.getState().pagination.pageSize).map(row => {
+                                            return (
+                                                <MuiTableRow key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                                                    <MuiTableCell padding='checkbox'>
+                                                        <Checkbox />
+                                                    </MuiTableCell>
+                                                    {row.getVisibleCells().map(cell => (
+                                                        <MuiTableCell key={cell.id}>
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </MuiTableCell>
+                                                    ))}
+                                                </MuiTableRow>
+                                            )
+                                        })}
+                                    </MuiTableBody>
+                                )}
+                            </MuiTable>
+                        </div>
+                        <TablePagination
+                            rowsPerPageOptions={[10, 25, 50, 100]}
+                            component='div'
+                            className='border-bs'
+                            count={table.getFilteredRowModel().rows.length}
+                            rowsPerPage={table.getState().pagination.pageSize}
+                            page={table.getState().pagination.pageIndex}
+                            SelectProps={{
+                                inputProps: { 'aria-label': 'rows per page' }
+                            }}
+                            onPageChange={(_, page) => {
+                                table.setPageIndex(page)
+                            }}
+                            onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+                        />
+                    </Card>
+                </Grid>
+            </Grid>
 
             {/* Add Equipo Dialog */}
             <AddEquipo
@@ -413,6 +484,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                 setData={setData}
                 tiposEquipo={tiposEquipo}
                 laboratoristas={laboratoristas}
+                areas={areas}
             />
 
             {/* Edit Equipo Dialog */}
@@ -427,6 +499,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                     equipo={selectedEquipo}
                     tiposEquipo={tiposEquipo}
                     laboratoristas={laboratoristas}
+                    areas={areas}
                 />
             )}
 

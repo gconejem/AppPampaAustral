@@ -22,7 +22,7 @@ import { toast } from 'react-hot-toast'
 import axios from 'axios'
 
 // Type Imports
-import type { Equipo, EquipoFormData, TipoEquipo, Laboratorista } from '@/types/apps/equipoTypes'
+import type { Equipo, EquipoFormData, TipoEquipo, Laboratorista, Area } from '@/types/apps/equipoTypes'
 
 type Props = {
     open: boolean
@@ -30,9 +30,10 @@ type Props = {
     setData: (data: Equipo[] | ((prevData: Equipo[]) => Equipo[])) => void
     tiposEquipo: TipoEquipo[]
     laboratoristas: Laboratorista[]
+    areas: Area[]
 }
 
-const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas }: Props) => {
+const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, areas }: Props) => {
     // States
     const [isLoading, setIsLoading] = useState(false)
 
@@ -50,6 +51,7 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas }: 
             descripcion: '',
             serie: '',
             funcionarioAsignadoId: null,
+            areaId: null,
             estado: 'Activo',
             observaciones: ''
         }
@@ -62,7 +64,8 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas }: 
             const payload = {
                 ...data,
                 tipoEquipoId: data.tipoEquipoId || undefined,
-                funcionarioAsignadoId: data.funcionarioAsignadoId || null
+                funcionarioAsignadoId: data.funcionarioAsignadoId || null,
+                areaId: data.areaId || null
             }
 
             const response = await axios.post('/api/equipos', payload)
@@ -180,6 +183,32 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas }: 
                                         label='Número de Serie'
                                         placeholder='Número de serie del equipo'
                                     />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Controller
+                                name='areaId'
+                                control={control}
+                                render={({ field }) => (
+                                    <FormControl fullWidth>
+                                        <InputLabel>Área de Uso</InputLabel>
+                                        <Select
+                                            {...field}
+                                            value={field.value || ''}
+                                            label='Área de Uso'
+                                        >
+                                            <MenuItem value=''>
+                                                <em>Sin asignar</em>
+                                            </MenuItem>
+                                            {areas.map(area => (
+                                                <MenuItem key={area.id} value={area.id}>
+                                                    {area.nombre}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
                                 )}
                             />
                         </Grid>

@@ -13,6 +13,11 @@ export interface Laboratorista {
     equiposCount?: number
 }
 
+export interface Area {
+    id: number
+    nombre: string
+}
+
 export interface Equipo {
     id: number
     codigo: string
@@ -21,6 +26,7 @@ export interface Equipo {
     descripcion: string | null
     serie: string | null
     funcionarioAsignadoId: string | null
+    areaId: number | null
     estado: string
     observaciones: string | null
     createdAt: Date
@@ -32,6 +38,7 @@ export interface Equipo {
         email: string | null
         rut: string | null
     } | null
+    area: Area | null
 }
 
 export interface EquipoFormData {
@@ -41,6 +48,7 @@ export interface EquipoFormData {
     descripcion?: string
     serie?: string
     funcionarioAsignadoId?: string | null
+    areaId?: number | null
     estado: string
     observaciones?: string
 }

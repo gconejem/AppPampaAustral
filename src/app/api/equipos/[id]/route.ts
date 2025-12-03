@@ -27,6 +27,12 @@ export async function GET(
                             }
                         }
                     }
+                },
+                area: {
+                    select: {
+                        id: true,
+                        nombre: true
+                    }
                 }
             }
         })
@@ -49,7 +55,7 @@ export async function PUT(
     try {
         const equipoId = parseInt(params.id)
         const body = await request.json()
-        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, estado, observaciones } = body
+        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, areaId, estado, observaciones } = body
 
         // Verificar que el equipo existe
         const equipoExistente = await prisma.equipo.findUnique({
@@ -130,6 +136,7 @@ export async function PUT(
                 descripcion,
                 serie,
                 funcionarioAsignadoId,
+                areaId,
                 estado,
                 observaciones
             },
@@ -141,6 +148,12 @@ export async function PUT(
                         name: true,
                         email: true,
                         rut: true
+                    }
+                },
+                area: {
+                    select: {
+                        id: true,
+                        nombre: true
                     }
                 }
             }

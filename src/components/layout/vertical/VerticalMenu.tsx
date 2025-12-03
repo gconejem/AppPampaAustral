@@ -163,6 +163,9 @@ const VerticalMenu = () => {
                 </SubMenu>
               )}
               <SubMenu label='Equipos' icon={<i className='ri-tools-line' />}>
+                <MenuItem href={`/${locale}/apps/equipos/list`} icon={<i className='ri-list-check' />}>
+                  Equipos
+                </MenuItem>
               </SubMenu>
             </MenuSection>
           </Menu>

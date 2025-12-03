@@ -12,6 +12,8 @@ export async function GET(request: Request) {
         const search = searchParams.get('search') || ''
         const tipoEquipoId = searchParams.get('tipoEquipoId')
         const estado = searchParams.get('estado')
+        const areaId = searchParams.get('areaId')
+        const funcionarioAsignadoId = searchParams.get('funcionarioAsignadoId')
 
         const skip = (page - 1) * limit
 
@@ -33,6 +35,14 @@ export async function GET(request: Request) {
             where.estado = estado
         }
 
+        if (areaId) {
+            where.areaId = parseInt(areaId)
+        }
+
+        if (funcionarioAsignadoId) {
+            where.funcionarioAsignadoId = funcionarioAsignadoId
+        }
+
         const [equipos, total] = await Promise.all([
             prisma.equipo.findMany({
                 where,
@@ -45,10 +55,16 @@ export async function GET(request: Request) {
                             email: true,
                             rut: true
                         }
+                    },
+                    area: {
+                        select: {
+                            id: true,
+                            nombre: true
+                        }
                     }
                 },
                 orderBy: {
-                    codigo: 'asc'
+                    id: 'asc'
                 },
                 skip,
                 take: limit
@@ -71,7 +87,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, estado, observaciones } = body
+        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, areaId, estado, observaciones } = body
 
         // Verificar si el código ya existe
         const equipoExistente = await prisma.equipo.findUnique({
@@ -138,6 +154,7 @@ export async function POST(request: Request) {
                 descripcion,
                 serie,
                 funcionarioAsignadoId,
+                areaId,
                 estado: estado || 'Activo',
                 observaciones
             },
@@ -149,6 +166,12 @@ export async function POST(request: Request) {
                         name: true,
                         email: true,
                         rut: true
+                    }
+                },
+                area: {
+                    select: {
+                        id: true,
+                        nombre: true
                     }
                 }
             }
