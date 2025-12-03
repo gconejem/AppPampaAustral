@@ -5,7 +5,7 @@ import { compare } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-export default NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     CredentialsProvider({
       name: 'Credentials',
