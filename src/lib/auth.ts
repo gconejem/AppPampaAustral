@@ -63,8 +63,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           return {
             id: user.id,
-            name: user.name,
-            email: user.email,
+            name: user.name || '',
+            email: user.email || '',
             rut: user.rut
           }
         } catch (error: any) {
@@ -115,12 +115,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
         console.log('🔐 [session] usuario en BD:', dbUser)
 
-        session.user.id = dbUser?.id
-        session.user.email = dbUser?.email
-        session.user.name = dbUser?.name
-        session.user.roles = dbUser?.roles.map(r => r.rol.nombre) ?? []
-        session.user.permissions = dbUser?.roles
-          .flatMap(r => r.rol.permisos.map(p => p.permission.name)) ?? []
+        if (dbUser) {
+          session.user.id = dbUser.id
+          session.user.email = dbUser.email || ''
+          session.user.name = dbUser.name || ''
+          session.user.roles = dbUser.roles.map(r => r.rol.nombre)
+          session.user.permissions = dbUser.roles
+            .flatMap(r => r.rol.permisos.map(p => p.permission.name))
+        } else {
+          // Handle case where user is not found in database
+          session.user.roles = []
+          session.user.permissions = []
+        }
 
         console.log('🔐 [session] roles:', session.user.roles)
         console.log('🔐 [session] permisos:', session.user.permissions)
