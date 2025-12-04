@@ -114,14 +114,11 @@ const VerticalMenu = () => {
 
               {hasPermission(permisos.control.ver) && (
                 <SubMenu label='Control Interno' icon={<i className='ri-home-smile-line' />}>
-                  <MenuItem href={`/${locale}/apps/user/control`} icon={<i className='ri-home-smile-line' />}>
-                    Control Interno
-                  </MenuItem>
                   <MenuItem href={`/${locale}/apps/rcmnavigator`} icon={<i className='ri-home-smile-line' />}>
                     Navegador
                   </MenuItem>
                   <MenuItem href={`/${locale}/apps/rcmnavigatordetail`} icon={<i className='ri-home-smile-line' />}>
-                    Navegador Detalle
+                    RCM
                   </MenuItem>
                 </SubMenu>
               )}

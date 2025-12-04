@@ -112,8 +112,8 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
         </Link>
         <div className='flex flex-col gap-5 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset]'>
           <div>
-            <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}!👋🏻`}</Typography>
-            <Typography className='mbs-1'>Please sign-in to your account and start the adventure</Typography>
+            <Typography variant='h4'>{`Bienvenido a ${themeConfig.templateName}!👋🏻`}</Typography>
+            <Typography className='mbs-1'>Por favor inicia sesión en tu cuenta para comenzar</Typography>
           </div>
 
           {error && (
@@ -126,7 +126,7 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
             <TextField
               autoFocus
               fullWidth
-              label='Email'
+              label='Correo Electrónico'
               type='email'
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -134,7 +134,7 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
             />
             <TextField
               fullWidth
-              label='Password'
+              label='Contraseña'
               type={isPasswordShown ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -155,7 +155,7 @@ const LoginV2 = ({ mode }: { mode: Mode }) => {
               }}
             />
             <Button fullWidth variant='contained' type='submit' disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
+              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
           </form>
         </div>

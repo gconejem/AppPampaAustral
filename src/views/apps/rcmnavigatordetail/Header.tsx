@@ -206,7 +206,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       <Grid container alignItems='center' sx={{ mb: 4 }}>
         <Grid item xs={3}>
           <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
-            Navegador Detalle de RCM
+            RCM - Registro Control de Muestras
           </Typography>
         </Grid>
         <Grid item xs={6} />
