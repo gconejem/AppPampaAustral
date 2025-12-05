@@ -48,6 +48,53 @@ export async function GET(
     }
 }
 
+export async function PATCH(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const equipoId = parseInt(params.id)
+        const body = await request.json()
+
+        // Verificar que el equipo existe
+        const equipoExistente = await prisma.equipo.findUnique({
+            where: { id: equipoId }
+        })
+
+        if (!equipoExistente) {
+            return NextResponse.json({ error: 'Equipo no encontrado' }, { status: 404 })
+        }
+
+        // Actualización parcial - solo los campos proporcionados
+        const equipoActualizado = await prisma.equipo.update({
+            where: { id: equipoId },
+            data: body,
+            include: {
+                tipoEquipo: true,
+                funcionarioAsignado: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        rut: true
+                    }
+                },
+                area: {
+                    select: {
+                        id: true,
+                        nombre: true
+                    }
+                }
+            }
+        })
+
+        return NextResponse.json(equipoActualizado)
+    } catch (error) {
+        console.error('Error al actualizar equipo:', error)
+        return NextResponse.json({ error: 'Error al actualizar el equipo' }, { status: 500 })
+    }
+}
+
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }

@@ -224,6 +224,29 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         setEditEquipoOpen(true)
     }
 
+    const handleToggleEstado = async (equipo: Equipo) => {
+        try {
+            const nuevoEstado = equipo.estado === 'Activo' ? 'Inactivo' : 'Activo'
+            await axios.patch(`/api/equipos/${equipo.id}`, {
+                estado: nuevoEstado
+            })
+            setData(prevData =>
+                prevData.map(e =>
+                    e.id === equipo.id ? { ...e, estado: nuevoEstado } : e
+                )
+            )
+            toast.success(`Equipo ${nuevoEstado === 'Activo' ? 'activado' : 'desactivado'} correctamente`)
+        } catch (error) {
+            console.error('Error al cambiar estado:', error)
+            toast.error('Error al cambiar el estado del equipo')
+        }
+    }
+
+    const handleShowHistory = (equipo: Equipo) => {
+        // Placeholder para mostrar historial
+        console.log('Mostrar historial de equipo:', equipo)
+    }
+
     const handleViewDetails = (equipo: Equipo) => {
         setEquipoToView(equipo)
         setDetailsEquipoOpen(true)
@@ -416,9 +439,14 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                                 <i className='ri-edit-box-line text-[22px] text-textSecondary' />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title='Activar/Desactivar'>
-                            <IconButton size='small'>
-                                <i className='ri-power-line text-[22px] text-textSecondary' />
+                        <Tooltip title={row.original.estado === 'Activo' ? 'Desactivar' : 'Activar'}>
+                            <IconButton size='small' onClick={() => handleToggleEstado(row.original)}>
+                                <i className='ri-toggle-line text-[22px] text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title='Ver historial'>
+                            <IconButton size='small' onClick={() => handleShowHistory(row.original)}>
+                                <i className='ri-table-line text-[22px] text-textSecondary' />
                             </IconButton>
                         </Tooltip>
                     </div>
