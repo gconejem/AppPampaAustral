@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef } from 'react'
 
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
@@ -10,6 +10,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
+import type { TextFieldProps } from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -26,6 +27,12 @@ import Box from '@mui/material/Box'
 // Third-party Imports
 import { toast } from 'react-hot-toast'
 import axios from 'axios'
+
+// Component Imports
+import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+
+// Utils Imports
+import { parseDateFromBackend, formatDateForBackend } from '@/utils/dateUtils'
 
 // Icon Imports
 import AddIcon from '@mui/icons-material/Add'
@@ -52,8 +59,13 @@ type Props = {
     onSaved?: () => void
 }
 
+// Custom Input Component for DatePicker
+const CustomInput = forwardRef((props: TextFieldProps, ref) => {
+    return <TextField fullWidth inputRef={ref} {...props} />
+})
+
 const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSaved }: Props) => {
-    const [fechaCalibracion, setFechaCalibracion] = useState<string>('')
+    const [fechaCalibracion, setFechaCalibracion] = useState<Date | null>(null)
     const [certificado, setCertificado] = useState<string>('')
     const [detalles, setDetalles] = useState<DetalleRow[]>([
         { datoEquipo: '', correccion: '' },
@@ -80,11 +92,8 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
                     // Tomar la calibración más reciente
                     const calibracion: CalibracionData = response.data[0]
 
-                    // Formatear la fecha para el input type="date"
-                    const fechaFormateada = new Date(calibracion.fechaCalibracion).toISOString().split('T')[0]
-
                     setCurrentCalibracionId(calibracion.id)
-                    setFechaCalibracion(fechaFormateada)
+                    setFechaCalibracion(parseDateFromBackend(calibracion.fechaCalibracion))
                     setCertificado(calibracion.certificado)
 
                     // Cargar detalles o usar filas vacías si no hay
@@ -121,7 +130,7 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
 
     const resetForm = () => {
         setCurrentCalibracionId(null)
-        setFechaCalibracion('')
+        setFechaCalibracion(null)
         setCertificado('')
         setDetalles([
             { datoEquipo: '', correccion: '' },
@@ -173,7 +182,7 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
 
         try {
             const payload = {
-                fechaCalibracion,
+                fechaCalibracion: fechaCalibracion ? formatDateForBackend(fechaCalibracion) : '',
                 certificado,
                 equipoId,
                 detalles: detallesValidos
@@ -234,16 +243,14 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
                     <Grid container spacing={3} sx={{ mt: 0 }}>
                         {/* Fecha de Calibración */}
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                required
-                                type='date'
-                                label='Fecha de calibración'
-                                value={fechaCalibracion}
-                                onChange={(e) => setFechaCalibracion(e.target.value)}
-                                InputLabelProps={{
-                                    shrink: true
-                                }}
+                            <AppReactDatepicker
+                                selected={fechaCalibracion}
+                                onChange={(date: Date | null) => setFechaCalibracion(date)}
+                                dateFormat='dd/MM/yyyy'
+                                customInput={<CustomInput label='Fecha de calibración' />}
+                                showYearDropdown
+                                showMonthDropdown
+                                dropdownMode='select'
                             />
                         </Grid>
 
