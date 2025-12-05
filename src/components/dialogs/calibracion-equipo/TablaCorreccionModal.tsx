@@ -96,13 +96,23 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
                     setFechaCalibracion(parseDateFromBackend(calibracion.fechaCalibracion))
                     setCertificado(calibracion.certificado)
 
-                    // Cargar detalles o usar filas vacías si no hay
+                    // Cargar detalles asegurando un mínimo de 5 filas
                     if (calibracion.detalles && calibracion.detalles.length > 0) {
-                        setDetalles(calibracion.detalles.map(d => ({
+                        const detallesCargados = calibracion.detalles.map(d => ({
                             id: d.id,
                             datoEquipo: d.datoEquipo,
                             correccion: d.correccion
-                        })))
+                        }))
+
+                        // Asegurar que siempre haya al menos 5 filas
+                        const filasMinimas = 5
+                        const filasVacias = Math.max(0, filasMinimas - detallesCargados.length)
+                        const filasVaciasArray = Array(filasVacias).fill(null).map(() => ({
+                            datoEquipo: '',
+                            correccion: ''
+                        }))
+
+                        setDetalles([...detallesCargados, ...filasVaciasArray])
                     } else {
                         setDetalles([
                             { datoEquipo: '', correccion: '' },
@@ -217,7 +227,18 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
     }
 
     return (
-        <Dialog open={open} onClose={handleCancel} maxWidth='md' fullWidth>
+        <Dialog
+            open={open}
+            onClose={handleCancel}
+            maxWidth='md'
+            fullWidth
+            scroll='body'
+            PaperProps={{
+                sx: {
+                    minHeight: '600px'
+                }
+            }}
+        >
             <DialogTitle>
                 <div>
                     <Typography variant='h5' component='div'>
@@ -231,7 +252,7 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
                 </div>
             </DialogTitle>
 
-            <DialogContent>
+            <DialogContent sx={{ overflow: 'visible' }}>
                 {isFetchingData ? (
                     <Box display='flex' justifyContent='center' alignItems='center' minHeight='300px'>
                         <CircularProgress />
@@ -282,8 +303,15 @@ const TablaCorreccionModal = ({ open, handleClose, equipoId, calibracionId, onSa
                                 </Button>
                             </div>
 
-                            <TableContainer component={Paper} variant='outlined'>
-                                <Table size='small'>
+                            <TableContainer
+                                component={Paper}
+                                variant='outlined'
+                                sx={{
+                                    maxHeight: '300px',
+                                    overflow: 'auto'
+                                }}
+                            >
+                                <Table size='small' stickyHeader>
                                     <TableHead>
                                         <TableRow>
                                             <TableCell width='50'>ID</TableCell>
