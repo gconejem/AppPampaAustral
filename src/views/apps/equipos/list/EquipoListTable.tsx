@@ -101,6 +101,8 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
     const [deleteEquipoOpen, setDeleteEquipoOpen] = useState(false)
     const [equipoToDelete, setEquipoToDelete] = useState<Equipo | null>(null)
+    const [detailsEquipoOpen, setDetailsEquipoOpen] = useState(false)
+    const [equipoToView, setEquipoToView] = useState<Equipo | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [sorting, setSorting] = useState<SortingState>([{ id: 'id', desc: false }])
     const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
@@ -244,6 +246,11 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const handleDeleteClick = (equipo: Equipo) => {
         setEquipoToDelete(equipo)
         setDeleteEquipoOpen(true)
+    }
+
+    const handleViewDetails = (equipo: Equipo) => {
+        setEquipoToView(equipo)
+        setDetailsEquipoOpen(true)
     }
 
     const handleFilterChange = useCallback((newFilters: typeof filters) => {
@@ -424,7 +431,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                 cell: ({ row }) => (
                     <div className='flex items-center gap-1'>
                         <Tooltip title='Ver detalles'>
-                            <IconButton size='small'>
+                            <IconButton size='small' onClick={() => handleViewDetails(row.original)}>
                                 <i className='ri-eye-line text-[22px] text-textSecondary' />
                             </IconButton>
                         </Tooltip>
@@ -609,6 +616,166 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                     areas={areas}
                 />
             )}
+
+            {/* Details Dialog */}
+            <Dialog
+                open={detailsEquipoOpen}
+                onClose={() => setDetailsEquipoOpen(false)}
+                maxWidth='md'
+                fullWidth
+            >
+                <DialogTitle className='flex items-center justify-between'>
+                    <Typography variant='h5'>Detalles del Equipo</Typography>
+                    <IconButton
+                        onClick={() => setDetailsEquipoOpen(false)}
+                        size='small'
+                    >
+                        <i className='ri-close-line' />
+                    </IconButton>
+                </DialogTitle>
+                <Divider />
+                <DialogContent>
+                    {equipoToView && (
+                        <Grid container spacing={4}>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    # Correlativo
+                                </Typography>
+                                <Typography variant='body1' className='font-medium'>
+                                    {String(equipoToView.id).padStart(3, '0')}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Código
+                                </Typography>
+                                <Typography variant='body1' className='font-medium'>
+                                    {equipoToView.codigo}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Tipo de Equipo
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.tipoEquipo.tipo}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Estado
+                                </Typography>
+                                <Chip
+                                    variant='tonal'
+                                    label={equipoToView.estado}
+                                    size='small'
+                                    color={equipoToView.estado === 'Activo' ? 'success' : 'default'}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Descripción
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.nombre}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    N° Serie
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.serie || '-'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Marca
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.marca || '-'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Modelo
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.modelo || '-'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Área de Uso
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.area?.nombre || '-'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Funcionario Asignado
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {equipoToView.funcionarioAsignado?.name || '-'}
+                                </Typography>
+                            </Grid>
+                            {equipoToView.observaciones && (
+                                <Grid item xs={12}>
+                                    <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                        Observaciones
+                                    </Typography>
+                                    <Typography variant='body1'>
+                                        {equipoToView.observaciones}
+                                    </Typography>
+                                </Grid>
+                            )}
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Fecha de Creación
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {new Date(equipoToView.createdAt).toLocaleDateString('es-CL', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant='subtitle2' color='text.secondary' gutterBottom>
+                                    Última Actualización
+                                </Typography>
+                                <Typography variant='body1'>
+                                    {new Date(equipoToView.updatedAt).toLocaleDateString('es-CL', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    )}
+                </DialogContent>
+                <Divider />
+                <DialogActions className='p-4'>
+                    <Button onClick={() => setDetailsEquipoOpen(false)} variant='outlined'>
+                        Cerrar
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            setDetailsEquipoOpen(false)
+                            if (equipoToView) {
+                                handleEditEquipo(equipoToView)
+                            }
+                        }}
+                        variant='contained'
+                        startIcon={<i className='ri-edit-box-line' />}
+                    >
+                        Editar
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteEquipoOpen} onClose={() => setDeleteEquipoOpen(false)}>
