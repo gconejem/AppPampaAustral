@@ -402,6 +402,9 @@ model Equipo {
   areaId                Int?
   estado                String         @default("Activo")
   observaciones         String?
+  marca                 String?
+  modelo                String?
+  agenda                Boolean?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   tipoEquipo            TipoEquipo     @relation(fields: [tipoEquipoId], references: [id])
