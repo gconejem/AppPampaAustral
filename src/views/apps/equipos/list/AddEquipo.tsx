@@ -46,7 +46,6 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
     } = useForm<EquipoFormData>({
         defaultValues: {
             codigo: '',
-            nombre: '',
             tipoEquipoId: null,
             descripcion: '',
             serie: '',
@@ -107,6 +106,7 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
             <div className='p-5'>
                 <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
                     <Grid container spacing={3}>
+                        {/* 1. Código */}
                         <Grid item xs={12}>
                             <Controller
                                 name='codigo'
@@ -125,24 +125,7 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
-                        <Grid item xs={12}>
-                            <Controller
-                                name='nombre'
-                                control={control}
-                                rules={{ required: 'Este campo es requerido' }}
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        fullWidth
-                                        label='Nombre *'
-                                        placeholder='Nombre del equipo'
-                                        error={!!errors.nombre}
-                                        helperText={errors.nombre?.message}
-                                    />
-                                )}
-                            />
-                        </Grid>
-
+                        {/* 2. Tipo */}
                         <Grid item xs={12}>
                             <Controller
                                 name='tipoEquipoId'
@@ -172,6 +155,25 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
+                        {/* 3. Descripción */}
+                        <Grid item xs={12}>
+                            <Controller
+                                name='descripcion'
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        multiline
+                                        rows={3}
+                                        label='Descripción'
+                                        placeholder='Descripción del equipo'
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {/* 4. Número de Serie */}
                         <Grid item xs={12}>
                             <Controller
                                 name='serie'
@@ -187,6 +189,7 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
+                        {/* 5. Área de Uso */}
                         <Grid item xs={12}>
                             <Controller
                                 name='areaId'
@@ -213,17 +216,18 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
+                        {/* 6. Funcionario */}
                         <Grid item xs={12}>
                             <Controller
                                 name='funcionarioAsignadoId'
                                 control={control}
                                 render={({ field }) => (
                                     <FormControl fullWidth>
-                                        <InputLabel>Laboratorista Asignado</InputLabel>
+                                        <InputLabel>Funcionario Asignado</InputLabel>
                                         <Select
                                             {...field}
                                             value={field.value || ''}
-                                            label='Laboratorista Asignado'
+                                            label='Funcionario Asignado'
                                         >
                                             <MenuItem value=''>
                                                 <em>Sin asignar</em>
@@ -235,41 +239,6 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                                             ))}
                                         </Select>
                                     </FormControl>
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Controller
-                                name='estado'
-                                control={control}
-                                render={({ field }) => (
-                                    <FormControl fullWidth>
-                                        <InputLabel>Estado</InputLabel>
-                                        <Select {...field} label='Estado'>
-                                            <MenuItem value='Activo'>Activo</MenuItem>
-                                            <MenuItem value='Inactivo'>Inactivo</MenuItem>
-                                            <MenuItem value='En Mantención'>En Mantención</MenuItem>
-                                            <MenuItem value='Fuera de Servicio'>Fuera de Servicio</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                )}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Controller
-                                name='descripcion'
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        fullWidth
-                                        multiline
-                                        rows={3}
-                                        label='Descripción'
-                                        placeholder='Descripción del equipo'
-                                    />
                                 )}
                             />
                         </Grid>
