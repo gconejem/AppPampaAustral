@@ -444,7 +444,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                                 <i className='ri-toggle-line text-[22px] text-textSecondary' />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title='Ver historial'>
+                        <Tooltip title='Tabla de corrección'>
                             <IconButton size='small' onClick={() => handleShowHistory(row.original)}>
                                 <i className='ri-table-line text-[22px] text-textSecondary' />
                             </IconButton>
