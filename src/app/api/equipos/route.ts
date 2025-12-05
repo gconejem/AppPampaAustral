@@ -27,6 +27,8 @@ export async function GET(request: Request) {
                 { nombre: { contains: search, mode: 'insensitive' } },
                 { descripcion: { contains: search, mode: 'insensitive' } },
                 { serie: { contains: search, mode: 'insensitive' } },
+                { marca: { contains: search, mode: 'insensitive' } },
+                { modelo: { contains: search, mode: 'insensitive' } },
                 { tipoEquipo: { tipo: { contains: search, mode: 'insensitive' } } },
                 { area: { nombre: { contains: search, mode: 'insensitive' } } },
                 { funcionarioAsignado: { name: { contains: search, mode: 'insensitive' } } },
@@ -111,7 +113,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, areaId, estado, observaciones } = body
+        const { codigo, tipoEquipoId, descripcion, serie, marca, modelo, funcionarioAsignadoId, areaId, estado, agenda, observaciones } = body
 
         // Verificar si el código ya existe
         const equipoExistente = await prisma.equipo.findUnique({
@@ -173,13 +175,16 @@ export async function POST(request: Request) {
         const equipo = await prisma.equipo.create({
             data: {
                 codigo,
-                nombre,
+                nombre: tipoEquipo.tipo, // Auto-generated from tipo
                 tipoEquipoId,
                 descripcion,
                 serie,
+                marca,
+                modelo,
                 funcionarioAsignadoId,
                 areaId,
                 estado: estado || 'Activo',
+                agenda: agenda ?? false,
                 observaciones
             },
             include: {

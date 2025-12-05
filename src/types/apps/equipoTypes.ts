@@ -25,9 +25,12 @@ export interface Equipo {
     tipoEquipoId: number
     descripcion: string | null
     serie: string | null
+    marca: string | null
+    modelo: string | null
     funcionarioAsignadoId: string | null
     areaId: number | null
     estado: string
+    agenda: boolean | null
     observaciones: string | null
     createdAt: Date
     updatedAt: Date
@@ -43,12 +46,14 @@ export interface Equipo {
 
 export interface EquipoFormData {
     codigo: string
-    nombre: string
     tipoEquipoId: number | null
     descripcion?: string
     serie?: string
-    funcionarioAsignadoId?: string | null
+    marca?: string
+    modelo?: string
     areaId?: number | null
+    funcionarioAsignadoId?: string | null
     estado: string
+    agenda?: boolean
     observaciones?: string
 }

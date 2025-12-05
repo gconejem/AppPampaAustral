@@ -49,9 +49,12 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
             tipoEquipoId: null,
             descripcion: '',
             serie: '',
+            marca: '',
+            modelo: '',
             funcionarioAsignadoId: null,
             areaId: null,
             estado: 'Activo',
+            agenda: false,
             observaciones: ''
         }
     })
@@ -189,7 +192,39 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
-                        {/* 5. Área de Uso */}
+                        {/* 5. Marca */}
+                        <Grid item xs={12}>
+                            <Controller
+                                name='marca'
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label='Marca'
+                                        placeholder='Marca del equipo'
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {/* 6. Modelo */}
+                        <Grid item xs={12}>
+                            <Controller
+                                name='modelo'
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        fullWidth
+                                        label='Modelo'
+                                        placeholder='Modelo del equipo'
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {/* 7. Área de Uso */}
                         <Grid item xs={12}>
                             <Controller
                                 name='areaId'
@@ -216,18 +251,18 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
-                        {/* 6. Funcionario */}
+                        {/* 8. Funcionario Responsable */}
                         <Grid item xs={12}>
                             <Controller
                                 name='funcionarioAsignadoId'
                                 control={control}
                                 render={({ field }) => (
                                     <FormControl fullWidth>
-                                        <InputLabel>Funcionario Asignado</InputLabel>
+                                        <InputLabel>Funcionario Responsable</InputLabel>
                                         <Select
                                             {...field}
                                             value={field.value || ''}
-                                            label='Funcionario Asignado'
+                                            label='Funcionario Responsable'
                                         >
                                             <MenuItem value=''>
                                                 <em>Sin asignar</em>
@@ -243,6 +278,55 @@ const AddEquipo = ({ open, handleClose, setData, tiposEquipo, laboratoristas, ar
                             />
                         </Grid>
 
+                        {/* 9. Estado */}
+                        <Grid item xs={12}>
+                            <Controller
+                                name='estado'
+                                control={control}
+                                rules={{ required: 'Este campo es requerido' }}
+                                render={({ field }) => (
+                                    <FormControl fullWidth error={!!errors.estado}>
+                                        <InputLabel>Estado *</InputLabel>
+                                        <Select
+                                            {...field}
+                                            label='Estado *'
+                                        >
+                                            <MenuItem value='Activo'>Activo</MenuItem>
+                                            <MenuItem value='Inactivo'>Inactivo</MenuItem>
+                                        </Select>
+                                        {errors.estado && (
+                                            <Typography variant='caption' color='error' sx={{ mt: 1, ml: 2 }}>
+                                                {errors.estado.message}
+                                            </Typography>
+                                        )}
+                                    </FormControl>
+                                )}
+                            />
+                        </Grid>
+
+                        {/* 10. Agenda */}
+                        <Grid item xs={12}>
+                            <Controller
+                                name='agenda'
+                                control={control}
+                                render={({ field }) => (
+                                    <FormControl fullWidth>
+                                        <InputLabel>Agenda</InputLabel>
+                                        <Select
+                                            {...field}
+                                            value={field.value ? 'true' : 'false'}
+                                            onChange={(e) => field.onChange(e.target.value === 'true')}
+                                            label='Agenda'
+                                        >
+                                            <MenuItem value='false'>No</MenuItem>
+                                            <MenuItem value='true'>Sí</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                )}
+                            />
+                        </Grid>
+
+                        {/* 11. Observaciones */}
                         <Grid item xs={12}>
                             <Controller
                                 name='observaciones'

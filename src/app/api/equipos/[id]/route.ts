@@ -55,7 +55,7 @@ export async function PUT(
     try {
         const equipoId = parseInt(params.id)
         const body = await request.json()
-        const { codigo, nombre, tipoEquipoId, descripcion, serie, funcionarioAsignadoId, areaId, estado, observaciones } = body
+        const { codigo, tipoEquipoId, descripcion, serie, marca, modelo, funcionarioAsignadoId, areaId, estado, agenda, observaciones } = body
 
         // Verificar que el equipo existe
         const equipoExistente = await prisma.equipo.findUnique({
@@ -127,17 +127,25 @@ export async function PUT(
             }
         }
 
+        // Get tipo equipo to auto-generate nombre
+        const tipoEquipo = await prisma.tipoEquipo.findUnique({
+            where: { id: tipoEquipoId }
+        })
+
         const equipoActualizado = await prisma.equipo.update({
             where: { id: equipoId },
             data: {
                 codigo,
-                nombre,
+                nombre: tipoEquipo?.tipo || equipoExistente.nombre,
                 tipoEquipoId,
                 descripcion,
                 serie,
+                marca,
+                modelo,
                 funcionarioAsignadoId,
                 areaId,
                 estado,
+                agenda: agenda ?? false,
                 observaciones
             },
             include: {
