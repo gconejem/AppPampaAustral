@@ -22,11 +22,24 @@ export async function GET(request: Request) {
         const where: any = {}
 
         if (search) {
-            where.OR = [
+            const searchConditions: any[] = [
                 { codigo: { contains: search, mode: 'insensitive' } },
                 { nombre: { contains: search, mode: 'insensitive' } },
-                { descripcion: { contains: search, mode: 'insensitive' } }
+                { descripcion: { contains: search, mode: 'insensitive' } },
+                { serie: { contains: search, mode: 'insensitive' } },
+                { tipoEquipo: { tipo: { contains: search, mode: 'insensitive' } } },
+                { area: { nombre: { contains: search, mode: 'insensitive' } } },
+                { funcionarioAsignado: { name: { contains: search, mode: 'insensitive' } } },
+                { funcionarioAsignado: { rut: { contains: search, mode: 'insensitive' } } }
             ]
+
+            // Si es un número, buscar también por ID (correlativo)
+            const searchNumber = parseInt(search)
+            if (!isNaN(searchNumber)) {
+                searchConditions.push({ id: searchNumber })
+            }
+
+            where.OR = searchConditions
         }
 
         // Filtros con multiselección

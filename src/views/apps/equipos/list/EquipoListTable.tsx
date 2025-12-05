@@ -113,11 +113,13 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         estado: string | string[]
         areaId: string | string[]
         funcionarioAsignadoId: string | string[]
+        search: string
     }>({
         tipoEquipoId: '',
         estado: '',
         areaId: '',
-        funcionarioAsignadoId: ''
+        funcionarioAsignadoId: '',
+        search: ''
     })
 
     // Hooks
@@ -126,21 +128,27 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
 
     // Fetch data on component mount
     useEffect(() => {
-        fetchEquipos()
         fetchTiposEquipo()
         fetchLaboratoristas()
         fetchAreas()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // Fetch equipos when filters change
     useEffect(() => {
         fetchEquipos()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters])
 
-    const fetchEquipos = async () => {
+    const fetchEquipos = useCallback(async () => {
         try {
             setIsLoading(true)
             const params = new URLSearchParams({ limit: '1000' })
+
+            // Agregar búsqueda de texto libre
+            if (filters.search) {
+                params.append('search', filters.search)
+            }
 
             // Manejar filtros que pueden ser arrays
             if (filters.tipoEquipoId) {
@@ -183,7 +191,7 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [filters, setData])
 
     const fetchTiposEquipo = async () => {
         try {
@@ -241,6 +249,72 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const handleFilterChange = useCallback((newFilters: typeof filters) => {
         setFilters(newFilters)
     }, [])
+
+    const handleExport = useCallback(async () => {
+        try {
+            setIsLoading(true)
+            const params = new URLSearchParams()
+
+            // Agregar búsqueda de texto libre
+            if (filters.search) {
+                params.append('search', filters.search)
+            }
+
+            // Manejar filtros que pueden ser arrays
+            if (filters.tipoEquipoId) {
+                if (Array.isArray(filters.tipoEquipoId)) {
+                    filters.tipoEquipoId.forEach(id => params.append('tipoEquipoId', id))
+                } else {
+                    params.append('tipoEquipoId', filters.tipoEquipoId)
+                }
+            }
+
+            if (filters.estado) {
+                if (Array.isArray(filters.estado)) {
+                    filters.estado.forEach(estado => params.append('estado', estado))
+                } else {
+                    params.append('estado', filters.estado)
+                }
+            }
+
+            if (filters.areaId) {
+                if (Array.isArray(filters.areaId)) {
+                    filters.areaId.forEach(id => params.append('areaId', id))
+                } else {
+                    params.append('areaId', filters.areaId)
+                }
+            }
+
+            if (filters.funcionarioAsignadoId) {
+                if (Array.isArray(filters.funcionarioAsignadoId)) {
+                    filters.funcionarioAsignadoId.forEach(id => params.append('funcionarioAsignadoId', id))
+                } else {
+                    params.append('funcionarioAsignadoId', filters.funcionarioAsignadoId)
+                }
+            }
+
+            const response = await axios.get(`/api/equipos/export?${params.toString()}`, {
+                responseType: 'blob'
+            })
+
+            // Crear un enlace de descarga
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', `equipos_${new Date().toISOString().split('T')[0]}.xlsx`)
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            window.URL.revokeObjectURL(url)
+
+            toast.success('Equipos exportados correctamente')
+        } catch (error) {
+            console.error('Error exporting equipos:', error)
+            toast.error('Error al exportar los equipos')
+        } finally {
+            setIsLoading(false)
+        }
+    }, [filters])
 
     // Columns definition
     const columns = useMemo(
@@ -406,10 +480,10 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                 <Grid item xs={12}>
                     <TableFilters
                         onFilterChange={handleFilterChange}
+                        onExport={handleExport}
                         tiposEquipo={tiposEquipo}
                         laboratoristas={laboratoristas}
                         areas={areas}
-                        isLoading={isLoading}
                     />
                 </Grid>
 

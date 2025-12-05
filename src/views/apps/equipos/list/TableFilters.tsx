@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -17,6 +17,8 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Checkbox from '@mui/material/Checkbox'
 import ListItemText from '@mui/material/ListItemText'
 import OutlinedInput from '@mui/material/OutlinedInput'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 
 // Type Imports
 import type { TipoEquipo, Laboratorista } from '@/types/apps/equipoTypes'
@@ -32,11 +34,12 @@ interface TableFiltersProps {
         estado: string | string[]
         areaId: string | string[]
         funcionarioAsignadoId: string | string[]
+        search: string
     }) => void
+    onExport: () => void
     tiposEquipo: TipoEquipo[]
     laboratoristas: Laboratorista[]
     areas: AreaUso[]
-    isLoading?: boolean
 }
 
 const ESTADOS_EQUIPO = [
@@ -47,16 +50,29 @@ const ESTADOS_EQUIPO = [
 
 const TableFilters = ({
     onFilterChange,
+    onExport,
     tiposEquipo,
     laboratoristas,
-    areas,
-    isLoading = false
+    areas
 }: TableFiltersProps) => {
     // States
     const [selectedTipo, setSelectedTipo] = useState<string[]>(['Todos'])
     const [selectedEstado, setSelectedEstado] = useState<string[]>(['Todos'])
     const [selectedArea, setSelectedArea] = useState<string[]>(['Todos'])
     const [selectedFuncionario, setSelectedFuncionario] = useState<string[]>([])
+    const [searchText, setSearchText] = useState<string>('')
+    const [debouncedSearch, setDebouncedSearch] = useState<string>('')
+
+    // Debounce search text - solo buscar si hay 3+ caracteres o está vacío
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchText.length === 0 || searchText.length >= 3) {
+                setDebouncedSearch(searchText)
+            }
+        }, 500) // 500ms de debounce
+
+        return () => clearTimeout(timer)
+    }, [searchText])
 
     // Notify parent of filter changes
     useEffect(() => {
@@ -65,16 +81,18 @@ const TableFilters = ({
             tipoEquipoId: selectedTipo.includes('Todos') ? '' : selectedTipo,
             estado: selectedEstado.includes('Todos') ? '' : selectedEstado,
             areaId: selectedArea.includes('Todos') ? '' : selectedArea,
-            funcionarioAsignadoId: selectedFuncionario.length === 0 ? '' : selectedFuncionario
+            funcionarioAsignadoId: selectedFuncionario.length === 0 ? '' : selectedFuncionario,
+            search: debouncedSearch
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedTipo, selectedEstado, selectedArea, selectedFuncionario])
+    }, [selectedTipo, selectedEstado, selectedArea, selectedFuncionario, debouncedSearch])
 
     const handleClearFilters = () => {
         setSelectedTipo(['Todos'])
         setSelectedEstado(['Todos'])
         setSelectedArea(['Todos'])
         setSelectedFuncionario([])
+        setSearchText('')
     }
 
     // Handler para multiselección
@@ -165,7 +183,7 @@ const TableFilters = ({
             <CardContent>
                 <Grid container spacing={4} alignItems='center'>
                     <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth disabled={isLoading}>
+                        <FormControl fullWidth>
                             <InputLabel>Tipo</InputLabel>
                             <Select
                                 multiple
@@ -190,7 +208,7 @@ const TableFilters = ({
                     </Grid>
 
                     <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth disabled={isLoading}>
+                        <FormControl fullWidth>
                             <InputLabel>Estado</InputLabel>
                             <Select
                                 multiple
@@ -215,7 +233,7 @@ const TableFilters = ({
                     </Grid>
 
                     <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth disabled={isLoading}>
+                        <FormControl fullWidth>
                             <InputLabel>Área de uso</InputLabel>
                             <Select
                                 multiple
@@ -240,7 +258,7 @@ const TableFilters = ({
                     </Grid>
 
                     <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth disabled={isLoading}>
+                        <FormControl fullWidth>
                             <InputLabel>Funcionario asignado</InputLabel>
                             <Select
                                 multiple
@@ -260,13 +278,42 @@ const TableFilters = ({
                         </FormControl>
                     </Grid>
 
+                    <Grid item xs={12} sm={8} md={9}>
+                        <TextField
+                            fullWidth
+                            label='Búsqueda libre'
+                            placeholder='Buscar por correlativo, código, tipo, descripción, serie, área, funcionario... (mínimo 3 caracteres)'
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            helperText={searchText.length > 0 && searchText.length < 3 ? 'Ingrese al menos 3 caracteres para buscar' : ''}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position='start'>
+                                        <i className='ri-search-line' />
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} sm={4} md={3}>
+                        <Button
+                            fullWidth
+                            variant='contained'
+                            color='success'
+                            onClick={onExport}
+                            startIcon={<i className='ri-file-excel-2-line' />}
+                        >
+                            Exportar
+                        </Button>
+                    </Grid>
+
                     <Grid item xs={12}>
                         <Box display='flex' justifyContent='flex-end'>
                             <Button
                                 variant='outlined'
                                 color='secondary'
                                 onClick={handleClearFilters}
-                                disabled={isLoading}
                                 startIcon={<i className='ri-refresh-line' />}
                             >
                                 Limpiar filtros
@@ -279,4 +326,4 @@ const TableFilters = ({
     )
 }
 
-export default TableFilters
+export default memo(TableFilters)
