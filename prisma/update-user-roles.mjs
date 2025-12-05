@@ -11,7 +11,7 @@ const usuarios = [
   { usuario: "jsepulveda", rol: "Laboratorista" },
   { usuario: "jgualas", rol: "Laboratorista" },
   { usuario: "jcsepulveda", rol: "Laboratorista" },
-  { usuario: "jtroncoso", rol: "Laboratorista / E. de Área Sala" },
+  { usuario: "jtroncoso", rol: "Laboratorista" },
   { usuario: "magalyl", rol: "E. de Ruta" },
   { usuario: "mperez", rol: "Administrador" },
   { usuario: "msepulveda", rol: "Laboratorista" },
