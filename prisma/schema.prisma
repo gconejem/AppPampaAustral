@@ -392,25 +392,26 @@ model Servicio {
 }
 
 model Equipo {
-  id                    Int            @id @default(autoincrement())
-  codigo                String         @unique
+  id                    Int                 @id @default(autoincrement())
+  codigo                String              @unique
   nombre                String
   tipoEquipoId          Int
   descripcion           String?
   serie                 String?
   funcionarioAsignadoId String?
   areaId                Int?
-  estado                String         @default("Activo")
+  estado                String              @default("Activo")
   observaciones         String?
   marca                 String?
   modelo                String?
   agenda                Boolean?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  tipoEquipo            TipoEquipo     @relation(fields: [tipoEquipoId], references: [id])
-  funcionarioAsignado   User?          @relation("EquiposFuncionario", fields: [funcionarioAsignadoId], references: [id])
-  area                  Area?          @relation(fields: [areaId], references: [id])
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  tipoEquipo            TipoEquipo          @relation(fields: [tipoEquipoId], references: [id])
+  funcionarioAsignado   User?               @relation("EquiposFuncionario", fields: [funcionarioAsignadoId], references: [id])
+  area                  Area?               @relation(fields: [areaId], references: [id])
   agendas               AgendaEquipo[]
+  calibraciones         CalibracionEquipo[]
 
   @@index([tipoEquipoId])
   @@index([funcionarioAsignadoId])
@@ -917,4 +918,29 @@ model ServicioMuestraHistorial {
   @@index([fechaAccion])
   @@index([tipo])
   @@map("ServicioMuestraHistorial")
+}
+
+model CalibracionEquipo {
+  id               Int                  @id @default(autoincrement())
+  fechaCalibracion DateTime
+  certificado      String
+  equipoId         Int?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  equipo           Equipo?              @relation(fields: [equipoId], references: [id])
+  detalles         DetalleCalibracion[]
+
+  @@index([equipoId])
+}
+
+model DetalleCalibracion {
+  id                  Int               @id @default(autoincrement())
+  datoEquipo          String
+  correccion          String
+  calibracionEquipoId Int
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  calibracionEquipo   CalibracionEquipo @relation(fields: [calibracionEquipoId], references: [id], onDelete: Cascade)
+
+  @@index([calibracionEquipoId])
 }
