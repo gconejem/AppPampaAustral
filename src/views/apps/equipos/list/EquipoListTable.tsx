@@ -29,7 +29,6 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Tooltip from '@mui/material/Tooltip'
 import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import CircularProgress from '@mui/material/CircularProgress'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
@@ -99,8 +98,6 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const [addEquipoOpen, setAddEquipoOpen] = useState(false)
     const [editEquipoOpen, setEditEquipoOpen] = useState(false)
     const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
-    const [deleteEquipoOpen, setDeleteEquipoOpen] = useState(false)
-    const [equipoToDelete, setEquipoToDelete] = useState<Equipo | null>(null)
     const [detailsEquipoOpen, setDetailsEquipoOpen] = useState(false)
     const [equipoToView, setEquipoToView] = useState<Equipo | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -222,30 +219,9 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
         }
     }
 
-    const handleDeleteEquipo = async () => {
-        if (!equipoToDelete) return
-
-        try {
-            await axios.delete(`/api/equipos/${equipoToDelete.id}`)
-            setData(prevData => prevData.filter(equipo => equipo.id !== equipoToDelete.id))
-            toast.success('Equipo eliminado correctamente')
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.error || 'Error al eliminar el equipo'
-            toast.error(errorMessage)
-        } finally {
-            setDeleteEquipoOpen(false)
-            setEquipoToDelete(null)
-        }
-    }
-
     const handleEditEquipo = (equipo: Equipo) => {
         setSelectedEquipo(equipo)
         setEditEquipoOpen(true)
-    }
-
-    const handleDeleteClick = (equipo: Equipo) => {
-        setEquipoToDelete(equipo)
-        setDeleteEquipoOpen(true)
     }
 
     const handleViewDetails = (equipo: Equipo) => {
@@ -443,11 +419,6 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                         <Tooltip title='Activar/Desactivar'>
                             <IconButton size='small'>
                                 <i className='ri-power-line text-[22px] text-textSecondary' />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title='Eliminar'>
-                            <IconButton size='small' onClick={() => handleDeleteClick(row.original)}>
-                                <i className='ri-delete-bin-7-line text-[22px] text-textSecondary' />
                             </IconButton>
                         </Tooltip>
                     </div>
@@ -773,23 +744,6 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                         startIcon={<i className='ri-edit-box-line' />}
                     >
                         Editar
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteEquipoOpen} onClose={() => setDeleteEquipoOpen(false)}>
-                <DialogTitle>Confirmar eliminación</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        ¿Estás seguro de que quieres eliminar el equipo "{equipoToDelete?.nombre}"?
-                        Esta acción no se puede deshacer.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteEquipoOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleDeleteEquipo} color='error' variant='contained'>
-                        Eliminar
                     </Button>
                 </DialogActions>
             </Dialog>
