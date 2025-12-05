@@ -239,7 +239,7 @@ const TableFilters = ({
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={6} md={2.5}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Funcionario asignado</InputLabel>
                             <Select
@@ -260,18 +260,16 @@ const TableFilters = ({
                         </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={12} md={0.5}>
-                        <Box display='flex' justifyContent='flex-end' alignItems='center' height='100%'>
+                    <Grid item xs={12}>
+                        <Box display='flex' justifyContent='flex-end'>
                             <Button
-                                variant='text'
+                                variant='outlined'
                                 color='secondary'
                                 onClick={handleClearFilters}
                                 disabled={isLoading}
                                 startIcon={<i className='ri-refresh-line' />}
-                                sx={{ minWidth: 'auto', px: 1 }}
-                                title='Limpiar filtros'
                             >
-                                <i className='ri-refresh-line' style={{ fontSize: '20px' }} />
+                                Limpiar filtros
                             </Button>
                         </Box>
                     </Grid>
