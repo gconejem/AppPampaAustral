@@ -73,6 +73,7 @@ import type { Equipo, TipoEquipo, Laboratorista, Area } from '@/types/apps/equip
 import AddEquipo from './AddEquipo'
 import EditEquipo from '../edit/EditEquipo'
 import TableFilters from './TableFilters'
+import TablaCorreccionModal from '@/components/dialogs/calibracion-equipo/TablaCorreccionModal'
 import OptionMenu from '@core/components/option-menu'
 
 // Style Imports
@@ -100,6 +101,8 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
     const [detailsEquipoOpen, setDetailsEquipoOpen] = useState(false)
     const [equipoToView, setEquipoToView] = useState<Equipo | null>(null)
+    const [calibracionModalOpen, setCalibracionModalOpen] = useState(false)
+    const [equipoToCalibracion, setEquipoToCalibracion] = useState<Equipo | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [sorting, setSorting] = useState<SortingState>([{ id: 'id', desc: false }])
     const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
@@ -243,8 +246,8 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
     }
 
     const handleShowHistory = (equipo: Equipo) => {
-        // Placeholder para mostrar historial
-        console.log('Mostrar historial de equipo:', equipo)
+        setEquipoToCalibracion(equipo)
+        setCalibracionModalOpen(true)
     }
 
     const handleViewDetails = (equipo: Equipo) => {
@@ -775,6 +778,21 @@ const EquipoListTable = ({ equipoData, setData }: Props) => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Modal de Tabla de Corrección */}
+            {equipoToCalibracion && (
+                <TablaCorreccionModal
+                    open={calibracionModalOpen}
+                    handleClose={() => {
+                        setCalibracionModalOpen(false)
+                        setEquipoToCalibracion(null)
+                    }}
+                    equipoId={equipoToCalibracion.id}
+                    onSaved={() => {
+                        toast.success('Calibración guardada correctamente')
+                    }}
+                />
+            )}
         </>
     )
 }
