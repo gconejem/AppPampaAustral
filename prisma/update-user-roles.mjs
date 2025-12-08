@@ -29,6 +29,9 @@ async function main() {
   for (const usuario of usuarios) {
     const user = await prisma.user.findFirst({ where: { usuario: usuario.usuario } })
     const rol = await prisma.rol.findUnique({ where: { nombre: usuario.rol } })
+
+    console.log({user, rol})
+
     if (!user || !rol) {
       console.log(`Usuario o rol no encontrado: ${usuario.usuario} - ${usuario.rol}`)
       continue
