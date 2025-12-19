@@ -19,6 +19,7 @@ import AccordionDetails from '@mui/material/AccordionDetails'
 
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import SearchIcon from '@mui/icons-material/Search'
 import {
   Box,
   Button,
@@ -51,7 +52,12 @@ import {
   Select,
   MenuItem,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider
 } from '@mui/material'
 
 // Component Imports
@@ -107,6 +113,23 @@ interface Muestra {
     fechaVencimiento: string
     estado: string
   }>
+}
+
+interface GrupoMuestras {
+  id: string
+  muestrasIds: string[]
+  tarjetas: string[]
+  servicioActual: {
+    codigo: string
+    nombre: string
+    productoId: number
+  } | null
+  nuevoServicio: {
+    codigo: string
+    nombre: string
+    productoId: number
+  } | null
+  cantidad: number
 }
 
 // Helper function to get today's date in YYYY-MM-DD format (local timezone)
@@ -224,6 +247,14 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
   const [productsPage, setProductsPage] = useState(0)
   const [totalProductos, setTotalProductos] = useState(0)
   const ITEMS_PER_PAGE = 10
+
+  // Estados para el popup de codificación masiva
+  const [openCodificarDialog, setOpenCodificarDialog] = useState(false)
+  const [muestrasSeleccionadas, setMuestrasSeleccionadas] = useState<string[]>([])
+  const [gruposMuestras, setGruposMuestras] = useState<GrupoMuestras[]>([])
+  const [servicioPopoverAnchor, setServicioPopoverAnchor] = useState<{[key: string]: HTMLElement | null}>({})
+  const [searchTermGrupo, setSearchTermGrupo] = useState<{[key: string]: string}>({})
+  const [selectedProductGrupo, setSelectedProductGrupo] = useState<{[key: string]: Producto | null}>({})
 
   // Obtener el próximo número de RCM al cargar el componente
   useEffect(() => {
@@ -786,6 +817,138 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
     }
 
     return true
+  }
+
+  // Funciones para el popup de codificación masiva
+  const handleOpenCodificarDialog = () => {
+    setOpenCodificarDialog(true)
+    setMuestrasSeleccionadas([])
+    setGruposMuestras([])
+  }
+
+  const handleCloseCodificarDialog = () => {
+    setOpenCodificarDialog(false)
+    setMuestrasSeleccionadas([])
+    setGruposMuestras([])
+    setServicioPopoverAnchor({})
+    setSearchTermGrupo({})
+    setSelectedProductGrupo({})
+  }
+
+  const handleToggleMuestra = (numeroMuestra: string) => {
+    setMuestrasSeleccionadas(prev => {
+      if (prev.includes(numeroMuestra)) {
+        return prev.filter(id => id !== numeroMuestra)
+      } else {
+        return [...prev, numeroMuestra]
+      }
+    })
+  }
+
+  const handleAgruparMuestras = () => {
+    if (muestrasSeleccionadas.length === 0) {
+      toast.error('Seleccione al menos una muestra')
+      return
+    }
+
+    // Obtener datos de las muestras seleccionadas
+    const muestrasData = muestras.filter(m => muestrasSeleccionadas.includes(m.numeroMuestra))
+    
+    // Obtener el servicio más común (o el primero si no hay coincidencias)
+    const servicioActual = muestrasData[0]?.servicios[0] || null
+
+    const nuevoGrupo: GrupoMuestras = {
+      id: `grupo-${Date.now()}`,
+      muestrasIds: [...muestrasSeleccionadas],
+      tarjetas: muestrasData.map(m => m.numeroTarjeta),
+      servicioActual: servicioActual ? {
+        codigo: servicioActual.codigo,
+        nombre: servicioActual.nombre,
+        productoId: servicioActual.productoId
+      } : null,
+      nuevoServicio: null,
+      cantidad: 1
+    }
+
+    setGruposMuestras(prev => [...prev, nuevoGrupo])
+    setMuestrasSeleccionadas([])
+    toast.success('Grupo de muestras creado')
+  }
+
+  const handleEliminarGrupo = (grupoId: string) => {
+    setGruposMuestras(prev => prev.filter(g => g.id !== grupoId))
+  }
+
+  const handleOpenServicioPopover = (event: React.MouseEvent<HTMLElement>, grupoId: string) => {
+    setServicioPopoverAnchor(prev => ({ ...prev, [grupoId]: event.currentTarget }))
+  }
+
+  const handleCloseServicioPopover = (grupoId: string) => {
+    setServicioPopoverAnchor(prev => ({ ...prev, [grupoId]: null }))
+  }
+
+  const handleSelectProductoGrupo = (grupoId: string, producto: Producto) => {
+    setSelectedProductGrupo(prev => ({ ...prev, [grupoId]: producto }))
+    setGruposMuestras(prev => prev.map(g => {
+      if (g.id === grupoId) {
+        return {
+          ...g,
+          nuevoServicio: {
+            codigo: producto.sku,
+            nombre: `${producto.tipo ? `${producto.tipo} - ` : ''}${producto.nombre}`,
+            productoId: producto.productoId
+          }
+        }
+      }
+      return g
+    }))
+    handleCloseServicioPopover(grupoId)
+  }
+
+  const handleConfirmarCodificacion = () => {
+    if (gruposMuestras.length === 0) {
+      toast.error('Cree al menos un grupo de muestras')
+      return
+    }
+
+    // Aplicar los servicios a las muestras
+    const muestrasActualizadas = muestras.map(muestra => {
+      // Buscar si esta muestra está en algún grupo
+      const grupoConMuestra = gruposMuestras.find(g => g.muestrasIds.includes(muestra.numeroMuestra))
+      
+      if (grupoConMuestra && grupoConMuestra.nuevoServicio) {
+        // Reemplazar o agregar el nuevo servicio
+        const nuevosServicios = [...muestra.servicios]
+        const servicioExistente = nuevosServicios.findIndex(
+          s => s.productoId === grupoConMuestra.nuevoServicio!.productoId
+        )
+
+        if (servicioExistente >= 0) {
+          // Actualizar cantidad si ya existe
+          nuevosServicios[servicioExistente].cantidad = grupoConMuestra.cantidad
+        } else {
+          // Agregar nuevo servicio
+          nuevosServicios.push({
+            codigo: grupoConMuestra.nuevoServicio.codigo,
+            nombre: grupoConMuestra.nuevoServicio.nombre,
+            cantidad: grupoConMuestra.cantidad,
+            productoId: grupoConMuestra.nuevoServicio.productoId,
+            estado: 'CODIFICADO'
+          })
+        }
+
+        return {
+          ...muestra,
+          servicios: nuevosServicios
+        }
+      }
+      
+      return muestra
+    })
+
+    setMuestras(muestrasActualizadas)
+    handleCloseCodificarDialog()
+    toast.success('Servicios aplicados a las muestras seleccionadas')
   }
 
   // Función para guardar el RCM
@@ -2445,8 +2608,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
                             variant='contained'
                             color='primary'
                             size='medium'
-                            startIcon={<i className='ri-save-line' />}
-                            onClick={handleSaveRCM}
+                            startIcon={<i className='ri-code-s-slash-line' />}
+                            onClick={handleOpenCodificarDialog}
+                            disabled={muestras.length === 0}
                           >
                             Codificar
                           </Button>
@@ -2504,6 +2668,300 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
           </div>
         )}
       </CardContent>
+
+      {/* Dialog de Codificación Masiva */}
+      <Dialog
+        open={openCodificarDialog}
+        onClose={handleCloseCodificarDialog}
+        maxWidth='lg'
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display='flex' justifyContent='space-between' alignItems='center'>
+            <Typography variant='h5'>Codificación Masiva de Muestras</Typography>
+            <IconButton onClick={handleCloseCodificarDialog}>
+              <i className='ri-close-line' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {/* Sección 1: Selección de Muestras */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant='h6' gutterBottom>
+              1. Seleccionar Muestras para Agrupar
+            </Typography>
+            <TableContainer component={Paper} variant='outlined' sx={{ mt: 2 }}>
+              <Table size='small'>
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding='checkbox'>
+                      <Checkbox
+                        indeterminate={muestrasSeleccionadas.length > 0 && muestrasSeleccionadas.length < muestras.length}
+                        checked={muestras.length > 0 && muestrasSeleccionadas.length === muestras.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setMuestrasSeleccionadas(muestras.map(m => m.numeroMuestra))
+                          } else {
+                            setMuestrasSeleccionadas([])
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell><strong>N° Muestra</strong></TableCell>
+                    <TableCell><strong>N° Tarjeta</strong></TableCell>
+                    <TableCell><strong>Tipo Material</strong></TableCell>
+                    <TableCell><strong>Elemento</strong></TableCell>
+                    <TableCell><strong>Estado</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {muestras.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align='center'>
+                        <Typography color='text.secondary'>No hay muestras disponibles</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    muestras.map((muestra, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell padding='checkbox'>
+                          <Checkbox
+                            checked={muestrasSeleccionadas.includes(muestra.numeroMuestra)}
+                            onChange={() => handleToggleMuestra(muestra.numeroMuestra)}
+                          />
+                        </TableCell>
+                        <TableCell>{muestra.numeroMuestra}</TableCell>
+                        <TableCell>{muestra.numeroTarjeta}</TableCell>
+                        <TableCell>{muestra.tipoMaterial}</TableCell>
+                        <TableCell>{muestra.elemento}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getEstadoNombre(muestra.estado || 'CODIFICADO')}
+                            size='small'
+                            sx={{
+                              backgroundColor: getEstadoColor(muestra.estado || 'CODIFICADO').color,
+                              color: getEstadoColor(muestra.estado || 'CODIFICADO').textColor
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Button
+                variant='contained'
+                onClick={handleAgruparMuestras}
+                disabled={muestrasSeleccionadas.length === 0}
+                startIcon={<i className='ri-group-line' />}
+              >
+                Agrupar Seleccionadas ({muestrasSeleccionadas.length})
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Sección 2: Tabla de Grupos con Servicios */}
+          <Box>
+            <Typography variant='h6' gutterBottom>
+              2. Asignar Servicios a Grupos
+            </Typography>
+            <TableContainer component={Paper} variant='outlined' sx={{ mt: 2 }}>
+              <Table size='small'>
+                <TableHead>
+                  <TableRow>
+                    <TableCell width='20%'><strong>Muestras</strong></TableCell>
+                    <TableCell width='15%'><strong>N° Tarjetas</strong></TableCell>
+                    <TableCell width='25%'><strong>Servicio Actual</strong></TableCell>
+                    <TableCell width='25%'><strong>Nuevo Servicio</strong></TableCell>
+                    <TableCell width='10%'><strong>Cantidad</strong></TableCell>
+                    <TableCell width='5%'><strong>Acciones</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {gruposMuestras.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align='center'>
+                        <Typography color='text.secondary'>No hay grupos creados. Seleccione muestras y agrúpelas.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    gruposMuestras.map((grupo) => {
+                      const isPopoverOpen = Boolean(servicioPopoverAnchor[grupo.id])
+                      return (
+                        <TableRow key={grupo.id}>
+                          <TableCell>
+                            <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
+                              {grupo.muestrasIds.join(', ')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='body2' color='text.secondary'>
+                              {grupo.tarjetas.join(', ')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {grupo.servicioActual ? (
+                              <Typography variant='body2'>
+                                {grupo.servicioActual.nombre}
+                              </Typography>
+                            ) : (
+                              <Typography variant='body2' color='text.secondary'>
+                                Sin servicio
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Box display='flex' alignItems='center' gap={1}>
+                              <TextField
+                                size='small'
+                                fullWidth
+                                placeholder='Buscar servicio...'
+                                value={grupo.nuevoServicio?.nombre || searchTermGrupo[grupo.id] || ''}
+                                onChange={(e) => {
+                                  setSearchTermGrupo(prev => ({ ...prev, [grupo.id]: e.target.value }))
+                                }}
+                                onClick={(e) => handleOpenServicioPopover(e, grupo.id)}
+                                InputProps={{
+                                  startAdornment: (
+                                    <InputAdornment position='start'>
+                                      <SearchIcon fontSize='small' />
+                                    </InputAdornment>
+                                  ),
+                                  readOnly: true
+                                }}
+                              />
+                              <Popover
+                                open={isPopoverOpen}
+                                anchorEl={servicioPopoverAnchor[grupo.id]}
+                                onClose={() => handleCloseServicioPopover(grupo.id)}
+                                anchorOrigin={{
+                                  vertical: 'bottom',
+                                  horizontal: 'left'
+                                }}
+                                transformOrigin={{
+                                  vertical: 'top',
+                                  horizontal: 'left'
+                                }}
+                                PaperProps={{
+                                  style: {
+                                    maxHeight: 400,
+                                    width: 500
+                                  }
+                                }}
+                              >
+                                <Box sx={{ p: 2 }}>
+                                  <TextField
+                                    fullWidth
+                                    size='small'
+                                    placeholder='Buscar servicio...'
+                                    value={searchTermGrupo[grupo.id] || ''}
+                                    onChange={(e) => {
+                                      setSearchTermGrupo(prev => ({ ...prev, [grupo.id]: e.target.value }))
+                                    }}
+                                    autoFocus
+                                    sx={{ mb: 1 }}
+                                  />
+                                </Box>
+                                <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                                  <List>
+                                    {filteredProductos
+                                      .filter(p => {
+                                        const searchLower = (searchTermGrupo[grupo.id] || '').toLowerCase()
+                                        return p.nombre.toLowerCase().includes(searchLower) ||
+                                               p.sku.toLowerCase().includes(searchLower) ||
+                                               (p.tipo && p.tipo.toLowerCase().includes(searchLower))
+                                      })
+                                      .slice(0, 10)
+                                      .map(producto => (
+                                        <ListItem
+                                          button
+                                          key={producto.productoId}
+                                          onClick={() => handleSelectProductoGrupo(grupo.id, producto)}
+                                          divider
+                                        >
+                                          <ListItemText
+                                            primary={producto.nombre}
+                                            secondary={`${producto.sku} | ${producto.tipo || 'N/A'} | ${producto.area || 'N/A'}`}
+                                          />
+                                        </ListItem>
+                                      ))}
+                                    {filteredProductos.filter(p => {
+                                      const searchLower = (searchTermGrupo[grupo.id] || '').toLowerCase()
+                                      return p.nombre.toLowerCase().includes(searchLower) ||
+                                             p.sku.toLowerCase().includes(searchLower)
+                                    }).length === 0 && (
+                                      <ListItem>
+                                        <ListItemText
+                                          primary='No se encontraron servicios'
+                                          secondary='Intenta con otros términos'
+                                        />
+                                      </ListItem>
+                                    )}
+                                  </List>
+                                </Box>
+                              </Popover>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={grupo.cantidad}
+                              onChange={(e) => {
+                                const nuevaCantidad = parseInt(e.target.value) || 1
+                                setGruposMuestras(prev => prev.map(g => 
+                                  g.id === grupo.id ? { ...g, cantidad: nuevaCantidad } : g
+                                ))
+                              }}
+                              inputProps={{ min: 1 }}
+                              sx={{ width: 70 }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              size='small'
+                              onClick={() => handleEliminarGrupo(grupo.id)}
+                              color='error'
+                            >
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCodificarDialog} variant='outlined'>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmarCodificacion}
+            variant='contained'
+            disabled={gruposMuestras.length === 0 || gruposMuestras.some(g => !g.nuevoServicio)}
+            startIcon={<i className='ri-check-line' />}
+          >
+            Confirmar Codificación
+          </Button>
+          <Button
+            onClick={handleSaveRCM}
+            variant='contained'
+            color='success'
+            disabled={muestras.length === 0}
+            startIcon={<i className='ri-save-line' />}
+          >
+            Guardar RCM
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }
