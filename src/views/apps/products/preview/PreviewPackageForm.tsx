@@ -93,7 +93,7 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
           <Grid item xs={4}>
             <TextField
               label='Cantidad'
-              value={previewPaquete.productosEnPaquete.length > 0 ? previewPaquete.productosEnPaquete[0].cantidad : 1}
+              value={previewPaquete.productosEnPaquete?.length > 0 ? previewPaquete.productosEnPaquete[0].cantidad : 1}
               fullWidth
               InputProps={{ readOnly: true }}
             />

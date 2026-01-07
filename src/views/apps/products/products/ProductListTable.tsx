@@ -249,7 +249,7 @@ const ProductListTable = () => {
   // Agregar estado para el modal de preview
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [previewProduct, setPreviewProduct] = useState<Producto | null>(null)
-  const [previewPackageModalOpen, setPreviewPackageModal] = useState(false)
+  const [previewPackageModalOpen, setPreviewPackageModalOpen] = useState(false)
   const [previewPackage, setPreviewPackage] = useState<any | null>(null)
 
   const params = useParams()
