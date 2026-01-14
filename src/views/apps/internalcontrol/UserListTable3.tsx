@@ -25,8 +25,8 @@ const UserListTable3 = ({
   loading?: boolean
 }) => {
   // States
-  const [selectedArea, setSelectedArea] = useState('')
-  const [selectedTipoServicio, setSelectedTipoServicio] = useState('')
+  const [selectedArea, setSelectedArea] = useState<number | ''>('')
+  const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
   const [familias, setFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
   const [loadingAreas, setLoadingAreas] = useState(false)
@@ -62,13 +62,10 @@ const UserListTable3 = ({
 
       setLoadingFamilias(true)
       try {
-        const areaSeleccionada = areas.find(area => area.nombre === selectedArea)
-        if (areaSeleccionada) {
-          const response = await fetch(`/api/familias?areaId=${areaSeleccionada.id}`)
-          if (response.ok) {
-            const familiasData = await response.json()
-            setFamilias(familiasData)
-          }
+        const response = await fetch(`/api/familias?areaId=${selectedArea}`)
+        if (response.ok) {
+          const familiasData = await response.json()
+          setFamilias(familiasData)
         }
       } catch (error) {
         console.error('Error al cargar familias:', error)
@@ -80,7 +77,7 @@ const UserListTable3 = ({
     fetchFamilias()
     // Limpiar el filtro de familia cuando cambia el área
     setSelectedTipoServicio('')
-  }, [selectedArea, areas])
+  }, [selectedArea])
 
   // Si está cargando
   if (loading) {
@@ -135,7 +132,7 @@ const UserListTable3 = ({
                   Seleccionar área
                 </MenuItem>
                 {areas.map((area) => (
-                  <MenuItem key={area.id} value={area.nombre}>
+                  <MenuItem key={area.id} value={area.id}>
                     {area.nombre}
                   </MenuItem>
                 ))}
@@ -158,7 +155,7 @@ const UserListTable3 = ({
                   Seleccionar tipo de servicio
                 </MenuItem>
                 {familias.map((familia) => (
-                  <MenuItem key={familia.id} value={familia.nombre}>
+                  <MenuItem key={familia.id} value={familia.id}>
                     {familia.nombre}
                   </MenuItem>
                 ))}
@@ -172,12 +169,23 @@ const UserListTable3 = ({
           <Button
             variant='contained'
             startIcon={<i className='ri-add-line' />}
-            onClick={() =>
-              window.open(
-                `/en/apps/encoder?otId=${otId}&tipo=${otData?.tipoOT?.codigo || ''}`,
-                '_blank'
-              )
-            }
+            disabled={!selectedArea || !selectedTipoServicio}
+            onClick={() => {
+              const params = new URLSearchParams({
+                otId: otId || '',
+                tipo: otData?.tipoOT?.codigo || ''
+              })
+
+              if (selectedArea) {
+                params.append('areaId', selectedArea.toString())
+              }
+
+              if (selectedTipoServicio) {
+                params.append('familiaId', selectedTipoServicio.toString())
+              }
+
+              window.open(`/en/apps/encoder?${params.toString()}`, '_blank')
+            }}
           >
             Nuevo RCM
           </Button>
