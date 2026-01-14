@@ -106,7 +106,7 @@ const Header = ({ otData, loading }: HeaderProps) => {
         />
 
         {/* Título */}
-        <Typography variant='h6' sx={{ fontWeight: 'bold', mb: 4 }}>
+        <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
           Datos de la Orden de Trabajo
         </Typography>
 
