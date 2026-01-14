@@ -41,203 +41,168 @@ const Header = ({ otData, loading }: HeaderProps) => {
     )
   }
 
-  // Obtener el estado de la OT para mostrar el chip apropiado
-  const getChipProps = () => {
-    switch (otData.estado) {
-      case 'PENDIENTE':
-        return {
-          label: 'Pendiente',
-          sx: {
-            bgcolor: '#fff3cd',
-            color: '#856404',
-            fontWeight: 'bold',
-            borderRadius: '4px',
-            padding: '8px 16px',
-            border: '1px solid #856404',
-            fontSize: '14px',
-            textAlign: 'center'
-          }
-        }
-      case 'EN_PROCESO':
-      case 'EN PROCESO':
-        return {
-          label: 'En Proceso',
-          sx: {
-            bgcolor: '#fff3cd',
-            color: '#856404',
-            fontWeight: 'bold',
-            borderRadius: '4px',
-            padding: '8px 16px',
-            border: '1px solid #856404',
-            fontSize: '14px',
-            textAlign: 'center'
-          }
-        }
-      case 'FINALIZADO':
-        return {
-          label: 'Finalizado',
-          sx: {
-            bgcolor: '#d4edda',
-            color: '#155724',
-            fontWeight: 'bold',
-            borderRadius: '4px',
-            padding: '8px 16px',
-            border: '1px solid #155724',
-            fontSize: '14px',
-            textAlign: 'center'
-          }
-        }
-      default:
-        return {
-          label: otData.estado || 'Sin Estado',
-          sx: {
-            bgcolor: '#f8f9fa',
-            color: '#6c757d',
-            fontWeight: 'bold',
-            borderRadius: '4px',
-            padding: '8px 16px',
-            border: '1px solid #6c757d',
-            fontSize: '14px',
-            textAlign: 'center'
-          }
-        }
+  // En esta pantalla el estado siempre es "En Proceso"
+  const chipProps = {
+    label: 'En Proceso',
+    sx: {
+      bgcolor: '#FFF4E5',
+      color: '#C87941',
+      fontWeight: 'bold',
+      borderRadius: '16px',
+      padding: '10px 22px',
+      fontSize: '14px',
+      textAlign: 'center'
     }
   }
 
-  const chipProps = getChipProps()
+  // Formatear el tipo de OT con el formato "R-12-27 Muestreo de Materiales"
+  const formatTipoOT = () => {
+    if (!otData.tipoOT) return ''
+    const codigo = otData.tipoOT.codigo || ''
+    const descripcion = otData.tipoOT.descripcion || ''
+    return codigo && descripcion ? `${codigo} ${descripcion}` : codigo || descripcion
+  }
+
+  // Formatear obra: "numero | nombre"
+  const formatObra = () => {
+    const numeroObra = otData.agenda?.obra?.numeroObra || ''
+    let nombreObra = otData.agenda?.obra?.nombreObra || ''
+
+    // Limpiar el nombre de la obra eliminando comuna y región si están concatenadas
+    if (nombreObra) {
+      // Remover " - Comuna de..." y " - Región del..."
+      nombreObra = nombreObra.split(' - Comuna de')[0].split(' - Región del')[0].split(' - Region del')[0]
+    }
+
+    return numeroObra && nombreObra ? `${numeroObra} | ${nombreObra}` : numeroObra || nombreObra
+  }
+
+  // Formatear cliente: "nombre | rut"
+  const formatCliente = () => {
+    const nombreCliente = otData.agenda?.cliente?.nombreCliente || ''
+    const rutCliente = otData.agenda?.cliente?.rut || ''
+    return nombreCliente && rutCliente ? `${nombreCliente} | ${rutCliente}` : nombreCliente || rutCliente
+  }
+
+  // Formatear región/ciudad: "región / comuna"
+  const formatRegionCiudad = () => {
+    const region = otData.agenda?.obra?.region || ''
+    const comuna = otData.agenda?.obra?.comuna || ''
+    return region && comuna ? `${region} / ${comuna}` : region || comuna
+  }
 
   return (
     <Card>
-      <CardHeader title='Codificación' action={<Chip label={chipProps.label} sx={chipProps.sx} />} />
-      <CardContent>
-        <Grid container spacing={3}>
+      <Box sx={{ p: 4, position: 'relative' }}>
+        {/* Chip de estado en la esquina superior derecha */}
+        <Chip
+          label={chipProps.label}
+          sx={{
+            ...chipProps.sx,
+            position: 'absolute',
+            top: 20,
+            right: 20
+          }}
+        />
+
+        {/* Título */}
+        <Typography variant='h6' sx={{ fontWeight: 'bold', mb: 4 }}>
+          Datos de la Orden de Trabajo
+        </Typography>
+
+        {/* Grid de campos */}
+        <Grid container spacing={4}>
           {/* Primera fila */}
-          <Grid item xs={4}>
-            <TextField
-              label='Orden de Trabajo'
-              value={otData.clave || ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                N° OT
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {/* Vacío por ahora según requerimientos */}
+              </Typography>
+            </Box>
           </Grid>
-          <Grid item xs={4}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  label='N° Obra'
-                  value={otData.agenda?.obra?.numeroObra || ''}
-                  variant='outlined'
-                  fullWidth
-                  size='small'
-                  InputProps={{ readOnly: true }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label='Nombre Obra'
-                  value={otData.agenda?.obra?.nombreObra || ''}
-                  variant='outlined'
-                  fullWidth
-                  size='small'
-                  InputProps={{ readOnly: true }}
-                />
-              </Grid>
-            </Grid>
+
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                TIPO OT
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {formatTipoOT()}
+              </Typography>
+            </Box>
           </Grid>
-          <Grid item xs={4}>
-            <TextField
-              label='Cliente'
-              value={otData.agenda?.cliente?.nombreCliente || ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                FECHA OT
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {/* Vacío por ahora según requerimientos */}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                MUESTREADO POR
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {otData.user?.name || 'No asignado'}
+              </Typography>
+            </Box>
           </Grid>
 
           {/* Segunda fila */}
-          <Grid item xs={4}>
-            <TextField
-              label='Fecha de Muestreo'
-              value={otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={4}>
-            <TextField
-              label='Muestreado por...'
-              value={otData.user?.name || 'No asignado'}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={4}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  label='Región'
-                  value={otData.agenda?.region || ''}
-                  variant='outlined'
-                  fullWidth
-                  size='small'
-                  InputProps={{ readOnly: true }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label='Comuna'
-                  value={otData.agenda?.comuna || ''}
-                  variant='outlined'
-                  fullWidth
-                  size='small'
-                  InputProps={{ readOnly: true }}
-                />
-              </Grid>
-            </Grid>
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                OBRA
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {formatObra()}
+              </Typography>
+            </Box>
           </Grid>
 
-          {/* Tercera fila */}
-          <Grid item xs={4}>
-            <TextField
-              label='Fecha de Ingreso'
-              value={otData.createdAt ? new Date(otData.createdAt).toLocaleDateString() : ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                CLIENTE
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {formatCliente()}
+              </Typography>
+            </Box>
           </Grid>
 
-          <Grid item xs={4}>
-            <TextField
-              label='Laboratorista'
-              value={otData.user?.name || 'No asignado'}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                REGIÓN / CIUDAD
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {formatRegionCiudad()}
+              </Typography>
+            </Box>
           </Grid>
 
-          <Grid item xs={4}>
-            <TextField
-              label='Mandante'
-              value={otData.agenda?.obra?.mandante || ''}
-              variant='outlined'
-              fullWidth
-              size='small'
-              InputProps={{ readOnly: true }}
-            />
+          <Grid item xs={3}>
+            <Box>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                MANDANTE
+              </Typography>
+              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                {otData.agenda?.obra?.mandante || ''}
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
-      </CardContent>
+      </Box>
     </Card>
   )
 }
