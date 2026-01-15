@@ -1,5 +1,7 @@
 // MUI Imports
-import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography } from '@mui/material'
+import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography, Stepper, Step, StepLabel, Button, IconButton } from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CheckIcon from '@mui/icons-material/Check'
 
 // Utils
 import { formatDateForDisplay } from '@/utils/dateUtils'
@@ -95,118 +97,199 @@ const Header = ({ otData, loading }: HeaderProps) => {
   }
 
   return (
-    <Card>
-      <Box sx={{ p: 6, position: 'relative' }}>
-        {/* Chip de estado en la esquina superior derecha */}
-        <Chip
-          label={chipProps.label}
-          sx={{
-            ...chipProps.sx,
-            position: 'absolute',
-            top: 20,
-            right: 20
-          }}
-        />
+    <>
+      {/* Sección superior: Título, Stepper y Botón */}
+      <Box sx={{ mb: 4 }}>
+        {/* Fila superior: Título y Botón */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 
-        {/* Título */}
-        <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
-          Datos de la Orden de Trabajo
-        </Typography>
+            <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
+              Codificación de Muestras - RCM
+            </Typography>
+          </Box>
+          <Button
+            variant='contained'
+            color='primary'
+            startIcon={<CheckIcon />}
+            sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+          >
+            Finalizar Codificación
+          </Button>
+        </Box>
 
-        {/* Grid de campos */}
-        <Grid container spacing={4}>
-          {/* Primera fila */}
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                N° OT
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {/* Vacío por ahora según requerimientos */}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                TIPO OT
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {formatTipoOT()}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                FECHA OT
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {otData.createdAt ? formatDateForDisplay(otData.createdAt) : ''}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                MUESTREADO POR
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {otData.user?.name || 'No asignado'}
-              </Typography>
-            </Box>
-          </Grid>
-
-          {/* Segunda fila */}
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                OBRA
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {formatObra()}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                CLIENTE
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {formatCliente()}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                REGIÓN / CIUDAD
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {formatRegionCiudad()}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={3}>
-            <Box>
-              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
-                MANDANTE
-              </Typography>
-              <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {otData.agenda?.obra?.mandante || ''}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+        {/* Stepper alineado a la izquierda */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            1
+          </Box>
+          <Typography variant='body2' sx={{ fontWeight: 500 }}>Área y Servicio</Typography>
+          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              bgcolor: 'grey.300',
+              color: 'text.secondary',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            2
+          </Box>
+          <Typography variant='body2' sx={{ color: 'text.secondary' }}>Crear RCMs</Typography>
+          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              bgcolor: 'grey.300',
+              color: 'text.secondary',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            3
+          </Box>
+          <Typography variant='body2' sx={{ color: 'text.secondary' }}>Agrupar Códigos</Typography>
+        </Box>
       </Box>
-    </Card>
+
+      {/* Card de Datos de la Orden de Trabajo */}
+      <Card>
+        <Box sx={{ p: 6, position: 'relative' }}>
+          {/* Chip de estado en la esquina superior derecha */}
+          <Chip
+            label={chipProps.label}
+            sx={{
+              ...chipProps.sx,
+              position: 'absolute',
+              top: 20,
+              right: 20
+            }}
+          />
+
+          {/* Título */}
+          <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
+            Datos de la Orden de Trabajo
+          </Typography>
+
+          {/* Grid de campos */}
+          <Grid container spacing={4}>
+            {/* Primera fila */}
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  N° OT
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {/* Vacío por ahora según requerimientos */}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  TIPO OT
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {formatTipoOT()}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  FECHA OT
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {otData.createdAt ? formatDateForDisplay(otData.createdAt) : ''}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  MUESTREADO POR
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {otData.user?.name || 'No asignado'}
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* Segunda fila */}
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  OBRA
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {formatObra()}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  CLIENTE
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {formatCliente()}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  REGIÓN / CIUDAD
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {formatRegionCiudad()}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  MANDANTE
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {otData.agenda?.obra?.mandante || ''}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Card>
+    </>
   )
 }
 
