@@ -96,7 +96,7 @@ const Header = ({ otData, loading }: HeaderProps) => {
 
   return (
     <Card>
-      <Box sx={{ p: 4, position: 'relative' }}>
+      <Box sx={{ p: 6, position: 'relative' }}>
         {/* Chip de estado en la esquina superior derecha */}
         <Chip
           label={chipProps.label}
