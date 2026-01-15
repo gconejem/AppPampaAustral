@@ -47,8 +47,17 @@ interface ProductoType {
     norma?: string
 }
 
+interface EnsayoAsociado {
+    id: number
+    productoId: number
+    nombre: string
+    norma?: string
+    cantidad: number
+}
+
 const Step2CreateRcms = () => {
     const [expandedRcm, setExpandedRcm] = useState(true)
+    const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -128,9 +137,48 @@ const Step2CreateRcms = () => {
     }
 
     const handleSelectProduct = (producto: ProductoType) => {
+        console.log('=== handleSelectProduct ===')
         console.log('Producto seleccionado:', producto)
-        // TODO: Agregar producto a la lista de ensayos
+
+        // Usar productoId o id según lo que tenga el producto
+        const idProducto = (producto as any).productoId || producto.id
+        console.log('ID del producto:', idProducto)
+
+        setEnsayosAsociados(prev => {
+            console.log('Estado anterior ensayos:', prev)
+
+            // Verificar si el producto ya está en la lista
+            const yaExiste = prev.some(e => e.productoId === idProducto)
+            if (yaExiste) {
+                console.log('El ensayo ya está agregado, no se agrega')
+                return prev
+            }
+
+            // Agregar el producto a la lista de ensayos
+            const nuevoEnsayo: EnsayoAsociado = {
+                id: Date.now(), // ID temporal
+                productoId: idProducto,
+                nombre: producto.nombre,
+                norma: producto.norma,
+                cantidad: 1
+            }
+
+            const nuevaLista = [...prev, nuevoEnsayo]
+            console.log('Nueva lista de ensayos:', nuevaLista)
+            return nuevaLista
+        })
+
         handleCloseSearchPopover()
+    }
+
+    const handleDeleteEnsayo = (ensayoId: number) => {
+        setEnsayosAsociados(ensayosAsociados.filter(e => e.id !== ensayoId))
+    }
+
+    const handleChangeCantidad = (ensayoId: number, cantidad: number) => {
+        setEnsayosAsociados(ensayosAsociados.map(e =>
+            e.id === ensayoId ? { ...e, cantidad } : e
+        ))
     }
 
     // Cargar áreas
@@ -355,55 +403,54 @@ const Step2CreateRcms = () => {
 
                                 {/* Lista de ensayos */}
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {/* Ensayo 1 */}
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            p: 2,
-                                            bgcolor: '#F5F5F5',
-                                            borderRadius: '8px'
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <IconButton size='small'>
-                                                <EditIcon fontSize='small' />
-                                            </IconButton>
-                                            <Typography variant='body2'>Densidad in situ método cono arena (NCh 1516)</Typography>
+                                    {ensayosAsociados.length === 0 ? (
+                                        <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                            <Typography variant='body2' color='text.secondary'>
+                                                No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
+                                            </Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <TextField size='small' defaultValue='3' type='number' sx={{ width: '80px' }} />
-                                            <IconButton size='small' color='error'>
-                                                <DeleteIcon fontSize='small' />
-                                            </IconButton>
-                                        </Box>
-                                    </Box>
-
-                                    {/* Ensayo 2 */}
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            p: 2,
-                                            bgcolor: '#F5F5F5',
-                                            borderRadius: '8px'
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <IconButton size='small'>
-                                                <EditIcon fontSize='small' />
-                                            </IconButton>
-                                            <Typography variant='body2'>Humedad natural (NCh 1515)</Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <TextField size='small' defaultValue='3' type='number' sx={{ width: '80px' }} />
-                                            <IconButton size='small' color='error'>
-                                                <DeleteIcon fontSize='small' />
-                                            </IconButton>
-                                        </Box>
-                                    </Box>
+                                    ) : (
+                                        ensayosAsociados.map(ensayo => (
+                                            <Box
+                                                key={ensayo.id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    p: 2,
+                                                    bgcolor: '#F5F5F5',
+                                                    borderRadius: '8px'
+                                                }}
+                                            >
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <IconButton size='small'>
+                                                        <EditIcon fontSize='small' />
+                                                    </IconButton>
+                                                    <Typography variant='body2'>
+                                                        {ensayo.nombre}
+                                                        {ensayo.norma && ` (${ensayo.norma})`}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <TextField
+                                                        size='small'
+                                                        value={ensayo.cantidad}
+                                                        onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                        type='number'
+                                                        sx={{ width: '80px' }}
+                                                        inputProps={{ min: 1 }}
+                                                    />
+                                                    <IconButton
+                                                        size='small'
+                                                        color='error'
+                                                        onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                    >
+                                                        <DeleteIcon fontSize='small' />
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+                                        ))
+                                    )}
                                 </Box>
                             </Box>
 
