@@ -55,9 +55,13 @@ interface EnsayoAsociado {
     cantidad: number
 }
 
-const Step2CreateRcms = () => {
+interface Step2CreateRcmsProps {
+    ensayosAsociados: EnsayoAsociado[]
+    setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
+}
+
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateRcmsProps) => {
     const [expandedRcm, setExpandedRcm] = useState(true)
-    const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)

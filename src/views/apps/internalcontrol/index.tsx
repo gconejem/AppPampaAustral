@@ -18,6 +18,14 @@ interface UsersType {
   [key: string]: any
 }
 
+interface EnsayoAsociado {
+  id: number
+  productoId: number
+  nombre: string
+  norma?: string
+  cantidad: number
+}
+
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const searchParams = useSearchParams()
   const [otId, setOtId] = useState<string | null>(null)
@@ -26,6 +34,9 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [activeStep, setActiveStep] = useState(1) // 1 = Área y Servicio, 2 = Crear RCMs, 3 = Agrupar Códigos
   const [selectedArea, setSelectedArea] = useState<number | ''>('')
   const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
+
+  // Estados para persistir datos del Paso 2
+  const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
 
   useEffect(() => {
     if (!searchParams) return
@@ -106,7 +117,10 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
       {/* Paso 2: Crear RCMs */}
       {activeStep === 2 && (
         <Grid item xs={12}>
-          <Step2CreateRcms />
+          <Step2CreateRcms
+            ensayosAsociados={ensayosAsociados}
+            setEnsayosAsociados={setEnsayosAsociados}
+          />
         </Grid>
       )}
     </Grid>
