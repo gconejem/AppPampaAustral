@@ -10,6 +10,7 @@ import Grid from '@mui/material/Grid'
 // Component Imports
 import UserListTable3 from './UserListTable3'
 import Header from './header'
+import Step2CreateRcms from './step2-create-rcms'
 
 // Definición de tipos básicos para evitar errores
 interface UsersType {
@@ -22,6 +23,9 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [otId, setOtId] = useState<string | null>(null)
   const [otData, setOtData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [activeStep, setActiveStep] = useState(1) // 1 = Área y Servicio, 2 = Crear RCMs, 3 = Agrupar Códigos
+  const [selectedArea, setSelectedArea] = useState<number | ''>('')
+  const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
 
   useEffect(() => {
     if (!searchParams) return
@@ -54,17 +58,57 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
     }
   }, [searchParams])
 
+  const handleStepClick = (step: number) => {
+    // No permitir avanzar al paso 2 sin área y servicio seleccionados
+    if (step === 2 && (!selectedArea || !selectedTipoServicio)) {
+      return
+    }
+    setActiveStep(step)
+  }
+
+  const handleGoToStep2 = () => {
+    // Solo avanzar si hay área y servicio seleccionados
+    if (selectedArea && selectedTipoServicio) {
+      setActiveStep(2)
+    }
+  }
+
   return (
     <Grid container spacing={6}>
       {/* Agregamos el Header con los datos de la OT */}
       <Grid item xs={12}>
-        <Header otData={otData} loading={loading} />
+        <Header
+          otData={otData}
+          loading={loading}
+          activeStep={activeStep}
+          onStepClick={handleStepClick}
+          canAdvanceToStep2={!!(selectedArea && selectedTipoServicio)}
+        />
       </Grid>
 
-      {/* Componente de la tabla con los servicios de la OT */}
-      <Grid item xs={12}>
-        <UserListTable3 tableData={userData} otId={otId} otData={otData} loading={loading} />
-      </Grid>
+      {/* Paso 1: Área y Servicio */}
+      {activeStep === 1 && (
+        <Grid item xs={12}>
+          <UserListTable3
+            tableData={userData}
+            otId={otId}
+            otData={otData}
+            loading={loading}
+            onGoToStep2={handleGoToStep2}
+            selectedArea={selectedArea}
+            setSelectedArea={setSelectedArea}
+            selectedTipoServicio={selectedTipoServicio}
+            setSelectedTipoServicio={setSelectedTipoServicio}
+          />
+        </Grid>
+      )}
+
+      {/* Paso 2: Crear RCMs */}
+      {activeStep === 2 && (
+        <Grid item xs={12}>
+          <Step2CreateRcms />
+        </Grid>
+      )}
     </Grid>
   )
 }

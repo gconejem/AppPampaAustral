@@ -17,16 +17,24 @@ import Box from '@mui/material/Box'
 const UserListTable3 = ({
   otId,
   otData,
-  loading
+  loading,
+  onGoToStep2,
+  selectedArea,
+  setSelectedArea,
+  selectedTipoServicio,
+  setSelectedTipoServicio
 }: {
   tableData?: any[]
   otId?: string | null
   otData?: any
   loading?: boolean
+  onGoToStep2?: () => void
+  selectedArea: number | ''
+  setSelectedArea: (value: number | '') => void
+  selectedTipoServicio: number | ''
+  setSelectedTipoServicio: (value: number | '') => void
 }) => {
   // States
-  const [selectedArea, setSelectedArea] = useState<number | ''>('')
-  const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
   const [familias, setFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
   const [loadingAreas, setLoadingAreas] = useState(false)
@@ -57,6 +65,7 @@ const UserListTable3 = ({
     const fetchFamilias = async () => {
       if (!selectedArea) {
         setFamilias([])
+        setSelectedTipoServicio('')
         return
       }
 
@@ -66,6 +75,11 @@ const UserListTable3 = ({
         if (response.ok) {
           const familiasData = await response.json()
           setFamilias(familiasData)
+
+          // Solo limpiar el tipo de servicio si no está en la lista de familias cargadas
+          if (selectedTipoServicio && !familiasData.some((f: any) => f.id === selectedTipoServicio)) {
+            setSelectedTipoServicio('')
+          }
         }
       } catch (error) {
         console.error('Error al cargar familias:', error)
@@ -75,8 +89,6 @@ const UserListTable3 = ({
     }
 
     fetchFamilias()
-    // Limpiar el filtro de familia cuando cambia el área
-    setSelectedTipoServicio('')
   }, [selectedArea])
 
   // Si está cargando
@@ -171,20 +183,9 @@ const UserListTable3 = ({
             startIcon={<i className='ri-add-line' />}
             disabled={!selectedArea || !selectedTipoServicio}
             onClick={() => {
-              const params = new URLSearchParams({
-                otId: otId || '',
-                tipo: otData?.tipoOT?.codigo || ''
-              })
-
-              if (selectedArea) {
-                params.append('areaId', selectedArea.toString())
+              if (onGoToStep2) {
+                onGoToStep2()
               }
-
-              if (selectedTipoServicio) {
-                params.append('familiaId', selectedTipoServicio.toString())
-              }
-
-              window.open(`/en/apps/encoder?${params.toString()}`, '_blank')
             }}
           >
             Nuevo RCM
