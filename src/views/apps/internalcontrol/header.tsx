@@ -1,6 +1,9 @@
 // MUI Imports
 import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography } from '@mui/material'
 
+// Utils
+import { formatDateForDisplay } from '@/utils/dateUtils'
+
 // Interfaces
 interface HeaderProps {
   otData?: any
@@ -141,7 +144,7 @@ const Header = ({ otData, loading }: HeaderProps) => {
                 FECHA OT
               </Typography>
               <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                {/* Vacío por ahora según requerimientos */}
+                {otData.createdAt ? formatDateForDisplay(otData.createdAt) : ''}
               </Typography>
             </Box>
           </Grid>
