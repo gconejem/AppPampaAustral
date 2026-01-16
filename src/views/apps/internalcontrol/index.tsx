@@ -26,6 +26,15 @@ interface EnsayoAsociado {
   cantidad: number
 }
 
+interface RCMData {
+  id: number
+  rcmType: string
+  numeroTarjeta: string
+  tipoMaterial: string
+  item: string
+  ensayos: EnsayoAsociado[]
+}
+
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const searchParams = useSearchParams()
   const [otId, setOtId] = useState<string | null>(null)
@@ -37,6 +46,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
 
   // Estados para persistir datos del Paso 2
   const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
+  const [savedRcms, setSavedRcms] = useState<RCMData[]>([])
 
   useEffect(() => {
     if (!searchParams) return
@@ -120,6 +130,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           <Step2CreateRcms
             ensayosAsociados={ensayosAsociados}
             setEnsayosAsociados={setEnsayosAsociados}
+            savedRcms={savedRcms}
+            setSavedRcms={setSavedRcms}
           />
         </Grid>
       )}

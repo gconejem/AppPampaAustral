@@ -67,16 +67,17 @@ interface RCMData {
 interface Step2CreateRcmsProps {
     ensayosAsociados: EnsayoAsociado[]
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
+    savedRcms: RCMData[]
+    setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms }: Step2CreateRcmsProps) => {
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [item, setItem] = useState('')
-    const [savedRcms, setSavedRcms] = useState<RCMData[]>([])
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
     // Estados para el popover de búsqueda de productos
