@@ -369,23 +369,169 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                         <Box sx={{ p: 3, bgcolor: 'white' }}>
                             {/* Campos principales */}
                             <Grid container spacing={3}>
-                                <Grid item xs={12} md={4}>
-                                    <TextField label='N° Tarjeta' defaultValue='LEO-2026-001' fullWidth />
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Fecha Codificación'
+                                        type='date'
+                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                        required
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Fecha de Muestreo'
+                                        type='date'
+                                        required
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Fecha de Ingreso'
+                                        type='date'
+                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                        required
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Fecha de Entrega'
+                                        type='date'
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                    />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField label='Tipo Material' defaultValue='Suelo granular' required fullWidth />
+                                    <FormControl fullWidth>
+                                        <InputLabel>Área</InputLabel>
+                                        <Select label='Área'>
+                                            <MenuItem value='suelos'>Suelos</MenuItem>
+                                            <MenuItem value='hormigon'>Hormigón</MenuItem>
+                                            <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                        </Select>
+                                    </FormControl>
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField label='Ítem' defaultValue='Base' required fullWidth />
+                                    <FormControl fullWidth>
+                                        <InputLabel>Tipo Servicio</InputLabel>
+                                        <Select label='Tipo Servicio'>
+                                            <MenuItem value='ensayo'>Ensayo</MenuItem>
+                                            <MenuItem value='muestreo'>Muestreo</MenuItem>
+                                            <MenuItem value='inspeccion'>Inspección</MenuItem>
+                                        </Select>
+                                    </FormControl>
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField label='Procedencia' defaultValue='Cantera Los Andes' fullWidth />
+                                    <FormControl fullWidth>
+                                        <InputLabel>Tipo de muestra</InputLabel>
+                                        <Select label='Tipo de muestra'>
+                                            <MenuItem value='muestra'>Muestra</MenuItem>
+                                            <MenuItem value='control'>Control</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Nº Tarjeta'
+                                        type='number'
+                                        defaultValue='LEO-2026-001'
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Tipo Material</InputLabel>
+                                        <Select label='Tipo Material'>
+                                            <MenuItem value='suelo_granular'>Suelo granular</MenuItem>
+                                            <MenuItem value='suelo_cohesivo'>Suelo cohesivo</MenuItem>
+                                            <MenuItem value='hormigon'>Hormigón</MenuItem>
+                                            <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <FormControl fullWidth required>
+                                        <InputLabel>Ítem</InputLabel>
+                                        <Select label='Ítem'>
+                                            <MenuItem value='base'>Base</MenuItem>
+                                            <MenuItem value='subbase'>Subbase</MenuItem>
+                                            <MenuItem value='subrasante'>Subrasante</MenuItem>
+                                            <MenuItem value='terraplen'>Terraplén</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Elemento'
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Grado</InputLabel>
+                                        <Select label='Grado'>
+                                            <MenuItem value='1'>Grado 1</MenuItem>
+                                            <MenuItem value='2'>Grado 2</MenuItem>
+                                            <MenuItem value='3'>Grado 3</MenuItem>
+                                            <MenuItem value='4'>Grado 4</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Cota 1'
+                                        type='number'
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Cota 2'
+                                        type='number'
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        label='Cantidad de Muestras'
+                                        type='number'
+                                        defaultValue='1'
+                                        required
+                                        fullWidth
+                                    />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField label='Sector' defaultValue='Eje A - Km 2+340' fullWidth />
+                                    <TextField
+                                        label='Procedencia'
+                                        fullWidth
+                                    />
                                 </Grid>
                                 <Grid item xs={12} md={4}>
-                                    <TextField label='Cantidad de muestras' defaultValue='3' type='number' required fullWidth />
+                                    <TextField
+                                        label='Ubicación/Sector'
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Estado</InputLabel>
+                                        <Select label='Estado' defaultValue='codificado'>
+                                            <MenuItem value='codificado'>Codificado</MenuItem>
+                                            <MenuItem value='en_proceso'>En Proceso</MenuItem>
+                                            <MenuItem value='ensayado'>Ensayado</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <FormControlLabel
+                                        control={<Checkbox />}
+                                        label='Vencimiento'
+                                    />
                                 </Grid>
                             </Grid>
 
@@ -467,7 +613,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                                     multiline
                                     rows={3}
                                     fullWidth
-                                    defaultValue='Material con presencia de finos, compactado al 95% Proctor Modificado'
                                 />
                             </Box>
                         </Box>
