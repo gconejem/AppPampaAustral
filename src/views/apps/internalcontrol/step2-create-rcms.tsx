@@ -55,6 +55,15 @@ interface EnsayoAsociado {
     cantidad: number
 }
 
+interface RCMData {
+    id: number
+    rcmType: string
+    numeroTarjeta: string
+    tipoMaterial: string
+    item: string
+    ensayos: EnsayoAsociado[]
+}
+
 interface Step2CreateRcmsProps {
     ensayosAsociados: EnsayoAsociado[]
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
@@ -67,6 +76,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [savedRcms, setSavedRcms] = useState<RCMData[]>([])
+    const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -95,11 +106,37 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
         setNumeroTarjeta('')
         setTipoMaterial('')
         setItem('')
+        setEnsayosAsociados([])
         setExpandedRcm(true)
+    }
+
+    const handleSaveRcm = () => {
+        const newRcm: RCMData = {
+            id: Date.now(),
+            rcmType,
+            numeroTarjeta,
+            tipoMaterial,
+            item,
+            ensayos: [...ensayosAsociados]
+        }
+        setSavedRcms([...savedRcms, newRcm])
+        setShowRcmCard(false)
+        setRcmType('')
+        setNumeroTarjeta('')
+        setTipoMaterial('')
+        setItem('')
+        setEnsayosAsociados([])
     }
 
     const handleToggleExpand = () => {
         setExpandedRcm(!expandedRcm)
+    }
+
+    const handleToggleSavedRcm = (id: number) => {
+        setExpandedSavedRcms(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }))
     }
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
@@ -664,16 +701,108 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                                         variant='contained'
                                         color='primary'
                                         sx={{ textTransform: 'none', px: 4 }}
-                                        onClick={() => {
-                                            console.log('Guardar RCM')
-                                            // TODO: Implementar lógica para guardar RCM
-                                        }}
+                                        onClick={handleSaveRcm}
                                     >
                                         Guardar RCM
                                     </Button>
                                 </Box>
                             </Box>
                         </Collapse>
+                    </Box>
+                )}
+
+                {/* Lista de RCMs guardados */}
+                {savedRcms.length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+                            RCMs Creados ({savedRcms.length})
+                        </Typography>
+                        {savedRcms.map(rcm => (
+                            <Box
+                                key={rcm.id}
+                                sx={{
+                                    bgcolor: '#E3F2FD',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    mb: 2
+                                }}
+                            >
+                                {/* Header del RCM guardado */}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        p: 2,
+                                        bgcolor: '#E3F2FD'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <IconButton size='small' onClick={() => handleToggleSavedRcm(rcm.id)}>
+                                            <ExpandMoreIcon
+                                                sx={{
+                                                    transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                    transition: 'transform 0.3s'
+                                                }}
+                                            />
+                                        </IconButton>
+                                        <Chip label={rcm.rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                        {rcm.numeroTarjeta && (
+                                            <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                                                Tarjeta: {rcm.numeroTarjeta}
+                                            </Typography>
+                                        )}
+                                        {(rcm.tipoMaterial || rcm.item) && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                                                <LayersIcon fontSize='small' />
+                                                <Typography variant='body2'>
+                                                    {rcm.tipoMaterial && `Material: ${rcm.tipoMaterial}`}
+                                                    {rcm.tipoMaterial && rcm.item && ' • '}
+                                                    {rcm.item && `Ítem: ${rcm.item}`}
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Checkbox />
+                                        <IconButton size='small'>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+
+                                {/* Contenido expandible del RCM guardado */}
+                                <Collapse in={expandedSavedRcms[rcm.id]}>
+                                    <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                        <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                                            Ensayos Asociados ({rcm.ensayos.length})
+                                        </Typography>
+                                        {rcm.ensayos.map(ensayo => (
+                                            <Box
+                                                key={ensayo.id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    p: 2,
+                                                    mb: 1,
+                                                    bgcolor: '#F5F5F5',
+                                                    borderRadius: '8px'
+                                                }}
+                                            >
+                                                <Typography variant='body2'>
+                                                    {ensayo.nombre}
+                                                    {ensayo.norma && ` (${ensayo.norma})`}
+                                                </Typography>
+                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                    Cantidad: {ensayo.cantidad}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Collapse>
+                            </Box>
+                        ))}
                     </Box>
                 )}
 
