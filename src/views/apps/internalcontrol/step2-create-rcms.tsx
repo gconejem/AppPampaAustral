@@ -62,6 +62,8 @@ interface Step2CreateRcmsProps {
 
 const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateRcmsProps) => {
     const [expandedRcm, setExpandedRcm] = useState(true)
+    const [showRcmCard, setShowRcmCard] = useState(false)
+    const [rcmType, setRcmType] = useState('')
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -85,8 +87,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
     }
 
     const handleNewRcm = () => {
-        // TODO: Implementar lógica para crear nuevo RCM
-        console.log('Nuevo RCM')
+        setShowRcmCard(true)
+        setRcmType('')
+        setExpandedRcm(true)
     }
 
     const handleToggleExpand = () => {
@@ -321,303 +324,321 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                 </Box>
 
                 {/* RCM Card */}
-                <Box
-                    sx={{
-                        bgcolor: '#E3F2FD',
-                        borderRadius: '8px',
-                        overflow: 'hidden'
-                    }}
-                >
-                    {/* Header del RCM */}
+                {showRcmCard && (
                     <Box
                         sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 2,
-                            bgcolor: '#E3F2FD'
+                            bgcolor: '#E3F2FD',
+                            borderRadius: '8px',
+                            overflow: 'hidden'
                         }}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <IconButton size='small' onClick={handleToggleExpand}>
-                                <ExpandMoreIcon
-                                    sx={{
-                                        transform: expandedRcm ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                        transition: 'transform 0.3s'
-                                    }}
-                                />
-                            </IconButton>
-                            <Chip label='MUESTRA' color='primary' sx={{ fontWeight: 'bold' }} />
-                            <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                                Tarjeta: LEO-2026-001
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                                <LayersIcon fontSize='small' />
-                                <Typography variant='body2'>Material: Suelo granular • Ítem: Base</Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Checkbox />
-                            <IconButton size='small'>
-                                <MoreVertIcon />
-                            </IconButton>
-                        </Box>
-                    </Box>
-
-                    {/* Contenido colapsable del RCM */}
-                    <Collapse in={expandedRcm}>
-                        <Box sx={{ p: 3, bgcolor: 'white' }}>
-                            {/* Campos principales */}
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Fecha Codificación'
-                                        type='date'
-                                        defaultValue={new Date().toISOString().split('T')[0]}
-                                        required
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
+                        {/* Header del RCM */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                p: 2,
+                                bgcolor: '#E3F2FD'
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <IconButton size='small' onClick={handleToggleExpand}>
+                                    <ExpandMoreIcon
+                                        sx={{
+                                            transform: expandedRcm ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                            transition: 'transform 0.3s'
+                                        }}
                                     />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Fecha de Muestreo'
-                                        type='date'
-                                        required
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Fecha de Ingreso'
-                                        type='date'
-                                        defaultValue={new Date().toISOString().split('T')[0]}
-                                        required
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Fecha de Entrega'
-                                        type='date'
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Área</InputLabel>
-                                        <Select label='Área'>
-                                            <MenuItem value='suelos'>Suelos</MenuItem>
-                                            <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                            <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                </IconButton>
+                                {rcmType ? (
+                                    <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                ) : (
+                                    <FormControl size='small' sx={{ minWidth: 150 }}>
+                                        <InputLabel>Tipo de RCM</InputLabel>
+                                        <Select
+                                            value={rcmType}
+                                            label='Tipo de RCM'
+                                            onChange={(e) => setRcmType(e.target.value)}
+                                            sx={{ bgcolor: 'white' }}
+                                        >
+                                            <MenuItem value='Muestra'>Muestra</MenuItem>
+                                            <MenuItem value='Control'>Control</MenuItem>
+                                            <MenuItem value='Servicio'>Servicio</MenuItem>
                                         </Select>
                                     </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Tipo Servicio</InputLabel>
-                                        <Select label='Tipo Servicio'>
-                                            <MenuItem value='ensayo'>Ensayo</MenuItem>
-                                            <MenuItem value='muestreo'>Muestreo</MenuItem>
-                                            <MenuItem value='inspeccion'>Inspección</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Tipo de muestra</InputLabel>
-                                        <Select label='Tipo de muestra'>
-                                            <MenuItem value='muestra'>Muestra</MenuItem>
-                                            <MenuItem value='control'>Control</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Nº Tarjeta'
-                                        type='number'
-                                        defaultValue='LEO-2026-001'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Tipo Material</InputLabel>
-                                        <Select label='Tipo Material'>
-                                            <MenuItem value='suelo_granular'>Suelo granular</MenuItem>
-                                            <MenuItem value='suelo_cohesivo'>Suelo cohesivo</MenuItem>
-                                            <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                            <MenuItem value='asfalto'>Asfalto</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth required>
-                                        <InputLabel>Ítem</InputLabel>
-                                        <Select label='Ítem'>
-                                            <MenuItem value='base'>Base</MenuItem>
-                                            <MenuItem value='subbase'>Subbase</MenuItem>
-                                            <MenuItem value='subrasante'>Subrasante</MenuItem>
-                                            <MenuItem value='terraplen'>Terraplén</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Elemento'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Grado</InputLabel>
-                                        <Select label='Grado'>
-                                            <MenuItem value='1'>Grado 1</MenuItem>
-                                            <MenuItem value='2'>Grado 2</MenuItem>
-                                            <MenuItem value='3'>Grado 3</MenuItem>
-                                            <MenuItem value='4'>Grado 4</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Cota 1'
-                                        type='number'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Cota 2'
-                                        type='number'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        label='Cantidad de Muestras'
-                                        type='number'
-                                        defaultValue='1'
-                                        required
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <TextField
-                                        label='Procedencia'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <TextField
-                                        label='Ubicación/Sector'
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Estado</InputLabel>
-                                        <Select label='Estado' defaultValue='codificado'>
-                                            <MenuItem value='codificado'>Codificado</MenuItem>
-                                            <MenuItem value='en_proceso'>En Proceso</MenuItem>
-                                            <MenuItem value='ensayado'>Ensayado</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <FormControlLabel
-                                        control={<Checkbox />}
-                                        label='Vencimiento'
-                                    />
-                                </Grid>
-                            </Grid>
-
-                            {/* Ensayos Asociados */}
-                            <Box sx={{ mt: 4 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                    <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                                        Ensayos Asociados
-                                    </Typography>
-                                    <Button
-                                        startIcon={<SearchIcon />}
-                                        variant='outlined'
-                                        sx={{ textTransform: 'none' }}
-                                        onClick={handleOpenSearchPopover}
-                                    >
-                                        Buscar ensayo
-                                    </Button>
-                                </Box>
-
-                                {/* Lista de ensayos */}
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {ensayosAsociados.length === 0 ? (
-                                        <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
-                                            <Typography variant='body2' color='text.secondary'>
-                                                No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
-                                            </Typography>
-                                        </Box>
-                                    ) : (
-                                        ensayosAsociados.map(ensayo => (
-                                            <Box
-                                                key={ensayo.id}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    p: 2,
-                                                    bgcolor: '#F5F5F5',
-                                                    borderRadius: '8px'
-                                                }}
-                                            >
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                    <IconButton size='small'>
-                                                        <EditIcon fontSize='small' />
-                                                    </IconButton>
-                                                    <Typography variant='body2'>
-                                                        {ensayo.nombre}
-                                                        {ensayo.norma && ` (${ensayo.norma})`}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                    <TextField
-                                                        size='small'
-                                                        value={ensayo.cantidad}
-                                                        onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                        type='number'
-                                                        sx={{ width: '80px' }}
-                                                        inputProps={{ min: 1 }}
-                                                    />
-                                                    <IconButton
-                                                        size='small'
-                                                        color='error'
-                                                        onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                    >
-                                                        <DeleteIcon fontSize='small' />
-                                                    </IconButton>
-                                                </Box>
-                                            </Box>
-                                        ))
-                                    )}
-                                </Box>
-                            </Box>
-
-                            {/* Observaciones */}
-                            <Box sx={{ mt: 4 }}>
-                                <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
-                                    Observaciones
+                                )}
+                                <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                                    Tarjeta: LEO-2026-001
                                 </Typography>
-                                <TextField
-                                    multiline
-                                    rows={3}
-                                    fullWidth
-                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                                    <LayersIcon fontSize='small' />
+                                    <Typography variant='body2'>Material: Suelo granular • Ítem: Base</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Checkbox />
+                                <IconButton size='small'>
+                                    <MoreVertIcon />
+                                </IconButton>
                             </Box>
                         </Box>
-                    </Collapse>
-                </Box>
+
+                        {/* Contenido colapsable del RCM */}
+                        <Collapse in={expandedRcm && rcmType !== ''}>
+                            <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                {/* Campos principales */}
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Fecha Codificación'
+                                            type='date'
+                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            required
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Fecha de Muestreo'
+                                            type='date'
+                                            required
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Fecha de Ingreso'
+                                            type='date'
+                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            required
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Fecha de Entrega'
+                                            type='date'
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Área</InputLabel>
+                                            <Select label='Área'>
+                                                <MenuItem value='suelos'>Suelos</MenuItem>
+                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
+                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Tipo Servicio</InputLabel>
+                                            <Select label='Tipo Servicio'>
+                                                <MenuItem value='ensayo'>Ensayo</MenuItem>
+                                                <MenuItem value='muestreo'>Muestreo</MenuItem>
+                                                <MenuItem value='inspeccion'>Inspección</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Tipo de muestra</InputLabel>
+                                            <Select label='Tipo de muestra'>
+                                                <MenuItem value='muestra'>Muestra</MenuItem>
+                                                <MenuItem value='control'>Control</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Nº Tarjeta'
+                                            type='number'
+                                            defaultValue='LEO-2026-001'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Tipo Material</InputLabel>
+                                            <Select label='Tipo Material'>
+                                                <MenuItem value='suelo_granular'>Suelo granular</MenuItem>
+                                                <MenuItem value='suelo_cohesivo'>Suelo cohesivo</MenuItem>
+                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
+                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth required>
+                                            <InputLabel>Ítem</InputLabel>
+                                            <Select label='Ítem'>
+                                                <MenuItem value='base'>Base</MenuItem>
+                                                <MenuItem value='subbase'>Subbase</MenuItem>
+                                                <MenuItem value='subrasante'>Subrasante</MenuItem>
+                                                <MenuItem value='terraplen'>Terraplén</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Elemento'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Grado</InputLabel>
+                                            <Select label='Grado'>
+                                                <MenuItem value='1'>Grado 1</MenuItem>
+                                                <MenuItem value='2'>Grado 2</MenuItem>
+                                                <MenuItem value='3'>Grado 3</MenuItem>
+                                                <MenuItem value='4'>Grado 4</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Cota 1'
+                                            type='number'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Cota 2'
+                                            type='number'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            label='Cantidad de Muestras'
+                                            type='number'
+                                            defaultValue='1'
+                                            required
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField
+                                            label='Procedencia'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField
+                                            label='Ubicación/Sector'
+                                            fullWidth
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Estado</InputLabel>
+                                            <Select label='Estado' defaultValue='codificado'>
+                                                <MenuItem value='codificado'>Codificado</MenuItem>
+                                                <MenuItem value='en_proceso'>En Proceso</MenuItem>
+                                                <MenuItem value='ensayado'>Ensayado</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControlLabel
+                                            control={<Checkbox />}
+                                            label='Vencimiento'
+                                        />
+                                    </Grid>
+                                </Grid>
+
+                                {/* Ensayos Asociados */}
+                                <Box sx={{ mt: 4 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                        <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                            Ensayos Asociados
+                                        </Typography>
+                                        <Button
+                                            startIcon={<SearchIcon />}
+                                            variant='outlined'
+                                            sx={{ textTransform: 'none' }}
+                                            onClick={handleOpenSearchPopover}
+                                        >
+                                            Buscar ensayo
+                                        </Button>
+                                    </Box>
+
+                                    {/* Lista de ensayos */}
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        {ensayosAsociados.length === 0 ? (
+                                            <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                                <Typography variant='body2' color='text.secondary'>
+                                                    No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            ensayosAsociados.map(ensayo => (
+                                                <Box
+                                                    key={ensayo.id}
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        p: 2,
+                                                        bgcolor: '#F5F5F5',
+                                                        borderRadius: '8px'
+                                                    }}
+                                                >
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <IconButton size='small'>
+                                                            <EditIcon fontSize='small' />
+                                                        </IconButton>
+                                                        <Typography variant='body2'>
+                                                            {ensayo.nombre}
+                                                            {ensayo.norma && ` (${ensayo.norma})`}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <TextField
+                                                            size='small'
+                                                            value={ensayo.cantidad}
+                                                            onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                            type='number'
+                                                            sx={{ width: '80px' }}
+                                                            inputProps={{ min: 1 }}
+                                                        />
+                                                        <IconButton
+                                                            size='small'
+                                                            color='error'
+                                                            onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                        >
+                                                            <DeleteIcon fontSize='small' />
+                                                        </IconButton>
+                                                    </Box>
+                                                </Box>
+                                            ))
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                {/* Observaciones */}
+                                <Box sx={{ mt: 4 }}>
+                                    <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
+                                        Observaciones
+                                    </Typography>
+                                    <TextField
+                                        multiline
+                                        rows={3}
+                                        fullWidth
+                                    />
+                                </Box>
+                            </Box>
+                        </Collapse>
+                    </Box>
+                )}
 
                 {/* Popover de búsqueda de ensayos */}
                 <Popover
