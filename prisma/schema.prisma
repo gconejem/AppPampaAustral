@@ -147,6 +147,7 @@ model Producto {
   paquetesQueLoIncluyen ProductoPaquete[]     @relation("ProductoEnPaquetes")
   serviciosMuestra      ServicioMuestra[]
   serviciosRCM          ServicioRCM[]
+  serviciosRCMTecnica   RCMTecnicaServicio[]
 
   @@index([sku])
   @@index([estado])
@@ -779,12 +780,13 @@ model Probeta {
 }
 
 model Area {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  familias  Familia[]
-  equipos   Equipo[]
+  id          Int          @id @default(autoincrement())
+  nombre      String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  familias    Familia[]
+  equipos     Equipo[]
+  rcmTecnicas RCMTecnica[]
 }
 
 model Familia {
@@ -943,4 +945,48 @@ model DetalleCalibracion {
   calibracionEquipo   CalibracionEquipo @relation(fields: [calibracionEquipoId], references: [id], onDelete: Cascade)
 
   @@index([calibracionEquipoId])
+}
+
+model RCMTecnica {
+  id                Int                  @id @default(autoincrement())
+  fechaCodificacion DateTime?
+  fechaMuestreo     DateTime?
+  fechaIngreso      DateTime?
+  fechaEntrega      DateTime?
+  areaId            Int?
+  tipoServicio      Int?
+  tipoMuestra       String?
+  numeroTarjeta     Int?
+  tipoMaterial      Int?
+  item              Int?
+  elemento          String?
+  grado             Int?
+  cota1             Int?
+  cota2             Int?
+  procedencia       String?
+  ubicacion         String?
+  cantidadMuestras  Int?
+  vencimiento       Boolean?
+  observaciones     String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  area              Area?                @relation(fields: [areaId], references: [id])
+  servicios         RCMTecnicaServicio[]
+
+  @@index([areaId])
+}
+
+model RCMTecnicaServicio {
+  id           Int        @id @default(autoincrement())
+  rcmTecnicaId Int
+  idProducto   Int?
+  cantidad     Int?
+  estado       String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  rcmTecnica   RCMTecnica @relation(fields: [rcmTecnicaId], references: [id], onDelete: Cascade)
+  producto     Producto?  @relation(fields: [idProducto], references: [productoId])
+
+  @@index([rcmTecnicaId])
+  @@index([idProducto])
 }
