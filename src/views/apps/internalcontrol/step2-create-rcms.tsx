@@ -657,6 +657,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                                         fullWidth
                                     />
                                 </Box>
+
+                                {/* Botón Guardar RCM */}
+                                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Button
+                                        variant='contained'
+                                        color='primary'
+                                        sx={{ textTransform: 'none', px: 4 }}
+                                        onClick={() => {
+                                            console.log('Guardar RCM')
+                                            // TODO: Implementar lógica para guardar RCM
+                                        }}
+                                    >
+                                        Guardar RCM
+                                    </Button>
+                                </Box>
                             </Box>
                         </Collapse>
                     </Box>
