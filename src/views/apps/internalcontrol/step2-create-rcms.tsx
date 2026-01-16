@@ -64,6 +64,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+    const [numeroTarjeta, setNumeroTarjeta] = useState('')
+    const [tipoMaterial, setTipoMaterial] = useState('')
+    const [item, setItem] = useState('')
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -89,6 +92,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
     const handleNewRcm = () => {
         setShowRcmCard(true)
         setRcmType('')
+        setNumeroTarjeta('')
+        setTipoMaterial('')
+        setItem('')
         setExpandedRcm(true)
     }
 
@@ -368,13 +374,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                                         </Select>
                                     </FormControl>
                                 )}
-                                <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                                    Tarjeta: LEO-2026-001
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                                    <LayersIcon fontSize='small' />
-                                    <Typography variant='body2'>Material: Suelo granular • Ítem: Base</Typography>
-                                </Box>
+                                {numeroTarjeta && (
+                                    <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                                        Tarjeta: {numeroTarjeta}
+                                    </Typography>
+                                )}
+                                {(tipoMaterial || item) && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                                        <LayersIcon fontSize='small' />
+                                        <Typography variant='body2'>
+                                            {tipoMaterial && `Material: ${tipoMaterial}`}
+                                            {tipoMaterial && item && ' • '}
+                                            {item && `Ítem: ${item}`}
+                                        </Typography>
+                                    </Box>
+                                )}
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Checkbox />
@@ -458,30 +472,38 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados }: Step2CreateR
                                     <Grid item xs={12} md={3}>
                                         <TextField
                                             label='Nº Tarjeta'
-                                            type='number'
-                                            defaultValue='LEO-2026-001'
+                                            value={numeroTarjeta}
+                                            onChange={(e) => setNumeroTarjeta(e.target.value)}
                                             fullWidth
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth>
                                             <InputLabel>Tipo Material</InputLabel>
-                                            <Select label='Tipo Material'>
-                                                <MenuItem value='suelo_granular'>Suelo granular</MenuItem>
-                                                <MenuItem value='suelo_cohesivo'>Suelo cohesivo</MenuItem>
-                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                            <Select
+                                                label='Tipo Material'
+                                                value={tipoMaterial}
+                                                onChange={(e) => setTipoMaterial(e.target.value)}
+                                            >
+                                                <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
+                                                <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
+                                                <MenuItem value='Hormigón'>Hormigón</MenuItem>
+                                                <MenuItem value='Asfalto'>Asfalto</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
-                                            <Select label='Ítem'>
-                                                <MenuItem value='base'>Base</MenuItem>
-                                                <MenuItem value='subbase'>Subbase</MenuItem>
-                                                <MenuItem value='subrasante'>Subrasante</MenuItem>
-                                                <MenuItem value='terraplen'>Terraplén</MenuItem>
+                                            <Select
+                                                label='Ítem'
+                                                value={item}
+                                                onChange={(e) => setItem(e.target.value)}
+                                            >
+                                                <MenuItem value='Base'>Base</MenuItem>
+                                                <MenuItem value='Subbase'>Subbase</MenuItem>
+                                                <MenuItem value='Subrasante'>Subrasante</MenuItem>
+                                                <MenuItem value='Terraplén'>Terraplén</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
