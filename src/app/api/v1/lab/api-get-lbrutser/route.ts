@@ -1,8 +1,18 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  }
+}
+
+export async function OPTIONS() {
+  return new Response(null, { headers: corsHeaders() })
+}
 
 function normalizeKey(k: string) {
   return (k || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -27,7 +37,7 @@ const TARGET_KEYS = ['CODIGO', 'FORMULARIO', 'DESCRIP']
 export async function GET(request: Request) {
   try {
     if (!prisma) {
-      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
     }
 
     const model =
@@ -40,7 +50,7 @@ export async function GET(request: Request) {
     if (!model || typeof model.findMany !== 'function') {
       return new Response(JSON.stringify({ error: "Prisma model for 'TipoOrdenTrabajo' not available", prismaKeys: Object.keys(prisma) }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(), 'Content-Type': 'application/json' }
       })
     }
 
@@ -98,9 +108,9 @@ export async function GET(request: Request) {
     })
 
     // devolver array: cada objeto sólo contiene los campos que hicieron match
-    return new Response(JSON.stringify(mapped), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   } catch (error: any) {
     console.error('Error en api-get-lbrutser:', error)
-    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   }
 }

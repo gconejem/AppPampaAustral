@@ -2,6 +2,18 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  }
+}
+
+export async function OPTIONS() {
+  return new Response(null, { headers: corsHeaders() })
+}
+
 function normalizeKey(k: string) {
   return (k || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '')
 }
@@ -73,12 +85,14 @@ export async function GET(request: Request) {
     const obraId = searchParams.get('obraId')
     const direccion = searchParams.get('direccion')
     const clienteId = searchParams.get('clienteId')
+    const codigo = searchParams.get('codigo[]') || searchParams.get('codigo')
     const limit = Number(searchParams.get('limit') ?? 100)
 
     const whereFilter: any = {}
     if (obraId) whereFilter.obraId = Number(obraId)
     if (direccion) whereFilter.direccion = { contains: direccion }
     if (clienteId) whereFilter.clienteId = Number(clienteId)
+    if (codigo) whereFilter.numeroObra = { in: String(codigo).split(',').filter(Boolean) }
 
     const raw = await obraModel.findMany({
       where: whereFilter,
@@ -159,9 +173,9 @@ export async function GET(request: Request) {
     })
 
     // devolver sólo el array de objetos con las claves especificadas
-    return new Response(JSON.stringify(mapped), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   } catch (error: any) {
     console.error('GET Error en get-obras: mapping error:', error)
-    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   }
 }

@@ -4,6 +4,18 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders() })
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -66,6 +78,17 @@ export async function GET(request: Request) {
       console.log('End date filter:', { endDate })
       whereFilter.fechaInicio = {
         lte: endDate
+      }
+    } else {
+      // Si no se especifica rango, devolver solo las visitas de HOY
+      const now = new Date()
+      const startOfDay = new Date(now)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(now)
+      endOfDay.setHours(23, 59, 59, 999)
+      whereFilter.fechaInicio = {
+        gte: startOfDay,
+        lte: endOfDay
       }
     }
 
@@ -176,13 +199,19 @@ export async function GET(request: Request) {
       console.log('Filtrando por laboratoristas IDs:', laboratoristaIdsArray)
       filteredAgendas = filteredAgendas.filter(agenda => {
         const agendaLaboratoristaIds = agenda.asignados.map(asignado => asignado.user.id)
-        console.log('Agenda laboratoristas:', agendaLaboratoristaIds)
         const hasMatch = agendaLaboratoristaIds.some(id =>
           laboratoristaIdsArray.includes(String(id))
         )
-        console.log('Tiene coincidencia:', hasMatch)
         return hasMatch
       })
+    }
+
+    // Filtrar por parámetro persona[] si viene en la query (compatibilidad App Terreno)
+    if (persona) {
+      const personaId = String(persona)
+      filteredAgendas = filteredAgendas.filter(agenda =>
+        agenda.asignados.some(asignado => String(asignado.user?.id) === personaId)
+      )
     }
 
     // Filtrar por nombre de laboratorista
@@ -203,29 +232,30 @@ export async function GET(request: Request) {
       })
     }
 
-    // Formatear salida
+    // Formatear salida para la App Terreno (compatibilidad de claves esperadas)
     const agendasLimitadas = filteredAgendas.map(agenda => {
       const fechaInicioDate = new Date(agenda.fechaInicio)
-      const fechaFinDate = new Date(agenda.fechaFin)
       const horaInicio = fechaInicioDate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })
-      const horaFin = fechaFinDate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })
+
+      // Construcción de estructura compatible
+      const cliente = agenda.cliente
+        ? { RAZON: agenda.cliente.razonSocial ?? '' }
+        : { RAZON: '' }
+
+      const ciudad = { NOMBRE: (agenda.obra as any)?.comuna ?? '' }
 
       return {
-        id: agenda.id,
-        fechaInicio: agenda.fechaInicio,
-        horaInicio,
-        horaFin,
-        cliente: agenda.cliente ? {
-          rut: agenda.cliente.rut,
-          razonSocial: agenda.cliente.razonSocial ?? undefined
-        } : null,
-        obra: agenda.obra ? {
-          idObra: agenda.obra.obraId,
-          direccion: agenda.obra.direccion
-        } : null,
-        servicios: agenda.servicios?.map(servicio => ({
-          servicio: servicio.servicio
-        })) || [],
+        // Claves usadas por la app móvil
+        CLAVE: agenda.id, // id de la agenda como clave
+        OBRA: (agenda.obra as any)?.numeroObra ?? null,
+        DIRECC: (agenda.obra as any)?.direccion ?? '',
+        HORA: horaInicio,
+        ESTADO: (agenda as any)?.estado ?? 'P',
+        cliente,
+        ciudad,
+
+        // Datos adicionales (no imprescindibles para el flujo actual)
+        servicios: agenda.servicios?.map(s => ({ servicio: s.servicio })) || [],
         asignados: agenda.asignados?.map(asignado => ({
           rut: asignado.user?.rut ?? undefined,
           nombre: asignado.user?.name ?? undefined,
@@ -234,15 +264,15 @@ export async function GET(request: Request) {
           userId: asignado.user?.id,
           roles: asignado.user?.roles?.map(r => r.rol?.nombre).filter(Boolean)
         })) || [],
-        equipos: agenda.equipos?.map(eq => ({
-          codigo: eq.equipo?.codigo
-        })) || []
+        equipos: agenda.equipos?.map(eq => ({ codigo: eq.equipo?.codigo })) || []
       }
     })
 
-    return NextResponse.json(agendasLimitadas)
+    console.log(`Total agendas returned: ${agendasLimitadas.length}`, JSON.stringify(agendasLimitadas.map(a => ({ CLAVE: a.CLAVE, OBRA: a.OBRA, HORA: a.HORA, asignados: a.asignados.map(x => x.userId) })), null, 2))
+
+    return NextResponse.json({ data: agendasLimitadas }, { headers: corsHeaders() })
   } catch (error) {
     console.error('Error en api-get-lbrutas-check-integracion:', error)
-    return NextResponse.json({ error: 'Error al obtener agendas' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener agendas' }, { status: 500, headers: corsHeaders() })
   }
 }

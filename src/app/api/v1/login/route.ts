@@ -59,11 +59,15 @@ export async function PUT(req: Request) {
 
     const normalizedUsername = isRut ? normalizeRut(username) : normalizeEmail(username)
 
+    console.log('Login attempt:', { normalizedUsername, isRut, isFuncionario })
+
     const user = await prisma.user.findFirst({
       where: isRut
         ? { rut: normalizedUsername }
         : { email: { equals: normalizedUsername, mode: 'insensitive' } }
     })
+
+    console.log('User lookup result:', { found: !!user, email: user?.email, usuario: user?.usuario })
 
     if (!user) {
       return badCombo(username)
@@ -103,8 +107,10 @@ export async function PUT(req: Request) {
     }
 
     if (isFuncionario) {
+      // La App Terreno filtra las visitas por ?persona[]=<CODIGO> comparando contra user.id en agenda.asignados.
+      // Para que no quede en blanco cuando el usuario tiene RUT, forzamos CODIGO al user.id y dejamos el RUT en el campo RUT.
       response.funcionario = {
-        CODIGO: user.rut ?? user.id,
+        CODIGO: user.id, // este valor se usa como persona[] en /lab/api-get-lbrutas-check-integracion
         NOMBRE: user.name ?? '',
         RUT: user.rut ?? '',
         LISTAPRE: null,

@@ -1,5 +1,17 @@
 import { prisma } from '@/lib/prisma'
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  }
+}
+
+export async function OPTIONS() {
+  return new Response(null, { headers: corsHeaders() })
+}
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -34,7 +46,7 @@ const TARGET_KEYS = [
 export async function GET(request: Request) {
   try {
     if (!prisma) {
-      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
     }
 
     const model =
@@ -44,7 +56,7 @@ export async function GET(request: Request) {
       (prisma as any).Equipos
 
     if (!model || typeof model.findMany !== 'function') {
-      return new Response(JSON.stringify({ error: "Prisma model 'equipo' not available", prismaKeys: Object.keys(prisma) }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: "Prisma model 'equipo' not available", prismaKeys: Object.keys(prisma) }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
     }
 
     const { searchParams } = new URL(request.url)
@@ -92,10 +104,10 @@ export async function GET(request: Request) {
       return out
     })
 
-    return new Response(JSON.stringify(mapped), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   } catch (error: any) {
     console.error('Error en api-get-lbrutas-join-lbequipos:', error)
-    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   }
 }
 
