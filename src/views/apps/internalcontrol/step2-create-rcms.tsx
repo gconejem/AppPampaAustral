@@ -631,6 +631,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Button>
                                     </Box>
 
+
+
                                     {/* Lista de ensayos */}
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {ensayosAsociados.length === 0 ? (
@@ -807,6 +809,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Box>
                 )}
 
+
                 {/* Popover de búsqueda de ensayos */}
                 <Popover
                     open={Boolean(anchorEl)}
@@ -814,11 +817,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     onClose={handleCloseSearchPopover}
                     anchorOrigin={{
                         vertical: 'bottom',
-                        horizontal: 'left'
+                        horizontal: 'right'
                     }}
                     transformOrigin={{
                         vertical: 'top',
-                        horizontal: 'left'
+                        horizontal: 'right'
                     }}
                     PaperProps={{
                         sx: {
