@@ -17,9 +17,10 @@ interface HeaderProps {
   activeStep?: number
   onStepClick?: (step: number) => void
   canAdvanceToStep2?: boolean
+  hasSavedRcms?: boolean
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false }: HeaderProps) => {
+const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const lang = params?.lang || 'es'
@@ -144,6 +145,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               color='primary'
               startIcon={<CheckIcon />}
               sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+              disabled={!hasSavedRcms}
             >
               Finalizar Codificación
             </Button>

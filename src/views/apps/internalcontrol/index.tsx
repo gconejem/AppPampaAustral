@@ -104,6 +104,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           activeStep={activeStep}
           onStepClick={handleStepClick}
           canAdvanceToStep2={!!(selectedArea && selectedTipoServicio)}
+          hasSavedRcms={savedRcms.length > 0}
         />
       </Grid>
 
