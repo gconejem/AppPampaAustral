@@ -3,6 +3,10 @@ import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Ty
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckIcon from '@mui/icons-material/Check'
 
+// Next Imports
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+
 // Utils
 import { formatDateForDisplay } from '@/utils/dateUtils'
 
@@ -16,6 +20,10 @@ interface HeaderProps {
 }
 
 const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false }: HeaderProps) => {
+  // Hooks
+  const params = useParams()
+  const lang = params?.lang || 'es'
+
   // Si está cargando o no hay datos, mostrar esqueletos
   if (loading) {
     return (
@@ -111,14 +119,35 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               Codificación de Muestras - RCM
             </Typography>
           </Box>
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<CheckIcon />}
-            sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
-          >
-            Finalizar Codificación
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              component={Link}
+              href={`/${lang}/apps/otmanagement`}
+              variant='outlined'
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                borderRadius: '8px',
+                textTransform: 'none',
+                px: 3,
+                color: 'text.secondary',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'text.primary',
+                  color: 'text.primary'
+                }
+              }}
+            >
+              Volver a OTs
+            </Button>
+            <Button
+              variant='contained'
+              color='primary'
+              startIcon={<CheckIcon />}
+              sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+            >
+              Finalizar Codificación
+            </Button>
+          </Box>
         </Box>
 
         {/* Stepper alineado a la izquierda */}
