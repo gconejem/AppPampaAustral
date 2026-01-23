@@ -127,9 +127,9 @@ const UserListTable3 = ({
           </Typography>
         </Box>
 
-        {/* Formulario con los selectores */}
-        <Grid container spacing={3} alignItems='flex-start'>
-          <Grid item xs={12} sm={6}>
+        {/* Formulario con los selectores y botón */}
+        <Grid container spacing={3} alignItems='center'>
+          <Grid item xs={12} sm={5}>
             <FormControl fullWidth required>
               <InputLabel shrink>Área</InputLabel>
               <Select
@@ -152,7 +152,7 @@ const UserListTable3 = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={5}>
             <FormControl fullWidth required>
               <InputLabel shrink>Tipo de Servicio</InputLabel>
               <Select
@@ -174,23 +174,23 @@ const UserListTable3 = ({
               </Select>
             </FormControl>
           </Grid>
-        </Grid>
 
-        {/* Botón Nuevo RCM */}
-        <Box sx={{ mt: 4 }}>
-          <Button
-            variant='contained'
-            startIcon={<i className='ri-add-line' />}
-            disabled={!selectedArea || !selectedTipoServicio}
-            onClick={() => {
-              if (onGoToStep2) {
-                onGoToStep2()
-              }
-            }}
-          >
-            Nuevo RCM
-          </Button>
-        </Box>
+          <Grid item xs={12} sm={2}>
+            <Button
+              fullWidth
+              variant='contained'
+              startIcon={<i className='ri-add-line' />}
+              disabled={!selectedArea || !selectedTipoServicio}
+              onClick={() => {
+                if (onGoToStep2) {
+                  onGoToStep2()
+                }
+              }}
+            >
+              Nuevo RCM
+            </Button>
+          </Grid>
+        </Grid>
       </Box>
     </Card>
   )
