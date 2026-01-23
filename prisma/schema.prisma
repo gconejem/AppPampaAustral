@@ -990,3 +990,13 @@ model RCMTecnicaServicio {
   @@index([rcmTecnicaId])
   @@index([idProducto])
 }
+
+model SubMuestra {
+  id               Int       @id @default(autoincrement())
+  IdSubmuestra     String?
+  fechaConfeccion  DateTime?
+  cantidad         Int?
+  dias             Int?
+  fechaVencimiento DateTime?
+  estadoOperativo  String?
+}
