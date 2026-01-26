@@ -244,6 +244,15 @@ export async function GET(request: Request) {
 
       const ciudad = { NOMBRE: (agenda.obra as any)?.comuna ?? '' }
 
+      // Obtener contacto principal (solicitante)
+      const contactoPrincipal = agenda.contactos?.find(c => c.isPrincipal)
+      const solicitanteNombre = contactoPrincipal?.nombre ?? ''
+      const solicitanteTelefono = contactoPrincipal?.telefono1 ?? ''
+
+      // Construir ENSAYO y OBSERV desde servicios
+      const ensayo = agenda.servicios?.map(s => s.servicio).join(', ') || ''
+      const observ = agenda.servicios?.map(s => s.observacion).filter(Boolean).join(', ') || ''
+
       return {
         // Claves usadas por la app móvil
         CLAVE: agenda.id, // id de la agenda como clave
@@ -253,6 +262,14 @@ export async function GET(request: Request) {
         ESTADO: (agenda as any)?.estado ?? 'P',
         cliente,
         ciudad,
+
+        // Campos esperados por la app móvil para solicitante
+        SOL_NOM: solicitanteNombre,
+        SOL_FON: solicitanteTelefono,
+
+        // Campos esperados para observaciones de servicio
+        ENSAYO: ensayo,
+        OBSERV: observ,
 
         // Datos adicionales (no imprescindibles para el flujo actual)
         servicios: agenda.servicios?.map(s => ({ servicio: s.servicio })) || [],
@@ -269,6 +286,22 @@ export async function GET(request: Request) {
     })
 
     console.log(`Total agendas returned: ${agendasLimitadas.length}`, JSON.stringify(agendasLimitadas.map(a => ({ CLAVE: a.CLAVE, OBRA: a.OBRA, HORA: a.HORA, asignados: a.asignados.map(x => x.userId) })), null, 2))
+
+    console.log('=== GET VISITAS BACKEND - ENVIANDO ===');
+    console.log('Total agendas:', agendasLimitadas.length);
+    if (agendasLimitadas.length > 0) {
+      console.log('Primera agenda:', JSON.stringify({
+        CLAVE: agendasLimitadas[0].CLAVE,
+        OBRA: agendasLimitadas[0].OBRA,
+        DIRECC: agendasLimitadas[0].DIRECC,
+        cliente: agendasLimitadas[0].cliente,
+        SOL_NOM: agendasLimitadas[0].SOL_NOM,
+        SOL_FON: agendasLimitadas[0].SOL_FON,
+        ENSAYO: agendasLimitadas[0].ENSAYO,
+        OBSERV: agendasLimitadas[0].OBSERV,
+        servicios: agendasLimitadas[0].servicios?.length || 0
+      }, null, 2));
+    }
 
     return NextResponse.json({ data: agendasLimitadas }, { headers: corsHeaders() })
   } catch (error) {

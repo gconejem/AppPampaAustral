@@ -21,9 +21,56 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const fk_lbrutas = searchParams.get('fk_lbrutas[]')
 
-    // Por ahora devolvemos un array vacío
-    // Este endpoint debería consultar OTs asociadas a visitas
-    const resultados: any[] = []
+    console.log('=== GET LBRUTAOT CHECK INTEGRACION ===')
+    console.log('fk_lbrutas:', fk_lbrutas)
+
+    if (!fk_lbrutas) {
+      return NextResponse.json({ data: [] }, { headers: corsHeaders() })
+    }
+
+    const agendaId = parseInt(fk_lbrutas)
+
+    // Buscar órdenes de trabajo asociadas a la agenda
+    const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
+      where: {
+        agendaId: agendaId
+      },
+      include: {
+        tipoOT: true,
+        estadoOT: true,
+        user: true
+      }
+    })
+
+    console.log(`Found ${ordenesTrabajo.length} OTs for agenda ${agendaId}`)
+
+    // Si no hay datos, devolver mockup
+    if (ordenesTrabajo.length === 0) {
+      console.log('No data found, returning mockup')
+      const mockupData = [
+        {
+          CLAVE: '1',
+          NUMERO_OT: 'OT-2024-001',
+          ESTADO: 'En Proceso',
+          TIPO_OT: 'Densidad',
+          FECHA_CREACION: new Date(),
+          LABORATORISTA: 'App Pruebas',
+          FK_LBRUTAS: agendaId
+        }
+      ]
+      return NextResponse.json({ data: mockupData }, { headers: corsHeaders() })
+    }
+
+    // Transformar datos reales
+    const resultados = ordenesTrabajo.map(ot => ({
+      CLAVE: ot.id,
+      NUMERO_OT: ot.numeroOT,
+      ESTADO: ot.estadoOT?.nombre || 'Pendiente',
+      TIPO_OT: ot.tipoOT?.nombre || '',
+      FECHA_CREACION: ot.createdAt,
+      LABORATORISTA: ot.user?.name || '',
+      FK_LBRUTAS: ot.agendaId
+    }))
 
     return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
   } catch (error) {

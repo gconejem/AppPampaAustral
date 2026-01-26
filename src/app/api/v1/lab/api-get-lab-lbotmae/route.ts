@@ -21,9 +21,55 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const codigo = searchParams.get('codigo[]')
 
-    // Por ahora devolvemos un array vacío
-    // Este endpoint debería consultar datos de órdenes de trabajo
-    const resultados: any[] = []
+    console.log('=== GET LAB LBOTMAE ===')
+    console.log('codigo:', codigo)
+
+    // Si no hay código o está vacío, devolver array vacío
+    if (!codigo || codigo.trim() === '') {
+      console.log('No codigo parameter or empty, returning empty array')
+      return NextResponse.json({ data: [] }, { headers: corsHeaders() })
+    }
+
+    // Buscar órdenes de trabajo por código
+    const codigos = codigo.split(',').map(c => c.trim()).filter(c => c.length > 0)
+    
+    const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
+      where: {
+        numeroOT: {
+          in: codigos
+        }
+      },
+      include: {
+        tipoOT: true,
+        estadoOT: true
+      }
+    })
+
+    console.log(`Found ${ordenesTrabajo.length} ordenes for codigos: ${codigos.join(', ')}`)
+
+    // Si no hay datos, devolver mockup
+    if (ordenesTrabajo.length === 0) {
+      console.log('No data found, returning mockup')
+      const mockupData = codigos.map((cod, idx) => ({
+        CODIGO: cod,
+        NUMERO_OT: cod,
+        ESTADO: 'Pendiente',
+        TIPO: 'Laboratorio',
+        FECHA_CREACION: new Date(),
+        OBSERVACION: 'Orden de trabajo mockup'
+      }))
+      return NextResponse.json({ data: mockupData }, { headers: corsHeaders() })
+    }
+
+    // Transformar datos reales
+    const resultados = ordenesTrabajo.map(ot => ({
+      CODIGO: ot.numeroOT,
+      NUMERO_OT: ot.numeroOT,
+      ESTADO: ot.estadoOT?.nombre || 'Pendiente',
+      TIPO: ot.tipoOT?.nombre || '',
+      FECHA_CREACION: ot.createdAt,
+      OBSERVACION: ''
+    }))
 
     return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
   } catch (error) {

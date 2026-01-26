@@ -119,6 +119,10 @@ export async function PUT(req: Request) {
         FUNCIONES: '',
         NOMBRECOM: user.name ?? ''
       }
+
+      console.log('=== LOGIN BACKEND - ENVIANDO ===');
+      console.log('Usuario:', user.name, '| user.id:', user.id, '| user.rut:', user.rut);
+      console.log('funcionario.CODIGO:', response.funcionario.CODIGO);
     }
 
     return NextResponse.json(response, { status: 200, headers: corsHeaders() })

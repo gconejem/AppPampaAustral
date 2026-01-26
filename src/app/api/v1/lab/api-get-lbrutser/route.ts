@@ -108,6 +108,13 @@ export async function GET(request: Request) {
     })
 
     // devolver array: cada objeto sólo contiene los campos que hicieron match
+    console.log('=== GET SERVICIOS BACKEND - ENVIANDO ===')
+    console.log('Total servicios:', mapped.length)
+    if (mapped.length > 0) {
+      console.log('Primer servicio:', mapped[0])
+      console.log('Servicios con FORMULARIO:', mapped.filter((s: any) => s.FORMULARIO).length)
+    }
+    
     return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
   } catch (error: any) {
     console.error('Error en api-get-lbrutser:', error)
