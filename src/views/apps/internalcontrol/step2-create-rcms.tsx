@@ -686,7 +686,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </FormControl>
                                         </Grid>
                                     )}
-                                    {rcmType === 'Muestra' && (
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
                                                 label='Calicata'
@@ -697,7 +697,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             />
                                         </Grid>
                                     )}
-                                    {rcmType === 'Muestra' && (
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
                                                 label='Estrato'
@@ -708,7 +708,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             />
                                         </Grid>
                                     )}
-                                    {rcmType === 'Muestra' && (
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
                                         <>
                                             <Grid item xs={12} md={3}>
                                                 <TextField
