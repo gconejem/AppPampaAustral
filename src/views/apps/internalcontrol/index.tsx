@@ -140,6 +140,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             savedRcms={savedRcms}
             setSavedRcms={setSavedRcms}
             otData={otData}
+            selectedAreaNombre={selectedAreaNombre}
           />
         </Grid>
       )}

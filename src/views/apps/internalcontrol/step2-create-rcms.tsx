@@ -71,9 +71,10 @@ interface Step2CreateRcmsProps {
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
+    selectedAreaNombre?: string
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -105,6 +106,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+    const [area, setArea] = useState('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
@@ -145,6 +147,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const handleNewRcm = () => {
         setShowRcmCard(true)
         setRcmType('')
+        setArea('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
@@ -177,6 +180,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSavedRcms([...savedRcms, newRcm])
         setShowRcmCard(false)
         setRcmType('')
+        setArea('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
@@ -567,8 +571,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel>Área</InputLabel>
-                                            <Select label='Área'>
+                                            <InputLabel id="area-label">Área</InputLabel>
+                                            <Select
+                                                labelId="area-label"
+                                                label='Área'
+                                                value={area}
+                                                onChange={(e) => {
+                                                    const valor = e.target.value as string
+                                                    console.log('Área seleccionada:', valor)
+                                                    setArea(valor)
+                                                }}
+                                            >
                                                 <MenuItem value='suelos'>Suelos</MenuItem>
                                                 <MenuItem value='hormigon'>Hormigón</MenuItem>
                                                 <MenuItem value='asfalto'>Asfalto</MenuItem>
@@ -646,7 +659,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    {rcmType === 'Muestra' && (
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'hormigón' && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
                                                 label='Elemento'
@@ -656,7 +669,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             />
                                         </Grid>
                                     )}
-                                    {rcmType === 'Muestra' && (
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'hormigón' && (
                                         <Grid item xs={12} md={3}>
                                             <FormControl fullWidth>
                                                 <InputLabel>Grado</InputLabel>
