@@ -734,6 +734,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 value={procedencia}
                                                 onChange={(e) => setProcedencia(e.target.value)}
                                                 fullWidth
+                                                multiline
+                                                rows={3}
                                             />
                                         </Grid>
                                     )}
@@ -743,6 +745,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             value={ubicacionSector}
                                             onChange={(e) => setUbicacionSector(e.target.value)}
                                             fullWidth
+                                            multiline
+                                            rows={3}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
