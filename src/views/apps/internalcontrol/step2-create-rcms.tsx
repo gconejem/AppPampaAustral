@@ -106,8 +106,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
+    const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [elemento, setElemento] = useState('')
+    const [grado, setGrado] = useState('')
+    const [calicata, setCalicata] = useState('')
+    const [estrato, setEstrato] = useState('')
+    const [cota1, setCota1] = useState('')
+    const [cota2, setCota2] = useState('')
+    const [procedencia, setProcedencia] = useState('')
+    const [ubicacionSector, setUbicacionSector] = useState('')
+    const [cantidadMuestras, setCantidadMuestras] = useState('1')
     const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
@@ -136,8 +146,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowRcmCard(true)
         setRcmType('')
         setNumeroTarjeta('')
+        setTomaMuestra('')
         setTipoMaterial('')
         setItem('')
+        setElemento('')
+        setGrado('')
+        setCalicata('')
+        setEstrato('')
+        setCota1('')
+        setCota2('')
+        setProcedencia('')
+        setUbicacionSector('')
+        setCantidadMuestras('1')
         setEnsayosAsociados([])
         setFechaServicio(getFechaServicioForInput())
         setFechaIngreso(getTodayDateForInput())
@@ -158,8 +178,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowRcmCard(false)
         setRcmType('')
         setNumeroTarjeta('')
+        setTomaMuestra('')
         setTipoMaterial('')
         setItem('')
+        setElemento('')
+        setGrado('')
+        setCalicata('')
+        setEstrato('')
+        setCota1('')
+        setCota2('')
+        setProcedencia('')
+        setUbicacionSector('')
+        setCantidadMuestras('1')
         setEnsayosAsociados([])
     }
 
@@ -477,6 +507,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={3}>
                                         <TextField
+                                            label='RCM'
+                                            type='number'
+                                            disabled
+                                            fullWidth
+                                            placeholder='Automático'
+                                            InputProps={{
+                                                readOnly: true
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
                                             label='Fecha Codificación'
                                             type='date'
                                             value={fechaCodificacion}
@@ -500,17 +542,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Fecha de Ingreso'
-                                            type='date'
-                                            value={fechaIngreso}
-                                            onChange={(e) => setFechaIngreso(e.target.value)}
-                                            required
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Fecha de Ingreso'
+                                                type='date'
+                                                value={fechaIngreso}
+                                                onChange={(e) => setFechaIngreso(e.target.value)}
+                                                required
+                                                fullWidth
+                                                InputLabelProps={{ shrink: true }}
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <TextField
                                             label='Fecha de Entrega'
@@ -550,29 +594,43 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Nº Tarjeta'
-                                            value={numeroTarjeta}
-                                            onChange={(e) => setNumeroTarjeta(e.target.value)}
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo Material</InputLabel>
-                                            <Select
-                                                label='Tipo Material'
-                                                value={tipoMaterial}
-                                                onChange={(e) => setTipoMaterial(e.target.value)}
-                                            >
-                                                <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
-                                                <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
-                                                <MenuItem value='Hormigón'>Hormigón</MenuItem>
-                                                <MenuItem value='Asfalto'>Asfalto</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Nº Tarjeta'
+                                                value={numeroTarjeta}
+                                                onChange={(e) => setNumeroTarjeta(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='# Toma de Muestra'
+                                                value={tomaMuestra}
+                                                onChange={(e) => setTomaMuestra(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Tipo Material</InputLabel>
+                                                <Select
+                                                    label='Tipo Material'
+                                                    value={tipoMaterial}
+                                                    onChange={(e) => setTipoMaterial(e.target.value)}
+                                                >
+                                                    <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
+                                                    <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
+                                                    <MenuItem value='Hormigón'>Hormigón</MenuItem>
+                                                    <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
@@ -588,55 +646,102 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Elemento'
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Grado</InputLabel>
-                                            <Select label='Grado'>
-                                                <MenuItem value='1'>Grado 1</MenuItem>
-                                                <MenuItem value='2'>Grado 2</MenuItem>
-                                                <MenuItem value='3'>Grado 3</MenuItem>
-                                                <MenuItem value='4'>Grado 4</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cota 1'
-                                            type='number'
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cota 2'
-                                            type='number'
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Elemento'
+                                                value={elemento}
+                                                onChange={(e) => setElemento(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Grado</InputLabel>
+                                                <Select
+                                                    label='Grado'
+                                                    value={grado}
+                                                    onChange={(e) => setGrado(e.target.value)}
+                                                >
+                                                    <MenuItem value='1'>Grado 1</MenuItem>
+                                                    <MenuItem value='2'>Grado 2</MenuItem>
+                                                    <MenuItem value='3'>Grado 3</MenuItem>
+                                                    <MenuItem value='4'>Grado 4</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Calicata'
+                                                type='number'
+                                                value={calicata}
+                                                onChange={(e) => setCalicata(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Estrato'
+                                                type='number'
+                                                value={estrato}
+                                                onChange={(e) => setEstrato(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <>
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Cota 1'
+                                                    type='number'
+                                                    value={cota1}
+                                                    onChange={(e) => setCota1(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Cota 2'
+                                                    type='number'
+                                                    value={cota2}
+                                                    onChange={(e) => setCota2(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        </>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <TextField
                                             label='Cantidad de Muestras'
                                             type='number'
-                                            defaultValue='1'
+                                            value={cantidadMuestras}
+                                            onChange={(e) => setCantidadMuestras(e.target.value)}
                                             required
                                             fullWidth
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            label='Procedencia'
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={4}>
+                                            <TextField
+                                                label='Procedencia'
+                                                value={procedencia}
+                                                onChange={(e) => setProcedencia(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={4}>
                                         <TextField
                                             label='Ubicación/Sector'
+                                            value={ubicacionSector}
+                                            onChange={(e) => setUbicacionSector(e.target.value)}
                                             fullWidth
                                         />
                                     </Grid>
