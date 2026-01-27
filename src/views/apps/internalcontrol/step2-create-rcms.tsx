@@ -21,7 +21,8 @@ import {
     Select,
     MenuItem,
     FormControlLabel,
-    Switch
+    Switch,
+    Menu
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -51,9 +52,12 @@ interface ProductoType {
 interface EnsayoAsociado {
     id: number
     productoId: number
+    sku: string
     nombre: string
     norma?: string
     cantidad: number
+    observacion: string
+    estadoOperativo: string
 }
 
 interface RCMData {
@@ -125,6 +129,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null)
+    const [selectedEnsayoId, setSelectedEnsayoId] = useState<number | null>(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [productsPage, setProductsPage] = useState(0)
     const [allProductos, setAllProductos] = useState<ProductoType[]>([]) // Todos los productos
@@ -277,9 +283,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             const nuevoEnsayo: EnsayoAsociado = {
                 id: Date.now(), // ID temporal
                 productoId: idProducto,
+                sku: producto.sku,
                 nombre: producto.nombre,
                 norma: producto.norma,
-                cantidad: 1
+                cantidad: 1,
+                observacion: '',
+                estadoOperativo: 'Codificado'
             }
 
             const nuevaLista = [...prev, nuevoEnsayo]
@@ -298,6 +307,35 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setEnsayosAsociados(ensayosAsociados.map(e =>
             e.id === ensayoId ? { ...e, cantidad } : e
         ))
+    }
+
+    const handleChangeObservacion = (ensayoId: number, observacion: string) => {
+        setEnsayosAsociados(ensayosAsociados.map(e =>
+            e.id === ensayoId ? { ...e, observacion } : e
+        ))
+    }
+
+    const handleChangeEstadoOperativo = (ensayoId: number, estadoOperativo: string) => {
+        setEnsayosAsociados(ensayosAsociados.map(e =>
+            e.id === ensayoId ? { ...e, estadoOperativo } : e
+        ))
+    }
+
+    const handleOpenStatusMenu = (event: React.MouseEvent<HTMLElement>, ensayoId: number) => {
+        setStatusMenuAnchor(event.currentTarget)
+        setSelectedEnsayoId(ensayoId)
+    }
+
+    const handleCloseStatusMenu = () => {
+        setStatusMenuAnchor(null)
+        setSelectedEnsayoId(null)
+    }
+
+    const handleSelectStatus = (status: string) => {
+        if (selectedEnsayoId !== null) {
+            handleChangeEstadoOperativo(selectedEnsayoId, status)
+        }
+        handleCloseStatusMenu()
     }
 
     // Cargar áreas
@@ -809,57 +847,121 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
 
 
-                                    {/* Lista de ensayos */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        {ensayosAsociados.length === 0 ? (
-                                            <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
-                                                <Typography variant='body2' color='text.secondary'>
-                                                    No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
-                                                </Typography>
-                                            </Box>
-                                        ) : (
-                                            ensayosAsociados.map(ensayo => (
-                                                <Box
-                                                    key={ensayo.id}
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        p: 2,
-                                                        bgcolor: '#F5F5F5',
-                                                        borderRadius: '8px'
-                                                    }}
-                                                >
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <IconButton size='small'>
-                                                            <EditIcon fontSize='small' />
-                                                        </IconButton>
-                                                        <Typography variant='body2'>
-                                                            {ensayo.nombre}
-                                                            {ensayo.norma && ` (${ensayo.norma})`}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <TextField
-                                                            size='small'
-                                                            value={ensayo.cantidad}
-                                                            onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                            type='number'
-                                                            sx={{ width: '80px' }}
-                                                            inputProps={{ min: 1 }}
-                                                        />
-                                                        <IconButton
-                                                            size='small'
-                                                            color='error'
-                                                            onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                        >
-                                                            <DeleteIcon fontSize='small' />
-                                                        </IconButton>
-                                                    </Box>
-                                                </Box>
-                                            ))
-                                        )}
-                                    </Box>
+                                    {/* Tabla de ensayos */}
+                                    {ensayosAsociados.length === 0 ? (
+                                        <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                            <Typography variant='body2' color='text.secondary'>
+                                                No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        <Box sx={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Observación</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ensayosAsociados.map(ensayo => (
+                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                    {ensayo.sku}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2'>
+                                                                    {ensayo.nombre}
+                                                                </Typography>
+                                                                {ensayo.norma && (
+                                                                    <Typography variant='caption' color='text.secondary'>
+                                                                        {ensayo.norma}
+                                                                    </Typography>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <TextField
+                                                                    size='small'
+                                                                    value={ensayo.cantidad}
+                                                                    onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                                    type='number'
+                                                                    sx={{ width: '80px' }}
+                                                                    inputProps={{ min: 1 }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <TextField
+                                                                    size='small'
+                                                                    fullWidth
+                                                                    value={ensayo.observacion}
+                                                                    onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
+                                                                    placeholder='Observación...'
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Chip
+                                                                    label={ensayo.estadoOperativo}
+                                                                    size='small'
+                                                                    onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
+                                                                    color={
+                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                    'success'
+                                                                    }
+                                                                    sx={{ cursor: 'pointer' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <IconButton
+                                                                    size='small'
+                                                                    color='error'
+                                                                    onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                                >
+                                                                    <DeleteIcon fontSize='small' />
+                                                                </IconButton>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </Box>
+                                    )}
+
+                                    {/* Menu para seleccionar estado operativo */}
+                                    <Menu
+                                        anchorEl={statusMenuAnchor}
+                                        open={Boolean(statusMenuAnchor)}
+                                        onClose={handleCloseStatusMenu}
+                                    >
+                                        <MenuItem onClick={() => handleSelectStatus('Codificado')}>
+                                            <Chip
+                                                label='Codificado'
+                                                size='small'
+                                                color='default'
+                                            />
+                                        </MenuItem>
+                                        <MenuItem onClick={() => handleSelectStatus('En Proceso')}>
+                                            <Chip
+                                                label='En Proceso'
+                                                size='small'
+                                                color='info'
+                                            />
+                                        </MenuItem>
+                                        <MenuItem onClick={() => handleSelectStatus('Ensayado')}>
+                                            <Chip
+                                                label='Ensayado'
+                                                size='small'
+                                                color='warning'
+                                            />
+                                        </MenuItem>
+                                    </Menu>
                                 </Box>
 
                                 {/* Observaciones */}
@@ -956,28 +1058,62 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
                                             Ensayos Asociados ({rcm.ensayos.length})
                                         </Typography>
-                                        {rcm.ensayos.map(ensayo => (
-                                            <Box
-                                                key={ensayo.id}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    p: 2,
-                                                    mb: 1,
-                                                    bgcolor: '#F5F5F5',
-                                                    borderRadius: '8px'
-                                                }}
-                                            >
-                                                <Typography variant='body2'>
-                                                    {ensayo.nombre}
-                                                    {ensayo.norma && ` (${ensayo.norma})`}
-                                                </Typography>
-                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                    Cantidad: {ensayo.cantidad}
-                                                </Typography>
-                                            </Box>
-                                        ))}
+                                        <Box sx={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rcm.ensayos.map(ensayo => (
+                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                    {ensayo.sku}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2'>
+                                                                    {ensayo.nombre}
+                                                                </Typography>
+                                                                {ensayo.norma && (
+                                                                    <Typography variant='caption' color='text.secondary'>
+                                                                        {ensayo.norma}
+                                                                    </Typography>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                                    {ensayo.cantidad}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' color='text.secondary'>
+                                                                    {ensayo.observacion || '-'}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Chip
+                                                                    label={ensayo.estadoOperativo}
+                                                                    size='small'
+                                                                    color={
+                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                    'success'
+                                                                    }
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </Box>
                                     </Box>
                                 </Collapse>
                             </Box>
