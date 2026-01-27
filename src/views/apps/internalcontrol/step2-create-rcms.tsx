@@ -659,7 +659,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'hormigón' && (
+                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
                                                 label='Elemento'
@@ -669,7 +669,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             />
                                         </Grid>
                                     )}
-                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'hormigón' && (
+                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
                                         <Grid item xs={12} md={3}>
                                             <FormControl fullWidth>
                                                 <InputLabel>Grado</InputLabel>
