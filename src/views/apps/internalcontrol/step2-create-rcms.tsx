@@ -216,12 +216,25 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget)
+
+        // Pre-seleccionar el área del RCM si está definida
+        if (area && areas.length > 0) {
+            // Buscar el área que coincida con el valor del RCM
+            const areaEncontrada = areas.find(a =>
+                a.nombre.toLowerCase() === area.toLowerCase() ||
+                a.nombre.toLowerCase().includes(area.toLowerCase())
+            )
+            if (areaEncontrada) {
+                setSelectedAreaId(areaEncontrada.id)
+            }
+        }
     }
 
     const handleCloseSearchPopover = () => {
         setAnchorEl(null)
         setSearchTerm('')
         setProductsPage(0)
+        // Mantener el área seleccionada del RCM
     }
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -346,6 +359,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 if (response.ok) {
                     const data = await response.json()
                     setAreas(data)
+
+                    // Si el popover está abierto y hay un área seleccionada en el RCM, pre-seleccionarla
+                    if (anchorEl && area && data.length > 0) {
+                        const areaEncontrada = data.find((a: { nombre: string }) =>
+                            a.nombre.toLowerCase() === area.toLowerCase() ||
+                            a.nombre.toLowerCase().includes(area.toLowerCase())
+                        )
+                        if (areaEncontrada) {
+                            setSelectedAreaId(areaEncontrada.id)
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error al cargar áreas:', error)
@@ -387,9 +411,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 })
 
                 if (searchTerm) params.append('q', searchTerm)
-                if (selectedAreaId) params.append('areaId', selectedAreaId.toString())
-                if (selectedTipo) params.append('tipo', selectedTipo)
-                if (selectedFamilia) params.append('familia', selectedFamilia)
+                // Filtrar por el área seleccionada en el paso 1
+                if (selectedAreaNombre) params.append('area', selectedAreaNombre)
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
                 console.log('Cargando productos con params:', params.toString())
@@ -416,7 +439,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, searchTerm, selectedAreaId, selectedTipo, selectedFamilia, showOnlyPaquetes])
+    }, [anchorEl, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -1160,45 +1183,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 )
                             }}
                         />
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                            <FormControl size='small' fullWidth>
-                                <InputLabel shrink>Área</InputLabel>
-                                <Select
-                                    key={`area-${filterResetKey}`}
-                                    value={selectedAreaId?.toString() || ''}
-                                    label='Área'
-                                    onChange={handleAreaChange}
-                                    displayEmpty
-                                    renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
-                                >
-                                    <MenuItem value=''>Todas</MenuItem>
-                                    {areas.map(area => (
-                                        <MenuItem key={area.id} value={area.id}>
-                                            {area.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <FormControl size='small' fullWidth>
-                                <InputLabel shrink>Familia</InputLabel>
-                                <Select
-                                    key={`familia-${filterResetKey}`}
-                                    value={selectedFamilia}
-                                    label='Familia'
-                                    onChange={handleFamiliaChange}
-                                    displayEmpty
-                                    renderValue={selected => selected === '' ? 'Todas' : selected}
-                                    disabled={!selectedAreaId}
-                                >
-                                    <MenuItem value=''>Todas</MenuItem>
-                                    {familias.map(familia => (
-                                        <MenuItem key={familia.id} value={familia.nombre}>
-                                            {familia.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
+                        {selectedAreaNombre && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    label={`Área: ${selectedAreaNombre}`}
+                                    size='small'
+                                    color='primary'
+                                    variant='outlined'
+                                />
+                            </Box>
+                        )}
                         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                             <FormControlLabel
                                 control={
@@ -1206,16 +1200,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 }
                                 label='Solo Paquetes'
                             />
-                            <Button
-                                size='small'
-                                onClick={() => {
-                                    handleClearFilters()
-                                    setShowOnlyPaquetes(false)
-                                }}
-                                startIcon={<i className='ri-filter-off-line' />}
-                            >
-                                Limpiar filtros
-                            </Button>
                         </Box>
                     </Box>
                     <List sx={{ pt: 0 }}>
