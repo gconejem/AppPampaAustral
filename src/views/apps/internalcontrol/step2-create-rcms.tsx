@@ -23,6 +23,7 @@ import {
     FormControlLabel,
     Switch
 } from '@mui/material'
+import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -69,9 +70,38 @@ interface Step2CreateRcmsProps {
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
+    otData?: any
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData }: Step2CreateRcmsProps) => {
+    // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
+    const getTodayDateForInput = () => {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(today.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    // Función para obtener fecha de servicio desde la OT en formato YYYY-MM-DD
+    const getFechaServicioForInput = () => {
+        if (otData?.fechaServicio) {
+            // Si la fecha viene en formato ISO, extraer solo la parte de fecha
+            const dateMatch = otData.fechaServicio.match(/^(\d{4})-(\d{2})-(\d{2})/)
+            if (dateMatch) {
+                return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
+            }
+            return otData.fechaServicio
+        }
+        return getTodayDateForInput()
+    }
+
+    // Estados para las fechas
+    const [fechaCodificacion] = useState(getTodayDateForInput())
+    const [fechaServicio, setFechaServicio] = useState(getFechaServicioForInput())
+    const [fechaIngreso, setFechaIngreso] = useState(getTodayDateForInput())
+    const [fechaEntrega, setFechaEntrega] = useState('')
+
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
@@ -109,6 +139,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setTipoMaterial('')
         setItem('')
         setEnsayosAsociados([])
+        setFechaServicio(getFechaServicioForInput())
+        setFechaIngreso(getTodayDateForInput())
+        setFechaEntrega('')
         setExpandedRcm(true)
     }
 
@@ -446,16 +479,22 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             label='Fecha Codificación'
                                             type='date'
-                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            value={fechaCodificacion}
                                             required
                                             fullWidth
+                                            disabled
                                             InputLabelProps={{ shrink: true }}
+                                            InputProps={{
+                                                readOnly: true
+                                            }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <TextField
-                                            label='Fecha de Muestreo'
+                                            label='Fecha de Servicio'
                                             type='date'
+                                            value={fechaServicio}
+                                            onChange={(e) => setFechaServicio(e.target.value)}
                                             required
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
@@ -465,7 +504,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             label='Fecha de Ingreso'
                                             type='date'
-                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            value={fechaIngreso}
+                                            onChange={(e) => setFechaIngreso(e.target.value)}
                                             required
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
@@ -475,6 +515,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             label='Fecha de Entrega'
                                             type='date'
+                                            value={fechaEntrega}
+                                            onChange={(e) => setFechaEntrega(e.target.value)}
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
                                         />

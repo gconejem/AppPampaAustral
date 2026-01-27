@@ -139,6 +139,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             setEnsayosAsociados={setEnsayosAsociados}
             savedRcms={savedRcms}
             setSavedRcms={setSavedRcms}
+            otData={otData}
           />
         </Grid>
       )}
