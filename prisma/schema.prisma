@@ -948,30 +948,30 @@ model DetalleCalibracion {
 }
 
 model RCMTecnica {
-  id                Int                  @id @default(autoincrement())
-  fechaCodificacion DateTime?
-  fechaMuestreo     DateTime?
-  fechaIngreso      DateTime?
-  fechaEntrega      DateTime?
-  areaId            Int?
-  tipoServicio      Int?
-  tipoMuestra       String?
-  numeroTarjeta     Int?
-  tipoMaterial      Int?
-  item              Int?
-  elemento          String?
-  grado             Int?
-  cota1             Int?
-  cota2             Int?
-  procedencia       String?
-  ubicacion         String?
-  cantidadMuestras  Int?
-  vencimiento       Boolean?
-  observaciones     String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  area              Area?                @relation(fields: [areaId], references: [id])
-  servicios         RCMTecnicaServicio[]
+  id               Int                  @id @default(autoincrement())
+  fechaServicio    DateTime?
+  fechaMuestreo    DateTime?
+  fechaIngreso     DateTime?
+  fechaEntrega     DateTime?
+  areaId           Int?
+  tipoServicio     Int?
+  tipoMuestra      String?
+  numeroTarjeta    Int?
+  tipoMaterial     Int?
+  item             Int?
+  elemento         String?
+  grado            Int?
+  cota1            Int?
+  cota2            Int?
+  procedencia      String?
+  ubicacion        String?
+  cantidadMuestras Int?
+  vencimiento      Boolean?
+  observaciones    String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  area             Area?                @relation(fields: [areaId], references: [id])
+  servicios        RCMTecnicaServicio[]
 
   @@index([areaId])
 }
