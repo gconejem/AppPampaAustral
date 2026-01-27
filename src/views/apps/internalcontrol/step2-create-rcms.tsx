@@ -78,6 +78,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
     // Estados para el popover de búsqueda de productos
@@ -611,6 +612,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <FormControlLabel
                                             control={<Checkbox />}
                                             label='Vencimiento'
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={informeEnsayo}
+                                                    onChange={(e) => setInformeEnsayo(e.target.checked)}
+                                                />
+                                            }
+                                            label='Informe Ensayo'
                                         />
                                     </Grid>
                                 </Grid>
