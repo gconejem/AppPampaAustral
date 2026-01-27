@@ -43,6 +43,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [activeStep, setActiveStep] = useState(1) // 1 = Área y Servicio, 2 = Crear RCMs, 3 = Agrupar Códigos
   const [selectedArea, setSelectedArea] = useState<number | ''>('')
   const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
+  const [selectedAreaNombre, setSelectedAreaNombre] = useState('')
+  const [selectedTipoServicioNombre, setSelectedTipoServicioNombre] = useState('')
 
   // Estados para persistir datos del Paso 2
   const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
@@ -105,6 +107,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           onStepClick={handleStepClick}
           canAdvanceToStep2={!!(selectedArea && selectedTipoServicio)}
           hasSavedRcms={savedRcms.length > 0}
+          selectedAreaNombre={selectedAreaNombre}
+          selectedTipoServicioNombre={selectedTipoServicioNombre}
         />
       </Grid>
 
@@ -121,6 +125,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             setSelectedArea={setSelectedArea}
             selectedTipoServicio={selectedTipoServicio}
             setSelectedTipoServicio={setSelectedTipoServicio}
+            setSelectedAreaNombre={setSelectedAreaNombre}
+            setSelectedTipoServicioNombre={setSelectedTipoServicioNombre}
           />
         </Grid>
       )}

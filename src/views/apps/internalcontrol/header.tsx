@@ -21,9 +21,11 @@ interface HeaderProps {
   onStepClick?: (step: number) => void
   canAdvanceToStep2?: boolean
   hasSavedRcms?: boolean
+  selectedAreaNombre?: string
+  selectedTipoServicioNombre?: string
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false }: HeaderProps) => {
+const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -390,6 +392,36 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
           </Grid>
         </Box>
       </Card>
+
+      {/* Mostrar Área y Tipo de Servicio seleccionados cuando estamos en paso 2 o superior */}
+      {activeStep >= 2 && selectedAreaNombre && selectedTipoServicioNombre && (
+        <Card sx={{ mt: 3 }}>
+          <Box sx={{ p: 4 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={6}>
+                <Box>
+                  <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                    ÁREA
+                  </Typography>
+                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                    {selectedAreaNombre}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box>
+                  <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                    TIPO DE SERVICIO
+                  </Typography>
+                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                    {selectedTipoServicioNombre}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </Card>
+      )}
 
       {/* Diálogo de confirmación */}
       <Dialog
