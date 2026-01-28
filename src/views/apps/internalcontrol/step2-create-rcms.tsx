@@ -22,7 +22,9 @@ import {
     MenuItem,
     FormControlLabel,
     Switch,
-    Menu
+    Menu,
+    Alert,
+    Snackbar
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -72,6 +74,7 @@ interface RCMData {
     tomaMuestra?: string
     cantidadMuestras: string
     numeroRcm?: string
+    estado: string
 }
 
 interface Step2CreateRcmsProps {
@@ -199,15 +202,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleSaveRcm = () => {
+        // Validación 1: Al menos un ensayo asociado
+        if (ensayosAsociados.length === 0) {
+            setErrorVencimiento('Debe agregar al menos un ensayo antes de guardar el RCM')
+            return
+        }
+
         // Validar submuestras si el vencimiento está activado
         if (tieneVencimiento) {
-            // Validación 1: Al menos una submuestra obligatoria
+            // Validación: Al menos una submuestra obligatoria
             if (submuestrasVencimiento.length === 0) {
                 setErrorVencimiento('Debe agregar al menos una submuestra cuando el vencimiento está activado')
                 return
             }
 
-            // Validación 2: La suma de cantidades debe coincidir con Cantidad de Muestras
+            // Validación: La suma de cantidades debe coincidir con Cantidad de Muestras
             const sumaCantidades = submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)
             const cantidadRequerida = parseInt(cantidadMuestras) || 0
 
@@ -220,6 +229,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
+        // Determinar el estado según el tipo de RCM
+        let estadoRcm = 'Codificado' // Por defecto
+        if (rcmType === 'Muestra') {
+            estadoRcm = 'Codificado'
+        } else if (rcmType === 'Control') {
+            estadoRcm = 'Ensayado'
+        } else if (rcmType === 'Servicio') {
+            estadoRcm = 'Codificado' // O el estado que corresponda para Servicio
+        }
+
         const newRcm: RCMData = {
             id: Date.now(),
             rcmType,
@@ -231,7 +250,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             fechaMuestreo: fechaServicio, // Usar fecha servicio como fecha muestreo
             tomaMuestra,
             cantidadMuestras,
-            numeroRcm: `RCM-${savedRcms.length + 1}`
+            numeroRcm: `RCM-${savedRcms.length + 1}`,
+            estado: estadoRcm
         }
         setSavedRcms([...savedRcms, newRcm])
         setShowRcmCard(false)
@@ -997,8 +1017,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Button>
                                     </Box>
 
-
-
                                     {/* Tabla de ensayos */}
                                     {ensayosAsociados.length === 0 ? (
                                         <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
@@ -1165,21 +1183,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 Agregar Submuestra
                                             </Button>
                                         </Box>
-
-                                        {/* Mensaje de error */}
-                                        {errorVencimiento && (
-                                            <Box sx={{
-                                                p: 2,
-                                                mb: 2,
-                                                bgcolor: '#FFEBEE',
-                                                borderRadius: '8px',
-                                                border: '1px solid #EF5350'
-                                            }}>
-                                                <Typography variant='body2' color='error' sx={{ fontWeight: 500 }}>
-                                                    {errorVencimiento}
-                                                </Typography>
-                                            </Box>
-                                        )}
 
                                         {submuestrasVencimiento.length === 0 ? (
                                             <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
@@ -1355,6 +1358,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             label={rcm.rcmType.toUpperCase()}
                                             color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
                                             sx={{ fontWeight: 'bold' }}
+                                        />
+
+                                        {/* Mostrar estado del RCM */}
+                                        <Chip
+                                            label={rcm.estado}
+                                            size='small'
+                                            color={rcm.estado === 'Codificado' ? 'default' : rcm.estado === 'Ensayado' ? 'warning' : 'info'}
+                                            sx={{ fontWeight: 500 }}
                                         />
 
                                         {/* Mostrar campos según el tipo de RCM */}
@@ -1689,6 +1700,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Button>
                     </Box>
                 </Popover>
+
+                {/* Snackbar flotante para mensajes de error */}
+                <Snackbar
+                    open={Boolean(errorVencimiento)}
+                    autoHideDuration={6000}
+                    onClose={() => setErrorVencimiento('')}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                    <Alert
+                        onClose={() => setErrorVencimiento('')}
+                        severity='error'
+                        variant='filled'
+                        sx={{ width: '100%' }}
+                    >
+                        {errorVencimiento}
+                    </Alert>
+                </Snackbar>
             </Box>
         </Card>
     )
