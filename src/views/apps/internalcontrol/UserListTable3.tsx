@@ -22,7 +22,9 @@ const UserListTable3 = ({
   selectedArea,
   setSelectedArea,
   selectedTipoServicio,
-  setSelectedTipoServicio
+  setSelectedTipoServicio,
+  setSelectedAreaNombre,
+  setSelectedTipoServicioNombre
 }: {
   tableData?: any[]
   otId?: string | null
@@ -33,6 +35,8 @@ const UserListTable3 = ({
   setSelectedArea: (value: number | '') => void
   selectedTipoServicio: number | ''
   setSelectedTipoServicio: (value: number | '') => void
+  setSelectedAreaNombre?: (value: string) => void
+  setSelectedTipoServicioNombre?: (value: string) => void
 }) => {
   // States
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
@@ -136,7 +140,14 @@ const UserListTable3 = ({
                 value={selectedArea}
                 label='Área'
                 disabled={loadingAreas}
-                onChange={(e) => setSelectedArea(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value as number | ''
+                  setSelectedArea(value)
+                  const areaSeleccionada = areas.find(a => a.id === value)
+                  if (setSelectedAreaNombre) {
+                    setSelectedAreaNombre(areaSeleccionada?.nombre || '')
+                  }
+                }}
                 displayEmpty
                 notched
               >
@@ -159,7 +170,14 @@ const UserListTable3 = ({
                 value={selectedTipoServicio}
                 label='Tipo de Servicio'
                 disabled={loadingFamilias || !selectedArea}
-                onChange={(e) => setSelectedTipoServicio(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value as number | ''
+                  setSelectedTipoServicio(value)
+                  const familiaSeleccionada = familias.find(f => f.id === value)
+                  if (setSelectedTipoServicioNombre) {
+                    setSelectedTipoServicioNombre(familiaSeleccionada?.nombre || '')
+                  }
+                }}
                 displayEmpty
                 notched
               >

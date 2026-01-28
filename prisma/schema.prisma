@@ -950,7 +950,7 @@ model DetalleCalibracion {
 model RCMTecnica {
   id                Int                  @id @default(autoincrement())
   fechaCodificacion DateTime?
-  fechaMuestreo     DateTime?
+  fechaServicio     DateTime?
   fechaIngreso      DateTime?
   fechaEntrega      DateTime?
   areaId            Int?
@@ -968,6 +968,7 @@ model RCMTecnica {
   cantidadMuestras  Int?
   vencimiento       Boolean?
   observaciones     String?
+  informeEnsayo     Boolean?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   area              Area?                @relation(fields: [areaId], references: [id])

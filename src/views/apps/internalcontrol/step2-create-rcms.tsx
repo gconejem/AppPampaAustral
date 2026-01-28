@@ -21,8 +21,10 @@ import {
     Select,
     MenuItem,
     FormControlLabel,
-    Switch
+    Switch,
+    Menu
 } from '@mui/material'
+import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -50,9 +52,12 @@ interface ProductoType {
 interface EnsayoAsociado {
     id: number
     productoId: number
+    sku: string
     nombre: string
     norma?: string
     cantidad: number
+    observacion: string
+    estadoOperativo: string
 }
 
 interface RCMData {
@@ -69,19 +74,63 @@ interface Step2CreateRcmsProps {
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
+    otData?: any
+    selectedAreaNombre?: string
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre }: Step2CreateRcmsProps) => {
+    // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
+    const getTodayDateForInput = () => {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(today.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    // Función para obtener fecha de servicio desde la OT en formato YYYY-MM-DD
+    const getFechaServicioForInput = () => {
+        if (otData?.fechaServicio) {
+            // Si la fecha viene en formato ISO, extraer solo la parte de fecha
+            const dateMatch = otData.fechaServicio.match(/^(\d{4})-(\d{2})-(\d{2})/)
+            if (dateMatch) {
+                return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
+            }
+            return otData.fechaServicio
+        }
+        return getTodayDateForInput()
+    }
+
+    // Estados para las fechas
+    const [fechaCodificacion] = useState(getTodayDateForInput())
+    const [fechaServicio, setFechaServicio] = useState(getFechaServicioForInput())
+    const [fechaIngreso, setFechaIngreso] = useState(getTodayDateForInput())
+    const [fechaEntrega, setFechaEntrega] = useState('')
+
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+    const [area, setArea] = useState('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
+    const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [elemento, setElemento] = useState('')
+    const [grado, setGrado] = useState('')
+    const [calicata, setCalicata] = useState('')
+    const [estrato, setEstrato] = useState('')
+    const [cota1, setCota1] = useState('')
+    const [cota2, setCota2] = useState('')
+    const [procedencia, setProcedencia] = useState('')
+    const [ubicacionSector, setUbicacionSector] = useState('')
+    const [cantidadMuestras, setCantidadMuestras] = useState('1')
+    const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null)
+    const [selectedEnsayoId, setSelectedEnsayoId] = useState<number | null>(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [productsPage, setProductsPage] = useState(0)
     const [allProductos, setAllProductos] = useState<ProductoType[]>([]) // Todos los productos
@@ -104,10 +153,24 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const handleNewRcm = () => {
         setShowRcmCard(true)
         setRcmType('')
+        setArea('')
         setNumeroTarjeta('')
+        setTomaMuestra('')
         setTipoMaterial('')
         setItem('')
+        setElemento('')
+        setGrado('')
+        setCalicata('')
+        setEstrato('')
+        setCota1('')
+        setCota2('')
+        setProcedencia('')
+        setUbicacionSector('')
+        setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setFechaServicio(getFechaServicioForInput())
+        setFechaIngreso(getTodayDateForInput())
+        setFechaEntrega('')
         setExpandedRcm(true)
     }
 
@@ -123,9 +186,20 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSavedRcms([...savedRcms, newRcm])
         setShowRcmCard(false)
         setRcmType('')
+        setArea('')
         setNumeroTarjeta('')
+        setTomaMuestra('')
         setTipoMaterial('')
         setItem('')
+        setElemento('')
+        setGrado('')
+        setCalicata('')
+        setEstrato('')
+        setCota1('')
+        setCota2('')
+        setProcedencia('')
+        setUbicacionSector('')
+        setCantidadMuestras('1')
         setEnsayosAsociados([])
     }
 
@@ -142,12 +216,25 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget)
+
+        // Pre-seleccionar el área del RCM si está definida
+        if (area && areas.length > 0) {
+            // Buscar el área que coincida con el valor del RCM
+            const areaEncontrada = areas.find(a =>
+                a.nombre.toLowerCase() === area.toLowerCase() ||
+                a.nombre.toLowerCase().includes(area.toLowerCase())
+            )
+            if (areaEncontrada) {
+                setSelectedAreaId(areaEncontrada.id)
+            }
+        }
     }
 
     const handleCloseSearchPopover = () => {
         setAnchorEl(null)
         setSearchTerm('')
         setProductsPage(0)
+        // Mantener el área seleccionada del RCM
     }
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,9 +296,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             const nuevoEnsayo: EnsayoAsociado = {
                 id: Date.now(), // ID temporal
                 productoId: idProducto,
+                sku: producto.sku,
                 nombre: producto.nombre,
                 norma: producto.norma,
-                cantidad: 1
+                cantidad: 1,
+                observacion: '',
+                estadoOperativo: 'Codificado'
             }
 
             const nuevaLista = [...prev, nuevoEnsayo]
@@ -232,6 +322,35 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         ))
     }
 
+    const handleChangeObservacion = (ensayoId: number, observacion: string) => {
+        setEnsayosAsociados(ensayosAsociados.map(e =>
+            e.id === ensayoId ? { ...e, observacion } : e
+        ))
+    }
+
+    const handleChangeEstadoOperativo = (ensayoId: number, estadoOperativo: string) => {
+        setEnsayosAsociados(ensayosAsociados.map(e =>
+            e.id === ensayoId ? { ...e, estadoOperativo } : e
+        ))
+    }
+
+    const handleOpenStatusMenu = (event: React.MouseEvent<HTMLElement>, ensayoId: number) => {
+        setStatusMenuAnchor(event.currentTarget)
+        setSelectedEnsayoId(ensayoId)
+    }
+
+    const handleCloseStatusMenu = () => {
+        setStatusMenuAnchor(null)
+        setSelectedEnsayoId(null)
+    }
+
+    const handleSelectStatus = (status: string) => {
+        if (selectedEnsayoId !== null) {
+            handleChangeEstadoOperativo(selectedEnsayoId, status)
+        }
+        handleCloseStatusMenu()
+    }
+
     // Cargar áreas
     useEffect(() => {
         const fetchAreas = async () => {
@@ -240,6 +359,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 if (response.ok) {
                     const data = await response.json()
                     setAreas(data)
+
+                    // Si el popover está abierto y hay un área seleccionada en el RCM, pre-seleccionarla
+                    if (anchorEl && area && data.length > 0) {
+                        const areaEncontrada = data.find((a: { nombre: string }) =>
+                            a.nombre.toLowerCase() === area.toLowerCase() ||
+                            a.nombre.toLowerCase().includes(area.toLowerCase())
+                        )
+                        if (areaEncontrada) {
+                            setSelectedAreaId(areaEncontrada.id)
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error al cargar áreas:', error)
@@ -281,9 +411,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 })
 
                 if (searchTerm) params.append('q', searchTerm)
-                if (selectedAreaId) params.append('areaId', selectedAreaId.toString())
-                if (selectedTipo) params.append('tipo', selectedTipo)
-                if (selectedFamilia) params.append('familia', selectedFamilia)
+                // Filtrar por el área seleccionada en el paso 1
+                if (selectedAreaNombre) params.append('area', selectedAreaNombre)
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
                 console.log('Cargando productos con params:', params.toString())
@@ -310,7 +439,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, searchTerm, selectedAreaId, selectedTipo, selectedFamilia, showOnlyPaquetes])
+    }, [anchorEl, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -443,45 +572,77 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={3}>
                                         <TextField
+                                            label='RCM'
+                                            type='number'
+                                            disabled
+                                            fullWidth
+                                            placeholder='Automático'
+                                            InputProps={{
+                                                readOnly: true
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
                                             label='Fecha Codificación'
                                             type='date'
-                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            value={fechaCodificacion}
                                             required
                                             fullWidth
+                                            disabled
                                             InputLabelProps={{ shrink: true }}
+                                            InputProps={{
+                                                readOnly: true
+                                            }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <TextField
-                                            label='Fecha de Muestreo'
+                                            label='Fecha de Servicio'
                                             type='date'
+                                            value={fechaServicio}
+                                            onChange={(e) => setFechaServicio(e.target.value)}
                                             required
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Fecha de Ingreso'
-                                            type='date'
-                                            defaultValue={new Date().toISOString().split('T')[0]}
-                                            required
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Fecha de Ingreso'
+                                                type='date'
+                                                value={fechaIngreso}
+                                                onChange={(e) => setFechaIngreso(e.target.value)}
+                                                required
+                                                fullWidth
+                                                InputLabelProps={{ shrink: true }}
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <TextField
                                             label='Fecha de Entrega'
                                             type='date'
+                                            value={fechaEntrega}
+                                            onChange={(e) => setFechaEntrega(e.target.value)}
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel>Área</InputLabel>
-                                            <Select label='Área'>
+                                            <InputLabel id="area-label">Área</InputLabel>
+                                            <Select
+                                                labelId="area-label"
+                                                label='Área'
+                                                value={area}
+                                                onChange={(e) => {
+                                                    const valor = e.target.value as string
+                                                    console.log('Área seleccionada:', valor)
+                                                    setArea(valor)
+                                                }}
+                                            >
                                                 <MenuItem value='suelos'>Suelos</MenuItem>
                                                 <MenuItem value='hormigon'>Hormigón</MenuItem>
                                                 <MenuItem value='asfalto'>Asfalto</MenuItem>
@@ -507,29 +668,43 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Nº Tarjeta'
-                                            value={numeroTarjeta}
-                                            onChange={(e) => setNumeroTarjeta(e.target.value)}
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo Material</InputLabel>
-                                            <Select
-                                                label='Tipo Material'
-                                                value={tipoMaterial}
-                                                onChange={(e) => setTipoMaterial(e.target.value)}
-                                            >
-                                                <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
-                                                <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
-                                                <MenuItem value='Hormigón'>Hormigón</MenuItem>
-                                                <MenuItem value='Asfalto'>Asfalto</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Nº Tarjeta'
+                                                value={numeroTarjeta}
+                                                onChange={(e) => setNumeroTarjeta(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='# Toma de Muestra'
+                                                value={tomaMuestra}
+                                                onChange={(e) => setTomaMuestra(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Tipo Material</InputLabel>
+                                                <Select
+                                                    label='Tipo Material'
+                                                    value={tipoMaterial}
+                                                    onChange={(e) => setTipoMaterial(e.target.value)}
+                                                >
+                                                    <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
+                                                    <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
+                                                    <MenuItem value='Hormigón'>Hormigón</MenuItem>
+                                                    <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
@@ -545,56 +720,107 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Elemento'
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Grado</InputLabel>
-                                            <Select label='Grado'>
-                                                <MenuItem value='1'>Grado 1</MenuItem>
-                                                <MenuItem value='2'>Grado 2</MenuItem>
-                                                <MenuItem value='3'>Grado 3</MenuItem>
-                                                <MenuItem value='4'>Grado 4</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cota 1'
-                                            type='number'
-                                            fullWidth
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cota 2'
-                                            type='number'
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Elemento'
+                                                value={elemento}
+                                                onChange={(e) => setElemento(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Grado</InputLabel>
+                                                <Select
+                                                    label='Grado'
+                                                    value={grado}
+                                                    onChange={(e) => setGrado(e.target.value)}
+                                                >
+                                                    <MenuItem value='1'>Grado 1</MenuItem>
+                                                    <MenuItem value='2'>Grado 2</MenuItem>
+                                                    <MenuItem value='3'>Grado 3</MenuItem>
+                                                    <MenuItem value='4'>Grado 4</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Calicata'
+                                                type='number'
+                                                value={calicata}
+                                                onChange={(e) => setCalicata(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Estrato'
+                                                type='number'
+                                                value={estrato}
+                                                onChange={(e) => setEstrato(e.target.value)}
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        <>
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Cota 1'
+                                                    type='number'
+                                                    value={cota1}
+                                                    onChange={(e) => setCota1(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Cota 2'
+                                                    type='number'
+                                                    value={cota2}
+                                                    onChange={(e) => setCota2(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        </>
+                                    )}
                                     <Grid item xs={12} md={3}>
                                         <TextField
                                             label='Cantidad de Muestras'
                                             type='number'
-                                            defaultValue='1'
+                                            value={cantidadMuestras}
+                                            onChange={(e) => setCantidadMuestras(e.target.value)}
                                             required
                                             fullWidth
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            label='Procedencia'
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={4}>
+                                            <TextField
+                                                label='Procedencia'
+                                                value={procedencia}
+                                                onChange={(e) => setProcedencia(e.target.value)}
+                                                fullWidth
+                                                multiline
+                                                rows={3}
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={4}>
                                         <TextField
                                             label='Ubicación/Sector'
+                                            value={ubicacionSector}
+                                            onChange={(e) => setUbicacionSector(e.target.value)}
                                             fullWidth
+                                            multiline
+                                            rows={3}
                                         />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
@@ -611,6 +837,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <FormControlLabel
                                             control={<Checkbox />}
                                             label='Vencimiento'
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={informeEnsayo}
+                                                    onChange={(e) => setInformeEnsayo(e.target.checked)}
+                                                />
+                                            }
+                                            label='Informe Ensayo'
                                         />
                                     </Grid>
                                 </Grid>
@@ -633,57 +870,121 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
 
 
-                                    {/* Lista de ensayos */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        {ensayosAsociados.length === 0 ? (
-                                            <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
-                                                <Typography variant='body2' color='text.secondary'>
-                                                    No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
-                                                </Typography>
-                                            </Box>
-                                        ) : (
-                                            ensayosAsociados.map(ensayo => (
-                                                <Box
-                                                    key={ensayo.id}
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        p: 2,
-                                                        bgcolor: '#F5F5F5',
-                                                        borderRadius: '8px'
-                                                    }}
-                                                >
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <IconButton size='small'>
-                                                            <EditIcon fontSize='small' />
-                                                        </IconButton>
-                                                        <Typography variant='body2'>
-                                                            {ensayo.nombre}
-                                                            {ensayo.norma && ` (${ensayo.norma})`}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <TextField
-                                                            size='small'
-                                                            value={ensayo.cantidad}
-                                                            onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                            type='number'
-                                                            sx={{ width: '80px' }}
-                                                            inputProps={{ min: 1 }}
-                                                        />
-                                                        <IconButton
-                                                            size='small'
-                                                            color='error'
-                                                            onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                        >
-                                                            <DeleteIcon fontSize='small' />
-                                                        </IconButton>
-                                                    </Box>
-                                                </Box>
-                                            ))
-                                        )}
-                                    </Box>
+                                    {/* Tabla de ensayos */}
+                                    {ensayosAsociados.length === 0 ? (
+                                        <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                            <Typography variant='body2' color='text.secondary'>
+                                                No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        <Box sx={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Observación</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ensayosAsociados.map(ensayo => (
+                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                    {ensayo.sku}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2'>
+                                                                    {ensayo.nombre}
+                                                                </Typography>
+                                                                {ensayo.norma && (
+                                                                    <Typography variant='caption' color='text.secondary'>
+                                                                        {ensayo.norma}
+                                                                    </Typography>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <TextField
+                                                                    size='small'
+                                                                    value={ensayo.cantidad}
+                                                                    onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                                    type='number'
+                                                                    sx={{ width: '80px' }}
+                                                                    inputProps={{ min: 1 }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <TextField
+                                                                    size='small'
+                                                                    fullWidth
+                                                                    value={ensayo.observacion}
+                                                                    onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
+                                                                    placeholder='Observación...'
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Chip
+                                                                    label={ensayo.estadoOperativo}
+                                                                    size='small'
+                                                                    onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
+                                                                    color={
+                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                    'success'
+                                                                    }
+                                                                    sx={{ cursor: 'pointer' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <IconButton
+                                                                    size='small'
+                                                                    color='error'
+                                                                    onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                                >
+                                                                    <DeleteIcon fontSize='small' />
+                                                                </IconButton>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </Box>
+                                    )}
+
+                                    {/* Menu para seleccionar estado operativo */}
+                                    <Menu
+                                        anchorEl={statusMenuAnchor}
+                                        open={Boolean(statusMenuAnchor)}
+                                        onClose={handleCloseStatusMenu}
+                                    >
+                                        <MenuItem onClick={() => handleSelectStatus('Codificado')}>
+                                            <Chip
+                                                label='Codificado'
+                                                size='small'
+                                                color='default'
+                                            />
+                                        </MenuItem>
+                                        <MenuItem onClick={() => handleSelectStatus('En Proceso')}>
+                                            <Chip
+                                                label='En Proceso'
+                                                size='small'
+                                                color='info'
+                                            />
+                                        </MenuItem>
+                                        <MenuItem onClick={() => handleSelectStatus('Ensayado')}>
+                                            <Chip
+                                                label='Ensayado'
+                                                size='small'
+                                                color='warning'
+                                            />
+                                        </MenuItem>
+                                    </Menu>
                                 </Box>
 
                                 {/* Observaciones */}
@@ -780,28 +1081,62 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
                                             Ensayos Asociados ({rcm.ensayos.length})
                                         </Typography>
-                                        {rcm.ensayos.map(ensayo => (
-                                            <Box
-                                                key={ensayo.id}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    p: 2,
-                                                    mb: 1,
-                                                    bgcolor: '#F5F5F5',
-                                                    borderRadius: '8px'
-                                                }}
-                                            >
-                                                <Typography variant='body2'>
-                                                    {ensayo.nombre}
-                                                    {ensayo.norma && ` (${ensayo.norma})`}
-                                                </Typography>
-                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                    Cantidad: {ensayo.cantidad}
-                                                </Typography>
-                                            </Box>
-                                        ))}
+                                        <Box sx={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rcm.ensayos.map(ensayo => (
+                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                    {ensayo.sku}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2'>
+                                                                    {ensayo.nombre}
+                                                                </Typography>
+                                                                {ensayo.norma && (
+                                                                    <Typography variant='caption' color='text.secondary'>
+                                                                        {ensayo.norma}
+                                                                    </Typography>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                                    {ensayo.cantidad}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' color='text.secondary'>
+                                                                    {ensayo.observacion || '-'}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Chip
+                                                                    label={ensayo.estadoOperativo}
+                                                                    size='small'
+                                                                    color={
+                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                    'success'
+                                                                    }
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </Box>
                                     </Box>
                                 </Collapse>
                             </Box>
@@ -848,45 +1183,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 )
                             }}
                         />
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                            <FormControl size='small' fullWidth>
-                                <InputLabel shrink>Área</InputLabel>
-                                <Select
-                                    key={`area-${filterResetKey}`}
-                                    value={selectedAreaId?.toString() || ''}
-                                    label='Área'
-                                    onChange={handleAreaChange}
-                                    displayEmpty
-                                    renderValue={selected => selected === '' ? 'Todas' : areas.find(a => a.id.toString() === selected)?.nombre || ''}
-                                >
-                                    <MenuItem value=''>Todas</MenuItem>
-                                    {areas.map(area => (
-                                        <MenuItem key={area.id} value={area.id}>
-                                            {area.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <FormControl size='small' fullWidth>
-                                <InputLabel shrink>Familia</InputLabel>
-                                <Select
-                                    key={`familia-${filterResetKey}`}
-                                    value={selectedFamilia}
-                                    label='Familia'
-                                    onChange={handleFamiliaChange}
-                                    displayEmpty
-                                    renderValue={selected => selected === '' ? 'Todas' : selected}
-                                    disabled={!selectedAreaId}
-                                >
-                                    <MenuItem value=''>Todas</MenuItem>
-                                    {familias.map(familia => (
-                                        <MenuItem key={familia.id} value={familia.nombre}>
-                                            {familia.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
+                        {selectedAreaNombre && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    label={`Área: ${selectedAreaNombre}`}
+                                    size='small'
+                                    color='primary'
+                                    variant='outlined'
+                                />
+                            </Box>
+                        )}
                         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                             <FormControlLabel
                                 control={
@@ -894,16 +1200,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 }
                                 label='Solo Paquetes'
                             />
-                            <Button
-                                size='small'
-                                onClick={() => {
-                                    handleClearFilters()
-                                    setShowOnlyPaquetes(false)
-                                }}
-                                startIcon={<i className='ri-filter-off-line' />}
-                            >
-                                Limpiar filtros
-                            </Button>
                         </Box>
                     </Box>
                     <List sx={{ pt: 0 }}>

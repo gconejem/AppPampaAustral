@@ -1,11 +1,14 @@
 // MUI Imports
-import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography, Stepper, Step, StepLabel, Button, IconButton } from '@mui/material'
+import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography, Stepper, Step, StepLabel, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckIcon from '@mui/icons-material/Check'
 
+// React Imports
+import { useState } from 'react'
+
 // Next Imports
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 // Utils
 import { formatDateForDisplay } from '@/utils/dateUtils'
@@ -18,12 +21,34 @@ interface HeaderProps {
   onStepClick?: (step: number) => void
   canAdvanceToStep2?: boolean
   hasSavedRcms?: boolean
+  selectedAreaNombre?: string
+  selectedTipoServicioNombre?: string
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false }: HeaderProps) => {
+const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre }: HeaderProps) => {
   // Hooks
   const params = useParams()
+  const router = useRouter()
   const lang = params?.lang || 'es'
+
+  // State para el diálogo de confirmación
+  const [openDialog, setOpenDialog] = useState(false)
+
+  // Función para abrir el diálogo
+  const handleBackClick = () => {
+    setOpenDialog(true)
+  }
+
+  // Función para cerrar el diálogo
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
+
+  // Función para confirmar y volver a OTs
+  const handleConfirmBack = () => {
+    setOpenDialog(false)
+    router.push(`/${lang}/apps/otmanagement`)
+  }
 
   // Si está cargando o no hay datos, mostrar esqueletos
   if (loading) {
@@ -122,8 +147,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
-              component={Link}
-              href={`/${lang}/apps/otmanagement`}
+              onClick={handleBackClick}
               variant='outlined'
               startIcon={<ArrowBackIcon />}
               sx={{
@@ -368,6 +392,61 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
           </Grid>
         </Box>
       </Card>
+
+      {/* Mostrar Área y Tipo de Servicio seleccionados cuando estamos en paso 2 o superior */}
+      {activeStep >= 2 && selectedAreaNombre && selectedTipoServicioNombre && (
+        <Card sx={{ mt: 3 }}>
+          <Box sx={{ p: 4 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={6}>
+                <Box>
+                  <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                    ÁREA
+                  </Typography>
+                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                    {selectedAreaNombre}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box>
+                  <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                    TIPO DE SERVICIO
+                  </Typography>
+                  <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                    {selectedTipoServicioNombre}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </Card>
+      )}
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          ¿Está seguro que desea volver a OTs?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Si vuelve a las OTs sin finalizar la codificación, se perderá toda la información ingresada que no haya sido guardada.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmBack} color="error" variant="contained" autoFocus>
+            Volver a OTs
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
