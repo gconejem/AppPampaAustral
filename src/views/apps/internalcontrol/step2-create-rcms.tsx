@@ -211,7 +211,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleSaveRcm = () => {
-        // Validación 1: Al menos un ensayo asociado
+        // Validación 1: Número de tarjeta obligatorio para tipo Muestra
+        if (rcmType === 'Muestra' && !numeroTarjeta.trim()) {
+            setErrorVencimiento('El número de tarjeta es obligatorio para RCM tipo Muestra')
+            return
+        }
+
+        // Validación 2: Al menos un ensayo asociado
         if (ensayosAsociados.length === 0) {
             setErrorVencimiento('Debe agregar al menos un ensayo antes de guardar el RCM')
             return
@@ -348,12 +354,26 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         if (selectedRcmId !== null) {
             const rcmToDuplicate = savedRcms.find(r => r.id === selectedRcmId)
             if (rcmToDuplicate) {
-                const duplicatedRcm: RCMData = {
-                    ...rcmToDuplicate,
-                    id: Date.now(),
-                    numeroRcm: `RCM-${savedRcms.length + 1}`
-                }
-                setSavedRcms([...savedRcms, duplicatedRcm])
+                // Cargar los datos del RCM en el formulario (similar a editar)
+                setRcmType(rcmToDuplicate.rcmType)
+                setNumeroTarjeta('') // Forzar a ingresar un nuevo número de tarjeta
+                setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                setItem(rcmToDuplicate.item)
+                setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
+                setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
+                setFechaServicio(rcmToDuplicate.fechaServicio)
+                setEnsayosAsociados([...rcmToDuplicate.ensayos])
+
+                // Cargar estados de vencimiento
+                setTieneVencimiento(rcmToDuplicate.tieneVencimiento || false)
+                setSubmuestrasVencimiento(rcmToDuplicate.submuestrasVencimiento || [])
+
+                // NO eliminar el RCM original de la lista (a diferencia de editar)
+                // El RCM duplicado será un nuevo RCM cuando se guarde
+
+                // Mostrar el formulario
+                setShowRcmCard(true)
+                setExpandedRcm(true)
             }
         }
         handleCloseRcmMenu()
@@ -830,6 +850,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 label='Nº Tarjeta'
                                                 value={numeroTarjeta}
                                                 onChange={(e) => setNumeroTarjeta(e.target.value)}
+                                                required
                                                 fullWidth
                                             />
                                         </Grid>
