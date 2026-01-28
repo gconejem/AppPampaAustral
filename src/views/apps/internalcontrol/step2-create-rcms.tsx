@@ -75,6 +75,15 @@ interface RCMData {
     cantidadMuestras: string
     numeroRcm?: string
     estado: string
+    tieneVencimiento?: boolean
+    submuestrasVencimiento?: Array<{
+        id: number
+        submuestra: string
+        numero: number
+        dias: number
+        fechaVencimiento: string
+        cantidad: number
+    }>
 }
 
 interface Step2CreateRcmsProps {
@@ -251,7 +260,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             tomaMuestra,
             cantidadMuestras,
             numeroRcm: `RCM-${savedRcms.length + 1}`,
-            estado: estadoRcm
+            estado: estadoRcm,
+            tieneVencimiento,
+            submuestrasVencimiento: [...submuestrasVencimiento]
         }
         setSavedRcms([...savedRcms, newRcm])
         setShowRcmCard(false)
@@ -310,6 +321,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
                 setFechaServicio(rcmToEdit.fechaServicio)
                 setEnsayosAsociados([...rcmToEdit.ensayos])
+
+                // Cargar estados de vencimiento
+                setTieneVencimiento(rcmToEdit.tieneVencimiento || false)
+                setSubmuestrasVencimiento(rcmToEdit.submuestrasVencimiento || [])
 
                 // Eliminar el RCM de la lista de guardados (se volverá a guardar al editar)
                 setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
