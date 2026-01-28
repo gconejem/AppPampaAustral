@@ -127,6 +127,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
 
+    // Estados para vencimiento
+    const [tieneVencimiento, setTieneVencimiento] = useState(false)
+    const [submuestrasVencimiento, setSubmuestrasVencimiento] = useState<Array<{
+        id: number
+        submuestra: string
+        numero: number
+        dias: number
+        fechaVencimiento: string
+        cantidad: number
+    }>>([])
+
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null)
@@ -172,6 +183,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setFechaIngreso(getTodayDateForInput())
         setFechaEntrega('')
         setExpandedRcm(true)
+
+        // Resetear vencimiento
+        const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
+        setTieneVencimiento(shouldHaveVencimiento)
+        setSubmuestrasVencimiento([])
     }
 
     const handleSaveRcm = () => {
@@ -350,6 +366,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
         handleCloseStatusMenu()
     }
+
+    // Activar vencimiento automáticamente cuando el área es Hormigón o Elementos y Componentes
+    useEffect(() => {
+        const shouldHaveVencimiento =
+            selectedAreaNombre?.toLowerCase() === 'hormigón' ||
+            selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
+
+        if (shouldHaveVencimiento) {
+            setTieneVencimiento(true)
+        }
+    }, [selectedAreaNombre])
 
     // Cargar áreas
     useEffect(() => {
@@ -835,7 +862,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControlLabel
-                                            control={<Checkbox />}
+                                            control={
+                                                <Checkbox
+                                                    checked={tieneVencimiento}
+                                                    onChange={(e) => setTieneVencimiento(e.target.checked)}
+                                                />
+                                            }
                                             label='Vencimiento'
                                         />
                                     </Grid>
@@ -986,6 +1018,140 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </MenuItem>
                                     </Menu>
                                 </Box>
+
+                                {/* Tabla de Submuestras con Vencimiento */}
+                                {tieneVencimiento && (
+                                    <Box sx={{ mt: 4 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                                Submuestras con Vencimiento
+                                            </Typography>
+                                            <Button
+                                                startIcon={<AddIcon />}
+                                                variant='outlined'
+                                                size='small'
+                                                sx={{ textTransform: 'none' }}
+                                                onClick={() => {
+                                                    const newId = submuestrasVencimiento.length > 0
+                                                        ? Math.max(...submuestrasVencimiento.map(s => s.id)) + 1
+                                                        : 1
+                                                    const newNumero = submuestrasVencimiento.length + 1
+                                                    setSubmuestrasVencimiento([...submuestrasVencimiento, {
+                                                        id: newId,
+                                                        submuestra: `RCM - ${newNumero}`,
+                                                        numero: newNumero,
+                                                        dias: 0,
+                                                        fechaVencimiento: '',
+                                                        cantidad: 1
+                                                    }])
+                                                }}
+                                            >
+                                                Agregar Submuestra
+                                            </Button>
+                                        </Box>
+
+                                        {submuestrasVencimiento.length === 0 ? (
+                                            <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                                <Typography variant='body2' color='text.secondary'>
+                                                    No hay submuestras. Haz clic en "Agregar Submuestra" para añadir.
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Submuestra</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>#</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {submuestrasVencimiento.map((submuestra) => (
+                                                            <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2'>
+                                                                        {submuestra.submuestra}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <Typography variant='body2'>
+                                                                        {submuestra.numero}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <TextField
+                                                                        size='small'
+                                                                        type='number'
+                                                                        value={submuestra.dias}
+                                                                        onChange={(e) => {
+                                                                            const dias = parseInt(e.target.value) || 0
+                                                                            const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                            fechaBase.setDate(fechaBase.getDate() + dias)
+                                                                            const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
+
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id
+                                                                                    ? { ...s, dias, fechaVencimiento: fechaVenc }
+                                                                                    : s
+                                                                            ))
+                                                                        }}
+                                                                        sx={{ width: '100px' }}
+                                                                        inputProps={{ min: 0 }}
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <Typography variant='body2' color='text.secondary'>
+                                                                        {submuestra.fechaVencimiento ? formatDateOnly(submuestra.fechaVencimiento) : 'Calculada'}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <TextField
+                                                                        size='small'
+                                                                        type='number'
+                                                                        value={submuestra.cantidad}
+                                                                        onChange={(e) => {
+                                                                            const cantidad = parseInt(e.target.value) || 1
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id
+                                                                                    ? { ...s, cantidad }
+                                                                                    : s
+                                                                            ))
+                                                                        }}
+                                                                        sx={{ width: '100px' }}
+                                                                        inputProps={{ min: 1 }}
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <IconButton
+                                                                        size='small'
+                                                                        onClick={() => {
+                                                                            // TODO: Implementar edición
+                                                                        }}
+                                                                    >
+                                                                        <EditIcon fontSize='small' />
+                                                                    </IconButton>
+                                                                    <IconButton
+                                                                        size='small'
+                                                                        color='error'
+                                                                        onClick={() => {
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.filter(s => s.id !== submuestra.id))
+                                                                        }}
+                                                                    >
+                                                                        <DeleteIcon fontSize='small' />
+                                                                    </IconButton>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                )}
 
                                 {/* Observaciones */}
                                 <Box sx={{ mt: 4 }}>
