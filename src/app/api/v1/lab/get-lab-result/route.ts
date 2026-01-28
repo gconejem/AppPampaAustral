@@ -112,6 +112,15 @@ export async function GET(request: Request) {
     }
 
     // Transformar a formato esperado por la app móvil
+    process.stdout.write('\n📦 DATOS DE ÓRDENES ENCONTRADAS:\n')
+    ordenesConDensidad.forEach((orden, idx) => {
+      process.stdout.write(`\n  [${idx + 1}] Orden ID: ${orden.id}\n`)
+      process.stdout.write(`      - clave: ${orden.clave}\n`)
+      process.stdout.write(`      - numeroTarjeta: ${orden.numeroTarjeta || 'N/A'}\n`)
+      process.stdout.write(`      - densidad ID: ${orden.densidad?.id || 'N/A'}\n`)
+      process.stdout.write(`      - obra: ${orden.agenda?.obra?.numeroObra || 'N/A'}\n`)
+    })
+
     const resultados = ordenesConDensidad.map(orden => {
       const densidad = orden.densidad
       const controles = densidad?.controles as any[] || []
@@ -137,7 +146,7 @@ export async function GET(request: Request) {
       }
 
       return {
-        CODIGO: orden.numeroOT || `OT-${orden.id}`,
+        CODIGO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`,
         FECHA: orden.createdAt,
         FECHATXT: '', // Se formatea en el frontend con moment
         ITEMM: densidad?.item || '',

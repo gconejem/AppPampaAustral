@@ -22,28 +22,45 @@ export async function GET(request: Request) {
     const obra = searchParams.get('obra[]')
     const sortColumn = searchParams.get('sortColumn') || 'FECHA'
     const sortDirection = searchParams.get('sortDirection') || 'DESC'
+    const sinRetiro = searchParams.get('sinRetiro') === 'true' // Nuevo parámetro para filtrar sin retiro
 
-    console.log('=== GET MUESTREOS ===')
-    console.log('obra:', obra)
+    process.stdout.write('\n====================================================\n')
+    process.stdout.write('=== GET MUESTREOS - ENDPOINT CALLED ===\n')
+    process.stdout.write(`obra: ${obra}\n`)
+    process.stdout.write(`sortColumn: ${sortColumn}\n`)
+    process.stdout.write(`sortDirection: ${sortDirection}\n`)
+    process.stdout.write(`sinRetiro: ${sinRetiro}\n`)
+    process.stdout.write('====================================================\n')
 
     if (!obra) {
+      process.stdout.write('⚠️ No obra parameter, returning empty array\n')
       return NextResponse.json({ data: [] }, { headers: corsHeaders() })
     }
 
-    // Buscar muestreos de hormigón de la obra
-    const muestreos = await prisma.ordenTrabajo.findMany({
-      where: {
-        agenda: {
-          obra: {
-            numeroObra: obra
-          }
-        },
-        OR: [
-          { hormigonFresco: { isNot: null } },
-          { muestreoMaterial: { isNot: null } },
-          { testigos: { isNot: null } }
-        ]
+    // Construir condiciones de WHERE
+    const whereConditions: any = {
+      agenda: {
+        obra: {
+          numeroObra: obra
+        }
       },
+      OR: [
+        { hormigonFresco: { isNot: null } },
+        { muestreoMaterial: { isNot: null } },
+        { testigos: { isNot: null } }
+      ]
+    }
+
+    // Si se solicita solo muestreos sin retiro
+    if (sinRetiro) {
+      whereConditions.retiroProbeta = null
+      process.stdout.write('🔍 Filtrando solo muestreos SIN retiro asociado\n')
+    }
+
+    // Buscar muestreos de hormigón de la obra
+    process.stdout.write(`🔍 Buscando muestreos para obra: ${obra}\n`)
+    const muestreos = await prisma.ordenTrabajo.findMany({
+      where: whereConditions,
       include: {
         hormigonFresco: true,
         muestreoMaterial: true,
@@ -60,11 +77,19 @@ export async function GET(request: Request) {
       take: 100
     })
 
-    console.log(`Found ${muestreos.length} muestreos for obra ${obra}`)
+    process.stdout.write(`✅ Found ${muestreos.length} muestreos for obra ${obra}\n`)
+
+    if (muestreos.length > 0) {
+      process.stdout.write('\n📦 TIPOS DE MUESTREOS ENCONTRADOS:\n')
+      muestreos.forEach((m, idx) => {
+        const tipo = m.hormigonFresco ? 'Hormigón Fresco' : m.testigos ? 'Testigos' : m.muestreoMaterial ? 'Material' : 'Otro'
+        process.stdout.write(`  [${idx + 1}] ${m.clave} - ${tipo}\n`)
+      })
+    }
 
     // Si no hay datos reales, devolver mockup
     if (muestreos.length === 0) {
-      console.log('No data found, returning mockup')
+      process.stdout.write('⚠️ No muestreos found, returning mockup\n')
       const mockupData = [
         {
           CODIGO: 'MH-001',
@@ -96,12 +121,16 @@ export async function GET(request: Request) {
     const resultados = muestreos.map(orden => {
       const hormigon = orden.hormigonFresco
       const testigo = orden.testigos
+      const tipo = hormigon ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo'
       
       return {
-        CODIGO: orden.numeroOT || `OT-${orden.id}`,
+        CODIGO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`,
+        OTNUMERO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`, // Para el combobox de retiro
+        num_tarjeta: orden.numeroTarjeta || '', // Para el combobox de retiro
+        descrip_tipo_probeta: tipo, // Para el combobox de retiro
         FECHA: orden.createdAt,
         FECHATXT: '',
-        TIPO: hormigon ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo',
+        TIPO: tipo,
         GRADO: testigo?.grado || hormigon?.tipoHormigon || '',
         ELEMENTO: hormigon?.elementoHormigonado || '',
         UBICACION: hormigon?.ubicacionHormigonado || '',
@@ -110,9 +139,17 @@ export async function GET(request: Request) {
       }
     })
 
+    process.stdout.write(`\n📊 Returning ${resultados.length} muestreos\n`)
+    if (resultados.length > 0) {
+      process.stdout.write('📄 First muestreo sample:\n')
+      process.stdout.write(JSON.stringify(resultados[0], null, 2) + '\n')
+    }
+
     return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
   } catch (error) {
-    console.error('Error en muestreos:', error)
+    process.stdout.write('❌ Error en muestreos:\n')
+    process.stdout.write(String(error) + '\n')
+    console.error('❌ Error en muestreos:', error)
     return NextResponse.json({ error: 'Error al obtener muestreos' }, { status: 500, headers: corsHeaders() })
   }
 }

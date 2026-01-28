@@ -21,21 +21,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const codigo = searchParams.get('codigo[]')
 
-    console.log('=== GET LAB LBOTMAE ===')
-    console.log('codigo:', codigo)
+    process.stdout.write('\n====================================================\n')
+    process.stdout.write('=== GET LAB LBOTMAE - ENDPOINT CALLED ===\n')
+    process.stdout.write(`codigo: ${codigo}\n`)
+    process.stdout.write('====================================================\n')
 
     // Si no hay código o está vacío, devolver array vacío
     if (!codigo || codigo.trim() === '') {
-      console.log('No codigo parameter or empty, returning empty array')
+      process.stdout.write('⚠️ No codigo parameter or empty, returning empty array\n')
       return NextResponse.json({ data: [] }, { headers: corsHeaders() })
     }
 
     // Buscar órdenes de trabajo por código
     const codigos = codigo.split(',').map(c => c.trim()).filter(c => c.length > 0)
+    process.stdout.write(`🔍 Buscando órdenes por códigos (clave): ${codigos.join(', ')}\n`)
     
     const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
       where: {
-        numeroOT: {
+        clave: {
           in: codigos
         }
       },
@@ -45,11 +48,18 @@ export async function GET(request: Request) {
       }
     })
 
-    console.log(`Found ${ordenesTrabajo.length} ordenes for codigos: ${codigos.join(', ')}`)
+    process.stdout.write(`✅ Found ${ordenesTrabajo.length} ordenes for codigos: ${codigos.join(', ')}\n`)
+
+    if (ordenesTrabajo.length > 0) {
+      process.stdout.write('\n📦 ÓRDENES ENCONTRADAS:\n')
+      ordenesTrabajo.forEach((ot, idx) => {
+        process.stdout.write(`  [${idx + 1}] clave: ${ot.clave}, tipo: ${ot.tipoOT?.nombre || 'N/A'}, estado: ${ot.estadoOT?.nombre || 'N/A'}\n`)
+      })
+    }
 
     // Si no hay datos, devolver mockup
     if (ordenesTrabajo.length === 0) {
-      console.log('No data found, returning mockup')
+      process.stdout.write('⚠️ No ordenes found, returning mockup\n')
       const mockupData = codigos.map((cod, idx) => ({
         CODIGO: cod,
         NUMERO_OT: cod,
@@ -63,17 +73,25 @@ export async function GET(request: Request) {
 
     // Transformar datos reales
     const resultados = ordenesTrabajo.map(ot => ({
-      CODIGO: ot.numeroOT,
-      NUMERO_OT: ot.numeroOT,
+      CODIGO: ot.clave,
+      NUMERO_OT: ot.clave,
       ESTADO: ot.estadoOT?.nombre || 'Pendiente',
       TIPO: ot.tipoOT?.nombre || '',
       FECHA_CREACION: ot.createdAt,
       OBSERVACION: ''
     }))
 
+    process.stdout.write(`\n📊 Returning ${resultados.length} resultados\n`)
+    if (resultados.length > 0) {
+      process.stdout.write('📄 First resultado sample:\n')
+      process.stdout.write(JSON.stringify(resultados[0], null, 2) + '\n')
+    }
+
     return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
   } catch (error) {
-    console.error('Error en api-get-lab-lbotmae:', error)
+    process.stdout.write('❌ Error en api-get-lab-lbotmae:\n')
+    process.stdout.write(String(error) + '\n')
+    console.error('❌ Error en api-get-lab-lbotmae:', error)
     return NextResponse.json({ error: 'Error al obtener datos' }, { status: 500, headers: corsHeaders() })
   }
 }
