@@ -67,6 +67,11 @@ interface RCMData {
     tipoMaterial: string
     item: string
     ensayos: EnsayoAsociado[]
+    fechaServicio: string
+    fechaMuestreo?: string
+    tomaMuestra?: string
+    cantidadMuestras: string
+    numeroRcm?: string
 }
 
 interface Step2CreateRcmsProps {
@@ -126,6 +131,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [cantidadMuestras, setCantidadMuestras] = useState('1')
     const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
+    const [rcmMenuAnchor, setRcmMenuAnchor] = useState<HTMLElement | null>(null)
+    const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -219,7 +226,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             numeroTarjeta,
             tipoMaterial,
             item,
-            ensayos: [...ensayosAsociados]
+            ensayos: [...ensayosAsociados],
+            fechaServicio,
+            fechaMuestreo: fechaServicio, // Usar fecha servicio como fecha muestreo
+            tomaMuestra,
+            cantidadMuestras,
+            numeroRcm: `RCM-${savedRcms.length + 1}`
         }
         setSavedRcms([...savedRcms, newRcm])
         setShowRcmCard(false)
@@ -252,6 +264,64 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             ...prev,
             [id]: !prev[id]
         }))
+    }
+
+    const handleOpenRcmMenu = (event: React.MouseEvent<HTMLElement>, rcmId: number) => {
+        event.stopPropagation()
+        setRcmMenuAnchor(event.currentTarget)
+        setSelectedRcmId(rcmId)
+    }
+
+    const handleCloseRcmMenu = () => {
+        setRcmMenuAnchor(null)
+        setSelectedRcmId(null)
+    }
+
+    const handleEditRcm = () => {
+        if (selectedRcmId !== null) {
+            const rcmToEdit = savedRcms.find(r => r.id === selectedRcmId)
+            if (rcmToEdit) {
+                // Cargar los datos del RCM en el formulario
+                setRcmType(rcmToEdit.rcmType)
+                setNumeroTarjeta(rcmToEdit.numeroTarjeta)
+                setTipoMaterial(rcmToEdit.tipoMaterial)
+                setItem(rcmToEdit.item)
+                setTomaMuestra(rcmToEdit.tomaMuestra || '')
+                setCantidadMuestras(rcmToEdit.cantidadMuestras)
+                setFechaServicio(rcmToEdit.fechaServicio)
+                setEnsayosAsociados([...rcmToEdit.ensayos])
+
+                // Eliminar el RCM de la lista de guardados (se volverá a guardar al editar)
+                setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
+
+                // Mostrar el formulario
+                setShowRcmCard(true)
+                setExpandedRcm(true)
+            }
+        }
+        handleCloseRcmMenu()
+    }
+
+    const handleDeleteRcm = () => {
+        if (selectedRcmId !== null) {
+            setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
+        }
+        handleCloseRcmMenu()
+    }
+
+    const handleDuplicateRcm = () => {
+        if (selectedRcmId !== null) {
+            const rcmToDuplicate = savedRcms.find(r => r.id === selectedRcmId)
+            if (rcmToDuplicate) {
+                const duplicatedRcm: RCMData = {
+                    ...rcmToDuplicate,
+                    id: Date.now(),
+                    numeroRcm: `RCM-${savedRcms.length + 1}`
+                }
+                setSavedRcms([...savedRcms, duplicatedRcm])
+            }
+        }
+        handleCloseRcmMenu()
     }
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
@@ -1267,11 +1337,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         p: 2,
-                                        bgcolor: '#E3F2FD'
+                                        bgcolor: '#E3F2FD',
+                                        cursor: 'pointer'
                                     }}
+                                    onClick={() => handleToggleSavedRcm(rcm.id)}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <IconButton size='small' onClick={() => handleToggleSavedRcm(rcm.id)}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                        <IconButton size='small'>
                                             <ExpandMoreIcon
                                                 sx={{
                                                     transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
@@ -1279,26 +1351,102 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 }}
                                             />
                                         </IconButton>
-                                        <Chip label={rcm.rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
-                                        {rcm.numeroTarjeta && (
-                                            <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                                                Tarjeta: {rcm.numeroTarjeta}
-                                            </Typography>
-                                        )}
-                                        {(rcm.tipoMaterial || rcm.item) && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                                                <LayersIcon fontSize='small' />
-                                                <Typography variant='body2'>
-                                                    {rcm.tipoMaterial && `Material: ${rcm.tipoMaterial}`}
-                                                    {rcm.tipoMaterial && rcm.item && ' • '}
-                                                    {rcm.item && `Ítem: ${rcm.item}`}
+                                        <Chip
+                                            label={rcm.rcmType.toUpperCase()}
+                                            color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
+                                            sx={{ fontWeight: 'bold' }}
+                                        />
+
+                                        {/* Mostrar campos según el tipo de RCM */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                            {/* Número de RCM */}
+                                            {rcm.numeroRcm && (
+                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                    {rcm.numeroRcm}
                                                 </Typography>
-                                            </Box>
-                                        )}
+                                            )}
+
+                                            {/* MUESTRA: #n | N° Tarjeta | Fecha Muestreo | #Toma de Muestra | Material | Item | Cantidad */}
+                                            {rcm.rcmType === 'Muestra' && (
+                                                <>
+                                                    {rcm.numeroTarjeta && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>N° Tarjeta: {rcm.numeroTarjeta}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.fechaMuestreo && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Fecha Muestreo: {formatDateOnly(rcm.fechaMuestreo)}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.tomaMuestra && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>#Toma: {rcm.tomaMuestra}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.tipoMaterial && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Material: {rcm.tipoMaterial}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.item && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Item: {rcm.item}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.cantidadMuestras && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Cantidad: {rcm.cantidadMuestras}</Typography>
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* CONTROL: #n | Fecha Servicio | Item | Cantidad */}
+                                            {rcm.rcmType === 'Control' && (
+                                                <>
+                                                    {rcm.fechaServicio && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.item && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Item: {rcm.item}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.cantidadMuestras && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Cantidad: {rcm.cantidadMuestras}</Typography>
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* SERVICIO: #n | Fecha Servicio */}
+                                            {rcm.rcmType === 'Servicio' && (
+                                                <>
+                                                    {rcm.fechaServicio && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+                                        </Box>
                                     </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Checkbox />
-                                        <IconButton size='small'>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }} onClick={(e) => e.stopPropagation()}>
+                                        <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                             <MoreVertIcon />
                                         </IconButton>
                                     </Box>
@@ -1372,6 +1520,34 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         ))}
                     </Box>
                 )}
+
+                {/* Menú de opciones para RCM guardado */}
+                <Menu
+                    anchorEl={rcmMenuAnchor}
+                    open={Boolean(rcmMenuAnchor)}
+                    onClose={handleCloseRcmMenu}
+                    anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'right'
+                    }}
+                    transformOrigin={{
+                        vertical: 'top',
+                        horizontal: 'right'
+                    }}
+                >
+                    <MenuItem onClick={handleEditRcm}>
+                        <EditIcon fontSize='small' sx={{ mr: 1 }} />
+                        Editar
+                    </MenuItem>
+                    <MenuItem onClick={handleDuplicateRcm}>
+                        <ContentCopyIcon fontSize='small' sx={{ mr: 1 }} />
+                        Duplicar
+                    </MenuItem>
+                    <MenuItem onClick={handleDeleteRcm} sx={{ color: 'error.main' }}>
+                        <DeleteIcon fontSize='small' sx={{ mr: 1 }} />
+                        Eliminar
+                    </MenuItem>
+                </Menu>
 
 
                 {/* Popover de búsqueda de ensayos */}
