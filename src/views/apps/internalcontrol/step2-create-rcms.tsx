@@ -137,6 +137,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         fechaVencimiento: string
         cantidad: number
     }>>([])
+    const [errorVencimiento, setErrorVencimiento] = useState('')
 
     // Estados para el popover de búsqueda de productos
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -191,6 +192,27 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleSaveRcm = () => {
+        // Validar submuestras si el vencimiento está activado
+        if (tieneVencimiento) {
+            // Validación 1: Al menos una submuestra obligatoria
+            if (submuestrasVencimiento.length === 0) {
+                setErrorVencimiento('Debe agregar al menos una submuestra cuando el vencimiento está activado')
+                return
+            }
+
+            // Validación 2: La suma de cantidades debe coincidir con Cantidad de Muestras
+            const sumaCantidades = submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)
+            const cantidadRequerida = parseInt(cantidadMuestras) || 0
+
+            if (sumaCantidades !== cantidadRequerida) {
+                setErrorVencimiento(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`)
+                return
+            }
+        }
+
+        // Limpiar error si pasó las validaciones
+        setErrorVencimiento('')
+
         const newRcm: RCMData = {
             id: Date.now(),
             rcmType,
@@ -217,6 +239,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setUbicacionSector('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setTieneVencimiento(false)
+        setSubmuestrasVencimiento([])
     }
 
     const handleToggleExpand = () => {
@@ -823,7 +847,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             label='Cantidad de Muestras'
                                             type='number'
                                             value={cantidadMuestras}
-                                            onChange={(e) => setCantidadMuestras(e.target.value)}
+                                            onChange={(e) => {
+                                                setErrorVencimiento('') // Limpiar error al modificar cantidad
+                                                setCantidadMuestras(e.target.value)
+                                            }}
                                             required
                                             fullWidth
                                         />
@@ -1023,15 +1050,34 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 {tieneVencimiento && (
                                     <Box sx={{ mt: 4 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                                                Submuestras con Vencimiento
-                                            </Typography>
+                                            <Box>
+                                                <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                                    Submuestras con Vencimiento
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                                                    <Typography variant='body2' color='text.secondary'>
+                                                        Cantidad requerida: {cantidadMuestras}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant='body2'
+                                                        sx={{
+                                                            color: submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0) === parseInt(cantidadMuestras || '0')
+                                                                ? 'success.main'
+                                                                : 'warning.main',
+                                                            fontWeight: 600
+                                                        }}
+                                                    >
+                                                        Suma actual: {submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
                                             <Button
                                                 startIcon={<AddIcon />}
                                                 variant='outlined'
                                                 size='small'
                                                 sx={{ textTransform: 'none' }}
                                                 onClick={() => {
+                                                    setErrorVencimiento('') // Limpiar error al agregar
                                                     const newId = submuestrasVencimiento.length > 0
                                                         ? Math.max(...submuestrasVencimiento.map(s => s.id)) + 1
                                                         : 1
@@ -1049,6 +1095,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 Agregar Submuestra
                                             </Button>
                                         </Box>
+
+                                        {/* Mensaje de error */}
+                                        {errorVencimiento && (
+                                            <Box sx={{
+                                                p: 2,
+                                                mb: 2,
+                                                bgcolor: '#FFEBEE',
+                                                borderRadius: '8px',
+                                                border: '1px solid #EF5350'
+                                            }}>
+                                                <Typography variant='body2' color='error' sx={{ fontWeight: 500 }}>
+                                                    {errorVencimiento}
+                                                </Typography>
+                                            </Box>
+                                        )}
 
                                         {submuestrasVencimiento.length === 0 ? (
                                             <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
@@ -1114,6 +1175,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                         type='number'
                                                                         value={submuestra.cantidad}
                                                                         onChange={(e) => {
+                                                                            setErrorVencimiento('') // Limpiar error al modificar
                                                                             const cantidad = parseInt(e.target.value) || 1
                                                                             setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
                                                                                 s.id === submuestra.id
@@ -1138,6 +1200,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                         size='small'
                                                                         color='error'
                                                                         onClick={() => {
+                                                                            setErrorVencimiento('') // Limpiar error al eliminar
                                                                             setSubmuestrasVencimiento(submuestrasVencimiento.filter(s => s.id !== submuestra.id))
                                                                         }}
                                                                     >
