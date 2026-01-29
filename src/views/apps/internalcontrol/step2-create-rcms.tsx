@@ -187,10 +187,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [paginatedProductos, setPaginatedProductos] = useState<ProductoType[]>([]) // Productos de la página actual
     const [filterResetKey, setFilterResetKey] = useState(0)
 
-    const handleDuplicateLastRcm = () => {
+    /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
         console.log('Duplicar último RCM')
-    }
+    } */
 
     const handleNewRcm = () => {
         // Validar si hay un RCM en EDICIÓN (editando un RCM guardado)
@@ -734,7 +734,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                     {/* Botones */}
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
+                        {/* <Button
                             variant='outlined'
                             startIcon={<ContentCopyIcon />}
                             onClick={handleDuplicateLastRcm}
@@ -751,7 +751,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             }}
                         >
                             Duplicar último RCM
-                        </Button>
+                        </Button> */}
                         <Button
                             variant='contained'
                             color='primary'
