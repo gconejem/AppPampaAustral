@@ -1068,7 +1068,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             rows={3}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
+                                    {/* <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
                                             <InputLabel>Estado</InputLabel>
                                             <Select label='Estado' defaultValue='codificado'>
@@ -1077,7 +1077,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <MenuItem value='ensayado'>Ensayado</MenuItem>
                                             </Select>
                                         </FormControl>
-                                    </Grid>
+                                    </Grid> */}
                                     <Grid item xs={12} md={4}>
                                         <FormControlLabel
                                             control={
