@@ -145,6 +145,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [cota2, setCota2] = useState('')
     const [procedencia, setProcedencia] = useState('')
     const [ubicacionSector, setUbicacionSector] = useState('')
+    const [observacionItem, setObservacionItem] = useState('')
     const [cantidadMuestras, setCantidadMuestras] = useState('1')
     const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
@@ -224,6 +225,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setCota2('')
         setProcedencia('')
         setUbicacionSector('')
+        setObservacionItem('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
         setFechaServicio(getFechaServicioForInput())
@@ -269,6 +271,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setCota2('')
         setProcedencia('')
         setUbicacionSector('')
+        setObservacionItem('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
         setTieneVencimiento(false)
@@ -1094,6 +1097,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             rows={3}
                                         />
                                     </Grid>
+                                    {rcmType === 'Control' && (
+                                        <Grid item xs={12} md={4}>
+                                            <TextField
+                                                label='Observación al Ítem'
+                                                value={observacionItem}
+                                                onChange={(e) => setObservacionItem(e.target.value)}
+                                                fullWidth
+                                                multiline
+                                                rows={3}
+                                                placeholder='Ingrese observaciones sobre el ítem...'
+                                            />
+                                        </Grid>
+                                    )}
                                     {/* <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
                                             <InputLabel>Estado</InputLabel>
