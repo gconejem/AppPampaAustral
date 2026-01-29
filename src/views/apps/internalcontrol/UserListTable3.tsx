@@ -40,60 +40,65 @@ const UserListTable3 = ({
 }) => {
   // States
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
-  const [familias, setFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
-  const [loadingAreas, setLoadingAreas] = useState(false)
-  const [loadingFamilias, setLoadingFamilias] = useState(false)
+  const [todasLasFamilias, setTodasLasFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
+  const [loadingData, setLoadingData] = useState(false)
 
-  // Efecto para cargar las áreas desde la API
+  // Familias filtradas según el área seleccionada
+  const familiasFiltradas = selectedArea 
+    ? todasLasFamilias.filter(f => f.areaId === selectedArea)
+    : []
+
+  // Efecto para cargar las áreas y familias al inicio
   useEffect(() => {
-    const fetchAreas = async () => {
-      setLoadingAreas(true)
+    const fetchData = async () => {
+      setLoadingData(true)
       try {
-        const response = await fetch('/api/areas')
-        if (response.ok) {
-          const areasData = await response.json()
+        // Cargar áreas y familias en paralelo
+        const [areasResponse, familiasResponse] = await Promise.all([
+          fetch('/api/areas'),
+          fetch('/api/familias')
+        ])
+
+        if (areasResponse.ok) {
+          const areasData = await areasResponse.json()
           setAreas(areasData)
         }
-      } catch (error) {
-        console.error('Error al cargar áreas:', error)
-      } finally {
-        setLoadingAreas(false)
-      }
-    }
 
-    fetchAreas()
-  }, [])
-
-  // Efecto para cargar las familias cuando cambia el área seleccionada
-  useEffect(() => {
-    const fetchFamilias = async () => {
-      if (!selectedArea) {
-        setFamilias([])
-        setSelectedTipoServicio('')
-        return
-      }
-
-      setLoadingFamilias(true)
-      try {
-        const response = await fetch(`/api/familias?areaId=${selectedArea}`)
-        if (response.ok) {
-          const familiasData = await response.json()
-          setFamilias(familiasData)
-
-          // Solo limpiar el tipo de servicio si no está en la lista de familias cargadas
-          if (selectedTipoServicio && !familiasData.some((f: any) => f.id === selectedTipoServicio)) {
-            setSelectedTipoServicio('')
-          }
+        if (familiasResponse.ok) {
+          const familiasData = await familiasResponse.json()
+          // Transformar los datos para incluir areaId
+          const familiasConAreaId = familiasData.map((f: any) => ({
+            id: f.id,
+            nombre: f.nombre,
+            areaId: f.area?.id || 0
+          }))
+          setTodasLasFamilias(familiasConAreaId)
         }
       } catch (error) {
-        console.error('Error al cargar familias:', error)
+        console.error('Error al cargar datos:', error)
       } finally {
-        setLoadingFamilias(false)
+        setLoadingData(false)
       }
     }
 
-    fetchFamilias()
-  }, [selectedArea])
+    fetchData()
+  }, [])
+
+  // Efecto para limpiar el tipo de servicio cuando cambia el área seleccionada
+  useEffect(() => {
+    if (!selectedArea) {
+      setSelectedTipoServicio('')
+      return
+    }
+
+    // Si hay un tipo de servicio seleccionado, verificar si pertenece al área actual
+    if (selectedTipoServicio) {
+      const familiaSeleccionada = todasLasFamilias.find(f => f.id === selectedTipoServicio)
+      if (!familiaSeleccionada || familiaSeleccionada.areaId !== selectedArea) {
+        setSelectedTipoServicio('')
+      }
+    }
+  }, [selectedArea, selectedTipoServicio, todasLasFamilias])
 
   // Si está cargando
   if (loading) {
@@ -139,7 +144,7 @@ const UserListTable3 = ({
               <Select
                 value={selectedArea}
                 label='Área'
-                disabled={loadingAreas}
+                disabled={loadingData}
                 onChange={(e) => {
                   const value = e.target.value as number | ''
                   setSelectedArea(value)
@@ -169,11 +174,11 @@ const UserListTable3 = ({
               <Select
                 value={selectedTipoServicio}
                 label='Tipo de Servicio'
-                disabled={loadingFamilias || !selectedArea}
+                disabled={loadingData || !selectedArea}
                 onChange={(e) => {
                   const value = e.target.value as number | ''
                   setSelectedTipoServicio(value)
-                  const familiaSeleccionada = familias.find(f => f.id === value)
+                  const familiaSeleccionada = familiasFiltradas.find(f => f.id === value)
                   if (setSelectedTipoServicioNombre) {
                     setSelectedTipoServicioNombre(familiaSeleccionada?.nombre || '')
                   }
@@ -184,7 +189,7 @@ const UserListTable3 = ({
                 <MenuItem value='' disabled>
                   Seleccionar tipo de servicio
                 </MenuItem>
-                {familias.map((familia) => (
+                {familiasFiltradas.map((familia) => (
                   <MenuItem key={familia.id} value={familia.id}>
                     {familia.nombre}
                   </MenuItem>

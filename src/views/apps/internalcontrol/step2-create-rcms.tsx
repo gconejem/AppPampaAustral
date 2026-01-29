@@ -145,6 +145,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
     const [rcmMenuAnchor, setRcmMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
+    const [isEditingRcm, setIsEditingRcm] = useState(false)
+    const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
+    const [showEditWarning, setShowEditWarning] = useState(false)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -182,6 +185,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleNewRcm = () => {
+        // Validar si hay un RCM en edición
+        if (isEditingRcm) {
+            setShowEditWarning(true)
+            return
+        }
+
         setShowRcmCard(true)
         setRcmType('')
         setArea('')
@@ -208,6 +217,55 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
         setTieneVencimiento(shouldHaveVencimiento)
         setSubmuestrasVencimiento([])
+    }
+
+    const handleCancelEdit = () => {
+        // Si estamos editando un RCM, restaurarlo a la lista
+        if (isEditingRcm && editingRcmId !== null) {
+            const rcmToRestore: RCMData = {
+                id: editingRcmId,
+                rcmType,
+                numeroTarjeta,
+                tipoMaterial,
+                item,
+                ensayos: [...ensayosAsociados],
+                fechaServicio,
+                fechaMuestreo: fechaServicio,
+                tomaMuestra,
+                cantidadMuestras,
+                numeroRcm: `RCM-RESTORED`,
+                estado: 'Codificado',
+                tieneVencimiento,
+                submuestrasVencimiento: [...submuestrasVencimiento]
+            }
+            setSavedRcms([...savedRcms, rcmToRestore])
+        }
+
+        // Cerrar el formulario y limpiar estados
+        setShowRcmCard(false)
+        setRcmType('')
+        setArea('')
+        setNumeroTarjeta('')
+        setTomaMuestra('')
+        setTipoMaterial('')
+        setItem('')
+        setElemento('')
+        setGrado('')
+        setCalicata('')
+        setEstrato('')
+        setCota1('')
+        setCota2('')
+        setProcedencia('')
+        setUbicacionSector('')
+        setCantidadMuestras('1')
+        setEnsayosAsociados([])
+        setTieneVencimiento(false)
+        setSubmuestrasVencimiento([])
+        setErrorVencimiento('')
+
+        // Limpiar estado de edición
+        setIsEditingRcm(false)
+        setEditingRcmId(null)
     }
 
     const handleSaveRcm = () => {
@@ -243,6 +301,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
+
+        // Limpiar estado de edición
+        setIsEditingRcm(false)
+        setEditingRcmId(null)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -332,6 +394,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setTieneVencimiento(rcmToEdit.tieneVencimiento || false)
                 setSubmuestrasVencimiento(rcmToEdit.submuestrasVencimiento || [])
 
+                // Establecer estado de edición
+                setIsEditingRcm(true)
+                setEditingRcmId(selectedRcmId)
+
                 // Eliminar el RCM de la lista de guardados (se volverá a guardar al editar)
                 setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
 
@@ -351,6 +417,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleDuplicateRcm = () => {
+        // Validar si hay un RCM en edición
+        if (isEditingRcm) {
+            setShowEditWarning(true)
+            handleCloseRcmMenu()
+            return
+        }
+
         if (selectedRcmId !== null) {
             const rcmToDuplicate = savedRcms.find(r => r.id === selectedRcmId)
             if (rcmToDuplicate) {
@@ -1338,7 +1411,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 </Box>
 
                                 {/* Botón Guardar RCM */}
-                                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                                    <Button
+                                        variant='outlined'
+                                        color='error'
+                                        sx={{ textTransform: 'none', px: 4 }}
+                                        onClick={handleCancelEdit}
+                                    >
+                                        Cancelar
+                                    </Button>
                                     <Button
                                         variant='contained'
                                         color='primary'
@@ -1751,6 +1832,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         sx={{ width: '100%' }}
                     >
                         {errorVencimiento}
+                    </Alert>
+                </Snackbar>
+
+                {/* Snackbar para advertencia de edición */}
+                <Snackbar
+                    open={showEditWarning}
+                    autoHideDuration={5000}
+                    onClose={() => setShowEditWarning(false)}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                    <Alert
+                        onClose={() => setShowEditWarning(false)}
+                        severity='warning'
+                        variant='filled'
+                        sx={{ width: '100%' }}
+                    >
+                        Debe finalizar la edición del RCM actual antes de crear uno nuevo
                     </Alert>
                 </Snackbar>
             </Box>
