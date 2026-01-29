@@ -147,6 +147,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
     const [isEditingRcm, setIsEditingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
+    const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
 
     // Estados para vencimiento
@@ -220,25 +221,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleCancelEdit = () => {
-        // Si estamos editando un RCM, restaurarlo a la lista
-        if (isEditingRcm && editingRcmId !== null) {
-            const rcmToRestore: RCMData = {
-                id: editingRcmId,
-                rcmType,
-                numeroTarjeta,
-                tipoMaterial,
-                item,
-                ensayos: [...ensayosAsociados],
-                fechaServicio,
-                fechaMuestreo: fechaServicio,
-                tomaMuestra,
-                cantidadMuestras,
-                numeroRcm: `RCM-RESTORED`,
-                estado: 'Codificado',
-                tieneVencimiento,
-                submuestrasVencimiento: [...submuestrasVencimiento]
-            }
-            setSavedRcms([...savedRcms, rcmToRestore])
+        // Si estamos editando un RCM, restaurarlo a la lista con sus datos originales
+        if (isEditingRcm && editingRcmId !== null && originalRcm !== null) {
+            setSavedRcms([...savedRcms, originalRcm])
+            setOriginalRcm(null)
         }
 
         // Cerrar el formulario y limpiar estados
@@ -305,6 +291,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar estado de edición
         setIsEditingRcm(false)
         setEditingRcmId(null)
+        setOriginalRcm(null)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -380,6 +367,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         if (selectedRcmId !== null) {
             const rcmToEdit = savedRcms.find(r => r.id === selectedRcmId)
             if (rcmToEdit) {
+                // Guardar el RCM completo original para poder restaurarlo si se cancela
+                setOriginalRcm({ ...rcmToEdit })
+
                 // Cargar los datos del RCM en el formulario
                 setRcmType(rcmToEdit.rcmType)
                 setNumeroTarjeta(rcmToEdit.numeroTarjeta)
