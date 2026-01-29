@@ -24,7 +24,12 @@ import {
     Switch,
     Menu,
     Alert,
-    Snackbar
+    Snackbar,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -149,6 +154,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
+    const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -186,12 +192,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleNewRcm = () => {
-        // Validar si hay un RCM en edición
+        // Validar si hay un RCM en EDICIÓN (editando un RCM guardado)
         if (isEditingRcm) {
             setShowEditWarning(true)
             return
         }
 
+        // Si hay un RCM en CREACIÓN (nuevo RCM sin guardar), mostrar confirmación
+        if (showRcmCard && !isEditingRcm) {
+            setShowConfirmNewRcm(true)
+            return
+        }
+
+        // Si no hay RCM en proceso, crear uno nuevo directamente
+        createNewRcm()
+    }
+
+    const createNewRcm = () => {
         setShowRcmCard(true)
         setRcmType('')
         setArea('')
@@ -218,6 +235,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
         setTieneVencimiento(shouldHaveVencimiento)
         setSubmuestrasVencimiento([])
+    }
+
+    const handleConfirmNewRcm = () => {
+        setShowConfirmNewRcm(false)
+        createNewRcm()
+    }
+
+    const handleCancelNewRcm = () => {
+        setShowConfirmNewRcm(false)
     }
 
     const handleCancelEdit = () => {
@@ -1843,6 +1869,41 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         Debe finalizar la edición del RCM actual antes de crear uno nuevo
                     </Alert>
                 </Snackbar>
+
+                {/* Dialog de confirmación para crear nuevo RCM */}
+                <Dialog
+                    open={showConfirmNewRcm}
+                    onClose={handleCancelNewRcm}
+                    maxWidth='sm'
+                    fullWidth
+                >
+                    <DialogTitle sx={{ fontWeight: 600 }}>
+                        ¿Crear nuevo RCM?
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Si crea un nuevo RCM, se perderá la información del RCM actual a menos que lo guarde primero.
+                            ¿Desea continuar?
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button
+                            onClick={handleCancelNewRcm}
+                            variant='outlined'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Continuar creando
+                        </Button>
+                        <Button
+                            onClick={handleConfirmNewRcm}
+                            variant='contained'
+                            color='primary'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Crear nuevo
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </Card>
     )
