@@ -44,7 +44,7 @@ const UserListTable3 = ({
   const [loadingData, setLoadingData] = useState(false)
 
   // Familias filtradas según el área seleccionada
-  const familiasFiltradas = selectedArea 
+  const familiasFiltradas = selectedArea
     ? todasLasFamilias.filter(f => f.areaId === selectedArea)
     : []
 
