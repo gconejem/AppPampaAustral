@@ -806,12 +806,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Box>
                                 )}
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Checkbox />
-                                <IconButton size='small'>
-                                    <MoreVertIcon />
-                                </IconButton>
-                            </Box>
+                            {isEditingRcm && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Checkbox />
+                                    <IconButton size='small'>
+                                        <MoreVertIcon />
+                                    </IconButton>
+                                </Box>
+                            )}
                         </Box>
 
                         {/* Contenido colapsable del RCM */}
