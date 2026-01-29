@@ -83,6 +83,7 @@ Costos Adicionales contra evento:
 
 Consideraciones adicionales y requisitos especiales
 • Esta cotización ha sido elaborada en base a los antecedentes proporcionados por el cliente. Cualquier requerimiento adicional deberá ser informado previamente para su evaluación y eventual recotización.
+• Inicio de los trabajos: Previa recepción de OC y pago del 50% del valor total cotizado.
 • Los requerimientos adicionales pueden incluir: Normativas técnicas específicas, Acreditaciones de personal, Exigencias de seguridad, medio ambiente u otras disposiciones del mandante.
 
 Condiciones para terreno y accesos
