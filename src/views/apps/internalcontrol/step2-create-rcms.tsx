@@ -1866,7 +1866,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         variant='filled'
                         sx={{ width: '100%' }}
                     >
-                        Debe finalizar la edición del RCM actual antes de crear uno nuevo
+                        Debe finalizar la edición del RCM actual o cancelarla antes de crear uno nuevo
                     </Alert>
                 </Snackbar>
 
