@@ -85,6 +85,17 @@ const parseRequestPayload = async (request: Request) => {
   }
 }
 
+const logRequest = (contentType: string, payload: any) => {
+  const integracionTipo = payload?.integracionTipo
+  const data = payload?.integracionData?.data
+  const dataCount = Array.isArray(data) ? data.length : 0
+  const sampleClave = Array.isArray(data) && data.length > 0 ? data[0]?.CLAVE : undefined
+
+  console.info('[api-post-integracion] content-type:', contentType)
+  console.info('[api-post-integracion] integracionTipo:', integracionTipo)
+  console.info('[api-post-integracion] dataCount:', dataCount, 'sampleClave:', sampleClave)
+}
+
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   let docCode: string
   if (fklbdocver.startsWith('X-1')) {
@@ -126,7 +137,10 @@ const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
 
 export async function POST(request: Request) {
   try {
+    const contentType = request.headers.get('content-type') || ''
     const payload = await parseRequestPayload(request)
+
+    logRequest(contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
       return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
