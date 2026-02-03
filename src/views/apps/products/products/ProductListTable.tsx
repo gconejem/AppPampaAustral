@@ -266,9 +266,11 @@ const ProductListTable = () => {
         console.log('Datos cargados:', data)
 
         if (data) {
-          setProductos(data.productos || [])
-          setAllProductos(data.productos || []) // Guardar todos los productos
-          // No establecer filteredProductos aquí - dejar que el useEffect maneje el filtrado
+          const productos = data.productos || []
+          setProductos(productos)
+          setAllProductos(productos) // Guardar todos los productos
+          setFilteredProductos(productos) // Inicializar filteredProductos con todos los productos
+          setTotalProductos(productos.length)
           setTipos(data.tipos || [])
         }
 
