@@ -43,6 +43,7 @@ import Alert from '@mui/material/Alert'
 // Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
+import * as XLSX from 'xlsx'
 import {
   createColumnHelper,
   flexRender,
@@ -891,6 +892,42 @@ const ProductListTable = () => {
   const handleOpenPackageModal = () => setOpenPackageModal(true)
   const handleClosePackageModal = () => setOpenPackageModal(false)
 
+  // Función para exportar a Excel
+  const exportToExcel = () => {
+    const dataToExport = filteredProductos.map(producto => ({
+      SKU: producto.sku,
+      Nombre: producto.nombre,
+      Área: producto.area,
+      Familia: producto.familia,
+      Tipo: producto.tipo,
+      Estado: producto.estado,
+      'Es Paquete': producto.esPaquete ? 'Sí' : 'No',
+      Norma: producto.norma || '',
+      'Aplica Impuesto': producto.aplicaImpuesto ? 'Sí' : 'No'
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos')
+
+    // Ajustar ancho de columnas
+    const colWidths = [
+      { wch: 15 }, // SKU
+      { wch: 40 }, // Nombre
+      { wch: 20 }, // Área
+      { wch: 20 }, // Familia
+      { wch: 15 }, // Tipo
+      { wch: 12 }, // Estado
+      { wch: 12 }, // Es Paquete
+      { wch: 20 }, // Norma
+      { wch: 15 }  // Aplica Impuesto
+    ]
+    worksheet['!cols'] = colWidths
+
+    XLSX.writeFile(workbook, `Productos_${new Date().toISOString().split('T')[0]}.xlsx`)
+    toast.success('Archivo Excel descargado exitosamente')
+  }
+
   const { hasPermission } = usePermissions()
   const soloLectura =
     hasPermission(permisos.productos.ver) &&
@@ -942,6 +979,14 @@ const ProductListTable = () => {
             className='max-sm:is-full'
           />
           <div className='flex items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
+            <Button
+              variant='outlined'
+              onClick={exportToExcel}
+              startIcon={<i className='ri-file-excel-2-line' />}
+              disabled={filteredProductos.length === 0}
+            >
+              Exportar Excel
+            </Button>
             <Button
               variant='contained'
               onClick={handleOpenPackageModal}
