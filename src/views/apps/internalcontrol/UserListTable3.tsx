@@ -13,6 +13,7 @@ import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Box from '@mui/material/Box'
+import Menu from '@mui/material/Menu'
 
 const UserListTable3 = ({
   otId,
@@ -30,7 +31,7 @@ const UserListTable3 = ({
   otId?: string | null
   otData?: any
   loading?: boolean
-  onGoToStep2?: () => void
+  onGoToStep2?: (rcmType: string) => void
   selectedArea: number | ''
   setSelectedArea: (value: number | '') => void
   selectedTipoServicio: number | ''
@@ -42,6 +43,7 @@ const UserListTable3 = ({
   const [areas, setAreas] = useState<Array<{ id: number, nombre: string }>>([])
   const [todasLasFamilias, setTodasLasFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
   const [loadingData, setLoadingData] = useState(false)
+  const [rcmMenuAnchor, setRcmMenuAnchor] = useState<HTMLElement | null>(null)
 
   // Familias filtradas según el área seleccionada
   const familiasFiltradas = selectedArea
@@ -209,14 +211,43 @@ const UserListTable3 = ({
               variant='contained'
               startIcon={<i className='ri-add-line' />}
               disabled={!selectedArea || !selectedTipoServicio}
-              onClick={() => {
-                if (onGoToStep2) {
-                  onGoToStep2()
-                }
-              }}
+              onClick={(e) => setRcmMenuAnchor(e.currentTarget)}
             >
               Nuevo RCM
             </Button>
+            <Menu
+              anchorEl={rcmMenuAnchor}
+              open={Boolean(rcmMenuAnchor)}
+              onClose={() => setRcmMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    minWidth: rcmMenuAnchor?.offsetWidth || 'auto'
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={() => {
+                setRcmMenuAnchor(null)
+                if (onGoToStep2) onGoToStep2('Muestra')
+              }}>
+                Muestra
+              </MenuItem>
+              <MenuItem onClick={() => {
+                setRcmMenuAnchor(null)
+                if (onGoToStep2) onGoToStep2('Control')
+              }}>
+                Control
+              </MenuItem>
+              <MenuItem onClick={() => {
+                setRcmMenuAnchor(null)
+                if (onGoToStep2) onGoToStep2('Servicio')
+              }}>
+                Servicio
+              </MenuItem>
+            </Menu>
           </Grid>
         </Grid>
       </Box>

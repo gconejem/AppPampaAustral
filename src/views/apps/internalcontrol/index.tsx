@@ -49,6 +49,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   // Estados para persistir datos del Paso 2
   const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
   const [savedRcms, setSavedRcms] = useState<RCMData[]>([])
+  const [initialRcmType, setInitialRcmType] = useState<string>('')
 
   useEffect(() => {
     if (!searchParams) return
@@ -89,9 +90,12 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
     setActiveStep(step)
   }
 
-  const handleGoToStep2 = () => {
+  const handleGoToStep2 = (rcmType?: string) => {
     // Solo avanzar si hay área y servicio seleccionados
     if (selectedArea && selectedTipoServicio) {
+      if (rcmType) {
+        setInitialRcmType(rcmType)
+      }
       setActiveStep(2)
     }
   }
@@ -141,6 +145,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             setSavedRcms={setSavedRcms}
             otData={otData}
             selectedAreaNombre={selectedAreaNombre}
+            initialRcmType={initialRcmType}
+            onClearInitialRcmType={() => setInitialRcmType('')}
           />
         </Grid>
       )}

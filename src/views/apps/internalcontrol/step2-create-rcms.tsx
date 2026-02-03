@@ -98,9 +98,11 @@ interface Step2CreateRcmsProps {
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
     selectedAreaNombre?: string
+    initialRcmType?: string
+    onClearInitialRcmType?: () => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -150,6 +152,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [informeEnsayo, setInformeEnsayo] = useState(true)
     const [expandedSavedRcms, setExpandedSavedRcms] = useState<Record<number, boolean>>({})
     const [rcmMenuAnchor, setRcmMenuAnchor] = useState<HTMLElement | null>(null)
+    const [newRcmMenuAnchor, setNewRcmMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
     const [isEditingRcm, setIsEditingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
@@ -186,32 +189,41 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [totalProductos, setTotalProductos] = useState(0)
     const [paginatedProductos, setPaginatedProductos] = useState<ProductoType[]>([]) // Productos de la página actual
     const [filterResetKey, setFilterResetKey] = useState(0)
+    const [pendingRcmType, setPendingRcmType] = useState<string>('')
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
         console.log('Duplicar último RCM')
     } */
 
-    const handleNewRcm = () => {
+    const handleNewRcmClick = (event: React.MouseEvent<HTMLElement>) => {
         // Validar si hay un RCM en EDICIÓN (editando un RCM guardado)
         if (isEditingRcm) {
             setShowEditWarning(true)
             return
         }
 
+        // Abrir el menú de tipos de RCM
+        setNewRcmMenuAnchor(event.currentTarget)
+    }
+
+    const handleSelectRcmType = (type: string) => {
+        setNewRcmMenuAnchor(null)
+
         // Si hay un RCM en CREACIÓN (nuevo RCM sin guardar), mostrar confirmación
         if (showRcmCard && !isEditingRcm) {
+            setPendingRcmType(type)
             setShowConfirmNewRcm(true)
             return
         }
 
         // Si no hay RCM en proceso, crear uno nuevo directamente
-        createNewRcm()
+        createNewRcm(type)
     }
 
-    const createNewRcm = () => {
+    const createNewRcm = (type?: string) => {
         setShowRcmCard(true)
-        setRcmType('')
+        setRcmType(type || '')
         setArea('')
         setNumeroTarjeta('')
         setTomaMuestra('')
@@ -241,7 +253,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleConfirmNewRcm = () => {
         setShowConfirmNewRcm(false)
-        createNewRcm()
+        createNewRcm(pendingRcmType)
+        setPendingRcmType('')
     }
 
     const handleCancelNewRcm = () => {
@@ -608,6 +621,44 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseStatusMenu()
     }
 
+    // Efecto para inicializar RCM cuando viene del paso 1 con un tipo seleccionado
+    useEffect(() => {
+        if (initialRcmType && !showRcmCard) {
+            setShowRcmCard(true)
+            setRcmType(initialRcmType)
+            setArea('')
+            setNumeroTarjeta('')
+            setTomaMuestra('')
+            setTipoMaterial('')
+            setItem('')
+            setElemento('')
+            setGrado('')
+            setCalicata('')
+            setEstrato('')
+            setCota1('')
+            setCota2('')
+            setProcedencia('')
+            setUbicacionSector('')
+            setObservacionItem('')
+            setCantidadMuestras('1')
+            setEnsayosAsociados([])
+            setFechaServicio(getFechaServicioForInput())
+            setFechaIngreso(getTodayDateForInput())
+            setFechaEntrega('')
+            setExpandedRcm(true)
+
+            // Resetear vencimiento
+            const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
+            setTieneVencimiento(shouldHaveVencimiento)
+            setSubmuestrasVencimiento([])
+
+            // Limpiar el tipo inicial después de usarlo
+            if (onClearInitialRcmType) {
+                onClearInitialRcmType()
+            }
+        }
+    }, [initialRcmType])
+
     // Activar vencimiento automáticamente cuando el área es Hormigón o Elementos y Componentes
     useEffect(() => {
         const shouldHaveVencimiento =
@@ -756,11 +807,35 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             variant='contained'
                             color='primary'
                             startIcon={<AddIcon />}
-                            onClick={handleNewRcm}
+                            onClick={handleNewRcmClick}
                             sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
                         >
                             Nuevo RCM
                         </Button>
+                        <Menu
+                            anchorEl={newRcmMenuAnchor}
+                            open={Boolean(newRcmMenuAnchor)}
+                            onClose={() => setNewRcmMenuAnchor(null)}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                            slotProps={{
+                                paper: {
+                                    sx: {
+                                        minWidth: newRcmMenuAnchor?.offsetWidth || 'auto'
+                                    }
+                                }
+                            }}
+                        >
+                            <MenuItem onClick={() => handleSelectRcmType('Muestra')}>
+                                Muestra
+                            </MenuItem>
+                            <MenuItem onClick={() => handleSelectRcmType('Control')}>
+                                Control
+                            </MenuItem>
+                            <MenuItem onClick={() => handleSelectRcmType('Servicio')}>
+                                Servicio
+                            </MenuItem>
+                        </Menu>
                     </Box>
                 </Box>
 
@@ -792,23 +867,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         }}
                                     />
                                 </IconButton>
-                                {rcmType ? (
-                                    <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
-                                ) : (
-                                    <FormControl size='small' sx={{ minWidth: 150 }}>
-                                        <InputLabel>Tipo de RCM</InputLabel>
-                                        <Select
-                                            value={rcmType}
-                                            label='Tipo de RCM'
-                                            onChange={(e) => setRcmType(e.target.value)}
-                                            sx={{ bgcolor: 'white' }}
-                                        >
-                                            <MenuItem value='Muestra'>Muestra</MenuItem>
-                                            <MenuItem value='Control'>Control</MenuItem>
-                                            <MenuItem value='Servicio'>Servicio</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                )}
+                                <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
                                 {numeroTarjeta && (
                                     <Typography variant='body1' sx={{ fontWeight: 600 }}>
                                         Tarjeta: {numeroTarjeta}
@@ -836,7 +895,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Box>
 
                         {/* Contenido colapsable del RCM */}
-                        <Collapse in={expandedRcm && rcmType !== ''}>
+                        <Collapse in={expandedRcm}>
                             <Box sx={{ p: 3, bgcolor: 'white' }}>
                                 {/* Campos principales */}
                                 <Grid container spacing={3}>
