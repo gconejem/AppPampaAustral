@@ -300,8 +300,8 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
 
           {/* Grid de campos */}
           <Grid container spacing={4}>
-            {/* Primera fila */}
-            <Grid item xs={3}>
+            {/* Primera fila - 5 columnas */}
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   N° OT
@@ -312,7 +312,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   TIPO OT
@@ -323,7 +323,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   FECHA OT
@@ -334,7 +334,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   MUESTREADO POR
@@ -345,8 +345,19 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
+            <Grid item xs={2.4}>
+              <Box>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
+                  ID SOLICITUD
+                </Typography>
+                <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
+                  {/* Por ahora solo encabezado */}
+                </Typography>
+              </Box>
+            </Grid>
+
             {/* Segunda fila */}
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   OBRA
@@ -368,7 +379,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.5}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   REGIÓN / CIUDAD
@@ -379,7 +390,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.5}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   MANDANTE
