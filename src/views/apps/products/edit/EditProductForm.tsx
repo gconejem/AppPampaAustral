@@ -207,6 +207,7 @@ export default function EditProductForm({ open, onClose, product, onSave, areas,
               <MenuItem value='Ensayo'>Ensayo</MenuItem>
               <MenuItem value='Paquete'>Paquete</MenuItem>
               <MenuItem value='Terreno'>Terreno</MenuItem>
+              <MenuItem value='Servicio'>Servicio</MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={6}>
