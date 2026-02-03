@@ -91,6 +91,11 @@ const UserListTable3 = ({
       return
     }
 
+    // Solo validar si las familias ya están cargadas
+    if (todasLasFamilias.length === 0) {
+      return
+    }
+
     // Si hay un tipo de servicio seleccionado, verificar si pertenece al área actual
     if (selectedTipoServicio) {
       const familiaSeleccionada = todasLasFamilias.find(f => f.id === selectedTipoServicio)
