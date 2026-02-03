@@ -5,6 +5,237 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const parseBracketPath = (key: string): string[] => {
+  return key.match(/[^\[\]]+/g) || [key]
+}
+
+const setDeepValue = (target: any, path: string[], value: any) => {
+  const key = path[0]
+  const isIndex = /^\d+$/.test(key)
+
+  if (path.length === 1) {
+    if (isIndex) {
+      target[Number(key)] = value
+    } else {
+      target[key] = value
+    }
+    return
+  }
+
+  const nextKey = path[1]
+  const nextIsIndex = /^\d+$/.test(nextKey)
+
+  if (isIndex) {
+    const idx = Number(key)
+    if (target[idx] === undefined) {
+      target[idx] = nextIsIndex ? [] : {}
+    }
+    setDeepValue(target[idx], path.slice(1), value)
+    return
+  }
+
+  if (target[key] === undefined) {
+    target[key] = nextIsIndex ? [] : {}
+  }
+
+  setDeepValue(target[key], path.slice(1), value)
+}
+
+const parseFormBody = (text: string) => {
+  const params = new URLSearchParams(text)
+  const payload: any = {}
+
+  for (const [key, value] of params.entries()) {
+    const path = parseBracketPath(key)
+    setDeepValue(payload, path, value)
+  }
+
+  if (typeof payload.integracionData === 'string') {
+    try {
+      payload.integracionData = JSON.parse(payload.integracionData)
+    } catch {
+      // ignore
+    }
+  }
+
+  if (payload.integracionData?.data && typeof payload.integracionData.data === 'string') {
+    try {
+      payload.integracionData.data = JSON.parse(payload.integracionData.data)
+    } catch {
+      // ignore
+    }
+  }
+
+  return payload
+}
+
+const parseRequestPayload = async (request: Request) => {
+  const contentType = request.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    return request.json()
+  }
+
+  const text = await request.text()
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return parseFormBody(text)
+  }
+}
+
+const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
+  let docCode: string
+  if (fklbdocver.startsWith('X-1')) {
+    docCode = fklbdocver.substring(0, 3)
+  } else {
+    docCode = fklbdocver.substring(0, 7)
+  }
+
+  const tipoOTMap: { [key: string]: string } = {
+    'R-12-03': 'R-12-03',
+    'R-12-39': 'R-12-39',
+    'R-12-99': 'R-12-99',
+    'R-12-27': 'R-12-27',
+    'R-12-58': 'R-12-58',
+    'R-12-31': 'R-12-31',
+    'R-12-69': 'R-12-69',
+    'R-12-34': 'R-12-34',
+    'X-1': 'X-1'
+  }
+
+  const codigo = tipoOTMap[docCode]
+
+  if (codigo) {
+    const tipoOT = await prisma.tipoOrdenTrabajo.findFirst({
+      where: { codigo }
+    })
+
+    if (tipoOT) {
+      return tipoOT.id
+    }
+  }
+
+  const tipoOTDefault = await prisma.tipoOrdenTrabajo.findFirst({
+    where: { codigo: 'R-12-34' }
+  })
+
+  return tipoOTDefault?.id || 8
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = await parseRequestPayload(request)
+
+    if (!payload?.integracionTipo || !payload?.integracionData?.data) {
+      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+    }
+
+    const { integracionTipo } = payload
+    const data = payload.integracionData.data
+
+    const user = await prisma.user.findFirst()
+    if (!user) {
+      return NextResponse.json({ error: 'No se encontró ningún laboratorista' }, { status: 500 })
+    }
+
+    if (integracionTipo === 'NewLBRUTAOT') {
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json({ error: 'No hay OTs para procesar' }, { status: 400 })
+      }
+
+      const ordenesTrabajo = await Promise.all(
+        data.map(async (ot: {
+          CLAVE: string
+          ESTADO?: string
+          ORIGEN?: string
+          FKLBRUTAS?: string
+          CORRELATIV?: string
+          FKLBDOCVER?: string
+          FKLBRUTSER?: string
+          RESPUESTA?: any
+        }) => {
+          const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
+
+          let numeroTarjeta: string | undefined = undefined
+          if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
+            numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
+          }
+
+          return prisma.ordenTrabajo.create({
+            data: {
+              clave: ot.CLAVE,
+              estado: ot.ESTADO || 'PENDIENTE',
+              origen: ot.ORIGEN || 'VISITA',
+              fklbrutas: ot.FKLBRUTAS || '',
+              correlativ: ot.CORRELATIV || '001',
+              fklbdocver: ot.FKLBDOCVER || '',
+              fklbrutser: ot.FKLBRUTSER || '',
+              numeroTarjeta,
+              jsonOT: ot,
+              agenda: {
+                connect: {
+                  id: parseInt(ot.FKLBRUTAS || '-1')
+                }
+              },
+              tipoOT: {
+                connect: {
+                  id: tipoOTId
+                }
+              },
+              user: {
+                connect: {
+                  id: user.id
+                }
+              }
+            }
+          })
+        })
+      )
+
+      return NextResponse.json({ message: 'OTs creadas correctamente', data: ordenesTrabajo })
+    }
+
+    if (integracionTipo === 'UpdateLBRUTAS') {
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json({ error: 'No hay visitas para procesar' }, { status: 400 })
+      }
+
+      const agendasActualizadas = []
+
+      for (const item of data) {
+        if (item?.ACEPVISITA && item?.CLAVE) {
+          const agenda = await prisma.agenda.update({
+            where: { id: parseInt(item.CLAVE) },
+            data: {
+              horaLlegada: item.ACEPVISITA.hora_llegada,
+              horaSalida: item.ACEPVISITA.hora_salida,
+              movilizacion: item.ACEPVISITA.movilizacion,
+              comprobanteVisitaJSON: item
+            }
+          })
+
+          agendasActualizadas.push(agenda)
+        }
+      }
+
+      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas })
+    }
+
+    return NextResponse.json({ error: `Integración no soportada: ${integracionTipo}` }, { status: 400 })
+  } catch (error) {
+    console.error('Error en api-post-integracion:', error)
+
+    return NextResponse.json({ error: 'Error al procesar integración' }, { status: 500 })
+  }
+}import { NextResponse } from 'next/server'
+
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   let docCode: string
   if (fklbdocver.startsWith('X-1')) {

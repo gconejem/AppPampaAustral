@@ -5,6 +5,86 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const parseBracketPath = (key: string): string[] => {
+  return key.match(/[^\[\]]+/g) || [key]
+}
+
+const setDeepValue = (target: any, path: string[], value: any) => {
+  const key = path[0]
+  const isIndex = /^\d+$/.test(key)
+
+  if (path.length === 1) {
+    if (isIndex) {
+      target[Number(key)] = value
+    } else {
+      target[key] = value
+    }
+    return
+  }
+
+  const nextKey = path[1]
+  const nextIsIndex = /^\d+$/.test(nextKey)
+
+  if (isIndex) {
+    const idx = Number(key)
+    if (target[idx] === undefined) {
+      target[idx] = nextIsIndex ? [] : {}
+    }
+    setDeepValue(target[idx], path.slice(1), value)
+    return
+  }
+
+  if (target[key] === undefined) {
+    target[key] = nextIsIndex ? [] : {}
+  }
+
+  setDeepValue(target[key], path.slice(1), value)
+}
+
+const parseFormBody = (text: string) => {
+  const params = new URLSearchParams(text)
+  const payload: any = {}
+
+  for (const [key, value] of params.entries()) {
+    const path = parseBracketPath(key)
+    setDeepValue(payload, path, value)
+  }
+
+  if (typeof payload.integracionData === 'string') {
+    try {
+      payload.integracionData = JSON.parse(payload.integracionData)
+    } catch {
+      // ignore
+    }
+  }
+
+  if (payload.integracionData?.data && typeof payload.integracionData.data === 'string') {
+    try {
+      payload.integracionData.data = JSON.parse(payload.integracionData.data)
+    } catch {
+      // ignore
+    }
+  }
+
+  return payload
+}
+
+const parseRequestPayload = async (request: Request) => {
+  const contentType = request.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    return request.json()
+  }
+
+  const text = await request.text()
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return parseFormBody(text)
+  }
+}
+
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   let docCode: string
   if (fklbdocver.startsWith('X-1')) {
@@ -46,7 +126,7 @@ const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json()
+    const payload = await parseRequestPayload(request)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
       return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
