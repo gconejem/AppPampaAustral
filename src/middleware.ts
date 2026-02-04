@@ -1,24 +1,45 @@
 import { NextResponse } from 'next/server'
 
+const ALLOWED_ORIGINS = new Set([
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://localhost'
+])
+
+function getAllowedOrigin(request) {
+    const origin = request.headers.get('origin')
+    return origin && ALLOWED_ORIGINS.has(origin) ? origin : null
+}
+
 export function middleware(request) {
+    const pathname = request.nextUrl?.pathname || ''
+    if (pathname.startsWith('/api')) {
+        return NextResponse.next()
+    }
+
+    const allowedOrigin = getAllowedOrigin(request)
+
     // Manejar preflight OPTIONS
     if (request.method === 'OPTIONS') {
         return new NextResponse(null, {
             status: 200,
             headers: {
-                'Access-Control-Allow-Origin': 'https://localhost',
+                ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-                'Access-Control-Allow-Credentials': 'true',
-            },
+                'Access-Control-Allow-Credentials': 'true'
+            }
         })
     }
 
     // Añadir headers CORS a todas las respuestas
     const response = NextResponse.next()
-    response.headers.set('Access-Control-Allow-Origin', 'https://localhost')
-    response.headers.set('Access-Control-Allow-Credentials', 'true')
-    
+    if (allowedOrigin) {
+        response.headers.set('Access-Control-Allow-Origin', allowedOrigin)
+        response.headers.set('Access-Control-Allow-Credentials', 'true')
+    }
+
     return response
 }
 

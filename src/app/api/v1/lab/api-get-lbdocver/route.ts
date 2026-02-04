@@ -4,21 +4,30 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function corsHeaders() {
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders() })
+export async function OPTIONS(request: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(request.headers.get('origin')) })
 }
 
 export async function GET(request: Request) {
   try {
+    const origin = request.headers.get('origin')
     const { searchParams } = new URL(request.url)
     
     // Formularios basados en tabla LBDOCVER
@@ -605,13 +614,13 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { data: formularios },
-      { headers: corsHeaders(), status: 200 }
+      { headers: corsHeaders(origin), status: 200 }
     )
   } catch (error: any) {
     console.error('Error en api-get-lbdocver:', error)
     return NextResponse.json(
       { error: error?.message ?? 'unknown' },
-      { status: 500, headers: corsHeaders() }
+      { status: 500, headers: corsHeaders(request.headers.get('origin')) }
     )
   }
 }

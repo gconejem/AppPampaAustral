@@ -2,17 +2,26 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-function corsHeaders() {
+
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return new Response(null, { headers: corsHeaders() })
+export async function OPTIONS(request: Request) {
+  return new Response(null, { headers: corsHeaders(request.headers.get('origin')) })
 }
 
 function normalizeKey(k: string) {
@@ -37,8 +46,9 @@ const TARGET_KEYS = ['CODIGO', 'FORMULARIO', 'DESCRIP']
 
 export async function GET(request: Request) {
   try {
+    const origin = request.headers.get('origin')
     if (!prisma) {
-      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     const model =
@@ -51,7 +61,7 @@ export async function GET(request: Request) {
     if (!model || typeof model.findMany !== 'function') {
       return new Response(JSON.stringify({ error: "Prisma model for 'TipoOrdenTrabajo' not available", prismaKeys: Object.keys(prisma) }), {
         status: 500,
-        headers: { ...corsHeaders(), 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -116,9 +126,9 @@ export async function GET(request: Request) {
       console.log('Servicios con FORMULARIO:', mapped.filter((s: any) => s.FORMULARIO).length)
     }
     
-    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } })
   } catch (error: any) {
     console.error('Error en api-get-lbrutser:', error)
-    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(request.headers.get('origin')), 'Content-Type': 'application/json' } })
   }
 }

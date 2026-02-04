@@ -5,6 +5,27 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+const corsHeaders = (origin?: string | null) => {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
+  return {
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true'
+  }
+}
+
+export async function OPTIONS(request: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(request.headers.get('origin')) })
+}
+
 const parseBracketPath = (key: string): string[] => {
   return key.match(/[^\[\]]+/g) || [key]
 }
@@ -71,12 +92,15 @@ const parseFormBody = (text: string) => {
 
 const parseRequestPayload = async (request: Request) => {
   const contentType = request.headers.get('content-type') || ''
+  const text = await request.text()
 
   if (contentType.includes('application/json')) {
-    return request.json()
+    try {
+      return JSON.parse(text)
+    } catch {
+      return parseFormBody(text)
+    }
   }
-
-  const text = await request.text()
 
   try {
     return JSON.parse(text)
@@ -139,11 +163,12 @@ export async function POST(request: Request) {
   try {
     const contentType = request.headers.get('content-type') || ''
     const payload = await parseRequestPayload(request)
+    const origin = request.headers.get('origin')
 
     logRequest(contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
-      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+      return NextResponse.json({ error: 'Payload inválido' }, { status: 400, headers: corsHeaders(origin) })
     }
 
     const { integracionTipo } = payload
@@ -151,12 +176,12 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findFirst()
     if (!user) {
-      return NextResponse.json({ error: 'No se encontró ningún laboratorista' }, { status: 500 })
+      return NextResponse.json({ error: 'No se encontró ningún laboratorista' }, { status: 500, headers: corsHeaders(origin) })
     }
 
     if (integracionTipo === 'NewLBRUTAOT') {
       if (!Array.isArray(data) || data.length === 0) {
-        return NextResponse.json({ error: 'No hay OTs para procesar' }, { status: 400 })
+        return NextResponse.json({ error: 'No hay OTs para procesar' }, { status: 400, headers: corsHeaders(origin) })
       }
 
       const ordenesTrabajo = await Promise.all(
@@ -208,12 +233,12 @@ export async function POST(request: Request) {
         })
       )
 
-      return NextResponse.json({ message: 'OTs creadas correctamente', data: ordenesTrabajo })
+      return NextResponse.json({ message: 'OTs creadas correctamente', data: ordenesTrabajo }, { headers: corsHeaders(origin) })
     }
 
     if (integracionTipo === 'UpdateLBRUTAS') {
       if (!Array.isArray(data) || data.length === 0) {
-        return NextResponse.json({ error: 'No hay visitas para procesar' }, { status: 400 })
+        return NextResponse.json({ error: 'No hay visitas para procesar' }, { status: 400, headers: corsHeaders(origin) })
       }
 
       const agendasActualizadas = []
@@ -234,13 +259,12 @@ export async function POST(request: Request) {
         }
       }
 
-      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas })
+      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas }, { headers: corsHeaders(origin) })
     }
 
-    return NextResponse.json({ error: `Integración no soportada: ${integracionTipo}` }, { status: 400 })
+    return NextResponse.json({ error: `Integración no soportada: ${integracionTipo}` }, { status: 400, headers: corsHeaders(origin) })
   } catch (error) {
     console.error('Error en api-post-integracion:', error)
-
-    return NextResponse.json({ error: 'Error al procesar integración' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al procesar integración' }, { status: 500, headers: corsHeaders(request.headers.get('origin')) })
   }
 }

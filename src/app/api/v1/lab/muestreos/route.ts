@@ -4,21 +4,30 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function corsHeaders() {
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders() })
+export async function OPTIONS(request: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(request.headers.get('origin')) })
 }
 
 export async function GET(request: Request) {
   try {
+    const origin = request.headers.get('origin')
     const { searchParams } = new URL(request.url)
     const obra = searchParams.get('obra[]')
     const sortColumn = searchParams.get('sortColumn') || 'FECHA'
@@ -35,7 +44,7 @@ export async function GET(request: Request) {
 
     if (!obra) {
       process.stdout.write('⚠️ No obra parameter, returning empty array\n')
-      return NextResponse.json({ data: [] }, { headers: corsHeaders() })
+      return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
     // Construir condiciones de WHERE
@@ -115,7 +124,7 @@ export async function GET(request: Request) {
           ASENTAMIENTO: null
         }
       ]
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders() })
+      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
     }
 
     // Transformar datos reales
@@ -146,11 +155,11 @@ export async function GET(request: Request) {
       process.stdout.write(JSON.stringify(resultados[0], null, 2) + '\n')
     }
 
-    return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
+    return NextResponse.json({ data: resultados }, { headers: corsHeaders(origin) })
   } catch (error) {
     process.stdout.write('❌ Error en muestreos:\n')
     process.stdout.write(String(error) + '\n')
     console.error('❌ Error en muestreos:', error)
-    return NextResponse.json({ error: 'Error al obtener muestreos' }, { status: 500, headers: corsHeaders() })
+    return NextResponse.json({ error: 'Error al obtener muestreos' }, { status: 500, headers: corsHeaders(request.headers.get('origin')) })
   }
 }

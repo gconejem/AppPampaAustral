@@ -6,27 +6,35 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function corsHeaders() {
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders() })
+export async function OPTIONS(req: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(req.headers.get('origin')) })
 }
 
-function badCombo(username: string, message = 'No se encuentra ese usuario en el sistema') {
+function badCombo(username: string, message = 'No se encuentra ese usuario en el sistema', origin?: string | null) {
   return NextResponse.json(
     {
       hasErrors: true,
       errorData: [{ username }],
       errorDescription: [message]
     },
-    { status: 400, headers: corsHeaders() }
+    { status: 400, headers: corsHeaders(origin) }
   )
 }
 
@@ -51,11 +59,12 @@ function buildSessionId(rut: string | null | undefined) {
 
 export async function PUT(req: Request) {
   try {
+    const origin = req.headers.get('origin')
     const body = await req.json()
     const { username, password, isRut = false, isFuncionario = false } = body || {}
 
     if (!username || !password) {
-      return badCombo(username || '', 'Faltan credenciales')
+      return badCombo(username || '', 'Faltan credenciales', origin)
     }
 
     const normalizedUsername = isRut ? normalizeRut(username) : normalizeEmail(username)
@@ -71,16 +80,16 @@ export async function PUT(req: Request) {
     console.log('User lookup result:', { found: !!user, email: user?.email, usuario: user?.usuario })
 
     if (!user) {
-      return badCombo(username)
+      return badCombo(username, 'No se encuentra ese usuario en el sistema', origin)
     }
 
     if (!user.password) {
-      return badCombo(username, 'Usuario sin contraseña configurada')
+      return badCombo(username, 'Usuario sin contraseña configurada', origin)
     }
 
     const isValid = await compare(password, user.password)
     if (!isValid) {
-      return badCombo(username, 'Credenciales inválidas')
+      return badCombo(username, 'Credenciales inválidas', origin)
     }
 
     const sessionId = buildSessionId(user.rut ?? normalizedUsername)
@@ -126,9 +135,9 @@ export async function PUT(req: Request) {
       console.log('funcionario.CODIGO:', response.funcionario.CODIGO);
     }
 
-    return NextResponse.json(response, { status: 200, headers: corsHeaders() })
+    return NextResponse.json(response, { status: 200, headers: corsHeaders(origin) })
   } catch (error) {
     console.error('Error en /api/v1/login:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders() })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders(req.headers.get('origin')) })
   }
 }
