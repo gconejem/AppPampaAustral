@@ -4,21 +4,30 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function corsHeaders() {
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders() })
+export async function OPTIONS(request: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(request.headers.get('origin')) })
 }
 
 export async function GET(request: Request) {
   try {
+    const origin = request.headers.get('origin')
     const { searchParams } = new URL(request.url)
     const fk_lbrutas = searchParams.get('fk_lbrutas[]')
 
@@ -26,7 +35,7 @@ export async function GET(request: Request) {
     console.log('fk_lbrutas:', fk_lbrutas)
 
     if (!fk_lbrutas) {
-      return NextResponse.json({ data: [] }, { headers: corsHeaders() })
+      return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
     const agendaId = parseInt(fk_lbrutas)
@@ -59,7 +68,7 @@ export async function GET(request: Request) {
           FK_LBRUTAS: agendaId
         }
       ]
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders() })
+      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
     }
 
     // Transformar datos reales
@@ -73,9 +82,9 @@ export async function GET(request: Request) {
       FK_LBRUTAS: ot.agendaId
     }))
 
-    return NextResponse.json({ data: resultados }, { headers: corsHeaders() })
+    return NextResponse.json({ data: resultados }, { headers: corsHeaders(origin) })
   } catch (error) {
     console.error('Error en api-get-lbrutaot-check-integracion:', error)
-    return NextResponse.json({ error: 'Error al obtener datos' }, { status: 500, headers: corsHeaders() })
+    return NextResponse.json({ error: 'Error al obtener datos' }, { status: 500, headers: corsHeaders(request.headers.get('origin')) })
   }
 }
