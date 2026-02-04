@@ -109,15 +109,49 @@ const parseRequestPayload = async (request: Request) => {
   }
 }
 
-const logRequest = (contentType: string, payload: any) => {
+const logRequest = (request: Request, contentType: string, payload: any) => {
+  const origin = request.headers.get('origin')
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  const realIp = request.headers.get('x-real-ip')
+  const ip = forwardedFor || realIp || '-'
+
   const integracionTipo = payload?.integracionTipo
+  const integracionEstado = payload?.integracionEstado
+  const mensajeLog = payload?.mensajeLog
+  const sessionId = payload?.sessionId
+
   const data = payload?.integracionData?.data
   const dataCount = Array.isArray(data) ? data.length : 0
   const sampleClave = Array.isArray(data) && data.length > 0 ? data[0]?.CLAVE : undefined
 
+  console.info('[api-post-integracion] ===== REQUEST START =====')
+  console.info('[api-post-integracion] ts:', new Date().toISOString())
+  console.info('[api-post-integracion] origin:', origin || '-')
+  console.info('[api-post-integracion] ip:', ip)
   console.info('[api-post-integracion] content-type:', contentType)
+  console.info('[api-post-integracion] sessionId:', sessionId || '-')
   console.info('[api-post-integracion] integracionTipo:', integracionTipo)
+  console.info('[api-post-integracion] integracionEstado:', integracionEstado)
+  console.info('[api-post-integracion] mensajeLog:', mensajeLog)
   console.info('[api-post-integracion] dataCount:', dataCount, 'sampleClave:', sampleClave)
+
+  if (integracionTipo === 'UpdateLBRUTAS' && Array.isArray(data)) {
+    const withAceptacion = data.filter((x: any) => x?.CLAVE && x?.ACEPVISITA).length
+    console.info('[api-post-integracion] UpdateLBRUTAS with ACEPVISITA:', withAceptacion)
+  }
+
+  if (integracionTipo === 'NewLBRUTAOT' && Array.isArray(data)) {
+    const sample = data[0] || {}
+    console.info('[api-post-integracion] NewLBRUTAOT sample:', {
+      CLAVE: sample?.CLAVE,
+      FKLBRUTAS: sample?.FKLBRUTAS,
+      FKLBDOCVER: sample?.FKLBDOCVER,
+      FKLBRUTSER: sample?.FKLBRUTSER,
+      ESTADO: sample?.ESTADO
+    })
+  }
+
+  console.info('[api-post-integracion] ===== REQUEST END =====')
 }
 
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
@@ -165,7 +199,7 @@ export async function POST(request: Request) {
     const payload = await parseRequestPayload(request)
     const origin = request.headers.get('origin')
 
-    logRequest(contentType, payload)
+    logRequest(request, contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
       return NextResponse.json({ error: 'Payload inválido' }, { status: 400, headers: corsHeaders(origin) })
