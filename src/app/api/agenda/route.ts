@@ -15,10 +15,13 @@ export async function POST(request: Request) {
       return new Date(dateString)
     }
 
+    const rawTipoVisita = typeof data.tipoVisita === 'string' ? data.tipoVisita.trim() : ''
+    const tipoVisita = rawTipoVisita || (data.esRecurrente ? 'RECURRENTE' : 'EVENTO')
+
     const agenda = await prisma.agenda.create({
       data: {
         titulo: data.titulo,
-        tipoVisita: data.tipoVisita,
+        tipoVisita,
         esRecurrente: data.esRecurrente,
         fechaInicio: parseLocalDate(data.fechaInicio),
         fechaFin: parseLocalDate(data.fechaFin),
