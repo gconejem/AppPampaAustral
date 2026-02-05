@@ -278,19 +278,48 @@ export async function POST(request: Request) {
       const agendasActualizadas = []
 
       for (const item of data) {
-        if (item?.ACEPVISITA && item?.CLAVE) {
-          const agenda = await prisma.agenda.update({
-            where: { id: parseInt(item.CLAVE) },
-            data: {
-              horaLlegada: item.ACEPVISITA.hora_llegada,
-              horaSalida: item.ACEPVISITA.hora_salida,
-              movilizacion: item.ACEPVISITA.movilizacion,
-              comprobanteVisitaJSON: item
-            }
-          })
+        if (!item?.CLAVE) continue
 
-          agendasActualizadas.push(agenda)
+        const agendaId = parseInt(item.CLAVE)
+        if (!Number.isFinite(agendaId)) continue
+
+        // ACEPVISITA puede venir como objeto o string (form-encoded / legacy)
+        let acep: any = item.ACEPVISITA
+        if (typeof acep === 'string') {
+          try {
+            acep = JSON.parse(acep)
+          } catch {
+            // ignore
+          }
         }
+
+        const horaLlegada = acep?.hora_llegada ?? acep?.horaLlegada
+        const horaSalida = acep?.hora_salida ?? acep?.horaSalida
+        const movilizacion = acep?.movilizacion
+        const kmAdicionalesRaw = acep?.kms_adicionales ?? acep?.kmAdicionales
+        const kmAdicionales = kmAdicionalesRaw === undefined || kmAdicionalesRaw === null ? undefined : String(kmAdicionalesRaw)
+
+        const hasComprobante = Boolean(horaLlegada || horaSalida || movilizacion || kmAdicionales)
+
+        const agenda = await prisma.agenda.update({
+          where: { id: agendaId },
+          data: {
+            ...(hasComprobante
+              ? {
+                  horaLlegada: horaLlegada ?? null,
+                  horaSalida: horaSalida ?? null,
+                  movilizacion: movilizacion ?? null,
+                  kmAdicionales: kmAdicionales ?? null,
+                  // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
+                  estado: 'RECIBIDA_OK'
+                }
+              : {}),
+            comprobanteVisitaJSON: item
+          }
+        })
+
+        console.info('[api-post-integracion] UpdateLBRUTAS updated agendaId:', agendaId, 'hasComprobante:', hasComprobante)
+        agendasActualizadas.push(agenda)
       }
 
       return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas }, { headers: corsHeaders(origin) })
