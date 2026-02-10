@@ -2015,10 +2015,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             </Box>
                             <Button
                                 variant='contained'
-                                startIcon={<CheckCircleIcon />}
+                                startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
                                 sx={{
                                     textTransform: 'none',
-                                    borderRadius: '24px',
+                                    borderRadius: '8px',
                                     fontWeight: 600,
                                     px: 3,
                                     bgcolor: '#1976D2',
