@@ -884,14 +884,50 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Box>
                                 )}
                             </Box>
-                            {isEditingRcm && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Checkbox />
-                                    <IconButton size='small'>
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
-                            )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Button
+                                    variant='outlined'
+                                    size='small'
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        borderColor: '#1976D2',
+                                        color: '#1976D2',
+                                        fontWeight: 600,
+                                        px: 2,
+                                        '&:hover': {
+                                            borderColor: '#1565C0',
+                                            bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    Asignar a código
+                                </Button>
+                                <Button
+                                    variant='contained'
+                                    size='small'
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        px: 2,
+                                        bgcolor: '#1976D2',
+                                        '&:hover': {
+                                            bgcolor: '#1565C0'
+                                        }
+                                    }}
+                                >
+                                    Crear nuevo código
+                                </Button>
+                                {isEditingRcm && (
+                                    <>
+                                        <Checkbox />
+                                        <IconButton size='small'>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </>
+                                )}
+                            </Box>
                         </Box>
 
                         {/* Contenido colapsable del RCM */}
