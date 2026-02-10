@@ -15,6 +15,7 @@ import {
     List,
     ListItem,
     ListItemText,
+    ListItemButton,
     InputAdornment,
     FormControl,
     InputLabel,
@@ -29,7 +30,10 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    Divider,
+    Radio,
+    RadioGroup
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -40,6 +44,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import LayersIcon from '@mui/icons-material/Layers'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
 const ITEMS_PER_PAGE = 10
 
@@ -190,6 +196,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [paginatedProductos, setPaginatedProductos] = useState<ProductoType[]>([]) // Productos de la página actual
     const [filterResetKey, setFilterResetKey] = useState(0)
     const [pendingRcmType, setPendingRcmType] = useState<string>('')
+
+    // Estados para popup de códigos
+    const [codigoAnchorEl, setCodigoAnchorEl] = useState<HTMLElement | null>(null)
+    const [showNewCodigoForm, setShowNewCodigoForm] = useState(false)
+    const [selectedCodigo, setSelectedCodigo] = useState<string>('')
+    const [newCodigoNombre, setNewCodigoNombre] = useState('')
+    const [newCodigoDescripcion, setNewCodigoDescripcion] = useState('')
+    const [newCodigoTipo, setNewCodigoTipo] = useState('')
+
+    // Códigos existentes de la OT (mock data)
+    const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
+        { id: 'COD-001', nombre: 'Hormigón H30', tipo: 'Muestra', descripcion: 'Código para muestras de hormigón grado H30' },
+        { id: 'COD-002', nombre: 'Suelo Base', tipo: 'Control', descripcion: 'Control de compactación base estabilizada' },
+        { id: 'COD-003', nombre: 'Asfalto CA-24', tipo: 'Muestra', descripcion: 'Muestras de carpeta asfáltica' },
+    ])
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
@@ -482,6 +503,50 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             }
         }
         handleCloseRcmMenu()
+    }
+
+    // Handlers para popup de códigos
+    const handleOpenCodigoPopup = (event: React.MouseEvent<HTMLElement>) => {
+        setCodigoAnchorEl(event.currentTarget)
+        setShowNewCodigoForm(false)
+        setSelectedCodigo('')
+    }
+
+    const handleCloseCodigoPopup = () => {
+        setCodigoAnchorEl(null)
+        setShowNewCodigoForm(false)
+        setSelectedCodigo('')
+        setNewCodigoNombre('')
+        setNewCodigoDescripcion('')
+        setNewCodigoTipo('')
+    }
+
+    const handleSelectCodigo = (codigoId: string) => {
+        setSelectedCodigo(codigoId)
+    }
+
+    const handleConfirmCodigo = () => {
+        if (selectedCodigo) {
+            console.log('Código asignado:', selectedCodigo)
+            // TODO: Implementar lógica de asignación
+        }
+        handleCloseCodigoPopup()
+    }
+
+    const handleCrearNuevoCodigo = () => {
+        if (!newCodigoNombre.trim()) return
+        const newCodigo = {
+            id: `COD-${String(codigosOT.length + 1).padStart(3, '0')}`,
+            nombre: newCodigoNombre,
+            tipo: newCodigoTipo || 'General',
+            descripcion: newCodigoDescripcion
+        }
+        setCodigosOT([...codigosOT, newCodigo])
+        setSelectedCodigo(newCodigo.id)
+        setShowNewCodigoForm(false)
+        setNewCodigoNombre('')
+        setNewCodigoDescripcion('')
+        setNewCodigoTipo('')
     }
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
@@ -888,6 +953,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 <Button
                                     variant='outlined'
                                     size='small'
+                                    onClick={handleOpenCodigoPopup}
                                     sx={{
                                         textTransform: 'none',
                                         borderRadius: '8px',
@@ -901,23 +967,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         }
                                     }}
                                 >
-                                    Asignar a código
-                                </Button>
-                                <Button
-                                    variant='contained'
-                                    size='small'
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 600,
-                                        px: 2,
-                                        bgcolor: '#1976D2',
-                                        '&:hover': {
-                                            bgcolor: '#1565C0'
-                                        }
-                                    }}
-                                >
-                                    Crear nuevo código
+                                    Asignar a código / Crear nuevo código
                                 </Button>
                                 {isEditingRcm && (
                                     <>
@@ -2016,6 +2066,209 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Popover de Códigos */}
+                <Popover
+                    open={Boolean(codigoAnchorEl)}
+                    anchorEl={codigoAnchorEl}
+                    onClose={handleCloseCodigoPopup}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                width: 400,
+                                maxHeight: 500,
+                                borderRadius: '12px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                overflow: 'hidden'
+                            }
+                        }
+                    }}
+                >
+                    {/* Header del popover */}
+                    <Box sx={{ p: 2, bgcolor: '#F5F7FA', borderBottom: '1px solid #E0E0E0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AssignmentIcon sx={{ color: '#1976D2', fontSize: 20 }} />
+                            <Typography variant='subtitle1' sx={{ fontWeight: 700, color: '#1A2027' }}>
+                                Códigos de la OT
+                            </Typography>
+                        </Box>
+                        <Typography variant='caption' sx={{ color: 'text.secondary', mt: 0.5 }}>
+                            Seleccione un código existente o cree uno nuevo
+                        </Typography>
+                    </Box>
+
+                    {/* Lista de códigos existentes */}
+                    <Box sx={{ maxHeight: 240, overflowY: 'auto' }}>
+                        <RadioGroup value={selectedCodigo} onChange={(e) => handleSelectCodigo(e.target.value)}>
+                            <List disablePadding>
+                                {codigosOT.length === 0 ? (
+                                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                                        <Typography variant='body2' color='text.secondary'>
+                                            No hay códigos creados en esta OT
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    codigosOT.map((codigo) => (
+                                        <ListItemButton
+                                            key={codigo.id}
+                                            selected={selectedCodigo === codigo.id}
+                                            onClick={() => handleSelectCodigo(codigo.id)}
+                                            sx={{
+                                                py: 1.5,
+                                                px: 2,
+                                                borderBottom: '1px solid #F0F0F0',
+                                                '&.Mui-selected': {
+                                                    bgcolor: 'rgba(25, 118, 210, 0.06)',
+                                                    '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.10)' }
+                                                }
+                                            }}
+                                        >
+                                            <Radio
+                                                value={codigo.id}
+                                                size='small'
+                                                sx={{ p: 0.5, mr: 1.5 }}
+                                            />
+                                            <ListItemText
+                                                primary={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant='body2' sx={{ fontWeight: 600, fontFamily: 'monospace', color: '#1976D2' }}>
+                                                            {codigo.id}
+                                                        </Typography>
+                                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                            {codigo.nombre}
+                                                        </Typography>
+                                                        <Chip label={codigo.tipo} size='small' sx={{ height: 20, fontSize: '0.7rem' }} />
+                                                    </Box>
+                                                }
+                                                secondary={
+                                                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, display: 'block' }}>
+                                                        {codigo.descripcion}
+                                                    </Typography>
+                                                }
+                                            />
+                                        </ListItemButton>
+                                    ))
+                                )}
+                            </List>
+                        </RadioGroup>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Botón para crear nuevo código / Sub-formulario */}
+                    {!showNewCodigoForm ? (
+                        <Box sx={{ p: 2 }}>
+                            {selectedCodigo && (
+                                <Button
+                                    variant='contained'
+                                    fullWidth
+                                    onClick={handleConfirmCodigo}
+                                    sx={{
+                                        mb: 1.5,
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        bgcolor: '#1976D2',
+                                        '&:hover': { bgcolor: '#1565C0' }
+                                    }}
+                                >
+                                    Asignar código seleccionado
+                                </Button>
+                            )}
+                            <Button
+                                variant='outlined'
+                                fullWidth
+                                startIcon={<AddCircleOutlineIcon />}
+                                onClick={() => setShowNewCodigoForm(true)}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 600,
+                                    borderColor: '#1976D2',
+                                    color: '#1976D2',
+                                    '&:hover': {
+                                        borderColor: '#1565C0',
+                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                    }
+                                }}
+                            >
+                                Crear nuevo Código
+                            </Button>
+                        </Box>
+                    ) : (
+                        <Box sx={{ p: 2, bgcolor: '#FAFBFC' }}>
+                            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 2, color: '#1A2027' }}>
+                                Nuevo Código
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <TextField
+                                    label='Nombre'
+                                    size='small'
+                                    fullWidth
+                                    required
+                                    value={newCodigoNombre}
+                                    onChange={(e) => setNewCodigoNombre(e.target.value)}
+                                    placeholder='Ej: Hormigón H30'
+                                />
+                                <FormControl fullWidth size='small'>
+                                    <InputLabel>Tipo</InputLabel>
+                                    <Select
+                                        label='Tipo'
+                                        value={newCodigoTipo}
+                                        onChange={(e) => setNewCodigoTipo(e.target.value)}
+                                    >
+                                        <MenuItem value='Muestra'>Muestra</MenuItem>
+                                        <MenuItem value='Control'>Control</MenuItem>
+                                        <MenuItem value='Servicio'>Servicio</MenuItem>
+                                        <MenuItem value='General'>General</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <TextField
+                                    label='Descripción'
+                                    size='small'
+                                    fullWidth
+                                    multiline
+                                    rows={2}
+                                    value={newCodigoDescripcion}
+                                    onChange={(e) => setNewCodigoDescripcion(e.target.value)}
+                                    placeholder='Descripción breve del código...'
+                                />
+                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                    <Button
+                                        variant='outlined'
+                                        size='small'
+                                        onClick={() => {
+                                            setShowNewCodigoForm(false)
+                                            setNewCodigoNombre('')
+                                            setNewCodigoDescripcion('')
+                                            setNewCodigoTipo('')
+                                        }}
+                                        sx={{ flex: 1, textTransform: 'none', borderRadius: '8px' }}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        variant='contained'
+                                        size='small'
+                                        onClick={handleCrearNuevoCodigo}
+                                        disabled={!newCodigoNombre.trim()}
+                                        sx={{
+                                            flex: 1,
+                                            textTransform: 'none',
+                                            borderRadius: '8px',
+                                            bgcolor: '#1976D2',
+                                            '&:hover': { bgcolor: '#1565C0' }
+                                        }}
+                                    >
+                                        Crear
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Box>
+                    )}
+                </Popover>
             </Box>
         </Card>
     )
