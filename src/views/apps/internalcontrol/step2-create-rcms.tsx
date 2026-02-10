@@ -46,6 +46,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 const ITEMS_PER_PAGE = 10
 
@@ -95,6 +96,18 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
+}
+
+interface CodigoAgrupador {
+    id: string
+    codigoId: string
+    codigoNombre: string
+    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string }>
+    ensayos: Array<{ productoId: number; sku: string; nombre: string }>
+    descripcionServicio: string
+    cantidad: number
+    unidad: string
+    facturacion: 'Unitario' | 'Fijo'
 }
 
 interface Step2CreateRcmsProps {
@@ -211,6 +224,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         { id: 'COD-002', nombre: 'Suelo Base', tipo: 'Control', descripcion: 'Control de compactación base estabilizada' },
         { id: 'COD-003', nombre: 'Asfalto CA-24', tipo: 'Muestra', descripcion: 'Muestras de carpeta asfáltica' },
     ])
+
+    // Códigos Agrupadores (Productos)
+    const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
+    const [selectedRcmIds, setSelectedRcmIds] = useState<number[]>([])
+    const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
+    const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
+    const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
@@ -527,10 +547,125 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleConfirmCodigo = () => {
         if (selectedCodigo) {
-            console.log('Código asignado:', selectedCodigo)
-            // TODO: Implementar lógica de asignación
+            const codigo = codigosOT.find(c => c.id === selectedCodigo)
+            if (!codigo) return
+
+            // Get the RCMs that are checked (selected) or use the current RCM being created
+            const rcmsToAssign = selectedRcmIds.length > 0
+                ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                    id: r.id,
+                    numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                    rcmType: r.rcmType
+                }))
+                : showRcmCard
+                    ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
+                    : []
+
+            if (rcmsToAssign.length === 0) return
+
+            // Collect SKUs from the assigned RCMs
+            const allSkus: string[] = []
+            let ensayoNombre = ''
+            rcmsToAssign.forEach(rcmRef => {
+                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+                if (fullRcm) {
+                    fullRcm.ensayos.forEach(e => {
+                        if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
+                        if (!ensayoNombre) ensayoNombre = e.nombre
+                    })
+                }
+            })
+
+            // If only the current (unsaved) RCM, use ensayosAsociados
+            if (allSkus.length === 0 && ensayosAsociados.length > 0) {
+                ensayosAsociados.forEach(e => {
+                    if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
+                    if (!ensayoNombre) ensayoNombre = e.nombre
+                })
+            }
+
+            const newAgrupador: CodigoAgrupador = {
+                id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+                codigoId: codigo.id,
+                codigoNombre: codigo.nombre,
+                rcmsVinculados: rcmsToAssign,
+                ensayos: allSkus.map((sku, idx) => ({ productoId: idx, sku, nombre: ensayoNombre || codigo.nombre })),
+                descripcionServicio: codigo.descripcion || codigo.nombre,
+                cantidad: rcmsToAssign.length,
+                unidad: 'unid',
+                facturacion: 'Unitario'
+            }
+
+            setCodigosAgrupadores(prev => [...prev, newAgrupador])
+            setSelectedRcmIds([])
         }
         handleCloseCodigoPopup()
+    }
+
+    const handleDeleteAgrupador = (agrupadorId: string) => {
+        setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
+    }
+
+    const handleToggleRcmSelection = (rcmId: number) => {
+        setSelectedRcmIds(prev =>
+            prev.includes(rcmId)
+                ? prev.filter(id => id !== rcmId)
+                : [...prev, rcmId]
+        )
+    }
+
+    const handleChangeAgrupadorCantidad = (agrupadorId: string, cantidad: number) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, cantidad } : a
+        ))
+    }
+
+    const handleChangeAgrupadorFacturacion = (agrupadorId: string, facturacion: 'Unitario' | 'Fijo') => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, facturacion } : a
+        ))
+    }
+
+    const handleChangeAgrupadorDescripcion = (agrupadorId: string, descripcionServicio: string) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, descripcionServicio } : a
+        ))
+    }
+
+    const handleOpenAgrupadorSearch = (event: React.MouseEvent<HTMLElement>, agrupadorId: string) => {
+        setAgrupadorSearchAnchor(event.currentTarget)
+        setEditingAgrupadorId(agrupadorId)
+        setAgrupadorSearchTerm('')
+    }
+
+    const handleCloseAgrupadorSearch = () => {
+        setAgrupadorSearchAnchor(null)
+        setEditingAgrupadorId(null)
+        setAgrupadorSearchTerm('')
+    }
+
+    const handleSelectProductForAgrupador = (producto: ProductoType) => {
+        if (!editingAgrupadorId) return
+        const idProducto = (producto as any).productoId || producto.id
+
+        setCodigosAgrupadores(prev => prev.map(a => {
+            if (a.id !== editingAgrupadorId) return a
+            // Don't add duplicates
+            if (a.ensayos.some(e => e.productoId === idProducto)) return a
+            return {
+                ...a,
+                ensayos: [...a.ensayos, { productoId: idProducto, sku: producto.sku, nombre: producto.nombre }]
+            }
+        }))
+        handleCloseAgrupadorSearch()
+    }
+
+    const handleRemoveEnsayoFromAgrupador = (agrupadorId: string, productoId: number) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId
+                ? { ...a, ensayos: a.ensayos.filter(e => e.productoId !== productoId) }
+                : a
+        ))
     }
 
     const handleCrearNuevoCodigo = () => {
@@ -785,7 +920,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Cargar productos con filtros
     useEffect(() => {
-        if (!anchorEl) return
+        if (!anchorEl && !agrupadorSearchAnchor) return
 
         const fetchProductos = async () => {
             try {
@@ -823,7 +958,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -1753,7 +1888,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                        <Checkbox size='small' />
+                                        <Checkbox
+                                            size='small'
+                                            checked={selectedRcmIds.includes(rcm.id)}
+                                            onChange={() => handleToggleRcmSelection(rcm.id)}
+                                        />
                                         <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                             <MoreVertIcon />
                                         </IconButton>
@@ -1826,6 +1965,217 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 </Collapse>
                             </Box>
                         ))}
+                    </Box>
+                )}
+
+                {/* Sección de Códigos Agrupadores (Productos) */}
+                {codigosAgrupadores.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                        {/* Barra de selección */}
+                        {selectedRcmIds.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    bgcolor: '#E3F2FD',
+                                    borderRadius: '8px',
+                                    p: 2,
+                                    mb: 3
+                                }}
+                            >
+                                <Typography variant='body2' sx={{ fontWeight: 500 }}>
+                                    {selectedRcmIds.length} RCMs seleccionados
+                                </Typography>
+                                <Button
+                                    variant='contained'
+                                    startIcon={<LayersIcon />}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        bgcolor: '#1976D2',
+                                        '&:hover': { bgcolor: '#1565C0' }
+                                    }}
+                                >
+                                    Agrupar en Producto
+                                </Button>
+                            </Box>
+                        )}
+
+                        {/* Título y botón Finalizar Codificación */}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+                            <Box>
+                                <Typography variant='h6' sx={{ fontWeight: 700 }}>
+                                    Códigos Agrupadores (Productos)
+                                </Typography>
+                                <Typography variant='body2' color='text.secondary'>
+                                    Productos comerciales facturables generados
+                                </Typography>
+                            </Box>
+                            <Button
+                                variant='contained'
+                                startIcon={<CheckCircleIcon />}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '24px',
+                                    fontWeight: 600,
+                                    px: 3,
+                                    bgcolor: '#1976D2',
+                                    '&:hover': { bgcolor: '#1565C0' }
+                                }}
+                            >
+                                Finalizar Codificación
+                            </Button>
+                        </Box>
+
+                        {/* Tabla de Códigos Agrupadores */}
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CÓDIGO ID</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>RCMS VINCULADOS</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>SKUS / ENSAYOS</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>DESCRIPCIÓN DEL SERVICIO</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CANTIDAD</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>FACTURACIÓN</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>ACCIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {codigosAgrupadores.map((agrupador) => (
+                                        <tr key={agrupador.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                            {/* Código ID */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
+                                                    {agrupador.id}
+                                                </Typography>
+                                            </td>
+
+                                            {/* RCMs Vinculados */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {agrupador.rcmsVinculados.map((rcm, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={`RCM-${idx + 1}`}
+                                                            size='small'
+                                                            sx={{
+                                                                bgcolor: '#EEF2FF',
+                                                                color: '#4338CA',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.75rem'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            </td>
+
+                                            {/* SKUs / Ensayos */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                    {agrupador.ensayos.length > 0 && (
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {agrupador.ensayos.map((ensayo, idx) => (
+                                                                <Chip
+                                                                    key={idx}
+                                                                    label={`${ensayo.nombre} (${ensayo.sku})`}
+                                                                    size='small'
+                                                                    onDelete={() => handleRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
+                                                                    sx={{
+                                                                        bgcolor: '#F0F7FF',
+                                                                        color: '#1976D2',
+                                                                        fontWeight: 500,
+                                                                        fontSize: '0.7rem',
+                                                                        '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </Box>
+                                                    )}
+                                                    <Button
+                                                        startIcon={<SearchIcon />}
+                                                        size='small'
+                                                        variant='outlined'
+                                                        onClick={(e) => handleOpenAgrupadorSearch(e, agrupador.id)}
+                                                        sx={{
+                                                            textTransform: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            borderColor: '#E0E0E0',
+                                                            color: '#666',
+                                                            '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
+                                                        }}
+                                                    >
+                                                        Buscar ensayo
+                                                    </Button>
+                                                </Box>
+                                            </td>
+
+                                            {/* Descripción del Servicio */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <TextField
+                                                    size='small'
+                                                    value={agrupador.descripcionServicio}
+                                                    onChange={(e) => handleChangeAgrupadorDescripcion(agrupador.id, e.target.value)}
+                                                    sx={{ width: 180 }}
+                                                />
+                                            </td>
+
+                                            {/* Cantidad */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    <TextField
+                                                        size='small'
+                                                        type='number'
+                                                        value={agrupador.cantidad}
+                                                        onChange={(e) => handleChangeAgrupadorCantidad(agrupador.id, parseInt(e.target.value) || 0)}
+                                                        sx={{ width: 70 }}
+                                                        inputProps={{ min: 1 }}
+                                                    />
+                                                    <Typography variant='body2' color='text.secondary'>
+                                                        {agrupador.unidad}
+                                                    </Typography>
+                                                </Box>
+                                            </td>
+
+                                            {/* Facturación */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <Chip
+                                                    label={agrupador.facturacion}
+                                                    size='small'
+                                                    onClick={() => handleChangeAgrupadorFacturacion(
+                                                        agrupador.id,
+                                                        agrupador.facturacion === 'Unitario' ? 'Fijo' : 'Unitario'
+                                                    )}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        fontWeight: 600,
+                                                        bgcolor: agrupador.facturacion === 'Unitario' ? '#EEF2FF' : '#F0FDF4',
+                                                        color: agrupador.facturacion === 'Unitario' ? '#4338CA' : '#16A34A',
+                                                        '&:hover': {
+                                                            bgcolor: agrupador.facturacion === 'Unitario' ? '#E0E7FF' : '#DCFCE7'
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
+
+                                            {/* Acciones */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <IconButton
+                                                    size='small'
+                                                    onClick={() => handleDeleteAgrupador(agrupador.id)}
+                                                    sx={{ color: '#9CA3AF', '&:hover': { color: '#EF4444' } }}
+                                                >
+                                                    <DeleteIcon fontSize='small' />
+                                                </IconButton>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </Box>
                     </Box>
                 )}
 
@@ -2268,6 +2618,140 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             </Box>
                         </Box>
                     )}
+                </Popover>
+
+                {/* Popover de búsqueda de ensayos para Agrupadores */}
+                <Popover
+                    open={Boolean(agrupadorSearchAnchor)}
+                    anchorEl={agrupadorSearchAnchor}
+                    onClose={handleCloseAgrupadorSearch}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    PaperProps={{
+                        sx: {
+                            width: '100%',
+                            maxWidth: '500px',
+                            maxHeight: '400px',
+                            overflow: 'auto',
+                            zIndex: 1300
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 2 }}>
+                        <TextField
+                            fullWidth
+                            size='small'
+                            placeholder='Buscar por nombre, descripción o norma...'
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position='start'>
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                        {selectedAreaNombre && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    label={`Área: ${selectedAreaNombre}`}
+                                    size='small'
+                                    color='primary'
+                                    variant='outlined'
+                                />
+                            </Box>
+                        )}
+                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                                }
+                                label='Solo Paquetes'
+                            />
+                        </Box>
+                    </Box>
+                    <List sx={{ pt: 0 }}>
+                        {paginatedProductos.length === 0 ? (
+                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                                <Typography variant='body2' color='text.secondary'>
+                                    No se encontraron ensayos
+                                </Typography>
+                            </Box>
+                        ) : (
+                            paginatedProductos.map(producto => (
+                                <ListItem
+                                    key={producto.id}
+                                    onClick={() => handleSelectProductForAgrupador(producto)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            backgroundColor: 'action.hover'
+                                        },
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start'
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant='body1'>
+                                                    {producto.nombre}
+                                                    {producto.norma && (
+                                                        <Typography component='span' color='text.secondary'>
+                                                            {' '}
+                                                            - {producto.norma}
+                                                        </Typography>
+                                                    )}
+                                                </Typography>
+                                                {producto.esPaquete && (
+                                                    <Typography
+                                                        variant='caption'
+                                                        sx={{
+                                                            backgroundColor: 'primary.main',
+                                                            color: 'white',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            ml: 1
+                                                        }}
+                                                    >
+                                                        Paquete
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        }
+                                        secondary={
+                                            <Box>
+                                                <Typography variant='caption' color='text.secondary'>
+                                                    {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                </ListItem>
+                            ))
+                        )}
+                    </List>
+                    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                            disabled={productsPage === 0}
+                        >
+                            Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => prev + 1)}
+                            disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                        >
+                            Siguiente
+                        </Button>
+                    </Box>
                 </Popover>
             </Box>
         </Card>
