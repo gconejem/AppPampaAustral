@@ -1702,7 +1702,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             )}
                                         </Box>
                                     </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }} onClick={(e) => e.stopPropagation()}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox size='small' />
                                         <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                             <MoreVertIcon />
                                         </IconButton>
