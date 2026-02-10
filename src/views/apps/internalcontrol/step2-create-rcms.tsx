@@ -1180,44 +1180,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel id="area-label">Área</InputLabel>
-                                            <Select
-                                                labelId="area-label"
-                                                label='Área'
-                                                value={area}
-                                                onChange={(e) => {
-                                                    const valor = e.target.value as string
-                                                    console.log('Área seleccionada:', valor)
-                                                    setArea(valor)
-                                                }}
-                                            >
-                                                <MenuItem value='suelos'>Suelos</MenuItem>
-                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo Servicio</InputLabel>
-                                            <Select label='Tipo Servicio'>
-                                                <MenuItem value='ensayo'>Ensayo</MenuItem>
-                                                <MenuItem value='muestreo'>Muestreo</MenuItem>
-                                                <MenuItem value='inspeccion'>Inspección</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo de muestra</InputLabel>
-                                            <Select label='Tipo de muestra'>
-                                                <MenuItem value='muestra'>Muestra</MenuItem>
-                                                <MenuItem value='control'>Control</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
+
                                     {rcmType === 'Muestra' && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
