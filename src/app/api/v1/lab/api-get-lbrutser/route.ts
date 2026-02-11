@@ -110,6 +110,12 @@ export async function GET(request: Request) {
         const fb = findValue(flat, 'formulario') ?? findValue(flat, 'form') ?? findValue(flat, 'form_code') ?? findValue(flat, 'formulario_codigo')
         if (fb !== undefined) out['FORMULARIO'] = fb
       }
+
+      // Fallback crítico para AppLab: en nuestra tabla TipoOrdenTrabajo no existe columna FORMULARIO;
+      // el código de tipo (ej: R-12-39) es el mismo que se usa como FORMULARIO en el cliente.
+      if (!out['FORMULARIO'] && out['CODIGO']) {
+        out['FORMULARIO'] = out['CODIGO']
+      }
       if (!out['DESCRIP']) {
         const fb = findValue(flat, 'descrip') ?? findValue(flat, 'descripcion') ?? findValue(flat, 'desc') ?? findValue(flat, 'name')
         if (fb !== undefined) out['DESCRIP'] = fb
