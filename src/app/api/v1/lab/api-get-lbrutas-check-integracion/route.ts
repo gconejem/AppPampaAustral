@@ -252,7 +252,13 @@ export async function GET(request: Request) {
         ? { RAZON: agenda.cliente.razonSocial ?? '' }
         : { RAZON: '' }
 
-      const ciudad = { NOMBRE: (agenda.obra as any)?.comuna ?? '' }
+      const direccionAgenda = agenda.direccion ?? ''
+      const direccionObra = ((agenda.obra as any)?.direccion ?? '') as string
+      const direccionFinal = direccionAgenda || direccionObra || ''
+
+      // La App Terreno muestra `visita.DIRECC` y `visita.ciudad.NOMBRE`.
+      // Si el usuario cambió la dirección en Agenda, debe primar sobre la dirección de la Obra.
+      const ciudad = { NOMBRE: (agenda.comuna ?? (agenda.obra as any)?.comuna ?? '') }
 
       // Obtener contacto principal (solicitante)
       const contactoPrincipal = agenda.contactos?.find(c => c.isPrincipal)
@@ -267,7 +273,7 @@ export async function GET(request: Request) {
         // Claves usadas por la app móvil
         CLAVE: agenda.id, // id de la agenda como clave
         OBRA: (agenda.obra as any)?.numeroObra ?? null,
-        DIRECC: (agenda.obra as any)?.direccion ?? '',
+        DIRECC: direccionFinal,
         HORA: horaInicio,
         ESTADO: (agenda as any)?.estado ?? 'P',
         cliente,
@@ -294,6 +300,20 @@ export async function GET(request: Request) {
         equipos: agenda.equipos?.map(eq => ({ codigo: eq.equipo?.codigo })) || []
       }
     })
+
+    // Debug acotado para validar incidencia QA: dirección tomada de Obra vs Visita (Agenda)
+    try {
+      const sample = filteredAgendas.slice(0, 5).map(a => ({
+        agendaId: a.id,
+        obraNumero: (a.obra as any)?.numeroObra ?? null,
+        direccionAgenda: a.direccion ?? null,
+        direccionObra: (a.obra as any)?.direccion ?? null,
+        direccionEnviada: (a.direccion ?? (a.obra as any)?.direccion ?? null)
+      }))
+      console.log('Sample direcciones (primeras 5):', JSON.stringify(sample, null, 2))
+    } catch (e) {
+      console.warn('No se pudo loguear sample direcciones', e)
+    }
 
     console.log(`Total agendas returned: ${agendasLimitadas.length}`, JSON.stringify(agendasLimitadas.map(a => ({ CLAVE: a.CLAVE, OBRA: a.OBRA, HORA: a.HORA, asignados: a.asignados.map(x => x.userId) })), null, 2))
 
