@@ -42,19 +42,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
-    // Buscar órdenes de trabajo por código
+    // Buscar órdenes de trabajo por código (la App Terreno envía CODIGO de OT en esta query)
     const codigos = codigo.split(',').map(c => c.trim()).filter(c => c.length > 0)
     process.stdout.write(`🔍 Buscando órdenes por códigos (clave): ${codigos.join(', ')}\n`)
     
     const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
       where: {
-        clave: {
-          in: codigos
-        }
+        OR: [
+          {
+            clave: {
+              in: codigos
+            }
+          },
+          {
+            numeroTarjeta: {
+              in: codigos
+            }
+          }
+        ]
       },
       include: {
         tipoOT: true,
-        estadoOT: true
+        estadoOT: true,
+        // Para enriquecer con datos del RCM (Control Interno)
+        RCM: {
+          include: {
+            muestras: true
+          },
+          orderBy: {
+            fechaIngreso: 'desc'
+          }
+        }
       }
     })
 
@@ -81,15 +99,46 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
     }
 
-    // Transformar datos reales
-    const resultados = ordenesTrabajo.map(ot => ({
-      CODIGO: ot.clave,
-      NUMERO_OT: ot.clave,
-      ESTADO: ot.estadoOT?.nombre || 'Pendiente',
-      TIPO: ot.tipoOT?.nombre || '',
-      FECHA_CREACION: ot.createdAt,
-      OBSERVACION: ''
-    }))
+    const uniqueNonEmpty = (values: Array<string | null | undefined>) => {
+      const out: string[] = []
+      values.forEach(v => {
+        const s = (v ?? '').trim()
+        if (!s) return
+        if (!out.includes(s)) out.push(s)
+      })
+      return out
+    }
+
+    // Transformar datos reales (mantiene compatibilidad y agrega campos que usa AppLab)
+    const resultados = ordenesTrabajo.map(ot => {
+      const rcm = (ot as any).RCM?.[0]
+      const muestras = (rcm?.muestras ?? []) as any[]
+
+      // Campos RCM (Control Interno) esperados por AppLab
+      const itemm = uniqueNonEmpty(muestras.map(m => m.item || m.elemento)).join(' / ')
+      const procede = uniqueNonEmpty(muestras.map(m => m.procedencia)).join(' / ')
+      const ubica = uniqueNonEmpty(
+        muestras.map(m => {
+          const ubic = (m.ubicacionSector ?? '').trim()
+          const cotas = (m.cotas ?? '').trim()
+          return `${ubic}${ubic && cotas ? ' ' : ''}${cotas}`.trim()
+        })
+      ).join(' / ')
+
+      return {
+        CODIGO: ot.clave,
+        NUMERO_OT: ot.clave,
+        ESTADO: ot.estadoOT?.nombre || 'Pendiente',
+        TIPO: ot.tipoOT?.nombre || '',
+        FECHA_CREACION: ot.createdAt,
+        OBSERVACION: '',
+
+        // Enriquecimiento para App Terreno (merge en AppLab/www/js/utils.js)
+        ITEMM: itemm,
+        PROCEDE: procede,
+        UBICA: ubica
+      }
+    })
 
     process.stdout.write(`\n📊 Returning ${resultados.length} resultados\n`)
     if (resultados.length > 0) {
