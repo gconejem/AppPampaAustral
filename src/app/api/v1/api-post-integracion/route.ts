@@ -205,9 +205,8 @@ export async function POST(request: Request) {
       const tipo = payload?.integracionTipo
       const data = payload?.integracionData?.data
       const count = Array.isArray(data) ? data.length : 0
-      if (tipo === 'NewLBRUTAOT' || tipo === 'UpdateLBRUTAS' || tipo === 'UpdateLBRUTAOT') {
-        console.error('[api-post-integracion] tipo:', tipo, 'count:', count)
-      }
+      const sampleClave = Array.isArray(data) && data.length > 0 ? data[0]?.CLAVE : undefined
+      console.error('[api-post-integracion] tipo:', tipo, 'count:', count, 'sampleClave:', sampleClave)
     } catch {
       // ignore
     }
@@ -215,6 +214,7 @@ export async function POST(request: Request) {
     logRequest(request, contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
+      console.error('[api-post-integracion] Payload inválido')
       return NextResponse.json({ error: 'Payload inválido' }, { status: 400, headers: corsHeaders(origin) })
     }
 
