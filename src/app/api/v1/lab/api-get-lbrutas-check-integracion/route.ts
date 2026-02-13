@@ -46,6 +46,37 @@ export async function GET(request: Request) {
     const sortColumn = searchParams.get('sortColumn') || 'HORA'
     const sortDirection = searchParams.get('sortDirection') || 'ASC'
 
+    const mapAgendaEstadoToAppEstado = (raw?: string | null): string => {
+      const value = String(raw ?? '').trim().toUpperCase()
+      if (!value) return 'P'
+
+      // Si ya viene como código de la app, lo respetamos
+      if (value.length === 1) return value
+
+      switch (value) {
+        case 'AGENDADA':
+        case 'ACORDADA':
+          return 'A'
+        case 'CREADA':
+          return 'P'
+        case 'COMPLETADA':
+          // En la lista, AppLab considera "terminada" cuando es 'T' (o 'R').
+          // Además, no permite iniciar visitas con estado 'T'.
+          return 'T'
+        case 'RECIBIDA_OK':
+        case 'EN_REVISION':
+          return 'R'
+        case 'SUSPENDIDA':
+          return 'S'
+        case 'ELIMINADA':
+          return 'Z'
+        case 'CANCELADA':
+          return 'X'
+        default:
+          return 'P'
+      }
+    }
+
     // Construir el filtro base
     const whereFilter: any = {}
 
@@ -194,15 +225,22 @@ export async function GET(request: Request) {
     }
 
     // Filtro por estado
-    if (estado) {
-      const estadosArray = estado.split(',').map(e => e.trim()).filter(e => e.length > 0)
-      if (estadosArray.length === 1) {
-        whereFilter.estado = estadosArray[0]
-      } else if (estadosArray.length > 1) {
-        whereFilter.estado = {
-          in: estadosArray
-        }
-      }
+    // Nota: En BD el estado suele ser textual (AGENDADA/CREADA/COMPLETADA...),
+    // pero AppLab históricamente filtra con letras (A/P/T/R/S/Z/X). Soportamos ambos.
+    const estadoParam = estado
+      ? estado.split(',').map(e => e.trim()).filter(e => e.length > 0)
+      : []
+    const appEstadoFilter = new Set(
+      estadoParam
+        .map(e => e.toUpperCase())
+        .filter(e => e.length === 1)
+    )
+
+    const dbEstadoFilter = estadoParam.filter(e => e.length !== 1)
+    if (dbEstadoFilter.length === 1) {
+      whereFilter.estado = dbEstadoFilter[0]
+    } else if (dbEstadoFilter.length > 1) {
+      whereFilter.estado = { in: dbEstadoFilter }
     }
 
     console.log('Final whereFilter:', whereFilter)
@@ -313,8 +351,13 @@ export async function GET(request: Request) {
     if (porRecibir === 'true') {
       console.log('Filtrando por visitas por recibir (COMPLETADA o EN_REVISION)')
       filteredAgendas = filteredAgendas.filter(agenda => {
-        return agenda.estado === 'COMPLETADA' || agenda.estado === 'EN_REVISION'
+        return agenda.estado === 'COMPLETADA' || agenda.estado === 'EN_REVISION' || agenda.estado === 'RECIBIDA_OK'
       })
+    }
+
+    // Si el cliente pidió estados con letras (AppLab), filtramos por el mapeo.
+    if (appEstadoFilter.size > 0) {
+      filteredAgendas = filteredAgendas.filter(agenda => appEstadoFilter.has(mapAgendaEstadoToAppEstado(agenda.estado)))
     }
 
     // Formatear salida para la App Terreno (compatibilidad de claves esperadas)
@@ -350,7 +393,7 @@ export async function GET(request: Request) {
         OBRA: (agenda.obra as any)?.numeroObra ?? null,
         DIRECC: direccionFinal,
         HORA: horaInicio,
-        ESTADO: (agenda as any)?.estado ?? 'P',
+        ESTADO: mapAgendaEstadoToAppEstado((agenda as any)?.estado),
         cliente,
         ciudad,
 
