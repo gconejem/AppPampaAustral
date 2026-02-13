@@ -202,8 +202,22 @@ export async function POST(request: Request) {
             numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
           }
 
-          return prisma.ordenTrabajo.create({
-            data: {
+          const agendaId = Number.parseInt(String(ot.FKLBRUTAS ?? ''), 10)
+          const agendaConnect = Number.isFinite(agendaId) && agendaId > 0
+            ? {
+                agenda: {
+                  connect: {
+                    id: agendaId
+                  }
+                }
+              }
+            : {}
+
+          return prisma.ordenTrabajo.upsert({
+            where: {
+              clave: ot.CLAVE
+            },
+            create: {
               clave: ot.CLAVE,
               estado: ot.ESTADO || 'PENDIENTE',
               origen: ot.ORIGEN || 'VISITA',
@@ -213,11 +227,7 @@ export async function POST(request: Request) {
               fklbrutser: ot.FKLBRUTSER || '',
               numeroTarjeta,
               jsonOT: ot,
-              agenda: {
-                connect: {
-                  id: parseInt(ot.FKLBRUTAS || '-1')
-                }
-              },
+              ...agendaConnect,
               tipoOT: {
                 connect: {
                   id: tipoOTId
@@ -226,6 +236,21 @@ export async function POST(request: Request) {
               user: {
                 connect: {
                   id: user.id
+                }
+              }
+            },
+            update: {
+              estado: ot.ESTADO ?? undefined,
+              origen: ot.ORIGEN ?? undefined,
+              fklbrutas: ot.FKLBRUTAS ?? undefined,
+              correlativ: ot.CORRELATIV ?? undefined,
+              fklbdocver: ot.FKLBDOCVER ?? undefined,
+              fklbrutser: ot.FKLBRUTSER ?? undefined,
+              numeroTarjeta,
+              jsonOT: ot,
+              tipoOT: {
+                connect: {
+                  id: tipoOTId
                 }
               }
             }
