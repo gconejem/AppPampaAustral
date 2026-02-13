@@ -37,28 +37,46 @@ export async function GET(request: Request) {
     const fechaInicio = searchParams.get('fechaInicio')
     const fechaFin = searchParams.get('fechaFin')
 
+    const parseYmdToUtc = (ymd: string, endOfDay: boolean) => {
+      const value = String(ymd || '').trim()
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+
+      const [y, m, d] = value.split('-').map(Number)
+      const hour = endOfDay ? 23 : 0
+      const min = endOfDay ? 59 : 0
+      const sec = endOfDay ? 59 : 0
+      const ms = endOfDay ? 999 : 0
+      const date = new Date(Date.UTC(y, m - 1, d, hour, min, sec, ms))
+      return Number.isFinite(date.getTime()) ? date : null
+    }
+
     const whereClause: any = {}
 
     if (fechaInicio || fechaFin) {
       whereClause.fechaCreacion = {}
       if (fechaInicio) {
-        // Parsear la fecha y crear un rango que cubra todo el día
-        // Usamos el inicio del día en la zona horaria local del servidor
-        const inicioDate = new Date(fechaInicio + 'T00:00:00')
-        whereClause.fechaCreacion.gte = inicioDate
+        const inicioDate = parseYmdToUtc(fechaInicio, false)
+        if (inicioDate) {
+          whereClause.fechaCreacion.gte = inicioDate
+        }
       }
       if (fechaFin) {
-        // Usamos el final del día en la zona horaria local del servidor
-        const finDate = new Date(fechaFin + 'T23:59:59.999')
-        whereClause.fechaCreacion.lte = finDate
+        const finDate = parseYmdToUtc(fechaFin, true)
+        if (finDate) {
+          whereClause.fechaCreacion.lte = finDate
+        }
+      }
+
+      if (Object.keys(whereClause.fechaCreacion).length === 0) {
+        delete whereClause.fechaCreacion
       }
     }
 
     console.log('=== FILTROS DE FECHA ===')
     console.log('Parámetros recibidos:', { fechaInicio, fechaFin })
     console.log('Rango UTC aplicado:', {
-      desde: whereClause.fechaCreacion?.gte?.toISOString(),
-      hasta: whereClause.fechaCreacion?.lte?.toISOString()
+      desde: whereClause.fechaCreacion?.gte ? whereClause.fechaCreacion.gte.toISOString() : null,
+      hasta: whereClause.fechaCreacion?.lte ? whereClause.fechaCreacion.lte.toISOString() : null
     })
 
     const cotizaciones = await prisma.cotizacion.findMany({
