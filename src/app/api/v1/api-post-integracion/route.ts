@@ -199,6 +199,19 @@ export async function POST(request: Request) {
     const payload = await parseRequestPayload(request)
     const origin = request.headers.get('origin')
 
+    // Nota: next.config.mjs tiene removeConsole (excluye solo console.error).
+    // Para poder diagnosticar integración en producción, dejamos una traza mínima con console.error.
+    try {
+      const tipo = payload?.integracionTipo
+      const data = payload?.integracionData?.data
+      const count = Array.isArray(data) ? data.length : 0
+      if (tipo === 'NewLBRUTAOT' || tipo === 'UpdateLBRUTAS' || tipo === 'UpdateLBRUTAOT') {
+        console.error('[api-post-integracion] tipo:', tipo, 'count:', count)
+      }
+    } catch {
+      // ignore
+    }
+
     logRequest(request, contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
@@ -218,7 +231,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No hay OTs para procesar' }, { status: 400, headers: corsHeaders(origin) })
       }
 
-      const ordenesTrabajo = await Promise.all(
+      const results = await Promise.allSettled(
         data.map(async (ot: {
           CLAVE: string
           ESTADO?: string
@@ -247,12 +260,8 @@ export async function POST(request: Request) {
               }
             : {}
 
-          // Nota: la app puede reintentar el envío (o el usuario puede finalizar 2 veces).
-          // `clave` es unique, por lo que usamos upsert para que el endpoint sea idempotente.
-          return prisma.ordenTrabajo.upsert({
-            where: {
-              clave: ot.CLAVE
-            },
+          const upsertBase = {
+            where: { clave: ot.CLAVE },
             create: {
               clave: ot.CLAVE,
               estado: ot.ESTADO || 'PENDIENTE',
@@ -264,16 +273,8 @@ export async function POST(request: Request) {
               numeroTarjeta,
               jsonOT: ot,
               ...agendaConnect,
-              tipoOT: {
-                connect: {
-                  id: tipoOTId
-                }
-              },
-              user: {
-                connect: {
-                  id: user.id
-                }
-              }
+              tipoOT: { connect: { id: tipoOTId } },
+              user: { connect: { id: user.id } }
             },
             update: {
               estado: ot.ESTADO ?? undefined,
@@ -284,17 +285,37 @@ export async function POST(request: Request) {
               fklbrutser: ot.FKLBRUTSER ?? undefined,
               numeroTarjeta,
               jsonOT: ot,
-              tipoOT: {
-                connect: {
-                  id: tipoOTId
-                }
-              }
+              tipoOT: { connect: { id: tipoOTId } }
             }
-          })
+          } as const
+
+          // Nota: `agenda.connect` puede fallar si el id no existe. En ese caso,
+          // no abortamos toda la sync: reintentamos sin conectar agenda.
+          try {
+            return await prisma.ordenTrabajo.upsert(upsertBase as any)
+          } catch (e: any) {
+            console.error('[api-post-integracion] upsert OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
+            const { create, ...rest } = upsertBase as any
+            const createWithoutAgenda = { ...create }
+            delete createWithoutAgenda.agenda
+            return await prisma.ordenTrabajo.upsert({
+              ...rest,
+              create: createWithoutAgenda
+            })
+          }
         })
       )
 
-      return NextResponse.json({ message: 'OTs creadas correctamente', data: ordenesTrabajo }, { headers: corsHeaders(origin) })
+      const ok = results.filter(r => r.status === 'fulfilled').map((r: any) => r.value)
+      const errors = results
+        .filter(r => r.status === 'rejected')
+        .map((r: any) => String(r.reason?.message || r.reason || 'Error'))
+
+      if (errors.length > 0) {
+        console.error('[api-post-integracion] NewLBRUTAOT errores:', errors.slice(0, 5))
+      }
+
+      return NextResponse.json({ message: 'OTs procesadas', data: ok, errors }, { headers: corsHeaders(origin) })
     }
 
     if (integracionTipo === 'UpdateLBRUTAS') {
@@ -303,6 +324,7 @@ export async function POST(request: Request) {
       }
 
       const agendasActualizadas = []
+      const errores: Array<{ agendaId: number; error: string }> = []
 
       for (const item of data) {
         if (!item?.CLAVE) continue
@@ -328,28 +350,38 @@ export async function POST(request: Request) {
 
         const hasComprobante = Boolean(horaLlegada || horaSalida || movilizacion || kmAdicionales)
 
-        const agenda = await prisma.agenda.update({
-          where: { id: agendaId },
-          data: {
-            ...(hasComprobante
-              ? {
-                  horaLlegada: horaLlegada ?? null,
-                  horaSalida: horaSalida ?? null,
-                  movilizacion: movilizacion ?? null,
-                  kmAdicionales: kmAdicionales ?? null,
-                  // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
-                  estado: 'RECIBIDA_OK'
-                }
-              : {}),
-            comprobanteVisitaJSON: item
-          }
-        })
+        try {
+          const agenda = await prisma.agenda.update({
+            where: { id: agendaId },
+            data: {
+              ...(hasComprobante
+                ? {
+                    horaLlegada: horaLlegada ?? null,
+                    horaSalida: horaSalida ?? null,
+                    movilizacion: movilizacion ?? null,
+                    kmAdicionales: kmAdicionales ?? null,
+                    // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
+                    estado: 'RECIBIDA_OK'
+                  }
+                : {}),
+              comprobanteVisitaJSON: item
+            }
+          })
 
-        console.info('[api-post-integracion] UpdateLBRUTAS updated agendaId:', agendaId, 'hasComprobante:', hasComprobante)
-        agendasActualizadas.push(agenda)
+          console.error('[api-post-integracion] UpdateLBRUTAS updated agendaId:', agendaId, 'hasComprobante:', hasComprobante)
+          agendasActualizadas.push(agenda)
+        } catch (e: any) {
+          const msg = String(e?.message || e)
+          console.error('[api-post-integracion] UpdateLBRUTAS error agendaId:', agendaId, msg)
+          errores.push({ agendaId, error: msg })
+          continue
+        }
       }
 
-      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas }, { headers: corsHeaders(origin) })
+      return NextResponse.json(
+        { message: 'Aceptación de visita procesada', data: agendasActualizadas, errors: errores },
+        { headers: corsHeaders(origin) }
+      )
     }
 
     return NextResponse.json({ error: `Integración no soportada: ${integracionTipo}` }, { status: 400, headers: corsHeaders(origin) })

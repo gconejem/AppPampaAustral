@@ -165,6 +165,19 @@ export async function POST(request: Request) {
     const payload = await parseRequestPayload(request)
     const origin = request.headers.get('origin')
 
+    // Nota: en producción, next.config.mjs puede remover console.log/info.
+    // Dejamos una traza mínima con console.error para diagnosticar integraciones.
+    try {
+      const tipo = payload?.integracionTipo
+      const data = payload?.integracionData?.data
+      const count = Array.isArray(data) ? data.length : 0
+      if (tipo === 'NewLBRUTAOT' || tipo === 'UpdateLBRUTAS' || tipo === 'UpdateLBRUTAOT') {
+        console.error('[lab/api-post-integracion] tipo:', tipo, 'count:', count)
+      }
+    } catch {
+      // ignore
+    }
+
     logRequest(contentType, payload)
 
     if (!payload?.integracionTipo || !payload?.integracionData?.data) {
@@ -184,7 +197,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No hay OTs para procesar' }, { status: 400, headers: corsHeaders(origin) })
       }
 
-      const ordenesTrabajo = await Promise.all(
+      const results = await Promise.allSettled(
         data.map(async (ot: {
           CLAVE: string
           ESTADO?: string
@@ -213,7 +226,7 @@ export async function POST(request: Request) {
               }
             : {}
 
-          return prisma.ordenTrabajo.upsert({
+          const upsertBase = {
             where: {
               clave: ot.CLAVE
             },
@@ -254,11 +267,33 @@ export async function POST(request: Request) {
                 }
               }
             }
-          })
+          } as const
+
+          try {
+            return await prisma.ordenTrabajo.upsert(upsertBase as any)
+          } catch (e: any) {
+            console.error('[lab/api-post-integracion] upsert OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
+            const { create, ...rest } = upsertBase as any
+            const createWithoutAgenda = { ...create }
+            delete createWithoutAgenda.agenda
+            return await prisma.ordenTrabajo.upsert({
+              ...rest,
+              create: createWithoutAgenda
+            })
+          }
         })
       )
 
-      return NextResponse.json({ message: 'OTs creadas correctamente', data: ordenesTrabajo }, { headers: corsHeaders(origin) })
+      const ok = results.filter(r => r.status === 'fulfilled').map((r: any) => r.value)
+      const errors = results
+        .filter(r => r.status === 'rejected')
+        .map((r: any) => String(r.reason?.message || r.reason || 'Error'))
+
+      if (errors.length > 0) {
+        console.error('[lab/api-post-integracion] NewLBRUTAOT errores:', errors.slice(0, 5))
+      }
+
+      return NextResponse.json({ message: 'OTs procesadas', data: ok, errors }, { headers: corsHeaders(origin) })
     }
 
     if (integracionTipo === 'UpdateLBRUTAS') {
@@ -267,6 +302,7 @@ export async function POST(request: Request) {
       }
 
       const agendasActualizadas = []
+      const errores: Array<{ agendaId: number; error: string }> = []
 
       for (const item of data) {
         if (!item?.CLAVE) continue
@@ -292,29 +328,39 @@ export async function POST(request: Request) {
 
         const hasComprobante = Boolean(horaLlegada || horaSalida || movilizacion || kmAdicionales)
 
-        const agenda = await prisma.agenda.update({
-          where: { id: agendaId },
-          data: {
-            ...(hasComprobante
-              ? {
-                  horaLlegada: horaLlegada ?? null,
-                  horaSalida: horaSalida ?? null,
-                  movilizacion: movilizacion ?? null,
-                  kmAdicionales: kmAdicionales ?? null,
-                  // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
-                  estado: 'RECIBIDA_OK'
-                }
-              : {}),
-            // Guardamos siempre el JSON para trazabilidad
-            comprobanteVisitaJSON: item
-          }
-        })
+        try {
+          const agenda = await prisma.agenda.update({
+            where: { id: agendaId },
+            data: {
+              ...(hasComprobante
+                ? {
+                    horaLlegada: horaLlegada ?? null,
+                    horaSalida: horaSalida ?? null,
+                    movilizacion: movilizacion ?? null,
+                    kmAdicionales: kmAdicionales ?? null,
+                    // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
+                    estado: 'RECIBIDA_OK'
+                  }
+                : {}),
+              // Guardamos siempre el JSON para trazabilidad
+              comprobanteVisitaJSON: item
+            }
+          })
 
-        console.info('[api-post-integracion][lab] UpdateLBRUTAS updated agendaId:', agendaId, 'hasComprobante:', hasComprobante)
-        agendasActualizadas.push(agenda)
+          console.error('[lab/api-post-integracion] UpdateLBRUTAS updated agendaId:', agendaId, 'hasComprobante:', hasComprobante)
+          agendasActualizadas.push(agenda)
+        } catch (e: any) {
+          const msg = String(e?.message || e)
+          console.error('[lab/api-post-integracion] UpdateLBRUTAS error agendaId:', agendaId, msg)
+          errores.push({ agendaId, error: msg })
+          continue
+        }
       }
 
-      return NextResponse.json({ message: 'Aceptación de visita procesada correctamente', data: agendasActualizadas }, { headers: corsHeaders(origin) })
+      return NextResponse.json(
+        { message: 'Aceptación de visita procesada', data: agendasActualizadas, errors: errores },
+        { headers: corsHeaders(origin) }
+      )
     }
 
     return NextResponse.json({ error: `Integración no soportada: ${integracionTipo}` }, { status: 400, headers: corsHeaders(origin) })
