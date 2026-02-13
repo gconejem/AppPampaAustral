@@ -90,15 +90,51 @@ export async function GET(request: Request) {
         lte: endDate
       }
     } else {
-      // Si no se especifica rango, devolver solo las visitas de HOY
+      // Si no se especifica rango, devolver solo las visitas de HOY.
+      // AppLab usa el día local (Chile). Si el servidor corre en UTC, el "hoy" puede correrse
+      // y dejar al cliente sin citas. Por eso calculamos el día en America/Santiago.
+
+      const TZ = 'America/Santiago'
       const now = new Date()
-      const startOfDay = new Date(now)
-      startOfDay.setHours(0, 0, 0, 0)
-      const endOfDay = new Date(now)
-      endOfDay.setHours(23, 59, 59, 999)
+
+      const dtf = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+
+      // yyyy-mm-dd (en-CA)
+      const ymd = dtf.format(now)
+      const parts = ymd.split('-')
+      const year = Number(parts[0])
+      const month = Number(parts[1])
+      const day = Number(parts[2])
+
+      // Calcula el offset del timezone en minutos usando timeZoneName: shortOffset (Node >= 18)
+      const getOffsetMinutes = (date: Date) => {
+        const off = new Intl.DateTimeFormat('en-US', {
+          timeZone: TZ,
+          timeZoneName: 'shortOffset'
+        }).format(date)
+        const m = off.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/)
+        if (!m) return 0
+        const hours = Number(m[1])
+        const mins = m[2] ? Number(m[2]) : 0
+        return hours * 60 + (hours >= 0 ? mins : -mins)
+      }
+
+      // Creamos un Date aproximado en UTC para estimar offset de ese día.
+      const approx = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+      const offsetMinutes = getOffsetMinutes(approx)
+      const startOfDayUtc = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - offsetMinutes * 60_000)
+      const endOfDayUtc = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - offsetMinutes * 60_000)
+
+      console.log('Default date range (Chile):', { ymd, startOfDayUtc, endOfDayUtc, offsetMinutes })
+
       whereFilter.fechaInicio = {
-        gte: startOfDay,
-        lte: endOfDay
+        gte: startOfDayUtc,
+        lte: endOfDayUtc
       }
     }
 
