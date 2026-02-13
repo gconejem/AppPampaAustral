@@ -218,10 +218,49 @@ export async function GET(request: Request) {
 
     // Filtrar por parámetro persona[] si viene en la query (compatibilidad App Terreno)
     if (persona) {
-      const personaId = String(persona)
+      const rawPersona = String(persona)
+      const personaNorm = rawPersona.trim().toLowerCase()
+
+      const normalizeRut = (rut?: string | null) =>
+        (rut || '').toString().trim().toLowerCase().replace(/[^0-9k]/g, '')
+
+      const personaRutNorm = normalizeRut(rawPersona)
+
+      const beforeCount = filteredAgendas.length
       filteredAgendas = filteredAgendas.filter(agenda =>
-        agenda.asignados.some(asignado => String(asignado.user?.id) === personaId)
+        agenda.asignados.some(asignado => {
+          const u = asignado.user
+          if (!u) return false
+
+          const idMatch = String(u.id) === rawPersona
+          const usuarioMatch = (u.usuario || '').toString().trim().toLowerCase() === personaNorm
+          const emailMatch = (u.email || '').toString().trim().toLowerCase() === personaNorm
+          const nameMatch = (u.name || '').toString().trim().toLowerCase().includes(personaNorm)
+          const rutMatch = personaRutNorm.length > 0 && normalizeRut(u.rut) === personaRutNorm
+
+          return idMatch || usuarioMatch || emailMatch || nameMatch || rutMatch
+        })
       )
+
+      console.log('Filtro persona[] aplicado:', {
+        persona: rawPersona,
+        beforeCount,
+        afterCount: filteredAgendas.length
+      })
+
+      if (beforeCount > 0 && filteredAgendas.length === 0) {
+        const sampleAsignados = agendas.slice(0, 5).map(a => ({
+          agendaId: a.id,
+          asignados: (a.asignados || []).map(x => ({
+            id: x.user?.id,
+            usuario: x.user?.usuario,
+            name: x.user?.name,
+            rut: x.user?.rut,
+            email: x.user?.email
+          }))
+        }))
+        console.log('WARN: persona[] no matcheó agendas. Sample asignados (max 5 agendas):', sampleAsignados)
+      }
     }
 
     // Filtrar por nombre de laboratorista
