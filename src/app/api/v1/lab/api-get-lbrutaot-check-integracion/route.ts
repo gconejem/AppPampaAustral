@@ -74,10 +74,16 @@ export async function GET(request: Request) {
     const resultados = ordenesTrabajo.map(ot => {
       const formulario = findFormulario(ot.fklbdocver)
 
+      const tipoCodigo = (ot.tipoOT?.codigo ?? '').trim()
+      const tipoDescripcion = (ot.tipoOT?.descripcion ?? '').trim()
+      const fallbackDescripcion = ot.origen === 'P' ? 'OT en papel' : 'Servicio'
+
       const servicio = {
         CODIGO: ot.fklbrutser || ot.tipoOT?.codigo || null,
-        FORMULARIO: ot.tipoOT?.codigo || ot.fklbrutser || null,
-        DESCRIP: ot.tipoOT?.descripcion || null
+        FORMULARIO: tipoCodigo || ot.fklbrutser || null,
+        // Evita que en AppLab se renderice un "Servicio" vacío.
+        // Si por datos históricos/placeholder viene descripción vacía, mostramos un fallback.
+        DESCRIP: tipoDescripcion || fallbackDescripcion
       }
 
       return {
