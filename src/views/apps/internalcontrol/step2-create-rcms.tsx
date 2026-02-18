@@ -1668,6 +1668,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
                                                                         <DatePicker
                                                                             value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
+                                                                            minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
                                                                             onChange={(newValue) => {
                                                                                 const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
                                                                                 const fechaBase = new Date(fechaServicio || getTodayDateForInput())
