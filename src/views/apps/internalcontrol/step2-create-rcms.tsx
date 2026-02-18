@@ -369,6 +369,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setErrorVencimiento(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`)
                 return
             }
+
+            // Validación: Todas las submuestras deben tener fecha de vencimiento
+            const sinFecha = submuestrasVencimiento.some(sub => !sub.fechaVencimiento)
+            if (sinFecha) {
+                setErrorVencimiento('Todas las submuestras deben tener una fecha de vencimiento calculada o ingresada')
+                return
+            }
         }
 
         // Limpiar error si pasó las validaciones
