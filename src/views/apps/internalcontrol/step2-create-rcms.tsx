@@ -1895,6 +1895,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             sx={{ fontWeight: 500 }}
                                         />
 
+                                        {/* Mostrar estado de agrupación según tipo */}
+                                        <Chip
+                                            label={rcm.rcmType === 'Muestra' ? 'Pendiente de agrupar' : 'Agrupado'}
+                                            size='small'
+                                            sx={{
+                                                fontWeight: 600,
+                                                bgcolor: rcm.rcmType === 'Muestra' ? '#FFF3E0' : '#E8F5E9',
+                                                color: rcm.rcmType === 'Muestra' ? '#E65100' : '#2E7D32',
+                                                border: rcm.rcmType === 'Muestra' ? '1px solid #FFB74D' : '1px solid #81C784',
+                                            }}
+                                        />
+
                                         {/* Mostrar campos según el tipo de RCM */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {/* Número de RCM */}
