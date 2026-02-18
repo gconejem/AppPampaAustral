@@ -1333,19 +1333,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Grid>
                                         </>
                                     )}
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cantidad de Muestras'
-                                            type='number'
-                                            value={cantidadMuestras}
-                                            onChange={(e) => {
-                                                setErrorVencimiento('') // Limpiar error al modificar cantidad
-                                                setCantidadMuestras(e.target.value)
-                                            }}
-                                            required
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Cantidad de Muestras'
+                                                type='number'
+                                                value={cantidadMuestras}
+                                                onChange={(e) => {
+                                                    setErrorVencimiento('') // Limpiar error al modificar cantidad
+                                                    setCantidadMuestras(e.target.value)
+                                                }}
+                                                required
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
                                     {rcmType === 'Muestra' && (
                                         <Grid item xs={12} md={4}>
                                             <TextField
