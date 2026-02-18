@@ -15,6 +15,7 @@ import {
     List,
     ListItem,
     ListItemText,
+    ListItemButton,
     InputAdornment,
     FormControl,
     InputLabel,
@@ -29,9 +30,15 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    Divider,
+    Radio,
+    RadioGroup
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { es } from 'date-fns/locale'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -40,6 +47,10 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import LayersIcon from '@mui/icons-material/Layers'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 
 const ITEMS_PER_PAGE = 10
 
@@ -89,6 +100,18 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
+}
+
+interface CodigoAgrupador {
+    id: string
+    codigoId: string
+    codigoNombre: string
+    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string }>
+    ensayos: Array<{ productoId: number; sku: string; nombre: string }>
+    descripcionServicio: string
+    cantidad: number
+    unidad: string
+    facturacion: 'Unitario' | 'Fijo'
 }
 
 interface Step2CreateRcmsProps {
@@ -155,10 +178,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [newRcmMenuAnchor, setNewRcmMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
     const [isEditingRcm, setIsEditingRcm] = useState(false)
+    const [isDuplicatingRcm, setIsDuplicatingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [actionBarRcmId, setActionBarRcmId] = useState<number | null>(null)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -190,6 +216,28 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [paginatedProductos, setPaginatedProductos] = useState<ProductoType[]>([]) // Productos de la página actual
     const [filterResetKey, setFilterResetKey] = useState(0)
     const [pendingRcmType, setPendingRcmType] = useState<string>('')
+
+    // Estados para popup de códigos
+    const [codigoAnchorEl, setCodigoAnchorEl] = useState<HTMLElement | null>(null)
+    const [showNewCodigoForm, setShowNewCodigoForm] = useState(false)
+    const [selectedCodigo, setSelectedCodigo] = useState<string>('')
+    const [newCodigoNombre, setNewCodigoNombre] = useState('')
+    const [newCodigoDescripcion, setNewCodigoDescripcion] = useState('')
+    const [newCodigoTipo, setNewCodigoTipo] = useState('')
+
+    // Códigos existentes de la OT (mock data)
+    const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
+        { id: 'COD-001', nombre: 'Hormigón H30', tipo: 'Muestra', descripcion: 'Código para muestras de hormigón grado H30' },
+        { id: 'COD-002', nombre: 'Suelo Base', tipo: 'Control', descripcion: 'Control de compactación base estabilizada' },
+        { id: 'COD-003', nombre: 'Asfalto CA-24', tipo: 'Muestra', descripcion: 'Muestras de carpeta asfáltica' },
+    ])
+
+    // Códigos Agrupadores (Productos)
+    const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
+    const [selectedRcmIds, setSelectedRcmIds] = useState<number[]>([])
+    const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
+    const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
+    const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
@@ -261,7 +309,59 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowConfirmNewRcm(false)
     }
 
+    // Función para detectar si hay cambios sin guardar en el formulario
+    const hasUnsavedChanges = (): boolean => {
+        if (isEditingRcm && originalRcm) {
+            // Comparar con los datos originales del RCM que se está editando
+            return (
+                numeroTarjeta !== originalRcm.numeroTarjeta ||
+                tipoMaterial !== originalRcm.tipoMaterial ||
+                item !== originalRcm.item ||
+                tomaMuestra !== (originalRcm.tomaMuestra || '') ||
+                cantidadMuestras !== originalRcm.cantidadMuestras ||
+                fechaServicio !== originalRcm.fechaServicio ||
+                JSON.stringify(ensayosAsociados) !== JSON.stringify(originalRcm.ensayos) ||
+                tieneVencimiento !== (originalRcm.tieneVencimiento || false) ||
+                JSON.stringify(submuestrasVencimiento) !== JSON.stringify(originalRcm.submuestrasVencimiento || [])
+            )
+        } else {
+            // Nuevo RCM: verificar si se ha ingresado algún dato
+            return (
+                numeroTarjeta.trim() !== '' ||
+                tipoMaterial.trim() !== '' ||
+                item.trim() !== '' ||
+                elemento.trim() !== '' ||
+                grado.trim() !== '' ||
+                calicata.trim() !== '' ||
+                estrato.trim() !== '' ||
+                cota1.trim() !== '' ||
+                cota2.trim() !== '' ||
+                procedencia.trim() !== '' ||
+                ubicacionSector.trim() !== '' ||
+                observacionItem.trim() !== '' ||
+                tomaMuestra.trim() !== '' ||
+                ensayosAsociados.length > 0 ||
+                submuestrasVencimiento.length > 0
+            )
+        }
+    }
+
     const handleCancelEdit = () => {
+        // Si estamos duplicando, cancelar directamente sin modal
+        if (isDuplicatingRcm) {
+            performCancelEdit()
+            return
+        }
+        // Si hay cambios sin guardar, mostrar modal de confirmación
+        if (hasUnsavedChanges()) {
+            setShowCancelConfirm(true)
+            return
+        }
+        // Si no hay cambios, cancelar directamente
+        performCancelEdit()
+    }
+
+    const performCancelEdit = () => {
         // Si estamos editando un RCM, restaurarlo a la lista con sus datos originales
         if (isEditingRcm && editingRcmId !== null && originalRcm !== null) {
             setSavedRcms([...savedRcms, originalRcm])
@@ -291,9 +391,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSubmuestrasVencimiento([])
         setErrorVencimiento('')
 
-        // Limpiar estado de edición
+        // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
+        setIsDuplicatingRcm(false)
+    }
+
+    const handleConfirmCancel = () => {
+        setShowCancelConfirm(false)
+        performCancelEdit()
+    }
+
+    const handleDismissCancelConfirm = () => {
+        setShowCancelConfirm(false)
     }
 
     const handleSaveRcm = () => {
@@ -325,15 +435,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setErrorVencimiento(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`)
                 return
             }
+
+            // Validación: Todas las submuestras deben tener fecha de vencimiento
+            const sinFecha = submuestrasVencimiento.some(sub => !sub.fechaVencimiento)
+            if (sinFecha) {
+                setErrorVencimiento('Todas las submuestras deben tener una fecha de vencimiento calculada o ingresada')
+                return
+            }
         }
 
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
-        // Limpiar estado de edición
+        // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
         setOriginalRcm(null)
+        setIsDuplicatingRcm(false)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -362,6 +480,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             submuestrasVencimiento: [...submuestrasVencimiento]
         }
         setSavedRcms([...savedRcms, newRcm])
+        setActionBarRcmId(newRcm.id)
         setShowRcmCard(false)
         setRcmType('')
         setArea('')
@@ -476,12 +595,172 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 // NO eliminar el RCM original de la lista (a diferencia de editar)
                 // El RCM duplicado será un nuevo RCM cuando se guarde
 
-                // Mostrar el formulario
+                // Marcar como duplicación y mostrar el formulario
+                setIsDuplicatingRcm(true)
                 setShowRcmCard(true)
                 setExpandedRcm(true)
             }
         }
         handleCloseRcmMenu()
+    }
+
+    // Handlers para popup de códigos
+    const handleOpenCodigoPopup = (event: React.MouseEvent<HTMLElement>) => {
+        setCodigoAnchorEl(event.currentTarget)
+        setShowNewCodigoForm(false)
+        setSelectedCodigo('')
+    }
+
+    const handleCloseCodigoPopup = () => {
+        setCodigoAnchorEl(null)
+        setShowNewCodigoForm(false)
+        setSelectedCodigo('')
+        setNewCodigoNombre('')
+        setNewCodigoDescripcion('')
+        setNewCodigoTipo('')
+    }
+
+    const handleSelectCodigo = (codigoId: string) => {
+        setSelectedCodigo(codigoId)
+    }
+
+    const handleConfirmCodigo = () => {
+        if (selectedCodigo) {
+            const codigo = codigosOT.find(c => c.id === selectedCodigo)
+            if (!codigo) return
+
+            // Get the RCMs that are checked (selected) or use the current RCM being created
+            const rcmsToAssign = selectedRcmIds.length > 0
+                ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                    id: r.id,
+                    numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                    rcmType: r.rcmType
+                }))
+                : showRcmCard
+                    ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
+                    : []
+
+            if (rcmsToAssign.length === 0) return
+
+            // Collect SKUs from the assigned RCMs
+            const allSkus: string[] = []
+            let ensayoNombre = ''
+            rcmsToAssign.forEach(rcmRef => {
+                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+                if (fullRcm) {
+                    fullRcm.ensayos.forEach(e => {
+                        if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
+                        if (!ensayoNombre) ensayoNombre = e.nombre
+                    })
+                }
+            })
+
+            // If only the current (unsaved) RCM, use ensayosAsociados
+            if (allSkus.length === 0 && ensayosAsociados.length > 0) {
+                ensayosAsociados.forEach(e => {
+                    if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
+                    if (!ensayoNombre) ensayoNombre = e.nombre
+                })
+            }
+
+            const newAgrupador: CodigoAgrupador = {
+                id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+                codigoId: codigo.id,
+                codigoNombre: codigo.nombre,
+                rcmsVinculados: rcmsToAssign,
+                ensayos: allSkus.map((sku, idx) => ({ productoId: idx, sku, nombre: ensayoNombre || codigo.nombre })),
+                descripcionServicio: codigo.descripcion || codigo.nombre,
+                cantidad: rcmsToAssign.length,
+                unidad: 'unid',
+                facturacion: 'Unitario'
+            }
+
+            setCodigosAgrupadores(prev => [...prev, newAgrupador])
+            setSelectedRcmIds([])
+        }
+        handleCloseCodigoPopup()
+    }
+
+    const handleDeleteAgrupador = (agrupadorId: string) => {
+        setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
+    }
+
+    const handleToggleRcmSelection = (rcmId: number) => {
+        setSelectedRcmIds(prev =>
+            prev.includes(rcmId)
+                ? prev.filter(id => id !== rcmId)
+                : [...prev, rcmId]
+        )
+    }
+
+    const handleChangeAgrupadorCantidad = (agrupadorId: string, cantidad: number) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, cantidad } : a
+        ))
+    }
+
+    const handleChangeAgrupadorFacturacion = (agrupadorId: string, facturacion: 'Unitario' | 'Fijo') => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, facturacion } : a
+        ))
+    }
+
+    const handleChangeAgrupadorDescripcion = (agrupadorId: string, descripcionServicio: string) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId ? { ...a, descripcionServicio } : a
+        ))
+    }
+
+    const handleOpenAgrupadorSearch = (event: React.MouseEvent<HTMLElement>, agrupadorId: string) => {
+        setAgrupadorSearchAnchor(event.currentTarget)
+        setEditingAgrupadorId(agrupadorId)
+        setAgrupadorSearchTerm('')
+    }
+
+    const handleCloseAgrupadorSearch = () => {
+        setAgrupadorSearchAnchor(null)
+        setEditingAgrupadorId(null)
+        setAgrupadorSearchTerm('')
+    }
+
+    const handleSelectProductForAgrupador = (producto: ProductoType) => {
+        if (!editingAgrupadorId) return
+        const idProducto = (producto as any).productoId || producto.id
+
+        setCodigosAgrupadores(prev => prev.map(a => {
+            if (a.id !== editingAgrupadorId) return a
+            // Don't add duplicates
+            if (a.ensayos.some(e => e.productoId === idProducto)) return a
+            return {
+                ...a,
+                ensayos: [...a.ensayos, { productoId: idProducto, sku: producto.sku, nombre: producto.nombre }]
+            }
+        }))
+        handleCloseAgrupadorSearch()
+    }
+
+    const handleRemoveEnsayoFromAgrupador = (agrupadorId: string, productoId: number) => {
+        setCodigosAgrupadores(prev => prev.map(a =>
+            a.id === agrupadorId
+                ? { ...a, ensayos: a.ensayos.filter(e => e.productoId !== productoId) }
+                : a
+        ))
+    }
+
+    const handleCrearNuevoCodigo = () => {
+        if (!newCodigoNombre.trim()) return
+        const newCodigo = {
+            id: `COD-${String(codigosOT.length + 1).padStart(3, '0')}`,
+            nombre: newCodigoNombre,
+            tipo: newCodigoTipo || 'General',
+            descripcion: newCodigoDescripcion
+        }
+        setCodigosOT([...codigosOT, newCodigo])
+        setSelectedCodigo(newCodigo.id)
+        setShowNewCodigoForm(false)
+        setNewCodigoNombre('')
+        setNewCodigoDescripcion('')
+        setNewCodigoTipo('')
     }
 
     const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
@@ -720,7 +999,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Cargar productos con filtros
     useEffect(() => {
-        if (!anchorEl) return
+        if (!anchorEl && !agrupadorSearchAnchor) return
 
         const fetchProductos = async () => {
             try {
@@ -758,7 +1037,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -884,14 +1163,35 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Box>
                                 )}
                             </Box>
-                            {isEditingRcm && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Checkbox />
-                                    <IconButton size='small'>
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
-                            )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Button
+                                    variant='outlined'
+                                    size='small'
+                                    onClick={handleOpenCodigoPopup}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        borderColor: '#1976D2',
+                                        color: '#1976D2',
+                                        fontWeight: 600,
+                                        px: 2,
+                                        '&:hover': {
+                                            borderColor: '#1565C0',
+                                            bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    Asignar a código / Crear nuevo código
+                                </Button>
+                                {isEditingRcm && (
+                                    <>
+                                        <Checkbox />
+                                        <IconButton size='small'>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </>
+                                )}
+                            </Box>
                         </Box>
 
                         {/* Contenido colapsable del RCM */}
@@ -985,15 +1285,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <MenuItem value='ensayo'>Ensayo</MenuItem>
                                                 <MenuItem value='muestreo'>Muestreo</MenuItem>
                                                 <MenuItem value='inspeccion'>Inspección</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo de muestra</InputLabel>
-                                            <Select label='Tipo de muestra'>
-                                                <MenuItem value='muestra'>Muestra</MenuItem>
-                                                <MenuItem value='control'>Control</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
@@ -1121,19 +1412,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Grid>
                                         </>
                                     )}
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Cantidad de Muestras'
-                                            type='number'
-                                            value={cantidadMuestras}
-                                            onChange={(e) => {
-                                                setErrorVencimiento('') // Limpiar error al modificar cantidad
-                                                setCantidadMuestras(e.target.value)
-                                            }}
-                                            required
-                                            fullWidth
-                                        />
-                                    </Grid>
+                                    {rcmType === 'Muestra' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Cantidad de Muestras'
+                                                type='number'
+                                                value={cantidadMuestras}
+                                                onChange={(e) => {
+                                                    setErrorVencimiento('') // Limpiar error al modificar cantidad
+                                                    setCantidadMuestras(e.target.value)
+                                                }}
+                                                required
+                                                fullWidth
+                                            />
+                                        </Grid>
+                                    )}
                                     {rcmType === 'Muestra' && (
                                         <Grid item xs={12} md={4}>
                                             <TextField
@@ -1397,8 +1690,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                     <thead>
                                                         <tr style={{ backgroundColor: '#F5F5F5' }}>
-                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Submuestra</th>
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>#</th>
+
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
@@ -1408,15 +1701,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <tbody>
                                                         {submuestrasVencimiento.map((submuestra) => (
                                                             <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Typography variant='body2'>
-                                                                        {submuestra.submuestra}
-                                                                    </Typography>
-                                                                </td>
+
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <Typography variant='body2'>
-                                                                        {submuestra.numero}
-                                                                    </Typography>
+                                                                    <TextField
+                                                                        size='small'
+                                                                        type='number'
+                                                                        value={submuestra.numero}
+                                                                        onChange={(e) => {
+                                                                            const numero = parseInt(e.target.value) || 0
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id
+                                                                                    ? { ...s, numero }
+                                                                                    : s
+                                                                            ))
+                                                                        }}
+                                                                        sx={{ width: '70px' }}
+                                                                        inputProps={{ min: 1 }}
+                                                                    />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
@@ -1440,9 +1741,27 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                     />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <Typography variant='body2' color='text.secondary'>
-                                                                        {submuestra.fechaVencimiento ? formatDateOnly(submuestra.fechaVencimiento) : 'Calculada'}
-                                                                    </Typography>
+                                                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                                                        <DatePicker
+                                                                            value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
+                                                                            minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
+                                                                            onChange={(newValue) => {
+                                                                                const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
+                                                                                const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                                const fechaVenc = new Date(nuevaFecha)
+                                                                                const diffTime = fechaVenc.getTime() - fechaBase.getTime()
+                                                                                const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                    s.id === submuestra.id
+                                                                                        ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 }
+                                                                                        : s
+                                                                                ))
+                                                                            }}
+                                                                            slotProps={{
+                                                                                textField: { size: 'small', sx: { width: '170px' } }
+                                                                            }}
+                                                                        />
+                                                                    </LocalizationProvider>
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
@@ -1578,6 +1897,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             sx={{ fontWeight: 500 }}
                                         />
 
+                                        {/* Mostrar estado de agrupación según tipo */}
+                                        <Chip
+                                            label={rcm.rcmType === 'Muestra' ? 'Pendiente de agrupar' : 'Agrupado'}
+                                            size='small'
+                                            sx={{
+                                                fontWeight: 600,
+                                                bgcolor: rcm.rcmType === 'Muestra' ? '#FFF3E0' : '#E8F5E9',
+                                                color: rcm.rcmType === 'Muestra' ? '#E65100' : '#2E7D32',
+                                                border: rcm.rcmType === 'Muestra' ? '1px solid #FFB74D' : '1px solid #81C784',
+                                            }}
+                                        />
+
                                         {/* Mostrar campos según el tipo de RCM */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {/* Número de RCM */}
@@ -1666,7 +1997,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             )}
                                         </Box>
                                     </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }} onClick={(e) => e.stopPropagation()}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox
+                                            size='small'
+                                            checked={selectedRcmIds.includes(rcm.id)}
+                                            onChange={() => handleToggleRcmSelection(rcm.id)}
+                                        />
                                         <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                             <MoreVertIcon />
                                         </IconButton>
@@ -1737,8 +2073,326 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Box>
                                     </Box>
                                 </Collapse>
+
+                                {/* Barra de acciones rápidas debajo del RCM recién guardado */}
+                                {actionBarRcmId === rcm.id && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-end',
+                                            gap: 1.5,
+                                            px: 2,
+                                            py: 1.5,
+                                            bgcolor: '#BBDEFB',
+                                            borderTop: '1px solid #90CAF9'
+                                        }}
+                                    >
+                                        <Button
+                                            variant='contained'
+                                            size='small'
+                                            startIcon={<AddIcon />}
+                                            onClick={handleNewRcmClick}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                bgcolor: '#1976D2',
+                                                '&:hover': { bgcolor: '#1565C0' }
+                                            }}
+                                        >
+                                            Nuevo RCM
+                                        </Button>
+                                        <Button
+                                            variant='outlined'
+                                            size='small'
+                                            startIcon={<ContentCopyIcon />}
+                                            onClick={() => {
+                                                setSelectedRcmId(rcm.id)
+                                                setActionBarRcmId(null)
+                                                // Duplicar lógica inline
+                                                const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
+                                                if (rcmToDuplicate) {
+                                                    setRcmType(rcmToDuplicate.rcmType)
+                                                    setNumeroTarjeta('')
+                                                    setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                                                    setItem(rcmToDuplicate.item)
+                                                    setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
+                                                    setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
+                                                    setFechaServicio(rcmToDuplicate.fechaServicio)
+                                                    setEnsayosAsociados([...rcmToDuplicate.ensayos])
+                                                    setTieneVencimiento(rcmToDuplicate.tieneVencimiento || false)
+                                                    setSubmuestrasVencimiento(rcmToDuplicate.submuestrasVencimiento || [])
+                                                    setIsDuplicatingRcm(true)
+                                                    setShowRcmCard(true)
+                                                    setExpandedRcm(true)
+                                                }
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                borderColor: '#1976D2',
+                                                color: '#1976D2',
+                                                bgcolor: 'white',
+                                                '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' }
+                                            }}
+                                        >
+                                            Duplicar este
+                                        </Button>
+                                        <Button
+                                            variant='outlined'
+                                            size='small'
+                                            startIcon={<LayersIcon />}
+                                            onClick={(e) => {
+                                                setSelectedRcmIds([rcm.id])
+                                                handleOpenCodigoPopup(e)
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                borderColor: '#7B1FA2',
+                                                color: '#7B1FA2',
+                                                bgcolor: 'white',
+                                                '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' }
+                                            }}
+                                        >
+                                            Asociar a Producto
+                                        </Button>
+                                        <Button
+                                            variant='text'
+                                            size='small'
+                                            onClick={() => setActionBarRcmId(null)}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                color: '#666',
+                                                '&:hover': { bgcolor: '#E0E0E0' }
+                                            }}
+                                        >
+                                            Cerrar
+                                        </Button>
+                                    </Box>
+                                )}
                             </Box>
                         ))}
+                    </Box>
+                )}
+
+                {/* Sección de Códigos Agrupadores (Productos) */}
+                {codigosAgrupadores.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                        {/* Barra de selección */}
+                        {selectedRcmIds.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    bgcolor: '#E3F2FD',
+                                    borderRadius: '8px',
+                                    p: 2,
+                                    mb: 3
+                                }}
+                            >
+                                <Typography variant='body2' sx={{ fontWeight: 500 }}>
+                                    {selectedRcmIds.length} RCMs seleccionados
+                                </Typography>
+                                <Button
+                                    variant='contained'
+                                    startIcon={<LayersIcon />}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        bgcolor: '#1976D2',
+                                        '&:hover': { bgcolor: '#1565C0' }
+                                    }}
+                                >
+                                    Agrupar en Producto
+                                </Button>
+                            </Box>
+                        )}
+
+                        {/* Título y botón Finalizar Codificación */}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+                            <Box>
+                                <Typography variant='h6' sx={{ fontWeight: 700 }}>
+                                    Códigos Agrupadores (Productos)
+                                </Typography>
+                                <Typography variant='body2' color='text.secondary'>
+                                    Productos comerciales facturables generados
+                                </Typography>
+                            </Box>
+                            <Button
+                                variant='contained'
+                                startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 600,
+                                    px: 3,
+                                    bgcolor: '#1976D2',
+                                    '&:hover': { bgcolor: '#1565C0' }
+                                }}
+                            >
+                                Finalizar Codificación
+                            </Button>
+                        </Box>
+
+                        {/* Tabla de Códigos Agrupadores */}
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CÓDIGO ID</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>RCMS VINCULADOS</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>SKUS / ENSAYOS</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>DESCRIPCIÓN DEL SERVICIO</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CANTIDAD</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>FACTURACIÓN</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>ACCIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {codigosAgrupadores.map((agrupador) => (
+                                        <tr key={agrupador.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                            {/* Código ID */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
+                                                    {agrupador.id}
+                                                </Typography>
+                                            </td>
+
+                                            {/* RCMs Vinculados */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {agrupador.rcmsVinculados.map((rcm, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={`RCM-${idx + 1}`}
+                                                            size='small'
+                                                            sx={{
+                                                                bgcolor: '#EEF2FF',
+                                                                color: '#4338CA',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.75rem'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            </td>
+
+                                            {/* SKUs / Ensayos */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                    {agrupador.ensayos.length > 0 && (
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {agrupador.ensayos.map((ensayo, idx) => (
+                                                                <Chip
+                                                                    key={idx}
+                                                                    label={`${ensayo.nombre} (${ensayo.sku})`}
+                                                                    size='small'
+                                                                    onDelete={() => handleRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
+                                                                    sx={{
+                                                                        bgcolor: '#F0F7FF',
+                                                                        color: '#1976D2',
+                                                                        fontWeight: 500,
+                                                                        fontSize: '0.7rem',
+                                                                        '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </Box>
+                                                    )}
+                                                    <Button
+                                                        startIcon={<SearchIcon />}
+                                                        size='small'
+                                                        variant='outlined'
+                                                        onClick={(e) => handleOpenAgrupadorSearch(e, agrupador.id)}
+                                                        sx={{
+                                                            textTransform: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            borderColor: '#E0E0E0',
+                                                            color: '#666',
+                                                            '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
+                                                        }}
+                                                    >
+                                                        Buscar ensayo
+                                                    </Button>
+                                                </Box>
+                                            </td>
+
+                                            {/* Descripción del Servicio */}
+                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                                <TextField
+                                                    size='small'
+                                                    value={agrupador.descripcionServicio}
+                                                    onChange={(e) => handleChangeAgrupadorDescripcion(agrupador.id, e.target.value)}
+                                                    sx={{ width: 180 }}
+                                                />
+                                            </td>
+
+                                            {/* Cantidad */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    <TextField
+                                                        size='small'
+                                                        type='number'
+                                                        value={agrupador.cantidad}
+                                                        onChange={(e) => handleChangeAgrupadorCantidad(agrupador.id, parseInt(e.target.value) || 0)}
+                                                        sx={{ width: 70 }}
+                                                        inputProps={{ min: 1 }}
+                                                    />
+                                                    <Typography variant='body2' color='text.secondary'>
+                                                        {agrupador.unidad}
+                                                    </Typography>
+                                                </Box>
+                                            </td>
+
+                                            {/* Facturación */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <Chip
+                                                    label={agrupador.facturacion}
+                                                    size='small'
+                                                    onClick={() => handleChangeAgrupadorFacturacion(
+                                                        agrupador.id,
+                                                        agrupador.facturacion === 'Unitario' ? 'Fijo' : 'Unitario'
+                                                    )}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        fontWeight: 600,
+                                                        bgcolor: agrupador.facturacion === 'Unitario' ? '#EEF2FF' : '#F0FDF4',
+                                                        color: agrupador.facturacion === 'Unitario' ? '#4338CA' : '#16A34A',
+                                                        '&:hover': {
+                                                            bgcolor: agrupador.facturacion === 'Unitario' ? '#E0E7FF' : '#DCFCE7'
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
+
+                                            {/* Acciones */}
+                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                                <IconButton
+                                                    size='small'
+                                                    onClick={() => handleDeleteAgrupador(agrupador.id)}
+                                                    sx={{ color: '#9CA3AF', '&:hover': { color: '#EF4444' } }}
+                                                >
+                                                    <DeleteIcon fontSize='small' />
+                                                </IconButton>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </Box>
                     </Box>
                 )}
 
@@ -1979,6 +2633,385 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Dialog de confirmación para cancelar con cambios sin guardar */}
+                <Dialog
+                    open={showCancelConfirm}
+                    onClose={handleDismissCancelConfirm}
+                    maxWidth='sm'
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: '12px',
+                            overflow: 'hidden'
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WarningAmberIcon sx={{ color: '#ED6C02', fontSize: 28 }} />
+                        ¿Deseas salir sin guardar los cambios?
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Se perderá la información ingresada.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button
+                            onClick={handleConfirmCancel}
+                            variant='outlined'
+                            color='error'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Cancelar sin guardar
+                        </Button>
+                        <Button
+                            onClick={handleDismissCancelConfirm}
+                            variant='contained'
+                            color='primary'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Volver al formulario
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Popover de Códigos */}
+                <Popover
+                    open={Boolean(codigoAnchorEl)}
+                    anchorEl={codigoAnchorEl}
+                    onClose={handleCloseCodigoPopup}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                width: 400,
+                                maxHeight: 500,
+                                borderRadius: '12px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                overflow: 'hidden'
+                            }
+                        }
+                    }}
+                >
+                    {/* Header del popover */}
+                    <Box sx={{ p: 2, bgcolor: '#F5F7FA', borderBottom: '1px solid #E0E0E0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AssignmentIcon sx={{ color: '#1976D2', fontSize: 20 }} />
+                            <Typography variant='subtitle1' sx={{ fontWeight: 700, color: '#1A2027' }}>
+                                Códigos de la OT
+                            </Typography>
+                        </Box>
+                        <Typography variant='caption' sx={{ color: 'text.secondary', mt: 0.5 }}>
+                            Seleccione un código existente o cree uno nuevo
+                        </Typography>
+                    </Box>
+
+                    {/* Lista de códigos existentes */}
+                    <Box sx={{ maxHeight: 240, overflowY: 'auto' }}>
+                        <RadioGroup value={selectedCodigo} onChange={(e) => handleSelectCodigo(e.target.value)}>
+                            <List disablePadding>
+                                {codigosOT.length === 0 ? (
+                                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                                        <Typography variant='body2' color='text.secondary'>
+                                            No hay códigos creados en esta OT
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    codigosOT.map((codigo) => (
+                                        <ListItemButton
+                                            key={codigo.id}
+                                            selected={selectedCodigo === codigo.id}
+                                            onClick={() => handleSelectCodigo(codigo.id)}
+                                            sx={{
+                                                py: 1.5,
+                                                px: 2,
+                                                borderBottom: '1px solid #F0F0F0',
+                                                '&.Mui-selected': {
+                                                    bgcolor: 'rgba(25, 118, 210, 0.06)',
+                                                    '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.10)' }
+                                                }
+                                            }}
+                                        >
+                                            <Radio
+                                                value={codigo.id}
+                                                size='small'
+                                                sx={{ p: 0.5, mr: 1.5 }}
+                                            />
+                                            <ListItemText
+                                                primary={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant='body2' sx={{ fontWeight: 600, fontFamily: 'monospace', color: '#1976D2' }}>
+                                                            {codigo.id}
+                                                        </Typography>
+                                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                            {codigo.nombre}
+                                                        </Typography>
+                                                        <Chip label={codigo.tipo} size='small' sx={{ height: 20, fontSize: '0.7rem' }} />
+                                                    </Box>
+                                                }
+                                                secondary={
+                                                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, display: 'block' }}>
+                                                        {codigo.descripcion}
+                                                    </Typography>
+                                                }
+                                            />
+                                        </ListItemButton>
+                                    ))
+                                )}
+                            </List>
+                        </RadioGroup>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Botón para crear nuevo código / Sub-formulario */}
+                    {!showNewCodigoForm ? (
+                        <Box sx={{ p: 2 }}>
+                            {selectedCodigo && (
+                                <Button
+                                    variant='contained'
+                                    fullWidth
+                                    onClick={handleConfirmCodigo}
+                                    sx={{
+                                        mb: 1.5,
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        bgcolor: '#1976D2',
+                                        '&:hover': { bgcolor: '#1565C0' }
+                                    }}
+                                >
+                                    Asignar código seleccionado
+                                </Button>
+                            )}
+                            <Button
+                                variant='outlined'
+                                fullWidth
+                                startIcon={<AddCircleOutlineIcon />}
+                                onClick={() => setShowNewCodigoForm(true)}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 600,
+                                    borderColor: '#1976D2',
+                                    color: '#1976D2',
+                                    '&:hover': {
+                                        borderColor: '#1565C0',
+                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                    }
+                                }}
+                            >
+                                Crear nuevo Código
+                            </Button>
+                        </Box>
+                    ) : (
+                        <Box sx={{ p: 2, bgcolor: '#FAFBFC' }}>
+                            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 2, color: '#1A2027' }}>
+                                Nuevo Código
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <TextField
+                                    label='Nombre'
+                                    size='small'
+                                    fullWidth
+                                    required
+                                    value={newCodigoNombre}
+                                    onChange={(e) => setNewCodigoNombre(e.target.value)}
+                                    placeholder='Ej: Hormigón H30'
+                                />
+                                <FormControl fullWidth size='small'>
+                                    <InputLabel>Tipo</InputLabel>
+                                    <Select
+                                        label='Tipo'
+                                        value={newCodigoTipo}
+                                        onChange={(e) => setNewCodigoTipo(e.target.value)}
+                                    >
+                                        <MenuItem value='Muestra'>Muestra</MenuItem>
+                                        <MenuItem value='Control'>Control</MenuItem>
+                                        <MenuItem value='Servicio'>Servicio</MenuItem>
+                                        <MenuItem value='General'>General</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <TextField
+                                    label='Descripción'
+                                    size='small'
+                                    fullWidth
+                                    multiline
+                                    rows={2}
+                                    value={newCodigoDescripcion}
+                                    onChange={(e) => setNewCodigoDescripcion(e.target.value)}
+                                    placeholder='Descripción breve del código...'
+                                />
+                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                    <Button
+                                        variant='outlined'
+                                        size='small'
+                                        onClick={() => {
+                                            setShowNewCodigoForm(false)
+                                            setNewCodigoNombre('')
+                                            setNewCodigoDescripcion('')
+                                            setNewCodigoTipo('')
+                                        }}
+                                        sx={{ flex: 1, textTransform: 'none', borderRadius: '8px' }}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        variant='contained'
+                                        size='small'
+                                        onClick={handleCrearNuevoCodigo}
+                                        disabled={!newCodigoNombre.trim()}
+                                        sx={{
+                                            flex: 1,
+                                            textTransform: 'none',
+                                            borderRadius: '8px',
+                                            bgcolor: '#1976D2',
+                                            '&:hover': { bgcolor: '#1565C0' }
+                                        }}
+                                    >
+                                        Crear
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Box>
+                    )}
+                </Popover>
+
+                {/* Popover de búsqueda de ensayos para Agrupadores */}
+                <Popover
+                    open={Boolean(agrupadorSearchAnchor)}
+                    anchorEl={agrupadorSearchAnchor}
+                    onClose={handleCloseAgrupadorSearch}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    PaperProps={{
+                        sx: {
+                            width: '100%',
+                            maxWidth: '500px',
+                            maxHeight: '400px',
+                            overflow: 'auto',
+                            zIndex: 1300
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 2 }}>
+                        <TextField
+                            fullWidth
+                            size='small'
+                            placeholder='Buscar por nombre, descripción o norma...'
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position='start'>
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                        {selectedAreaNombre && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    label={`Área: ${selectedAreaNombre}`}
+                                    size='small'
+                                    color='primary'
+                                    variant='outlined'
+                                />
+                            </Box>
+                        )}
+                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                                }
+                                label='Solo Paquetes'
+                            />
+                        </Box>
+                    </Box>
+                    <List sx={{ pt: 0 }}>
+                        {paginatedProductos.length === 0 ? (
+                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                                <Typography variant='body2' color='text.secondary'>
+                                    No se encontraron ensayos
+                                </Typography>
+                            </Box>
+                        ) : (
+                            paginatedProductos.map(producto => (
+                                <ListItem
+                                    key={producto.id}
+                                    onClick={() => handleSelectProductForAgrupador(producto)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            backgroundColor: 'action.hover'
+                                        },
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start'
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant='body1'>
+                                                    {producto.nombre}
+                                                    {producto.norma && (
+                                                        <Typography component='span' color='text.secondary'>
+                                                            {' '}
+                                                            - {producto.norma}
+                                                        </Typography>
+                                                    )}
+                                                </Typography>
+                                                {producto.esPaquete && (
+                                                    <Typography
+                                                        variant='caption'
+                                                        sx={{
+                                                            backgroundColor: 'primary.main',
+                                                            color: 'white',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            ml: 1
+                                                        }}
+                                                    >
+                                                        Paquete
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        }
+                                        secondary={
+                                            <Box>
+                                                <Typography variant='caption' color='text.secondary'>
+                                                    {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                </ListItem>
+                            ))
+                        )}
+                    </List>
+                    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                            disabled={productsPage === 0}
+                        >
+                            Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => prev + 1)}
+                            disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                        >
+                            Siguiente
+                        </Button>
+                    </Box>
+                </Popover>
             </Box>
         </Card>
     )
