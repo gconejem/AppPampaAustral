@@ -1612,7 +1612,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <thead>
                                                         <tr style={{ backgroundColor: '#F5F5F5' }}>
 
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>#</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
@@ -1624,9 +1624,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                             <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
 
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <Typography variant='body2'>
-                                                                        {submuestra.numero}
-                                                                    </Typography>
+                                                                    <TextField
+                                                                        size='small'
+                                                                        type='number'
+                                                                        value={submuestra.numero}
+                                                                        onChange={(e) => {
+                                                                            const numero = parseInt(e.target.value) || 0
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id
+                                                                                    ? { ...s, numero }
+                                                                                    : s
+                                                                            ))
+                                                                        }}
+                                                                        sx={{ width: '70px' }}
+                                                                        inputProps={{ min: 1 }}
+                                                                    />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
