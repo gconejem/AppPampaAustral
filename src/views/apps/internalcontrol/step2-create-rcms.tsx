@@ -36,6 +36,9 @@ import {
     RadioGroup
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { es } from 'date-fns/locale'
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -1662,9 +1665,26 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                     />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <Typography variant='body2' color='text.secondary'>
-                                                                        {submuestra.fechaVencimiento ? formatDateOnly(submuestra.fechaVencimiento) : 'Calculada'}
-                                                                    </Typography>
+                                                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                                                        <DatePicker
+                                                                            value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
+                                                                            onChange={(newValue) => {
+                                                                                const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
+                                                                                const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                                const fechaVenc = new Date(nuevaFecha)
+                                                                                const diffTime = fechaVenc.getTime() - fechaBase.getTime()
+                                                                                const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                    s.id === submuestra.id
+                                                                                        ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 }
+                                                                                        : s
+                                                                                ))
+                                                                            }}
+                                                                            slotProps={{
+                                                                                textField: { size: 'small', sx: { width: '170px' } }
+                                                                            }}
+                                                                        />
+                                                                    </LocalizationProvider>
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
