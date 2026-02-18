@@ -1209,15 +1209,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Tipo de muestra</InputLabel>
-                                            <Select label='Tipo de muestra'>
-                                                <MenuItem value='muestra'>Muestra</MenuItem>
-                                                <MenuItem value='control'>Control</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
                                     {rcmType === 'Muestra' && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
