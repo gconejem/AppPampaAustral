@@ -50,6 +50,7 @@ import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 
 const ITEMS_PER_PAGE = 10
 
@@ -181,6 +182,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -305,7 +307,54 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowConfirmNewRcm(false)
     }
 
+    // Función para detectar si hay cambios sin guardar en el formulario
+    const hasUnsavedChanges = (): boolean => {
+        if (isEditingRcm && originalRcm) {
+            // Comparar con los datos originales del RCM que se está editando
+            return (
+                numeroTarjeta !== originalRcm.numeroTarjeta ||
+                tipoMaterial !== originalRcm.tipoMaterial ||
+                item !== originalRcm.item ||
+                tomaMuestra !== (originalRcm.tomaMuestra || '') ||
+                cantidadMuestras !== originalRcm.cantidadMuestras ||
+                fechaServicio !== originalRcm.fechaServicio ||
+                JSON.stringify(ensayosAsociados) !== JSON.stringify(originalRcm.ensayos) ||
+                tieneVencimiento !== (originalRcm.tieneVencimiento || false) ||
+                JSON.stringify(submuestrasVencimiento) !== JSON.stringify(originalRcm.submuestrasVencimiento || [])
+            )
+        } else {
+            // Nuevo RCM: verificar si se ha ingresado algún dato
+            return (
+                numeroTarjeta.trim() !== '' ||
+                tipoMaterial.trim() !== '' ||
+                item.trim() !== '' ||
+                elemento.trim() !== '' ||
+                grado.trim() !== '' ||
+                calicata.trim() !== '' ||
+                estrato.trim() !== '' ||
+                cota1.trim() !== '' ||
+                cota2.trim() !== '' ||
+                procedencia.trim() !== '' ||
+                ubicacionSector.trim() !== '' ||
+                observacionItem.trim() !== '' ||
+                tomaMuestra.trim() !== '' ||
+                ensayosAsociados.length > 0 ||
+                submuestrasVencimiento.length > 0
+            )
+        }
+    }
+
     const handleCancelEdit = () => {
+        // Si hay cambios sin guardar, mostrar modal de confirmación
+        if (hasUnsavedChanges()) {
+            setShowCancelConfirm(true)
+            return
+        }
+        // Si no hay cambios, cancelar directamente
+        performCancelEdit()
+    }
+
+    const performCancelEdit = () => {
         // Si estamos editando un RCM, restaurarlo a la lista con sus datos originales
         if (isEditingRcm && editingRcmId !== null && originalRcm !== null) {
             setSavedRcms([...savedRcms, originalRcm])
@@ -338,6 +387,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar estado de edición
         setIsEditingRcm(false)
         setEditingRcmId(null)
+    }
+
+    const handleConfirmCancel = () => {
+        setShowCancelConfirm(false)
+        performCancelEdit()
+    }
+
+    const handleDismissCancelConfirm = () => {
+        setShowCancelConfirm(false)
     }
 
     const handleSaveRcm = () => {
@@ -2442,6 +2500,48 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             sx={{ textTransform: 'none' }}
                         >
                             Crear nuevo
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Dialog de confirmación para cancelar con cambios sin guardar */}
+                <Dialog
+                    open={showCancelConfirm}
+                    onClose={handleDismissCancelConfirm}
+                    maxWidth='sm'
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: '12px',
+                            overflow: 'hidden'
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WarningAmberIcon sx={{ color: '#ED6C02', fontSize: 28 }} />
+                        ¿Deseas salir sin guardar los cambios?
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Se perderá la información ingresada.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button
+                            onClick={handleConfirmCancel}
+                            variant='outlined'
+                            color='error'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Cancelar sin guardar
+                        </Button>
+                        <Button
+                            onClick={handleDismissCancelConfirm}
+                            variant='contained'
+                            color='primary'
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Volver al formulario
                         </Button>
                     </DialogActions>
                 </Dialog>
