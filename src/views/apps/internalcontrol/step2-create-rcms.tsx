@@ -178,6 +178,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [newRcmMenuAnchor, setNewRcmMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedRcmId, setSelectedRcmId] = useState<number | null>(null)
     const [isEditingRcm, setIsEditingRcm] = useState(false)
+    const [isDuplicatingRcm, setIsDuplicatingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
@@ -345,6 +346,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleCancelEdit = () => {
+        // Si estamos duplicando, cancelar directamente sin modal
+        if (isDuplicatingRcm) {
+            performCancelEdit()
+            return
+        }
         // Si hay cambios sin guardar, mostrar modal de confirmación
         if (hasUnsavedChanges()) {
             setShowCancelConfirm(true)
@@ -384,9 +390,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSubmuestrasVencimiento([])
         setErrorVencimiento('')
 
-        // Limpiar estado de edición
+        // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
+        setIsDuplicatingRcm(false)
     }
 
     const handleConfirmCancel = () => {
@@ -439,10 +446,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
-        // Limpiar estado de edición
+        // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
         setOriginalRcm(null)
+        setIsDuplicatingRcm(false)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -585,7 +593,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 // NO eliminar el RCM original de la lista (a diferencia de editar)
                 // El RCM duplicado será un nuevo RCM cuando se guarde
 
-                // Mostrar el formulario
+                // Marcar como duplicación y mostrar el formulario
+                setIsDuplicatingRcm(true)
                 setShowRcmCard(true)
                 setExpandedRcm(true)
             }
