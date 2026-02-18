@@ -1611,7 +1611,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                     <thead>
                                                         <tr style={{ backgroundColor: '#F5F5F5' }}>
-                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Submuestra</th>
+
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>#</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
@@ -1622,11 +1622,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <tbody>
                                                         {submuestrasVencimiento.map((submuestra) => (
                                                             <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Typography variant='body2'>
-                                                                        {submuestra.submuestra}
-                                                                    </Typography>
-                                                                </td>
+
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <Typography variant='body2'>
                                                                         {submuestra.numero}
