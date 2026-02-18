@@ -184,6 +184,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [actionBarRcmId, setActionBarRcmId] = useState<number | null>(null)
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -479,6 +480,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             submuestrasVencimiento: [...submuestrasVencimiento]
         }
         setSavedRcms([...savedRcms, newRcm])
+        setActionBarRcmId(newRcm.id)
         setShowRcmCard(false)
         setRcmType('')
         setArea('')
@@ -2071,6 +2073,113 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Box>
                                     </Box>
                                 </Collapse>
+
+                                {/* Barra de acciones rápidas debajo del RCM recién guardado */}
+                                {actionBarRcmId === rcm.id && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-end',
+                                            gap: 1.5,
+                                            px: 2,
+                                            py: 1.5,
+                                            bgcolor: '#BBDEFB',
+                                            borderTop: '1px solid #90CAF9'
+                                        }}
+                                    >
+                                        <Button
+                                            variant='contained'
+                                            size='small'
+                                            startIcon={<AddIcon />}
+                                            onClick={handleNewRcmClick}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                bgcolor: '#1976D2',
+                                                '&:hover': { bgcolor: '#1565C0' }
+                                            }}
+                                        >
+                                            Nuevo RCM
+                                        </Button>
+                                        <Button
+                                            variant='outlined'
+                                            size='small'
+                                            startIcon={<ContentCopyIcon />}
+                                            onClick={() => {
+                                                setSelectedRcmId(rcm.id)
+                                                setActionBarRcmId(null)
+                                                // Duplicar lógica inline
+                                                const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
+                                                if (rcmToDuplicate) {
+                                                    setRcmType(rcmToDuplicate.rcmType)
+                                                    setNumeroTarjeta('')
+                                                    setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                                                    setItem(rcmToDuplicate.item)
+                                                    setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
+                                                    setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
+                                                    setFechaServicio(rcmToDuplicate.fechaServicio)
+                                                    setEnsayosAsociados([...rcmToDuplicate.ensayos])
+                                                    setTieneVencimiento(rcmToDuplicate.tieneVencimiento || false)
+                                                    setSubmuestrasVencimiento(rcmToDuplicate.submuestrasVencimiento || [])
+                                                    setIsDuplicatingRcm(true)
+                                                    setShowRcmCard(true)
+                                                    setExpandedRcm(true)
+                                                }
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                borderColor: '#1976D2',
+                                                color: '#1976D2',
+                                                bgcolor: 'white',
+                                                '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' }
+                                            }}
+                                        >
+                                            Duplicar este
+                                        </Button>
+                                        <Button
+                                            variant='outlined'
+                                            size='small'
+                                            startIcon={<LayersIcon />}
+                                            onClick={(e) => {
+                                                setSelectedRcmIds([rcm.id])
+                                                handleOpenCodigoPopup(e)
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                borderColor: '#7B1FA2',
+                                                color: '#7B1FA2',
+                                                bgcolor: 'white',
+                                                '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' }
+                                            }}
+                                        >
+                                            Asociar a Producto
+                                        </Button>
+                                        <Button
+                                            variant='text'
+                                            size='small'
+                                            onClick={() => setActionBarRcmId(null)}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem',
+                                                color: '#666',
+                                                '&:hover': { bgcolor: '#E0E0E0' }
+                                            }}
+                                        >
+                                            Cerrar
+                                        </Button>
+                                    </Box>
+                                )}
                             </Box>
                         ))}
                     </Box>
