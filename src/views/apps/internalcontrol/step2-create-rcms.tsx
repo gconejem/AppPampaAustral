@@ -124,11 +124,12 @@ interface Step2CreateRcmsProps {
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
     selectedAreaNombre?: string
+    selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -160,8 +161,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
-    const [area, setArea] = useState('')
-    const [tipoServicio, setTipoServicio] = useState('')
+    const [area, setArea] = useState<number | ''>('')
+    const [tipoServicio, setTipoServicio] = useState<number | ''>('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
@@ -211,6 +212,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [allProductos, setAllProductos] = useState<ProductoType[]>([]) // Todos los productos
     const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
     const [familias, setFamilias] = useState<Array<{ id: number; nombre: string }>>([])
+    const [todasLasFamilias, setTodasLasFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
     const [tipos, setTipos] = useState<string[]>([])
     const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
     const [selectedTipo, setSelectedTipo] = useState('')
@@ -276,8 +278,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const createNewRcm = (type?: string) => {
         setShowRcmCard(true)
         setRcmType(type || '')
-        setArea('')
-        setTipoServicio('')
+
+        // Encontrar el ID del área seleccionada en el paso 1
+        const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
+        setArea(initialArea ? initialArea.id : '')
+
+        // Encontrar el ID del tipo de servicio seleccionado en el paso 1
+        if (initialArea) {
+            const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
+            setTipoServicio(initialService ? initialService.id : '')
+        } else {
+            setTipoServicio('')
+        }
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
@@ -316,9 +328,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Función para detectar si hay cambios sin guardar en el formulario
     const hasUnsavedChanges = (): boolean => {
+        const currentAreaName = areas.find(a => a.id === area)?.nombre || ''
+        const currentTipoServicioName = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
+
         if (isEditingRcm && originalRcm) {
             // Comparar con los datos originales del RCM que se está editando
             return (
+                currentAreaName !== (originalRcm.area || '') ||
+                currentTipoServicioName !== (originalRcm.tipoServicio || '') ||
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
                 tipoMaterial !== originalRcm.tipoMaterial ||
                 item !== originalRcm.item ||
@@ -330,8 +347,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 JSON.stringify(submuestrasVencimiento) !== JSON.stringify(originalRcm.submuestrasVencimiento || [])
             )
         } else {
-            // Nuevo RCM: verificar si se ha ingresado algún dato
+            // Nuevo RCM: verificar si se ha ingresado algún dato o cambiado el área/servicio default
             return (
+                (area !== '' && currentAreaName !== selectedAreaNombre) ||
+                (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
                 numeroTarjeta.trim() !== '' ||
                 tipoMaterial.trim() !== '' ||
                 item.trim() !== '' ||
@@ -453,6 +472,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
+        // Obtener nombres para guardar en el objeto RCM
+        const areaNombre = areas.find(a => a.id === area)?.nombre || ''
+        const tipoServicioNombre = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
+
         // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
@@ -472,8 +495,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         const newRcm: RCMData = {
             id: Date.now(),
             rcmType,
-            area,
-            tipoServicio,
+            area: areaNombre,
+            tipoServicio: tipoServicioNombre,
             numeroTarjeta,
             tipoMaterial,
             item,
@@ -543,8 +566,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                 // Cargar los datos del RCM en el formulario
                 setRcmType(rcmToEdit.rcmType)
-                setArea(rcmToEdit.area || '')
-                setTipoServicio(rcmToEdit.tipoServicio || '')
+
+                // Encontrar IDs por nombre
+                const areaFound = areas.find(a => a.nombre === rcmToEdit.area)
+                setArea(areaFound ? areaFound.id : '')
+
+                const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToEdit.tipoServicio)
+                setTipoServicio(familiaFound ? familiaFound.id : '')
+
                 setNumeroTarjeta(rcmToEdit.numeroTarjeta)
                 setTipoMaterial(rcmToEdit.tipoMaterial)
                 setItem(rcmToEdit.item)
@@ -593,8 +622,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             if (rcmToDuplicate) {
                 // Cargar los datos del RCM en el formulario (similar a editar)
                 setRcmType(rcmToDuplicate.rcmType)
-                setArea(rcmToDuplicate.area || '')
-                setTipoServicio(rcmToDuplicate.tipoServicio || '')
+
+                // Encontrar IDs por nombre
+                const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
+                setArea(areaFound ? areaFound.id : '')
+
+                const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
+                setTipoServicio(familiaFound ? familiaFound.id : '')
+
                 setNumeroTarjeta('') // Forzar a ingresar un nuevo número de tarjeta
                 setTipoMaterial(rcmToDuplicate.tipoMaterial)
                 setItem(rcmToDuplicate.item)
@@ -784,14 +819,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
         // Pre-seleccionar el área del RCM si está definida
         if (area && areas.length > 0) {
-            // Buscar el área que coincida con el valor del RCM
-            const areaEncontrada = areas.find(a =>
-                a.nombre.toLowerCase() === area.toLowerCase() ||
-                a.nombre.toLowerCase().includes(area.toLowerCase())
-            )
-            if (areaEncontrada) {
-                setSelectedAreaId(areaEncontrada.id)
-            }
+            setSelectedAreaId(area as number)
         }
     }
 
@@ -921,7 +949,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         if (initialRcmType && !showRcmCard) {
             setShowRcmCard(true)
             setRcmType(initialRcmType)
-            setArea('')
+
+            // Encontrar el ID del área seleccionada en el paso 1
+            const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
+            setArea(initialArea ? initialArea.id : '')
+
+            // Encontrar el ID del tipo de servicio seleccionado en el paso 1
+            if (initialArea) {
+                const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
+                setTipoServicio(initialService ? initialService.id : '')
+            } else {
+                setTipoServicio('')
+            }
             setNumeroTarjeta('')
             setTomaMuestra('')
             setTipoMaterial('')
@@ -965,34 +1004,59 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
     }, [selectedAreaNombre])
 
-    // Cargar áreas
+    // Cargar áreas y familias iniciales
     useEffect(() => {
-        const fetchAreas = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await fetch('/api/areas')
-                if (response.ok) {
-                    const data = await response.json()
-                    setAreas(data)
+                // Cargar áreas y familias en paralelo
+                const [areasResponse, familiasResponse] = await Promise.all([
+                    fetch('/api/areas'),
+                    fetch('/api/familias')
+                ])
 
-                    // Si el popover está abierto y hay un área seleccionada en el RCM, pre-seleccionarla
-                    if (anchorEl && area && data.length > 0) {
-                        const areaEncontrada = data.find((a: { nombre: string }) =>
-                            a.nombre.toLowerCase() === area.toLowerCase() ||
-                            a.nombre.toLowerCase().includes(area.toLowerCase())
-                        )
-                        if (areaEncontrada) {
-                            setSelectedAreaId(areaEncontrada.id)
-                        }
-                    }
+                if (areasResponse.ok) {
+                    const areasData = await areasResponse.json()
+                    setAreas(areasData)
+                }
+
+                if (familiasResponse.ok) {
+                    const familiasData = await familiasResponse.json()
+                    // Transformar los datos para incluir areaId y filtrar localmente
+                    const familiasConAreaId = familiasData.map((f: any) => ({
+                        id: f.id,
+                        nombre: f.nombre,
+                        areaId: f.area?.id || 0
+                    }))
+                    setTodasLasFamilias(familiasConAreaId)
                 }
             } catch (error) {
-                console.error('Error al cargar áreas:', error)
+                console.error('Error al cargar datos iniciales:', error)
             }
         }
-        fetchAreas()
+        fetchInitialData()
     }, [])
 
-    // Cargar familias cuando cambia el área
+    // Sincronizar ID de área y servicio inicial cuando se cargan los datos
+    useEffect(() => {
+        if (areas.length > 0 && selectedAreaNombre && showRcmCard && !isEditingRcm) {
+            const foundArea = areas.find(a => a.nombre === selectedAreaNombre)
+            if (foundArea) {
+                if (!area) {
+                    setArea(foundArea.id)
+                }
+
+                // Sincronizar el tipo de servicio si aún no está seleccionado y tenemos los datos
+                if (todasLasFamilias.length > 0 && selectedTipoServicioNombre && !tipoServicio) {
+                    const foundService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === foundArea.id)
+                    if (foundService) {
+                        setTipoServicio(foundService.id)
+                    }
+                }
+            }
+        }
+    }, [areas, todasLasFamilias, selectedAreaNombre, selectedTipoServicioNombre, showRcmCard, isEditingRcm, area, tipoServicio])
+
+    // Cargar familias filtradas para el popover de búsqueda cuando cambia el área
     useEffect(() => {
         if (!selectedAreaId) {
             setFamilias([])
@@ -1025,8 +1089,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 })
 
                 if (searchTerm) params.append('q', searchTerm)
-                // Filtrar por el área seleccionada en el paso 1
-                if (selectedAreaNombre) params.append('area', selectedAreaNombre)
+
+                // Filtrar por el área del RCM si está definida, si no usar el área del paso 1
+                const currentAreaName = areas.find(a => a.id === area)?.nombre || selectedAreaNombre
+                if (currentAreaName) params.append('area', currentAreaName)
+
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
                 console.log('Cargando productos con params:', params.toString())
@@ -1277,34 +1344,49 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel id="area-label">Área</InputLabel>
+                                            <InputLabel id="area-label" shrink>Área</InputLabel>
                                             <Select
                                                 labelId="area-label"
                                                 label='Área'
                                                 value={area}
+                                                displayEmpty
+                                                notched
                                                 onChange={(e) => {
-                                                    const valor = e.target.value as string
-                                                    console.log('Área seleccionada:', valor)
+                                                    const valor = e.target.value as number | ''
                                                     setArea(valor)
+                                                    setTipoServicio('') // Limpiar servicio al cambiar área
                                                 }}
                                             >
-                                                <MenuItem value='suelos'>Suelos</MenuItem>
-                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                                <MenuItem value='' disabled>Seleccionar área</MenuItem>
+                                                {areas.map((a) => (
+                                                    <MenuItem key={a.id} value={a.id}>
+                                                        {a.nombre}
+                                                    </MenuItem>
+                                                ))}
                                             </Select>
                                         </FormControl>
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel>Tipo Servicio</InputLabel>
+                                            <InputLabel id="tipo-servicio-label" shrink>Tipo Servicio</InputLabel>
                                             <Select
+                                                labelId="tipo-servicio-label"
                                                 label='Tipo Servicio'
                                                 value={tipoServicio}
-                                                onChange={(e) => setTipoServicio(e.target.value as string)}
+                                                displayEmpty
+                                                notched
+                                                disabled={!area}
+                                                onChange={(e) => setTipoServicio(e.target.value as number | '')}
                                             >
-                                                <MenuItem value='Ensayo'>Ensayo</MenuItem>
-                                                <MenuItem value='Muestreo'>Muestreo</MenuItem>
-                                                <MenuItem value='Inspección'>Inspección</MenuItem>
+                                                <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
+                                                {todasLasFamilias
+                                                    .filter(f => f.areaId === area)
+                                                    .map((f) => (
+                                                        <MenuItem key={f.id} value={f.id}>
+                                                            {f.nombre}
+                                                        </MenuItem>
+                                                    ))
+                                                }
                                             </Select>
                                         </FormControl>
                                     </Grid>

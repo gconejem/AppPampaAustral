@@ -21,18 +21,39 @@ interface UsersType {
 interface EnsayoAsociado {
   id: number
   productoId: number
+  sku: string
   nombre: string
   norma?: string
   cantidad: number
+  observacion: string
+  estadoOperativo: string
 }
 
 interface RCMData {
   id: number
   rcmType: string
+  area?: string
+  tipoServicio?: string
   numeroTarjeta: string
   tipoMaterial: string
   item: string
+  procedencia?: string
   ensayos: EnsayoAsociado[]
+  fechaServicio: string
+  fechaMuestreo?: string
+  tomaMuestra?: string
+  cantidadMuestras: string
+  numeroRcm?: string
+  estado: string
+  tieneVencimiento?: boolean
+  submuestrasVencimiento?: Array<{
+    id: number
+    submuestra: string
+    numero: number
+    dias: number
+    fechaVencimiento: string
+    cantidad: number
+  }>
 }
 
 const UserList = ({ userData }: { userData?: UsersType[] }) => {
@@ -145,6 +166,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             setSavedRcms={setSavedRcms}
             otData={otData}
             selectedAreaNombre={selectedAreaNombre}
+            selectedTipoServicioNombre={selectedTipoServicioNombre}
             initialRcmType={initialRcmType}
             onClearInitialRcmType={() => setInitialRcmType('')}
           />
