@@ -81,6 +81,7 @@ interface EnsayoAsociado {
 interface RCMData {
     id: number
     rcmType: string
+    sede?: string
     area?: string
     tipoServicio?: string
     numeroTarjeta: string
@@ -162,6 +163,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+    const [sede, setSede] = useState('PA Chillán')
+    const [customSede, setCustomSede] = useState('')
     const [area, setArea] = useState<number | ''>('')
     const [tipoServicio, setTipoServicio] = useState<number | ''>('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
@@ -283,6 +286,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowRcmCard(true)
         setRcmType(type || '')
 
+        // Resetear sede a valor por defecto
+        setSede('PA Chillán')
+        setCustomSede('')
+
         // Encontrar el ID del área seleccionada en el paso 1
         const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
         setArea(initialArea ? initialArea.id : '')
@@ -337,10 +344,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const hasUnsavedChanges = (): boolean => {
         const currentAreaName = areas.find(a => a.id === area)?.nombre || ''
         const currentTipoServicioName = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
+        const currentSede = sede === 'Otro' ? customSede : sede
 
         if (isEditingRcm && originalRcm) {
             // Comparar con los datos originales del RCM que se está editando
             return (
+                currentSede !== (originalRcm.sede || '') ||
                 currentAreaName !== (originalRcm.area || '') ||
                 currentTipoServicioName !== (originalRcm.tipoServicio || '') ||
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
@@ -357,6 +366,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         } else {
             // Nuevo RCM: verificar si se ha ingresado algún dato o cambiado el área/servicio default
             return (
+                (sede !== 'PA Chillán' || customSede.trim() !== '') ||
                 (area !== '' && currentAreaName !== selectedAreaNombre) ||
                 (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
                 numeroTarjeta.trim() !== '' ||
@@ -406,6 +416,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Cerrar el formulario y limpiar estados
         setShowRcmCard(false)
         setRcmType('')
+        setSede('PA Chillán')
+        setCustomSede('')
         setArea('')
         setTipoServicio('')
         setNumeroTarjeta('')
@@ -487,6 +499,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setErrorVencimiento('')
 
         // Obtener nombres para guardar en el objeto RCM
+        const sedeNombre = sede === 'Otro' ? customSede : sede
         const areaNombre = areas.find(a => a.id === area)?.nombre || ''
         const tipoServicioNombre = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
 
@@ -509,6 +522,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         const newRcm: RCMData = {
             id: Date.now(),
             rcmType,
+            sede: sedeNombre,
             area: areaNombre,
             tipoServicio: tipoServicioNombre,
             numeroTarjeta,
@@ -530,6 +544,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setActionBarRcmId(newRcm.id)
         setShowRcmCard(false)
         setRcmType('')
+        setSede('PA Chillán')
+        setCustomSede('')
         setArea('')
         setTipoServicio('')
         setNumeroTarjeta('')
@@ -584,6 +600,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                 // Cargar los datos del RCM en el formulario
                 setRcmType(rcmToEdit.rcmType)
+
+                // Cargar sede
+                const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                if (rcmToEdit.sede && !standardSedes.includes(rcmToEdit.sede)) {
+                    setSede('Otro')
+                    setCustomSede(rcmToEdit.sede)
+                } else {
+                    setSede(rcmToEdit.sede || 'PA Chillán')
+                    setCustomSede('')
+                }
 
                 // Encontrar IDs por nombre
                 const areaFound = areas.find(a => a.nombre === rcmToEdit.area)
@@ -670,6 +696,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             if (rcmToDuplicate) {
                 // Cargar los datos del RCM en el formulario (similar a editar)
                 setRcmType(rcmToDuplicate.rcmType)
+
+                // Cargar sede
+                const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
+                    setSede('Otro')
+                    setCustomSede(rcmToDuplicate.sede)
+                } else {
+                    setSede(rcmToDuplicate.sede || 'PA Chillán')
+                    setCustomSede('')
+                }
 
                 // Encontrar IDs por nombre
                 const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
@@ -1026,6 +1062,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         if (initialRcmType && !showRcmCard) {
             setShowRcmCard(true)
             setRcmType(initialRcmType)
+
+            // Resetear sede a valor por defecto
+            setSede('PA Chillán')
+            setCustomSede('')
 
             // Encontrar el ID del área seleccionada en el paso 1
             const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
@@ -1422,6 +1462,39 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel id="sede-label">Sede</InputLabel>
+                                            <Select
+                                                labelId="sede-label"
+                                                label='Sede'
+                                                value={sede}
+                                                onChange={(e) => {
+                                                    setSede(e.target.value)
+                                                    if (e.target.value !== 'Otro') {
+                                                        setCustomSede('')
+                                                    }
+                                                }}
+                                            >
+                                                <MenuItem value='PA Chillán'>PA Chillán</MenuItem>
+                                                <MenuItem value='PA Concepción'>PA Concepción</MenuItem>
+                                                <MenuItem value='Cliente'>Cliente</MenuItem>
+                                                <MenuItem value='Otro'>Otro</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    {sede === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Sede'
+                                                value={customSede}
+                                                onChange={(e) => setCustomSede(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese la sede'
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
                                             <InputLabel id="area-label" shrink>Área</InputLabel>
@@ -2133,9 +2206,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         {/* Mostrar campos según el tipo de RCM */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
 
-                                            {/* MUESTRA: Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
+                                            {/* MUESTRA: Sede | Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
                                             {rcm.rcmType === 'Muestra' && (
                                                 <>
+                                                    {rcm.sede && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
+                                                        </>
+                                                    )}
                                                     {rcm.area && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -2210,9 +2289,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </>
                                             )}
 
-                                            {/* CONTROL: Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
+                                            {/* CONTROL: Sede | Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
                                             {rcm.rcmType === 'Control' && (
                                                 <>
+                                                    {rcm.sede && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
+                                                        </>
+                                                    )}
                                                     {rcm.area && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -2263,9 +2348,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </>
                                             )}
 
-                                            {/* SERVICIO: Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
+                                            {/* SERVICIO: Sede | Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
                                             {rcm.rcmType === 'Servicio' && (
                                                 <>
+                                                    {rcm.sede && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
+                                                        </>
+                                                    )}
                                                     {rcm.area && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -2461,6 +2552,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
                                                 if (rcmToDuplicate) {
                                                     setRcmType(rcmToDuplicate.rcmType)
+
+                                                    // Cargar sede
+                                                    const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                                                    if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
+                                                        setSede('Otro')
+                                                        setCustomSede(rcmToDuplicate.sede)
+                                                    } else {
+                                                        setSede(rcmToDuplicate.sede || 'PA Chillán')
+                                                        setCustomSede('')
+                                                    }
 
                                                     // Encontrar IDs por nombre
                                                     const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
