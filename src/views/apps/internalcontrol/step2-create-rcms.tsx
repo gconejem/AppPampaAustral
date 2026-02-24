@@ -2178,6 +2178,44 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </tbody>
                                             </table>
                                         </Box>
+
+                                        {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                            <>
+                                                <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, mt: 4 }}>
+                                                    Submuestras con Vencimiento ({rcm.submuestrasVencimiento.length})
+                                                </Typography>
+                                                <Box sx={{ overflowX: 'auto' }}>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                        <thead>
+                                                            <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rcm.submuestrasVencimiento.map((submuestra) => (
+                                                                <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.numero}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.dias}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{formatDateOnly(submuestra.fechaVencimiento)}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.cantidad}</Typography>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </Box>
+                                            </>
+                                        )}
                                     </Box>
                                 </Collapse>
 
