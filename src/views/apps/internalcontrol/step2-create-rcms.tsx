@@ -166,6 +166,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
+    const [customTipoMaterial, setCustomTipoMaterial] = useState('')
     const [item, setItem] = useState('')
     const [elemento, setElemento] = useState('')
     const [grado, setGrado] = useState('')
@@ -293,6 +294,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
         setElemento('')
         setGrado('')
@@ -337,7 +339,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 currentAreaName !== (originalRcm.area || '') ||
                 currentTipoServicioName !== (originalRcm.tipoServicio || '') ||
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
-                tipoMaterial !== originalRcm.tipoMaterial ||
+                (tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial) !== originalRcm.tipoMaterial ||
                 item !== originalRcm.item ||
                 tomaMuestra !== (originalRcm.tomaMuestra || '') ||
                 cantidadMuestras !== originalRcm.cantidadMuestras ||
@@ -353,6 +355,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
                 numeroTarjeta.trim() !== '' ||
                 tipoMaterial.trim() !== '' ||
+                customTipoMaterial.trim() !== '' ||
                 item.trim() !== '' ||
                 elemento.trim() !== '' ||
                 grado.trim() !== '' ||
@@ -400,6 +403,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
         setElemento('')
         setGrado('')
@@ -498,7 +502,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             area: areaNombre,
             tipoServicio: tipoServicioNombre,
             numeroTarjeta,
-            tipoMaterial,
+            tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
             item,
             procedencia,
             ensayos: [...ensayosAsociados],
@@ -520,6 +524,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
         setElemento('')
         setGrado('')
@@ -575,7 +580,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setTipoServicio(familiaFound ? familiaFound.id : '')
 
                 setNumeroTarjeta(rcmToEdit.numeroTarjeta)
-                setTipoMaterial(rcmToEdit.tipoMaterial)
+
+                // Manejar tipoMaterial "Otro"
+                const standardMaterials = ['Suelo granular', 'Suelo cohesivo', 'Hormigón', 'Asfalto']
+                if (rcmToEdit.tipoMaterial && !standardMaterials.includes(rcmToEdit.tipoMaterial)) {
+                    setTipoMaterial('Otro')
+                    setCustomTipoMaterial(rcmToEdit.tipoMaterial)
+                } else {
+                    setTipoMaterial(rcmToEdit.tipoMaterial)
+                    setCustomTipoMaterial('')
+                }
+
                 setItem(rcmToEdit.item)
                 setProcedencia(rcmToEdit.procedencia || '')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
@@ -631,7 +646,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 setTipoServicio(familiaFound ? familiaFound.id : '')
 
                 setNumeroTarjeta('') // Forzar a ingresar un nuevo número de tarjeta
-                setTipoMaterial(rcmToDuplicate.tipoMaterial)
+
+                // Manejar tipoMaterial "Otro"
+                const standardMaterials = ['Suelo granular', 'Suelo cohesivo', 'Hormigón', 'Asfalto']
+                if (rcmToDuplicate.tipoMaterial && !standardMaterials.includes(rcmToDuplicate.tipoMaterial)) {
+                    setTipoMaterial('Otro')
+                    setCustomTipoMaterial(rcmToDuplicate.tipoMaterial)
+                } else {
+                    setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                    setCustomTipoMaterial('')
+                }
+
                 setItem(rcmToDuplicate.item)
                 setProcedencia(rcmToDuplicate.procedencia || '')
                 setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
@@ -964,6 +989,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setNumeroTarjeta('')
             setTomaMuestra('')
             setTipoMaterial('')
+            setCustomTipoMaterial('')
             setItem('')
             setElemento('')
             setGrado('')
@@ -1424,8 +1450,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
                                                     <MenuItem value='Hormigón'>Hormigón</MenuItem>
                                                     <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                    <MenuItem value='Otro'>Otro</MenuItem>
                                                 </Select>
                                             </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && tipoMaterial === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Material'
+                                                value={customTipoMaterial}
+                                                onChange={(e) => setCustomTipoMaterial(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el tipo de material'
+                                            />
                                         </Grid>
                                     )}
                                     <Grid item xs={12} md={3}>
