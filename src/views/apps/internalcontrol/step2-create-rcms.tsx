@@ -168,6 +168,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [tipoMaterial, setTipoMaterial] = useState('')
     const [customTipoMaterial, setCustomTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [customItem, setCustomItem] = useState('')
     const [elemento, setElemento] = useState('')
     const [grado, setGrado] = useState('')
     const [calicata, setCalicata] = useState('')
@@ -296,6 +297,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setTipoMaterial('')
         setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
         setCalicata('')
@@ -340,7 +342,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 currentTipoServicioName !== (originalRcm.tipoServicio || '') ||
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
                 (tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial) !== originalRcm.tipoMaterial ||
-                item !== originalRcm.item ||
+                (item === 'Otro' ? customItem : item) !== originalRcm.item ||
                 tomaMuestra !== (originalRcm.tomaMuestra || '') ||
                 cantidadMuestras !== originalRcm.cantidadMuestras ||
                 fechaServicio !== originalRcm.fechaServicio ||
@@ -357,6 +359,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 tipoMaterial.trim() !== '' ||
                 customTipoMaterial.trim() !== '' ||
                 item.trim() !== '' ||
+                customItem.trim() !== '' ||
                 elemento.trim() !== '' ||
                 grado.trim() !== '' ||
                 calicata.trim() !== '' ||
@@ -405,6 +408,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setTipoMaterial('')
         setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
         setCalicata('')
@@ -503,7 +507,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             tipoServicio: tipoServicioNombre,
             numeroTarjeta,
             tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
-            item,
+            item: item === 'Otro' ? customItem : item,
             procedencia,
             ensayos: [...ensayosAsociados],
             fechaServicio,
@@ -526,6 +530,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setTipoMaterial('')
         setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
         setCalicata('')
@@ -591,7 +596,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setCustomTipoMaterial('')
                 }
 
-                setItem(rcmToEdit.item)
+                // Manejar item "Otro"
+                const standardItems = ['Base', 'Subbase', 'Subrasante', 'Terraplén']
+                if (rcmToEdit.item && !standardItems.includes(rcmToEdit.item)) {
+                    setItem('Otro')
+                    setCustomItem(rcmToEdit.item)
+                } else {
+                    setItem(rcmToEdit.item)
+                    setCustomItem('')
+                }
                 setProcedencia(rcmToEdit.procedencia || '')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
@@ -657,7 +670,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setCustomTipoMaterial('')
                 }
 
-                setItem(rcmToDuplicate.item)
+                // Manejar item "Otro"
+                const standardItems = ['Base', 'Subbase', 'Subrasante', 'Terraplén']
+                if (rcmToDuplicate.item && !standardItems.includes(rcmToDuplicate.item)) {
+                    setItem('Otro')
+                    setCustomItem(rcmToDuplicate.item)
+                } else {
+                    setItem(rcmToDuplicate.item)
+                    setCustomItem('')
+                }
                 setProcedencia(rcmToDuplicate.procedencia || '')
                 setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
                 setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
@@ -991,6 +1012,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setTipoMaterial('')
             setCustomTipoMaterial('')
             setItem('')
+            setCustomItem('')
             setElemento('')
             setGrado('')
             setCalicata('')
@@ -1479,9 +1501,22 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <MenuItem value='Subbase'>Subbase</MenuItem>
                                                 <MenuItem value='Subrasante'>Subrasante</MenuItem>
                                                 <MenuItem value='Terraplén'>Terraplén</MenuItem>
+                                                <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
+                                    {item === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Ítem'
+                                                value={customItem}
+                                                onChange={(e) => setCustomItem(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el ítem'
+                                            />
+                                        </Grid>
+                                    )}
                                     {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
