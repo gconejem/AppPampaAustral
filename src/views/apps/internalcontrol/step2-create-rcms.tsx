@@ -1927,12 +1927,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                             <Typography variant='body2'>N° Tarjeta: {rcm.numeroTarjeta}</Typography>
                                                         </>
                                                     )}
-                                                    {rcm.fechaMuestreo && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Muestreo: {formatDateOnly(rcm.fechaMuestreo)}</Typography>
-                                                        </>
-                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
                                                     {rcm.tomaMuestra && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -1963,12 +1974,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             {/* CONTROL: #n | Fecha Servicio | Item | Cantidad */}
                                             {rcm.rcmType === 'Control' && (
                                                 <>
-                                                    {rcm.fechaServicio && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
-                                                        </>
-                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
                                                     {rcm.item && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -1987,12 +2009,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             {/* SERVICIO: #n | Fecha Servicio */}
                                             {rcm.rcmType === 'Servicio' && (
                                                 <>
-                                                    {rcm.fechaServicio && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
-                                                        </>
-                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
                                                 </>
                                             )}
                                         </Box>
