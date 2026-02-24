@@ -81,9 +81,13 @@ interface EnsayoAsociado {
 interface RCMData {
     id: number
     rcmType: string
+    sede?: string
+    area?: string
+    tipoServicio?: string
     numeroTarjeta: string
     tipoMaterial: string
     item: string
+    procedencia?: string
     ensayos: EnsayoAsociado[]
     fechaServicio: string
     fechaMuestreo?: string
@@ -100,6 +104,7 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
+    grado?: string
 }
 
 interface CodigoAgrupador {
@@ -121,11 +126,12 @@ interface Step2CreateRcmsProps {
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
     selectedAreaNombre?: string
+    selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -157,13 +163,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
-    const [area, setArea] = useState('')
+    const [sede, setSede] = useState('PA Chillán')
+    const [customSede, setCustomSede] = useState('')
+    const [area, setArea] = useState<number | ''>('')
+    const [tipoServicio, setTipoServicio] = useState<number | ''>('')
     const [numeroTarjeta, setNumeroTarjeta] = useState('')
     const [tomaMuestra, setTomaMuestra] = useState('')
     const [tipoMaterial, setTipoMaterial] = useState('')
+    const [customTipoMaterial, setCustomTipoMaterial] = useState('')
     const [item, setItem] = useState('')
+    const [customItem, setCustomItem] = useState('')
     const [elemento, setElemento] = useState('')
     const [grado, setGrado] = useState('')
+    const [customGrado, setCustomGrado] = useState('')
     const [calicata, setCalicata] = useState('')
     const [estrato, setEstrato] = useState('')
     const [cota1, setCota1] = useState('')
@@ -207,6 +219,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [allProductos, setAllProductos] = useState<ProductoType[]>([]) // Todos los productos
     const [areas, setAreas] = useState<Array<{ id: number; nombre: string }>>([])
     const [familias, setFamilias] = useState<Array<{ id: number; nombre: string }>>([])
+    const [todasLasFamilias, setTodasLasFamilias] = useState<Array<{ id: number, nombre: string, areaId: number }>>([])
     const [tipos, setTipos] = useState<string[]>([])
     const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
     const [selectedTipo, setSelectedTipo] = useState('')
@@ -272,13 +285,31 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const createNewRcm = (type?: string) => {
         setShowRcmCard(true)
         setRcmType(type || '')
-        setArea('')
+
+        // Resetear sede a valor por defecto
+        setSede('PA Chillán')
+        setCustomSede('')
+
+        // Encontrar el ID del área seleccionada en el paso 1
+        const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
+        setArea(initialArea ? initialArea.id : '')
+
+        // Encontrar el ID del tipo de servicio seleccionado en el paso 1
+        if (initialArea) {
+            const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
+            setTipoServicio(initialService ? initialService.id : '')
+        } else {
+            setTipoServicio('')
+        }
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -311,12 +342,20 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Función para detectar si hay cambios sin guardar en el formulario
     const hasUnsavedChanges = (): boolean => {
+        const currentAreaName = areas.find(a => a.id === area)?.nombre || ''
+        const currentTipoServicioName = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
+        const currentSede = sede === 'Otro' ? customSede : sede
+
         if (isEditingRcm && originalRcm) {
             // Comparar con los datos originales del RCM que se está editando
             return (
+                currentSede !== (originalRcm.sede || '') ||
+                currentAreaName !== (originalRcm.area || '') ||
+                currentTipoServicioName !== (originalRcm.tipoServicio || '') ||
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
-                tipoMaterial !== originalRcm.tipoMaterial ||
-                item !== originalRcm.item ||
+                (tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial) !== originalRcm.tipoMaterial ||
+                (item === 'Otro' ? customItem : item) !== originalRcm.item ||
+                (grado === 'Otro' ? customGrado : grado) !== (originalRcm.grado || '') ||
                 tomaMuestra !== (originalRcm.tomaMuestra || '') ||
                 cantidadMuestras !== originalRcm.cantidadMuestras ||
                 fechaServicio !== originalRcm.fechaServicio ||
@@ -325,13 +364,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 JSON.stringify(submuestrasVencimiento) !== JSON.stringify(originalRcm.submuestrasVencimiento || [])
             )
         } else {
-            // Nuevo RCM: verificar si se ha ingresado algún dato
+            // Nuevo RCM: verificar si se ha ingresado algún dato o cambiado el área/servicio default
             return (
+                (sede !== 'PA Chillán' || customSede.trim() !== '') ||
+                (area !== '' && currentAreaName !== selectedAreaNombre) ||
+                (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
                 numeroTarjeta.trim() !== '' ||
                 tipoMaterial.trim() !== '' ||
+                customTipoMaterial.trim() !== '' ||
                 item.trim() !== '' ||
+                customItem.trim() !== '' ||
                 elemento.trim() !== '' ||
                 grado.trim() !== '' ||
+                customGrado.trim() !== '' ||
                 calicata.trim() !== '' ||
                 estrato.trim() !== '' ||
                 cota1.trim() !== '' ||
@@ -371,13 +416,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Cerrar el formulario y limpiar estados
         setShowRcmCard(false)
         setRcmType('')
+        setSede('PA Chillán')
+        setCustomSede('')
         setArea('')
+        setTipoServicio('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -447,6 +498,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
+        // Obtener nombres para guardar en el objeto RCM
+        const sedeNombre = sede === 'Otro' ? customSede : sede
+        const areaNombre = areas.find(a => a.id === area)?.nombre || ''
+        const tipoServicioNombre = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
+
         // Limpiar estado de edición y duplicación
         setIsEditingRcm(false)
         setEditingRcmId(null)
@@ -460,15 +516,20 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         } else if (rcmType === 'Control') {
             estadoRcm = 'Ensayado'
         } else if (rcmType === 'Servicio') {
-            estadoRcm = 'Codificado' // O el estado que corresponda para Servicio
+            estadoRcm = 'Ejecutado'
         }
 
         const newRcm: RCMData = {
             id: Date.now(),
             rcmType,
+            sede: sedeNombre,
+            area: areaNombre,
+            tipoServicio: tipoServicioNombre,
             numeroTarjeta,
-            tipoMaterial,
-            item,
+            tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
+            item: item === 'Otro' ? customItem : item,
+            grado: grado === 'Otro' ? customGrado : grado,
+            procedencia,
             ensayos: [...ensayosAsociados],
             fechaServicio,
             fechaMuestreo: fechaServicio, // Usar fecha servicio como fecha muestreo
@@ -483,13 +544,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setActionBarRcmId(newRcm.id)
         setShowRcmCard(false)
         setRcmType('')
+        setSede('PA Chillán')
+        setCustomSede('')
         setArea('')
+        setTipoServicio('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
+        setCustomTipoMaterial('')
         setItem('')
+        setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -533,9 +600,58 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                 // Cargar los datos del RCM en el formulario
                 setRcmType(rcmToEdit.rcmType)
+
+                // Cargar sede
+                const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                if (rcmToEdit.sede && !standardSedes.includes(rcmToEdit.sede)) {
+                    setSede('Otro')
+                    setCustomSede(rcmToEdit.sede)
+                } else {
+                    setSede(rcmToEdit.sede || 'PA Chillán')
+                    setCustomSede('')
+                }
+
+                // Encontrar IDs por nombre
+                const areaFound = areas.find(a => a.nombre === rcmToEdit.area)
+                setArea(areaFound ? areaFound.id : '')
+
+                const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToEdit.tipoServicio)
+                setTipoServicio(familiaFound ? familiaFound.id : '')
+
                 setNumeroTarjeta(rcmToEdit.numeroTarjeta)
-                setTipoMaterial(rcmToEdit.tipoMaterial)
-                setItem(rcmToEdit.item)
+
+                // Manejar tipoMaterial "Otro"
+                const standardMaterials = ['Suelo granular', 'Suelo cohesivo', 'Hormigón', 'Asfalto']
+                if (rcmToEdit.tipoMaterial && !standardMaterials.includes(rcmToEdit.tipoMaterial)) {
+                    setTipoMaterial('Otro')
+                    setCustomTipoMaterial(rcmToEdit.tipoMaterial)
+                } else {
+                    setTipoMaterial(rcmToEdit.tipoMaterial)
+                    setCustomTipoMaterial('')
+                }
+
+                // Manejar item "Otro"
+                const standardItems = ['Base', 'Subbase', 'Subrasante', 'Terraplén']
+                if (rcmToEdit.item && !standardItems.includes(rcmToEdit.item)) {
+                    setItem('Otro')
+                    setCustomItem(rcmToEdit.item)
+                } else {
+                    setItem(rcmToEdit.item)
+                    setCustomItem('')
+                }
+                setGrado(rcmToEdit.grado || '')
+
+                // Manejar grado "Otro"
+                const standardGrades = ['1', '2', '3', '4']
+                if (rcmToEdit.grado && !standardGrades.includes(rcmToEdit.grado)) {
+                    setGrado('Otro')
+                    setCustomGrado(rcmToEdit.grado)
+                } else {
+                    setGrado(rcmToEdit.grado || '')
+                    setCustomGrado('')
+                }
+
+                setProcedencia(rcmToEdit.procedencia || '')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
                 setFechaServicio(rcmToEdit.fechaServicio)
@@ -580,9 +696,57 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             if (rcmToDuplicate) {
                 // Cargar los datos del RCM en el formulario (similar a editar)
                 setRcmType(rcmToDuplicate.rcmType)
+
+                // Cargar sede
+                const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
+                    setSede('Otro')
+                    setCustomSede(rcmToDuplicate.sede)
+                } else {
+                    setSede(rcmToDuplicate.sede || 'PA Chillán')
+                    setCustomSede('')
+                }
+
+                // Encontrar IDs por nombre
+                const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
+                setArea(areaFound ? areaFound.id : '')
+
+                const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
+                setTipoServicio(familiaFound ? familiaFound.id : '')
+
                 setNumeroTarjeta('') // Forzar a ingresar un nuevo número de tarjeta
-                setTipoMaterial(rcmToDuplicate.tipoMaterial)
-                setItem(rcmToDuplicate.item)
+
+                // Manejar tipoMaterial "Otro"
+                const standardMaterials = ['Suelo granular', 'Suelo cohesivo', 'Hormigón', 'Asfalto']
+                if (rcmToDuplicate.tipoMaterial && !standardMaterials.includes(rcmToDuplicate.tipoMaterial)) {
+                    setTipoMaterial('Otro')
+                    setCustomTipoMaterial(rcmToDuplicate.tipoMaterial)
+                } else {
+                    setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                    setCustomTipoMaterial('')
+                }
+
+                // Manejar item "Otro"
+                const standardItems = ['Base', 'Subbase', 'Subrasante', 'Terraplén']
+                if (rcmToDuplicate.item && !standardItems.includes(rcmToDuplicate.item)) {
+                    setItem('Otro')
+                    setCustomItem(rcmToDuplicate.item)
+                } else {
+                    setItem(rcmToDuplicate.item)
+                    setCustomItem('')
+                }
+                setProcedencia(rcmToDuplicate.procedencia || '')
+
+                // Manejar grado "Otro"
+                const standardGrades = ['1', '2', '3', '4']
+                if (rcmToDuplicate.grado && !standardGrades.includes(rcmToDuplicate.grado)) {
+                    setGrado('Otro')
+                    setCustomGrado(rcmToDuplicate.grado)
+                } else {
+                    setGrado(rcmToDuplicate.grado || '')
+                    setCustomGrado('')
+                }
+
                 setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
                 setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
                 setFechaServicio(rcmToDuplicate.fechaServicio)
@@ -768,14 +932,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
         // Pre-seleccionar el área del RCM si está definida
         if (area && areas.length > 0) {
-            // Buscar el área que coincida con el valor del RCM
-            const areaEncontrada = areas.find(a =>
-                a.nombre.toLowerCase() === area.toLowerCase() ||
-                a.nombre.toLowerCase().includes(area.toLowerCase())
-            )
-            if (areaEncontrada) {
-                setSelectedAreaId(areaEncontrada.id)
-            }
+            setSelectedAreaId(area as number)
         }
     }
 
@@ -905,13 +1062,31 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         if (initialRcmType && !showRcmCard) {
             setShowRcmCard(true)
             setRcmType(initialRcmType)
-            setArea('')
+
+            // Resetear sede a valor por defecto
+            setSede('PA Chillán')
+            setCustomSede('')
+
+            // Encontrar el ID del área seleccionada en el paso 1
+            const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
+            setArea(initialArea ? initialArea.id : '')
+
+            // Encontrar el ID del tipo de servicio seleccionado en el paso 1
+            if (initialArea) {
+                const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
+                setTipoServicio(initialService ? initialService.id : '')
+            } else {
+                setTipoServicio('')
+            }
             setNumeroTarjeta('')
             setTomaMuestra('')
             setTipoMaterial('')
+            setCustomTipoMaterial('')
             setItem('')
+            setCustomItem('')
             setElemento('')
             setGrado('')
+            setCustomGrado('')
             setCalicata('')
             setEstrato('')
             setCota1('')
@@ -949,34 +1124,59 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
     }, [selectedAreaNombre])
 
-    // Cargar áreas
+    // Cargar áreas y familias iniciales
     useEffect(() => {
-        const fetchAreas = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await fetch('/api/areas')
-                if (response.ok) {
-                    const data = await response.json()
-                    setAreas(data)
+                // Cargar áreas y familias en paralelo
+                const [areasResponse, familiasResponse] = await Promise.all([
+                    fetch('/api/areas'),
+                    fetch('/api/familias')
+                ])
 
-                    // Si el popover está abierto y hay un área seleccionada en el RCM, pre-seleccionarla
-                    if (anchorEl && area && data.length > 0) {
-                        const areaEncontrada = data.find((a: { nombre: string }) =>
-                            a.nombre.toLowerCase() === area.toLowerCase() ||
-                            a.nombre.toLowerCase().includes(area.toLowerCase())
-                        )
-                        if (areaEncontrada) {
-                            setSelectedAreaId(areaEncontrada.id)
-                        }
-                    }
+                if (areasResponse.ok) {
+                    const areasData = await areasResponse.json()
+                    setAreas(areasData)
+                }
+
+                if (familiasResponse.ok) {
+                    const familiasData = await familiasResponse.json()
+                    // Transformar los datos para incluir areaId y filtrar localmente
+                    const familiasConAreaId = familiasData.map((f: any) => ({
+                        id: f.id,
+                        nombre: f.nombre,
+                        areaId: f.area?.id || 0
+                    }))
+                    setTodasLasFamilias(familiasConAreaId)
                 }
             } catch (error) {
-                console.error('Error al cargar áreas:', error)
+                console.error('Error al cargar datos iniciales:', error)
             }
         }
-        fetchAreas()
+        fetchInitialData()
     }, [])
 
-    // Cargar familias cuando cambia el área
+    // Sincronizar ID de área y servicio inicial cuando se cargan los datos
+    useEffect(() => {
+        if (areas.length > 0 && selectedAreaNombre && showRcmCard && !isEditingRcm) {
+            const foundArea = areas.find(a => a.nombre === selectedAreaNombre)
+            if (foundArea) {
+                if (!area) {
+                    setArea(foundArea.id)
+                }
+
+                // Sincronizar el tipo de servicio si aún no está seleccionado y tenemos los datos
+                if (todasLasFamilias.length > 0 && selectedTipoServicioNombre && !tipoServicio) {
+                    const foundService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === foundArea.id)
+                    if (foundService) {
+                        setTipoServicio(foundService.id)
+                    }
+                }
+            }
+        }
+    }, [areas, todasLasFamilias, selectedAreaNombre, selectedTipoServicioNombre, showRcmCard, isEditingRcm, area, tipoServicio])
+
+    // Cargar familias filtradas para el popover de búsqueda cuando cambia el área
     useEffect(() => {
         if (!selectedAreaId) {
             setFamilias([])
@@ -1009,8 +1209,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 })
 
                 if (searchTerm) params.append('q', searchTerm)
-                // Filtrar por el área seleccionada en el paso 1
-                if (selectedAreaNombre) params.append('area', selectedAreaNombre)
+
+                // Filtrar por el área del RCM si está definida, si no usar el área del paso 1
+                const currentAreaName = areas.find(a => a.id === area)?.nombre || selectedAreaNombre
+                if (currentAreaName) params.append('area', currentAreaName)
+
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
                 console.log('Cargando productos con params:', params.toString())
@@ -1259,32 +1462,84 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             InputLabelProps={{ shrink: true }}
                                         />
                                     </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel id="sede-label">Sede</InputLabel>
+                                            <Select
+                                                labelId="sede-label"
+                                                label='Sede'
+                                                value={sede}
+                                                onChange={(e) => {
+                                                    setSede(e.target.value)
+                                                    if (e.target.value !== 'Otro') {
+                                                        setCustomSede('')
+                                                    }
+                                                }}
+                                            >
+                                                <MenuItem value='PA Chillán'>PA Chillán</MenuItem>
+                                                <MenuItem value='PA Concepción'>PA Concepción</MenuItem>
+                                                <MenuItem value='Cliente'>Cliente</MenuItem>
+                                                <MenuItem value='Otro'>Otro</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    {sede === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Sede'
+                                                value={customSede}
+                                                onChange={(e) => setCustomSede(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese la sede'
+                                            />
+                                        </Grid>
+                                    )}
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel id="area-label">Área</InputLabel>
+                                            <InputLabel id="area-label" shrink>Área</InputLabel>
                                             <Select
                                                 labelId="area-label"
                                                 label='Área'
                                                 value={area}
+                                                displayEmpty
+                                                notched
                                                 onChange={(e) => {
-                                                    const valor = e.target.value as string
-                                                    console.log('Área seleccionada:', valor)
+                                                    const valor = e.target.value as number | ''
                                                     setArea(valor)
+                                                    setTipoServicio('') // Limpiar servicio al cambiar área
                                                 }}
                                             >
-                                                <MenuItem value='suelos'>Suelos</MenuItem>
-                                                <MenuItem value='hormigon'>Hormigón</MenuItem>
-                                                <MenuItem value='asfalto'>Asfalto</MenuItem>
+                                                <MenuItem value='' disabled>Seleccionar área</MenuItem>
+                                                {areas.map((a) => (
+                                                    <MenuItem key={a.id} value={a.id}>
+                                                        {a.nombre}
+                                                    </MenuItem>
+                                                ))}
                                             </Select>
                                         </FormControl>
                                     </Grid>
                                     <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
-                                            <InputLabel>Tipo Servicio</InputLabel>
-                                            <Select label='Tipo Servicio'>
-                                                <MenuItem value='ensayo'>Ensayo</MenuItem>
-                                                <MenuItem value='muestreo'>Muestreo</MenuItem>
-                                                <MenuItem value='inspeccion'>Inspección</MenuItem>
+                                            <InputLabel id="tipo-servicio-label" shrink>Tipo Servicio</InputLabel>
+                                            <Select
+                                                labelId="tipo-servicio-label"
+                                                label='Tipo Servicio'
+                                                value={tipoServicio}
+                                                displayEmpty
+                                                notched
+                                                disabled={!area}
+                                                onChange={(e) => setTipoServicio(e.target.value as number | '')}
+                                            >
+                                                <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
+                                                {todasLasFamilias
+                                                    .filter(f => f.areaId === area)
+                                                    .map((f) => (
+                                                        <MenuItem key={f.id} value={f.id}>
+                                                            {f.nombre}
+                                                        </MenuItem>
+                                                    ))
+                                                }
                                             </Select>
                                         </FormControl>
                                     </Grid>
@@ -1322,8 +1577,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
                                                     <MenuItem value='Hormigón'>Hormigón</MenuItem>
                                                     <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                    <MenuItem value='Otro'>Otro</MenuItem>
                                                 </Select>
                                             </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && tipoMaterial === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Material'
+                                                value={customTipoMaterial}
+                                                onChange={(e) => setCustomTipoMaterial(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el tipo de material'
+                                            />
                                         </Grid>
                                     )}
                                     <Grid item xs={12} md={3}>
@@ -1338,9 +1606,22 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <MenuItem value='Subbase'>Subbase</MenuItem>
                                                 <MenuItem value='Subrasante'>Subrasante</MenuItem>
                                                 <MenuItem value='Terraplén'>Terraplén</MenuItem>
+                                                <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
+                                    {item === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Ítem'
+                                                value={customItem}
+                                                onChange={(e) => setCustomItem(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el ítem'
+                                            />
+                                        </Grid>
+                                    )}
                                     {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
                                         <Grid item xs={12} md={3}>
                                             <TextField
@@ -1364,8 +1645,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <MenuItem value='2'>Grado 2</MenuItem>
                                                     <MenuItem value='3'>Grado 3</MenuItem>
                                                     <MenuItem value='4'>Grado 4</MenuItem>
+                                                    <MenuItem value='Otro'>Otro</MenuItem>
                                                 </Select>
                                             </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && grado === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Grado'
+                                                value={customGrado}
+                                                onChange={(e) => setCustomGrado(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el grado'
+                                            />
                                         </Grid>
                                     )}
                                     {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
@@ -1911,86 +2205,191 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                                         {/* Mostrar campos según el tipo de RCM */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                            {/* Número de RCM */}
-                                            {rcm.numeroRcm && (
-                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                    {rcm.numeroRcm}
-                                                </Typography>
-                                            )}
 
-                                            {/* MUESTRA: #n | N° Tarjeta | Fecha Muestreo | #Toma de Muestra | Material | Item | Cantidad */}
+                                            {/* MUESTRA: Sede | Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
                                             {rcm.rcmType === 'Muestra' && (
                                                 <>
+                                                    {rcm.sede && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.area && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.area}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.tipoServicio && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                        </>
+                                                    )}
                                                     {rcm.numeroTarjeta && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>N° Tarjeta: {rcm.numeroTarjeta}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.fechaMuestreo && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Muestreo: {formatDateOnly(rcm.fechaMuestreo)}</Typography>
+                                                            <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
                                                         </>
                                                     )}
                                                     {rcm.tomaMuestra && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>#Toma: {rcm.tomaMuestra}</Typography>
+                                                            <Typography variant='body2'>#{rcm.tomaMuestra}</Typography>
                                                         </>
                                                     )}
                                                     {rcm.tipoMaterial && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Material: {rcm.tipoMaterial}</Typography>
+                                                            <Typography variant='body2'>{rcm.tipoMaterial}</Typography>
                                                         </>
                                                     )}
                                                     {rcm.item && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Item: {rcm.item}</Typography>
+                                                            <Typography variant='body2'>{rcm.item}</Typography>
                                                         </>
                                                     )}
+                                                    {rcm.procedencia && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.procedencia}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.ensayos.length > 0 && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
+                                                        </>
+                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
                                                     {rcm.cantidadMuestras && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Cantidad: {rcm.cantidadMuestras}</Typography>
+                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
                                                         </>
                                                     )}
                                                 </>
                                             )}
 
-                                            {/* CONTROL: #n | Fecha Servicio | Item | Cantidad */}
+                                            {/* CONTROL: Sede | Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
                                             {rcm.rcmType === 'Control' && (
                                                 <>
-                                                    {rcm.fechaServicio && (
+                                                    {rcm.sede && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
                                                         </>
                                                     )}
+                                                    {rcm.area && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.area}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.tipoServicio && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                        </>
+                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
                                                     {rcm.item && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Item: {rcm.item}</Typography>
+                                                            <Typography variant='body2'>{rcm.item}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.ensayos.length > 0 && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
                                                         </>
                                                     )}
                                                     {rcm.cantidadMuestras && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Cantidad: {rcm.cantidadMuestras}</Typography>
+                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
                                                         </>
                                                     )}
                                                 </>
                                             )}
 
-                                            {/* SERVICIO: #n | Fecha Servicio */}
+                                            {/* SERVICIO: Sede | Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
                                             {rcm.rcmType === 'Servicio' && (
                                                 <>
-                                                    {rcm.fechaServicio && (
+                                                    {rcm.sede && (
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>Fecha Servicio: {formatDateOnly(rcm.fechaServicio)}</Typography>
+                                                            <Typography variant='body2'>{rcm.sede}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.area && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.area}</Typography>
+                                                        </>
+                                                    )}
+                                                    {rcm.tipoServicio && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                        </>
+                                                    )}
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>
+                                                            {(() => {
+                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                    const fechas = rcm.submuestrasVencimiento
+                                                                        .map(sub => sub.fechaVencimiento)
+                                                                        .filter(f => !!f)
+                                                                        .sort()
+                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                }
+                                                                return formatDateOnly(rcm.fechaServicio)
+                                                            })()}
+                                                        </Typography>
+                                                    </>
+                                                    {rcm.cantidadMuestras && (
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
                                                         </>
                                                     )}
                                                 </>
@@ -2071,6 +2470,44 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </tbody>
                                             </table>
                                         </Box>
+
+                                        {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                            <>
+                                                <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, mt: 4 }}>
+                                                    Submuestras con Vencimiento ({rcm.submuestrasVencimiento.length})
+                                                </Typography>
+                                                <Box sx={{ overflowX: 'auto' }}>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                        <thead>
+                                                            <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rcm.submuestrasVencimiento.map((submuestra) => (
+                                                                <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.numero}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.dias}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{formatDateOnly(submuestra.fechaVencimiento)}</Typography>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <Typography variant='body2'>{submuestra.cantidad}</Typography>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </Box>
+                                            </>
+                                        )}
                                     </Box>
                                 </Collapse>
 
@@ -2115,9 +2552,28 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
                                                 if (rcmToDuplicate) {
                                                     setRcmType(rcmToDuplicate.rcmType)
+
+                                                    // Cargar sede
+                                                    const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                                                    if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
+                                                        setSede('Otro')
+                                                        setCustomSede(rcmToDuplicate.sede)
+                                                    } else {
+                                                        setSede(rcmToDuplicate.sede || 'PA Chillán')
+                                                        setCustomSede('')
+                                                    }
+
+                                                    // Encontrar IDs por nombre
+                                                    const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
+                                                    setArea(areaFound ? areaFound.id : '')
+
+                                                    const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
+                                                    setTipoServicio(familiaFound ? familiaFound.id : '')
+
                                                     setNumeroTarjeta('')
                                                     setTipoMaterial(rcmToDuplicate.tipoMaterial)
                                                     setItem(rcmToDuplicate.item)
+                                                    setProcedencia(rcmToDuplicate.procedencia || '')
                                                     setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
                                                     setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
                                                     setFechaServicio(rcmToDuplicate.fechaServicio)

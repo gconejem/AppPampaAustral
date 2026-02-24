@@ -186,7 +186,7 @@ Condiciones para terreno y accesos
         .label { color: #736e7d; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
         .value { color: #736e7d; font-size: 12px; margin-bottom: 2px; font-family: 'Inter', sans-serif; }
         .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-family: 'Inter', sans-serif; }
-        .table th { background-color: #f0f0f0; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif; }
+        .table th { background-color: #0300b4; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .table td { font-size: 0.8125rem; padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; color: #736e7d; font-family: 'Inter', sans-serif; }
         .area-row { background-color: #f5f5f5; font-weight: bold; color: #736e7d; font-family: 'Inter', sans-serif; }
         .totales { margin-top: 16px; text-align: right; color: #736e7d; font-family: 'Inter', sans-serif; font-size: 12px; }
@@ -316,9 +316,9 @@ Condiciones para terreno y accesos
           <table class="table">
             <thead>
               <tr>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO</th>
-                <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
+                <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">ÁREA</th>
+                <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">SERVICIO</th>
+                <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: left; font-family: 'Inter', sans-serif;">DESCRIPCIÓN</th>
                 ${(() => {
       // Mostrar columnas cuando:
       // 1. No es sinCantidad y es precio por producto (caso normal)
@@ -333,9 +333,9 @@ Condiciones para terreno y accesos
         cotizacion.tipoCotizacion === 'A';
 
       return mostrarColumnas ? `
-                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">CANTIDAD</th>
-                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
-                    <th style="box-shadow: 0 0 0 1000px #f0f0f0 inset; color: #736e7d; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
+                    <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">CANTIDAD</th>
+                    <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">PRECIO UNITARIO UF</th>
+                    <th style="box-shadow: 0 0 0 1000px #0300b4 inset; color: #ffffff !important; font-weight: bold; font-size: 12px; padding: 6px; text-align: right; font-family: 'Inter', sans-serif;">TOTAL NETO UF</th>
                   ` : '';
     })()}
               </tr>
