@@ -103,6 +103,7 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
+    grado?: string
 }
 
 interface CodigoAgrupador {
@@ -171,6 +172,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [customItem, setCustomItem] = useState('')
     const [elemento, setElemento] = useState('')
     const [grado, setGrado] = useState('')
+    const [customGrado, setCustomGrado] = useState('')
     const [calicata, setCalicata] = useState('')
     const [estrato, setEstrato] = useState('')
     const [cota1, setCota1] = useState('')
@@ -300,6 +302,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -343,6 +346,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 numeroTarjeta !== originalRcm.numeroTarjeta ||
                 (tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial) !== originalRcm.tipoMaterial ||
                 (item === 'Otro' ? customItem : item) !== originalRcm.item ||
+                (grado === 'Otro' ? customGrado : grado) !== (originalRcm.grado || '') ||
                 tomaMuestra !== (originalRcm.tomaMuestra || '') ||
                 cantidadMuestras !== originalRcm.cantidadMuestras ||
                 fechaServicio !== originalRcm.fechaServicio ||
@@ -362,6 +366,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 customItem.trim() !== '' ||
                 elemento.trim() !== '' ||
                 grado.trim() !== '' ||
+                customGrado.trim() !== '' ||
                 calicata.trim() !== '' ||
                 estrato.trim() !== '' ||
                 cota1.trim() !== '' ||
@@ -411,6 +416,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -508,6 +514,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             numeroTarjeta,
             tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
             item: item === 'Otro' ? customItem : item,
+            grado: grado === 'Otro' ? customGrado : grado,
             procedencia,
             ensayos: [...ensayosAsociados],
             fechaServicio,
@@ -533,6 +540,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setCustomItem('')
         setElemento('')
         setGrado('')
+        setCustomGrado('')
         setCalicata('')
         setEstrato('')
         setCota1('')
@@ -605,6 +613,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setItem(rcmToEdit.item)
                     setCustomItem('')
                 }
+                setGrado(rcmToEdit.grado || '')
+
+                // Manejar grado "Otro"
+                const standardGrades = ['1', '2', '3', '4']
+                if (rcmToEdit.grado && !standardGrades.includes(rcmToEdit.grado)) {
+                    setGrado('Otro')
+                    setCustomGrado(rcmToEdit.grado)
+                } else {
+                    setGrado(rcmToEdit.grado || '')
+                    setCustomGrado('')
+                }
+
                 setProcedencia(rcmToEdit.procedencia || '')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
@@ -680,6 +700,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setCustomItem('')
                 }
                 setProcedencia(rcmToDuplicate.procedencia || '')
+
+                // Manejar grado "Otro"
+                const standardGrades = ['1', '2', '3', '4']
+                if (rcmToDuplicate.grado && !standardGrades.includes(rcmToDuplicate.grado)) {
+                    setGrado('Otro')
+                    setCustomGrado(rcmToDuplicate.grado)
+                } else {
+                    setGrado(rcmToDuplicate.grado || '')
+                    setCustomGrado('')
+                }
+
                 setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
                 setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
                 setFechaServicio(rcmToDuplicate.fechaServicio)
@@ -1015,6 +1046,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setCustomItem('')
             setElemento('')
             setGrado('')
+            setCustomGrado('')
             setCalicata('')
             setEstrato('')
             setCota1('')
@@ -1540,8 +1572,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     <MenuItem value='2'>Grado 2</MenuItem>
                                                     <MenuItem value='3'>Grado 3</MenuItem>
                                                     <MenuItem value='4'>Grado 4</MenuItem>
+                                                    <MenuItem value='Otro'>Otro</MenuItem>
                                                 </Select>
                                             </FormControl>
+                                        </Grid>
+                                    )}
+                                    {rcmType === 'Muestra' && grado === 'Otro' && (
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Especificar Grado'
+                                                value={customGrado}
+                                                onChange={(e) => setCustomGrado(e.target.value)}
+                                                fullWidth
+                                                required
+                                                placeholder='Ingrese el grado'
+                                            />
                                         </Grid>
                                     )}
                                     {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
