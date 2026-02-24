@@ -237,7 +237,9 @@ Condiciones para terreno y accesos
 • Anexo de Informe: 0,42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
 • Informe con firma y timbres físicos: 0,58 UF neto
 
-(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
+(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.
+
+(5) En caso de que durante la ejecución del servicio se requiera la realización de ensayos no contemplados expresamente en la presente cotización y solicitados por el Cliente, éstos serán facturados conforme al arancel vigente del Laboratorio Pampa Austral Ltda., aplicable a la fecha de su ejecución.`
   }
 }
 
@@ -2937,7 +2939,9 @@ const AddCard = ({
 • Anexo de Informe: 0.42 UF neto - Sin costo si la modificación es responsabilidad del Laboratorio Pampa Austral.
 • Informe con firma y timbres físicos: 0.58 UF neto
 
-(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.` : ''}
+(4) Requisitos adicionales: Todo requerimiento especial como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.
+
+(5) En caso de que durante la ejecución del servicio se requiera la realización de ensayos no contemplados expresamente en la presente cotización y solicitados por el Cliente, éstos serán facturados conforme al arancel vigente del Laboratorio Pampa Austral Ltda., aplicable a la fecha de su ejecución.` : ''}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     backgroundColor: 'background.paper'
