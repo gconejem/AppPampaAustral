@@ -516,7 +516,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         } else if (rcmType === 'Control') {
             estadoRcm = 'Ensayado'
         } else if (rcmType === 'Servicio') {
-            estadoRcm = 'Codificado' // O el estado que corresponda para Servicio
+            estadoRcm = 'Ejecutado'
         }
 
         const newRcm: RCMData = {
