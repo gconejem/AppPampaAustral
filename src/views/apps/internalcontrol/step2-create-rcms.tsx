@@ -2461,8 +2461,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
                                                 if (rcmToDuplicate) {
                                                     setRcmType(rcmToDuplicate.rcmType)
-                                                    setArea(rcmToDuplicate.area || '')
-                                                    setTipoServicio(rcmToDuplicate.tipoServicio || '')
+
+                                                    // Encontrar IDs por nombre
+                                                    const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
+                                                    setArea(areaFound ? areaFound.id : '')
+
+                                                    const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
+                                                    setTipoServicio(familiaFound ? familiaFound.id : '')
+
                                                     setNumeroTarjeta('')
                                                     setTipoMaterial(rcmToDuplicate.tipoMaterial)
                                                     setItem(rcmToDuplicate.item)
