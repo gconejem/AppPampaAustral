@@ -142,6 +142,13 @@ export async function GET(request: Request) {
       const month = Number(parts[1])
       const day = Number(parts[2])
 
+      // Rango "naive" en UTC para el mismo YYYY-MM-DD.
+      // Esto cubre el caso en que `fechaInicio` se guarda como "hora local" pero sin conversión a UTC
+      // (p.ej. 2026-02-25 00:00 se persiste como 2026-02-25T00:00:00Z). En ese escenario,
+      // el rango calculado con offset podría dejar fuera las 00:00.
+      const startOfDayUtcNoOffset = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+      const endOfDayUtcNoOffset = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999))
+
       // Calcula el offset del timezone en minutos usando timeZoneName: shortOffset (Node >= 18)
       const getOffsetMinutes = (date: Date) => {
         const off = new Intl.DateTimeFormat('en-US', {
@@ -162,11 +169,14 @@ export async function GET(request: Request) {
       const endOfDayUtc = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - offsetMinutes * 60_000)
 
       console.log('Default date range (Chile):', { ymd, startOfDayUtc, endOfDayUtc, offsetMinutes })
+      console.log('Default date range (UTC no offset):', { ymd, startOfDayUtcNoOffset, endOfDayUtcNoOffset })
 
-      whereFilter.fechaInicio = {
-        gte: startOfDayUtc,
-        lte: endOfDayUtc
-      }
+      // Filtro robusto: incluye ambos rangos para evitar que visitas 00:00 se pierdan
+      // por discrepancias de timezone/almacenamiento.
+      whereFilter.OR = [
+        { fechaInicio: { gte: startOfDayUtc, lte: endOfDayUtc } },
+        { fechaInicio: { gte: startOfDayUtcNoOffset, lte: endOfDayUtcNoOffset } }
+      ]
     }
 
     // Filtro por cliente
@@ -363,7 +373,12 @@ export async function GET(request: Request) {
     // Formatear salida para la App Terreno (compatibilidad de claves esperadas)
     const agendasLimitadas = filteredAgendas.map(agenda => {
       const fechaInicioDate = new Date(agenda.fechaInicio)
-      const horaInicio = fechaInicioDate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })
+      const horaInicio = fechaInicioDate.toLocaleTimeString('es-CL', {
+        timeZone: 'America/Santiago',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
 
       // Construcción de estructura compatible
       const cliente = agenda.cliente
