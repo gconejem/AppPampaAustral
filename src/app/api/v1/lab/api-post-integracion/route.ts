@@ -338,8 +338,9 @@ export async function POST(request: Request) {
                     horaSalida: horaSalida ?? null,
                     movilizacion: movilizacion ?? null,
                     kmAdicionales: kmAdicionales ?? null,
-                    // Si la visita venía AGENDADA/CREADA, al recibir comprobante pasamos a RECIBIDA_OK
-                    estado: 'RECIBIDA_OK'
+                    // Al finalizar visita en terreno (comprobante), la marcamos como COMPLETADA.
+                    // (RECIBIDA_OK queda para flujos de recepción/revisión posteriores.)
+                    estado: 'COMPLETADA'
                   }
                 : {}),
               // Guardamos siempre el JSON para trazabilidad
