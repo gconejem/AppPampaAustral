@@ -373,12 +373,14 @@ export async function GET(request: Request) {
     // Formatear salida para la App Terreno (compatibilidad de claves esperadas)
     const agendasLimitadas = filteredAgendas.map(agenda => {
       const fechaInicioDate = new Date(agenda.fechaInicio)
-      const horaInicio = fechaInicioDate.toLocaleTimeString('es-CL', {
-        timeZone: 'America/Santiago',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      })
+      // `Agenda.fechaInicio`/`fechaFin` en DB es TIMESTAMP (sin zona horaria).
+      // En este esquema, la hora guardada se interpreta como "hora local" (Chile) y
+      // NO debe correrse por timezone al enviarla a AppLab.
+      // Si formateamos con `America/Santiago` desde un servidor en UTC, se desplaza -3h (ej: 06:00 -> 03:00).
+      // Para mantener la hora "tal cual" está en BD, usamos los componentes UTC del Date.
+      const hh = String(fechaInicioDate.getUTCHours()).padStart(2, '0')
+      const mm = String(fechaInicioDate.getUTCMinutes()).padStart(2, '0')
+      const horaInicio = `${hh}:${mm}`
 
       // Construcción de estructura compatible
       const cliente = agenda.cliente
