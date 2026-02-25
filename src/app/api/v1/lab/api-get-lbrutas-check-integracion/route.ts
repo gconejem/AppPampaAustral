@@ -400,7 +400,9 @@ export async function GET(request: Request) {
 
       // Construir ENSAYO y OBSERV desde servicios
       const ensayo = agenda.servicios?.map(s => s.servicio).join(', ') || ''
-      const observ = agenda.servicios?.map(s => s.observacion).filter(Boolean).join(', ') || ''
+      // OBSERV en AppLab corresponde a la observación general de la visita (Agenda), no a la observación por SKU.
+      // La observación por servicio se envía en `servicios[].observacion`.
+      const observ = (agenda.observaciones ?? '').toString()
 
       return {
         // Claves usadas por la app móvil
