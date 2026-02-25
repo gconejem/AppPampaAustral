@@ -421,7 +421,12 @@ export async function GET(request: Request) {
         OBSERV: observ,
 
         // Datos adicionales (no imprescindibles para el flujo actual)
-        servicios: agenda.servicios?.map(s => ({ servicio: s.servicio })) || [],
+        servicios: agenda.servicios?.map(s => ({
+          codigo: s.codigo,
+          servicio: s.servicio,
+          cantidad: s.cantidad,
+          observacion: s.observacion ?? ''
+        })) || [],
         asignados: agenda.asignados?.map(asignado => ({
           rut: asignado.user?.rut ?? undefined,
           nombre: asignado.user?.name ?? undefined,
