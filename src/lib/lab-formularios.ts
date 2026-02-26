@@ -469,7 +469,105 @@ export const LAB_FORMULARIOS: LabFormulario[] = [
     APROFECHA: '19-02-2021',
     OPCIONES: JSON.stringify({
       formulario: 'Testigos',
-      opciones: []
+      codigo: 'TESTIGO',
+      version: '1.0',
+      opciones: [
+        {
+          nombre: 'Testigo Normal',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Calzada' },
+            { posicion: 2, texto: 'Acera' },
+            { posicion: 3, texto: 'Acceso Vehicular' },
+            { posicion: 4, texto: 'Ciclovia' },
+            { posicion: 5, texto: 'Otro' }
+          ]
+        },
+        {
+          nombre: 'Testigo Empotrado',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Pilares' },
+            { posicion: 2, texto: 'Losa' },
+            { posicion: 3, texto: 'Cimiento' },
+            { posicion: 4, texto: 'Sobrecimiento' },
+            { posicion: 5, texto: 'Muro' },
+            { posicion: 6, texto: 'Otro' }
+          ]
+        },
+        {
+          nombre: 'entre',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Calle' },
+            { posicion: 2, texto: 'Pasaje' },
+            { posicion: 3, texto: 'Cámaras' },
+            { posicion: 4, texto: 'Nudos' },
+            { posicion: 5, texto: 'Ejes' },
+            { posicion: 6, texto: 'Georeferencia' },
+            { posicion: 7, texto: 'Km.' }
+          ]
+        },
+        {
+          nombre: 'faja',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Derecho' },
+            { posicion: 2, texto: 'Izquierdo' },
+            { posicion: 3, texto: 'Norte' },
+            { posicion: 4, texto: 'Sur' },
+            { posicion: 5, texto: 'Oriente' },
+            { posicion: 6, texto: 'Poniente' },
+            { posicion: 7, texto: 'Nor-Oriente' },
+            { posicion: 8, texto: 'Sur-Oriente' },
+            { posicion: 9, texto: 'Nor-Poniente' },
+            { posicion: 10, texto: 'Sur-Poniente' },
+            { posicion: 11, texto: 'Faja Única' },
+            { posicion: 12, texto: 'Centro' },
+            { posicion: 13, texto: 'No Aplica' }
+          ]
+        },
+        {
+          nombre: 'grado',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'H-15' },
+            { posicion: 2, texto: 'H-20' },
+            { posicion: 3, texto: 'H-25' },
+            { posicion: 4, texto: 'H-30' },
+            { posicion: 5, texto: 'H-35' },
+            { posicion: 6, texto: 'H-40' },
+            { posicion: 7, texto: 'HF-4' },
+            { posicion: 8, texto: 'HF-4.2' },
+            { posicion: 9, texto: 'HF-4.5' },
+            { posicion: 10, texto: 'HF-4.8' },
+            { posicion: 11, texto: 'HF-5' },
+            { posicion: 12, texto: 'HF-5.5' },
+            { posicion: 13, texto: 'G-10' },
+            { posicion: 14, texto: 'G-15' },
+            { posicion: 15, texto: 'G-17' },
+            { posicion: 16, texto: 'G-20' },
+            { posicion: 17, texto: 'G-25' },
+            { posicion: 18, texto: 'G-30' },
+            { posicion: 19, texto: 'G-35' },
+            { posicion: 20, texto: 'M 1:3' },
+            { posicion: 21, texto: 'M 1:4' },
+            { posicion: 22, texto: 'Otro' }
+          ]
+        },
+        {
+          nombre: 'Testigeras',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Z-0-11' },
+            { posicion: 2, texto: 'Z-0-12' },
+            { posicion: 3, texto: 'Z-0-13' },
+            { posicion: 4, texto: 'Z-0-14' },
+            { posicion: 5, texto: 'Z-0-28' },
+            { posicion: 6, texto: 'Z-0-30' }
+          ]
+        }
+      ]
     }),
     ESTADO: 'A',
     TIPO: 'D',
@@ -482,8 +580,53 @@ export const LAB_FORMULARIOS: LabFormulario[] = [
     APROBADO: 'Juan Salas',
     APROFECHA: '19-02-2021',
     OPCIONES: JSON.stringify({
-      formulario: 'Dosificacion',
-      opciones: []
+      formulario: 'Dosificaciones',
+      codigo: 'DOSIF',
+      version: '1.0',
+      opciones: [
+        {
+          nombre: 'grado',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'H-15' },
+            { posicion: 2, texto: 'H-20' },
+            { posicion: 3, texto: 'H-25' },
+            { posicion: 4, texto: 'H-30' },
+            { posicion: 5, texto: 'H-35' },
+            { posicion: 6, texto: 'H-40' },
+            { posicion: 7, texto: 'HF-4' },
+            { posicion: 8, texto: 'HF-4.2' },
+            { posicion: 9, texto: 'HF-4.5' },
+            { posicion: 10, texto: 'HF-4.8' },
+            { posicion: 11, texto: 'HF-5' },
+            { posicion: 12, texto: 'HF-5.5' },
+            { posicion: 13, texto: 'G-10' },
+            { posicion: 14, texto: 'G-15' },
+            { posicion: 15, texto: 'G-17' },
+            { posicion: 16, texto: 'G-20' },
+            { posicion: 17, texto: 'G-25' },
+            { posicion: 18, texto: 'G-30' },
+            { posicion: 19, texto: 'G-35' },
+            { posicion: 20, texto: 'M 1:3' },
+            { posicion: 21, texto: 'M 1:4' },
+            { posicion: 22, texto: 'Otro' }
+          ]
+        },
+        {
+          nombre: 'Tipo Material',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Grava 11 / 2' },
+            { posicion: 2, texto: 'Gravilla 1/2' },
+            { posicion: 3, texto: 'Gravilla 3/4' },
+            { posicion: 4, texto: 'Gravilla 3/8' },
+            { posicion: 5, texto: 'Arena fina' },
+            { posicion: 6, texto: 'Arena gruesa' },
+            { posicion: 7, texto: 'Polvo roca' },
+            { posicion: 8, texto: 'Otro' }
+          ]
+        }
+      ]
     }),
     ESTADO: 'A',
     TIPO: 'D',
@@ -510,10 +653,22 @@ export const LAB_FORMULARIOS: LabFormulario[] = [
     APROBADO: 'Juan Salas',
     APROFECHA: '19-02-2021',
     OPCIONES: JSON.stringify({
-      formulario: 'Suspendido en Terreno',
+      formulario: 'Cancelacion',
       codigo: 'X-1',
       version: '1.0',
-      opciones: []
+      opciones: [
+        {
+          nombre: 'motivoCancelacion',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Clima' },
+            { posicion: 2, texto: 'Problema Interno (Pampa Austral)' },
+            { posicion: 3, texto: 'Problema Planta (Hormigón)' },
+            { posicion: 4, texto: 'Terreno no preparado (Cliente)' },
+            { posicion: 5, texto: 'Otro' }
+          ]
+        }
+      ]
     }),
     ESTADO: 'A',
     TIPO: 'D',
