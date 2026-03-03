@@ -105,6 +105,7 @@ interface RCMData {
         cantidad: number
     }>
     grado?: string
+    codigoProducto?: string
 }
 
 interface CodigoAgrupador {
@@ -1267,6 +1268,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setPaginatedProductos(paginated)
     }, [allProductos, productsPage])
 
+    // Computar los IDs de RCMs que ya están agrupados (vinculados a algún código agrupador)
+    const rcmIdsAgrupados = new Set<number>()
+    codigosAgrupadores.forEach(ag => {
+        ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
+    })
+
+    // Listado 1: Borradores → manejado por showRcmCard (formulario abierto)
+    // Listado 2: Creados (Pendientes de Agrupar) → guardados, SIN código producto
+    const rcmsCreados = savedRcms.filter(rcm => !rcmIdsAgrupados.has(rcm.id))
+    // Listado 3: Agrupados → guardados, CON código producto (vinculados a un agrupador)
+    const rcmsAgrupados = savedRcms.filter(rcm => rcmIdsAgrupados.has(rcm.id))
+
     return (
         <Card>
             <Box sx={{ p: 6 }}>
@@ -1337,8 +1350,31 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Menu>
                     </Box>
                 </Box>
+                {/* ═══════════════════════════════════════════ */}
+                {/* LISTADO 1: BORRADORES (formulario abierto) */}
+                {/* ═══════════════════════════════════════════ */}
+                {showRcmCard && (
+                    <Box sx={{ mt: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                Borradores
+                            </Typography>
+                            <Chip
+                                label='1'
+                                size='small'
+                                sx={{
+                                    fontWeight: 700,
+                                    bgcolor: '#EEEEEE',
+                                    color: '#616161',
+                                    border: '1px solid #BDBDBD',
+                                    minWidth: 28,
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                )}
 
-                {/* RCM Card */}
+                {/* RCM Card (Borrador) */}
                 {showRcmCard && (
                     <Box
                         sx={{
@@ -1367,6 +1403,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     />
                                 </IconButton>
                                 <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                <Chip
+                                    label='Borrador'
+                                    size='small'
+                                    sx={{
+                                        fontWeight: 600,
+                                        bgcolor: '#EEEEEE',
+                                        color: '#616161',
+                                        border: '1px solid #BDBDBD',
+                                    }}
+                                />
                                 {numeroTarjeta && (
                                     <Typography variant='body1' sx={{ fontWeight: 600 }}>
                                         Tarjeta: {numeroTarjeta}
@@ -2157,13 +2203,28 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Box>
                 )}
 
-                {/* Lista de RCMs guardados */}
-                {savedRcms.length > 0 && (
+                {/* ═══════════════════════════════════════════════════════ */}
+                {/* LISTADO 2: CREADOS (Pendientes de Agrupar)            */}
+                {/* ═══════════════════════════════════════════════════════ */}
+                {rcmsCreados.length > 0 && (
                     <Box sx={{ mt: 3 }}>
-                        <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
-                            RCMs Creados ({savedRcms.length})
-                        </Typography>
-                        {savedRcms.map(rcm => (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                Creados (Pendientes de Agrupar)
+                            </Typography>
+                            <Chip
+                                label={rcmsCreados.length}
+                                size='small'
+                                sx={{
+                                    fontWeight: 700,
+                                    bgcolor: '#FFF3E0',
+                                    color: '#E65100',
+                                    border: '1px solid #FFB74D',
+                                    minWidth: 28,
+                                }}
+                            />
+                        </Box>
+                        {rcmsCreados.map(rcm => (
                             <Box
                                 key={rcm.id}
                                 sx={{
@@ -2200,23 +2261,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             sx={{ fontWeight: 'bold' }}
                                         />
 
-                                        {/* Mostrar estado del RCM */}
+                                        {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
                                         <Chip
-                                            label={rcm.estado}
-                                            size='small'
-                                            color={rcm.estado === 'Codificado' ? 'default' : rcm.estado === 'Ensayado' ? 'warning' : 'info'}
-                                            sx={{ fontWeight: 500 }}
-                                        />
-
-                                        {/* Mostrar estado de agrupación según tipo */}
-                                        <Chip
-                                            label={rcm.rcmType === 'Muestra' ? 'Pendiente de agrupar' : 'Agrupado'}
+                                            label='Pendiente de agrupar'
                                             size='small'
                                             sx={{
                                                 fontWeight: 600,
-                                                bgcolor: rcm.rcmType === 'Muestra' ? '#FFF3E0' : '#E8F5E9',
-                                                color: rcm.rcmType === 'Muestra' ? '#E65100' : '#2E7D32',
-                                                border: rcm.rcmType === 'Muestra' ? '1px solid #FFB74D' : '1px solid #81C784',
+                                                bgcolor: '#FFF3E0',
+                                                color: '#E65100',
+                                                border: '1px solid #FFB74D',
                                             }}
                                         />
 
@@ -2653,6 +2706,200 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         </Button>
                                     </Box>
                                 )}
+                            </Box>
+                        ))}
+                    </Box>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════ */}
+                {/* LISTADO 3: AGRUPADOS (con Código Producto)             */}
+                {/* ═══════════════════════════════════════════════════════ */}
+                {rcmsAgrupados.length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                Agrupados
+                            </Typography>
+                            <Chip
+                                label={rcmsAgrupados.length}
+                                size='small'
+                                sx={{
+                                    fontWeight: 700,
+                                    bgcolor: '#E8F5E9',
+                                    color: '#2E7D32',
+                                    border: '1px solid #81C784',
+                                    minWidth: 28,
+                                }}
+                            />
+                        </Box>
+                        {rcmsAgrupados.map(rcm => (
+                            <Box
+                                key={rcm.id}
+                                sx={{
+                                    bgcolor: '#E8F5E9',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    mb: 2
+                                }}
+                            >
+                                {/* Header del RCM agrupado */}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        p: 2,
+                                        bgcolor: '#E8F5E9',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => handleToggleSavedRcm(rcm.id)}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                        <IconButton size='small'>
+                                            <ExpandMoreIcon
+                                                sx={{
+                                                    transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                    transition: 'transform 0.3s'
+                                                }}
+                                            />
+                                        </IconButton>
+                                        <Chip
+                                            label={rcm.rcmType.toUpperCase()}
+                                            color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
+                                            sx={{ fontWeight: 'bold' }}
+                                        />
+
+                                        {/* Mostrar estado: Agrupado (verde) */}
+                                        <Chip
+                                            label='Agrupado'
+                                            size='small'
+                                            sx={{
+                                                fontWeight: 600,
+                                                bgcolor: '#C8E6C9',
+                                                color: '#2E7D32',
+                                                border: '1px solid #81C784',
+                                            }}
+                                        />
+
+                                        {/* Mostrar campos según el tipo de RCM */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                            {rcm.area && (
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>{rcm.area}</Typography>
+                                                </>
+                                            )}
+                                            {rcm.tipoServicio && (
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                </>
+                                            )}
+                                            {rcm.numeroTarjeta && (
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
+                                                </>
+                                            )}
+                                            {rcm.ensayos.length > 0 && (
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
+                                                </>
+                                            )}
+                                            <>
+                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                <Typography variant='body2'>
+                                                    {(() => {
+                                                        if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                            const fechas = rcm.submuestrasVencimiento
+                                                                .map(sub => sub.fechaVencimiento)
+                                                                .filter(f => !!f)
+                                                                .sort()
+                                                            if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                            if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                            return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                        }
+                                                        return formatDateOnly(rcm.fechaServicio)
+                                                    })()}
+                                                </Typography>
+                                            </>
+                                            {rcm.cantidadMuestras && (
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        {/* Checkbox solo si Tipo Servicio = Dosificación */}
+                                        {rcm.tipoServicio?.toLowerCase() === 'dosificación' && (
+                                            <Checkbox
+                                                size='small'
+                                                checked={selectedRcmIds.includes(rcm.id)}
+                                                onChange={() => handleToggleRcmSelection(rcm.id)}
+                                            />
+                                        )}
+                                        <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+
+                                {/* Contenido expandible del RCM agrupado */}
+                                <Collapse in={expandedSavedRcms[rcm.id]}>
+                                    <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                        <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                                            Ensayos Asociados ({rcm.ensayos.length})
+                                        </Typography>
+                                        <Box sx={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rcm.ensayos.map(ensayo => (
+                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                    {ensayo.sku}
+                                                                </Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2'>{ensayo.nombre}</Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <Chip
+                                                                    label={ensayo.estadoOperativo}
+                                                                    size='small'
+                                                                    color={
+                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                    'success'
+                                                                    }
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </Box>
+                                    </Box>
+                                </Collapse>
                             </Box>
                         ))}
                     </Box>
