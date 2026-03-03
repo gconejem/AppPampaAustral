@@ -824,24 +824,29 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
             if (rcmsToAssign.length === 0) return
 
-            // Collect SKUs from the assigned RCMs
-            const allSkus: string[] = []
-            let ensayoNombre = ''
+            // Collect all ensayos from all selected RCMs, deduplicating by productoId
+            const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+            const seenProductoIds = new Set<number>()
+
             rcmsToAssign.forEach(rcmRef => {
                 const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
                 if (fullRcm) {
                     fullRcm.ensayos.forEach(e => {
-                        if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
-                        if (!ensayoNombre) ensayoNombre = e.nombre
+                        if (!seenProductoIds.has(e.productoId)) {
+                            seenProductoIds.add(e.productoId)
+                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                        }
                     })
                 }
             })
 
             // If only the current (unsaved) RCM, use ensayosAsociados
-            if (allSkus.length === 0 && ensayosAsociados.length > 0) {
+            if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
                 ensayosAsociados.forEach(e => {
-                    if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
-                    if (!ensayoNombre) ensayoNombre = e.nombre
+                    if (!seenProductoIds.has(e.productoId)) {
+                        seenProductoIds.add(e.productoId)
+                        allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                    }
                 })
             }
 
@@ -850,7 +855,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 codigoId: codigo.id,
                 codigoNombre: codigo.nombre,
                 rcmsVinculados: rcmsToAssign,
-                ensayos: allSkus.map((sku, idx) => ({ productoId: idx, sku, nombre: ensayoNombre || codigo.nombre })),
+                ensayos: allEnsayos,
                 descripcionServicio: codigo.descripcion || codigo.nombre,
                 cantidad: rcmsToAssign.length,
                 unidad: 'unid',
