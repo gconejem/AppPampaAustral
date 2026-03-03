@@ -129,9 +129,11 @@ interface Step2CreateRcmsProps {
     selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
+    onDraftCountChange?: (count: number) => void
+    onAgrupadosCountChange?: (count: number) => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -163,6 +165,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+
+    // Notificar al padre cuando cambia el estado del borrador (formulario abierto)
+    useEffect(() => {
+        onDraftCountChange?.(showRcmCard ? 1 : 0)
+    }, [showRcmCard])
     const [sede, setSede] = useState('PA Chillán')
     const [customSede, setCustomSede] = useState('')
     const [area, setArea] = useState<number | ''>('')
@@ -251,6 +258,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
+
+    // Notificar al padre cuando cambia la cantidad de RCMs agrupados
+    useEffect(() => {
+        // Contar RCMs únicos vinculados a códigos agrupadores
+        const rcmIdsAgrupados = new Set<number>()
+        codigosAgrupadores.forEach(ag => {
+            ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
+        })
+        onAgrupadosCountChange?.(rcmIdsAgrupados.size)
+    }, [codigosAgrupadores])
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM

@@ -23,9 +23,14 @@ interface HeaderProps {
   hasSavedRcms?: boolean
   selectedAreaNombre?: string
   selectedTipoServicioNombre?: string
+  // Contadores en tiempo real
+  borradores?: number
+  pendientes?: number
+  agrupados?: number
+  totalRcms?: number
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre }: HeaderProps) => {
+const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -293,10 +298,72 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
             }}
           />
 
-          {/* Título */}
-          <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 4 }}>
-            Datos de la Orden de Trabajo
-          </Typography>
+          {/* Título y Contadores */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 4 }}>
+            <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
+              Datos de la Orden de Trabajo
+            </Typography>
+
+            {/* Contadores en tiempo real */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 1 }}>
+              {/* Borradores */}
+              <Chip
+                size='small'
+                label={`Borradores: ${borradores}`}
+                sx={{
+                  bgcolor: '#E3F2FD',
+                  color: '#1565C0',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  height: 26,
+                  borderRadius: '13px',
+                  '& .MuiChip-label': { px: 1.5 }
+                }}
+              />
+              {/* Pendientes */}
+              <Chip
+                size='small'
+                label={`Pendientes: ${pendientes}`}
+                sx={{
+                  bgcolor: '#FFF3E0',
+                  color: '#E65100',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  height: 26,
+                  borderRadius: '13px',
+                  '& .MuiChip-label': { px: 1.5 }
+                }}
+              />
+              {/* Agrupados */}
+              <Chip
+                size='small'
+                label={`Agrupados: ${agrupados}`}
+                sx={{
+                  bgcolor: '#E8F5E9',
+                  color: '#2E7D32',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  height: 26,
+                  borderRadius: '13px',
+                  '& .MuiChip-label': { px: 1.5 }
+                }}
+              />
+              {/* Total RCMs */}
+              <Chip
+                size='small'
+                label={`Total RCMs: ${totalRcms}`}
+                sx={{
+                  bgcolor: '#F3E5F5',
+                  color: '#6A1B9A',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  height: 26,
+                  borderRadius: '13px',
+                  '& .MuiChip-label': { px: 1.5 }
+                }}
+              />
+            </Box>
+          </Box>
 
           {/* Grid de campos */}
           <Grid container spacing={4}>

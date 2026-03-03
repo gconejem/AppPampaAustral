@@ -72,6 +72,16 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [savedRcms, setSavedRcms] = useState<RCMData[]>([])
   const [initialRcmType, setInitialRcmType] = useState<string>('')
 
+  // Estados para contadores en tiempo real
+  const [openDraftCount, setOpenDraftCount] = useState(0) // Borradores (formularios abiertos sin guardar)
+  const [agrupadosCount, setAgrupadosCount] = useState(0) // RCMs con Código Producto asignado
+
+  // Cálculo de contadores
+  const borradores = openDraftCount
+  const agrupados = agrupadosCount
+  const pendientes = savedRcms.length - agrupados // Guardados sin agrupar
+  const totalRcms = borradores + savedRcms.length
+
   useEffect(() => {
     if (!searchParams) return
 
@@ -134,6 +144,10 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           hasSavedRcms={savedRcms.length > 0}
           selectedAreaNombre={selectedAreaNombre}
           selectedTipoServicioNombre={selectedTipoServicioNombre}
+          borradores={borradores}
+          pendientes={pendientes}
+          agrupados={agrupados}
+          totalRcms={totalRcms}
         />
       </Grid>
 
@@ -169,6 +183,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
             selectedTipoServicioNombre={selectedTipoServicioNombre}
             initialRcmType={initialRcmType}
             onClearInitialRcmType={() => setInitialRcmType('')}
+            onDraftCountChange={setOpenDraftCount}
+            onAgrupadosCountChange={setAgrupadosCount}
           />
         </Grid>
       )}
