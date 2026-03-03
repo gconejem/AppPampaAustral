@@ -2905,40 +2905,46 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Box>
                 )}
 
+                {/* Barra de agrupación - visible siempre que haya RCMs creados */}
+                {rcmsCreados.length > 0 && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            bgcolor: '#E3F2FD',
+                            borderRadius: '8px',
+                            p: 2,
+                            mt: 3
+                        }}
+                    >
+                        <Typography variant='body2' sx={{ fontWeight: 500, color: selectedRcmIds.length === 0 ? 'text.disabled' : 'text.primary' }}>
+                            {selectedRcmIds.length === 0
+                                ? 'Seleccione RCMs de la lista para agrupar'
+                                : `${selectedRcmIds.length} RCM${selectedRcmIds.length > 1 ? 's' : ''} seleccionado${selectedRcmIds.length > 1 ? 's' : ''}`
+                            }
+                        </Typography>
+                        <Button
+                            variant='contained'
+                            startIcon={<LayersIcon />}
+                            disabled={selectedRcmIds.length === 0}
+                            onClick={(e) => handleOpenCodigoPopup(e)}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 600,
+                                bgcolor: '#1976D2',
+                                '&:hover': { bgcolor: '#1565C0' }
+                            }}
+                        >
+                            Agrupar en Código Producto
+                        </Button>
+                    </Box>
+                )}
+
                 {/* Sección de Códigos Agrupadores (Productos) */}
                 {codigosAgrupadores.length > 0 && (
                     <Box sx={{ mt: 4 }}>
-                        {/* Barra de selección */}
-                        {selectedRcmIds.length > 0 && (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    bgcolor: '#E3F2FD',
-                                    borderRadius: '8px',
-                                    p: 2,
-                                    mb: 3
-                                }}
-                            >
-                                <Typography variant='body2' sx={{ fontWeight: 500 }}>
-                                    {selectedRcmIds.length} RCMs seleccionados
-                                </Typography>
-                                <Button
-                                    variant='contained'
-                                    startIcon={<LayersIcon />}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 600,
-                                        bgcolor: '#1976D2',
-                                        '&:hover': { bgcolor: '#1565C0' }
-                                    }}
-                                >
-                                    Agrupar en Producto
-                                </Button>
-                            </Box>
-                        )}
 
                         {/* Título y botón Finalizar Codificación */}
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
