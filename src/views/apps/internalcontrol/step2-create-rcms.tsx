@@ -2910,42 +2910,67 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Box>
                 )}
 
-                {/* Barra de agrupación - visible siempre que haya RCMs creados */}
-                {rcmsCreados.length > 0 && (
+                {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados */}
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        bottom: 32,
+                        left: '50%',
+                        transform: selectedRcmIds.length > 0
+                            ? 'translateX(-50%) translateY(0)'
+                            : 'translateX(-50%) translateY(120px)',
+                        opacity: selectedRcmIds.length > 0 ? 1 : 0,
+                        pointerEvents: selectedRcmIds.length > 0 ? 'auto' : 'none',
+                        transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease',
+                        zIndex: 1300,
+                    }}
+                >
                     <Box
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            bgcolor: '#E3F2FD',
-                            borderRadius: '8px',
-                            p: 2,
-                            mt: 3
+                            gap: 2,
+                            bgcolor: '#1976D2',
+                            borderRadius: '50px',
+                            px: 3,
+                            py: 1.5,
+                            boxShadow: '0 8px 32px rgba(25, 118, 210, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
                         }}
                     >
-                        <Typography variant='body2' sx={{ fontWeight: 500, color: selectedRcmIds.length === 0 ? 'text.disabled' : 'text.primary' }}>
-                            {selectedRcmIds.length === 0
-                                ? 'Seleccione RCMs de la lista para agrupar'
-                                : `${selectedRcmIds.length} RCM${selectedRcmIds.length > 1 ? 's' : ''} seleccionado${selectedRcmIds.length > 1 ? 's' : ''}`
-                            }
+                        <Typography
+                            variant='body2'
+                            sx={{
+                                fontWeight: 600,
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {selectedRcmIds.length} RCM{selectedRcmIds.length > 1 ? 's' : ''} seleccionado{selectedRcmIds.length > 1 ? 's' : ''}
                         </Typography>
                         <Button
                             variant='contained'
                             startIcon={<LayersIcon />}
-                            disabled={selectedRcmIds.length === 0}
                             onClick={(e) => handleOpenCodigoPopup(e)}
                             sx={{
                                 textTransform: 'none',
-                                borderRadius: '8px',
-                                fontWeight: 600,
-                                bgcolor: '#1976D2',
-                                '&:hover': { bgcolor: '#1565C0' }
+                                borderRadius: '50px',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                px: 3,
+                                py: 1,
+                                bgcolor: 'white',
+                                color: '#1976D2',
+                                boxShadow: 'none',
+                                '&:hover': {
+                                    bgcolor: '#E3F2FD',
+                                    boxShadow: 'none',
+                                }
                             }}
                         >
                             Agrupar en Código Producto
                         </Button>
                     </Box>
-                )}
+                </Box>
 
                 {/* Sección de Códigos Agrupadores (Productos) */}
                 {codigosAgrupadores.length > 0 && (
