@@ -3026,7 +3026,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             alignItems: 'center',
                             gap: 2,
                             bgcolor: '#1976D2',
-                            borderRadius: '50px',
+                            borderRadius: '8px',
                             px: 3,
                             py: 1.5,
                             boxShadow: '0 8px 32px rgba(25, 118, 210, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
@@ -3048,7 +3048,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             onClick={(e) => handleOpenCodigoPopup(e)}
                             sx={{
                                 textTransform: 'none',
-                                borderRadius: '50px',
+                                borderRadius: '6px',
                                 fontWeight: 700,
                                 fontSize: '0.9rem',
                                 px: 3,
