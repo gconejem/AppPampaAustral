@@ -51,6 +51,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import CloseIcon from '@mui/icons-material/Close'
 
 const ITEMS_PER_PAGE = 10
 
@@ -238,13 +239,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [filterResetKey, setFilterResetKey] = useState(0)
     const [pendingRcmType, setPendingRcmType] = useState<string>('')
 
-    // Estados para popup de códigos
+    // Estados para Dialog de Crear Código Producto
+    const [openCodigoDialog, setOpenCodigoDialog] = useState(false)
     const [codigoAnchorEl, setCodigoAnchorEl] = useState<HTMLElement | null>(null)
     const [showNewCodigoForm, setShowNewCodigoForm] = useState(false)
     const [selectedCodigo, setSelectedCodigo] = useState<string>('')
     const [newCodigoNombre, setNewCodigoNombre] = useState('')
     const [newCodigoDescripcion, setNewCodigoDescripcion] = useState('')
     const [newCodigoTipo, setNewCodigoTipo] = useState('')
+    // Nuevos campos del Dialog
+    const [dialogSkuSearch, setDialogSkuSearch] = useState('')
+    const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
+    const [dialogCantidad, setDialogCantidad] = useState<number>(1)
+    // Modo del dialog: 'nuevo' | 'existente'
+    const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente'>('nuevo')
+    const [selectedExistingAgrupadorId, setSelectedExistingAgrupadorId] = useState<string>('')
 
     // Códigos existentes de la OT (mock data)
     const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
@@ -786,20 +795,30 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseRcmMenu()
     }
 
-    // Handlers para popup de códigos
-    const handleOpenCodigoPopup = (event: React.MouseEvent<HTMLElement>) => {
-        setCodigoAnchorEl(event.currentTarget)
+    // Handlers para Dialog de Crear Código Producto
+    const handleOpenCodigoPopup = (_event: React.MouseEvent<HTMLElement>) => {
+        setOpenCodigoDialog(true)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
+        setDialogSkuSearch('')
+        setDialogDescripcionServicio('')
+        setDialogCantidad(selectedRcmIds.length > 0 ? selectedRcmIds.length : 1)
+        // Si ya hay códigos creados, abrir por defecto en modo 'existente'
+        setDialogMode(codigosAgrupadores.length > 0 ? 'existente' : 'nuevo')
+        setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
 
     const handleCloseCodigoPopup = () => {
+        setOpenCodigoDialog(false)
         setCodigoAnchorEl(null)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
         setNewCodigoNombre('')
         setNewCodigoDescripcion('')
         setNewCodigoTipo('')
+        setDialogSkuSearch('')
+        setDialogDescripcionServicio('')
+        setSelectedExistingAgrupadorId('')
     }
 
     const handleSelectCodigo = (codigoId: string) => {
@@ -807,64 +826,115 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleConfirmCodigo = () => {
-        if (selectedCodigo) {
-            const codigo = codigosOT.find(c => c.id === selectedCodigo)
-            if (!codigo) return
+        // Determinar los RCMs a agrupar
+        const rcmsToAssign = selectedRcmIds.length > 0
+            ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                id: r.id,
+                numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                rcmType: r.rcmType
+            }))
+            : showRcmCard
+                ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
+                : []
 
-            // Get the RCMs that are checked (selected) or use the current RCM being created
-            const rcmsToAssign = selectedRcmIds.length > 0
-                ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
-                    id: r.id,
-                    numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                    rcmType: r.rcmType
-                }))
-                : showRcmCard
-                    ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
-                    : []
+        if (rcmsToAssign.length === 0) return
 
-            if (rcmsToAssign.length === 0) return
+        // Recopilar todos los ensayos de los RCMs seleccionados
+        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+        const seenProductoIds = new Set<number>()
 
-            // Collect all ensayos from all selected RCMs, deduplicating by productoId
-            const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
-            const seenProductoIds = new Set<number>()
-
-            rcmsToAssign.forEach(rcmRef => {
-                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
-                if (fullRcm) {
-                    fullRcm.ensayos.forEach(e => {
-                        if (!seenProductoIds.has(e.productoId)) {
-                            seenProductoIds.add(e.productoId)
-                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
-                        }
-                    })
-                }
-            })
-
-            // If only the current (unsaved) RCM, use ensayosAsociados
-            if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
-                ensayosAsociados.forEach(e => {
+        rcmsToAssign.forEach(rcmRef => {
+            const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+            if (fullRcm) {
+                fullRcm.ensayos.forEach(e => {
                     if (!seenProductoIds.has(e.productoId)) {
                         seenProductoIds.add(e.productoId)
                         allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
                     }
                 })
             }
+        })
 
-            const newAgrupador: CodigoAgrupador = {
-                id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-                codigoId: codigo.id,
-                codigoNombre: codigo.nombre,
-                rcmsVinculados: rcmsToAssign,
-                ensayos: allEnsayos,
-                descripcionServicio: codigo.descripcion || codigo.nombre,
-                cantidad: rcmsToAssign.length,
-                unidad: 'unid',
-                facturacion: 'Unitario'
-            }
-
-            setCodigosAgrupadores(prev => [...prev, newAgrupador])
-            setSelectedRcmIds([])
+        if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
+            ensayosAsociados.forEach(e => {
+                if (!seenProductoIds.has(e.productoId)) {
+                    seenProductoIds.add(e.productoId)
+                    allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                }
+            })
         }
+
+        // Si hay SKU seleccionado, incluirlo como ensayo si no está ya
+        if (dialogSkuSearch.trim()) {
+            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === dialogSkuSearch.trim())
+            if (!skuAlreadyIncluded) {
+                allEnsayos.unshift({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
+            }
+        }
+
+        const newAgrupador: CodigoAgrupador = {
+            id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+            codigoId: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+            codigoNombre: dialogDescripcionServicio || `Código ${codigosAgrupadores.length + 1}`,
+            rcmsVinculados: rcmsToAssign,
+            ensayos: allEnsayos,
+            descripcionServicio: dialogDescripcionServicio,
+            cantidad: dialogCantidad,
+            unidad: 'unid',
+            facturacion: dialogSkuSearch.trim() ? 'Fijo' : 'Unitario'
+        }
+
+        setCodigosAgrupadores(prev => [...prev, newAgrupador])
+        setSelectedRcmIds([])
+        handleCloseCodigoPopup()
+    }
+
+    const handleAddToExistingAgrupador = () => {
+        if (!selectedExistingAgrupadorId) return
+
+        // Determinar los RCMs a agregar
+        const rcmsToAdd = selectedRcmIds.length > 0
+            ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                id: r.id,
+                numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                rcmType: r.rcmType
+            }))
+            : []
+
+        if (rcmsToAdd.length === 0) return
+
+        setCodigosAgrupadores(prev => prev.map(ag => {
+            if (ag.id !== selectedExistingAgrupadorId) return ag
+
+            // Evitar RCMs duplicados
+            const existingRcmIds = new Set(ag.rcmsVinculados.map(r => r.id))
+            const newRcms = rcmsToAdd.filter(r => !existingRcmIds.has(r.id))
+
+            // Recopilar ensayos de los nuevos RCMs sin duplicar
+            const existingEnsayoIds = new Set(ag.ensayos.map(e => e.productoId))
+            const newEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+
+            newRcms.forEach(rcmRef => {
+                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+                if (fullRcm) {
+                    fullRcm.ensayos.forEach(e => {
+                        if (!existingEnsayoIds.has(e.productoId)) {
+                            existingEnsayoIds.add(e.productoId)
+                            newEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                        }
+                    })
+                }
+            })
+
+            return {
+                ...ag,
+                rcmsVinculados: [...ag.rcmsVinculados, ...newRcms],
+                ensayos: [...ag.ensayos, ...newEnsayos],
+                cantidad: ag.cantidad + newRcms.length
+            }
+        }))
+
+        setSelectedRcmIds([])
         handleCloseCodigoPopup()
     }
 
@@ -3432,208 +3502,390 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </DialogActions>
                 </Dialog>
 
-                {/* Popover de Códigos */}
-                <Popover
-                    open={Boolean(codigoAnchorEl)}
-                    anchorEl={codigoAnchorEl}
+                {/* Dialog: Crear Código Producto */}
+                <Dialog
+                    open={openCodigoDialog}
                     onClose={handleCloseCodigoPopup}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                    slotProps={{
-                        paper: {
-                            sx: {
-                                width: 400,
-                                maxHeight: 500,
-                                borderRadius: '12px',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                overflow: 'hidden'
-                            }
+                    maxWidth='sm'
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: '12px',
+                            overflow: 'hidden'
                         }
                     }}
                 >
-                    {/* Header del popover */}
-                    <Box sx={{ p: 2, bgcolor: '#F5F7FA', borderBottom: '1px solid #E0E0E0' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AssignmentIcon sx={{ color: '#1976D2', fontSize: 20 }} />
-                            <Typography variant='subtitle1' sx={{ fontWeight: 700, color: '#1A2027' }}>
-                                Códigos de la OT
-                            </Typography>
-                        </Box>
-                        <Typography variant='caption' sx={{ color: 'text.secondary', mt: 0.5 }}>
-                            Seleccione un código existente o cree uno nuevo
-                        </Typography>
-                    </Box>
-
-                    {/* Lista de códigos existentes */}
-                    <Box sx={{ maxHeight: 240, overflowY: 'auto' }}>
-                        <RadioGroup value={selectedCodigo} onChange={(e) => handleSelectCodigo(e.target.value)}>
-                            <List disablePadding>
-                                {codigosOT.length === 0 ? (
-                                    <Box sx={{ p: 3, textAlign: 'center' }}>
-                                        <Typography variant='body2' color='text.secondary'>
-                                            No hay códigos creados en esta OT
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    codigosOT.map((codigo) => (
-                                        <ListItemButton
-                                            key={codigo.id}
-                                            selected={selectedCodigo === codigo.id}
-                                            onClick={() => handleSelectCodigo(codigo.id)}
-                                            sx={{
-                                                py: 1.5,
-                                                px: 2,
-                                                borderBottom: '1px solid #F0F0F0',
-                                                '&.Mui-selected': {
-                                                    bgcolor: 'rgba(25, 118, 210, 0.06)',
-                                                    '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.10)' }
-                                                }
-                                            }}
-                                        >
-                                            <Radio
-                                                value={codigo.id}
-                                                size='small'
-                                                sx={{ p: 0.5, mr: 1.5 }}
-                                            />
-                                            <ListItemText
-                                                primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant='body2' sx={{ fontWeight: 600, fontFamily: 'monospace', color: '#1976D2' }}>
-                                                            {codigo.id}
-                                                        </Typography>
-                                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                            {codigo.nombre}
-                                                        </Typography>
-                                                        <Chip label={codigo.tipo} size='small' sx={{ height: 20, fontSize: '0.7rem' }} />
-                                                    </Box>
-                                                }
-                                                secondary={
-                                                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, display: 'block' }}>
-                                                        {codigo.descripcion}
-                                                    </Typography>
-                                                }
-                                            />
-                                        </ListItemButton>
-                                    ))
-                                )}
-                            </List>
-                        </RadioGroup>
-                    </Box>
+                    {/* Título */}
+                    <DialogTitle
+                        sx={{
+                            fontWeight: 700,
+                            fontSize: '1.1rem',
+                            pb: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}
+                    >
+                        Agrupar en Código Producto
+                        <IconButton size='small' onClick={handleCloseCodigoPopup} sx={{ color: 'text.secondary' }}>
+                            <CloseIcon fontSize='small' />
+                        </IconButton>
+                    </DialogTitle>
 
                     <Divider />
 
-                    {/* Botón para crear nuevo código / Sub-formulario */}
-                    {!showNewCodigoForm ? (
-                        <Box sx={{ p: 2 }}>
-                            {selectedCodigo && (
-                                <Button
-                                    variant='contained'
-                                    fullWidth
-                                    onClick={handleConfirmCodigo}
+                    <DialogContent sx={{ pt: 2.5, pb: 1 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+
+                            {/* Sección RCMs a agrupar */}
+                            {selectedRcmIds.length > 0 && (
+                                <Box
                                     sx={{
-                                        mb: 1.5,
-                                        textTransform: 'none',
+                                        bgcolor: '#EFF6FF',
+                                        border: '1px solid',
+                                        borderColor: '#DBEAFE',
                                         borderRadius: '8px',
-                                        fontWeight: 600,
-                                        bgcolor: '#1976D2',
-                                        '&:hover': { bgcolor: '#1565C0' }
+                                        p: 2
                                     }}
                                 >
-                                    Asignar código seleccionado
-                                </Button>
+                                    <Typography
+                                        variant='caption'
+                                        sx={{ fontWeight: 700, color: 'primary.main', display: 'block', mb: 1 }}
+                                    >
+                                        RCMs a agrupar en este código
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                        {selectedRcmIds.map((id, idx) => {
+                                            const rcm = savedRcms.find(r => r.id === id)
+                                            const label = rcm?.numeroRcm || `RCM-${String(idx + 1).padStart(3, '0')}`
+                                            return (
+                                                <Chip
+                                                    key={id}
+                                                    label={`${label} —`}
+                                                    size='small'
+                                                    sx={{
+                                                        bgcolor: 'white',
+                                                        border: '1px solid',
+                                                        borderColor: '#BFDBFE',
+                                                        color: 'text.primary',
+                                                        fontWeight: 500,
+                                                        fontSize: '0.78rem'
+                                                    }}
+                                                />
+                                            )
+                                        })}
+                                    </Box>
+                                </Box>
                             )}
-                            <Button
-                                variant='outlined'
-                                fullWidth
-                                startIcon={<AddCircleOutlineIcon />}
-                                onClick={() => setShowNewCodigoForm(true)}
-                                sx={{
-                                    textTransform: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: 600,
-                                    borderColor: '#1976D2',
-                                    color: '#1976D2',
-                                    '&:hover': {
-                                        borderColor: '#1565C0',
-                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
-                                    }
-                                }}
-                            >
-                                Crear nuevo Código
-                            </Button>
-                        </Box>
-                    ) : (
-                        <Box sx={{ p: 2, bgcolor: '#FAFBFC' }}>
-                            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 2, color: '#1A2027' }}>
-                                Nuevo Código
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <TextField
-                                    label='Nombre'
-                                    size='small'
-                                    fullWidth
-                                    required
-                                    value={newCodigoNombre}
-                                    onChange={(e) => setNewCodigoNombre(e.target.value)}
-                                    placeholder='Ej: Hormigón H30'
-                                />
-                                <FormControl fullWidth size='small'>
-                                    <InputLabel>Tipo</InputLabel>
-                                    <Select
-                                        label='Tipo'
-                                        value={newCodigoTipo}
-                                        onChange={(e) => setNewCodigoTipo(e.target.value)}
-                                    >
-                                        <MenuItem value='Muestra'>Muestra</MenuItem>
-                                        <MenuItem value='Control'>Control</MenuItem>
-                                        <MenuItem value='Servicio'>Servicio</MenuItem>
-                                        <MenuItem value='General'>General</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <TextField
-                                    label='Descripción'
-                                    size='small'
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    value={newCodigoDescripcion}
-                                    onChange={(e) => setNewCodigoDescripcion(e.target.value)}
-                                    placeholder='Descripción breve del código...'
-                                />
-                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+
+                            {/* Selector de modo: existente vs nuevo (solo si hay agrupadores) */}
+                            {codigosAgrupadores.length > 0 && (
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        bgcolor: '#F3F4F6',
+                                        borderRadius: '8px',
+                                        p: 0.5,
+                                        gap: 0.5
+                                    }}
+                                >
                                     <Button
-                                        variant='outlined'
+                                        fullWidth
                                         size='small'
+                                        variant={dialogMode === 'existente' ? 'contained' : 'text'}
                                         onClick={() => {
-                                            setShowNewCodigoForm(false)
-                                            setNewCodigoNombre('')
-                                            setNewCodigoDescripcion('')
-                                            setNewCodigoTipo('')
+                                            setDialogMode('existente')
+                                            if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
+                                                setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
+                                            }
                                         }}
-                                        sx={{ flex: 1, textTransform: 'none', borderRadius: '8px' }}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: '6px',
+                                            fontWeight: 600,
+                                            fontSize: '0.82rem',
+                                            ...(dialogMode === 'existente' ? {
+                                                bgcolor: 'white',
+                                                color: 'primary.main',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                                '&:hover': { bgcolor: 'white' }
+                                            } : {
+                                                color: 'text.secondary',
+                                                '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                            })
+                                        }}
                                     >
-                                        Cancelar
+                                        Agregar a código existente
                                     </Button>
                                     <Button
-                                        variant='contained'
+                                        fullWidth
                                         size='small'
-                                        onClick={handleCrearNuevoCodigo}
-                                        disabled={!newCodigoNombre.trim()}
+                                        variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
+                                        onClick={() => setDialogMode('nuevo')}
                                         sx={{
-                                            flex: 1,
                                             textTransform: 'none',
-                                            borderRadius: '8px',
-                                            bgcolor: '#1976D2',
-                                            '&:hover': { bgcolor: '#1565C0' }
+                                            borderRadius: '6px',
+                                            fontWeight: 600,
+                                            fontSize: '0.82rem',
+                                            ...(dialogMode === 'nuevo' ? {
+                                                bgcolor: 'white',
+                                                color: 'primary.main',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                                '&:hover': { bgcolor: 'white' }
+                                            } : {
+                                                color: 'text.secondary',
+                                                '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                            })
                                         }}
                                     >
-                                        Crear
+                                        Crear nuevo código
                                     </Button>
                                 </Box>
-                            </Box>
+                            )}
+
+                            {/* MODO: Agregar a código existente */}
+                            {dialogMode === 'existente' && codigosAgrupadores.length > 0 && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                        Seleccionar código al que agregar los RCMs
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {codigosAgrupadores.map((ag) => (
+                                            <Box
+                                                key={ag.id}
+                                                onClick={() => setSelectedExistingAgrupadorId(ag.id)}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1.5,
+                                                    p: 1.5,
+                                                    borderRadius: '8px',
+                                                    border: '1.5px solid',
+                                                    borderColor: selectedExistingAgrupadorId === ag.id ? 'primary.main' : '#E5E7EB',
+                                                    bgcolor: selectedExistingAgrupadorId === ag.id ? '#EFF6FF' : 'white',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease',
+                                                    '&:hover': {
+                                                        borderColor: 'primary.light',
+                                                        bgcolor: '#F8FAFF'
+                                                    }
+                                                }}
+                                            >
+                                                {/* Radio visual */}
+                                                <Box
+                                                    sx={{
+                                                        width: 18,
+                                                        height: 18,
+                                                        borderRadius: '50%',
+                                                        border: '2px solid',
+                                                        borderColor: selectedExistingAgrupadorId === ag.id ? 'primary.main' : '#9CA3AF',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0
+                                                    }}
+                                                >
+                                                    {selectedExistingAgrupadorId === ag.id && (
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                                                    )}
+                                                </Box>
+
+                                                {/* Info del código */}
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace' }}>
+                                                            {ag.id}
+                                                        </Typography>
+                                                        {ag.descripcionServicio && (
+                                                            <Typography variant='body2' sx={{ fontWeight: 500 }} noWrap>
+                                                                {ag.descripcionServicio}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
+                                                        <Typography variant='caption' color='text.secondary'>
+                                                            {ag.rcmsVinculados.length} RCM{ag.rcmsVinculados.length !== 1 ? 's' : ''} vinculado{ag.rcmsVinculados.length !== 1 ? 's' : ''}
+                                                        </Typography>
+                                                        {ag.facturacion && (
+                                                            <Chip
+                                                                label={ag.facturacion}
+                                                                size='small'
+                                                                sx={{ height: 18, fontSize: '0.68rem', fontWeight: 600 }}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* MODO: Crear nuevo código */}
+                            {(dialogMode === 'nuevo' || codigosAgrupadores.length === 0) && (
+                                <>
+                                    {/* Área (heredado) + SKU Producto */}
+                                    <Box sx={{ display: 'flex', gap: 2 }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                                Área (heredado automáticamente)
+                                            </Typography>
+                                            <TextField
+                                                fullWidth
+                                                size='small'
+                                                value={selectedAreaNombre || '—'}
+                                                disabled
+                                                InputProps={{ readOnly: true }}
+                                            />
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                                SKU Producto (opcional)
+                                            </Typography>
+                                            <TextField
+                                                fullWidth
+                                                size='small'
+                                                placeholder='Buscar SKU...'
+                                                value={dialogSkuSearch}
+                                                onChange={(e) => setDialogSkuSearch(e.target.value)}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position='start'>
+                                                            <SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} />
+                                                        </InputAdornment>
+                                                    )
+                                                }}
+                                            />
+                                        </Box>
+                                    </Box>
+
+                                    {/* Descripción del Servicio */}
+                                    <Box>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Descripción del Servicio
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size='small'
+                                            placeholder='Ej: Dosificación G20 — 3 áridos'
+                                            value={dialogDescripcionServicio}
+                                            onChange={(e) => setDialogDescripcionServicio(e.target.value)}
+                                        />
+                                    </Box>
+
+                                    {/* Cantidad + Modo de Facturación (automático según SKU) */}
+                                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                                Cantidad (unidades a facturar)
+                                            </Typography>
+                                            <TextField
+                                                fullWidth
+                                                size='small'
+                                                type='number'
+                                                value={dialogCantidad}
+                                                onChange={(e) => setDialogCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                                                inputProps={{ min: 1 }}
+                                            />
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                                Modo de Facturación
+                                            </Typography>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    height: 40,
+                                                    px: 1.5,
+                                                    borderRadius: '8px',
+                                                    border: '1px solid',
+                                                    borderColor: dialogSkuSearch.trim() ? '#FDE68A' : 'divider',
+                                                    bgcolor: dialogSkuSearch.trim() ? '#FEF3C7' : '#F9FAFB',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                <Box
+                                                    sx={{
+                                                        width: 8,
+                                                        height: 8,
+                                                        borderRadius: '50%',
+                                                        bgcolor: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                        flexShrink: 0,
+                                                        transition: 'background-color 0.2s ease'
+                                                    }}
+                                                />
+                                                <Typography
+                                                    variant='body2'
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        color: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                        fontSize: '0.8rem',
+                                                        transition: 'color 0.2s ease'
+                                                    }}
+                                                >
+                                                    {dialogSkuSearch.trim()
+                                                        ? 'Fijo — SKU \u00d7 Cantidad'
+                                                        : 'Unitario — P\u00d7Q por ensayos'
+                                                    }
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+
+                                    {/* Nota informativa */}
+                                    <Box
+                                        sx={{
+                                            bgcolor: '#FFFDE7',
+                                            border: '1px solid #FFF176',
+                                            borderRadius: '8px',
+                                            p: 1.5,
+                                            display: 'flex',
+                                            gap: 1,
+                                            alignItems: 'flex-start'
+                                        }}
+                                    >
+                                        <Typography sx={{ fontSize: '1rem', lineHeight: 1.3 }}>💡</Typography>
+                                        <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                            Si dejas el SKU vacío, la minuta calculará el cobro sumando los ensayos individuales de cada RCM (modo P×Q).
+                                            Si asignas un SKU, el cobro será precio del SKU × cantidad.
+                                        </Typography>
+                                    </Box>
+                                </>
+                            )}
+
                         </Box>
-                    )}
-                </Popover>
+                    </DialogContent>
+
+                    <Divider />
+
+                    <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+                        <Button
+                            variant='outlined'
+                            onClick={handleCloseCodigoPopup}
+                            sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600, px: 3 }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant='contained'
+                            startIcon={<CheckCircleIcon />}
+                            disabled={dialogMode === 'existente' && !selectedExistingAgrupadorId}
+                            onClick={dialogMode === 'existente' ? handleAddToExistingAgrupador : handleConfirmCodigo}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                px: 3,
+                                bgcolor: 'primary.main',
+                                '&:hover': { bgcolor: 'primary.dark' }
+                            }}
+                        >
+                            {dialogMode === 'existente' ? '✓ Agregar al código' : '✓ Crear Código Producto'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 {/* Popover de búsqueda de ensayos para Agrupadores */}
                 <Popover
