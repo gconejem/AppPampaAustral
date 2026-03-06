@@ -266,6 +266,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
     const [selectedRcmIds, setSelectedRcmIds] = useState<number[]>([])
     const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
+    const [skuSearchAnchor, setSkuSearchAnchor] = useState<HTMLElement | null>(null)
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
 
@@ -996,6 +997,30 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseAgrupadorSearch()
     }
 
+    const handleOpenSkuSearch = (event: React.MouseEvent<HTMLElement>) => {
+        setSkuSearchAnchor(event.currentTarget)
+        setSearchTerm(dialogSkuSearch)
+        // Pre-filtrar por area de los RCMs seleccionados
+        if (selectedRcmIds.length > 0) {
+            const firstRcm = savedRcms.find(r => selectedRcmIds.includes(r.id))
+            const areaId = firstRcm?.area ? areas.find(a => a.nombre === firstRcm.area || String(a.id) === String(firstRcm.area))?.id : null
+            if (areaId) setSelectedAreaId(areaId)
+        } else if (selectedAreaNombre) {
+            const areaId = areas.find(a => a.nombre === selectedAreaNombre)?.id ?? null
+            if (areaId) setSelectedAreaId(areaId)
+        }
+    }
+
+    const handleCloseSkuSearch = () => {
+        setSkuSearchAnchor(null)
+        setSearchTerm('')
+    }
+
+    const handleSelectProductForSku = (producto: ProductoType) => {
+        setDialogSkuSearch(producto.sku || producto.nombre)
+        handleCloseSkuSearch()
+    }
+
     const handleRemoveEnsayoFromAgrupador = (agrupadorId: string, productoId: number) => {
         setCodigosAgrupadores(prev => prev.map(a =>
             a.id === agrupadorId
@@ -1292,7 +1317,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Cargar productos con filtros
     useEffect(() => {
-        if (!anchorEl && !agrupadorSearchAnchor) return
+        if (!anchorEl && !agrupadorSearchAnchor && !skuSearchAnchor) return
 
         const fetchProductos = async () => {
             try {
@@ -1333,7 +1358,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -3561,7 +3586,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             return (
                                                 <Chip
                                                     key={id}
-                                                    label={`${label} —`}
+                                                    label={`${label}`}
                                                     size='small'
                                                     sx={{
                                                         bgcolor: 'white',
@@ -3748,12 +3773,25 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 placeholder='Buscar SKU...'
                                                 value={dialogSkuSearch}
                                                 onChange={(e) => setDialogSkuSearch(e.target.value)}
+                                                onClick={handleOpenSkuSearch}
+                                                inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
                                                 InputProps={{
                                                     startAdornment: (
                                                         <InputAdornment position='start'>
                                                             <SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} />
                                                         </InputAdornment>
-                                                    )
+                                                    ),
+                                                    endAdornment: dialogSkuSearch ? (
+                                                        <InputAdornment position='end'>
+                                                            <IconButton
+                                                                size='small'
+                                                                onClick={(e) => { e.stopPropagation(); setDialogSkuSearch('') }}
+                                                                sx={{ p: 0.25 }}
+                                                            >
+                                                                <CloseIcon fontSize='small' />
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    ) : undefined
                                                 }}
                                             />
                                         </Box>
@@ -3886,6 +3924,137 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Popover de búsqueda de SKU para el Dialog de Código Producto */}
+                <Popover
+                    open={Boolean(skuSearchAnchor)}
+                    anchorEl={skuSearchAnchor}
+                    onClose={handleCloseSkuSearch}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    PaperProps={{
+                        sx: {
+                            width: skuSearchAnchor?.offsetWidth ? Math.max(skuSearchAnchor.offsetWidth, 420) : 420,
+                            maxHeight: '400px',
+                            overflow: 'auto',
+                            zIndex: 1400
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 2 }}>
+                        <TextField
+                            fullWidth
+                            size='small'
+                            placeholder='Buscar por nombre, descripción o norma...'
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            autoFocus
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position='start'>
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                        {selectedAreaNombre && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    label={`Área: ${selectedAreaNombre}`}
+                                    size='small'
+                                    color='primary'
+                                    variant='outlined'
+                                />
+                            </Box>
+                        )}
+                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                                }
+                                label='Solo Paquetes'
+                            />
+                        </Box>
+                    </Box>
+                    <List sx={{ pt: 0 }}>
+                        {paginatedProductos.length === 0 ? (
+                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                                <Typography variant='body2' color='text.secondary'>
+                                    No se encontraron ensayos
+                                </Typography>
+                            </Box>
+                        ) : (
+                            paginatedProductos.map(producto => (
+                                <ListItem
+                                    key={producto.id}
+                                    onClick={() => handleSelectProductForSku(producto)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        '&:hover': { backgroundColor: 'action.hover' },
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start'
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant='body1'>
+                                                    {producto.nombre}
+                                                    {producto.norma && (
+                                                        <Typography component='span' color='text.secondary'>
+                                                            {' '}- {producto.norma}
+                                                        </Typography>
+                                                    )}
+                                                </Typography>
+                                                {producto.esPaquete && (
+                                                    <Typography
+                                                        variant='caption'
+                                                        sx={{
+                                                            backgroundColor: 'primary.main',
+                                                            color: 'white',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            ml: 1
+                                                        }}
+                                                    >
+                                                        Paquete
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        }
+                                        secondary={
+                                            <Box>
+                                                <Typography variant='caption' color='text.secondary'>
+                                                    {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                </ListItem>
+                            ))
+                        )}
+                    </List>
+                    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                            disabled={productsPage === 0}
+                        >
+                            Anterior
+                        </Button>
+                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                        </Typography>
+                        <Button
+                            size='small'
+                            onClick={() => setProductsPage(prev => prev + 1)}
+                            disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                        >
+                            Siguiente
+                        </Button>
+                    </Box>
+                </Popover>
 
                 {/* Popover de búsqueda de ensayos para Agrupadores */}
                 <Popover
