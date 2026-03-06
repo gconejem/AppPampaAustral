@@ -1,5 +1,5 @@
 // MUI Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -51,6 +51,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import CloseIcon from '@mui/icons-material/Close'
 
 const ITEMS_PER_PAGE = 10
 
@@ -105,6 +106,7 @@ interface RCMData {
         cantidad: number
     }>
     grado?: string
+    codigoProducto?: string
 }
 
 interface CodigoAgrupador {
@@ -129,9 +131,11 @@ interface Step2CreateRcmsProps {
     selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
+    onDraftCountChange?: (count: number) => void
+    onAgrupadosCountChange?: (count: number) => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -163,6 +167,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [expandedRcm, setExpandedRcm] = useState(true)
     const [showRcmCard, setShowRcmCard] = useState(false)
     const [rcmType, setRcmType] = useState('')
+
+    // Notificar al padre cuando cambia el estado del borrador (formulario abierto)
+    useEffect(() => {
+        onDraftCountChange?.(showRcmCard ? 1 : 0)
+    }, [showRcmCard])
     const [sede, setSede] = useState('PA Chillán')
     const [customSede, setCustomSede] = useState('')
     const [area, setArea] = useState<number | ''>('')
@@ -230,13 +239,21 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [filterResetKey, setFilterResetKey] = useState(0)
     const [pendingRcmType, setPendingRcmType] = useState<string>('')
 
-    // Estados para popup de códigos
+    // Estados para Dialog de Crear Código Producto
+    const [openCodigoDialog, setOpenCodigoDialog] = useState(false)
     const [codigoAnchorEl, setCodigoAnchorEl] = useState<HTMLElement | null>(null)
     const [showNewCodigoForm, setShowNewCodigoForm] = useState(false)
     const [selectedCodigo, setSelectedCodigo] = useState<string>('')
     const [newCodigoNombre, setNewCodigoNombre] = useState('')
     const [newCodigoDescripcion, setNewCodigoDescripcion] = useState('')
     const [newCodigoTipo, setNewCodigoTipo] = useState('')
+    // Nuevos campos del Dialog
+    const [dialogSkuSearch, setDialogSkuSearch] = useState('')
+    const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
+    const [dialogCantidad, setDialogCantidad] = useState<number>(1)
+    // Modo del dialog: 'nuevo' | 'existente'
+    const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente'>('nuevo')
+    const [selectedExistingAgrupadorId, setSelectedExistingAgrupadorId] = useState<string>('')
 
     // Códigos existentes de la OT (mock data)
     const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
@@ -249,8 +266,19 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
     const [selectedRcmIds, setSelectedRcmIds] = useState<number[]>([])
     const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
+    const [skuSearchAnchor, setSkuSearchAnchor] = useState<HTMLElement | null>(null)
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
+
+    // Notificar al padre cuando cambia la cantidad de RCMs agrupados
+    useEffect(() => {
+        // Contar RCMs únicos vinculados a códigos agrupadores
+        const rcmIdsAgrupados = new Set<number>()
+        codigosAgrupadores.forEach(ag => {
+            ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
+        })
+        onAgrupadosCountChange?.(rcmIdsAgrupados.size)
+    }, [codigosAgrupadores])
 
     /* const handleDuplicateLastRcm = () => {
         // TODO: Implementar lógica para duplicar último RCM
@@ -768,20 +796,30 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseRcmMenu()
     }
 
-    // Handlers para popup de códigos
-    const handleOpenCodigoPopup = (event: React.MouseEvent<HTMLElement>) => {
-        setCodigoAnchorEl(event.currentTarget)
+    // Handlers para Dialog de Crear Código Producto
+    const handleOpenCodigoPopup = (_event: React.MouseEvent<HTMLElement>) => {
+        setOpenCodigoDialog(true)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
+        setDialogSkuSearch('')
+        setDialogDescripcionServicio('')
+        setDialogCantidad(selectedRcmIds.length > 0 ? selectedRcmIds.length : 1)
+        // Si ya hay códigos creados, abrir por defecto en modo 'existente'
+        setDialogMode(codigosAgrupadores.length > 0 ? 'existente' : 'nuevo')
+        setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
 
     const handleCloseCodigoPopup = () => {
+        setOpenCodigoDialog(false)
         setCodigoAnchorEl(null)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
         setNewCodigoNombre('')
         setNewCodigoDescripcion('')
         setNewCodigoTipo('')
+        setDialogSkuSearch('')
+        setDialogDescripcionServicio('')
+        setSelectedExistingAgrupadorId('')
     }
 
     const handleSelectCodigo = (codigoId: string) => {
@@ -789,59 +827,115 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleConfirmCodigo = () => {
-        if (selectedCodigo) {
-            const codigo = codigosOT.find(c => c.id === selectedCodigo)
-            if (!codigo) return
+        // Determinar los RCMs a agrupar
+        const rcmsToAssign = selectedRcmIds.length > 0
+            ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                id: r.id,
+                numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                rcmType: r.rcmType
+            }))
+            : showRcmCard
+                ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
+                : []
 
-            // Get the RCMs that are checked (selected) or use the current RCM being created
-            const rcmsToAssign = selectedRcmIds.length > 0
-                ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
-                    id: r.id,
-                    numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                    rcmType: r.rcmType
-                }))
-                : showRcmCard
-                    ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
-                    : []
+        if (rcmsToAssign.length === 0) return
 
-            if (rcmsToAssign.length === 0) return
+        // Recopilar todos los ensayos de los RCMs seleccionados
+        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+        const seenProductoIds = new Set<number>()
 
-            // Collect SKUs from the assigned RCMs
-            const allSkus: string[] = []
-            let ensayoNombre = ''
-            rcmsToAssign.forEach(rcmRef => {
+        rcmsToAssign.forEach(rcmRef => {
+            const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+            if (fullRcm) {
+                fullRcm.ensayos.forEach(e => {
+                    if (!seenProductoIds.has(e.productoId)) {
+                        seenProductoIds.add(e.productoId)
+                        allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                    }
+                })
+            }
+        })
+
+        if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
+            ensayosAsociados.forEach(e => {
+                if (!seenProductoIds.has(e.productoId)) {
+                    seenProductoIds.add(e.productoId)
+                    allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                }
+            })
+        }
+
+        // Si hay SKU seleccionado, incluirlo como ensayo si no está ya
+        if (dialogSkuSearch.trim()) {
+            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === dialogSkuSearch.trim())
+            if (!skuAlreadyIncluded) {
+                allEnsayos.unshift({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
+            }
+        }
+
+        const newAgrupador: CodigoAgrupador = {
+            id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+            codigoId: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
+            codigoNombre: dialogDescripcionServicio || `Código ${codigosAgrupadores.length + 1}`,
+            rcmsVinculados: rcmsToAssign,
+            ensayos: allEnsayos,
+            descripcionServicio: dialogDescripcionServicio,
+            cantidad: dialogCantidad,
+            unidad: 'unid',
+            facturacion: dialogSkuSearch.trim() ? 'Fijo' : 'Unitario'
+        }
+
+        setCodigosAgrupadores(prev => [...prev, newAgrupador])
+        setSelectedRcmIds([])
+        handleCloseCodigoPopup()
+    }
+
+    const handleAddToExistingAgrupador = () => {
+        if (!selectedExistingAgrupadorId) return
+
+        // Determinar los RCMs a agregar
+        const rcmsToAdd = selectedRcmIds.length > 0
+            ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
+                id: r.id,
+                numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
+                rcmType: r.rcmType
+            }))
+            : []
+
+        if (rcmsToAdd.length === 0) return
+
+        setCodigosAgrupadores(prev => prev.map(ag => {
+            if (ag.id !== selectedExistingAgrupadorId) return ag
+
+            // Evitar RCMs duplicados
+            const existingRcmIds = new Set(ag.rcmsVinculados.map(r => r.id))
+            const newRcms = rcmsToAdd.filter(r => !existingRcmIds.has(r.id))
+
+            // Recopilar ensayos de los nuevos RCMs sin duplicar
+            const existingEnsayoIds = new Set(ag.ensayos.map(e => e.productoId))
+            const newEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+
+            newRcms.forEach(rcmRef => {
                 const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
                 if (fullRcm) {
                     fullRcm.ensayos.forEach(e => {
-                        if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
-                        if (!ensayoNombre) ensayoNombre = e.nombre
+                        if (!existingEnsayoIds.has(e.productoId)) {
+                            existingEnsayoIds.add(e.productoId)
+                            newEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                        }
                     })
                 }
             })
 
-            // If only the current (unsaved) RCM, use ensayosAsociados
-            if (allSkus.length === 0 && ensayosAsociados.length > 0) {
-                ensayosAsociados.forEach(e => {
-                    if (!allSkus.includes(e.sku)) allSkus.push(e.sku)
-                    if (!ensayoNombre) ensayoNombre = e.nombre
-                })
+            return {
+                ...ag,
+                rcmsVinculados: [...ag.rcmsVinculados, ...newRcms],
+                ensayos: [...ag.ensayos, ...newEnsayos],
+                cantidad: ag.cantidad + newRcms.length
             }
+        }))
 
-            const newAgrupador: CodigoAgrupador = {
-                id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-                codigoId: codigo.id,
-                codigoNombre: codigo.nombre,
-                rcmsVinculados: rcmsToAssign,
-                ensayos: allSkus.map((sku, idx) => ({ productoId: idx, sku, nombre: ensayoNombre || codigo.nombre })),
-                descripcionServicio: codigo.descripcion || codigo.nombre,
-                cantidad: rcmsToAssign.length,
-                unidad: 'unid',
-                facturacion: 'Unitario'
-            }
-
-            setCodigosAgrupadores(prev => [...prev, newAgrupador])
-            setSelectedRcmIds([])
-        }
+        setSelectedRcmIds([])
         handleCloseCodigoPopup()
     }
 
@@ -901,6 +995,30 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             }
         }))
         handleCloseAgrupadorSearch()
+    }
+
+    const handleOpenSkuSearch = (event: React.MouseEvent<HTMLElement>) => {
+        setSkuSearchAnchor(event.currentTarget)
+        setSearchTerm(dialogSkuSearch)
+        // Pre-filtrar por area de los RCMs seleccionados
+        if (selectedRcmIds.length > 0) {
+            const firstRcm = savedRcms.find(r => selectedRcmIds.includes(r.id))
+            const areaId = firstRcm?.area ? areas.find(a => a.nombre === firstRcm.area || String(a.id) === String(firstRcm.area))?.id : null
+            if (areaId) setSelectedAreaId(areaId)
+        } else if (selectedAreaNombre) {
+            const areaId = areas.find(a => a.nombre === selectedAreaNombre)?.id ?? null
+            if (areaId) setSelectedAreaId(areaId)
+        }
+    }
+
+    const handleCloseSkuSearch = () => {
+        setSkuSearchAnchor(null)
+        setSearchTerm('')
+    }
+
+    const handleSelectProductForSku = (producto: ProductoType) => {
+        setDialogSkuSearch(producto.sku || producto.nombre)
+        handleCloseSkuSearch()
     }
 
     const handleRemoveEnsayoFromAgrupador = (agrupadorId: string, productoId: number) => {
@@ -1199,7 +1317,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Cargar productos con filtros
     useEffect(() => {
-        if (!anchorEl && !agrupadorSearchAnchor) return
+        if (!anchorEl && !agrupadorSearchAnchor && !skuSearchAnchor) return
 
         const fetchProductos = async () => {
             try {
@@ -1240,7 +1358,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -1250,24 +1368,66 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setPaginatedProductos(paginated)
     }, [allProductos, productsPage])
 
-    return (
-        <Card>
-            <Box sx={{ p: 6 }}>
-                {/* Fila superior: Título y Botones */}
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 4 }}>
-                    {/* Título y subtítulo */}
-                    <Box>
-                        <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
-                            Paso 2: Crear RCMs (Registro de Control de Muestras)
-                        </Typography>
-                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                            Registre las muestras, controles o servicios recolectados en terreno
-                        </Typography>
-                    </Box>
+    // Computar los IDs de RCMs que ya están agrupados (vinculados a algún código agrupador)
+    const rcmIdsAgrupados = new Set<number>()
+    codigosAgrupadores.forEach(ag => {
+        ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
+    })
 
-                    {/* Botones */}
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        {/* <Button
+    // Listado 1: Borradores → manejado por showRcmCard (formulario abierto)
+    // Listado 2: Creados (Pendientes de Agrupar) → guardados, SIN código producto
+    const rcmsCreados = savedRcms.filter(rcm => !rcmIdsAgrupados.has(rcm.id))
+    // Listado 3: Agrupados → guardados, CON código producto (vinculados a un agrupador)
+    const rcmsAgrupados = savedRcms.filter(rcm => rcmIdsAgrupados.has(rcm.id))
+
+    // Ref y estado para rastrear posición/ancho de la Card
+    const cardRef = useRef<HTMLDivElement>(null)
+    const [cardRect, setCardRect] = useState<{ left: number; width: number }>({ left: 0, width: 0 })
+
+    const updateCardRect = useCallback(() => {
+        if (cardRef.current) {
+            const rect = cardRef.current.getBoundingClientRect()
+            setCardRect({ left: rect.left, width: rect.width })
+        }
+    }, [])
+
+    useEffect(() => {
+        updateCardRect()
+        window.addEventListener('resize', updateCardRect)
+        window.addEventListener('scroll', updateCardRect, true)
+
+        let observer: ResizeObserver | null = null
+        if (cardRef.current) {
+            observer = new ResizeObserver(updateCardRect)
+            observer.observe(cardRef.current)
+        }
+
+        return () => {
+            window.removeEventListener('resize', updateCardRect)
+            window.removeEventListener('scroll', updateCardRect, true)
+            observer?.disconnect()
+        }
+    }, [updateCardRect])
+
+    return (
+        <>
+            <Card ref={cardRef}>
+                <Box sx={{ p: 6 }}>
+                    {/* Fila superior: Título y Botones */}
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 4 }}>
+                        {/* Título y subtítulo */}
+                        <Box>
+                            <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
+                                Paso 2: Crear RCMs (Registro de Control de Muestras)
+                            </Typography>
+                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                                Registre las muestras, controles o servicios recolectados en terreno
+                            </Typography>
+                        </Box>
+
+                        {/* Botones */}
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            {/* <Button
                             variant='outlined'
                             startIcon={<ContentCopyIcon />}
                             onClick={handleDuplicateLastRcm}
@@ -1285,478 +1445,511 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         >
                             Duplicar último RCM
                         </Button> */}
-                        <Button
-                            variant='contained'
-                            color='primary'
-                            startIcon={<AddIcon />}
-                            onClick={handleNewRcmClick}
-                            sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
-                        >
-                            Nuevo RCM
-                        </Button>
-                        <Menu
-                            anchorEl={newRcmMenuAnchor}
-                            open={Boolean(newRcmMenuAnchor)}
-                            onClose={() => setNewRcmMenuAnchor(null)}
-                            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                            transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                            slotProps={{
-                                paper: {
-                                    sx: {
-                                        minWidth: newRcmMenuAnchor?.offsetWidth || 'auto'
-                                    }
-                                }
-                            }}
-                        >
-                            <MenuItem onClick={() => handleSelectRcmType('Muestra')}>
-                                Muestra
-                            </MenuItem>
-                            <MenuItem onClick={() => handleSelectRcmType('Control')}>
-                                Control
-                            </MenuItem>
-                            <MenuItem onClick={() => handleSelectRcmType('Servicio')}>
-                                Servicio
-                            </MenuItem>
-                        </Menu>
-                    </Box>
-                </Box>
-
-                {/* RCM Card */}
-                {showRcmCard && (
-                    <Box
-                        sx={{
-                            bgcolor: '#E3F2FD',
-                            borderRadius: '8px',
-                            overflow: 'hidden'
-                        }}
-                    >
-                        {/* Header del RCM */}
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                p: 2,
-                                bgcolor: '#E3F2FD'
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <IconButton size='small' onClick={handleToggleExpand}>
-                                    <ExpandMoreIcon
-                                        sx={{
-                                            transform: expandedRcm ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                            transition: 'transform 0.3s'
-                                        }}
-                                    />
-                                </IconButton>
-                                <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
-                                {numeroTarjeta && (
-                                    <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                                        Tarjeta: {numeroTarjeta}
-                                    </Typography>
-                                )}
-                                {(tipoMaterial || item) && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                                        <LayersIcon fontSize='small' />
-                                        <Typography variant='body2'>
-                                            {tipoMaterial && `Material: ${tipoMaterial}`}
-                                            {tipoMaterial && item && ' • '}
-                                            {item && `Ítem: ${item}`}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Button
-                                    variant='outlined'
-                                    size='small'
-                                    onClick={handleOpenCodigoPopup}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '8px',
-                                        borderColor: '#1976D2',
-                                        color: '#1976D2',
-                                        fontWeight: 600,
-                                        px: 2,
-                                        '&:hover': {
-                                            borderColor: '#1565C0',
-                                            bgcolor: 'rgba(25, 118, 210, 0.04)'
+                            <Button
+                                variant='contained'
+                                color='primary'
+                                startIcon={<AddIcon />}
+                                onClick={handleNewRcmClick}
+                                sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+                            >
+                                Nuevo RCM
+                            </Button>
+                            <Menu
+                                anchorEl={newRcmMenuAnchor}
+                                open={Boolean(newRcmMenuAnchor)}
+                                onClose={() => setNewRcmMenuAnchor(null)}
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                slotProps={{
+                                    paper: {
+                                        sx: {
+                                            minWidth: newRcmMenuAnchor?.offsetWidth || 'auto'
                                         }
+                                    }
+                                }}
+                            >
+                                <MenuItem onClick={() => handleSelectRcmType('Muestra')}>
+                                    Muestra
+                                </MenuItem>
+                                <MenuItem onClick={() => handleSelectRcmType('Control')}>
+                                    Control
+                                </MenuItem>
+                                <MenuItem onClick={() => handleSelectRcmType('Servicio')}>
+                                    Servicio
+                                </MenuItem>
+                            </Menu>
+                        </Box>
+                    </Box>
+                    {/* ═══════════════════════════════════════════ */}
+                    {/* LISTADO 1: BORRADORES (formulario abierto) */}
+                    {/* ═══════════════════════════════════════════ */}
+                    {showRcmCard && (
+                        <Box sx={{ mt: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                                <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                    Borradores
+                                </Typography>
+                                <Chip
+                                    label='1'
+                                    size='small'
+                                    sx={{
+                                        fontWeight: 700,
+                                        bgcolor: '#EEEEEE',
+                                        color: '#616161',
+                                        border: '1px solid #BDBDBD',
+                                        minWidth: 28,
                                     }}
-                                >
-                                    Asignar a código / Crear nuevo código
-                                </Button>
-                                {isEditingRcm && (
-                                    <>
-                                        <Checkbox />
-                                        <IconButton size='small'>
-                                            <MoreVertIcon />
-                                        </IconButton>
-                                    </>
-                                )}
+                                />
                             </Box>
                         </Box>
+                    )}
 
-                        {/* Contenido colapsable del RCM */}
-                        <Collapse in={expandedRcm}>
-                            <Box sx={{ p: 3, bgcolor: 'white' }}>
-                                {/* Campos principales */}
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='RCM'
-                                            type='number'
-                                            disabled
-                                            fullWidth
-                                            placeholder='Automático'
-                                            InputProps={{
-                                                readOnly: true
+                    {/* RCM Card (Borrador) */}
+                    {showRcmCard && (
+                        <Box
+                            sx={{
+                                bgcolor: '#E3F2FD',
+                                borderRadius: '8px',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            {/* Header del RCM */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    p: 2,
+                                    bgcolor: '#E3F2FD'
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <IconButton size='small' onClick={handleToggleExpand}>
+                                        <ExpandMoreIcon
+                                            sx={{
+                                                transform: expandedRcm ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                transition: 'transform 0.3s'
                                             }}
                                         />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Fecha Codificación'
-                                            type='date'
-                                            value={fechaCodificacion}
-                                            required
-                                            fullWidth
-                                            disabled
-                                            InputLabelProps={{ shrink: true }}
-                                            InputProps={{
-                                                readOnly: true
-                                            }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Fecha de Servicio'
-                                            type='date'
-                                            value={fechaServicio}
-                                            onChange={(e) => setFechaServicio(e.target.value)}
-                                            required
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
-                                    {rcmType === 'Muestra' && (
+                                    </IconButton>
+                                    <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                    <Chip
+                                        label='Borrador'
+                                        size='small'
+                                        sx={{
+                                            fontWeight: 600,
+                                            bgcolor: '#EEEEEE',
+                                            color: '#616161',
+                                            border: '1px solid #BDBDBD',
+                                        }}
+                                    />
+                                    {numeroTarjeta && (
+                                        <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                                            Tarjeta: {numeroTarjeta}
+                                        </Typography>
+                                    )}
+                                    {(tipoMaterial || item) && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                                            <LayersIcon fontSize='small' />
+                                            <Typography variant='body2'>
+                                                {tipoMaterial && `Material: ${tipoMaterial}`}
+                                                {tipoMaterial && item && ' • '}
+                                                {item && `Ítem: ${item}`}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Button
+                                        variant='outlined'
+                                        size='small'
+                                        onClick={handleOpenCodigoPopup}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: '8px',
+                                            borderColor: '#1976D2',
+                                            color: '#1976D2',
+                                            fontWeight: 600,
+                                            px: 2,
+                                            '&:hover': {
+                                                borderColor: '#1565C0',
+                                                bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                            }
+                                        }}
+                                    >
+                                        Asignar a código / Crear nuevo código
+                                    </Button>
+                                    {isEditingRcm && (
+                                        <>
+                                            <Checkbox />
+                                            <IconButton size='small'>
+                                                <MoreVertIcon />
+                                            </IconButton>
+                                        </>
+                                    )}
+                                </Box>
+                            </Box>
+
+                            {/* Contenido colapsable del RCM */}
+                            <Collapse in={expandedRcm}>
+                                <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                    {/* Campos principales */}
+                                    <Grid container spacing={3}>
                                         <Grid item xs={12} md={3}>
                                             <TextField
-                                                label='Fecha de Ingreso'
+                                                label='RCM'
+                                                type='number'
+                                                disabled
+                                                fullWidth
+                                                placeholder='Automático'
+                                                InputProps={{
+                                                    readOnly: true
+                                                }}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Fecha Codificación'
                                                 type='date'
-                                                value={fechaIngreso}
-                                                onChange={(e) => setFechaIngreso(e.target.value)}
+                                                value={fechaCodificacion}
+                                                required
+                                                fullWidth
+                                                disabled
+                                                InputLabelProps={{ shrink: true }}
+                                                InputProps={{
+                                                    readOnly: true
+                                                }}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} md={3}>
+                                            <TextField
+                                                label='Fecha de Servicio'
+                                                type='date'
+                                                value={fechaServicio}
+                                                onChange={(e) => setFechaServicio(e.target.value)}
                                                 required
                                                 fullWidth
                                                 InputLabelProps={{ shrink: true }}
                                             />
                                         </Grid>
-                                    )}
-                                    <Grid item xs={12} md={3}>
-                                        <TextField
-                                            label='Fecha de Entrega'
-                                            type='date'
-                                            value={fechaEntrega}
-                                            onChange={(e) => setFechaEntrega(e.target.value)}
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel id="sede-label">Sede</InputLabel>
-                                            <Select
-                                                labelId="sede-label"
-                                                label='Sede'
-                                                value={sede}
-                                                onChange={(e) => {
-                                                    setSede(e.target.value)
-                                                    if (e.target.value !== 'Otro') {
-                                                        setCustomSede('')
-                                                    }
-                                                }}
-                                            >
-                                                <MenuItem value='PA Chillán'>PA Chillán</MenuItem>
-                                                <MenuItem value='PA Concepción'>PA Concepción</MenuItem>
-                                                <MenuItem value='Cliente'>Cliente</MenuItem>
-                                                <MenuItem value='Otro'>Otro</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    {sede === 'Otro' && (
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Fecha de Ingreso'
+                                                    type='date'
+                                                    value={fechaIngreso}
+                                                    onChange={(e) => setFechaIngreso(e.target.value)}
+                                                    required
+                                                    fullWidth
+                                                    InputLabelProps={{ shrink: true }}
+                                                />
+                                            </Grid>
+                                        )}
                                         <Grid item xs={12} md={3}>
                                             <TextField
-                                                label='Especificar Sede'
-                                                value={customSede}
-                                                onChange={(e) => setCustomSede(e.target.value)}
+                                                label='Fecha de Entrega'
+                                                type='date'
+                                                value={fechaEntrega}
+                                                onChange={(e) => setFechaEntrega(e.target.value)}
                                                 fullWidth
-                                                required
-                                                placeholder='Ingrese la sede'
+                                                InputLabelProps={{ shrink: true }}
                                             />
                                         </Grid>
-                                    )}
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel id="area-label" shrink>Área</InputLabel>
-                                            <Select
-                                                labelId="area-label"
-                                                label='Área'
-                                                value={area}
-                                                displayEmpty
-                                                notched
-                                                onChange={(e) => {
-                                                    const valor = e.target.value as number | ''
-                                                    setArea(valor)
-                                                    setTipoServicio('') // Limpiar servicio al cambiar área
-                                                }}
-                                            >
-                                                <MenuItem value='' disabled>Seleccionar área</MenuItem>
-                                                {areas.map((a) => (
-                                                    <MenuItem key={a.id} value={a.id}>
-                                                        {a.nombre}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControl fullWidth>
-                                            <InputLabel id="tipo-servicio-label" shrink>Tipo Servicio</InputLabel>
-                                            <Select
-                                                labelId="tipo-servicio-label"
-                                                label='Tipo Servicio'
-                                                value={tipoServicio}
-                                                displayEmpty
-                                                notched
-                                                disabled={!area}
-                                                onChange={(e) => setTipoServicio(e.target.value as number | '')}
-                                            >
-                                                <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
-                                                {todasLasFamilias
-                                                    .filter(f => f.areaId === area)
-                                                    .map((f) => (
-                                                        <MenuItem key={f.id} value={f.id}>
-                                                            {f.nombre}
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth>
+                                                <InputLabel id="sede-label">Sede</InputLabel>
+                                                <Select
+                                                    labelId="sede-label"
+                                                    label='Sede'
+                                                    value={sede}
+                                                    onChange={(e) => {
+                                                        setSede(e.target.value)
+                                                        if (e.target.value !== 'Otro') {
+                                                            setCustomSede('')
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value='PA Chillán'>PA Chillán</MenuItem>
+                                                    <MenuItem value='PA Concepción'>PA Concepción</MenuItem>
+                                                    <MenuItem value='Cliente'>Cliente</MenuItem>
+                                                    <MenuItem value='Otro'>Otro</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        {sede === 'Otro' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Especificar Sede'
+                                                    value={customSede}
+                                                    onChange={(e) => setCustomSede(e.target.value)}
+                                                    fullWidth
+                                                    required
+                                                    placeholder='Ingrese la sede'
+                                                />
+                                            </Grid>
+                                        )}
+                                        <Grid item xs={12} md={4}>
+                                            <FormControl fullWidth>
+                                                <InputLabel id="area-label" shrink>Área</InputLabel>
+                                                <Select
+                                                    labelId="area-label"
+                                                    label='Área'
+                                                    value={area}
+                                                    displayEmpty
+                                                    notched
+                                                    onChange={(e) => {
+                                                        const valor = e.target.value as number | ''
+                                                        setArea(valor)
+                                                        setTipoServicio('') // Limpiar servicio al cambiar área
+                                                    }}
+                                                >
+                                                    <MenuItem value='' disabled>Seleccionar área</MenuItem>
+                                                    {areas.map((a) => (
+                                                        <MenuItem key={a.id} value={a.id}>
+                                                            {a.nombre}
                                                         </MenuItem>
-                                                    ))
-                                                }
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    {rcmType === 'Muestra' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Nº Tarjeta'
-                                                value={numeroTarjeta}
-                                                onChange={(e) => setNumeroTarjeta(e.target.value)}
-                                                required
-                                                fullWidth
-                                            />
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
                                         </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='# Toma de Muestra'
-                                                value={tomaMuestra}
-                                                onChange={(e) => setTomaMuestra(e.target.value)}
-                                                fullWidth
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && (
-                                        <Grid item xs={12} md={3}>
+                                        <Grid item xs={12} md={4}>
                                             <FormControl fullWidth>
-                                                <InputLabel>Tipo Material</InputLabel>
+                                                <InputLabel id="tipo-servicio-label" shrink>Tipo Servicio</InputLabel>
                                                 <Select
-                                                    label='Tipo Material'
-                                                    value={tipoMaterial}
-                                                    onChange={(e) => setTipoMaterial(e.target.value)}
+                                                    labelId="tipo-servicio-label"
+                                                    label='Tipo Servicio'
+                                                    value={tipoServicio}
+                                                    displayEmpty
+                                                    notched
+                                                    disabled={!area}
+                                                    onChange={(e) => setTipoServicio(e.target.value as number | '')}
                                                 >
-                                                    <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
-                                                    <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
-                                                    <MenuItem value='Hormigón'>Hormigón</MenuItem>
-                                                    <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                    <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
+                                                    {todasLasFamilias
+                                                        .filter(f => f.areaId === area)
+                                                        .map((f) => (
+                                                            <MenuItem key={f.id} value={f.id}>
+                                                                {f.nombre}
+                                                            </MenuItem>
+                                                        ))
+                                                    }
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Nº Tarjeta'
+                                                    value={numeroTarjeta}
+                                                    onChange={(e) => setNumeroTarjeta(e.target.value)}
+                                                    required
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='# Toma de Muestra'
+                                                    value={tomaMuestra}
+                                                    onChange={(e) => setTomaMuestra(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={3}>
+                                                <FormControl fullWidth>
+                                                    <InputLabel>Tipo Material</InputLabel>
+                                                    <Select
+                                                        label='Tipo Material'
+                                                        value={tipoMaterial}
+                                                        onChange={(e) => setTipoMaterial(e.target.value)}
+                                                    >
+                                                        <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
+                                                        <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
+                                                        <MenuItem value='Hormigón'>Hormigón</MenuItem>
+                                                        <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                        <MenuItem value='Otro'>Otro</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && tipoMaterial === 'Otro' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Especificar Material'
+                                                    value={customTipoMaterial}
+                                                    onChange={(e) => setCustomTipoMaterial(e.target.value)}
+                                                    fullWidth
+                                                    required
+                                                    placeholder='Ingrese el tipo de material'
+                                                />
+                                            </Grid>
+                                        )}
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth required>
+                                                <InputLabel>Ítem</InputLabel>
+                                                <Select
+                                                    label='Ítem'
+                                                    value={item}
+                                                    onChange={(e) => setItem(e.target.value)}
+                                                >
+                                                    <MenuItem value='Base'>Base</MenuItem>
+                                                    <MenuItem value='Subbase'>Subbase</MenuItem>
+                                                    <MenuItem value='Subrasante'>Subrasante</MenuItem>
+                                                    <MenuItem value='Terraplén'>Terraplén</MenuItem>
                                                     <MenuItem value='Otro'>Otro</MenuItem>
                                                 </Select>
                                             </FormControl>
                                         </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && tipoMaterial === 'Otro' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Especificar Material'
-                                                value={customTipoMaterial}
-                                                onChange={(e) => setCustomTipoMaterial(e.target.value)}
-                                                fullWidth
-                                                required
-                                                placeholder='Ingrese el tipo de material'
-                                            />
-                                        </Grid>
-                                    )}
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth required>
-                                            <InputLabel>Ítem</InputLabel>
-                                            <Select
-                                                label='Ítem'
-                                                value={item}
-                                                onChange={(e) => setItem(e.target.value)}
-                                            >
-                                                <MenuItem value='Base'>Base</MenuItem>
-                                                <MenuItem value='Subbase'>Subbase</MenuItem>
-                                                <MenuItem value='Subrasante'>Subrasante</MenuItem>
-                                                <MenuItem value='Terraplén'>Terraplén</MenuItem>
-                                                <MenuItem value='Otro'>Otro</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    {item === 'Otro' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Especificar Ítem'
-                                                value={customItem}
-                                                onChange={(e) => setCustomItem(e.target.value)}
-                                                fullWidth
-                                                required
-                                                placeholder='Ingrese el ítem'
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Elemento'
-                                                value={elemento}
-                                                onChange={(e) => setElemento(e.target.value)}
-                                                fullWidth
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
-                                        <Grid item xs={12} md={3}>
-                                            <FormControl fullWidth>
-                                                <InputLabel>Grado</InputLabel>
-                                                <Select
-                                                    label='Grado'
-                                                    value={grado}
-                                                    onChange={(e) => setGrado(e.target.value)}
-                                                >
-                                                    <MenuItem value='1'>Grado 1</MenuItem>
-                                                    <MenuItem value='2'>Grado 2</MenuItem>
-                                                    <MenuItem value='3'>Grado 3</MenuItem>
-                                                    <MenuItem value='4'>Grado 4</MenuItem>
-                                                    <MenuItem value='Otro'>Otro</MenuItem>
-                                                </Select>
-                                            </FormControl>
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && grado === 'Otro' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Especificar Grado'
-                                                value={customGrado}
-                                                onChange={(e) => setCustomGrado(e.target.value)}
-                                                fullWidth
-                                                required
-                                                placeholder='Ingrese el grado'
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Calicata'
-                                                type='number'
-                                                value={calicata}
-                                                onChange={(e) => setCalicata(e.target.value)}
-                                                fullWidth
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Estrato'
-                                                type='number'
-                                                value={estrato}
-                                                onChange={(e) => setEstrato(e.target.value)}
-                                                fullWidth
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
-                                        <>
+                                        {item === 'Otro' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
-                                                    label='Cota 1'
-                                                    type='number'
-                                                    value={cota1}
-                                                    onChange={(e) => setCota1(e.target.value)}
+                                                    label='Especificar Ítem'
+                                                    value={customItem}
+                                                    onChange={(e) => setCustomItem(e.target.value)}
+                                                    fullWidth
+                                                    required
+                                                    placeholder='Ingrese el ítem'
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Elemento'
+                                                    value={elemento}
+                                                    onChange={(e) => setElemento(e.target.value)}
                                                     fullWidth
                                                 />
                                             </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                            <Grid item xs={12} md={3}>
+                                                <FormControl fullWidth>
+                                                    <InputLabel>Grado</InputLabel>
+                                                    <Select
+                                                        label='Grado'
+                                                        value={grado}
+                                                        onChange={(e) => setGrado(e.target.value)}
+                                                    >
+                                                        <MenuItem value='1'>Grado 1</MenuItem>
+                                                        <MenuItem value='2'>Grado 2</MenuItem>
+                                                        <MenuItem value='3'>Grado 3</MenuItem>
+                                                        <MenuItem value='4'>Grado 4</MenuItem>
+                                                        <MenuItem value='Otro'>Otro</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && grado === 'Otro' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
-                                                    label='Cota 2'
+                                                    label='Especificar Grado'
+                                                    value={customGrado}
+                                                    onChange={(e) => setCustomGrado(e.target.value)}
+                                                    fullWidth
+                                                    required
+                                                    placeholder='Ingrese el grado'
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Calicata'
                                                     type='number'
-                                                    value={cota2}
-                                                    onChange={(e) => setCota2(e.target.value)}
+                                                    value={calicata}
+                                                    onChange={(e) => setCalicata(e.target.value)}
                                                     fullWidth
                                                 />
                                             </Grid>
-                                        </>
-                                    )}
-                                    {rcmType === 'Muestra' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField
-                                                label='Cantidad de Muestras'
-                                                type='number'
-                                                value={cantidadMuestras}
-                                                onChange={(e) => {
-                                                    setErrorVencimiento('') // Limpiar error al modificar cantidad
-                                                    setCantidadMuestras(e.target.value)
-                                                }}
-                                                required
-                                                fullWidth
-                                            />
-                                        </Grid>
-                                    )}
-                                    {rcmType === 'Muestra' && (
+                                        )}
+                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Estrato'
+                                                    type='number'
+                                                    value={estrato}
+                                                    onChange={(e) => setEstrato(e.target.value)}
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                            <>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Cota 1'
+                                                        type='number'
+                                                        value={cota1}
+                                                        onChange={(e) => setCota1(e.target.value)}
+                                                        fullWidth
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Cota 2'
+                                                        type='number'
+                                                        value={cota2}
+                                                        onChange={(e) => setCota2(e.target.value)}
+                                                        fullWidth
+                                                    />
+                                                </Grid>
+                                            </>
+                                        )}
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={3}>
+                                                <TextField
+                                                    label='Cantidad de Muestras'
+                                                    type='number'
+                                                    value={cantidadMuestras}
+                                                    onChange={(e) => {
+                                                        setErrorVencimiento('') // Limpiar error al modificar cantidad
+                                                        setCantidadMuestras(e.target.value)
+                                                    }}
+                                                    required
+                                                    fullWidth
+                                                />
+                                            </Grid>
+                                        )}
+                                        {rcmType === 'Muestra' && (
+                                            <Grid item xs={12} md={4}>
+                                                <TextField
+                                                    label='Procedencia'
+                                                    value={procedencia}
+                                                    onChange={(e) => setProcedencia(e.target.value)}
+                                                    fullWidth
+                                                    multiline
+                                                    rows={3}
+                                                />
+                                            </Grid>
+                                        )}
                                         <Grid item xs={12} md={4}>
                                             <TextField
-                                                label='Procedencia'
-                                                value={procedencia}
-                                                onChange={(e) => setProcedencia(e.target.value)}
+                                                label='Ubicación/Sector'
+                                                value={ubicacionSector}
+                                                onChange={(e) => setUbicacionSector(e.target.value)}
                                                 fullWidth
                                                 multiline
                                                 rows={3}
                                             />
                                         </Grid>
-                                    )}
-                                    <Grid item xs={12} md={4}>
-                                        <TextField
-                                            label='Ubicación/Sector'
-                                            value={ubicacionSector}
-                                            onChange={(e) => setUbicacionSector(e.target.value)}
-                                            fullWidth
-                                            multiline
-                                            rows={3}
-                                        />
-                                    </Grid>
-                                    {rcmType === 'Control' && (
-                                        <Grid item xs={12} md={4}>
-                                            <TextField
-                                                label='Observación al Ítem'
-                                                value={observacionItem}
-                                                onChange={(e) => setObservacionItem(e.target.value)}
-                                                fullWidth
-                                                multiline
-                                                rows={3}
-                                                placeholder='Ingrese observaciones sobre el ítem...'
-                                            />
-                                        </Grid>
-                                    )}
-                                    {/* <Grid item xs={12} md={4}>
+                                        {rcmType === 'Control' && (
+                                            <Grid item xs={12} md={4}>
+                                                <TextField
+                                                    label='Observación al Ítem'
+                                                    value={observacionItem}
+                                                    onChange={(e) => setObservacionItem(e.target.value)}
+                                                    fullWidth
+                                                    multiline
+                                                    rows={3}
+                                                    placeholder='Ingrese observaciones sobre el ítem...'
+                                                />
+                                            </Grid>
+                                        )}
+                                        {/* <Grid item xs={12} md={4}>
                                         <FormControl fullWidth>
                                             <InputLabel>Estado</InputLabel>
                                             <Select label='Estado' defaultValue='codificado'>
@@ -1766,217 +1959,51 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Select>
                                         </FormControl>
                                     </Grid> */}
-                                    <Grid item xs={12} md={4}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={tieneVencimiento}
-                                                    onChange={(e) => setTieneVencimiento(e.target.checked)}
-                                                />
-                                            }
-                                            label='Vencimiento'
-                                        />
+                                        <Grid item xs={12} md={4}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        checked={tieneVencimiento}
+                                                        onChange={(e) => setTieneVencimiento(e.target.checked)}
+                                                    />
+                                                }
+                                                label='Vencimiento'
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} md={4}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        checked={informeEnsayo}
+                                                        onChange={(e) => setInformeEnsayo(e.target.checked)}
+                                                    />
+                                                }
+                                                label='Informe Ensayo'
+                                            />
+                                        </Grid>
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={informeEnsayo}
-                                                    onChange={(e) => setInformeEnsayo(e.target.checked)}
-                                                />
-                                            }
-                                            label='Informe Ensayo'
-                                        />
-                                    </Grid>
-                                </Grid>
 
-                                {/* Ensayos Asociados */}
-                                <Box sx={{ mt: 4 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                        <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                                            Ensayos Asociados
-                                        </Typography>
-                                        <Button
-                                            startIcon={<SearchIcon />}
-                                            variant='outlined'
-                                            sx={{ textTransform: 'none' }}
-                                            onClick={handleOpenSearchPopover}
-                                        >
-                                            Buscar ensayo
-                                        </Button>
-                                    </Box>
-
-                                    {/* Tabla de ensayos */}
-                                    {ensayosAsociados.length === 0 ? (
-                                        <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
-                                            <Typography variant='body2' color='text.secondary'>
-                                                No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
-                                            </Typography>
-                                        </Box>
-                                    ) : (
-                                        <Box sx={{ overflowX: 'auto' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                <thead>
-                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
-                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Observación</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
-                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {ensayosAsociados.map(ensayo => (
-                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
-                                                                    {ensayo.sku}
-                                                                </Typography>
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Typography variant='body2'>
-                                                                    {ensayo.nombre}
-                                                                </Typography>
-                                                                {ensayo.norma && (
-                                                                    <Typography variant='caption' color='text.secondary'>
-                                                                        {ensayo.norma}
-                                                                    </Typography>
-                                                                )}
-                                                            </td>
-                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                <TextField
-                                                                    size='small'
-                                                                    value={ensayo.cantidad}
-                                                                    onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                                    type='number'
-                                                                    sx={{ width: '80px' }}
-                                                                    inputProps={{ min: 1 }}
-                                                                />
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <TextField
-                                                                    size='small'
-                                                                    fullWidth
-                                                                    value={ensayo.observacion}
-                                                                    onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
-                                                                    placeholder='Observación...'
-                                                                />
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Chip
-                                                                    label={ensayo.estadoOperativo}
-                                                                    size='small'
-                                                                    onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
-                                                                    color={
-                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                    'success'
-                                                                    }
-                                                                    sx={{ cursor: 'pointer' }}
-                                                                />
-                                                            </td>
-                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                <IconButton
-                                                                    size='small'
-                                                                    color='error'
-                                                                    onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                                >
-                                                                    <DeleteIcon fontSize='small' />
-                                                                </IconButton>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </Box>
-                                    )}
-
-                                    {/* Menu para seleccionar estado operativo */}
-                                    <Menu
-                                        anchorEl={statusMenuAnchor}
-                                        open={Boolean(statusMenuAnchor)}
-                                        onClose={handleCloseStatusMenu}
-                                    >
-                                        <MenuItem onClick={() => handleSelectStatus('Codificado')}>
-                                            <Chip
-                                                label='Codificado'
-                                                size='small'
-                                                color='default'
-                                            />
-                                        </MenuItem>
-                                        <MenuItem onClick={() => handleSelectStatus('En Proceso')}>
-                                            <Chip
-                                                label='En Proceso'
-                                                size='small'
-                                                color='info'
-                                            />
-                                        </MenuItem>
-                                        <MenuItem onClick={() => handleSelectStatus('Ensayado')}>
-                                            <Chip
-                                                label='Ensayado'
-                                                size='small'
-                                                color='warning'
-                                            />
-                                        </MenuItem>
-                                    </Menu>
-                                </Box>
-
-                                {/* Tabla de Submuestras con Vencimiento */}
-                                {tieneVencimiento && (
+                                    {/* Ensayos Asociados */}
                                     <Box sx={{ mt: 4 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                            <Box>
-                                                <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                                                    Submuestras con Vencimiento
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
-                                                    <Typography variant='body2' color='text.secondary'>
-                                                        Cantidad requerida: {cantidadMuestras}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant='body2'
-                                                        sx={{
-                                                            color: submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0) === parseInt(cantidadMuestras || '0')
-                                                                ? 'success.main'
-                                                                : 'warning.main',
-                                                            fontWeight: 600
-                                                        }}
-                                                    >
-                                                        Suma actual: {submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                                            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                                Ensayos Asociados
+                                            </Typography>
                                             <Button
-                                                startIcon={<AddIcon />}
+                                                startIcon={<SearchIcon />}
                                                 variant='outlined'
-                                                size='small'
                                                 sx={{ textTransform: 'none' }}
-                                                onClick={() => {
-                                                    setErrorVencimiento('') // Limpiar error al agregar
-                                                    const newId = submuestrasVencimiento.length > 0
-                                                        ? Math.max(...submuestrasVencimiento.map(s => s.id)) + 1
-                                                        : 1
-                                                    const newNumero = submuestrasVencimiento.length + 1
-                                                    setSubmuestrasVencimiento([...submuestrasVencimiento, {
-                                                        id: newId,
-                                                        submuestra: `RCM - ${newNumero}`,
-                                                        numero: newNumero,
-                                                        dias: 0,
-                                                        fechaVencimiento: '',
-                                                        cantidad: 1
-                                                    }])
-                                                }}
+                                                onClick={handleOpenSearchPopover}
                                             >
-                                                Agregar Submuestra
+                                                Buscar ensayo
                                             </Button>
                                         </Box>
 
-                                        {submuestrasVencimiento.length === 0 ? (
+                                        {/* Tabla de ensayos */}
+                                        {ensayosAsociados.length === 0 ? (
                                             <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
                                                 <Typography variant='body2' color='text.secondary'>
-                                                    No hay submuestras. Haz clic en "Agregar Submuestra" para añadir.
+                                                    No hay ensayos asociados. Haz clic en "Buscar ensayo" para agregar.
                                                 </Typography>
                                             </Box>
                                         ) : (
@@ -1984,113 +2011,70 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                     <thead>
                                                         <tr style={{ backgroundColor: '#F5F5F5' }}>
-
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
-                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Acciones</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Observación</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>Acciones</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {submuestrasVencimiento.map((submuestra) => (
-                                                            <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-
+                                                        {ensayosAsociados.map(ensayo => (
+                                                            <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                        {ensayo.sku}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2'>
+                                                                        {ensayo.nombre}
+                                                                    </Typography>
+                                                                    {ensayo.norma && (
+                                                                        <Typography variant='caption' color='text.secondary'>
+                                                                            {ensayo.norma}
+                                                                        </Typography>
+                                                                    )}
+                                                                </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
                                                                         size='small'
+                                                                        value={ensayo.cantidad}
+                                                                        onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
                                                                         type='number'
-                                                                        value={submuestra.numero}
-                                                                        onChange={(e) => {
-                                                                            const numero = parseInt(e.target.value) || 0
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                s.id === submuestra.id
-                                                                                    ? { ...s, numero }
-                                                                                    : s
-                                                                            ))
-                                                                        }}
-                                                                        sx={{ width: '70px' }}
+                                                                        sx={{ width: '80px' }}
                                                                         inputProps={{ min: 1 }}
                                                                     />
                                                                 </td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <td style={{ padding: '12px' }}>
                                                                     <TextField
                                                                         size='small'
-                                                                        type='number'
-                                                                        value={submuestra.dias}
-                                                                        onChange={(e) => {
-                                                                            const dias = parseInt(e.target.value) || 0
-                                                                            const fechaBase = new Date(fechaServicio || getTodayDateForInput())
-                                                                            fechaBase.setDate(fechaBase.getDate() + dias)
-                                                                            const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
-
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                s.id === submuestra.id
-                                                                                    ? { ...s, dias, fechaVencimiento: fechaVenc }
-                                                                                    : s
-                                                                            ))
-                                                                        }}
-                                                                        sx={{ width: '100px' }}
-                                                                        inputProps={{ min: 0 }}
+                                                                        fullWidth
+                                                                        value={ensayo.observacion}
+                                                                        onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
+                                                                        placeholder='Observación...'
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Chip
+                                                                        label={ensayo.estadoOperativo}
+                                                                        size='small'
+                                                                        onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
+                                                                        color={
+                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                        'success'
+                                                                        }
+                                                                        sx={{ cursor: 'pointer' }}
                                                                     />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                                                                        <DatePicker
-                                                                            value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
-                                                                            minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
-                                                                            onChange={(newValue) => {
-                                                                                const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
-                                                                                const fechaBase = new Date(fechaServicio || getTodayDateForInput())
-                                                                                const fechaVenc = new Date(nuevaFecha)
-                                                                                const diffTime = fechaVenc.getTime() - fechaBase.getTime()
-                                                                                const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
-                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                    s.id === submuestra.id
-                                                                                        ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 }
-                                                                                        : s
-                                                                                ))
-                                                                            }}
-                                                                            slotProps={{
-                                                                                textField: { size: 'small', sx: { width: '170px' } }
-                                                                            }}
-                                                                        />
-                                                                    </LocalizationProvider>
-                                                                </td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <TextField
-                                                                        size='small'
-                                                                        type='number'
-                                                                        value={submuestra.cantidad}
-                                                                        onChange={(e) => {
-                                                                            setErrorVencimiento('') // Limpiar error al modificar
-                                                                            const cantidad = parseInt(e.target.value) || 1
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                s.id === submuestra.id
-                                                                                    ? { ...s, cantidad }
-                                                                                    : s
-                                                                            ))
-                                                                        }}
-                                                                        sx={{ width: '100px' }}
-                                                                        inputProps={{ min: 1 }}
-                                                                    />
-                                                                </td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <IconButton
-                                                                        size='small'
-                                                                        onClick={() => {
-                                                                            // TODO: Implementar edición
-                                                                        }}
-                                                                    >
-                                                                        <EditIcon fontSize='small' />
-                                                                    </IconButton>
                                                                     <IconButton
                                                                         size='small'
                                                                         color='error'
-                                                                        onClick={() => {
-                                                                            setErrorVencimiento('') // Limpiar error al eliminar
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.filter(s => s.id !== submuestra.id))
-                                                                        }}
+                                                                        onClick={() => handleDeleteEnsayo(ensayo.id)}
                                                                     >
                                                                         <DeleteIcon fontSize='small' />
                                                                     </IconButton>
@@ -2101,588 +2085,1048 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </table>
                                             </Box>
                                         )}
+
+                                        {/* Menu para seleccionar estado operativo */}
+                                        <Menu
+                                            anchorEl={statusMenuAnchor}
+                                            open={Boolean(statusMenuAnchor)}
+                                            onClose={handleCloseStatusMenu}
+                                        >
+                                            <MenuItem onClick={() => handleSelectStatus('Codificado')}>
+                                                <Chip
+                                                    label='Codificado'
+                                                    size='small'
+                                                    color='default'
+                                                />
+                                            </MenuItem>
+                                            <MenuItem onClick={() => handleSelectStatus('En Proceso')}>
+                                                <Chip
+                                                    label='En Proceso'
+                                                    size='small'
+                                                    color='info'
+                                                />
+                                            </MenuItem>
+                                            <MenuItem onClick={() => handleSelectStatus('Ensayado')}>
+                                                <Chip
+                                                    label='Ensayado'
+                                                    size='small'
+                                                    color='warning'
+                                                />
+                                            </MenuItem>
+                                        </Menu>
                                     </Box>
-                                )}
 
-                                {/* Observaciones */}
-                                <Box sx={{ mt: 4 }}>
-                                    <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
-                                        Observaciones
-                                    </Typography>
-                                    <TextField
-                                        multiline
-                                        rows={3}
-                                        fullWidth
-                                    />
-                                </Box>
-
-                                {/* Botón Guardar RCM */}
-                                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                                    <Button
-                                        variant='outlined'
-                                        color='error'
-                                        sx={{ textTransform: 'none', px: 4 }}
-                                        onClick={handleCancelEdit}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button
-                                        variant='contained'
-                                        color='primary'
-                                        sx={{ textTransform: 'none', px: 4 }}
-                                        onClick={handleSaveRcm}
-                                    >
-                                        Guardar RCM
-                                    </Button>
-                                </Box>
-                            </Box>
-                        </Collapse>
-                    </Box>
-                )}
-
-                {/* Lista de RCMs guardados */}
-                {savedRcms.length > 0 && (
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
-                            RCMs Creados ({savedRcms.length})
-                        </Typography>
-                        {savedRcms.map(rcm => (
-                            <Box
-                                key={rcm.id}
-                                sx={{
-                                    bgcolor: '#E3F2FD',
-                                    borderRadius: '8px',
-                                    overflow: 'hidden',
-                                    mb: 2
-                                }}
-                            >
-                                {/* Header del RCM guardado */}
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        p: 2,
-                                        bgcolor: '#E3F2FD',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={() => handleToggleSavedRcm(rcm.id)}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                        <IconButton size='small'>
-                                            <ExpandMoreIcon
-                                                sx={{
-                                                    transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                                    transition: 'transform 0.3s'
-                                                }}
-                                            />
-                                        </IconButton>
-                                        <Chip
-                                            label={rcm.rcmType.toUpperCase()}
-                                            color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
-                                            sx={{ fontWeight: 'bold' }}
-                                        />
-
-                                        {/* Mostrar estado del RCM */}
-                                        <Chip
-                                            label={rcm.estado}
-                                            size='small'
-                                            color={rcm.estado === 'Codificado' ? 'default' : rcm.estado === 'Ensayado' ? 'warning' : 'info'}
-                                            sx={{ fontWeight: 500 }}
-                                        />
-
-                                        {/* Mostrar estado de agrupación según tipo */}
-                                        <Chip
-                                            label={rcm.rcmType === 'Muestra' ? 'Pendiente de agrupar' : 'Agrupado'}
-                                            size='small'
-                                            sx={{
-                                                fontWeight: 600,
-                                                bgcolor: rcm.rcmType === 'Muestra' ? '#FFF3E0' : '#E8F5E9',
-                                                color: rcm.rcmType === 'Muestra' ? '#E65100' : '#2E7D32',
-                                                border: rcm.rcmType === 'Muestra' ? '1px solid #FFB74D' : '1px solid #81C784',
-                                            }}
-                                        />
-
-                                        {/* Mostrar campos según el tipo de RCM */}
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-
-                                            {/* MUESTRA: Sede | Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
-                                            {rcm.rcmType === 'Muestra' && (
-                                                <>
-                                                    {rcm.sede && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.sede}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.area && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.area}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.tipoServicio && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.numeroTarjeta && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.tomaMuestra && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>#{rcm.tomaMuestra}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.tipoMaterial && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.tipoMaterial}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.item && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.item}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.procedencia && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.procedencia}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.ensayos.length > 0 && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
-                                                        </>
-                                                    )}
-                                                    <>
-                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                        <Typography variant='body2'>
-                                                            {(() => {
-                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                                    const fechas = rcm.submuestrasVencimiento
-                                                                        .map(sub => sub.fechaVencimiento)
-                                                                        .filter(f => !!f)
-                                                                        .sort()
-                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                                }
-                                                                return formatDateOnly(rcm.fechaServicio)
-                                                            })()}
+                                    {/* Tabla de Submuestras con Vencimiento */}
+                                    {tieneVencimiento && (
+                                        <Box sx={{ mt: 4 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                                <Box>
+                                                    <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                                        Submuestras con Vencimiento
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                                                        <Typography variant='body2' color='text.secondary'>
+                                                            Cantidad requerida: {cantidadMuestras}
                                                         </Typography>
-                                                    </>
-                                                    {rcm.cantidadMuestras && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-
-                                            {/* CONTROL: Sede | Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
-                                            {rcm.rcmType === 'Control' && (
-                                                <>
-                                                    {rcm.sede && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.sede}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.area && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.area}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.tipoServicio && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
-                                                        </>
-                                                    )}
-                                                    <>
-                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                        <Typography variant='body2'>
-                                                            {(() => {
-                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                                    const fechas = rcm.submuestrasVencimiento
-                                                                        .map(sub => sub.fechaVencimiento)
-                                                                        .filter(f => !!f)
-                                                                        .sort()
-                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                                }
-                                                                return formatDateOnly(rcm.fechaServicio)
-                                                            })()}
+                                                        <Typography
+                                                            variant='body2'
+                                                            sx={{
+                                                                color: submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0) === parseInt(cantidadMuestras || '0')
+                                                                    ? 'success.main'
+                                                                    : 'warning.main',
+                                                                fontWeight: 600
+                                                            }}
+                                                        >
+                                                            Suma actual: {submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)}
                                                         </Typography>
-                                                    </>
-                                                    {rcm.item && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.item}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.ensayos.length > 0 && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.cantidadMuestras && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
+                                                    </Box>
+                                                </Box>
+                                                <Button
+                                                    startIcon={<AddIcon />}
+                                                    variant='outlined'
+                                                    size='small'
+                                                    sx={{ textTransform: 'none' }}
+                                                    onClick={() => {
+                                                        setErrorVencimiento('') // Limpiar error al agregar
+                                                        const newId = submuestrasVencimiento.length > 0
+                                                            ? Math.max(...submuestrasVencimiento.map(s => s.id)) + 1
+                                                            : 1
+                                                        const newNumero = submuestrasVencimiento.length + 1
+                                                        setSubmuestrasVencimiento([...submuestrasVencimiento, {
+                                                            id: newId,
+                                                            submuestra: `RCM - ${newNumero}`,
+                                                            numero: newNumero,
+                                                            dias: 0,
+                                                            fechaVencimiento: '',
+                                                            cantidad: 1
+                                                        }])
+                                                    }}
+                                                >
+                                                    Agregar Submuestra
+                                                </Button>
+                                            </Box>
 
-                                            {/* SERVICIO: Sede | Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
-                                            {rcm.rcmType === 'Servicio' && (
-                                                <>
-                                                    {rcm.sede && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.sede}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.area && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.area}</Typography>
-                                                        </>
-                                                    )}
-                                                    {rcm.tipoServicio && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.tipoServicio}</Typography>
-                                                        </>
-                                                    )}
-                                                    <>
-                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                        <Typography variant='body2'>
-                                                            {(() => {
-                                                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                                    const fechas = rcm.submuestrasVencimiento
-                                                                        .map(sub => sub.fechaVencimiento)
-                                                                        .filter(f => !!f)
-                                                                        .sort()
-                                                                    if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                    if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                    return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                                }
-                                                                return formatDateOnly(rcm.fechaServicio)
-                                                            })()}
-                                                        </Typography>
-                                                    </>
-                                                    {rcm.cantidadMuestras && (
-                                                        <>
-                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                        <Checkbox
-                                            size='small'
-                                            checked={selectedRcmIds.includes(rcm.id)}
-                                            onChange={() => handleToggleRcmSelection(rcm.id)}
-                                        />
-                                        <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
-                                            <MoreVertIcon />
-                                        </IconButton>
-                                    </Box>
-                                </Box>
-
-                                {/* Contenido expandible del RCM guardado */}
-                                <Collapse in={expandedSavedRcms[rcm.id]}>
-                                    <Box sx={{ p: 3, bgcolor: 'white' }}>
-                                        <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
-                                            Ensayos Asociados ({rcm.ensayos.length})
-                                        </Typography>
-                                        <Box sx={{ overflowX: 'auto' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                <thead>
-                                                    <tr style={{ backgroundColor: '#F5F5F5' }}>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
-                                                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
-                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {rcm.ensayos.map(ensayo => (
-                                                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
-                                                                    {ensayo.sku}
-                                                                </Typography>
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Typography variant='body2'>
-                                                                    {ensayo.nombre}
-                                                                </Typography>
-                                                                {ensayo.norma && (
-                                                                    <Typography variant='caption' color='text.secondary'>
-                                                                        {ensayo.norma}
-                                                                    </Typography>
-                                                                )}
-                                                            </td>
-                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                                    {ensayo.cantidad}
-                                                                </Typography>
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Typography variant='body2' color='text.secondary'>
-                                                                    {ensayo.observacion || '-'}
-                                                                </Typography>
-                                                            </td>
-                                                            <td style={{ padding: '12px' }}>
-                                                                <Chip
-                                                                    label={ensayo.estadoOperativo}
-                                                                    size='small'
-                                                                    color={
-                                                                        ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                            ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                    'success'
-                                                                    }
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </Box>
-
-                                        {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
-                                            <>
-                                                <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, mt: 4 }}>
-                                                    Submuestras con Vencimiento ({rcm.submuestrasVencimiento.length})
-                                                </Typography>
+                                            {submuestrasVencimiento.length === 0 ? (
+                                                <Box sx={{ p: 3, textAlign: 'center', bgcolor: '#F5F5F5', borderRadius: '8px' }}>
+                                                    <Typography variant='body2' color='text.secondary'>
+                                                        No hay submuestras. Haz clic en "Agregar Submuestra" para añadir.
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
                                                 <Box sx={{ overflowX: 'auto' }}>
                                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                         <thead>
                                                             <tr style={{ backgroundColor: '#F5F5F5' }}>
+
                                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
                                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
                                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
                                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
+                                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Acciones</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {rcm.submuestrasVencimiento.map((submuestra) => (
+                                                            {submuestrasVencimiento.map((submuestra) => (
                                                                 <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+
                                                                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                        <Typography variant='body2'>{submuestra.numero}</Typography>
+                                                                        <TextField
+                                                                            size='small'
+                                                                            type='number'
+                                                                            value={submuestra.numero}
+                                                                            onChange={(e) => {
+                                                                                const numero = parseInt(e.target.value) || 0
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                    s.id === submuestra.id
+                                                                                        ? { ...s, numero }
+                                                                                        : s
+                                                                                ))
+                                                                            }}
+                                                                            sx={{ width: '70px' }}
+                                                                            inputProps={{ min: 1 }}
+                                                                        />
                                                                     </td>
                                                                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                        <Typography variant='body2'>{submuestra.dias}</Typography>
+                                                                        <TextField
+                                                                            size='small'
+                                                                            type='number'
+                                                                            value={submuestra.dias}
+                                                                            onChange={(e) => {
+                                                                                const dias = parseInt(e.target.value) || 0
+                                                                                const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                                fechaBase.setDate(fechaBase.getDate() + dias)
+                                                                                const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
+
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                    s.id === submuestra.id
+                                                                                        ? { ...s, dias, fechaVencimiento: fechaVenc }
+                                                                                        : s
+                                                                                ))
+                                                                            }}
+                                                                            sx={{ width: '100px' }}
+                                                                            inputProps={{ min: 0 }}
+                                                                        />
                                                                     </td>
                                                                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                        <Typography variant='body2'>{formatDateOnly(submuestra.fechaVencimiento)}</Typography>
+                                                                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                                                            <DatePicker
+                                                                                value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
+                                                                                minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
+                                                                                onChange={(newValue) => {
+                                                                                    const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
+                                                                                    const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                                    const fechaVenc = new Date(nuevaFecha)
+                                                                                    const diffTime = fechaVenc.getTime() - fechaBase.getTime()
+                                                                                    const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                                                                                    setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                        s.id === submuestra.id
+                                                                                            ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 }
+                                                                                            : s
+                                                                                    ))
+                                                                                }}
+                                                                                slotProps={{
+                                                                                    textField: { size: 'small', sx: { width: '170px' } }
+                                                                                }}
+                                                                            />
+                                                                        </LocalizationProvider>
                                                                     </td>
                                                                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                        <Typography variant='body2'>{submuestra.cantidad}</Typography>
+                                                                        <TextField
+                                                                            size='small'
+                                                                            type='number'
+                                                                            value={submuestra.cantidad}
+                                                                            onChange={(e) => {
+                                                                                setErrorVencimiento('') // Limpiar error al modificar
+                                                                                const cantidad = parseInt(e.target.value) || 1
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                    s.id === submuestra.id
+                                                                                        ? { ...s, cantidad }
+                                                                                        : s
+                                                                                ))
+                                                                            }}
+                                                                            sx={{ width: '100px' }}
+                                                                            inputProps={{ min: 1 }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        <IconButton
+                                                                            size='small'
+                                                                            onClick={() => {
+                                                                                // TODO: Implementar edición
+                                                                            }}
+                                                                        >
+                                                                            <EditIcon fontSize='small' />
+                                                                        </IconButton>
+                                                                        <IconButton
+                                                                            size='small'
+                                                                            color='error'
+                                                                            onClick={() => {
+                                                                                setErrorVencimiento('') // Limpiar error al eliminar
+                                                                                setSubmuestrasVencimiento(submuestrasVencimiento.filter(s => s.id !== submuestra.id))
+                                                                            }}
+                                                                        >
+                                                                            <DeleteIcon fontSize='small' />
+                                                                        </IconButton>
                                                                     </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
                                                     </table>
                                                 </Box>
-                                            </>
-                                        )}
-                                    </Box>
-                                </Collapse>
+                                            )}
+                                        </Box>
+                                    )}
 
-                                {/* Barra de acciones rápidas debajo del RCM recién guardado */}
-                                {actionBarRcmId === rcm.id && (
+                                    {/* Observaciones */}
+                                    <Box sx={{ mt: 4 }}>
+                                        <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
+                                            Observaciones
+                                        </Typography>
+                                        <TextField
+                                            multiline
+                                            rows={3}
+                                            fullWidth
+                                        />
+                                    </Box>
+
+                                    {/* Botón Guardar RCM */}
+                                    <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                                        <Button
+                                            variant='outlined'
+                                            color='error'
+                                            sx={{ textTransform: 'none', px: 4 }}
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            variant='contained'
+                                            color='primary'
+                                            sx={{ textTransform: 'none', px: 4 }}
+                                            onClick={handleSaveRcm}
+                                        >
+                                            Guardar RCM
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            </Collapse>
+                        </Box>
+                    )}
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* LISTADO 2: CREADOS (Pendientes de Agrupar)            */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {rcmsCreados.length > 0 && (
+                        <Box sx={{ mt: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                                <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                    Creados (Pendientes de Agrupar)
+                                </Typography>
+                                <Chip
+                                    label={rcmsCreados.length}
+                                    size='small'
+                                    sx={{
+                                        fontWeight: 700,
+                                        bgcolor: '#FFF3E0',
+                                        color: '#E65100',
+                                        border: '1px solid #FFB74D',
+                                        minWidth: 28,
+                                    }}
+                                />
+                            </Box>
+                            {rcmsCreados.map(rcm => (
+                                <Box
+                                    key={rcm.id}
+                                    sx={{
+                                        bgcolor: '#E3F2FD',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        mb: 2
+                                    }}
+                                >
+                                    {/* Header del RCM guardado */}
                                     <Box
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'flex-end',
-                                            gap: 1.5,
-                                            px: 2,
-                                            py: 1.5,
-                                            bgcolor: '#BBDEFB',
-                                            borderTop: '1px solid #90CAF9'
+                                            justifyContent: 'space-between',
+                                            p: 2,
+                                            bgcolor: '#E3F2FD',
+                                            cursor: 'pointer'
                                         }}
+                                        onClick={() => handleToggleSavedRcm(rcm.id)}
                                     >
-                                        <Button
-                                            variant='contained'
-                                            size='small'
-                                            startIcon={<AddIcon />}
-                                            onClick={handleNewRcmClick}
-                                            sx={{
-                                                textTransform: 'none',
-                                                borderRadius: '6px',
-                                                fontWeight: 600,
-                                                fontSize: '0.8rem',
-                                                bgcolor: '#1976D2',
-                                                '&:hover': { bgcolor: '#1565C0' }
-                                            }}
-                                        >
-                                            Nuevo RCM
-                                        </Button>
-                                        <Button
-                                            variant='outlined'
-                                            size='small'
-                                            startIcon={<ContentCopyIcon />}
-                                            onClick={() => {
-                                                setSelectedRcmId(rcm.id)
-                                                setActionBarRcmId(null)
-                                                // Duplicar lógica inline
-                                                const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
-                                                if (rcmToDuplicate) {
-                                                    setRcmType(rcmToDuplicate.rcmType)
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <IconButton size='small'>
+                                                <ExpandMoreIcon
+                                                    sx={{
+                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                        transition: 'transform 0.3s'
+                                                    }}
+                                                />
+                                            </IconButton>
+                                            <Chip
+                                                label={rcm.rcmType.toUpperCase()}
+                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
+                                                sx={{ fontWeight: 'bold' }}
+                                            />
 
-                                                    // Cargar sede
-                                                    const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
-                                                    if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
-                                                        setSede('Otro')
-                                                        setCustomSede(rcmToDuplicate.sede)
-                                                    } else {
-                                                        setSede(rcmToDuplicate.sede || 'PA Chillán')
-                                                        setCustomSede('')
-                                                    }
+                                            {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
+                                            <Chip
+                                                label='Pendiente de agrupar'
+                                                size='small'
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    bgcolor: '#FFF3E0',
+                                                    color: '#E65100',
+                                                    border: '1px solid #FFB74D',
+                                                }}
+                                            />
 
-                                                    // Encontrar IDs por nombre
-                                                    const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
-                                                    setArea(areaFound ? areaFound.id : '')
+                                            {/* Mostrar campos según el tipo de RCM */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
 
-                                                    const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
-                                                    setTipoServicio(familiaFound ? familiaFound.id : '')
+                                                {/* MUESTRA: Sede | Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
+                                                {rcm.rcmType === 'Muestra' && (
+                                                    <>
+                                                        {rcm.sede && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.sede}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.area && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.area}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.tipoServicio && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.numeroTarjeta && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.tomaMuestra && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>#{rcm.tomaMuestra}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.tipoMaterial && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.tipoMaterial}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.item && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.item}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.procedencia && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.procedencia}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.ensayos.length > 0 && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
+                                                            </>
+                                                        )}
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>
+                                                                {(() => {
+                                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                        const fechas = rcm.submuestrasVencimiento
+                                                                            .map(sub => sub.fechaVencimiento)
+                                                                            .filter(f => !!f)
+                                                                            .sort()
+                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                    }
+                                                                    return formatDateOnly(rcm.fechaServicio)
+                                                                })()}
+                                                            </Typography>
+                                                        </>
+                                                        {rcm.cantidadMuestras && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
 
-                                                    setNumeroTarjeta('')
-                                                    setTipoMaterial(rcmToDuplicate.tipoMaterial)
-                                                    setItem(rcmToDuplicate.item)
-                                                    setProcedencia(rcmToDuplicate.procedencia || '')
-                                                    setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
-                                                    setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
-                                                    setFechaServicio(rcmToDuplicate.fechaServicio)
-                                                    setEnsayosAsociados([...rcmToDuplicate.ensayos])
-                                                    setTieneVencimiento(rcmToDuplicate.tieneVencimiento || false)
-                                                    setSubmuestrasVencimiento(rcmToDuplicate.submuestrasVencimiento || [])
-                                                    setIsDuplicatingRcm(true)
-                                                    setShowRcmCard(true)
-                                                    setExpandedRcm(true)
-                                                }
-                                            }}
-                                            sx={{
-                                                textTransform: 'none',
-                                                borderRadius: '6px',
-                                                fontWeight: 600,
-                                                fontSize: '0.8rem',
-                                                borderColor: '#1976D2',
-                                                color: '#1976D2',
-                                                bgcolor: 'white',
-                                                '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' }
-                                            }}
-                                        >
-                                            Duplicar este
-                                        </Button>
-                                        <Button
-                                            variant='outlined'
-                                            size='small'
-                                            startIcon={<LayersIcon />}
-                                            onClick={(e) => {
-                                                setSelectedRcmIds([rcm.id])
-                                                handleOpenCodigoPopup(e)
-                                            }}
-                                            sx={{
-                                                textTransform: 'none',
-                                                borderRadius: '6px',
-                                                fontWeight: 600,
-                                                fontSize: '0.8rem',
-                                                borderColor: '#7B1FA2',
-                                                color: '#7B1FA2',
-                                                bgcolor: 'white',
-                                                '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' }
-                                            }}
-                                        >
-                                            Asociar a Producto
-                                        </Button>
-                                        <Button
-                                            variant='text'
-                                            size='small'
-                                            onClick={() => setActionBarRcmId(null)}
-                                            sx={{
-                                                textTransform: 'none',
-                                                borderRadius: '6px',
-                                                fontWeight: 600,
-                                                fontSize: '0.8rem',
-                                                color: '#666',
-                                                '&:hover': { bgcolor: '#E0E0E0' }
-                                            }}
-                                        >
-                                            Cerrar
-                                        </Button>
+                                                {/* CONTROL: Sede | Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
+                                                {rcm.rcmType === 'Control' && (
+                                                    <>
+                                                        {rcm.sede && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.sede}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.area && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.area}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.tipoServicio && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                            </>
+                                                        )}
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>
+                                                                {(() => {
+                                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                        const fechas = rcm.submuestrasVencimiento
+                                                                            .map(sub => sub.fechaVencimiento)
+                                                                            .filter(f => !!f)
+                                                                            .sort()
+                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                    }
+                                                                    return formatDateOnly(rcm.fechaServicio)
+                                                                })()}
+                                                            </Typography>
+                                                        </>
+                                                        {rcm.item && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.item}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.ensayos.length > 0 && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.cantidadMuestras && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {/* SERVICIO: Sede | Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
+                                                {rcm.rcmType === 'Servicio' && (
+                                                    <>
+                                                        {rcm.sede && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.sede}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.area && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.area}</Typography>
+                                                            </>
+                                                        )}
+                                                        {rcm.tipoServicio && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                            </>
+                                                        )}
+                                                        <>
+                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Typography variant='body2'>
+                                                                {(() => {
+                                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                        const fechas = rcm.submuestrasVencimiento
+                                                                            .map(sub => sub.fechaVencimiento)
+                                                                            .filter(f => !!f)
+                                                                            .sort()
+                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                    }
+                                                                    return formatDateOnly(rcm.fechaServicio)
+                                                                })()}
+                                                            </Typography>
+                                                        </>
+                                                        {rcm.cantidadMuestras && (
+                                                            <>
+                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                size='small'
+                                                checked={selectedRcmIds.includes(rcm.id)}
+                                                onChange={() => handleToggleRcmSelection(rcm.id)}
+                                            />
+                                            <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
+                                                <MoreVertIcon />
+                                            </IconButton>
+                                        </Box>
                                     </Box>
-                                )}
-                            </Box>
-                        ))}
-                    </Box>
-                )}
 
-                {/* Sección de Códigos Agrupadores (Productos) */}
-                {codigosAgrupadores.length > 0 && (
-                    <Box sx={{ mt: 4 }}>
-                        {/* Barra de selección */}
-                        {selectedRcmIds.length > 0 && (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    bgcolor: '#E3F2FD',
-                                    borderRadius: '8px',
-                                    p: 2,
-                                    mb: 3
-                                }}
-                            >
-                                <Typography variant='body2' sx={{ fontWeight: 500 }}>
-                                    {selectedRcmIds.length} RCMs seleccionados
+                                    {/* Contenido expandible del RCM guardado */}
+                                    <Collapse in={expandedSavedRcms[rcm.id]}>
+                                        <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                            <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                                                Ensayos Asociados ({rcm.ensayos.length})
+                                            </Typography>
+                                            <Box sx={{ overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {rcm.ensayos.map(ensayo => (
+                                                            <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                        {ensayo.sku}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2'>
+                                                                        {ensayo.nombre}
+                                                                    </Typography>
+                                                                    {ensayo.norma && (
+                                                                        <Typography variant='caption' color='text.secondary'>
+                                                                            {ensayo.norma}
+                                                                        </Typography>
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                                        {ensayo.cantidad}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2' color='text.secondary'>
+                                                                        {ensayo.observacion || '-'}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Chip
+                                                                        label={ensayo.estadoOperativo}
+                                                                        size='small'
+                                                                        color={
+                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                        'success'
+                                                                        }
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </Box>
+
+                                            {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                                <>
+                                                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, mt: 4 }}>
+                                                        Submuestras con Vencimiento ({rcm.submuestrasVencimiento.length})
+                                                    </Typography>
+                                                    <Box sx={{ overflowX: 'auto' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                                <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {rcm.submuestrasVencimiento.map((submuestra) => (
+                                                                    <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                            <Typography variant='body2'>{submuestra.numero}</Typography>
+                                                                        </td>
+                                                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                            <Typography variant='body2'>{submuestra.dias}</Typography>
+                                                                        </td>
+                                                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                            <Typography variant='body2'>{formatDateOnly(submuestra.fechaVencimiento)}</Typography>
+                                                                        </td>
+                                                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                            <Typography variant='body2'>{submuestra.cantidad}</Typography>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </Box>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Collapse>
+
+                                    {/* Barra de acciones rápidas debajo del RCM recién guardado */}
+                                    {actionBarRcmId === rcm.id && (
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'flex-end',
+                                                gap: 1.5,
+                                                px: 2,
+                                                py: 1.5,
+                                                bgcolor: '#BBDEFB',
+                                                borderTop: '1px solid #90CAF9'
+                                            }}
+                                        >
+                                            <Button
+                                                variant='contained'
+                                                size='small'
+                                                startIcon={<AddIcon />}
+                                                onClick={handleNewRcmClick}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.8rem',
+                                                    bgcolor: '#1976D2',
+                                                    '&:hover': { bgcolor: '#1565C0' }
+                                                }}
+                                            >
+                                                Nuevo RCM
+                                            </Button>
+                                            <Button
+                                                variant='outlined'
+                                                size='small'
+                                                startIcon={<ContentCopyIcon />}
+                                                onClick={() => {
+                                                    setSelectedRcmId(rcm.id)
+                                                    setActionBarRcmId(null)
+                                                    // Duplicar lógica inline
+                                                    const rcmToDuplicate = savedRcms.find(r => r.id === rcm.id)
+                                                    if (rcmToDuplicate) {
+                                                        setRcmType(rcmToDuplicate.rcmType)
+
+                                                        // Cargar sede
+                                                        const standardSedes = ['PA Chillán', 'PA Concepción', 'Cliente']
+                                                        if (rcmToDuplicate.sede && !standardSedes.includes(rcmToDuplicate.sede)) {
+                                                            setSede('Otro')
+                                                            setCustomSede(rcmToDuplicate.sede)
+                                                        } else {
+                                                            setSede(rcmToDuplicate.sede || 'PA Chillán')
+                                                            setCustomSede('')
+                                                        }
+
+                                                        // Encontrar IDs por nombre
+                                                        const areaFound = areas.find(a => a.nombre === rcmToDuplicate.area)
+                                                        setArea(areaFound ? areaFound.id : '')
+
+                                                        const familiaFound = todasLasFamilias.find(f => f.nombre === rcmToDuplicate.tipoServicio)
+                                                        setTipoServicio(familiaFound ? familiaFound.id : '')
+
+                                                        setNumeroTarjeta('')
+                                                        setTipoMaterial(rcmToDuplicate.tipoMaterial)
+                                                        setItem(rcmToDuplicate.item)
+                                                        setProcedencia(rcmToDuplicate.procedencia || '')
+                                                        setTomaMuestra(rcmToDuplicate.tomaMuestra || '')
+                                                        setCantidadMuestras(rcmToDuplicate.cantidadMuestras)
+                                                        setFechaServicio(rcmToDuplicate.fechaServicio)
+                                                        setEnsayosAsociados([...rcmToDuplicate.ensayos])
+                                                        setTieneVencimiento(rcmToDuplicate.tieneVencimiento || false)
+                                                        setSubmuestrasVencimiento(rcmToDuplicate.submuestrasVencimiento || [])
+                                                        setIsDuplicatingRcm(true)
+                                                        setShowRcmCard(true)
+                                                        setExpandedRcm(true)
+                                                    }
+                                                }}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.8rem',
+                                                    borderColor: '#1976D2',
+                                                    color: '#1976D2',
+                                                    bgcolor: 'white',
+                                                    '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' }
+                                                }}
+                                            >
+                                                Duplicar este
+                                            </Button>
+                                            <Button
+                                                variant='outlined'
+                                                size='small'
+                                                startIcon={<LayersIcon />}
+                                                onClick={(e) => {
+                                                    setSelectedRcmIds([rcm.id])
+                                                    handleOpenCodigoPopup(e)
+                                                }}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.8rem',
+                                                    borderColor: '#7B1FA2',
+                                                    color: '#7B1FA2',
+                                                    bgcolor: 'white',
+                                                    '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' }
+                                                }}
+                                            >
+                                                Asociar a Producto
+                                            </Button>
+                                            <Button
+                                                variant='text'
+                                                size='small'
+                                                onClick={() => setActionBarRcmId(null)}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.8rem',
+                                                    color: '#666',
+                                                    '&:hover': { bgcolor: '#E0E0E0' }
+                                                }}
+                                            >
+                                                Cerrar
+                                            </Button>
+                                        </Box>
+                                    )}
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* LISTADO 3: AGRUPADOS (con Código Producto)             */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {rcmsAgrupados.length > 0 && (
+                        <Box sx={{ mt: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                                <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                                    Agrupados
                                 </Typography>
-                                <Button
-                                    variant='contained'
-                                    startIcon={<LayersIcon />}
+                                <Chip
+                                    label={rcmsAgrupados.length}
+                                    size='small'
                                     sx={{
-                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        bgcolor: '#E8F5E9',
+                                        color: '#2E7D32',
+                                        border: '1px solid #81C784',
+                                        minWidth: 28,
+                                    }}
+                                />
+                            </Box>
+                            {rcmsAgrupados.map(rcm => (
+                                <Box
+                                    key={rcm.id}
+                                    sx={{
+                                        bgcolor: '#E8F5E9',
                                         borderRadius: '8px',
-                                        fontWeight: 600,
-                                        bgcolor: '#1976D2',
-                                        '&:hover': { bgcolor: '#1565C0' }
+                                        overflow: 'hidden',
+                                        mb: 2
                                     }}
                                 >
-                                    Agrupar en Producto
-                                </Button>
-                            </Box>
-                        )}
+                                    {/* Header del RCM agrupado */}
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            p: 2,
+                                            bgcolor: '#E8F5E9',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleToggleSavedRcm(rcm.id)}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <IconButton size='small'>
+                                                <ExpandMoreIcon
+                                                    sx={{
+                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                        transition: 'transform 0.3s'
+                                                    }}
+                                                />
+                                            </IconButton>
+                                            <Chip
+                                                label={rcm.rcmType.toUpperCase()}
+                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
+                                                sx={{ fontWeight: 'bold' }}
+                                            />
 
+                                            {/* Mostrar estado: Agrupado (verde) */}
+                                            <Chip
+                                                label='Agrupado'
+                                                size='small'
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    bgcolor: '#C8E6C9',
+                                                    color: '#2E7D32',
+                                                    border: '1px solid #81C784',
+                                                }}
+                                            />
+
+                                            {/* Mostrar campos según el tipo de RCM */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                                {rcm.area && (
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>{rcm.area}</Typography>
+                                                    </>
+                                                )}
+                                                {rcm.tipoServicio && (
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>{rcm.tipoServicio}</Typography>
+                                                    </>
+                                                )}
+                                                {rcm.numeroTarjeta && (
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
+                                                    </>
+                                                )}
+                                                {rcm.ensayos.length > 0 && (
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
+                                                    </>
+                                                )}
+                                                <>
+                                                    <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Typography variant='body2'>
+                                                        {(() => {
+                                                            if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
+                                                                const fechas = rcm.submuestrasVencimiento
+                                                                    .map(sub => sub.fechaVencimiento)
+                                                                    .filter(f => !!f)
+                                                                    .sort()
+                                                                if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
+                                                                if (fechas.length === 1) return formatDateOnly(fechas[0])
+                                                                return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                            }
+                                                            return formatDateOnly(rcm.fechaServicio)
+                                                        })()}
+                                                    </Typography>
+                                                </>
+                                                {rcm.cantidadMuestras && (
+                                                    <>
+                                                        <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                        <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                    </>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                            {/* Checkbox solo si Tipo Servicio = Dosificación */}
+                                            {rcm.tipoServicio?.toLowerCase() === 'dosificación' && (
+                                                <Checkbox
+                                                    size='small'
+                                                    checked={selectedRcmIds.includes(rcm.id)}
+                                                    onChange={() => handleToggleRcmSelection(rcm.id)}
+                                                />
+                                            )}
+                                            <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
+                                                <MoreVertIcon />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+
+                                    {/* Contenido expandible del RCM agrupado */}
+                                    <Collapse in={expandedSavedRcms[rcm.id]}>
+                                        <Box sx={{ p: 3, bgcolor: 'white' }}>
+                                            <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                                                Ensayos Asociados ({rcm.ensayos.length})
+                                            </Typography>
+                                            <Box sx={{ overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ backgroundColor: '#F5F5F5' }}>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
+                                                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
+                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {rcm.ensayos.map(ensayo => (
+                                                            <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                        {ensayo.sku}
+                                                                    </Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2'>{ensayo.nombre}</Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                    <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
+                                                                </td>
+                                                                <td style={{ padding: '12px' }}>
+                                                                    <Chip
+                                                                        label={ensayo.estadoOperativo}
+                                                                        size='small'
+                                                                        color={
+                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                        'success'
+                                                                        }
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </Box>
+                                        </Box>
+                                    </Collapse>
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
+
+                    {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados */}
+                    <Box
+                        sx={{
+                            position: 'fixed',
+                            bottom: 32,
+                            left: '50%',
+                            transform: selectedRcmIds.length > 0
+                                ? 'translateX(-50%) translateY(0)'
+                                : 'translateX(-50%) translateY(120px)',
+                            opacity: selectedRcmIds.length > 0 ? 1 : 0,
+                            pointerEvents: selectedRcmIds.length > 0 ? 'auto' : 'none',
+                            transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease',
+                            zIndex: 1300,
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                bgcolor: '#1976D2',
+                                borderRadius: '8px',
+                                px: 3,
+                                py: 1.5,
+                                boxShadow: '0 8px 32px rgba(25, 118, 210, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
+                            }}
+                        >
+                            <Typography
+                                variant='body2'
+                                sx={{
+                                    fontWeight: 600,
+                                    color: 'white',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {selectedRcmIds.length} RCM{selectedRcmIds.length > 1 ? 's' : ''} seleccionado{selectedRcmIds.length > 1 ? 's' : ''}
+                            </Typography>
+                            <Button
+                                variant='contained'
+                                startIcon={<LayersIcon />}
+                                onClick={(e) => handleOpenCodigoPopup(e)}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 700,
+                                    fontSize: '0.9rem',
+                                    px: 3,
+                                    py: 1,
+                                    bgcolor: 'white',
+                                    color: '#1976D2',
+                                    boxShadow: 'none',
+                                    '&:hover': {
+                                        bgcolor: '#E3F2FD',
+                                        boxShadow: 'none',
+                                    }
+                                }}
+                            >
+                                Agrupar en Código Producto
+                            </Button>
+                        </Box>
+                    </Box>
+
+                    {/* Spacer para que el contenido no quede oculto detrás del panel fijo */}
+                    {codigosAgrupadores.length > 0 && (
+                        <Box sx={{ height: '340px' }} />
+                    )}
+                </Box>
+            </Card>
+
+            {/* Sección de Códigos Agrupadores (Productos) - Fija en la parte inferior */}
+            {
+                codigosAgrupadores.length > 0 && (
+                    <Box
+                        sx={{
+                            position: 'fixed',
+                            bottom: 0,
+                            left: `${cardRect.left}px`,
+                            width: `${cardRect.width}px`,
+                            zIndex: 1200,
+                            bgcolor: 'white',
+                            borderTop: '2px solid #E5E7EB',
+                            boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+                            borderRadius: '0 0 8px 8px',
+                        }}
+                    >
                         {/* Título y botón Finalizar Codificación */}
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 1.5 }}>
                             <Box>
-                                <Typography variant='h6' sx={{ fontWeight: 700 }}>
+                                <Typography variant='subtitle1' sx={{ fontWeight: 700, lineHeight: 1.3 }}>
                                     Códigos Agrupadores (Productos)
                                 </Typography>
-                                <Typography variant='body2' color='text.secondary'>
+                                <Typography variant='caption' color='text.secondary'>
                                     Productos comerciales facturables generados
                                 </Typography>
                             </Box>
@@ -2703,31 +3147,31 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Box>
 
                         {/* Tabla de Códigos Agrupadores */}
-                        <Box sx={{ overflowX: 'auto' }}>
+                        <Box sx={{ overflowX: 'auto', maxHeight: '250px', overflowY: 'auto', px: 1 }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
-                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CÓDIGO ID</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>RCMS VINCULADOS</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>SKUS / ENSAYOS</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>DESCRIPCIÓN DEL SERVICIO</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>CANTIDAD</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>FACTURACIÓN</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB' }}>ACCIONES</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>CÓDIGO ID</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>RCMS VINCULADOS</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>SKUS / ENSAYOS</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>DESCRIPCIÓN DEL SERVICIO</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>CANTIDAD</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>FACTURACIÓN</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#6B7280', letterSpacing: '0.05em', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>ACCIONES</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {codigosAgrupadores.map((agrupador) => (
                                         <tr key={agrupador.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
                                             {/* Código ID */}
-                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
                                                     {agrupador.id}
                                                 </Typography>
                                             </td>
 
                                             {/* RCMs Vinculados */}
-                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                     {agrupador.rcmsVinculados.map((rcm, idx) => (
                                                         <Chip
@@ -2746,7 +3190,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </td>
 
                                             {/* SKUs / Ensayos */}
-                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                                     {agrupador.ensayos.length > 0 && (
                                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -2787,7 +3231,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </td>
 
                                             {/* Descripción del Servicio */}
-                                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <TextField
                                                     size='small'
                                                     value={agrupador.descripcionServicio}
@@ -2797,7 +3241,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </td>
 
                                             {/* Cantidad */}
-                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                                                     <TextField
                                                         size='small'
@@ -2814,7 +3258,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </td>
 
                                             {/* Facturación */}
-                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
                                                 <Chip
                                                     label={agrupador.facturacion}
                                                     size='small'
@@ -2835,7 +3279,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </td>
 
                                             {/* Acciones */}
-                                            <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
                                                 <IconButton
                                                     size='small'
                                                     onClick={() => handleDeleteAgrupador(agrupador.id)}
@@ -2850,626 +3294,952 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             </table>
                         </Box>
                     </Box>
-                )}
+                )
+            }
 
-                {/* Menú de opciones para RCM guardado */}
-                <Menu
-                    anchorEl={rcmMenuAnchor}
-                    open={Boolean(rcmMenuAnchor)}
-                    onClose={handleCloseRcmMenu}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right'
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right'
-                    }}
-                >
-                    <MenuItem onClick={handleEditRcm}>
-                        <EditIcon fontSize='small' sx={{ mr: 1 }} />
-                        Editar
-                    </MenuItem>
-                    <MenuItem onClick={handleDuplicateRcm}>
-                        <ContentCopyIcon fontSize='small' sx={{ mr: 1 }} />
-                        Duplicar
-                    </MenuItem>
-                    <MenuItem onClick={handleDeleteRcm} sx={{ color: 'error.main' }}>
-                        <DeleteIcon fontSize='small' sx={{ mr: 1 }} />
-                        Eliminar
-                    </MenuItem>
-                </Menu>
+            {/* Menú de opciones para RCM guardado */}
+            <Menu
+                anchorEl={rcmMenuAnchor}
+                open={Boolean(rcmMenuAnchor)}
+                onClose={handleCloseRcmMenu}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right'
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right'
+                }}
+            >
+                <MenuItem onClick={handleEditRcm}>
+                    <EditIcon fontSize='small' sx={{ mr: 1 }} />
+                    Editar
+                </MenuItem>
+                <MenuItem onClick={handleDuplicateRcm}>
+                    <ContentCopyIcon fontSize='small' sx={{ mr: 1 }} />
+                    Duplicar
+                </MenuItem>
+                <MenuItem onClick={handleDeleteRcm} sx={{ color: 'error.main' }}>
+                    <DeleteIcon fontSize='small' sx={{ mr: 1 }} />
+                    Eliminar
+                </MenuItem>
+            </Menu>
 
 
-                {/* Popover de búsqueda de ensayos */}
-                <Popover
-                    open={Boolean(anchorEl)}
-                    anchorEl={anchorEl}
-                    onClose={handleCloseSearchPopover}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right'
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right'
-                    }}
-                    PaperProps={{
-                        sx: {
-                            width: '100%',
-                            maxWidth: '500px',
-                            maxHeight: '400px',
-                            overflow: 'auto',
-                            zIndex: 1300
-                        }
-                    }}
-                >
-                    <Box sx={{ p: 2 }}>
-                        <TextField
-                            fullWidth
-                            size='small'
-                            placeholder='Buscar por nombre, descripción o norma...'
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position='start'>
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                )
-                            }}
-                        />
-                        {selectedAreaNombre && (
-                            <Box sx={{ mt: 1 }}>
-                                <Chip
-                                    label={`Área: ${selectedAreaNombre}`}
-                                    size='small'
-                                    color='primary'
-                                    variant='outlined'
-                                />
-                            </Box>
-                        )}
-                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <FormControlLabel
-                                control={
-                                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
-                                }
-                                label='Solo Paquetes'
+            {/* Popover de búsqueda de ensayos */}
+            <Popover
+                open={Boolean(anchorEl)}
+                anchorEl={anchorEl}
+                onClose={handleCloseSearchPopover}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right'
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right'
+                }}
+                PaperProps={{
+                    sx: {
+                        width: '100%',
+                        maxWidth: '500px',
+                        maxHeight: '400px',
+                        overflow: 'auto',
+                        zIndex: 1300
+                    }
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <TextField
+                        fullWidth
+                        size='small'
+                        placeholder='Buscar por nombre, descripción o norma...'
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position='start'>
+                                    <SearchIcon />
+                                </InputAdornment>
+                            )
+                        }}
+                    />
+                    {selectedAreaNombre && (
+                        <Box sx={{ mt: 1 }}>
+                            <Chip
+                                label={`Área: ${selectedAreaNombre}`}
+                                size='small'
+                                color='primary'
+                                variant='outlined'
                             />
                         </Box>
-                    </Box>
-                    <List sx={{ pt: 0 }}>
-                        {paginatedProductos.length === 0 ? (
-                            <Box sx={{ p: 3, textAlign: 'center' }}>
-                                <Typography variant='body2' color='text.secondary'>
-                                    No se encontraron ensayos
-                                </Typography>
-                            </Box>
-                        ) : (
-                            paginatedProductos.map(producto => (
-                                <ListItem
-                                    key={producto.id}
-                                    onClick={() => handleSelectProduct(producto)}
-                                    sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: 'action.hover'
-                                        },
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start'
-                                    }}
-                                >
-                                    <ListItemText
-                                        primary={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant='body1'>
-                                                    {producto.nombre}
-                                                    {producto.norma && (
-                                                        <Typography component='span' color='text.secondary'>
-                                                            {' '}
-                                                            - {producto.norma}
-                                                        </Typography>
-                                                    )}
-                                                </Typography>
-                                                {producto.esPaquete && (
-                                                    <Typography
-                                                        variant='caption'
-                                                        sx={{
-                                                            backgroundColor: 'primary.main',
-                                                            color: 'white',
-                                                            px: 1,
-                                                            py: 0.5,
-                                                            borderRadius: 1,
-                                                            ml: 1
-                                                        }}
-                                                    >
-                                                        Paquete
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        }
-                                        secondary={
-                                            <Box>
-                                                <Typography variant='caption' color='text.secondary'>
-                                                    {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
-                                                </Typography>
-                                            </Box>
-                                        }
-                                    />
-                                </ListItem>
-                            ))
-                        )}
-                    </List>
-                    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
-                        <Button
-                            size='small'
-                            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
-                            disabled={productsPage === 0}
-                        >
-                            Anterior
-                        </Button>
-                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
-                            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
-                        </Typography>
-                        <Button
-                            size='small'
-                            onClick={() => setProductsPage(prev => prev + 1)}
-                            disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
-                        >
-                            Siguiente
-                        </Button>
-                    </Box>
-                </Popover>
-
-                {/* Snackbar flotante para mensajes de error */}
-                <Snackbar
-                    open={Boolean(errorVencimiento)}
-                    autoHideDuration={6000}
-                    onClose={() => setErrorVencimiento('')}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                    <Alert
-                        onClose={() => setErrorVencimiento('')}
-                        severity='error'
-                        variant='filled'
-                        sx={{ width: '100%' }}
-                    >
-                        {errorVencimiento}
-                    </Alert>
-                </Snackbar>
-
-                {/* Snackbar para advertencia de edición */}
-                <Snackbar
-                    open={showEditWarning}
-                    autoHideDuration={5000}
-                    onClose={() => setShowEditWarning(false)}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                >
-                    <Alert
-                        onClose={() => setShowEditWarning(false)}
-                        severity='warning'
-                        variant='filled'
-                        sx={{ width: '100%' }}
-                    >
-                        Debe finalizar la edición del RCM actual o cancelarla antes de crear uno nuevo
-                    </Alert>
-                </Snackbar>
-
-                {/* Dialog de confirmación para crear nuevo RCM */}
-                <Dialog
-                    open={showConfirmNewRcm}
-                    onClose={handleCancelNewRcm}
-                    maxWidth='sm'
-                    fullWidth
-                >
-                    <DialogTitle sx={{ fontWeight: 600 }}>
-                        ¿Crear nuevo RCM?
-                    </DialogTitle>
-                    <DialogContent>
-                        <DialogContentText>
-                            Si crea un nuevo RCM, se perderá la información del RCM actual a menos que lo guarde primero.
-                            ¿Desea continuar?
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions sx={{ px: 3, pb: 3 }}>
-                        <Button
-                            onClick={handleCancelNewRcm}
-                            variant='outlined'
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Continuar creando
-                        </Button>
-                        <Button
-                            onClick={handleConfirmNewRcm}
-                            variant='contained'
-                            color='primary'
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Crear nuevo
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                {/* Dialog de confirmación para cancelar con cambios sin guardar */}
-                <Dialog
-                    open={showCancelConfirm}
-                    onClose={handleDismissCancelConfirm}
-                    maxWidth='sm'
-                    fullWidth
-                    PaperProps={{
-                        sx: {
-                            borderRadius: '12px',
-                            overflow: 'hidden'
-                        }
-                    }}
-                >
-                    <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <WarningAmberIcon sx={{ color: '#ED6C02', fontSize: 28 }} />
-                        ¿Deseas salir sin guardar los cambios?
-                    </DialogTitle>
-                    <DialogContent>
-                        <DialogContentText>
-                            Se perderá la información ingresada.
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions sx={{ px: 3, pb: 3 }}>
-                        <Button
-                            onClick={handleConfirmCancel}
-                            variant='outlined'
-                            color='error'
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Cancelar sin guardar
-                        </Button>
-                        <Button
-                            onClick={handleDismissCancelConfirm}
-                            variant='contained'
-                            color='primary'
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Volver al formulario
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                {/* Popover de Códigos */}
-                <Popover
-                    open={Boolean(codigoAnchorEl)}
-                    anchorEl={codigoAnchorEl}
-                    onClose={handleCloseCodigoPopup}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                    slotProps={{
-                        paper: {
-                            sx: {
-                                width: 400,
-                                maxHeight: 500,
-                                borderRadius: '12px',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                overflow: 'hidden'
+                    )}
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
                             }
-                        }
-                    }}
-                >
-                    {/* Header del popover */}
-                    <Box sx={{ p: 2, bgcolor: '#F5F7FA', borderBottom: '1px solid #E0E0E0' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AssignmentIcon sx={{ color: '#1976D2', fontSize: 20 }} />
-                            <Typography variant='subtitle1' sx={{ fontWeight: 700, color: '#1A2027' }}>
-                                Códigos de la OT
+                            label='Solo Paquetes'
+                        />
+                    </Box>
+                </Box>
+                <List sx={{ pt: 0 }}>
+                    {paginatedProductos.length === 0 ? (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant='body2' color='text.secondary'>
+                                No se encontraron ensayos
                             </Typography>
                         </Box>
-                        <Typography variant='caption' sx={{ color: 'text.secondary', mt: 0.5 }}>
-                            Seleccione un código existente o cree uno nuevo
-                        </Typography>
-                    </Box>
+                    ) : (
+                        paginatedProductos.map(producto => (
+                            <ListItem
+                                key={producto.id}
+                                onClick={() => handleSelectProduct(producto)}
+                                sx={{
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'action.hover'
+                                    },
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start'
+                                }}
+                            >
+                                <ListItemText
+                                    primary={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant='body1'>
+                                                {producto.nombre}
+                                                {producto.norma && (
+                                                    <Typography component='span' color='text.secondary'>
+                                                        {' '}
+                                                        - {producto.norma}
+                                                    </Typography>
+                                                )}
+                                            </Typography>
+                                            {producto.esPaquete && (
+                                                <Typography
+                                                    variant='caption'
+                                                    sx={{
+                                                        backgroundColor: 'primary.main',
+                                                        color: 'white',
+                                                        px: 1,
+                                                        py: 0.5,
+                                                        borderRadius: 1,
+                                                        ml: 1
+                                                    }}
+                                                >
+                                                    Paquete
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    }
+                                    secondary={
+                                        <Box>
+                                            <Typography variant='caption' color='text.secondary'>
+                                                {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </ListItem>
+                        ))
+                    )}
+                </List>
+                <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                        disabled={productsPage === 0}
+                    >
+                        Anterior
+                    </Button>
+                    <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                        Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                    </Typography>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => prev + 1)}
+                        disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                    >
+                        Siguiente
+                    </Button>
+                </Box>
+            </Popover>
 
-                    {/* Lista de códigos existentes */}
-                    <Box sx={{ maxHeight: 240, overflowY: 'auto' }}>
-                        <RadioGroup value={selectedCodigo} onChange={(e) => handleSelectCodigo(e.target.value)}>
-                            <List disablePadding>
-                                {codigosOT.length === 0 ? (
-                                    <Box sx={{ p: 3, textAlign: 'center' }}>
-                                        <Typography variant='body2' color='text.secondary'>
-                                            No hay códigos creados en esta OT
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    codigosOT.map((codigo) => (
-                                        <ListItemButton
-                                            key={codigo.id}
-                                            selected={selectedCodigo === codigo.id}
-                                            onClick={() => handleSelectCodigo(codigo.id)}
+            {/* Snackbar flotante para mensajes de error */}
+            <Snackbar
+                open={Boolean(errorVencimiento)}
+                autoHideDuration={6000}
+                onClose={() => setErrorVencimiento('')}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setErrorVencimiento('')}
+                    severity='error'
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                >
+                    {errorVencimiento}
+                </Alert>
+            </Snackbar>
+
+            {/* Snackbar para advertencia de edición */}
+            <Snackbar
+                open={showEditWarning}
+                autoHideDuration={5000}
+                onClose={() => setShowEditWarning(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setShowEditWarning(false)}
+                    severity='warning'
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                >
+                    Debe finalizar la edición del RCM actual o cancelarla antes de crear uno nuevo
+                </Alert>
+            </Snackbar>
+
+            {/* Dialog de confirmación para crear nuevo RCM */}
+            <Dialog
+                open={showConfirmNewRcm}
+                onClose={handleCancelNewRcm}
+                maxWidth='sm'
+                fullWidth
+            >
+                <DialogTitle sx={{ fontWeight: 600 }}>
+                    ¿Crear nuevo RCM?
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Si crea un nuevo RCM, se perderá la información del RCM actual a menos que lo guarde primero.
+                        ¿Desea continuar?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={handleCancelNewRcm}
+                        variant='outlined'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Continuar creando
+                    </Button>
+                    <Button
+                        onClick={handleConfirmNewRcm}
+                        variant='contained'
+                        color='primary'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Crear nuevo
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Dialog de confirmación para cancelar con cambios sin guardar */}
+            <Dialog
+                open={showCancelConfirm}
+                onClose={handleDismissCancelConfirm}
+                maxWidth='sm'
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: '12px',
+                        overflow: 'hidden'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WarningAmberIcon sx={{ color: '#ED6C02', fontSize: 28 }} />
+                    ¿Deseas salir sin guardar los cambios?
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Se perderá la información ingresada.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={handleConfirmCancel}
+                        variant='outlined'
+                        color='error'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Cancelar sin guardar
+                    </Button>
+                    <Button
+                        onClick={handleDismissCancelConfirm}
+                        variant='contained'
+                        color='primary'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Volver al formulario
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Dialog: Crear Código Producto */}
+            <Dialog
+                open={openCodigoDialog}
+                onClose={handleCloseCodigoPopup}
+                maxWidth='sm'
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: '12px',
+                        overflow: 'hidden'
+                    }
+                }}
+            >
+                {/* Título */}
+                <DialogTitle
+                    sx={{
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        pb: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}
+                >
+                    Agrupar en Código Producto
+                    <IconButton size='small' onClick={handleCloseCodigoPopup} sx={{ color: 'text.secondary' }}>
+                        <CloseIcon fontSize='small' />
+                    </IconButton>
+                </DialogTitle>
+
+                <Divider />
+
+                <DialogContent sx={{ pt: 2.5, pb: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+
+                        {/* Sección RCMs a agrupar */}
+                        {selectedRcmIds.length > 0 && (
+                            <Box
+                                sx={{
+                                    bgcolor: '#EFF6FF',
+                                    border: '1px solid',
+                                    borderColor: '#DBEAFE',
+                                    borderRadius: '8px',
+                                    p: 2
+                                }}
+                            >
+                                <Typography
+                                    variant='caption'
+                                    sx={{ fontWeight: 700, color: 'primary.main', display: 'block', mb: 1 }}
+                                >
+                                    RCMs a agrupar en este código
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                    {selectedRcmIds.map((id, idx) => {
+                                        const rcm = savedRcms.find(r => r.id === id)
+                                        const label = rcm?.numeroRcm || `RCM-${String(idx + 1).padStart(3, '0')}`
+                                        return (
+                                            <Chip
+                                                key={id}
+                                                label={`${label}`}
+                                                size='small'
+                                                sx={{
+                                                    bgcolor: 'white',
+                                                    border: '1px solid',
+                                                    borderColor: '#BFDBFE',
+                                                    color: 'text.primary',
+                                                    fontWeight: 500,
+                                                    fontSize: '0.78rem'
+                                                }}
+                                            />
+                                        )
+                                    })}
+                                </Box>
+                            </Box>
+                        )}
+
+                        {/* Selector de modo: existente vs nuevo (solo si hay agrupadores) */}
+                        {codigosAgrupadores.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    bgcolor: '#F3F4F6',
+                                    borderRadius: '8px',
+                                    p: 0.5,
+                                    gap: 0.5
+                                }}
+                            >
+                                <Button
+                                    fullWidth
+                                    size='small'
+                                    variant={dialogMode === 'existente' ? 'contained' : 'text'}
+                                    onClick={() => {
+                                        setDialogMode('existente')
+                                        if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
+                                            setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
+                                        }
+                                    }}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '6px',
+                                        fontWeight: 600,
+                                        fontSize: '0.82rem',
+                                        ...(dialogMode === 'existente' ? {
+                                            bgcolor: 'white',
+                                            color: 'primary.main',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                            '&:hover': { bgcolor: 'white' }
+                                        } : {
+                                            color: 'text.secondary',
+                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                        })
+                                    }}
+                                >
+                                    Agregar a código existente
+                                </Button>
+                                <Button
+                                    fullWidth
+                                    size='small'
+                                    variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
+                                    onClick={() => setDialogMode('nuevo')}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '6px',
+                                        fontWeight: 600,
+                                        fontSize: '0.82rem',
+                                        ...(dialogMode === 'nuevo' ? {
+                                            bgcolor: 'white',
+                                            color: 'primary.main',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                            '&:hover': { bgcolor: 'white' }
+                                        } : {
+                                            color: 'text.secondary',
+                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                        })
+                                    }}
+                                >
+                                    Crear nuevo código
+                                </Button>
+                            </Box>
+                        )}
+
+                        {/* MODO: Agregar a código existente */}
+                        {dialogMode === 'existente' && codigosAgrupadores.length > 0 && (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                    Seleccionar código al que agregar los RCMs
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {codigosAgrupadores.map((ag) => (
+                                        <Box
+                                            key={ag.id}
+                                            onClick={() => setSelectedExistingAgrupadorId(ag.id)}
                                             sx={{
-                                                py: 1.5,
-                                                px: 2,
-                                                borderBottom: '1px solid #F0F0F0',
-                                                '&.Mui-selected': {
-                                                    bgcolor: 'rgba(25, 118, 210, 0.06)',
-                                                    '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.10)' }
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1.5,
+                                                p: 1.5,
+                                                borderRadius: '8px',
+                                                border: '1.5px solid',
+                                                borderColor: selectedExistingAgrupadorId === ag.id ? 'primary.main' : '#E5E7EB',
+                                                bgcolor: selectedExistingAgrupadorId === ag.id ? '#EFF6FF' : 'white',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease',
+                                                '&:hover': {
+                                                    borderColor: 'primary.light',
+                                                    bgcolor: '#F8FAFF'
                                                 }
                                             }}
                                         >
-                                            <Radio
-                                                value={codigo.id}
-                                                size='small'
-                                                sx={{ p: 0.5, mr: 1.5 }}
-                                            />
-                                            <ListItemText
-                                                primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant='body2' sx={{ fontWeight: 600, fontFamily: 'monospace', color: '#1976D2' }}>
-                                                            {codigo.id}
-                                                        </Typography>
-                                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                            {codigo.nombre}
-                                                        </Typography>
-                                                        <Chip label={codigo.tipo} size='small' sx={{ height: 20, fontSize: '0.7rem' }} />
-                                                    </Box>
-                                                }
-                                                secondary={
-                                                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, display: 'block' }}>
-                                                        {codigo.descripcion}
+                                            {/* Radio visual */}
+                                            <Box
+                                                sx={{
+                                                    width: 18,
+                                                    height: 18,
+                                                    borderRadius: '50%',
+                                                    border: '2px solid',
+                                                    borderColor: selectedExistingAgrupadorId === ag.id ? 'primary.main' : '#9CA3AF',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    flexShrink: 0
+                                                }}
+                                            >
+                                                {selectedExistingAgrupadorId === ag.id && (
+                                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                                                )}
+                                            </Box>
+
+                                            {/* Info del código */}
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace' }}>
+                                                        {ag.id}
                                                     </Typography>
-                                                }
-                                            />
-                                        </ListItemButton>
-                                    ))
-                                )}
-                            </List>
-                        </RadioGroup>
-                    </Box>
-
-                    <Divider />
-
-                    {/* Botón para crear nuevo código / Sub-formulario */}
-                    {!showNewCodigoForm ? (
-                        <Box sx={{ p: 2 }}>
-                            {selectedCodigo && (
-                                <Button
-                                    variant='contained'
-                                    fullWidth
-                                    onClick={handleConfirmCodigo}
-                                    sx={{
-                                        mb: 1.5,
-                                        textTransform: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 600,
-                                        bgcolor: '#1976D2',
-                                        '&:hover': { bgcolor: '#1565C0' }
-                                    }}
-                                >
-                                    Asignar código seleccionado
-                                </Button>
-                            )}
-                            <Button
-                                variant='outlined'
-                                fullWidth
-                                startIcon={<AddCircleOutlineIcon />}
-                                onClick={() => setShowNewCodigoForm(true)}
-                                sx={{
-                                    textTransform: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: 600,
-                                    borderColor: '#1976D2',
-                                    color: '#1976D2',
-                                    '&:hover': {
-                                        borderColor: '#1565C0',
-                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
-                                    }
-                                }}
-                            >
-                                Crear nuevo Código
-                            </Button>
-                        </Box>
-                    ) : (
-                        <Box sx={{ p: 2, bgcolor: '#FAFBFC' }}>
-                            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 2, color: '#1A2027' }}>
-                                Nuevo Código
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <TextField
-                                    label='Nombre'
-                                    size='small'
-                                    fullWidth
-                                    required
-                                    value={newCodigoNombre}
-                                    onChange={(e) => setNewCodigoNombre(e.target.value)}
-                                    placeholder='Ej: Hormigón H30'
-                                />
-                                <FormControl fullWidth size='small'>
-                                    <InputLabel>Tipo</InputLabel>
-                                    <Select
-                                        label='Tipo'
-                                        value={newCodigoTipo}
-                                        onChange={(e) => setNewCodigoTipo(e.target.value)}
-                                    >
-                                        <MenuItem value='Muestra'>Muestra</MenuItem>
-                                        <MenuItem value='Control'>Control</MenuItem>
-                                        <MenuItem value='Servicio'>Servicio</MenuItem>
-                                        <MenuItem value='General'>General</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <TextField
-                                    label='Descripción'
-                                    size='small'
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    value={newCodigoDescripcion}
-                                    onChange={(e) => setNewCodigoDescripcion(e.target.value)}
-                                    placeholder='Descripción breve del código...'
-                                />
-                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                    <Button
-                                        variant='outlined'
-                                        size='small'
-                                        onClick={() => {
-                                            setShowNewCodigoForm(false)
-                                            setNewCodigoNombre('')
-                                            setNewCodigoDescripcion('')
-                                            setNewCodigoTipo('')
-                                        }}
-                                        sx={{ flex: 1, textTransform: 'none', borderRadius: '8px' }}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button
-                                        variant='contained'
-                                        size='small'
-                                        onClick={handleCrearNuevoCodigo}
-                                        disabled={!newCodigoNombre.trim()}
-                                        sx={{
-                                            flex: 1,
-                                            textTransform: 'none',
-                                            borderRadius: '8px',
-                                            bgcolor: '#1976D2',
-                                            '&:hover': { bgcolor: '#1565C0' }
-                                        }}
-                                    >
-                                        Crear
-                                    </Button>
+                                                    {ag.descripcionServicio && (
+                                                        <Typography variant='body2' sx={{ fontWeight: 500 }} noWrap>
+                                                            {ag.descripcionServicio}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
+                                                    <Typography variant='caption' color='text.secondary'>
+                                                        {ag.rcmsVinculados.length} RCM{ag.rcmsVinculados.length !== 1 ? 's' : ''} vinculado{ag.rcmsVinculados.length !== 1 ? 's' : ''}
+                                                    </Typography>
+                                                    {ag.facturacion && (
+                                                        <Chip
+                                                            label={ag.facturacion}
+                                                            size='small'
+                                                            sx={{ height: 18, fontSize: '0.68rem', fontWeight: 600 }}
+                                                        />
+                                                    )}
+                                                </Box>
+                                            </Box>
+                                        </Box>
+                                    ))}
                                 </Box>
                             </Box>
-                        </Box>
-                    )}
-                </Popover>
-
-                {/* Popover de búsqueda de ensayos para Agrupadores */}
-                <Popover
-                    open={Boolean(agrupadorSearchAnchor)}
-                    anchorEl={agrupadorSearchAnchor}
-                    onClose={handleCloseAgrupadorSearch}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                    PaperProps={{
-                        sx: {
-                            width: '100%',
-                            maxWidth: '500px',
-                            maxHeight: '400px',
-                            overflow: 'auto',
-                            zIndex: 1300
-                        }
-                    }}
-                >
-                    <Box sx={{ p: 2 }}>
-                        <TextField
-                            fullWidth
-                            size='small'
-                            placeholder='Buscar por nombre, descripción o norma...'
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position='start'>
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                )
-                            }}
-                        />
-                        {selectedAreaNombre && (
-                            <Box sx={{ mt: 1 }}>
-                                <Chip
-                                    label={`Área: ${selectedAreaNombre}`}
-                                    size='small'
-                                    color='primary'
-                                    variant='outlined'
-                                />
-                            </Box>
                         )}
-                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <FormControlLabel
-                                control={
-                                    <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
-                                }
-                                label='Solo Paquetes'
-                            />
-                        </Box>
-                    </Box>
-                    <List sx={{ pt: 0 }}>
-                        {paginatedProductos.length === 0 ? (
-                            <Box sx={{ p: 3, textAlign: 'center' }}>
-                                <Typography variant='body2' color='text.secondary'>
-                                    No se encontraron ensayos
-                                </Typography>
-                            </Box>
-                        ) : (
-                            paginatedProductos.map(producto => (
-                                <ListItem
-                                    key={producto.id}
-                                    onClick={() => handleSelectProductForAgrupador(producto)}
+
+                        {/* MODO: Crear nuevo código */}
+                        {(dialogMode === 'nuevo' || codigosAgrupadores.length === 0) && (
+                            <>
+                                {/* Área (heredado) + SKU Producto */}
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Área (heredado automáticamente)
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size='small'
+                                            value={selectedAreaNombre || '—'}
+                                            disabled
+                                            InputProps={{ readOnly: true }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            SKU Producto (opcional)
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size='small'
+                                            placeholder='Buscar SKU...'
+                                            value={dialogSkuSearch}
+                                            onChange={(e) => setDialogSkuSearch(e.target.value)}
+                                            onClick={handleOpenSkuSearch}
+                                            inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position='start'>
+                                                        <SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} />
+                                                    </InputAdornment>
+                                                ),
+                                                endAdornment: dialogSkuSearch ? (
+                                                    <InputAdornment position='end'>
+                                                        <IconButton
+                                                            size='small'
+                                                            onClick={(e) => { e.stopPropagation(); setDialogSkuSearch('') }}
+                                                            sx={{ p: 0.25 }}
+                                                        >
+                                                            <CloseIcon fontSize='small' />
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ) : undefined
+                                            }}
+                                        />
+                                    </Box>
+                                </Box>
+
+                                {/* Descripción del Servicio */}
+                                <Box>
+                                    <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                        Descripción del Servicio
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size='small'
+                                        placeholder='Ej: Dosificación G20 — 3 áridos'
+                                        value={dialogDescripcionServicio}
+                                        onChange={(e) => setDialogDescripcionServicio(e.target.value)}
+                                    />
+                                </Box>
+
+                                {/* Cantidad + Modo de Facturación (automático según SKU) */}
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Cantidad (unidades a facturar)
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size='small'
+                                            type='number'
+                                            value={dialogCantidad}
+                                            onChange={(e) => setDialogCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                                            inputProps={{ min: 1 }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Modo de Facturación
+                                        </Typography>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                height: 40,
+                                                px: 1.5,
+                                                borderRadius: '8px',
+                                                border: '1px solid',
+                                                borderColor: dialogSkuSearch.trim() ? '#FDE68A' : 'divider',
+                                                bgcolor: dialogSkuSearch.trim() ? '#FEF3C7' : '#F9FAFB',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    bgcolor: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    flexShrink: 0,
+                                                    transition: 'background-color 0.2s ease'
+                                                }}
+                                            />
+                                            <Typography
+                                                variant='body2'
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    color: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    fontSize: '0.8rem',
+                                                    transition: 'color 0.2s ease'
+                                                }}
+                                            >
+                                                {dialogSkuSearch.trim()
+                                                    ? 'Fijo — SKU \u00d7 Cantidad'
+                                                    : 'Unitario — P\u00d7Q por ensayos'
+                                                }
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+
+                                {/* Nota informativa */}
+                                <Box
                                     sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: 'action.hover'
-                                        },
-                                        flexDirection: 'column',
+                                        bgcolor: '#FFFDE7',
+                                        border: '1px solid #FFF176',
+                                        borderRadius: '8px',
+                                        p: 1.5,
+                                        display: 'flex',
+                                        gap: 1,
                                         alignItems: 'flex-start'
                                     }}
                                 >
-                                    <ListItemText
-                                        primary={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant='body1'>
-                                                    {producto.nombre}
-                                                    {producto.norma && (
-                                                        <Typography component='span' color='text.secondary'>
-                                                            {' '}
-                                                            - {producto.norma}
-                                                        </Typography>
-                                                    )}
-                                                </Typography>
-                                                {producto.esPaquete && (
-                                                    <Typography
-                                                        variant='caption'
-                                                        sx={{
-                                                            backgroundColor: 'primary.main',
-                                                            color: 'white',
-                                                            px: 1,
-                                                            py: 0.5,
-                                                            borderRadius: 1,
-                                                            ml: 1
-                                                        }}
-                                                    >
-                                                        Paquete
+                                    <Typography sx={{ fontSize: '1rem', lineHeight: 1.3 }}>💡</Typography>
+                                    <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                        Si dejas el SKU vacío, la minuta calculará el cobro sumando los ensayos individuales de cada RCM (modo P×Q).
+                                        Si asignas un SKU, el cobro será precio del SKU × cantidad.
+                                    </Typography>
+                                </Box>
+                            </>
+                        )}
+
+                    </Box>
+                </DialogContent>
+
+                <Divider />
+
+                <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+                    <Button
+                        variant='outlined'
+                        onClick={handleCloseCodigoPopup}
+                        sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600, px: 3 }}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant='contained'
+                        startIcon={<CheckCircleIcon />}
+                        disabled={dialogMode === 'existente' && !selectedExistingAgrupadorId}
+                        onClick={dialogMode === 'existente' ? handleAddToExistingAgrupador : handleConfirmCodigo}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            px: 3,
+                            bgcolor: 'primary.main',
+                            '&:hover': { bgcolor: 'primary.dark' }
+                        }}
+                    >
+                        {dialogMode === 'existente' ? '✓ Agregar al código' : '✓ Crear Código Producto'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Popover de búsqueda de SKU para el Dialog de Código Producto */}
+            <Popover
+                open={Boolean(skuSearchAnchor)}
+                anchorEl={skuSearchAnchor}
+                onClose={handleCloseSkuSearch}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                PaperProps={{
+                    sx: {
+                        width: skuSearchAnchor?.offsetWidth ? Math.max(skuSearchAnchor.offsetWidth, 420) : 420,
+                        maxHeight: '400px',
+                        overflow: 'auto',
+                        zIndex: 1400
+                    }
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <TextField
+                        fullWidth
+                        size='small'
+                        placeholder='Buscar por nombre, descripción o norma...'
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        autoFocus
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position='start'>
+                                    <SearchIcon />
+                                </InputAdornment>
+                            )
+                        }}
+                    />
+                    {selectedAreaNombre && (
+                        <Box sx={{ mt: 1 }}>
+                            <Chip
+                                label={`Área: ${selectedAreaNombre}`}
+                                size='small'
+                                color='primary'
+                                variant='outlined'
+                            />
+                        </Box>
+                    )}
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                            }
+                            label='Solo Paquetes'
+                        />
+                    </Box>
+                </Box>
+                <List sx={{ pt: 0 }}>
+                    {paginatedProductos.length === 0 ? (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant='body2' color='text.secondary'>
+                                No se encontraron ensayos
+                            </Typography>
+                        </Box>
+                    ) : (
+                        paginatedProductos.map(producto => (
+                            <ListItem
+                                key={producto.id}
+                                onClick={() => handleSelectProductForSku(producto)}
+                                sx={{
+                                    cursor: 'pointer',
+                                    '&:hover': { backgroundColor: 'action.hover' },
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start'
+                                }}
+                            >
+                                <ListItemText
+                                    primary={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant='body1'>
+                                                {producto.nombre}
+                                                {producto.norma && (
+                                                    <Typography component='span' color='text.secondary'>
+                                                        {' '}- {producto.norma}
                                                     </Typography>
                                                 )}
-                                            </Box>
-                                        }
-                                        secondary={
-                                            <Box>
-                                                <Typography variant='caption' color='text.secondary'>
-                                                    {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                            </Typography>
+                                            {producto.esPaquete && (
+                                                <Typography
+                                                    variant='caption'
+                                                    sx={{
+                                                        backgroundColor: 'primary.main',
+                                                        color: 'white',
+                                                        px: 1,
+                                                        py: 0.5,
+                                                        borderRadius: 1,
+                                                        ml: 1
+                                                    }}
+                                                >
+                                                    Paquete
                                                 </Typography>
-                                            </Box>
-                                        }
-                                    />
-                                </ListItem>
-                            ))
-                        )}
-                    </List>
-                    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
-                        <Button
-                            size='small'
-                            onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
-                            disabled={productsPage === 0}
-                        >
-                            Anterior
-                        </Button>
-                        <Typography variant='body2' sx={{ alignSelf: 'center' }}>
-                            Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
-                        </Typography>
-                        <Button
-                            size='small'
-                            onClick={() => setProductsPage(prev => prev + 1)}
-                            disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
-                        >
-                            Siguiente
-                        </Button>
+                                            )}
+                                        </Box>
+                                    }
+                                    secondary={
+                                        <Box>
+                                            <Typography variant='caption' color='text.secondary'>
+                                                {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </ListItem>
+                        ))
+                    )}
+                </List>
+                <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                        disabled={productsPage === 0}
+                    >
+                        Anterior
+                    </Button>
+                    <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                        Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                    </Typography>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => prev + 1)}
+                        disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                    >
+                        Siguiente
+                    </Button>
+                </Box>
+            </Popover>
+
+            {/* Popover de búsqueda de ensayos para Agrupadores */}
+            <Popover
+                open={Boolean(agrupadorSearchAnchor)}
+                anchorEl={agrupadorSearchAnchor}
+                onClose={handleCloseAgrupadorSearch}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                PaperProps={{
+                    sx: {
+                        width: '100%',
+                        maxWidth: '500px',
+                        maxHeight: '400px',
+                        overflow: 'auto',
+                        zIndex: 1300
+                    }
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <TextField
+                        fullWidth
+                        size='small'
+                        placeholder='Buscar por nombre, descripción o norma...'
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position='start'>
+                                    <SearchIcon />
+                                </InputAdornment>
+                            )
+                        }}
+                    />
+                    {selectedAreaNombre && (
+                        <Box sx={{ mt: 1 }}>
+                            <Chip
+                                label={`Área: ${selectedAreaNombre}`}
+                                size='small'
+                                color='primary'
+                                variant='outlined'
+                            />
+                        </Box>
+                    )}
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch checked={showOnlyPaquetes} onChange={handleShowOnlyPaquetesChange} size='small' />
+                            }
+                            label='Solo Paquetes'
+                        />
                     </Box>
-                </Popover>
-            </Box>
-        </Card>
+                </Box>
+                <List sx={{ pt: 0 }}>
+                    {paginatedProductos.length === 0 ? (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant='body2' color='text.secondary'>
+                                No se encontraron ensayos
+                            </Typography>
+                        </Box>
+                    ) : (
+                        paginatedProductos.map(producto => (
+                            <ListItem
+                                key={producto.id}
+                                onClick={() => handleSelectProductForAgrupador(producto)}
+                                sx={{
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'action.hover'
+                                    },
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start'
+                                }}
+                            >
+                                <ListItemText
+                                    primary={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant='body1'>
+                                                {producto.nombre}
+                                                {producto.norma && (
+                                                    <Typography component='span' color='text.secondary'>
+                                                        {' '}
+                                                        - {producto.norma}
+                                                    </Typography>
+                                                )}
+                                            </Typography>
+                                            {producto.esPaquete && (
+                                                <Typography
+                                                    variant='caption'
+                                                    sx={{
+                                                        backgroundColor: 'primary.main',
+                                                        color: 'white',
+                                                        px: 1,
+                                                        py: 0.5,
+                                                        borderRadius: 1,
+                                                        ml: 1
+                                                    }}
+                                                >
+                                                    Paquete
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    }
+                                    secondary={
+                                        <Box>
+                                            <Typography variant='caption' color='text.secondary'>
+                                                {producto.area} {producto.tipo && `- ${producto.tipo}`} {producto.familia && `- ${producto.familia}`}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </ListItem>
+                        ))
+                    )}
+                </List>
+                <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: 1 }}>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => Math.max(0, prev - 1))}
+                        disabled={productsPage === 0}
+                    >
+                        Anterior
+                    </Button>
+                    <Typography variant='body2' sx={{ alignSelf: 'center' }}>
+                        Página {productsPage + 1} de {Math.max(1, Math.ceil(totalProductos / ITEMS_PER_PAGE))}
+                    </Typography>
+                    <Button
+                        size='small'
+                        onClick={() => setProductsPage(prev => prev + 1)}
+                        disabled={(productsPage + 1) * ITEMS_PER_PAGE >= totalProductos}
+                    >
+                        Siguiente
+                    </Button>
+                </Box>
+            </Popover>
+        </>
     )
 }
 
