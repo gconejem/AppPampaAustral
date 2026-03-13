@@ -1386,24 +1386,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                         {/* Botones */}
                         <Box sx={{ display: 'flex', gap: 2 }}>
-                            {/* <Button
-                            variant='outlined'
-                            startIcon={<ContentCopyIcon />}
-                            onClick={handleDuplicateLastRcm}
-                            sx={{
-                                borderRadius: '8px',
-                                textTransform: 'none',
-                                px: 3,
-                                color: '#9C27B0',
-                                borderColor: '#9C27B0',
-                                '&:hover': {
-                                    borderColor: '#7B1FA2',
-                                    bgcolor: 'rgba(156, 39, 176, 0.04)'
-                                }
-                            }}
-                        >
-                            Duplicar último RCM
-                        </Button> */}
                             {!showRcmCard && (
                                 <Button
                                     variant='contained'
@@ -1528,7 +1510,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     )}
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Button
+                                    {/* <Button
                                         variant='outlined'
                                         size='small'
                                         onClick={handleOpenCodigoPopup}
@@ -1546,7 +1528,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         }}
                                     >
                                         Asignar a código / Crear nuevo código
-                                    </Button>
+                                    </Button> */}
                                     {isEditingRcm && (
                                         <>
                                             <Checkbox />
