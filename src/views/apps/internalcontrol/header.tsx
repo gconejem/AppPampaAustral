@@ -181,106 +181,64 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
           </Box>
         </Box>
 
-        {/* Stepper alineado a la izquierda */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box
-            onClick={() => onStepClick && onStepClick(1)}
+        {/* Pastillas de contadores */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Borradores */}
+          <Chip
+            size='small'
+            label={`Borradores: ${borradores}`}
             sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 1 ? 'primary.main' : 'grey.300',
-              color: activeStep === 1 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#E3F2FD',
+              color: '#1565C0',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              '&:hover': {
-                opacity: 0.8
-              }
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            1
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Pendientes */}
+          <Chip
+            size='small'
+            label={`Pendientes: ${pendientes}`}
             sx={{
-              fontWeight: activeStep === 1 ? 500 : 400,
-              color: activeStep === 1 ? 'text.primary' : 'text.secondary',
-              cursor: 'pointer'
-            }}
-            onClick={() => onStepClick && onStepClick(1)}
-          >
-            Área y Servicio
-          </Typography>
-          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
-          <Box
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(2)}
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 2 ? 'primary.main' : 'grey.300',
-              color: activeStep === 2 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#FFF3E0',
+              color: '#E65100',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: canAdvanceToStep2 ? 'pointer' : 'not-allowed',
-              opacity: canAdvanceToStep2 ? 1 : 0.5,
-              '&:hover': {
-                opacity: canAdvanceToStep2 ? 0.8 : 0.5
-              }
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            2
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Agrupados */}
+          <Chip
+            size='small'
+            label={`Agrupados: ${agrupados}`}
             sx={{
-              fontWeight: activeStep === 2 ? 500 : 400,
-              color: activeStep === 2 ? 'text.primary' : 'text.secondary',
-              cursor: canAdvanceToStep2 ? 'pointer' : 'not-allowed',
-              opacity: canAdvanceToStep2 ? 1 : 0.5
-            }}
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(2)}
-          >
-            Crear RCMs
-          </Typography>
-          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
-          <Box
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(3)}
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 3 ? 'primary.main' : 'grey.300',
-              color: activeStep === 3 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#E8F5E9',
+              color: '#2E7D32',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'not-allowed',
-              opacity: 0.5
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            3
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Total RCMs */}
+          <Chip
+            size='small'
+            label={`Total RCMs: ${totalRcms}`}
             sx={{
-              fontWeight: activeStep === 3 ? 500 : 400,
-              color: 'text.secondary',
-              cursor: 'not-allowed',
-              opacity: 0.5
+              bgcolor: '#F3E5F5',
+              color: '#6A1B9A',
+              fontWeight: 600,
+              fontSize: '12px',
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            Agrupar Códigos
-          </Typography>
+          />
         </Box>
       </Box>
 
@@ -303,66 +261,6 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
             <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
               Datos de la Orden de Trabajo
             </Typography>
-
-            {/* Contadores en tiempo real */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 1 }}>
-              {/* Borradores */}
-              <Chip
-                size='small'
-                label={`Borradores: ${borradores}`}
-                sx={{
-                  bgcolor: '#E3F2FD',
-                  color: '#1565C0',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Pendientes */}
-              <Chip
-                size='small'
-                label={`Pendientes: ${pendientes}`}
-                sx={{
-                  bgcolor: '#FFF3E0',
-                  color: '#E65100',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Agrupados */}
-              <Chip
-                size='small'
-                label={`Agrupados: ${agrupados}`}
-                sx={{
-                  bgcolor: '#E8F5E9',
-                  color: '#2E7D32',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Total RCMs */}
-              <Chip
-                size='small'
-                label={`Total RCMs: ${totalRcms}`}
-                sx={{
-                  bgcolor: '#F3E5F5',
-                  color: '#6A1B9A',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-            </Box>
           </Box>
 
           {/* Grid de campos */}
