@@ -134,6 +134,12 @@ interface Step2CreateRcmsProps {
 }
 
 const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
+    // Ref para el campo de cantidad del último ensayo agregado
+    const lastEnsayoCantidadRef = useRef<HTMLInputElement>(null)
+
+    // Estado para rastrear ensayos pendientes de confirmación
+    const [ensayosPendientes, setEnsayosPendientes] = useState<Set<number>>(new Set())
+
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -454,6 +460,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setObservacionItem('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setEnsayosPendientes(new Set())
         setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
         setErrorVencimiento('')
@@ -581,6 +588,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setUbicacionSector('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setEnsayosPendientes(new Set())
         setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
     }
@@ -1117,6 +1125,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
             const nuevaLista = [...prev, nuevoEnsayo]
             console.log('Nueva lista de ensayos:', nuevaLista)
+
+            // Marcar el nuevo ensayo como pendiente de confirmación
+            setEnsayosPendientes(prev => new Set([...prev, nuevoEnsayo.id]))
+
             return nuevaLista
         })
 
@@ -1125,12 +1137,38 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleDeleteEnsayo = (ensayoId: number) => {
         setEnsayosAsociados(ensayosAsociados.filter(e => e.id !== ensayoId))
+        setEnsayosPendientes(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(ensayoId)
+            return newSet
+        })
+    }
+
+    const handleConfirmEnsayo = (ensayoId: number) => {
+        // Remover de pendientes
+        setEnsayosPendientes(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(ensayoId)
+            return newSet
+        })
+    }
+
+    const handleCancelEnsayo = (ensayoId: number) => {
+        // Eliminar el ensayo si se cancela antes de confirmar
+        handleDeleteEnsayo(ensayoId)
     }
 
     const handleChangeCantidad = (ensayoId: number, cantidad: number) => {
         setEnsayosAsociados(ensayosAsociados.map(e =>
             e.id === ensayoId ? { ...e, cantidad } : e
         ))
+    }
+
+    const handleKeyPressQuantity = (e: React.KeyboardEvent, ensayoId: number) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleConfirmEnsayo(ensayoId)
+        }
     }
 
     const handleChangeObservacion = (ensayoId: number, observacion: string) => {
@@ -1144,6 +1182,20 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             e.id === ensayoId ? { ...e, estadoOperativo } : e
         ))
     }
+
+    // Effect para hacer focus en el campo de cantidad cuando se agrega un nuevo ensayo
+    useEffect(() => {
+        if (ensayosAsociados.length > 0 && lastEnsayoCantidadRef.current) {
+            // Usar setTimeout para asegurar que el DOM se ha actualizado
+            setTimeout(() => {
+                const inputElement = lastEnsayoCantidadRef.current?.querySelector('input')
+                if (inputElement) {
+                    inputElement.focus()
+                    inputElement.select()
+                }
+            }, 0)
+        }
+    }, [ensayosAsociados.length])
 
     const handleOpenStatusMenu = (event: React.MouseEvent<HTMLElement>, ensayoId: number) => {
         setStatusMenuAnchor(event.currentTarget)
@@ -1970,7 +2022,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {ensayosAsociados.map(ensayo => (
+                                                        {ensayosAsociados.map((ensayo, index) => (
                                                             <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
                                                                 <td style={{ padding: '12px' }}>
                                                                     <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
@@ -1989,9 +2041,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                     <TextField
+                                                                        ref={index === ensayosAsociados.length - 1 ? lastEnsayoCantidadRef : null}
                                                                         size='small'
                                                                         value={ensayo.cantidad}
                                                                         onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                                        onKeyPress={(e) => handleKeyPressQuantity(e, ensayo.id)}
                                                                         type='number'
                                                                         sx={{ width: '80px' }}
                                                                         inputProps={{ min: 1 }}
@@ -2021,13 +2075,34 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                     />
                                                                 </td>
                                                                 <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <IconButton
-                                                                        size='small'
-                                                                        color='error'
-                                                                        onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                                    >
-                                                                        <DeleteIcon fontSize='small' />
-                                                                    </IconButton>
+                                                                    {ensayosPendientes.has(ensayo.id) ? (
+                                                                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                                                            <IconButton
+                                                                                size='small'
+                                                                                color='success'
+                                                                                onClick={() => handleConfirmEnsayo(ensayo.id)}
+                                                                                title='Confirmar ensayo'
+                                                                            >
+                                                                                <CheckCircleIcon fontSize='small' />
+                                                                            </IconButton>
+                                                                            <IconButton
+                                                                                size='small'
+                                                                                color='error'
+                                                                                onClick={() => handleCancelEnsayo(ensayo.id)}
+                                                                                title='Cancelar ensayo'
+                                                                            >
+                                                                                <CloseIcon fontSize='small' />
+                                                                            </IconButton>
+                                                                        </Box>
+                                                                    ) : (
+                                                                        <IconButton
+                                                                            size='small'
+                                                                            color='error'
+                                                                            onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                                        >
+                                                                            <DeleteIcon fontSize='small' />
+                                                                        </IconButton>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}
