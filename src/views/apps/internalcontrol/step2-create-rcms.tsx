@@ -1379,11 +1379,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         {/* Título y subtítulo */}
                         <Box>
                             <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
-                                Paso 2: Crear RCMs (Registro de Control de Muestras)
+                                RCMs creados <Typography component='span' sx={{ color: 'text.secondary', fontWeight: 'normal' }}>{savedRcms.length} {savedRcms.length === 1 ? 'registro' : 'registros'}</Typography>
                             </Typography>
-                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                                Registre las muestras, controles o servicios recolectados en terreno
-                            </Typography>
+
                         </Box>
 
                         {/* Botones */}
@@ -2297,6 +2295,25 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     {/* ═══════════════════════════════════════════════════════ */}
                     {/* LISTADO 2: CREADOS (Pendientes de Agrupar)            */}
                     {/* ═══════════════════════════════════════════════════════ */}
+
+                    {/* Estado vacío cuando no hay RCMs creados */}
+                    {rcmsCreados.length === 0 && !showRcmCard && (
+                        <Box sx={{ mt: 6, textAlign: 'center', py: 8 }}>
+                            <Box sx={{ mb: 3 }}>
+                                <AssignmentIcon sx={{ fontSize: 64, color: 'text.disabled' }} />
+                            </Box>
+                            <Typography variant='h6' sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                No hay RCMs creados aún
+                            </Typography>
+                            <Typography variant='body2' sx={{ color: 'text.secondary', mb: 2 }}>
+                                Presiona "+ Nuevo RCM" para comenzar.
+                            </Typography>
+                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                                Puedes crear muestras, controles o servicios.
+                            </Typography>
+                        </Box>
+                    )}
+
                     {rcmsCreados.length > 0 && (
                         <Box sx={{ mt: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
