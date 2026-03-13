@@ -1493,7 +1493,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             }}
                                         />
                                     </IconButton>
-                                    <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                    <Chip
+                                        label={rcmType.toUpperCase()}
+                                        sx={{
+                                            fontWeight: 'bold',
+                                            backgroundColor: rcmType === 'Muestra' ? '#1976d2' : rcmType === 'Control' ? '#e91e63' : '#424242',
+                                            color: '#ffffff'
+                                        }}
+                                    />
                                     <Chip
                                         label='Borrador'
                                         size='small'
@@ -2367,8 +2374,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
-                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
-                                                sx={{ fontWeight: 'bold' }}
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242',
+                                                    color: '#ffffff'
+                                                }}
                                             />
 
                                             {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
@@ -2875,8 +2885,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
-                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
-                                                sx={{ fontWeight: 'bold' }}
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242',
+                                                    color: '#ffffff'
+                                                }}
                                             />
 
                                             {/* Mostrar estado: Agrupado (verde) */}
