@@ -1,5 +1,5 @@
 // MUI Imports
-import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography, Stepper, Step, StepLabel, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
+import { Grid, Chip, Card, CardContent, CardHeader, Skeleton, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckIcon from '@mui/icons-material/Check'
 
@@ -7,7 +7,6 @@ import CheckIcon from '@mui/icons-material/Check'
 import { useState } from 'react'
 
 // Next Imports
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
 // Utils
@@ -107,7 +106,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
     return codigo && descripcion ? `${codigo} ${descripcion}` : codigo || descripcion
   }
 
-  // Formatear obra: "numero | nombre"
+  // Formatear obra: "numero — nombre"
   const formatObra = () => {
     const numeroObra = otData.agenda?.obra?.numeroObra || ''
     let nombreObra = otData.agenda?.obra?.nombreObra || ''
@@ -118,14 +117,14 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
       nombreObra = nombreObra.split(' - Comuna de')[0].split(' - Región del')[0].split(' - Region del')[0]
     }
 
-    return numeroObra && nombreObra ? `${numeroObra} | ${nombreObra}` : numeroObra || nombreObra
+    return numeroObra && nombreObra ? `${numeroObra} — ${nombreObra}` : numeroObra || nombreObra
   }
 
-  // Formatear cliente: "nombre | rut"
+  // Formatear cliente: "rut — nombre"
   const formatCliente = () => {
     const nombreCliente = otData.agenda?.cliente?.nombreCliente || ''
     const rutCliente = otData.agenda?.cliente?.rut || ''
-    return nombreCliente && rutCliente ? `${nombreCliente} | ${rutCliente}` : nombreCliente || rutCliente
+    return nombreCliente && rutCliente ? `${rutCliente} — ${nombreCliente}` : nombreCliente || rutCliente
   }
 
   // Formatear región/ciudad: "región / comuna"
@@ -269,7 +268,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
                   N° OT
                 </Typography>
                 <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                  {/* Vacío por ahora según requerimientos */}
+                  {otData.numeroOT || ''}
                 </Typography>
               </Box>
             </Grid>
@@ -313,13 +312,13 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
                   ID SOLICITUD
                 </Typography>
                 <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                  {/* Por ahora solo encabezado */}
+                  {otData.idSolicitud || ''}
                 </Typography>
               </Box>
             </Grid>
 
-            {/* Segunda fila */}
-            <Grid item xs={4}>
+            {/* Segunda fila - 5 columnas (OBRA ocupa 2) */}
+            <Grid item xs={4.8}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   OBRA
@@ -330,7 +329,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   CLIENTE
@@ -341,7 +340,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
               </Box>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   REGIÓN / CIUDAD
@@ -352,7 +351,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
               </Box>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   MANDANTE
