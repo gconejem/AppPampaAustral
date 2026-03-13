@@ -1,5 +1,5 @@
 // MUI Imports
-import { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -46,6 +46,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
+import InventoryIcon from '@mui/icons-material/Inventory'
 import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
@@ -68,6 +69,17 @@ interface ProductoType {
     norma?: string
 }
 
+interface SubProducto {
+    id: number
+    productoId: number
+    sku: string
+    nombre: string
+    norma?: string
+    cantidad: number
+    observacion: string
+    isEditing?: boolean
+}
+
 interface EnsayoAsociado {
     id: number
     productoId: number
@@ -77,6 +89,9 @@ interface EnsayoAsociado {
     cantidad: number
     observacion: string
     estadoOperativo: string
+    esPaquete?: boolean
+    subProductos?: SubProducto[]
+    isEditing?: boolean
 }
 
 interface RCMData {
@@ -127,15 +142,19 @@ interface Step2CreateRcmsProps {
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
-    selectedAreaNombre?: string
-    selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
     onDraftCountChange?: (count: number) => void
     onAgrupadosCountChange?: (count: number) => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
+    // Ref para el campo de cantidad del último ensayo agregado
+    const lastEnsayoCantidadRef = useRef<HTMLInputElement>(null)
+
+    // Estado para rastrear ensayos pendientes de confirmación
+    const [ensayosPendientes, setEnsayosPendientes] = useState<Set<number>>(new Set())
+
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -318,17 +337,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSede('PA Chillán')
         setCustomSede('')
 
-        // Encontrar el ID del área seleccionada en el paso 1
-        const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
-        setArea(initialArea ? initialArea.id : '')
-
-        // Encontrar el ID del tipo de servicio seleccionado en el paso 1
-        if (initialArea) {
-            const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
-            setTipoServicio(initialService ? initialService.id : '')
-        } else {
-            setTipoServicio('')
-        }
+        setArea('')
+        setTipoServicio('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
@@ -353,8 +363,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setExpandedRcm(true)
 
         // Resetear vencimiento
-        const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
-        setTieneVencimiento(shouldHaveVencimiento)
+        setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
     }
 
@@ -395,8 +404,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             // Nuevo RCM: verificar si se ha ingresado algún dato o cambiado el área/servicio default
             return (
                 (sede !== 'PA Chillán' || customSede.trim() !== '') ||
-                (area !== '' && currentAreaName !== selectedAreaNombre) ||
-                (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
+                (area !== '') ||
+                (tipoServicio !== '') ||
                 numeroTarjeta.trim() !== '' ||
                 tipoMaterial.trim() !== '' ||
                 customTipoMaterial.trim() !== '' ||
@@ -466,6 +475,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setObservacionItem('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setEnsayosPendientes(new Set())
         setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
         setErrorVencimiento('')
@@ -593,6 +603,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setUbicacionSector('')
         setCantidadMuestras('1')
         setEnsayosAsociados([])
+        setEnsayosPendientes(new Set())
         setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
     }
@@ -1005,9 +1016,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             const firstRcm = savedRcms.find(r => selectedRcmIds.includes(r.id))
             const areaId = firstRcm?.area ? areas.find(a => a.nombre === firstRcm.area || String(a.id) === String(firstRcm.area))?.id : null
             if (areaId) setSelectedAreaId(areaId)
-        } else if (selectedAreaNombre) {
-            const areaId = areas.find(a => a.nombre === selectedAreaNombre)?.id ?? null
-            if (areaId) setSelectedAreaId(areaId)
+        } else if (area) {
+            setSelectedAreaId(area as number)
         }
     }
 
@@ -1098,27 +1108,59 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setFilterResetKey(prev => prev + 1)
     }
 
-    const handleSelectProduct = (producto: ProductoType) => {
-        console.log('=== handleSelectProduct ===')
-        console.log('Producto seleccionado:', producto)
-
+    const handleSelectProduct = async (producto: ProductoType) => {
         // Usar productoId o id según lo que tenga el producto
         const idProducto = (producto as any).productoId || producto.id
-        console.log('ID del producto:', idProducto)
 
-        setEnsayosAsociados(prev => {
-            console.log('Estado anterior ensayos:', prev)
+        // Verificar si el producto ya está en la lista
+        const yaExiste = ensayosAsociados.some(e => e.productoId === idProducto)
+        if (yaExiste) {
+            handleCloseSearchPopover()
+            return
+        }
 
-            // Verificar si el producto ya está en la lista
-            const yaExiste = prev.some(e => e.productoId === idProducto)
-            if (yaExiste) {
-                console.log('El ensayo ya está agregado, no se agrega')
-                return prev
+        if (producto.esPaquete) {
+            // Fetch sub-products del paquete
+            try {
+                const response = await fetch(`/api/productos/${idProducto}/productos`)
+                if (response.ok) {
+                    const data = await response.json()
+                    const productosDelPaquete = data.productos || []
+
+                    const subProductos: SubProducto[] = productosDelPaquete.map((p: any, idx: number) => ({
+                        id: Date.now() + idx + 1,
+                        productoId: p.productoId,
+                        sku: p.sku,
+                        nombre: p.nombre,
+                        norma: p.norma || '',
+                        cantidad: p.cantidad || 1,
+                        observacion: '',
+                        isEditing: false
+                    }))
+
+                    const nuevoEnsayoPaquete: EnsayoAsociado = {
+                        id: Date.now(),
+                        productoId: idProducto,
+                        sku: producto.sku,
+                        nombre: producto.nombre,
+                        norma: producto.norma,
+                        cantidad: 1,
+                        observacion: '',
+                        estadoOperativo: 'Codificado',
+                        esPaquete: true,
+                        subProductos
+                    }
+
+                    setEnsayosAsociados(prev => [...prev, nuevoEnsayoPaquete])
+                    // No marcar como pendiente ni hacer focus para paquetes
+                }
+            } catch (error) {
+                console.error('Error al cargar productos del paquete:', error)
             }
-
-            // Agregar el producto a la lista de ensayos
+        } else {
+            // Producto individual (lógica existente)
             const nuevoEnsayo: EnsayoAsociado = {
-                id: Date.now(), // ID temporal
+                id: Date.now(),
                 productoId: idProducto,
                 sku: producto.sku,
                 nombre: producto.nombre,
@@ -1128,22 +1170,102 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 estadoOperativo: 'Codificado'
             }
 
-            const nuevaLista = [...prev, nuevoEnsayo]
-            console.log('Nueva lista de ensayos:', nuevaLista)
-            return nuevaLista
-        })
+            setEnsayosAsociados(prev => [...prev, nuevoEnsayo])
+            setEnsayosPendientes(prev => new Set([...prev, nuevoEnsayo.id]))
+        }
 
         handleCloseSearchPopover()
     }
 
     const handleDeleteEnsayo = (ensayoId: number) => {
         setEnsayosAsociados(ensayosAsociados.filter(e => e.id !== ensayoId))
+        setEnsayosPendientes(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(ensayoId)
+            return newSet
+        })
+    }
+
+    // Handlers para sub-productos de paquetes
+    const handleDeleteSubProducto = (ensayoId: number, subProductoId: number) => {
+        setEnsayosAsociados(prev => prev.map(e => {
+            if (e.id !== ensayoId || !e.subProductos) return e
+            return { ...e, subProductos: e.subProductos.filter(sp => sp.id !== subProductoId) }
+        }))
+    }
+
+    const handleToggleEditSubProducto = (ensayoId: number, subProductoId: number) => {
+        setEnsayosAsociados(prev => prev.map(e => {
+            if (e.id !== ensayoId || !e.subProductos) return e
+            return {
+                ...e,
+                subProductos: e.subProductos.map(sp =>
+                    sp.id === subProductoId ? { ...sp, isEditing: !sp.isEditing } : sp
+                )
+            }
+        }))
+    }
+
+    const handleChangeSubProductoCantidad = (ensayoId: number, subProductoId: number, cantidad: number) => {
+        setEnsayosAsociados(prev => prev.map(e => {
+            if (e.id !== ensayoId || !e.subProductos) return e
+            return {
+                ...e,
+                subProductos: e.subProductos.map(sp =>
+                    sp.id === subProductoId ? { ...sp, cantidad } : sp
+                )
+            }
+        }))
+    }
+
+    const handleChangeSubProductoObservacion = (ensayoId: number, subProductoId: number, observacion: string) => {
+        setEnsayosAsociados(prev => prev.map(e => {
+            if (e.id !== ensayoId || !e.subProductos) return e
+            return {
+                ...e,
+                subProductos: e.subProductos.map(sp =>
+                    sp.id === subProductoId ? { ...sp, observacion } : sp
+                )
+            }
+        }))
+    }
+
+    const handleToggleEditEnsayo = (ensayoId: number) => {
+        setEnsayosAsociados(prev => prev.map(e =>
+            e.id === ensayoId ? { ...e, isEditing: !e.isEditing } : e
+        ))
+    }
+
+    const handleConfirmEnsayo = (ensayoId: number) => {
+        // Remover de pendientes
+        setEnsayosPendientes(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(ensayoId)
+            return newSet
+        })
+
+        // Quitar el foco del campo actual
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+        }
+    }
+
+    const handleCancelEnsayo = (ensayoId: number) => {
+        // Eliminar el ensayo si se cancela antes de confirmar
+        handleDeleteEnsayo(ensayoId)
     }
 
     const handleChangeCantidad = (ensayoId: number, cantidad: number) => {
         setEnsayosAsociados(ensayosAsociados.map(e =>
             e.id === ensayoId ? { ...e, cantidad } : e
         ))
+    }
+
+    const handleKeyPressQuantity = (e: React.KeyboardEvent, ensayoId: number) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleConfirmEnsayo(ensayoId)
+        }
     }
 
     const handleChangeObservacion = (ensayoId: number, observacion: string) => {
@@ -1157,6 +1279,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             e.id === ensayoId ? { ...e, estadoOperativo } : e
         ))
     }
+
+    // Effect para hacer focus en el campo de cantidad cuando se agrega un nuevo ensayo (no paquete)
+    useEffect(() => {
+        if (ensayosAsociados.length > 0 && lastEnsayoCantidadRef.current) {
+            // No hacer focus si el último ensayo es un paquete
+            const lastEnsayo = ensayosAsociados[ensayosAsociados.length - 1]
+            if (lastEnsayo.esPaquete) return
+
+            setTimeout(() => {
+                const inputElement = lastEnsayoCantidadRef.current?.querySelector('input')
+                if (inputElement) {
+                    inputElement.focus()
+                    inputElement.select()
+                }
+            }, 0)
+        }
+    }, [ensayosAsociados.length])
 
     const handleOpenStatusMenu = (event: React.MouseEvent<HTMLElement>, ensayoId: number) => {
         setStatusMenuAnchor(event.currentTarget)
@@ -1185,17 +1324,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setSede('PA Chillán')
             setCustomSede('')
 
-            // Encontrar el ID del área seleccionada en el paso 1
-            const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
-            setArea(initialArea ? initialArea.id : '')
-
-            // Encontrar el ID del tipo de servicio seleccionado en el paso 1
-            if (initialArea) {
-                const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
-                setTipoServicio(initialService ? initialService.id : '')
-            } else {
-                setTipoServicio('')
-            }
+            setArea('')
+            setTipoServicio('')
             setNumeroTarjeta('')
             setTomaMuestra('')
             setTipoMaterial('')
@@ -1220,8 +1350,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setExpandedRcm(true)
 
             // Resetear vencimiento
-            const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
-            setTieneVencimiento(shouldHaveVencimiento)
+            setTieneVencimiento(false)
             setSubmuestrasVencimiento([])
 
             // Limpiar el tipo inicial después de usarlo
@@ -1233,14 +1362,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Activar vencimiento automáticamente cuando el área es Hormigón o Elementos y Componentes
     useEffect(() => {
+        const foundArea = areas.find(a => a.id === area)
+        const currentAreaName = foundArea?.nombre?.toLowerCase()
         const shouldHaveVencimiento =
-            selectedAreaNombre?.toLowerCase() === 'hormigón' ||
-            selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
+            currentAreaName === 'hormigón' ||
+            currentAreaName === 'elementos y componentes'
 
         if (shouldHaveVencimiento) {
             setTieneVencimiento(true)
         }
-    }, [selectedAreaNombre])
+    }, [area, areas])
 
     // Cargar áreas y familias iniciales
     useEffect(() => {
@@ -1274,25 +1405,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         fetchInitialData()
     }, [])
 
-    // Sincronizar ID de área y servicio inicial cuando se cargan los datos
-    useEffect(() => {
-        if (areas.length > 0 && selectedAreaNombre && showRcmCard && !isEditingRcm) {
-            const foundArea = areas.find(a => a.nombre === selectedAreaNombre)
-            if (foundArea) {
-                if (!area) {
-                    setArea(foundArea.id)
-                }
 
-                // Sincronizar el tipo de servicio si aún no está seleccionado y tenemos los datos
-                if (todasLasFamilias.length > 0 && selectedTipoServicioNombre && !tipoServicio) {
-                    const foundService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === foundArea.id)
-                    if (foundService) {
-                        setTipoServicio(foundService.id)
-                    }
-                }
-            }
-        }
-    }, [areas, todasLasFamilias, selectedAreaNombre, selectedTipoServicioNombre, showRcmCard, isEditingRcm, area, tipoServicio])
 
     // Cargar familias filtradas para el popover de búsqueda cuando cambia el área
     useEffect(() => {
@@ -1328,8 +1441,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                 if (searchTerm) params.append('q', searchTerm)
 
-                // Filtrar por el área del RCM si está definida, si no usar el área del paso 1
-                const currentAreaName = areas.find(a => a.id === area)?.nombre || selectedAreaNombre
+                // Filtrar por el área del RCM si está definida
+                const currentAreaName = areas.find(a => a.id === area)?.nombre
                 if (currentAreaName) params.append('area', currentAreaName)
 
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
@@ -1358,7 +1471,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, area, areas, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -1418,42 +1531,24 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         {/* Título y subtítulo */}
                         <Box>
                             <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
-                                Paso 2: Crear RCMs (Registro de Control de Muestras)
+                                RCMs creados <Typography component='span' sx={{ color: 'text.secondary', fontWeight: 'normal' }}>{savedRcms.length} {savedRcms.length === 1 ? 'registro' : 'registros'}</Typography>
                             </Typography>
-                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                                Registre las muestras, controles o servicios recolectados en terreno
-                            </Typography>
+
                         </Box>
 
                         {/* Botones */}
                         <Box sx={{ display: 'flex', gap: 2 }}>
-                            {/* <Button
-                            variant='outlined'
-                            startIcon={<ContentCopyIcon />}
-                            onClick={handleDuplicateLastRcm}
-                            sx={{
-                                borderRadius: '8px',
-                                textTransform: 'none',
-                                px: 3,
-                                color: '#9C27B0',
-                                borderColor: '#9C27B0',
-                                '&:hover': {
-                                    borderColor: '#7B1FA2',
-                                    bgcolor: 'rgba(156, 39, 176, 0.04)'
-                                }
-                            }}
-                        >
-                            Duplicar último RCM
-                        </Button> */}
-                            <Button
-                                variant='contained'
-                                color='primary'
-                                startIcon={<AddIcon />}
-                                onClick={handleNewRcmClick}
-                                sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
-                            >
-                                Nuevo RCM
-                            </Button>
+                            {!showRcmCard && (
+                                <Button
+                                    variant='contained'
+                                    color='primary'
+                                    startIcon={<AddIcon />}
+                                    onClick={handleNewRcmClick}
+                                    sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+                                >
+                                    Nuevo RCM
+                                </Button>
+                            )}
                             <Menu
                                 anchorEl={newRcmMenuAnchor}
                                 open={Boolean(newRcmMenuAnchor)}
@@ -1532,7 +1627,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             }}
                                         />
                                     </IconButton>
-                                    <Chip label={rcmType.toUpperCase()} color='primary' sx={{ fontWeight: 'bold' }} />
+                                    <Chip
+                                        label={rcmType.toUpperCase()}
+                                        sx={{
+                                            fontWeight: 'bold',
+                                            backgroundColor: rcmType === 'Muestra' ? '#1976d2' : rcmType === 'Control' ? '#e91e63' : '#424242',
+                                            color: '#ffffff'
+                                        }}
+                                    />
                                     <Chip
                                         label='Borrador'
                                         size='small'
@@ -1560,7 +1662,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     )}
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Button
+                                    {/* <Button
                                         variant='outlined'
                                         size='small'
                                         onClick={handleOpenCodigoPopup}
@@ -1578,7 +1680,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         }}
                                     >
                                         Asignar a código / Crear nuevo código
-                                    </Button>
+                                    </Button> */}
                                     {isEditingRcm && (
                                         <>
                                             <Checkbox />
@@ -1815,7 +1917,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        {rcmType === 'Muestra' && (areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'hormigón' || areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'elementos y componentes') && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Elemento'
@@ -1825,7 +1927,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        {rcmType === 'Muestra' && (areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'hormigón' || areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'elementos y componentes') && (
                                             <Grid item xs={12} md={3}>
                                                 <FormControl fullWidth>
                                                     <InputLabel>Grado</InputLabel>
@@ -1855,7 +1957,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Calicata'
@@ -1866,7 +1968,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Estrato'
@@ -1877,7 +1979,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <>
                                                 <Grid item xs={12} md={3}>
                                                     <TextField
@@ -2020,66 +2122,220 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {ensayosAsociados.map(ensayo => (
-                                                            <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
-                                                                        {ensayo.sku}
-                                                                    </Typography>
-                                                                </td>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Typography variant='body2'>
-                                                                        {ensayo.nombre}
-                                                                    </Typography>
-                                                                    {ensayo.norma && (
-                                                                        <Typography variant='caption' color='text.secondary'>
-                                                                            {ensayo.norma}
+                                                        {ensayosAsociados.map((ensayo, index) => (
+                                                            ensayo.esPaquete ? (
+                                                                // Renderizado de paquete
+                                                                <React.Fragment key={ensayo.id}>
+                                                                    {/* Fila cabecera del paquete */}
+                                                                    <tr style={{ backgroundColor: '#E3F2FD', borderBottom: '1px solid #BBDEFB' }}>
+                                                                        <td style={{ padding: '12px' }}>
+                                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                                <InventoryIcon sx={{ fontSize: 18, color: '#1565C0' }} />
+                                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1565C0' }}>
+                                                                                    PAQUETE SKU {ensayo.sku}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </td>
+                                                                        <td style={{ padding: '12px' }}>
+                                                                            <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                                                {ensayo.nombre}
+                                                                            </Typography>
+                                                                        </td>
+                                                                        <td colSpan={2} style={{ padding: '12px' }}>
+                                                                            <Alert severity='warning' sx={{ py: 0, px: 1, '& .MuiAlert-message': { fontSize: '12px' } }}>
+                                                                                Puedes quitar ítems individuales; recuerda que ítems fuera de cotización pueden generar costos no previstos
+                                                                            </Alert>
+                                                                        </td>
+                                                                        <td colSpan={2} style={{ padding: '12px', textAlign: 'right' }}>
+                                                                            <Button
+                                                                                size='small'
+                                                                                color='error'
+                                                                                variant='outlined'
+                                                                                startIcon={<CloseIcon />}
+                                                                                onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                                                sx={{ textTransform: 'none', fontSize: '12px' }}
+                                                                            >
+                                                                                Quitar paquete completo
+                                                                            </Button>
+                                                                        </td>
+                                                                    </tr>
+                                                                    {/* Filas de sub-productos */}
+                                                                    {ensayo.subProductos?.map((sub) => (
+                                                                        <tr key={sub.id} style={{ borderBottom: '1px solid #E3F2FD', backgroundColor: '#F5F9FF' }}>
+                                                                            <td style={{ padding: '12px', paddingLeft: '36px' }}>
+                                                                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: '#1976D2' }}>
+                                                                                    {sub.sku}
+                                                                                </Typography>
+                                                                            </td>
+                                                                            <td style={{ padding: '12px' }}>
+                                                                                <Typography variant='body2'>
+                                                                                    {sub.nombre}
+                                                                                </Typography>
+                                                                                {sub.norma && (
+                                                                                    <Typography variant='caption' color='text.secondary'>
+                                                                                        {sub.norma}
+                                                                                    </Typography>
+                                                                                )}
+                                                                            </td>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                {sub.isEditing ? (
+                                                                                    <TextField
+                                                                                        size='small'
+                                                                                        value={sub.cantidad}
+                                                                                        onChange={(e) => handleChangeSubProductoCantidad(ensayo.id, sub.id, parseInt(e.target.value) || 0)}
+                                                                                        type='number'
+                                                                                        sx={{ width: '80px' }}
+                                                                                        inputProps={{ min: 1 }}
+                                                                                    />
+                                                                                ) : (
+                                                                                    <Typography variant='body2'>{sub.cantidad}</Typography>
+                                                                                )}
+                                                                            </td>
+                                                                            <td style={{ padding: '12px' }}>
+                                                                                {sub.isEditing ? (
+                                                                                    <TextField
+                                                                                        size='small'
+                                                                                        fullWidth
+                                                                                        value={sub.observacion}
+                                                                                        onChange={(e) => handleChangeSubProductoObservacion(ensayo.id, sub.id, e.target.value)}
+                                                                                        placeholder='Observación...'
+                                                                                    />
+                                                                                ) : (
+                                                                                    <Typography variant='body2' color='text.secondary'>
+                                                                                        {sub.observacion || '\u2014'}
+                                                                                    </Typography>
+                                                                                )}
+                                                                            </td>
+                                                                            <td style={{ padding: '12px' }}></td>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                                                    <IconButton
+                                                                                        size='small'
+                                                                                        sx={{ color: '#FFA726' }}
+                                                                                        onClick={() => handleToggleEditSubProducto(ensayo.id, sub.id)}
+                                                                                        title={sub.isEditing ? 'Guardar cambios' : 'Modificar'}
+                                                                                    >
+                                                                                        {sub.isEditing ? <CheckCircleIcon fontSize='small' /> : <EditIcon fontSize='small' />}
+                                                                                    </IconButton>
+                                                                                    <IconButton
+                                                                                        size='small'
+                                                                                        color='error'
+                                                                                        onClick={() => handleDeleteSubProducto(ensayo.id, sub.id)}
+                                                                                        title='Quitar del paquete'
+                                                                                    >
+                                                                                        <DeleteIcon fontSize='small' />
+                                                                                    </IconButton>
+                                                                                </Box>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </React.Fragment>
+                                                            ) : (
+                                                                // Renderizado de ensayo individual
+                                                                <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                                    <td style={{ padding: '12px' }}>
+                                                                        <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                                                            {ensayo.sku}
                                                                         </Typography>
-                                                                    )}
-                                                                </td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <TextField
-                                                                        size='small'
-                                                                        value={ensayo.cantidad}
-                                                                        onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                                        type='number'
-                                                                        sx={{ width: '80px' }}
-                                                                        inputProps={{ min: 1 }}
-                                                                    />
-                                                                </td>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <TextField
-                                                                        size='small'
-                                                                        fullWidth
-                                                                        value={ensayo.observacion}
-                                                                        onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
-                                                                        placeholder='Observación...'
-                                                                    />
-                                                                </td>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Chip
-                                                                        label={ensayo.estadoOperativo}
-                                                                        size='small'
-                                                                        onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
-                                                                        color={
-                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                        'success'
-                                                                        }
-                                                                        sx={{ cursor: 'pointer' }}
-                                                                    />
-                                                                </td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <IconButton
-                                                                        size='small'
-                                                                        color='error'
-                                                                        onClick={() => handleDeleteEnsayo(ensayo.id)}
-                                                                    >
-                                                                        <DeleteIcon fontSize='small' />
-                                                                    </IconButton>
-                                                                </td>
-                                                            </tr>
+                                                                    </td>
+                                                                    <td style={{ padding: '12px' }}>
+                                                                        <Typography variant='body2'>
+                                                                            {ensayo.nombre}
+                                                                        </Typography>
+                                                                        {ensayo.norma && (
+                                                                            <Typography variant='caption' color='text.secondary'>
+                                                                                {ensayo.norma}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        {ensayo.isEditing || ensayosPendientes.has(ensayo.id) ? (
+                                                                            <TextField
+                                                                                ref={index === ensayosAsociados.length - 1 ? lastEnsayoCantidadRef : null}
+                                                                                size='small'
+                                                                                value={ensayo.cantidad}
+                                                                                onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
+                                                                                onKeyPress={(e) => handleKeyPressQuantity(e, ensayo.id)}
+                                                                                type='number'
+                                                                                sx={{ width: '80px' }}
+                                                                                inputProps={{ min: 1 }}
+                                                                            />
+                                                                        ) : (
+                                                                            <Typography variant='body2'>{ensayo.cantidad}</Typography>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: '12px' }}>
+                                                                        {ensayo.isEditing || ensayosPendientes.has(ensayo.id) ? (
+                                                                            <TextField
+                                                                                size='small'
+                                                                                fullWidth
+                                                                                value={ensayo.observacion}
+                                                                                onChange={(e) => handleChangeObservacion(ensayo.id, e.target.value)}
+                                                                                placeholder='Observación...'
+                                                                            />
+                                                                        ) : (
+                                                                            <Typography variant='body2' color='text.secondary'>
+                                                                                {ensayo.observacion || '\u2014'}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: '12px' }}>
+                                                                        <Chip
+                                                                            label={ensayo.estadoOperativo}
+                                                                            size='small'
+                                                                            onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
+                                                                            color={
+                                                                                ensayo.estadoOperativo === 'Codificado' ? 'default' :
+                                                                                    ensayo.estadoOperativo === 'En Proceso' ? 'info' :
+                                                                                        ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
+                                                                                            'success'
+                                                                            }
+                                                                            sx={{ cursor: 'pointer' }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                        {ensayosPendientes.has(ensayo.id) ? (
+                                                                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                                                                <IconButton
+                                                                                    size='small'
+                                                                                    color='success'
+                                                                                    onClick={() => handleConfirmEnsayo(ensayo.id)}
+                                                                                    title='Confirmar ensayo'
+                                                                                >
+                                                                                    <CheckCircleIcon fontSize='small' />
+                                                                                </IconButton>
+                                                                                <IconButton
+                                                                                    size='small'
+                                                                                    color='error'
+                                                                                    onClick={() => handleCancelEnsayo(ensayo.id)}
+                                                                                    title='Cancelar ensayo'
+                                                                                >
+                                                                                    <CloseIcon fontSize='small' />
+                                                                                </IconButton>
+                                                                            </Box>
+                                                                        ) : (
+                                                                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                                                <IconButton
+                                                                                    size='small'
+                                                                                    sx={{ color: '#FFA726' }}
+                                                                                    onClick={() => handleToggleEditEnsayo(ensayo.id)}
+                                                                                    title={ensayo.isEditing ? 'Guardar cambios' : 'Modificar'}
+                                                                                >
+                                                                                    {ensayo.isEditing ? <CheckCircleIcon fontSize='small' /> : <EditIcon fontSize='small' />}
+                                                                                </IconButton>
+                                                                                <IconButton
+                                                                                    size='small'
+                                                                                    color='error'
+                                                                                    onClick={() => handleDeleteEnsayo(ensayo.id)}
+                                                                                    title='Eliminar ensayo'
+                                                                                >
+                                                                                    <DeleteIcon fontSize='small' />
+                                                                                </IconButton>
+                                                                            </Box>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            )
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -2336,6 +2592,25 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     {/* ═══════════════════════════════════════════════════════ */}
                     {/* LISTADO 2: CREADOS (Pendientes de Agrupar)            */}
                     {/* ═══════════════════════════════════════════════════════ */}
+
+                    {/* Estado vacío cuando no hay RCMs creados */}
+                    {rcmsCreados.length === 0 && !showRcmCard && (
+                        <Box sx={{ mt: 6, textAlign: 'center', py: 8 }}>
+                            <Box sx={{ mb: 3 }}>
+                                <AssignmentIcon sx={{ fontSize: 64, color: 'text.disabled' }} />
+                            </Box>
+                            <Typography variant='h6' sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                No hay RCMs creados aún
+                            </Typography>
+                            <Typography variant='body2' sx={{ color: 'text.secondary', mb: 2 }}>
+                                Presiona "+ Nuevo RCM" para comenzar.
+                            </Typography>
+                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                                Puedes crear muestras, controles o servicios.
+                            </Typography>
+                        </Box>
+                    )}
+
                     {rcmsCreados.length > 0 && (
                         <Box sx={{ mt: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -2387,8 +2662,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
-                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
-                                                sx={{ fontWeight: 'bold' }}
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242',
+                                                    color: '#ffffff'
+                                                }}
                                             />
 
                                             {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
@@ -2712,7 +2990,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Collapse>
 
                                     {/* Barra de acciones rápidas debajo del RCM recién guardado */}
-                                    {actionBarRcmId === rcm.id && (
+                                    {actionBarRcmId === rcm.id && !showRcmCard && (
                                         <Box
                                             sx={{
                                                 display: 'flex',
@@ -2895,8 +3173,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
-                                                color={rcm.rcmType === 'Muestra' ? 'primary' : rcm.rcmType === 'Control' ? 'secondary' : 'default'}
-                                                sx={{ fontWeight: 'bold' }}
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242',
+                                                    color: '#ffffff'
+                                                }}
                                             />
 
                                             {/* Mostrar estado: Agrupado (verde) */}
@@ -3364,10 +3645,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'
@@ -3808,7 +4089,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             fullWidth
                                             size='small'
-                                            value={selectedAreaNombre || '—'}
+                                            value={areas.find(a => a.id === area)?.nombre || '—'}
                                             disabled
                                             InputProps={{ readOnly: true }}
                                         />
@@ -4007,10 +4288,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'
@@ -4138,10 +4419,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'

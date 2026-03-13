@@ -1,5 +1,5 @@
 // MUI Imports
-import { Grid, Chip, TextField, Card, CardContent, CardHeader, Skeleton, Box, Typography, Stepper, Step, StepLabel, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
+import { Grid, Chip, Card, CardContent, CardHeader, Skeleton, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckIcon from '@mui/icons-material/Check'
 
@@ -7,7 +7,6 @@ import CheckIcon from '@mui/icons-material/Check'
 import { useState } from 'react'
 
 // Next Imports
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
 // Utils
@@ -17,9 +16,6 @@ import { formatDateForDisplay } from '@/utils/dateUtils'
 interface HeaderProps {
   otData?: any
   loading: boolean
-  activeStep?: number
-  onStepClick?: (step: number) => void
-  canAdvanceToStep2?: boolean
   hasSavedRcms?: boolean
   selectedAreaNombre?: string
   selectedTipoServicioNombre?: string
@@ -30,7 +26,7 @@ interface HeaderProps {
   totalRcms?: number
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
+const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -110,7 +106,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
     return codigo && descripcion ? `${codigo} ${descripcion}` : codigo || descripcion
   }
 
-  // Formatear obra: "numero | nombre"
+  // Formatear obra: "numero — nombre"
   const formatObra = () => {
     const numeroObra = otData.agenda?.obra?.numeroObra || ''
     let nombreObra = otData.agenda?.obra?.nombreObra || ''
@@ -121,14 +117,14 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
       nombreObra = nombreObra.split(' - Comuna de')[0].split(' - Región del')[0].split(' - Region del')[0]
     }
 
-    return numeroObra && nombreObra ? `${numeroObra} | ${nombreObra}` : numeroObra || nombreObra
+    return numeroObra && nombreObra ? `${numeroObra} — ${nombreObra}` : numeroObra || nombreObra
   }
 
-  // Formatear cliente: "nombre | rut"
+  // Formatear cliente: "rut — nombre"
   const formatCliente = () => {
     const nombreCliente = otData.agenda?.cliente?.nombreCliente || ''
     const rutCliente = otData.agenda?.cliente?.rut || ''
-    return nombreCliente && rutCliente ? `${nombreCliente} | ${rutCliente}` : nombreCliente || rutCliente
+    return nombreCliente && rutCliente ? `${rutCliente} — ${nombreCliente}` : nombreCliente || rutCliente
   }
 
   // Formatear región/ciudad: "región / comuna"
@@ -181,106 +177,64 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
           </Box>
         </Box>
 
-        {/* Stepper alineado a la izquierda */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box
-            onClick={() => onStepClick && onStepClick(1)}
+        {/* Pastillas de contadores */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Borradores */}
+          <Chip
+            size='small'
+            label={`Borradores: ${borradores}`}
             sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 1 ? 'primary.main' : 'grey.300',
-              color: activeStep === 1 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#E3F2FD',
+              color: '#1565C0',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              '&:hover': {
-                opacity: 0.8
-              }
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            1
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Pendientes */}
+          <Chip
+            size='small'
+            label={`Pendientes: ${pendientes}`}
             sx={{
-              fontWeight: activeStep === 1 ? 500 : 400,
-              color: activeStep === 1 ? 'text.primary' : 'text.secondary',
-              cursor: 'pointer'
-            }}
-            onClick={() => onStepClick && onStepClick(1)}
-          >
-            Área y Servicio
-          </Typography>
-          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
-          <Box
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(2)}
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 2 ? 'primary.main' : 'grey.300',
-              color: activeStep === 2 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#FFF3E0',
+              color: '#E65100',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: canAdvanceToStep2 ? 'pointer' : 'not-allowed',
-              opacity: canAdvanceToStep2 ? 1 : 0.5,
-              '&:hover': {
-                opacity: canAdvanceToStep2 ? 0.8 : 0.5
-              }
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            2
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Agrupados */}
+          <Chip
+            size='small'
+            label={`Agrupados: ${agrupados}`}
             sx={{
-              fontWeight: activeStep === 2 ? 500 : 400,
-              color: activeStep === 2 ? 'text.primary' : 'text.secondary',
-              cursor: canAdvanceToStep2 ? 'pointer' : 'not-allowed',
-              opacity: canAdvanceToStep2 ? 1 : 0.5
-            }}
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(2)}
-          >
-            Crear RCMs
-          </Typography>
-          <Typography variant='body2' sx={{ color: 'text.secondary', mx: 1 }}>&gt;</Typography>
-          <Box
-            onClick={() => canAdvanceToStep2 && onStepClick && onStepClick(3)}
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              bgcolor: activeStep === 3 ? 'primary.main' : 'grey.300',
-              color: activeStep === 3 ? 'white' : 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: '#E8F5E9',
+              color: '#2E7D32',
+              fontWeight: 600,
               fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'not-allowed',
-              opacity: 0.5
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            3
-          </Box>
-          <Typography
-            variant='body2'
+          />
+          {/* Total RCMs */}
+          <Chip
+            size='small'
+            label={`Total RCMs: ${totalRcms}`}
             sx={{
-              fontWeight: activeStep === 3 ? 500 : 400,
-              color: 'text.secondary',
-              cursor: 'not-allowed',
-              opacity: 0.5
+              bgcolor: '#F3E5F5',
+              color: '#6A1B9A',
+              fontWeight: 600,
+              fontSize: '12px',
+              height: 26,
+              borderRadius: '13px',
+              '& .MuiChip-label': { px: 1.5 }
             }}
-          >
-            Agrupar Códigos
-          </Typography>
+          />
         </Box>
       </Box>
 
@@ -303,66 +257,6 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
             <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
               Datos de la Orden de Trabajo
             </Typography>
-
-            {/* Contadores en tiempo real */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 1 }}>
-              {/* Borradores */}
-              <Chip
-                size='small'
-                label={`Borradores: ${borradores}`}
-                sx={{
-                  bgcolor: '#E3F2FD',
-                  color: '#1565C0',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Pendientes */}
-              <Chip
-                size='small'
-                label={`Pendientes: ${pendientes}`}
-                sx={{
-                  bgcolor: '#FFF3E0',
-                  color: '#E65100',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Agrupados */}
-              <Chip
-                size='small'
-                label={`Agrupados: ${agrupados}`}
-                sx={{
-                  bgcolor: '#E8F5E9',
-                  color: '#2E7D32',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-              {/* Total RCMs */}
-              <Chip
-                size='small'
-                label={`Total RCMs: ${totalRcms}`}
-                sx={{
-                  bgcolor: '#F3E5F5',
-                  color: '#6A1B9A',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  height: 26,
-                  borderRadius: '13px',
-                  '& .MuiChip-label': { px: 1.5 }
-                }}
-              />
-            </Box>
           </Box>
 
           {/* Grid de campos */}
@@ -374,7 +268,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
                   N° OT
                 </Typography>
                 <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                  {/* Vacío por ahora según requerimientos */}
+                  {otData.numeroOT || ''}
                 </Typography>
               </Box>
             </Grid>
@@ -418,13 +312,13 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
                   ID SOLICITUD
                 </Typography>
                 <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                  {/* Por ahora solo encabezado */}
+                  {otData.idSolicitud || ''}
                 </Typography>
               </Box>
             </Grid>
 
-            {/* Segunda fila */}
-            <Grid item xs={4}>
+            {/* Segunda fila - 5 columnas (OBRA ocupa 2) */}
+            <Grid item xs={4.8}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   OBRA
@@ -435,7 +329,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   CLIENTE
@@ -446,7 +340,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   REGIÓN / CIUDAD
@@ -457,7 +351,7 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
               </Box>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   MANDANTE
@@ -471,8 +365,8 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
         </Box>
       </Card>
 
-      {/* Mostrar Área y Tipo de Servicio seleccionados cuando estamos en paso 2 o superior */}
-      {activeStep >= 2 && selectedAreaNombre && selectedTipoServicioNombre && (
+      {/* Mostrar Área y Tipo de Servicio seleccionados */}
+      {selectedAreaNombre && selectedTipoServicioNombre && (
         <Card sx={{ mt: 3 }}>
           <Box sx={{ p: 4 }}>
             <Grid container spacing={4}>
