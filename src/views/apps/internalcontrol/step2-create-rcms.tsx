@@ -127,15 +127,13 @@ interface Step2CreateRcmsProps {
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
     otData?: any
-    selectedAreaNombre?: string
-    selectedTipoServicioNombre?: string
     initialRcmType?: string
     onClearInitialRcmType?: () => void
     onDraftCountChange?: (count: number) => void
     onAgrupadosCountChange?: (count: number) => void
 }
 
-const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, selectedAreaNombre, selectedTipoServicioNombre, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
+const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, setSavedRcms, otData, initialRcmType, onClearInitialRcmType, onDraftCountChange, onAgrupadosCountChange }: Step2CreateRcmsProps) => {
     // Función para obtener fecha de hoy en formato YYYY-MM-DD (para input type='date')
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -318,17 +316,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSede('PA Chillán')
         setCustomSede('')
 
-        // Encontrar el ID del área seleccionada en el paso 1
-        const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
-        setArea(initialArea ? initialArea.id : '')
-
-        // Encontrar el ID del tipo de servicio seleccionado en el paso 1
-        if (initialArea) {
-            const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
-            setTipoServicio(initialService ? initialService.id : '')
-        } else {
-            setTipoServicio('')
-        }
+        setArea('')
+        setTipoServicio('')
         setNumeroTarjeta('')
         setTomaMuestra('')
         setTipoMaterial('')
@@ -353,8 +342,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setExpandedRcm(true)
 
         // Resetear vencimiento
-        const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
-        setTieneVencimiento(shouldHaveVencimiento)
+        setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
     }
 
@@ -395,8 +383,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             // Nuevo RCM: verificar si se ha ingresado algún dato o cambiado el área/servicio default
             return (
                 (sede !== 'PA Chillán' || customSede.trim() !== '') ||
-                (area !== '' && currentAreaName !== selectedAreaNombre) ||
-                (tipoServicio !== '' && currentTipoServicioName !== selectedTipoServicioNombre) ||
+                (area !== '') ||
+                (tipoServicio !== '') ||
                 numeroTarjeta.trim() !== '' ||
                 tipoMaterial.trim() !== '' ||
                 customTipoMaterial.trim() !== '' ||
@@ -1005,9 +993,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             const firstRcm = savedRcms.find(r => selectedRcmIds.includes(r.id))
             const areaId = firstRcm?.area ? areas.find(a => a.nombre === firstRcm.area || String(a.id) === String(firstRcm.area))?.id : null
             if (areaId) setSelectedAreaId(areaId)
-        } else if (selectedAreaNombre) {
-            const areaId = areas.find(a => a.nombre === selectedAreaNombre)?.id ?? null
-            if (areaId) setSelectedAreaId(areaId)
+        } else if (area) {
+            setSelectedAreaId(area as number)
         }
     }
 
@@ -1185,17 +1172,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setSede('PA Chillán')
             setCustomSede('')
 
-            // Encontrar el ID del área seleccionada en el paso 1
-            const initialArea = areas.find(a => a.nombre === selectedAreaNombre)
-            setArea(initialArea ? initialArea.id : '')
-
-            // Encontrar el ID del tipo de servicio seleccionado en el paso 1
-            if (initialArea) {
-                const initialService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === initialArea.id)
-                setTipoServicio(initialService ? initialService.id : '')
-            } else {
-                setTipoServicio('')
-            }
+            setArea('')
+            setTipoServicio('')
             setNumeroTarjeta('')
             setTomaMuestra('')
             setTipoMaterial('')
@@ -1220,8 +1198,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             setExpandedRcm(true)
 
             // Resetear vencimiento
-            const shouldHaveVencimiento = selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
-            setTieneVencimiento(shouldHaveVencimiento)
+            setTieneVencimiento(false)
             setSubmuestrasVencimiento([])
 
             // Limpiar el tipo inicial después de usarlo
@@ -1233,14 +1210,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     // Activar vencimiento automáticamente cuando el área es Hormigón o Elementos y Componentes
     useEffect(() => {
+        const foundArea = areas.find(a => a.id === area)
+        const currentAreaName = foundArea?.nombre?.toLowerCase()
         const shouldHaveVencimiento =
-            selectedAreaNombre?.toLowerCase() === 'hormigón' ||
-            selectedAreaNombre?.toLowerCase() === 'elementos y componentes'
+            currentAreaName === 'hormigón' ||
+            currentAreaName === 'elementos y componentes'
 
         if (shouldHaveVencimiento) {
             setTieneVencimiento(true)
         }
-    }, [selectedAreaNombre])
+    }, [area, areas])
 
     // Cargar áreas y familias iniciales
     useEffect(() => {
@@ -1274,25 +1253,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         fetchInitialData()
     }, [])
 
-    // Sincronizar ID de área y servicio inicial cuando se cargan los datos
-    useEffect(() => {
-        if (areas.length > 0 && selectedAreaNombre && showRcmCard && !isEditingRcm) {
-            const foundArea = areas.find(a => a.nombre === selectedAreaNombre)
-            if (foundArea) {
-                if (!area) {
-                    setArea(foundArea.id)
-                }
 
-                // Sincronizar el tipo de servicio si aún no está seleccionado y tenemos los datos
-                if (todasLasFamilias.length > 0 && selectedTipoServicioNombre && !tipoServicio) {
-                    const foundService = todasLasFamilias.find(f => f.nombre === selectedTipoServicioNombre && f.areaId === foundArea.id)
-                    if (foundService) {
-                        setTipoServicio(foundService.id)
-                    }
-                }
-            }
-        }
-    }, [areas, todasLasFamilias, selectedAreaNombre, selectedTipoServicioNombre, showRcmCard, isEditingRcm, area, tipoServicio])
 
     // Cargar familias filtradas para el popover de búsqueda cuando cambia el área
     useEffect(() => {
@@ -1328,8 +1289,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
                 if (searchTerm) params.append('q', searchTerm)
 
-                // Filtrar por el área del RCM si está definida, si no usar el área del paso 1
-                const currentAreaName = areas.find(a => a.id === area)?.nombre || selectedAreaNombre
+                // Filtrar por el área del RCM si está definida
+                const currentAreaName = areas.find(a => a.id === area)?.nombre
                 if (currentAreaName) params.append('area', currentAreaName)
 
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
@@ -1358,7 +1319,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, selectedAreaNombre, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, area, areas, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {
@@ -1815,7 +1776,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        {rcmType === 'Muestra' && (areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'hormigón' || areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'elementos y componentes') && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Elemento'
@@ -1825,7 +1786,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && (selectedAreaNombre?.toLowerCase() === 'hormigón' || selectedAreaNombre?.toLowerCase() === 'elementos y componentes') && (
+                                        {rcmType === 'Muestra' && (areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'hormigón' || areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'elementos y componentes') && (
                                             <Grid item xs={12} md={3}>
                                                 <FormControl fullWidth>
                                                     <InputLabel>Grado</InputLabel>
@@ -1855,7 +1816,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Calicata'
@@ -1866,7 +1827,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <Grid item xs={12} md={3}>
                                                 <TextField
                                                     label='Estrato'
@@ -1877,7 +1838,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 />
                                             </Grid>
                                         )}
-                                        {rcmType === 'Muestra' && selectedAreaNombre?.toLowerCase() === 'suelo' && (
+                                        {rcmType === 'Muestra' && areas.find(a => a.id === area)?.nombre?.toLowerCase() === 'suelo' && (
                                             <>
                                                 <Grid item xs={12} md={3}>
                                                     <TextField
@@ -3364,10 +3325,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'
@@ -3808,7 +3769,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             fullWidth
                                             size='small'
-                                            value={selectedAreaNombre || '—'}
+                                            value={areas.find(a => a.id === area)?.nombre || '—'}
                                             disabled
                                             InputProps={{ readOnly: true }}
                                         />
@@ -4007,10 +3968,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'
@@ -4138,10 +4099,10 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             )
                         }}
                     />
-                    {selectedAreaNombre && (
+                    {areas.find(a => a.id === area)?.nombre && (
                         <Box sx={{ mt: 1 }}>
                             <Chip
-                                label={`Área: ${selectedAreaNombre}`}
+                                label={`Área: ${areas.find(a => a.id === area)?.nombre}`}
                                 size='small'
                                 color='primary'
                                 variant='outlined'

@@ -17,9 +17,6 @@ import { formatDateForDisplay } from '@/utils/dateUtils'
 interface HeaderProps {
   otData?: any
   loading: boolean
-  activeStep?: number
-  onStepClick?: (step: number) => void
-  canAdvanceToStep2?: boolean
   hasSavedRcms?: boolean
   selectedAreaNombre?: string
   selectedTipoServicioNombre?: string
@@ -30,7 +27,7 @@ interface HeaderProps {
   totalRcms?: number
 }
 
-const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep2 = false, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
+const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -369,8 +366,8 @@ const Header = ({ otData, loading, activeStep = 1, onStepClick, canAdvanceToStep
         </Box>
       </Card>
 
-      {/* Mostrar Área y Tipo de Servicio seleccionados cuando estamos en paso 2 o superior */}
-      {activeStep >= 2 && selectedAreaNombre && selectedTipoServicioNombre && (
+      {/* Mostrar Área y Tipo de Servicio seleccionados */}
+      {selectedAreaNombre && selectedTipoServicioNombre && (
         <Card sx={{ mt: 3 }}>
           <Box sx={{ p: 4 }}>
             <Grid container spacing={4}>

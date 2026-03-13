@@ -8,7 +8,6 @@ import { useSearchParams } from 'next/navigation'
 import Grid from '@mui/material/Grid'
 
 // Component Imports
-import UserListTable3 from './UserListTable3'
 import Header from './header'
 import Step2CreateRcms from './step2-create-rcms'
 
@@ -61,11 +60,6 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [otId, setOtId] = useState<string | null>(null)
   const [otData, setOtData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeStep, setActiveStep] = useState(1) // 1 = Área y Servicio, 2 = Crear RCMs, 3 = Agrupar Códigos
-  const [selectedArea, setSelectedArea] = useState<number | ''>('')
-  const [selectedTipoServicio, setSelectedTipoServicio] = useState<number | ''>('')
-  const [selectedAreaNombre, setSelectedAreaNombre] = useState('')
-  const [selectedTipoServicioNombre, setSelectedTipoServicioNombre] = useState('')
 
   // Estados para persistir datos del Paso 2
   const [ensayosAsociados, setEnsayosAsociados] = useState<EnsayoAsociado[]>([])
@@ -113,24 +107,6 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
     }
   }, [searchParams])
 
-  const handleStepClick = (step: number) => {
-    // No permitir avanzar al paso 2 sin área y servicio seleccionados
-    if (step === 2 && (!selectedArea || !selectedTipoServicio)) {
-      return
-    }
-    setActiveStep(step)
-  }
-
-  const handleGoToStep2 = (rcmType?: string) => {
-    // Solo avanzar si hay área y servicio seleccionados
-    if (selectedArea && selectedTipoServicio) {
-      if (rcmType) {
-        setInitialRcmType(rcmType)
-      }
-      setActiveStep(2)
-    }
-  }
-
   return (
     <Grid container spacing={6}>
       {/* Agregamos el Header con los datos de la OT */}
@@ -138,12 +114,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
         <Header
           otData={otData}
           loading={loading}
-          activeStep={activeStep}
-          onStepClick={handleStepClick}
-          canAdvanceToStep2={!!(selectedArea && selectedTipoServicio)}
           hasSavedRcms={savedRcms.length > 0}
-          selectedAreaNombre={selectedAreaNombre}
-          selectedTipoServicioNombre={selectedTipoServicioNombre}
           borradores={borradores}
           pendientes={pendientes}
           agrupados={agrupados}
@@ -151,43 +122,20 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
         />
       </Grid>
 
-      {/* Paso 1: Área y Servicio */}
-      {activeStep === 1 && (
-        <Grid item xs={12}>
-          <UserListTable3
-            tableData={userData}
-            otId={otId}
-            otData={otData}
-            loading={loading}
-            onGoToStep2={handleGoToStep2}
-            selectedArea={selectedArea}
-            setSelectedArea={setSelectedArea}
-            selectedTipoServicio={selectedTipoServicio}
-            setSelectedTipoServicio={setSelectedTipoServicio}
-            setSelectedAreaNombre={setSelectedAreaNombre}
-            setSelectedTipoServicioNombre={setSelectedTipoServicioNombre}
-          />
-        </Grid>
-      )}
-
-      {/* Paso 2: Crear RCMs */}
-      {activeStep === 2 && (
-        <Grid item xs={12}>
-          <Step2CreateRcms
-            ensayosAsociados={ensayosAsociados}
-            setEnsayosAsociados={setEnsayosAsociados}
-            savedRcms={savedRcms}
-            setSavedRcms={setSavedRcms}
-            otData={otData}
-            selectedAreaNombre={selectedAreaNombre}
-            selectedTipoServicioNombre={selectedTipoServicioNombre}
-            initialRcmType={initialRcmType}
-            onClearInitialRcmType={() => setInitialRcmType('')}
-            onDraftCountChange={setOpenDraftCount}
-            onAgrupadosCountChange={setAgrupadosCount}
-          />
-        </Grid>
-      )}
+      {/* Formulario y Listado de RCMs */}
+      <Grid item xs={12}>
+        <Step2CreateRcms
+          ensayosAsociados={ensayosAsociados}
+          setEnsayosAsociados={setEnsayosAsociados}
+          savedRcms={savedRcms}
+          setSavedRcms={setSavedRcms}
+          otData={otData}
+          initialRcmType={initialRcmType}
+          onClearInitialRcmType={() => setInitialRcmType('')}
+          onDraftCountChange={setOpenDraftCount}
+          onAgrupadosCountChange={setAgrupadosCount}
+        />
+      </Grid>
     </Grid>
   )
 }
