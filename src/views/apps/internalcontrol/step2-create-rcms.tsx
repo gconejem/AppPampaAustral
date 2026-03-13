@@ -1404,15 +1404,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         >
                             Duplicar último RCM
                         </Button> */}
-                            <Button
-                                variant='contained'
-                                color='primary'
-                                startIcon={<AddIcon />}
-                                onClick={handleNewRcmClick}
-                                sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
-                            >
-                                Nuevo RCM
-                            </Button>
+                            {!showRcmCard && (
+                                <Button
+                                    variant='contained'
+                                    color='primary'
+                                    startIcon={<AddIcon />}
+                                    onClick={handleNewRcmClick}
+                                    sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
+                                >
+                                    Nuevo RCM
+                                </Button>
+                            )}
                             <Menu
                                 anchorEl={newRcmMenuAnchor}
                                 open={Boolean(newRcmMenuAnchor)}
@@ -2690,7 +2692,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Collapse>
 
                                     {/* Barra de acciones rápidas debajo del RCM recién guardado */}
-                                    {actionBarRcmId === rcm.id && (
+                                    {actionBarRcmId === rcm.id && !showRcmCard && (
                                         <Box
                                             sx={{
                                                 display: 'flex',
