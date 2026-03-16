@@ -3037,14 +3037,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     onChange={() => handleToggleRcmSelection(rcm.id)}
                                                 />
                                             </Box>
-                                            <IconButton size='small'>
-                                                <ExpandMoreIcon
-                                                    sx={{
-                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                                        transition: 'transform 0.3s'
-                                                    }}
-                                                />
-                                            </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
                                                 sx={{
@@ -3053,6 +3045,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     color: '#ffffff'
                                                 }}
                                             />
+                                            <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                            </Typography>
 
                                             {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
                                             <Chip
@@ -3069,7 +3064,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             {/* Mostrar campos según el tipo de RCM */}
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
 
-                                                {/* MUESTRA: Sede | Área | Tipo de Servicio | Tarjeta | #Toma de Muestra | Material | Ítem | Procedencia | Ensayo/Servicio | Fecha Ensayo | Cantidad */}
+                                                {/* MUESTRA: Sede | Área | Tipo Servicio | [Tarjeta] | #Toma | Material | Ítem | Procedencia | Fecha Muestreo [vence DD-MM — DD-MM] | ×Cantidad */}
                                                 {rcm.rcmType === 'Muestra' && (
                                                     <>
                                                         {rcm.sede && (
@@ -3093,7 +3088,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         {rcm.numeroTarjeta && (
                                                             <>
                                                                 <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
+                                                                <Chip
+                                                                    label={`T:${rcm.numeroTarjeta}`}
+                                                                    size='small'
+                                                                    sx={{
+                                                                        bgcolor: '#1976d2',
+                                                                        color: '#ffffff',
+                                                                        fontWeight: 600,
+                                                                        fontSize: '0.75rem'
+                                                                    }}
+                                                                />
                                                             </>
                                                         )}
                                                         {rcm.tomaMuestra && (
@@ -3120,39 +3124,34 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                 <Typography variant='body2'>{rcm.procedencia}</Typography>
                                                             </>
                                                         )}
-                                                        {rcm.ensayos.length > 0 && (
-                                                            <>
-                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
-                                                            </>
-                                                        )}
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
                                                             <Typography variant='body2'>
                                                                 {(() => {
+                                                                    const fechaMuestreo = rcm.fechaMuestreo ? formatDateOnly(rcm.fechaMuestreo) : formatDateOnly(rcm.fechaServicio)
                                                                     if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
                                                                         const fechas = rcm.submuestrasVencimiento
                                                                             .map(sub => sub.fechaVencimiento)
                                                                             .filter(f => !!f)
                                                                             .sort()
-                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
+                                                                        if (fechas.length === 0) return fechaMuestreo
+                                                                        if (fechas.length === 1) return `${fechaMuestreo} [vence ${formatDateOnly(fechas[0])}]`
+                                                                        return `${fechaMuestreo} [vence ${formatDateOnly(fechas[0])} — ${formatDateOnly(fechas[fechas.length - 1])}]`
                                                                     }
-                                                                    return formatDateOnly(rcm.fechaServicio)
+                                                                    return fechaMuestreo
                                                                 })()}
                                                             </Typography>
                                                         </>
                                                         {rcm.cantidadMuestras && (
                                                             <>
                                                                 <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                                <Typography variant='body2'>×{rcm.cantidadMuestras}</Typography>
                                                             </>
                                                         )}
                                                     </>
                                                 )}
 
-                                                {/* CONTROL: Sede | Área | Tipo de Servicio | Fecha Servicio | Ítem | Ensayo/Servicio | Cantidad */}
+                                                {/* CONTROL: Sede | Área | Tipo Servicio | Fecha Servicio | Ítem | ×Cantidad */}
                                                 {rcm.rcmType === 'Control' && (
                                                     <>
                                                         {rcm.sede && (
@@ -3175,20 +3174,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         )}
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>
-                                                                {(() => {
-                                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                                        const fechas = rcm.submuestrasVencimiento
-                                                                            .map(sub => sub.fechaVencimiento)
-                                                                            .filter(f => !!f)
-                                                                            .sort()
-                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                                    }
-                                                                    return formatDateOnly(rcm.fechaServicio)
-                                                                })()}
-                                                            </Typography>
+                                                            <Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography>
                                                         </>
                                                         {rcm.item && (
                                                             <>
@@ -3196,30 +3182,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                 <Typography variant='body2'>{rcm.item}</Typography>
                                                             </>
                                                         )}
-                                                        {rcm.ensayos.length > 0 && (
-                                                            <>
-                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography>
-                                                            </>
-                                                        )}
                                                         {rcm.cantidadMuestras && (
                                                             <>
                                                                 <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                                <Typography variant='body2'>×{rcm.cantidadMuestras}</Typography>
                                                             </>
                                                         )}
                                                     </>
                                                 )}
 
-                                                {/* SERVICIO: Sede | Área | Tipo de Servicio | Fecha Servicio | Cantidad */}
+                                                {/* SERVICIO: Área | Tipo Servicio | Fecha Servicio | ×Cantidad */}
                                                 {rcm.rcmType === 'Servicio' && (
                                                     <>
-                                                        {rcm.sede && (
-                                                            <>
-                                                                <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.sede}</Typography>
-                                                            </>
-                                                        )}
                                                         {rcm.area && (
                                                             <>
                                                                 <Typography variant='body2' color='text.secondary'>|</Typography>
@@ -3234,25 +3208,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         )}
                                                         <>
                                                             <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                            <Typography variant='body2'>
-                                                                {(() => {
-                                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                                        const fechas = rcm.submuestrasVencimiento
-                                                                            .map(sub => sub.fechaVencimiento)
-                                                                            .filter(f => !!f)
-                                                                            .sort()
-                                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                                    }
-                                                                    return formatDateOnly(rcm.fechaServicio)
-                                                                })()}
-                                                            </Typography>
+                                                            <Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography>
                                                         </>
                                                         {rcm.cantidadMuestras && (
                                                             <>
                                                                 <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                                <Typography variant='body2'>{rcm.cantidadMuestras}</Typography>
+                                                                <Typography variant='body2'>×{rcm.cantidadMuestras}</Typography>
                                                             </>
                                                         )}
                                                     </>
@@ -3260,6 +3221,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                            <IconButton size='small'>
+                                                <ExpandMoreIcon
+                                                    sx={{
+                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                        transition: 'transform 0.3s'
+                                                    }}
+                                                />
+                                            </IconButton>
                                             <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                                 <MoreVertIcon />
                                             </IconButton>
@@ -3530,14 +3499,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         onClick={() => handleToggleSavedRcm(rcm.id)}
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            <IconButton size='small'>
-                                                <ExpandMoreIcon
-                                                    sx={{
-                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                                        transition: 'transform 0.3s'
-                                                    }}
-                                                />
-                                            </IconButton>
                                             <Chip
                                                 label={rcm.rcmType.toUpperCase()}
                                                 sx={{
@@ -3546,6 +3507,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     color: '#ffffff'
                                                 }}
                                             />
+                                            <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                            </Typography>
 
                                             {/* Mostrar estado: Agrupado (verde) */}
                                             <Chip
@@ -3576,7 +3540,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 {rcm.numeroTarjeta && (
                                                     <>
                                                         <Typography variant='body2' color='text.secondary'>|</Typography>
-                                                        <Typography variant='body2'>{rcm.numeroTarjeta}</Typography>
+                                                        <Chip
+                                                            label={`T:${rcm.numeroTarjeta}`}
+                                                            size='small'
+                                                            sx={{
+                                                                bgcolor: '#1976d2',
+                                                                color: '#ffffff',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.75rem'
+                                                            }}
+                                                        />
                                                     </>
                                                 )}
                                                 {rcm.ensayos.length > 0 && (
@@ -3619,6 +3592,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     onChange={() => handleToggleRcmSelection(rcm.id)}
                                                 />
                                             )}
+                                            <IconButton size='small'>
+                                                <ExpandMoreIcon
+                                                    sx={{
+                                                        transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                        transition: 'transform 0.3s'
+                                                    }}
+                                                />
+                                            </IconButton>
                                             <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                                 <MoreVertIcon />
                                             </IconButton>
