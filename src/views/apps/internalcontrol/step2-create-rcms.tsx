@@ -2117,7 +2117,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Observación</th>
-                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>Acciones</th>
                                                         </tr>
                                                     </thead>
@@ -2146,7 +2145,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                                 Puedes quitar ítems individuales; recuerda que ítems fuera de cotización pueden generar costos no previstos
                                                                             </Alert>
                                                                         </td>
-                                                                        <td colSpan={2} style={{ padding: '12px', textAlign: 'right' }}>
+                                                                        <td style={{ padding: '12px', textAlign: 'right' }}>
                                                                             <Button
                                                                                 size='small'
                                                                                 color='error'
@@ -2206,7 +2205,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                                     </Typography>
                                                                                 )}
                                                                             </td>
-                                                                            <td style={{ padding: '12px' }}></td>
                                                                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                                                                                     <IconButton
@@ -2279,20 +2277,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                             </Typography>
                                                                         )}
                                                                     </td>
-                                                                    <td style={{ padding: '12px' }}>
-                                                                        <Chip
-                                                                            label={ensayo.estadoOperativo}
-                                                                            size='small'
-                                                                            onClick={(e) => handleOpenStatusMenu(e, ensayo.id)}
-                                                                            color={
-                                                                                ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                                    ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                        ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                            'success'
-                                                                            }
-                                                                            sx={{ cursor: 'pointer' }}
-                                                                        />
-                                                                    </td>
                                                                     <td style={{ padding: '12px', textAlign: 'center' }}>
                                                                         {ensayosPendientes.has(ensayo.id) ? (
                                                                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -2342,34 +2326,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Box>
                                         )}
 
-                                        {/* Menu para seleccionar estado operativo */}
-                                        <Menu
-                                            anchorEl={statusMenuAnchor}
-                                            open={Boolean(statusMenuAnchor)}
-                                            onClose={handleCloseStatusMenu}
-                                        >
-                                            <MenuItem onClick={() => handleSelectStatus('Codificado')}>
-                                                <Chip
-                                                    label='Codificado'
-                                                    size='small'
-                                                    color='default'
-                                                />
-                                            </MenuItem>
-                                            <MenuItem onClick={() => handleSelectStatus('En Proceso')}>
-                                                <Chip
-                                                    label='En Proceso'
-                                                    size='small'
-                                                    color='info'
-                                                />
-                                            </MenuItem>
-                                            <MenuItem onClick={() => handleSelectStatus('Ensayado')}>
-                                                <Chip
-                                                    label='Ensayado'
-                                                    size='small'
-                                                    color='warning'
-                                                />
-                                            </MenuItem>
-                                        </Menu>
+
                                     </Box>
 
                                     {/* Tabla de Submuestras con Vencimiento */}
@@ -2469,10 +2426,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                             value={submuestra.dias}
                                                                             onChange={(e) => {
                                                                                 const dias = parseInt(e.target.value) || 0
-                                                                                const fechaBase = new Date(fechaServicio || getTodayDateForInput())
+                                                                                const fechaBase = new Date((fechaCodificacion || getTodayDateForInput()) + 'T00:00:00')
                                                                                 fechaBase.setDate(fechaBase.getDate() + dias)
                                                                                 const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
-
                                                                                 setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
                                                                                     s.id === submuestra.id
                                                                                         ? { ...s, dias, fechaVencimiento: fechaVenc }
@@ -2490,8 +2446,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                                 minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
                                                                                 onChange={(newValue) => {
                                                                                     const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
-                                                                                    const fechaBase = new Date(fechaServicio || getTodayDateForInput())
-                                                                                    const fechaVenc = new Date(nuevaFecha)
+                                                                                    const fechaBase = new Date((fechaCodificacion || getTodayDateForInput()) + 'T00:00:00')
+                                                                                    const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
                                                                                     const diffTime = fechaVenc.getTime() - fechaBase.getTime()
                                                                                     const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
                                                                                     setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
@@ -2900,7 +2856,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
-                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -2930,18 +2885,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                     <Typography variant='body2' color='text.secondary'>
                                                                         {ensayo.observacion || '-'}
                                                                     </Typography>
-                                                                </td>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Chip
-                                                                        label={ensayo.estadoOperativo}
-                                                                        size='small'
-                                                                        color={
-                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                        'success'
-                                                                        }
-                                                                    />
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -3272,7 +3215,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
                                                             <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
                                                             <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
-                                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '150px' }}>Estado Operativo</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -3291,18 +3233,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                 </td>
                                                                 <td style={{ padding: '12px' }}>
                                                                     <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
-                                                                </td>
-                                                                <td style={{ padding: '12px' }}>
-                                                                    <Chip
-                                                                        label={ensayo.estadoOperativo}
-                                                                        size='small'
-                                                                        color={
-                                                                            ensayo.estadoOperativo === 'Codificado' ? 'default' :
-                                                                                ensayo.estadoOperativo === 'En Proceso' ? 'info' :
-                                                                                    ensayo.estadoOperativo === 'Ensayado' ? 'warning' :
-                                                                                        'success'
-                                                                        }
-                                                                    />
                                                                 </td>
                                                             </tr>
                                                         ))}
