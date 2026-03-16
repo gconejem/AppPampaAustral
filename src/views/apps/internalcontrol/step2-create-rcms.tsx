@@ -1978,9 +1978,221 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 </Grid>
                                             </Grid>
                                         </>
+                                    ) : rcmType === 'Control' ? (
+                                        /* ═══════════════════════════════════════════ */
+                                        /* LAYOUT PARA TIPO CONTROL                   */
+                                        /* ═══════════════════════════════════════════ */
+                                        <>
+                                            {/* Fila 1: Área, Tipo Servicio, Sede */}
+                                            <Grid container spacing={3}>
+                                                <Grid item xs={12} md={4}>
+                                                    <FormControl fullWidth>
+                                                        <InputLabel id="area-label-control" shrink>Área</InputLabel>
+                                                        <Select
+                                                            labelId="area-label-control"
+                                                            label='Área'
+                                                            value={area}
+                                                            displayEmpty
+                                                            notched
+                                                            onChange={(e) => {
+                                                                const valor = e.target.value as number | ''
+                                                                setArea(valor)
+                                                                setTipoServicio('')
+                                                            }}
+                                                        >
+                                                            <MenuItem value='' disabled>Seleccionar área</MenuItem>
+                                                            {areas.map((a) => (
+                                                                <MenuItem key={a.id} value={a.id}>
+                                                                    {a.nombre}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                                <Grid item xs={12} md={4}>
+                                                    <FormControl fullWidth>
+                                                        <InputLabel id="tipo-servicio-label-control" shrink>Tipo Servicio</InputLabel>
+                                                        <Select
+                                                            labelId="tipo-servicio-label-control"
+                                                            label='Tipo Servicio'
+                                                            value={tipoServicio}
+                                                            displayEmpty
+                                                            notched
+                                                            disabled={!area}
+                                                            onChange={(e) => setTipoServicio(e.target.value as number | '')}
+                                                        >
+                                                            <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
+                                                            {todasLasFamilias
+                                                                .filter(f => f.areaId === area)
+                                                                .map((f) => (
+                                                                    <MenuItem key={f.id} value={f.id}>
+                                                                        {f.nombre}
+                                                                    </MenuItem>
+                                                                ))
+                                                            }
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                                <Grid item xs={12} md={4}>
+                                                    <FormControl fullWidth>
+                                                        <InputLabel id="sede-label-control">Sede</InputLabel>
+                                                        <Select
+                                                            labelId="sede-label-control"
+                                                            label='Sede'
+                                                            value={sede}
+                                                            onChange={(e) => {
+                                                                setSede(e.target.value)
+                                                                if (e.target.value !== 'Otro') {
+                                                                    setCustomSede('')
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MenuItem value='PA Chillán'>PA Chillán</MenuItem>
+                                                            <MenuItem value='PA Concepción'>PA Concepción</MenuItem>
+                                                            <MenuItem value='Cliente'>Cliente</MenuItem>
+                                                            <MenuItem value='Otro'>Otro</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    {sede === 'Otro' && (
+                                                        <TextField
+                                                            label='Especificar Sede'
+                                                            value={customSede}
+                                                            onChange={(e) => setCustomSede(e.target.value)}
+                                                            fullWidth
+                                                            required
+                                                            placeholder='Ingrese la sede'
+                                                            sx={{ mt: 2 }}
+                                                        />
+                                                    )}
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* Fila 2: Fecha Codificación, Fecha Servicio, Fecha Ingreso, Fecha Entrega */}
+                                            <Grid container spacing={3} sx={{ mt: 0 }}>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Fecha Codificación'
+                                                        type='date'
+                                                        value={fechaCodificacion}
+                                                        required
+                                                        fullWidth
+                                                        disabled
+                                                        InputLabelProps={{ shrink: true }}
+                                                        InputProps={{
+                                                            readOnly: true
+                                                        }}
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Fecha de Servicio'
+                                                        type='date'
+                                                        value={fechaServicio}
+                                                        onChange={(e) => setFechaServicio(e.target.value)}
+                                                        required
+                                                        fullWidth
+                                                        InputLabelProps={{ shrink: true }}
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Fecha de Ingreso'
+                                                        type='date'
+                                                        value={fechaIngreso}
+                                                        onChange={(e) => setFechaIngreso(e.target.value)}
+                                                        required
+                                                        fullWidth
+                                                        InputLabelProps={{ shrink: true }}
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField
+                                                        label='Fecha de Entrega'
+                                                        type='date'
+                                                        value={fechaEntrega}
+                                                        onChange={(e) => setFechaEntrega(e.target.value)}
+                                                        fullWidth
+                                                        InputLabelProps={{ shrink: true }}
+                                                    />
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* Título: Descripción del control */}
+                                            <Typography variant='subtitle1' sx={{ fontWeight: 700, mt: 4, mb: 1 }}>
+                                                Descripción del control
+                                            </Typography>
+                                            <Divider sx={{ mb: 3 }} />
+
+                                            {/* Fila 3: Ítem, Observación al Ítem */}
+                                            <Grid container spacing={3}>
+                                                <Grid item xs={12} md={6}>
+                                                    <FormControl fullWidth required>
+                                                        <InputLabel>Ítem</InputLabel>
+                                                        <Select
+                                                            label='Ítem'
+                                                            value={item}
+                                                            onChange={(e) => setItem(e.target.value)}
+                                                        >
+                                                            <MenuItem value='Base'>Base</MenuItem>
+                                                            <MenuItem value='Subbase'>Subbase</MenuItem>
+                                                            <MenuItem value='Subrasante'>Subrasante</MenuItem>
+                                                            <MenuItem value='Terraplén'>Terraplén</MenuItem>
+                                                            <MenuItem value='Otro'>Otro</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                                <Grid item xs={12} md={6}>
+                                                    <TextField
+                                                        label='Observación al Ítem'
+                                                        value={observacionItem}
+                                                        onChange={(e) => setObservacionItem(e.target.value)}
+                                                        fullWidth
+                                                        placeholder='Ingrese observaciones sobre el ítem...'
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                            {/* Fila "Otro" para Ítem — se muestra debajo cuando se selecciona Otro */}
+                                            {item === 'Otro' && (
+                                                <Grid container spacing={3} sx={{ mt: 0 }}>
+                                                    <Grid item xs={12} md={6}>
+                                                        <TextField
+                                                            label='Especificar Ítem'
+                                                            value={customItem}
+                                                            onChange={(e) => setCustomItem(e.target.value)}
+                                                            fullWidth
+                                                            required
+                                                            placeholder='Ingrese el ítem'
+                                                        />
+                                                    </Grid>
+                                                </Grid>
+                                            )}
+
+                                            {/* Fila 4: Ubicación/Sector, Informe de Ensayo */}
+                                            <Grid container spacing={3} sx={{ mt: 0 }} alignItems='center'>
+                                                <Grid item xs={12} md={6}>
+                                                    <TextField
+                                                        label='Ubicación/Sector'
+                                                        value={ubicacionSector}
+                                                        onChange={(e) => setUbicacionSector(e.target.value)}
+                                                        fullWidth
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12} md={3}>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Checkbox
+                                                                checked={informeEnsayo}
+                                                                onChange={(e) => setInformeEnsayo(e.target.checked)}
+                                                            />
+                                                        }
+                                                        label='Informe de Ensayo'
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </>
                                     ) : (
                                         /* ═══════════════════════════════════════════ */
-                                        /* LAYOUT PARA TIPO CONTROL / SERVICIO        */
+                                        /* LAYOUT PARA TIPO SERVICIO                  */
                                         /* ═══════════════════════════════════════════ */
                                         <Grid container spacing={3}>
                                             <Grid item xs={12} md={3}>
@@ -2137,19 +2349,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     rows={3}
                                                 />
                                             </Grid>
-                                            {rcmType === 'Control' && (
-                                                <Grid item xs={12} md={4}>
-                                                    <TextField
-                                                        label='Observación al Ítem'
-                                                        value={observacionItem}
-                                                        onChange={(e) => setObservacionItem(e.target.value)}
-                                                        fullWidth
-                                                        multiline
-                                                        rows={3}
-                                                        placeholder='Ingrese observaciones sobre el ítem...'
-                                                    />
-                                                </Grid>
-                                            )}
                                             <Grid item xs={12} md={4}>
                                                 <FormControlLabel
                                                     control={
