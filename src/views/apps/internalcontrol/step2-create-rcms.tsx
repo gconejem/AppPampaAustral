@@ -3030,6 +3030,13 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         onClick={() => handleToggleSavedRcm(rcm.id)}
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <Box onClick={(e) => e.stopPropagation()}>
+                                                <Checkbox
+                                                    size='small'
+                                                    checked={selectedRcmIds.includes(rcm.id)}
+                                                    onChange={() => handleToggleRcmSelection(rcm.id)}
+                                                />
+                                            </Box>
                                             <IconButton size='small'>
                                                 <ExpandMoreIcon
                                                     sx={{
@@ -3253,11 +3260,6 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                            <Checkbox
-                                                size='small'
-                                                checked={selectedRcmIds.includes(rcm.id)}
-                                                onChange={() => handleToggleRcmSelection(rcm.id)}
-                                            />
                                             <IconButton size='small' onClick={(e) => handleOpenRcmMenu(e, rcm.id)}>
                                                 <MoreVertIcon />
                                             </IconButton>
