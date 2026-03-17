@@ -1,4 +1,4 @@
-// MUI Imports
+﻿// MUI Imports
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
@@ -282,6 +282,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [newCodigoTipo, setNewCodigoTipo] = useState('')
     // Nuevos campos del Dialog
     const [dialogSkuSearch, setDialogSkuSearch] = useState('')
+    const [dialogSkus, setDialogSkus] = useState<Array<{ sku: string; nombre: string; productoId: number }>>([])
     const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
     const [dialogCantidad, setDialogCantidad] = useState<number>(1)
     // Modo del dialog: 'nuevo' | 'existente'
@@ -967,6 +968,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setNewCodigoDescripcion('')
         setNewCodigoTipo('')
         setDialogSkuSearch('')
+        setDialogSkus([])
         setDialogDescripcionServicio('')
         setSelectedExistingAgrupadorId('')
     }
@@ -1014,8 +1016,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             })
         }
 
-        // Si hay SKU seleccionado, incluirlo como ensayo si no está ya
-        if (dialogSkuSearch.trim()) {
+        // Si hay SKUs seleccionados, incluirlos como ensayos si no están ya
+        dialogSkus.forEach(skuItem => {
+            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === skuItem.sku)
+            if (!skuAlreadyIncluded) {
+                allEnsayos.unshift({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre })
+            }
+        })
+        // Fallback: si hay texto en el campo de búsqueda y no hay SKUs en la lista
+        if (dialogSkus.length === 0 && dialogSkuSearch.trim()) {
             const skuAlreadyIncluded = allEnsayos.some(e => e.sku === dialogSkuSearch.trim())
             if (!skuAlreadyIncluded) {
                 allEnsayos.unshift({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
@@ -1037,7 +1046,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             descripcionServicio: dialogDescripcionServicio,
             cantidad: dialogCantidad,
             unidad: 'unid',
-            facturacion: dialogSkuSearch.trim() ? 'Fijo' : 'Unitario'
+            facturacion: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? 'Fijo' : 'Unitario'
         }
 
         setCodigosAgrupadores(prev => [...prev, newAgrupador])
@@ -1282,7 +1291,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleSelectProductForSku = (producto: ProductoType) => {
-        setDialogSkuSearch(producto.sku || producto.nombre)
+        const sku = producto.sku || producto.nombre
+        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: producto.id }])
+        setDialogSkuSearch('')
         handleCloseSkuSearch()
     }
 
@@ -4742,6 +4753,45 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     </Box>
                                 </Box>
 
+                                {/* Lista de SKUs agregados */}
+                                {dialogSkus.length > 0 && (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {dialogSkus.map((item, idx) => (
+                                            <Box
+                                                key={idx}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    px: 1.5,
+                                                    py: 0.75,
+                                                    borderRadius: '6px',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    bgcolor: '#F8FAFC'
+                                                }}
+                                            >
+                                                <InventoryIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+                                                <Typography variant='body2' sx={{ fontWeight: 700, fontFamily: 'monospace', color: 'primary.main', flexShrink: 0 }}>
+                                                    {item.sku}
+                                                </Typography>
+                                                {item.nombre !== item.sku && (
+                                                    <Typography variant='body2' color='text.secondary' noWrap sx={{ flex: 1 }}>
+                                                        {item.nombre}
+                                                    </Typography>
+                                                )}
+                                                <IconButton
+                                                    size='small'
+                                                    onClick={() => setDialogSkus(prev => prev.filter((_, i) => i !== idx))}
+                                                    sx={{ ml: 'auto', p: 0.25, flexShrink: 0 }}
+                                                >
+                                                    <CloseIcon sx={{ fontSize: 14 }} />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+
                                 {/* Descripción del Servicio */}
                                 <Box>
                                     <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
@@ -4784,8 +4834,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 px: 1.5,
                                                 borderRadius: '8px',
                                                 border: '1px solid',
-                                                borderColor: dialogSkuSearch.trim() ? '#FDE68A' : 'divider',
-                                                bgcolor: dialogSkuSearch.trim() ? '#FEF3C7' : '#F9FAFB',
+                                                borderColor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FDE68A' : 'divider',
+                                                bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FEF3C7' : '#F9FAFB',
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
@@ -4794,7 +4844,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     width: 8,
                                                     height: 8,
                                                     borderRadius: '50%',
-                                                    bgcolor: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
                                                     flexShrink: 0,
                                                     transition: 'background-color 0.2s ease'
                                                 }}
@@ -4803,12 +4853,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 variant='body2'
                                                 sx={{
                                                     fontWeight: 600,
-                                                    color: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    color: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
                                                     fontSize: '0.8rem',
                                                     transition: 'color 0.2s ease'
                                                 }}
                                             >
-                                                {dialogSkuSearch.trim()
+                                                {(dialogSkus.length > 0 || dialogSkuSearch.trim())
                                                     ? 'Fijo — SKU \u00d7 Cantidad'
                                                     : 'Unitario — P\u00d7Q por ensayos'
                                                 }
