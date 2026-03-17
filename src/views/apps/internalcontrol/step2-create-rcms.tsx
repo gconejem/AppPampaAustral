@@ -239,6 +239,15 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
     const [actionBarRcmId, setActionBarRcmId] = useState<number | null>(null)
+    const actionBarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current)
+        if (actionBarRcmId !== null) {
+            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 10000)
+        }
+        return () => { if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current) }
+    }, [actionBarRcmId])
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
