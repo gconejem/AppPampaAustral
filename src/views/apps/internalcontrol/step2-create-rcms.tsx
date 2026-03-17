@@ -963,8 +963,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setDialogSkuSearch('')
         setDialogDescripcionServicio('')
         setDialogCantidad(selectedRcmIds.length > 0 ? selectedRcmIds.length : 1)
-        // Si ya hay códigos creados, abrir por defecto en modo 'existente'
-        setDialogMode(codigosAgrupadores.length > 0 ? 'existente' : 'nuevo')
+        setDialogMode('nuevo')
         setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
 
@@ -4568,72 +4567,86 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             </Box>
                         )}
 
-                        {/* Selector de modo: existente vs nuevo (solo si hay agrupadores) */}
-                        {codigosAgrupadores.length > 0 && (
-                            <Box
+                        {/* Selector de modo: Crear nuevo / Añadir a existente */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                bgcolor: '#F3F4F6',
+                                borderRadius: '8px',
+                                p: 0.5,
+                                gap: 0.5
+                            }}
+                        >
+                            <Button
+                                fullWidth
+                                size='small'
+                                variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
+                                onClick={() => setDialogMode('nuevo')}
                                 sx={{
-                                    display: 'flex',
-                                    bgcolor: '#F3F4F6',
-                                    borderRadius: '8px',
-                                    p: 0.5,
-                                    gap: 0.5
+                                    textTransform: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '0.82rem',
+                                    ...(dialogMode === 'nuevo' ? {
+                                        bgcolor: 'white',
+                                        color: 'primary.main',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                        '&:hover': { bgcolor: 'white' }
+                                    } : {
+                                        color: 'text.secondary',
+                                        '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                    })
                                 }}
                             >
-                                <Button
-                                    fullWidth
-                                    size='small'
-                                    variant={dialogMode === 'existente' ? 'contained' : 'text'}
-                                    onClick={() => {
-                                        setDialogMode('existente')
-                                        if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
-                                            setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
-                                        }
-                                    }}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '6px',
-                                        fontWeight: 600,
-                                        fontSize: '0.82rem',
-                                        ...(dialogMode === 'existente' ? {
-                                            bgcolor: 'white',
-                                            color: 'primary.main',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                            '&:hover': { bgcolor: 'white' }
-                                        } : {
-                                            color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
-                                        })
-                                    }}
-                                >
-                                    Agregar a código existente
-                                </Button>
-                                <Button
-                                    fullWidth
-                                    size='small'
-                                    variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
-                                    onClick={() => setDialogMode('nuevo')}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '6px',
-                                        fontWeight: 600,
-                                        fontSize: '0.82rem',
-                                        ...(dialogMode === 'nuevo' ? {
-                                            bgcolor: 'white',
-                                            color: 'primary.main',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                            '&:hover': { bgcolor: 'white' }
-                                        } : {
-                                            color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
-                                        })
-                                    }}
-                                >
-                                    Crear nuevo código
-                                </Button>
+                                + Crear nuevo código
+                            </Button>
+                            <Button
+                                fullWidth
+                                size='small'
+                                variant={dialogMode === 'existente' ? 'contained' : 'text'}
+                                onClick={() => {
+                                    setDialogMode('existente')
+                                    if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
+                                        setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
+                                    }
+                                }}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '0.82rem',
+                                    ...(dialogMode === 'existente' ? {
+                                        bgcolor: 'white',
+                                        color: 'primary.main',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                        '&:hover': { bgcolor: 'white' }
+                                    } : {
+                                        color: 'text.secondary',
+                                        '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                    })
+                                }}
+                            >
+                                Añadir a código existente
+                            </Button>
+                        </Box>
+
+                        {/* MODO: Añadir a código existente */}
+                        {dialogMode === 'existente' && codigosAgrupadores.length === 0 && (
+                            <Box
+                                sx={{
+                                    p: 2.5,
+                                    borderRadius: '8px',
+                                    border: '1px dashed',
+                                    borderColor: 'divider',
+                                    bgcolor: '#FAFAFA',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                <Typography variant='body2' color='text.secondary'>
+                                    No hay códigos producto creados aún. Usa <strong>+ Crear nuevo código</strong> para crear el primero.
+                                </Typography>
                             </Box>
                         )}
-
-                        {/* MODO: Agregar a código existente */}
                         {dialogMode === 'existente' && codigosAgrupadores.length > 0 && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary' }}>
@@ -4712,7 +4725,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         )}
 
                         {/* MODO: Crear nuevo código */}
-                        {(dialogMode === 'nuevo' || codigosAgrupadores.length === 0) && (
+                        {dialogMode === 'nuevo' && (
                             <>
                                 {/* Área (heredado) + SKU Producto */}
                                 <Box sx={{ display: 'flex', gap: 2 }}>
