@@ -96,6 +96,7 @@ interface EnsayoAsociado {
 
 interface RCMData {
     id: number
+    dbId?: number          // ID real en DB después de persistir
     rcmType: string
     sede?: string
     area?: string
@@ -104,6 +105,15 @@ interface RCMData {
     tipoMaterial: string
     item: string
     procedencia?: string
+    ubicacionSector?: string
+    elemento?: string
+    grado?: string
+    calicata?: string
+    estrato?: string
+    cota1?: string
+    cota2?: string
+    observacionItem?: string
+    informeEnsayo?: boolean
     ensayos: EnsayoAsociado[]
     fechaServicio: string
     fechaMuestreo?: string
@@ -120,12 +130,12 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
-    grado?: string
     codigoProducto?: string
 }
 
 interface CodigoAgrupador {
     id: string
+    dbId?: number              // DB id after persisting
     codigoId: string
     codigoNombre: string
     rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string }>
@@ -221,6 +231,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [isEditingRcm, setIsEditingRcm] = useState(false)
     const [isDuplicatingRcm, setIsDuplicatingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isSavingRcm, setIsSavingRcm] = useState(false)
+    const [successMessage, setSuccessMessage] = useState('')
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
@@ -499,7 +512,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowCancelConfirm(false)
     }
 
-    const handleSaveRcm = () => {
+    const handleSaveRcm = async () => {
         // Validación 1: Número de tarjeta obligatorio para tipo Muestra
         if (rcmType === 'Muestra' && !numeroTarjeta.trim()) {
             setErrorVencimiento('El número de tarjeta es obligatorio para RCM tipo Muestra')
@@ -540,16 +553,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
+        // Capturar valores de edición antes de los setState (el closure los tiene correctamente)
+        const editandoRcm = isEditingRcm
+        const rcmOriginal = originalRcm
+
         // Obtener nombres para guardar en el objeto RCM
         const sedeNombre = sede === 'Otro' ? customSede : sede
         const areaNombre = areas.find(a => a.id === area)?.nombre || ''
         const tipoServicioNombre = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
-
-        // Limpiar estado de edición y duplicación
-        setIsEditingRcm(false)
-        setEditingRcmId(null)
-        setOriginalRcm(null)
-        setIsDuplicatingRcm(false)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -561,55 +572,154 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             estadoRcm = 'Ejecutado'
         }
 
-        const newRcm: RCMData = {
-            id: Date.now(),
+        const today = getTodayDateForInput()
+        const payload = {
             rcmType,
             sede: sedeNombre,
-            area: areaNombre,
-            tipoServicio: tipoServicioNombre,
+            areaId: area || null,
+            familiaId: tipoServicio || null,
+            fechaCodificacion: today,
+            fechaServicio,
+            fechaMuestreo: fechaServicio,
+            fechaIngreso: today,
             numeroTarjeta,
             tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
             item: item === 'Otro' ? customItem : item,
             grado: grado === 'Otro' ? customGrado : grado,
             procedencia,
-            ensayos: [...ensayosAsociados],
-            fechaServicio,
-            fechaMuestreo: fechaServicio, // Usar fecha servicio como fecha muestreo
+            ubicacionSector,
+            elemento,
+            cota1,
+            cota2,
+            observacionItem,
+            informeEnsayo,
             tomaMuestra,
-            cantidadMuestras,
-            numeroRcm: `RCM-${savedRcms.length + 1}`,
-            estado: estadoRcm,
-            tieneVencimiento,
-            submuestrasVencimiento: [...submuestrasVencimiento]
+            cantidadMuestras: parseInt(cantidadMuestras) || 1,
+            vencimiento: tieneVencimiento,
+            ensayos: ensayosAsociados.map(e => ({
+                productoId: e.productoId,
+                sku: e.sku,
+                nombre: e.nombre,
+                norma: e.norma,
+                cantidad: e.cantidad,
+                observacion: e.observacion,
+                estadoOperativo: e.estadoOperativo,
+                esPaquete: e.esPaquete,
+                subProductos: e.subProductos?.map(sp => ({
+                    productoId: sp.productoId,
+                    sku: sp.sku,
+                    nombre: sp.nombre,
+                    norma: sp.norma,
+                    cantidad: sp.cantidad,
+                    observacion: sp.observacion,
+                })),
+            })),
+            submuestrasVencimiento,
+            ordenTrabajoId: otData?.id ?? null,
+            clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+            obraId: otData?.obraId ?? otData?.obra?.id ?? null,
         }
-        setSavedRcms([...savedRcms, newRcm])
-        setActionBarRcmId(newRcm.id)
-        setShowRcmCard(false)
-        setRcmType('')
-        setSede('PA Chillán')
-        setCustomSede('')
-        setArea('')
-        setTipoServicio('')
-        setNumeroTarjeta('')
-        setTomaMuestra('')
-        setTipoMaterial('')
-        setCustomTipoMaterial('')
-        setItem('')
-        setCustomItem('')
-        setElemento('')
-        setGrado('')
-        setCustomGrado('')
-        setCalicata('')
-        setEstrato('')
-        setCota1('')
-        setCota2('')
-        setProcedencia('')
-        setUbicacionSector('')
-        setCantidadMuestras('1')
-        setEnsayosAsociados([])
-        setEnsayosPendientes(new Set())
-        setTieneVencimiento(false)
-        setSubmuestrasVencimiento([])
+
+        setIsSavingRcm(true)
+        try {
+            let result: any
+            if (editandoRcm && rcmOriginal?.dbId) {
+                // PUT — actualizar RCM existente
+                const response = await fetch(`/api/rcm/${rcmOriginal.dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}))
+                    throw new Error(errBody.error || 'Error al actualizar el RCM')
+                }
+                result = await response.json()
+            } else {
+                // POST — crear nuevo RCM
+                const response = await fetch('/api/rcm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}))
+                    throw new Error(errBody.error || 'Error al guardar el RCM')
+                }
+                result = await response.json()
+            }
+
+            const newRcm: RCMData = {
+                id: Date.now(),
+                dbId: result.id,
+                numeroRcm: result.numeroRcm,
+                rcmType,
+                sede: sedeNombre,
+                area: areaNombre,
+                tipoServicio: tipoServicioNombre,
+                numeroTarjeta,
+                tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
+                item: item === 'Otro' ? customItem : item,
+                grado: grado === 'Otro' ? customGrado : grado,
+                procedencia,
+                ubicacionSector,
+                elemento,
+                calicata,
+                estrato,
+                cota1,
+                cota2,
+                observacionItem,
+                informeEnsayo,
+                ensayos: [...ensayosAsociados],
+                fechaServicio,
+                fechaMuestreo: fechaServicio,
+                tomaMuestra,
+                cantidadMuestras,
+                estado: estadoRcm,
+                tieneVencimiento,
+                submuestrasVencimiento: [...submuestrasVencimiento],
+            }
+
+            setSavedRcms([...savedRcms, newRcm])
+            setActionBarRcmId(newRcm.id)
+
+            // Limpiar estado de edición y duplicación
+            setIsEditingRcm(false)
+            setEditingRcmId(null)
+            setOriginalRcm(null)
+            setIsDuplicatingRcm(false)
+
+            setShowRcmCard(false)
+            setRcmType('')
+            setSede('PA Chillán')
+            setCustomSede('')
+            setArea('')
+            setTipoServicio('')
+            setNumeroTarjeta('')
+            setTomaMuestra('')
+            setTipoMaterial('')
+            setCustomTipoMaterial('')
+            setItem('')
+            setCustomItem('')
+            setElemento('')
+            setGrado('')
+            setCustomGrado('')
+            setCalicata('')
+            setEstrato('')
+            setCota1('')
+            setCota2('')
+            setProcedencia('')
+            setUbicacionSector('')
+            setCantidadMuestras('1')
+            setEnsayosAsociados([])
+            setEnsayosPendientes(new Set())
+            setTieneVencimiento(false)
+            setSubmuestrasVencimiento([])
+        } catch (error) {
+            setErrorVencimiento(error instanceof Error ? error.message : 'Error al guardar el RCM')
+        } finally {
+            setIsSavingRcm(false)
+        }
     }
 
     const handleToggleExpand = () => {
@@ -695,6 +805,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 }
 
                 setProcedencia(rcmToEdit.procedencia || '')
+                setUbicacionSector(rcmToEdit.ubicacionSector || '')
+                setElemento(rcmToEdit.elemento || '')
+                setCalicata(rcmToEdit.calicata || '')
+                setEstrato(rcmToEdit.estrato || '')
+                setCota1(rcmToEdit.cota1 || '')
+                setCota2(rcmToEdit.cota2 || '')
+                setObservacionItem(rcmToEdit.observacionItem || '')
+                setInformeEnsayo(rcmToEdit.informeEnsayo !== undefined ? rcmToEdit.informeEnsayo : rcmToEdit.rcmType !== 'Servicio')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
                 setFechaServicio(rcmToEdit.fechaServicio)
@@ -719,8 +837,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseRcmMenu()
     }
 
-    const handleDeleteRcm = () => {
+    const handleDeleteRcm = async () => {
         if (selectedRcmId !== null) {
+            const rcmToDelete = savedRcms.find(r => r.id === selectedRcmId)
+            if (rcmToDelete?.dbId) {
+                try {
+                    await fetch(`/api/rcm/${rcmToDelete.dbId}`, { method: 'DELETE' })
+                } catch {
+                    // ignorar error de red, igual remover de la UI
+                }
+            }
             setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
         }
         handleCloseRcmMenu()
@@ -779,6 +905,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setCustomItem('')
                 }
                 setProcedencia(rcmToDuplicate.procedencia || '')
+                setUbicacionSector(rcmToDuplicate.ubicacionSector || '')
+                setElemento(rcmToDuplicate.elemento || '')
+                setCalicata(rcmToDuplicate.calicata || '')
+                setEstrato(rcmToDuplicate.estrato || '')
+                setCota1(rcmToDuplicate.cota1 || '')
+                setCota2(rcmToDuplicate.cota2 || '')
+                setObservacionItem(rcmToDuplicate.observacionItem || '')
+                setInformeEnsayo(rcmToDuplicate.informeEnsayo !== undefined ? rcmToDuplicate.informeEnsayo : rcmToDuplicate.rcmType !== 'Servicio')
 
                 // Manejar grado "Otro"
                 const standardGrades = ['1', '2', '3', '4']
@@ -888,10 +1022,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             }
         }
 
+        const seqNum = codigosAgrupadores.length + 1
+        const displayId = `PRD-${String(seqNum).padStart(3, '0')}`
+        const uniqueCodigoId: string = (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function')
+            ? (crypto as any).randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+
         const newAgrupador: CodigoAgrupador = {
-            id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-            codigoId: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-            codigoNombre: dialogDescripcionServicio || `Código ${codigosAgrupadores.length + 1}`,
+            id: displayId,
+            codigoId: uniqueCodigoId,
+            codigoNombre: dialogDescripcionServicio || `Código ${seqNum}`,
             rcmsVinculados: rcmsToAssign,
             ensayos: allEnsayos,
             descripcionServicio: dialogDescripcionServicio,
@@ -956,6 +1096,117 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleDeleteAgrupador = (agrupadorId: string) => {
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
+    }
+
+    const handleGuardarTodo = async () => {
+        if (savedRcms.length === 0) return
+        setIsSaving(true)
+        try {
+            const today = getTodayDateForInput()
+            const payload = {
+                rcms: savedRcms.map(rcm => ({
+                    dbId: rcm.dbId ?? undefined,
+                    id: rcm.id,
+                    rcmType: rcm.rcmType,
+                    sede: rcm.sede,
+                    areaId: areas.find(a => a.nombre === rcm.area)?.id ?? null,
+                    familiaId: todasLasFamilias.find(f => f.nombre === rcm.tipoServicio)?.id ?? null,
+                    fechaCodificacion: today,
+                    fechaServicio: rcm.fechaServicio,
+                    fechaMuestreo: rcm.fechaMuestreo || rcm.fechaServicio,
+                    fechaIngreso: today,
+                    numeroTarjeta: rcm.numeroTarjeta,
+                    tipoMaterial: rcm.tipoMaterial,
+                    item: rcm.item,
+                    grado: rcm.grado,
+                    elemento: rcm.elemento,
+                    procedencia: rcm.procedencia,
+                    ubicacionSector: rcm.ubicacionSector,
+                    observacionItem: rcm.observacionItem,
+                    cota1: rcm.cota1,
+                    cota2: rcm.cota2,
+                    informeEnsayo: rcm.informeEnsayo ?? true,
+                    cantidadMuestras: parseInt(rcm.cantidadMuestras) || 1,
+                    vencimiento: rcm.tieneVencimiento ?? false,
+                    tomaMuestra: rcm.tomaMuestra,
+                    ensayos: rcm.ensayos.map(e => ({
+                        productoId: e.productoId,
+                        sku: e.sku,
+                        nombre: e.nombre,
+                        norma: e.norma,
+                        cantidad: e.cantidad,
+                        observacion: e.observacion,
+                        estadoOperativo: e.estadoOperativo,
+                        esPaquete: e.esPaquete,
+                        subProductos: e.subProductos?.map(sp => ({
+                            productoId: sp.productoId,
+                            sku: sp.sku,
+                            nombre: sp.nombre,
+                            norma: sp.norma,
+                            cantidad: sp.cantidad,
+                            observacion: sp.observacion,
+                        })),
+                    })),
+                    submuestrasVencimiento: rcm.submuestrasVencimiento,
+                    ordenTrabajoId: otData?.id,
+                    clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+                    obraId: otData?.obraId ?? otData?.obra?.id ?? null,
+                })),
+                codigosAgrupadores: codigosAgrupadores.map(ag => ({
+                    id: ag.id,
+                    codigoId: ag.codigoId,
+                    codigoNombre: ag.codigoNombre,
+                    descripcionServicio: ag.descripcionServicio,
+                    cantidad: ag.cantidad,
+                    unidad: ag.unidad,
+                    facturacion: ag.facturacion,
+                    ensayos: ag.ensayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
+                    rcmsVinculados: ag.rcmsVinculados.map(r => ({ id: r.id })),
+                })),
+                ordenTrabajoId: otData?.id ?? null,
+                clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+                obraId: otData?.obraId ?? otData?.obra?.id ?? null,
+            }
+
+            const response = await fetch('/api/rcm/guardar-lote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
+
+            if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}))
+                throw new Error(errBody.message || 'Error al guardar los RCMs')
+            }
+
+            const result = await response.json()
+
+            // Actualizar savedRcms con los IDs reales de la DB
+            setSavedRcms(prev =>
+                prev.map((rcm, idx) => ({
+                    ...rcm,
+                    dbId: result.rcms[idx]?.id ?? rcm.dbId,
+                    numeroRcm: result.rcms[idx]?.id
+                        ? result.rcms[idx].id.toString()
+                        : rcm.numeroRcm,
+                }))
+            )
+
+            // Actualizar codigosAgrupadores con los IDs reales de la DB
+            setCodigosAgrupadores(prev =>
+                prev.map(ag => {
+                    const saved = result.agrupadores?.find((a: { id: number; codigoId: string }) => a.codigoId === ag.codigoId)
+                    return saved ? { ...ag, dbId: saved.id } : ag
+                })
+            )
+
+            const total = result.rcms?.length ?? savedRcms.length
+            setSuccessMessage(`${total} RCM${total !== 1 ? 's' : ''} guardado${total !== 1 ? 's' : ''} exitosamente`)
+        } catch (error) {
+            setErrorVencimiento(error instanceof Error ? error.message : 'Error al guardar')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const handleToggleRcmSelection = (rcmId: number) => {
@@ -2958,8 +3209,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             color='primary'
                                             sx={{ textTransform: 'none', px: 4 }}
                                             onClick={handleSaveRcm}
+                                            disabled={isSavingRcm}
                                         >
-                                            Guardar RCM
+                                            {isSavingRcm ? 'Guardando...' : 'Guardar RCM'}
                                         </Button>
                                     </Box>
                                 </Box>
@@ -3046,7 +3298,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 }}
                                             />
                                             <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                                {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                             </Typography>
 
                                             {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
@@ -3508,7 +3760,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 }}
                                             />
                                             <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                                {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                             </Typography>
 
                                             {/* Mostrar estado: Agrupado (verde) */}
@@ -3749,6 +4001,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             <Button
                                 variant='contained'
                                 startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
+                                disabled={isSaving}
+                                onClick={handleGuardarTodo}
                                 sx={{
                                     textTransform: 'none',
                                     borderRadius: '8px',
@@ -3758,7 +4012,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     '&:hover': { bgcolor: '#1565C0' }
                                 }}
                             >
-                                Finalizar Codificación
+                                {isSaving ? 'Guardando...' : 'Finalizar Codificación'}
                             </Button>
                         </Box>
 
@@ -4099,6 +4353,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 </Alert>
             </Snackbar>
 
+            {/* Snackbar de éxito al guardar */}
+            <Snackbar
+                open={Boolean(successMessage)}
+                autoHideDuration={5000}
+                onClose={() => setSuccessMessage('')}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setSuccessMessage('')}
+                    severity='success'
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                >
+                    {successMessage}
+                </Alert>
+            </Snackbar>
+
             {/* Snackbar para advertencia de edición */}
             <Snackbar
                 open={showEditWarning}
@@ -4248,7 +4519,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                                     {selectedRcmIds.map((id, idx) => {
                                         const rcm = savedRcms.find(r => r.id === id)
-                                        const label = rcm?.numeroRcm || `RCM-${String(idx + 1).padStart(3, '0')}`
+                                        const label = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
                                         return (
                                             <Chip
                                                 key={id}
