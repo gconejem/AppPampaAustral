@@ -238,6 +238,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [showPreFinalizacion, setShowPreFinalizacion] = useState(false)
     const [actionBarRcmId, setActionBarRcmId] = useState<number | null>(null)
     const actionBarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -1113,6 +1114,42 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
 
     const handleDeleteAgrupador = (agrupadorId: string) => {
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
+    }
+
+    const computeValidaciones = () => {
+        // V1: Todos los RCMs están vinculados a al menos un código agrupador
+        const rcmIdsAgrupados = new Set<number>()
+        codigosAgrupadores.forEach(ag => ag.rcmsVinculados.forEach(r => rcmIdsAgrupados.add(r.id)))
+        const v1 = savedRcms.every(rcm => rcmIdsAgrupados.has(rcm.id))
+
+        // V2: Para RCMs con vencimiento, la suma de cantidades de submuestras = cantidadMuestras
+        const v2 = savedRcms.every(rcm => {
+            if (!rcm.tieneVencimiento || !rcm.submuestrasVencimiento?.length) return true
+            const sumaSubmuestras = rcm.submuestrasVencimiento.reduce((acc, s) => acc + (s.cantidad || 0), 0)
+            return sumaSubmuestras === parseInt(rcm.cantidadMuestras || '1')
+        })
+
+        // V3: No hay códigos agrupadores sin RCMs vinculados
+        const v3 = codigosAgrupadores.every(ag => ag.rcmsVinculados.length > 0)
+
+        // V4: Todos los RCMs de un mismo agrupador tienen la misma área
+        const v4 = codigosAgrupadores.every(ag => {
+            const areas = ag.rcmsVinculados.map(rv => savedRcms.find(r => r.id === rv.id)?.area).filter(Boolean)
+            return areas.length === 0 || new Set(areas).size === 1
+        })
+
+        // V5: Todos los RCMs tienen al menos 1 ensayo registrado
+        const v5 = savedRcms.every(rcm => rcm.ensayos.length > 0)
+
+        const totalRcms = savedRcms.length
+        const tipoControl = savedRcms.filter(r => r.rcmType === 'Control').length
+        const tipoMuestra = savedRcms.filter(r => r.rcmType === 'Muestra').length
+        const tipoServicio = savedRcms.filter(r => r.rcmType === 'Servicio').length
+        const codigosProducto = codigosAgrupadores.length
+        const modoPxQ = codigosAgrupadores.filter(a => a.facturacion === 'Unitario').length
+        const modoFijo = codigosAgrupadores.filter(a => a.facturacion === 'Fijo').length
+
+        return { v1, v2, v3, v4, v5, totalRcms, tipoControl, tipoMuestra, tipoServicio, codigosProducto, modoPxQ, modoFijo }
     }
 
     const handleGuardarTodo = async () => {
@@ -4029,7 +4066,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 variant='contained'
                                 startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
                                 disabled={isSaving}
-                                onClick={handleGuardarTodo}
+                                onClick={() => setShowPreFinalizacion(true)}
                                 sx={{
                                     textTransform: 'none',
                                     borderRadius: '8px',
@@ -5206,6 +5243,162 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Button>
                 </Box>
             </Popover>
+
+            {/* Dialog: Validación Pre-Finalización */}
+            {showPreFinalizacion && (() => {
+                const val = computeValidaciones()
+                const allPassed = val.v1 && val.v2 && val.v3 && val.v4 && val.v5
+
+                const validaciones = [
+                    {
+                        key: 'v1',
+                        label: 'V1 — RCMs sin Código Producto',
+                        desc: val.v1 ? 'Todos los RCMs están agrupados correctamente' : 'Hay RCMs sin código producto asignado',
+                        ok: val.v1,
+                    },
+                    {
+                        key: 'v2',
+                        label: 'V2 — Submuestras',
+                        desc: val.v2 ? 'Cantidades cuadradas con muestras declaradas' : 'Hay submuestras con cantidades inconsistentes',
+                        ok: val.v2,
+                    },
+                    {
+                        key: 'v3',
+                        label: 'V3 — Códigos vacíos',
+                        desc: val.v3 ? 'Sin códigos huérfanos sin RCMs' : 'Hay códigos agrupadores sin RCMs vinculados',
+                        ok: val.v3,
+                    },
+                    {
+                        key: 'v4',
+                        label: 'V4 — Mezcla de Áreas',
+                        desc: val.v4 ? 'Áreas homogéneas en todos los códigos' : 'Hay códigos con RCMs de distintas áreas',
+                        ok: val.v4,
+                    },
+                    {
+                        key: 'v5',
+                        label: 'V5 — Mínimo 1 ensayo',
+                        desc: val.v5 ? 'Todos los RCMs tienen al menos 1 ensayo registrado' : 'Hay RCMs sin ensayos registrados',
+                        ok: val.v5,
+                    },
+                ]
+
+                return (
+                    <Dialog
+                        open={showPreFinalizacion}
+                        onClose={() => setShowPreFinalizacion(false)}
+                        maxWidth='sm'
+                        fullWidth
+                        PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                fontWeight: 700,
+                                fontSize: '1.1rem',
+                                pb: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}
+                        >
+                            Validación Pre-Finalización
+                            <IconButton size='small' onClick={() => setShowPreFinalizacion(false)} sx={{ color: 'text.secondary' }}>
+                                <CloseIcon fontSize='small' />
+                            </IconButton>
+                        </DialogTitle>
+
+                        <Divider />
+
+                        <DialogContent sx={{ pt: 2, pb: 1 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                {validaciones.map(v => (
+                                    <Box
+                                        key={v.key}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.5,
+                                            p: 1.5,
+                                            borderRadius: '8px',
+                                            border: '1px solid',
+                                            borderColor: v.ok ? 'success.light' : 'error.light',
+                                            bgcolor: v.ok ? 'success.50' : 'error.50',
+                                        }}
+                                    >
+                                        {v.ok
+                                            ? <CheckCircleIcon sx={{ color: 'success.main', fontSize: 22, flexShrink: 0 }} />
+                                            : <WarningAmberIcon sx={{ color: 'error.main', fontSize: 22, flexShrink: 0 }} />
+                                        }
+                                        <Box>
+                                            <Typography variant='body2' sx={{ fontWeight: 700, color: v.ok ? 'success.dark' : 'error.dark' }}>
+                                                {v.label}
+                                            </Typography>
+                                            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
+                                                {v.desc}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                ))}
+
+                                {/* Resumen de Codificación */}
+                                <Box sx={{ mt: 1, p: 2, borderRadius: '8px', bgcolor: 'action.hover' }}>
+                                    <Typography variant='body2' sx={{ fontWeight: 700, mb: 1.5 }}>
+                                        Resumen de Codificación
+                                    </Typography>
+                                    <Grid container spacing={1}>
+                                        {[
+                                            { label: 'Total RCMs', value: val.totalRcms },
+                                            { label: 'Tipo Muestra', value: val.tipoMuestra },
+                                            { label: 'Tipo Control', value: val.tipoControl },
+                                            { label: 'Tipo Servicio', value: val.tipoServicio },
+                                            { label: 'Códigos Producto', value: val.codigosProducto },
+                                            { label: 'Modo Fijo', value: val.modoFijo },
+                                            { label: 'Modo P×Q', value: val.modoPxQ },
+                                        ].map(item => (
+                                            <Grid item xs={6} key={item.label}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant='caption' color='text.secondary'>{item.label}</Typography>
+                                                    <Typography variant='caption' sx={{ fontWeight: 700 }}>{item.value}</Typography>
+                                                </Box>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                    <Divider sx={{ my: 1.5 }} />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant='caption' color='text.secondary'>OT quedará en estado:</Typography>
+                                        <Chip
+                                            label='Codificada'
+                                            size='small'
+                                            sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600, fontSize: '0.7rem' }}
+                                        />
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </DialogContent>
+
+                        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+                            <Button
+                                onClick={() => setShowPreFinalizacion(false)}
+                                variant='outlined'
+                                sx={{ textTransform: 'none', borderRadius: '8px' }}
+                            >
+                                Volver a Revisar
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    setShowPreFinalizacion(false)
+                                    await handleGuardarTodo()
+                                }}
+                                variant='contained'
+                                disabled={!allPassed || isSaving}
+                                startIcon={<CheckCircleIcon />}
+                                sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
+                            >
+                                {isSaving ? 'Guardando...' : 'Confirmar y Finalizar'}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                )
+            })()}
         </>
     )
 }
