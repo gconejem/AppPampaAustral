@@ -1777,6 +1777,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
     }, [updateCardRect])
 
+    // Si todos los RCMs seleccionados son del mismo tipo, se puede agrupar
+    const selectedRcmsData = savedRcms.filter(r => selectedRcmIds.includes(r.id))
+    const canAgrupar = selectedRcmsData.length > 0 && selectedRcmsData.every(r => r.rcmType === selectedRcmsData[0].rcmType)
+    // Área heredada de los RCMs seleccionados (o del área del formulario activo)
+    const dialogAreaNombre = selectedRcmsData.length > 0
+        ? (selectedRcmsData[0].area || '—')
+        : (areas.find(a => a.id === area)?.nombre || '—')
+
     return (
         <>
             <Card ref={cardRef}>
@@ -3903,17 +3911,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Box>
                     )}
 
-                    {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados */}
+                    {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados del mismo tipo */}
                     <Box
                         sx={{
                             position: 'fixed',
                             bottom: 32,
                             left: '50%',
-                            transform: selectedRcmIds.length > 0
+                            transform: canAgrupar
                                 ? 'translateX(-50%) translateY(0)'
                                 : 'translateX(-50%) translateY(120px)',
-                            opacity: selectedRcmIds.length > 0 ? 1 : 0,
-                            pointerEvents: selectedRcmIds.length > 0 ? 'auto' : 'none',
+                            opacity: canAgrupar ? 1 : 0,
+                            pointerEvents: canAgrupar ? 'auto' : 'none',
                             transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease',
                             zIndex: 1300,
                         }}
@@ -4695,7 +4703,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             fullWidth
                                             size='small'
-                                            value={areas.find(a => a.id === area)?.nombre || '—'}
+                                            value={dialogAreaNombre}
                                             disabled
                                             InputProps={{ readOnly: true }}
                                         />
