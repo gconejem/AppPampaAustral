@@ -1,114 +1,119 @@
+import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
 
-function corsHeaders() {
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://localhost'
+])
+
+function corsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
+
   return {
-    'Access-Control-Allow-Origin': 'https://localhost',
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true'
   }
 }
 
-export async function OPTIONS() {
-  return new Response(null, { headers: corsHeaders() })
+export async function OPTIONS(request: Request) {
+  return NextResponse.json({}, { headers: corsHeaders(request.headers.get('origin')) })
 }
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+function parseAgendaIds(searchParams: URLSearchParams): number[] {
+  const out: number[] = []
 
-function normalizeKey(k: string) {
-  return (k || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '')
-}
+  const pushParsed = (value: string | null) => {
+    if (!value) return
+    value
+      .split(',')
+      .map(v => v.trim())
+      .filter(v => v.length > 0)
+      .forEach(v => {
+        const n = Number(v)
 
-function flattenOneLevel(obj: any): Record<string, any> {
-  const out: Record<string, any> = {}
-  for (const k of Object.keys(obj || {})) {
-    const v = obj[k]
-    out[k] = v
-    if (v && typeof v === 'object' && !Array.isArray(v)) {
-      for (const ck of Object.keys(v)) {
-        out[`${k}.${ck}`] = v[ck]
-      }
-    }
+        if (!Number.isNaN(n)) out.push(n)
+      })
   }
-  return out
-}
 
-// campos simplificados que deben aparecer en la salida si hacen match
-const TARGET_KEYS = [
-  'lbrutas_clave',
-  'CODIGO',
-  'NOMBRE',
-  'SERIE',
-  'MARCA',
-  'MODELO'
-]
+  // Compatibilidad con otros endpoints
+  searchParams.getAll('fk_lbrutas[]').forEach(v => pushParsed(v))
+  pushParsed(searchParams.get('fk_lbrutas[]'))
+
+  // Compatibilidad AppLab (usa clave[])
+  searchParams.getAll('clave[]').forEach(v => pushParsed(v))
+  pushParsed(searchParams.get('clave[]'))
+
+  // Aliases comunes
+  searchParams.getAll('lbrutas_clave').forEach(v => pushParsed(v))
+  searchParams.getAll('CLAVE').forEach(v => pushParsed(v))
+  pushParsed(searchParams.get('lbrutas_clave'))
+  pushParsed(searchParams.get('CLAVE'))
+  pushParsed(searchParams.get('clave'))
+
+  // Unique
+  return Array.from(new Set(out))
+}
 
 export async function GET(request: Request) {
   try {
-    if (!prisma) {
-      return new Response(JSON.stringify({ error: 'Prisma client not initialized' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
-    }
-
-    const model =
-      (prisma as any).equipo ??
-      (prisma as any).Equipo ??
-      (prisma as any).equipos ??
-      (prisma as any).Equipos
-
-    if (!model || typeof model.findMany !== 'function') {
-      return new Response(JSON.stringify({ error: "Prisma model 'equipo' not available", prismaKeys: Object.keys(prisma) }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
-    }
-
+    const origin = request.headers.get('origin')
     const { searchParams } = new URL(request.url)
-    const codigo = searchParams.get('codigo')
-    const equipoId = searchParams.get('equipoId')
-    const obraId = searchParams.get('obraId')
-    const limit = Number(searchParams.get('limit') ?? 200)
+
+    const agendaIds = parseAgendaIds(searchParams)
+    const codigo = (searchParams.get('codigo') || searchParams.get('CODIGO') || '').trim()
+    const limit = Math.min(Number(searchParams.get('limit') ?? 500), 2000)
 
     const where: any = {}
-    if (codigo) where.codigo = { contains: codigo }
-    if (equipoId) where.id = Number(equipoId)
-    if (obraId) where.obraId = Number(obraId)
 
-    const raw = await model.findMany({ where, take: limit })
-
-    function findValue(flat: Record<string, any>, target: string) {
-      const tn = normalizeKey(target)
-      const found = Object.keys(flat).find(k => {
-        const kn = normalizeKey(k)
-        return kn === tn || kn.includes(tn) || tn.includes(kn)
-      })
-      return found !== undefined ? flat[found] : undefined
+    if (agendaIds.length > 0) {
+      where.agendaId = { in: agendaIds }
     }
 
-    const mapped = raw.map((r: any) => {
-      const flat = flattenOneLevel(r)
-      const out: Record<string, any> = {}
+    if (codigo) {
+      where.equipo = {
+        codigo: {
+          contains: codigo,
+          mode: 'insensitive'
+        }
+      }
+    }
 
-      for (const tk of TARGET_KEYS) {
-        const v = findValue(flat, tk)
-        out[tk] = v === undefined ? null : (v instanceof Date ? v.toISOString() : v)
-      }
-
-      // fallbacks comunes:
-      if (!out['CODIGO']) {
-        out['CODIGO'] = findValue(flat, 'codigo') ?? findValue(flat, 'code') ?? findValue(flat, 'id') ?? null
-      }
-      if (!out['NOMBRE']) {
-        out['NOMBRE'] = findValue(flat, 'nombre') ?? findValue(flat, 'name') ?? findValue(flat, 'descripcion') ?? null
-      }
-      if (!out['lbrutas_clave']) {
-        out['lbrutas_clave'] = findValue(flat, 'clave') ?? findValue(flat, 'lbrutasclave') ?? null
-      }
-
-      return out
+    const rows = await prisma.agendaEquipo.findMany({
+      where,
+      include: {
+        equipo: true
+      },
+      take: limit,
+      orderBy: [{ agendaId: 'asc' }, { equipoId: 'asc' }]
     })
 
-    return new Response(JSON.stringify({ data: mapped }), { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
+    const mapped = rows.map(r => ({
+      // En el mundo AppLab, LBRUTAS.CLAVE es la "clave" de la visita.
+      // En nuestra homologación, corresponde al Agenda.id.
+      lbrutas_clave: r.agendaId,
+      CODIGO: r.equipo?.codigo ?? null,
+      NOMBRE: r.equipo?.nombre ?? null,
+      SERIE: r.equipo?.serie ?? null,
+      MARCA: r.equipo?.marca ?? null,
+      MODELO: r.equipo?.modelo ?? null
+    }))
+
+    return NextResponse.json({ data: mapped }, { headers: corsHeaders(origin) })
   } catch (error: any) {
     console.error('Error en api-get-lbrutas-join-lbequipos:', error)
-    return new Response(JSON.stringify({ error: error?.message ?? 'unknown' }), { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
+
+    return NextResponse.json(
+      { error: error?.message ?? 'unknown' },
+      { status: 500, headers: corsHeaders(request.headers.get('origin')) }
+    )
   }
 }
 

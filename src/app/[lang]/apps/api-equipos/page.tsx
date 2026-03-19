@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+
 import { useSearchParams } from 'next/navigation';
 
 type Equipo = {
@@ -20,13 +21,19 @@ export default function ApiEquiposPage() {
             .then(data => {
                 console.log('Equipos recibidos:', data);
 
-                if (Array.isArray(data) && data.length > 0) {
-                    const allKeys = Object.keys(data[0]);
+                const rows = Array.isArray(data)
+                    ? data
+                    : (data && Array.isArray(data.data) ? data.data : []);
+
+                if (Array.isArray(rows) && rows.length > 0) {
+                    const allKeys = Object.keys(rows[0]);
+
                     setColumns(allKeys);
-                    setEquipos(data);
+                    setEquipos(rows);
                 } else {
                     setEquipos([]);
                 }
+
                 setLoading(false);
             })
             .catch(err => {
@@ -39,6 +46,7 @@ export default function ApiEquiposPage() {
         const blob = new Blob([JSON.stringify(equipos, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
+
         a.href = url;
         a.download = 'equipos.json';
         a.click();
