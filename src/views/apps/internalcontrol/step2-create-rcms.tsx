@@ -1835,9 +1835,11 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         }
     }, [updateCardRect])
 
-    // Si todos los RCMs seleccionados son del mismo tipo, se puede agrupar
+    // Si todos los RCMs seleccionados son del mismo tipo y misma área, se puede agrupar
     const selectedRcmsData = savedRcms.filter(r => selectedRcmIds.includes(r.id))
-    const canAgrupar = selectedRcmsData.length > 0 && selectedRcmsData.every(r => r.rcmType === selectedRcmsData[0].rcmType)
+    const canAgrupar = selectedRcmsData.length > 0
+        && selectedRcmsData.every(r => r.rcmType === selectedRcmsData[0].rcmType)
+        && selectedRcmsData.every(r => r.area === selectedRcmsData[0].area)
     // Área heredada de los RCMs seleccionados (o del área del formulario activo)
     const dialogAreaNombre = selectedRcmsData.length > 0
         ? (selectedRcmsData[0].area || '—')
