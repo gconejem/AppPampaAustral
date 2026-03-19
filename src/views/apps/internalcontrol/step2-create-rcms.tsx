@@ -1,4 +1,4 @@
-// MUI Imports
+﻿// MUI Imports
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
@@ -313,6 +313,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [skuSearchAnchor, setSkuSearchAnchor] = useState<HTMLElement | null>(null)
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
+    const [isCreatingCodigo, setIsCreatingCodigo] = useState(false)
 
     // Notificar al padre cuando cambia la cantidad de RCMs agrupados
     useEffect(() => {
@@ -986,7 +987,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSelectedCodigo(codigoId)
     }
 
-    const handleConfirmCodigo = () => {
+    const handleConfirmCodigo = async () => {
         // Determinar los RCMs a agrupar
         const rcmsToAssign = selectedRcmIds.length > 0
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
@@ -1041,27 +1042,54 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             }
         }
 
-        const seqNum = codigosAgrupadores.length + 1
-        const displayId = `PRD-${String(seqNum).padStart(3, '0')}`
-        const uniqueCodigoId: string = (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function')
-            ? (crypto as any).randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        const facturacionValue = (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? 'Fijo' : 'Unitario'
 
-        const newAgrupador: CodigoAgrupador = {
-            id: displayId,
-            codigoId: uniqueCodigoId,
-            codigoNombre: dialogDescripcionServicio || `Código ${seqNum}`,
-            rcmsVinculados: rcmsToAssign,
-            ensayos: allEnsayos,
-            descripcionServicio: dialogDescripcionServicio,
-            cantidad: dialogCantidad,
-            unidad: 'unid',
-            facturacion: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? 'Fijo' : 'Unitario'
+        // Crear el código de producto en la base de datos
+        setIsCreatingCodigo(true)
+        try {
+            const res = await fetch('/api/codigo-agrupador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    descripcionServicio: dialogDescripcionServicio || null,
+                    cantidad: dialogCantidad,
+                    unidad: 'unid',
+                    facturacion: facturacionValue,
+                    ensayos: allEnsayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
+                    ordenTrabajoId: otData?.id ?? null,
+                }),
+            })
+
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}))
+                throw new Error(errBody.error || 'Error al crear código de producto')
+            }
+
+            const created = await res.json()
+            // created: { id: number, codigoId: string, codigoNombre: string }
+
+            const newAgrupador: CodigoAgrupador = {
+                id: created.codigoNombre,
+                dbId: created.id,
+                codigoId: created.codigoId,
+                codigoNombre: created.codigoNombre,
+                rcmsVinculados: rcmsToAssign,
+                ensayos: allEnsayos,
+                descripcionServicio: dialogDescripcionServicio,
+                cantidad: dialogCantidad,
+                unidad: 'unid',
+                facturacion: facturacionValue
+            }
+
+            setCodigosAgrupadores(prev => [...prev, newAgrupador])
+            setSelectedRcmIds([])
+            handleCloseCodigoPopup()
+        } catch (err) {
+            console.error('Error al crear código de producto:', err)
+            setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear código de producto')
+        } finally {
+            setIsCreatingCodigo(false)
         }
-
-        setCodigosAgrupadores(prev => [...prev, newAgrupador])
-        setSelectedRcmIds([])
-        handleCloseCodigoPopup()
     }
 
     const handleAddToExistingAgrupador = () => {
@@ -1114,7 +1142,18 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseCodigoPopup()
     }
 
-    const handleDeleteAgrupador = (agrupadorId: string) => {
+    const handleDeleteAgrupador = async (agrupadorId: string) => {
+        const agrupador = codigosAgrupadores.find(a => a.id === agrupadorId)
+
+        // Eliminar de la base de datos si tiene dbId
+        if (agrupador?.dbId) {
+            try {
+                await fetch(`/api/codigo-agrupador/${agrupador.dbId}`, { method: 'DELETE' })
+            } catch (err) {
+                console.error('Error al eliminar código agrupador de la DB:', err)
+            }
+        }
+
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
     }
 
@@ -4116,17 +4155,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                         const rcmCode = rcm.numeroRcm || fullRcm?.numeroRcm
                                                         const rcmLabel = rcmCode ? `RCM-${String(rcmCode).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
                                                         return (
-                                                        <Chip
-                                                            key={idx}
-                                                            label={rcmLabel}
-                                                            size='small'
-                                                            sx={{
-                                                                bgcolor: '#EEF2FF',
-                                                                color: '#4338CA',
-                                                                fontWeight: 600,
-                                                                fontSize: '0.75rem'
-                                                            }}
-                                                        />
+                                                            <Chip
+                                                                key={idx}
+                                                                label={rcmLabel}
+                                                                size='small'
+                                                                sx={{
+                                                                    bgcolor: '#EEF2FF',
+                                                                    color: '#4338CA',
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.75rem'
+                                                                }}
+                                                            />
                                                         )
                                                     })}
                                                 </Box>
@@ -4973,7 +5012,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     <Button
                         variant='contained'
                         startIcon={<CheckCircleIcon />}
-                        disabled={dialogMode === 'existente' && !selectedExistingAgrupadorId}
+                        disabled={(dialogMode === 'existente' && !selectedExistingAgrupadorId) || isCreatingCodigo}
                         onClick={dialogMode === 'existente' ? handleAddToExistingAgrupador : handleConfirmCodigo}
                         sx={{
                             textTransform: 'none',
@@ -4984,7 +5023,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             '&:hover': { bgcolor: 'primary.dark' }
                         }}
                     >
-                        {dialogMode === 'existente' ? '✓ Agregar al código' : '✓ Crear Código Producto'}
+                        {dialogMode === 'existente' ? '✓ Agregar al código' : isCreatingCodigo ? 'Generando código...' : '✓ Crear Código Producto'}
                     </Button>
                 </DialogActions>
             </Dialog>

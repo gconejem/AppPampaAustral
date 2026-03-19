@@ -276,7 +276,7 @@ export async function POST(request: Request) {
                 if (rcmInput.id != null) rcmIdMap[rcmInput.id] = rcmCriado.id
             }
 
-            // 2. Create CodigoAgrupadores and link RCMs
+            // 2. Link RCMs to pre-existing CodigoAgrupadores (already created via /api/codigo-agrupador)
             const agrupadores: { id: number; codigoId: string }[] = []
 
             for (const ag of codigosAgrupadores) {
@@ -284,6 +284,17 @@ export async function POST(request: Request) {
                     .map(r => rcmIdMap[r.id])
                     .filter((id): id is number => id !== undefined)
 
+                if (rcmIdsVinculados.length === 0) continue
+
+                // Find the existing agrupador by codigoId
+                const existing = await tx.codigoAgrupador.findUnique({
+                    where: { codigoId: ag.codigoId },
+                    select: { id: true, codigoId: true },
+                })
+
+                if (!existing) continue
+
+                // Update: link the RCMs and sync metadata
                 const ensayosData = (ag.ensayos ?? [])
                     .filter(e => productosMap[e.sku] !== undefined)
                     .map(e => ({
@@ -292,34 +303,18 @@ export async function POST(request: Request) {
                         producto: { connect: { productoId: productosMap[e.sku] } },
                     }))
 
-                const agrupador = await tx.codigoAgrupador.upsert({
+                const agrupador = await tx.codigoAgrupador.update({
                     where: { codigoId: ag.codigoId },
-                    create: {
-                        codigoId: ag.codigoId,
-                        codigoNombre: ag.codigoNombre,
-                        descripcionServicio: ag.descripcionServicio ?? null,
-                        cantidad: ag.cantidad ?? 1,
-                        unidad: ag.unidad ?? 'unid',
-                        facturacion: ag.facturacion ?? 'Unitario',
-                        ordenTrabajoId: ordenTrabajoId ?? null,
-                        ensayos: { create: ensayosData },
-                        rcms: rcmIdsVinculados.length > 0
-                            ? { connect: rcmIdsVinculados.map(id => ({ id })) }
-                            : undefined,
-                    },
-                    update: {
-                        codigoNombre: ag.codigoNombre,
-                        descripcionServicio: ag.descripcionServicio ?? null,
-                        cantidad: ag.cantidad ?? 1,
-                        unidad: ag.unidad ?? 'unid',
-                        facturacion: ag.facturacion ?? 'Unitario',
+                    data: {
+                        descripcionServicio: ag.descripcionServicio ?? undefined,
+                        cantidad: ag.cantidad ?? undefined,
+                        facturacion: ag.facturacion ?? undefined,
+                        ordenTrabajoId: ordenTrabajoId ?? undefined,
                         ensayos: {
                             deleteMany: {},
                             create: ensayosData,
                         },
-                        rcms: rcmIdsVinculados.length > 0
-                            ? { set: rcmIdsVinculados.map(id => ({ id })) }
-                            : undefined,
+                        rcms: { connect: rcmIdsVinculados.map(id => ({ id })) },
                     },
                     select: { id: true, codigoId: true },
                 })
