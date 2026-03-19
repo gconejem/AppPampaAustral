@@ -127,27 +127,28 @@ model ClienteContacto {
 }
 
 model Producto {
-  productoId            Int                   @id @default(autoincrement())
-  sku                   String                @unique
-  nombre                String
-  descripcion           String?
-  area                  String?
-  familia               String?
-  esPaquete             Boolean               @default(false)
-  tipo                  String
-  precio                Decimal?              @db.Decimal(10, 3)
-  estado                EstadoProducto        @default(ACTIVO)
-  norma                 String?
-  aplicaImpuesto        Boolean               @default(true)
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  detallesCotizacion    DetalleCotizacion[]
-  listasPrecios         ProductoListaPrecio[]
-  productosEnPaquete    ProductoPaquete[]     @relation("PaqueteProductos")
-  paquetesQueLoIncluyen ProductoPaquete[]     @relation("ProductoEnPaquetes")
-  serviciosMuestra      ServicioMuestra[]
-  serviciosRCM          ServicioRCM[]
-  serviciosRCMTecnica   RCMTecnicaServicio[]
+  productoId              Int                      @id @default(autoincrement())
+  sku                     String                   @unique
+  nombre                  String
+  descripcion             String?
+  area                    String?
+  familia                 String?
+  esPaquete               Boolean                  @default(false)
+  tipo                    String
+  precio                  Decimal?                 @db.Decimal(10, 3)
+  estado                  EstadoProducto           @default(ACTIVO)
+  norma                   String?
+  aplicaImpuesto          Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  detallesCotizacion      DetalleCotizacion[]
+  listasPrecios           ProductoListaPrecio[]
+  productosEnPaquete      ProductoPaquete[]        @relation("PaqueteProductos")
+  paquetesQueLoIncluyen   ProductoPaquete[]        @relation("ProductoEnPaquetes")
+  serviciosMuestra        ServicioMuestra[]
+  serviciosRCM            ServicioRCM[]
+  subProductosServicioRCM SubProductoServicioRCM[]
+  codigoAgrupadorEnsayos  CodigoAgrupadorEnsayo[]
 
   @@index([sku])
   @@index([estado])
@@ -587,6 +588,7 @@ model OrdenTrabajo {
   retiroProbeta       RetiroProbeta?
   testigos            Testigos?
   RCM                 RCM[]
+  codigosAgrupadores  CodigoAgrupador[]
 
   @@index([tipoOrdenTrabajoId])
   @@index([estadoOTId])
@@ -691,40 +693,77 @@ model RetiroProbeta {
 }
 
 model RCM {
-  id                   Int           @id @default(autoincrement())
-  numeroRcm            String        @unique
+  id                   Int              @id @default(autoincrement())
+  numeroRcm            String           @unique
   fechaCodificacion    DateTime
   fechaMuestreo        DateTime
   fechaIngreso         DateTime
   fechaEntrega         DateTime?
-  estadoOperativo      String?       @map("estado_operativo")
-  estadoAdministrativo String?       @map("estado_administrativo")
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  estadoOperativo      String?          @map("estado_operativo")
+  estadoAdministrativo String?          @map("estado_administrativo")
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
   clienteId            Int?
-  obraId               Int?          @map("obraId")
-  ordenTrabajoId       String?       @map("ordenTrabajoId")
+  obraId               Int?             @map("obraId")
+  ordenTrabajoId       String?          @map("ordenTrabajoId")
   observaciones        String?
+  // Campos del Control Interno
+  rcmType              String? // 'Muestra' | 'Control' | 'Servicio'
+  sede                 String?
+  areaId               Int?
+  familiaId            Int?
+  numeroTarjeta        String?
+  tipoMaterial         String?
+  item                 String?
+  procedencia          String?
+  ubicacionSector      String?
+  grado                String?
+  elemento             String?
+  cantidadMuestras     Int?
+  vencimiento          Boolean          @default(false)
+  fechaServicio        DateTime?
+  fechaConfeccion      DateTime?
+  tomaMuestra          String?
+  codigoProducto       String?
+  informeEnsayo        Boolean          @default(true)
+  observacionItem      String?
+  cota1                String?
+  cota2                String?
+  codigoAgrupadorId    Int?
+  // Relaciones
   muestras             Muestra[]
-  cliente              Cliente?      @relation(fields: [clienteId], references: [clienteId])
-  obra                 Obra?         @relation(fields: [obraId], references: [obraId])
-  ordenTrabajo         OrdenTrabajo? @relation(fields: [ordenTrabajoId], references: [id])
+  cliente              Cliente?         @relation(fields: [clienteId], references: [clienteId])
+  obra                 Obra?            @relation(fields: [obraId], references: [obraId])
+  ordenTrabajo         OrdenTrabajo?    @relation(fields: [ordenTrabajoId], references: [id])
+  area                 Area?            @relation(fields: [areaId], references: [id])
+  familia              Familia?         @relation(fields: [familiaId], references: [id])
+  codigoAgrupador      CodigoAgrupador? @relation(fields: [codigoAgrupadorId], references: [id])
   servicios            ServicioRCM[]
   RCMHistory           RCMHistory[]
+
+  @@index([areaId])
+  @@index([familiaId])
+  @@index([codigoAgrupadorId])
+  @@index([ordenTrabajoId])
 }
 
 model ServicioRCM {
-  id         Int      @id @default(autoincrement())
-  rcmId      Int
-  productoId Int
-  codigo     String
-  nombre     String
-  cantidad   Int
-  estado     String   @default("CODIFICADO")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  producto   Producto @relation(fields: [productoId], references: [productoId])
-  rcm        RCM      @relation(fields: [rcmId], references: [id])
+  id              Int                      @id @default(autoincrement())
+  rcmId           Int
+  productoId      Int
+  codigo          String
+  nombre          String
+  cantidad        Int
+  estado          String                   @default("CODIFICADO")
+  norma           String?
+  observacion     String?
+  estadoOperativo String?
+  esPaquete       Boolean                  @default(false)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  producto        Producto                 @relation(fields: [productoId], references: [productoId])
+  rcm             RCM                      @relation(fields: [rcmId], references: [id])
+  subProductos    SubProductoServicioRCM[]
 }
 
 model Muestra {
@@ -780,13 +819,13 @@ model Probeta {
 }
 
 model Area {
-  id          Int          @id @default(autoincrement())
-  nombre      String       @unique
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  familias    Familia[]
-  equipos     Equipo[]
-  rcmTecnicas RCMTecnica[]
+  id        Int       @id @default(autoincrement())
+  nombre    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  familias  Familia[]
+  equipos   Equipo[]
+  rcms      RCM[]
 }
 
 model Familia {
@@ -796,6 +835,7 @@ model Familia {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   area      Area     @relation(fields: [areaId], references: [id])
+  rcms      RCM[]
 
   @@index([areaId])
 }
@@ -947,58 +987,52 @@ model DetalleCalibracion {
   @@index([calibracionEquipoId])
 }
 
-model RCMTecnica {
-  id                Int                  @id @default(autoincrement())
-  fechaCodificacion DateTime?
-  fechaServicio     DateTime?
-  fechaIngreso      DateTime?
-  fechaEntrega      DateTime?
-  areaId            Int?
-  tipoServicio      Int?
-  tipoMuestra       String?
-  numeroTarjeta     Int?
-  tipoMaterial      Int?
-  item              Int?
-  observacionItem   String?
-  elemento          String?
-  grado             Int?
-  cota1             Int?
-  cota2             Int?
-  procedencia       String?
-  ubicacion         String?
-  cantidadMuestras  Int?
-  vencimiento       Boolean?
-  observaciones     String?
-  informeEnsayo     Boolean?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  area              Area?                @relation(fields: [areaId], references: [id])
-  servicios         RCMTecnicaServicio[]
+model SubProductoServicioRCM {
+  id            Int         @id @default(autoincrement())
+  servicioRcmId Int
+  productoId    Int
+  sku           String
+  nombre        String
+  norma         String?
+  cantidad      Int         @default(1)
+  observacion   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  servicioRcm   ServicioRCM @relation(fields: [servicioRcmId], references: [id], onDelete: Cascade)
+  producto      Producto    @relation(fields: [productoId], references: [productoId])
 
-  @@index([areaId])
+  @@index([servicioRcmId])
+  @@index([productoId])
 }
 
-model RCMTecnicaServicio {
-  id           Int        @id @default(autoincrement())
-  rcmTecnicaId Int
-  idProducto   Int?
-  cantidad     Int?
-  estado       String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  rcmTecnica   RCMTecnica @relation(fields: [rcmTecnicaId], references: [id], onDelete: Cascade)
-  producto     Producto?  @relation(fields: [idProducto], references: [productoId])
+model CodigoAgrupador {
+  id                  Int                     @id @default(autoincrement())
+  codigoId            String                  @unique
+  codigoNombre        String
+  descripcionServicio String?
+  cantidad            Int                     @default(1)
+  unidad              String                  @default("unid")
+  facturacion         String                  @default("Unitario")
+  ordenTrabajoId      String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  ordenTrabajo        OrdenTrabajo?           @relation(fields: [ordenTrabajoId], references: [id])
+  rcms                RCM[]
+  ensayos             CodigoAgrupadorEnsayo[]
 
-  @@index([rcmTecnicaId])
-  @@index([idProducto])
+  @@index([ordenTrabajoId])
 }
 
-model SubMuestra {
-  id               Int       @id @default(autoincrement())
-  IdSubmuestra     String?
-  fechaConfeccion  DateTime?
-  cantidad         Int?
-  dias             Int?
-  fechaVencimiento DateTime?
-  estadoOperativo  String?
+model CodigoAgrupadorEnsayo {
+  id                Int             @id @default(autoincrement())
+  codigoAgrupadorId Int
+  productoId        Int
+  sku               String
+  nombre            String
+  createdAt         DateTime        @default(now())
+  codigoAgrupador   CodigoAgrupador @relation(fields: [codigoAgrupadorId], references: [id], onDelete: Cascade)
+  producto          Producto        @relation(fields: [productoId], references: [productoId])
+
+  @@index([codigoAgrupadorId])
+  @@index([productoId])
 }

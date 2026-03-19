@@ -1,4 +1,4 @@
-// MUI Imports
+﻿// MUI Imports
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
@@ -96,6 +96,7 @@ interface EnsayoAsociado {
 
 interface RCMData {
     id: number
+    dbId?: number          // ID real en DB después de persistir
     rcmType: string
     sede?: string
     area?: string
@@ -104,6 +105,15 @@ interface RCMData {
     tipoMaterial: string
     item: string
     procedencia?: string
+    ubicacionSector?: string
+    elemento?: string
+    grado?: string
+    calicata?: string
+    estrato?: string
+    cota1?: string
+    cota2?: string
+    observacionItem?: string
+    informeEnsayo?: boolean
     ensayos: EnsayoAsociado[]
     fechaServicio: string
     fechaMuestreo?: string
@@ -120,15 +130,15 @@ interface RCMData {
         fechaVencimiento: string
         cantidad: number
     }>
-    grado?: string
     codigoProducto?: string
 }
 
 interface CodigoAgrupador {
     id: string
+    dbId?: number              // DB id after persisting
     codigoId: string
     codigoNombre: string
-    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string }>
+    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string; numeroRcm?: string }>
     ensayos: Array<{ productoId: number; sku: string; nombre: string }>
     descripcionServicio: string
     cantidad: number
@@ -221,11 +231,24 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [isEditingRcm, setIsEditingRcm] = useState(false)
     const [isDuplicatingRcm, setIsDuplicatingRcm] = useState(false)
     const [editingRcmId, setEditingRcmId] = useState<number | null>(null)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isSavingRcm, setIsSavingRcm] = useState(false)
+    const [successMessage, setSuccessMessage] = useState('')
     const [originalRcm, setOriginalRcm] = useState<RCMData | null>(null)
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [showPreFinalizacion, setShowPreFinalizacion] = useState(false)
     const [actionBarRcmId, setActionBarRcmId] = useState<number | null>(null)
+    const actionBarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current)
+        if (actionBarRcmId !== null) {
+            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 10000)
+        }
+        return () => { if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current) }
+    }, [actionBarRcmId])
 
     // Estados para vencimiento
     const [tieneVencimiento, setTieneVencimiento] = useState(false)
@@ -269,6 +292,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [newCodigoTipo, setNewCodigoTipo] = useState('')
     // Nuevos campos del Dialog
     const [dialogSkuSearch, setDialogSkuSearch] = useState('')
+    const [dialogSkus, setDialogSkus] = useState<Array<{ sku: string; nombre: string; productoId: number }>>([])
     const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
     const [dialogCantidad, setDialogCantidad] = useState<number>(1)
     // Modo del dialog: 'nuevo' | 'existente'
@@ -289,6 +313,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     const [skuSearchAnchor, setSkuSearchAnchor] = useState<HTMLElement | null>(null)
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
+    const [isCreatingCodigo, setIsCreatingCodigo] = useState(false)
 
     // Notificar al padre cuando cambia la cantidad de RCMs agrupados
     useEffect(() => {
@@ -499,7 +524,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setShowCancelConfirm(false)
     }
 
-    const handleSaveRcm = () => {
+    const handleSaveRcm = async () => {
         // Validación 1: Número de tarjeta obligatorio para tipo Muestra
         if (rcmType === 'Muestra' && !numeroTarjeta.trim()) {
             setErrorVencimiento('El número de tarjeta es obligatorio para RCM tipo Muestra')
@@ -540,16 +565,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         // Limpiar error si pasó las validaciones
         setErrorVencimiento('')
 
+        // Capturar valores de edición antes de los setState (el closure los tiene correctamente)
+        const editandoRcm = isEditingRcm
+        const rcmOriginal = originalRcm
+
         // Obtener nombres para guardar en el objeto RCM
         const sedeNombre = sede === 'Otro' ? customSede : sede
         const areaNombre = areas.find(a => a.id === area)?.nombre || ''
         const tipoServicioNombre = todasLasFamilias.find(f => f.id === tipoServicio)?.nombre || ''
-
-        // Limpiar estado de edición y duplicación
-        setIsEditingRcm(false)
-        setEditingRcmId(null)
-        setOriginalRcm(null)
-        setIsDuplicatingRcm(false)
 
         // Determinar el estado según el tipo de RCM
         let estadoRcm = 'Codificado' // Por defecto
@@ -561,55 +584,154 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             estadoRcm = 'Ejecutado'
         }
 
-        const newRcm: RCMData = {
-            id: Date.now(),
+        const today = getTodayDateForInput()
+        const payload = {
             rcmType,
             sede: sedeNombre,
-            area: areaNombre,
-            tipoServicio: tipoServicioNombre,
+            areaId: area || null,
+            familiaId: tipoServicio || null,
+            fechaCodificacion: today,
+            fechaServicio,
+            fechaMuestreo: fechaServicio,
+            fechaIngreso: today,
             numeroTarjeta,
             tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
             item: item === 'Otro' ? customItem : item,
             grado: grado === 'Otro' ? customGrado : grado,
             procedencia,
-            ensayos: [...ensayosAsociados],
-            fechaServicio,
-            fechaMuestreo: fechaServicio, // Usar fecha servicio como fecha muestreo
+            ubicacionSector,
+            elemento,
+            cota1,
+            cota2,
+            observacionItem,
+            informeEnsayo,
             tomaMuestra,
-            cantidadMuestras,
-            numeroRcm: `RCM-${savedRcms.length + 1}`,
-            estado: estadoRcm,
-            tieneVencimiento,
-            submuestrasVencimiento: [...submuestrasVencimiento]
+            cantidadMuestras: parseInt(cantidadMuestras) || 1,
+            vencimiento: tieneVencimiento,
+            ensayos: ensayosAsociados.map(e => ({
+                productoId: e.productoId,
+                sku: e.sku,
+                nombre: e.nombre,
+                norma: e.norma,
+                cantidad: e.cantidad,
+                observacion: e.observacion,
+                estadoOperativo: e.estadoOperativo,
+                esPaquete: e.esPaquete,
+                subProductos: e.subProductos?.map(sp => ({
+                    productoId: sp.productoId,
+                    sku: sp.sku,
+                    nombre: sp.nombre,
+                    norma: sp.norma,
+                    cantidad: sp.cantidad,
+                    observacion: sp.observacion,
+                })),
+            })),
+            submuestrasVencimiento,
+            ordenTrabajoId: otData?.id ?? null,
+            clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+            obraId: otData?.obraId ?? otData?.obra?.id ?? null,
         }
-        setSavedRcms([...savedRcms, newRcm])
-        setActionBarRcmId(newRcm.id)
-        setShowRcmCard(false)
-        setRcmType('')
-        setSede('PA Chillán')
-        setCustomSede('')
-        setArea('')
-        setTipoServicio('')
-        setNumeroTarjeta('')
-        setTomaMuestra('')
-        setTipoMaterial('')
-        setCustomTipoMaterial('')
-        setItem('')
-        setCustomItem('')
-        setElemento('')
-        setGrado('')
-        setCustomGrado('')
-        setCalicata('')
-        setEstrato('')
-        setCota1('')
-        setCota2('')
-        setProcedencia('')
-        setUbicacionSector('')
-        setCantidadMuestras('1')
-        setEnsayosAsociados([])
-        setEnsayosPendientes(new Set())
-        setTieneVencimiento(false)
-        setSubmuestrasVencimiento([])
+
+        setIsSavingRcm(true)
+        try {
+            let result: any
+            if (editandoRcm && rcmOriginal?.dbId) {
+                // PUT — actualizar RCM existente
+                const response = await fetch(`/api/rcm/${rcmOriginal.dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}))
+                    throw new Error(errBody.error || 'Error al actualizar el RCM')
+                }
+                result = await response.json()
+            } else {
+                // POST — crear nuevo RCM
+                const response = await fetch('/api/rcm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}))
+                    throw new Error(errBody.error || 'Error al guardar el RCM')
+                }
+                result = await response.json()
+            }
+
+            const newRcm: RCMData = {
+                id: Date.now(),
+                dbId: result.id,
+                numeroRcm: result.numeroRcm,
+                rcmType,
+                sede: sedeNombre,
+                area: areaNombre,
+                tipoServicio: tipoServicioNombre,
+                numeroTarjeta,
+                tipoMaterial: tipoMaterial === 'Otro' ? customTipoMaterial : tipoMaterial,
+                item: item === 'Otro' ? customItem : item,
+                grado: grado === 'Otro' ? customGrado : grado,
+                procedencia,
+                ubicacionSector,
+                elemento,
+                calicata,
+                estrato,
+                cota1,
+                cota2,
+                observacionItem,
+                informeEnsayo,
+                ensayos: [...ensayosAsociados],
+                fechaServicio,
+                fechaMuestreo: fechaServicio,
+                tomaMuestra,
+                cantidadMuestras,
+                estado: estadoRcm,
+                tieneVencimiento,
+                submuestrasVencimiento: [...submuestrasVencimiento],
+            }
+
+            setSavedRcms([...savedRcms, newRcm])
+            setActionBarRcmId(newRcm.id)
+
+            // Limpiar estado de edición y duplicación
+            setIsEditingRcm(false)
+            setEditingRcmId(null)
+            setOriginalRcm(null)
+            setIsDuplicatingRcm(false)
+
+            setShowRcmCard(false)
+            setRcmType('')
+            setSede('PA Chillán')
+            setCustomSede('')
+            setArea('')
+            setTipoServicio('')
+            setNumeroTarjeta('')
+            setTomaMuestra('')
+            setTipoMaterial('')
+            setCustomTipoMaterial('')
+            setItem('')
+            setCustomItem('')
+            setElemento('')
+            setGrado('')
+            setCustomGrado('')
+            setCalicata('')
+            setEstrato('')
+            setCota1('')
+            setCota2('')
+            setProcedencia('')
+            setUbicacionSector('')
+            setCantidadMuestras('1')
+            setEnsayosAsociados([])
+            setEnsayosPendientes(new Set())
+            setTieneVencimiento(false)
+            setSubmuestrasVencimiento([])
+        } catch (error) {
+            setErrorVencimiento(error instanceof Error ? error.message : 'Error al guardar el RCM')
+        } finally {
+            setIsSavingRcm(false)
+        }
     }
 
     const handleToggleExpand = () => {
@@ -695,6 +817,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 }
 
                 setProcedencia(rcmToEdit.procedencia || '')
+                setUbicacionSector(rcmToEdit.ubicacionSector || '')
+                setElemento(rcmToEdit.elemento || '')
+                setCalicata(rcmToEdit.calicata || '')
+                setEstrato(rcmToEdit.estrato || '')
+                setCota1(rcmToEdit.cota1 || '')
+                setCota2(rcmToEdit.cota2 || '')
+                setObservacionItem(rcmToEdit.observacionItem || '')
+                setInformeEnsayo(rcmToEdit.informeEnsayo !== undefined ? rcmToEdit.informeEnsayo : rcmToEdit.rcmType !== 'Servicio')
                 setTomaMuestra(rcmToEdit.tomaMuestra || '')
                 setCantidadMuestras(rcmToEdit.cantidadMuestras)
                 setFechaServicio(rcmToEdit.fechaServicio)
@@ -719,8 +849,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseRcmMenu()
     }
 
-    const handleDeleteRcm = () => {
+    const handleDeleteRcm = async () => {
         if (selectedRcmId !== null) {
+            const rcmToDelete = savedRcms.find(r => r.id === selectedRcmId)
+            if (rcmToDelete?.dbId) {
+                try {
+                    await fetch(`/api/rcm/${rcmToDelete.dbId}`, { method: 'DELETE' })
+                } catch {
+                    // ignorar error de red, igual remover de la UI
+                }
+            }
             setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
         }
         handleCloseRcmMenu()
@@ -779,6 +917,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     setCustomItem('')
                 }
                 setProcedencia(rcmToDuplicate.procedencia || '')
+                setUbicacionSector(rcmToDuplicate.ubicacionSector || '')
+                setElemento(rcmToDuplicate.elemento || '')
+                setCalicata(rcmToDuplicate.calicata || '')
+                setEstrato(rcmToDuplicate.estrato || '')
+                setCota1(rcmToDuplicate.cota1 || '')
+                setCota2(rcmToDuplicate.cota2 || '')
+                setObservacionItem(rcmToDuplicate.observacionItem || '')
+                setInformeEnsayo(rcmToDuplicate.informeEnsayo !== undefined ? rcmToDuplicate.informeEnsayo : rcmToDuplicate.rcmType !== 'Servicio')
 
                 // Manejar grado "Otro"
                 const standardGrades = ['1', '2', '3', '4']
@@ -819,8 +965,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setDialogSkuSearch('')
         setDialogDescripcionServicio('')
         setDialogCantidad(selectedRcmIds.length > 0 ? selectedRcmIds.length : 1)
-        // Si ya hay códigos creados, abrir por defecto en modo 'existente'
-        setDialogMode(codigosAgrupadores.length > 0 ? 'existente' : 'nuevo')
+        setDialogMode('nuevo')
         setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
 
@@ -833,6 +978,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setNewCodigoDescripcion('')
         setNewCodigoTipo('')
         setDialogSkuSearch('')
+        setDialogSkus([])
         setDialogDescripcionServicio('')
         setSelectedExistingAgrupadorId('')
     }
@@ -841,13 +987,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         setSelectedCodigo(codigoId)
     }
 
-    const handleConfirmCodigo = () => {
+    const handleConfirmCodigo = async () => {
         // Determinar los RCMs a agrupar
         const rcmsToAssign = selectedRcmIds.length > 0
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
                 id: r.id,
                 numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                rcmType: r.rcmType
+                rcmType: r.rcmType,
+                numeroRcm: r.numeroRcm
             }))
             : showRcmCard
                 ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
@@ -880,29 +1027,69 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             })
         }
 
-        // Si hay SKU seleccionado, incluirlo como ensayo si no está ya
-        if (dialogSkuSearch.trim()) {
+        // Si hay SKUs seleccionados, incluirlos como ensayos si no están ya
+        dialogSkus.forEach(skuItem => {
+            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === skuItem.sku)
+            if (!skuAlreadyIncluded) {
+                allEnsayos.unshift({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre })
+            }
+        })
+        // Fallback: si hay texto en el campo de búsqueda y no hay SKUs en la lista
+        if (dialogSkus.length === 0 && dialogSkuSearch.trim()) {
             const skuAlreadyIncluded = allEnsayos.some(e => e.sku === dialogSkuSearch.trim())
             if (!skuAlreadyIncluded) {
                 allEnsayos.unshift({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
             }
         }
 
-        const newAgrupador: CodigoAgrupador = {
-            id: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-            codigoId: `PRD-${String(codigosAgrupadores.length + 1).padStart(3, '0')}`,
-            codigoNombre: dialogDescripcionServicio || `Código ${codigosAgrupadores.length + 1}`,
-            rcmsVinculados: rcmsToAssign,
-            ensayos: allEnsayos,
-            descripcionServicio: dialogDescripcionServicio,
-            cantidad: dialogCantidad,
-            unidad: 'unid',
-            facturacion: dialogSkuSearch.trim() ? 'Fijo' : 'Unitario'
-        }
+        const facturacionValue = (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? 'Fijo' : 'Unitario'
 
-        setCodigosAgrupadores(prev => [...prev, newAgrupador])
-        setSelectedRcmIds([])
-        handleCloseCodigoPopup()
+        // Crear el código de producto en la base de datos
+        setIsCreatingCodigo(true)
+        try {
+            const res = await fetch('/api/codigo-agrupador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    descripcionServicio: dialogDescripcionServicio || null,
+                    cantidad: dialogCantidad,
+                    unidad: 'unid',
+                    facturacion: facturacionValue,
+                    ensayos: allEnsayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
+                    ordenTrabajoId: otData?.id ?? null,
+                }),
+            })
+
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}))
+                throw new Error(errBody.error || 'Error al crear código de producto')
+            }
+
+            const created = await res.json()
+            // created: { id: number, codigoId: string, codigoNombre: string }
+
+            const newAgrupador: CodigoAgrupador = {
+                id: created.codigoNombre,
+                dbId: created.id,
+                codigoId: created.codigoId,
+                codigoNombre: created.codigoNombre,
+                rcmsVinculados: rcmsToAssign,
+                ensayos: allEnsayos,
+                descripcionServicio: dialogDescripcionServicio,
+                cantidad: dialogCantidad,
+                unidad: 'unid',
+                facturacion: facturacionValue
+            }
+
+            setCodigosAgrupadores(prev => [...prev, newAgrupador])
+            setSelectedRcmIds([])
+            handleCloseCodigoPopup()
+        } catch (err) {
+            console.error('Error al crear código de producto:', err)
+            setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear código de producto')
+        } finally {
+            setIsCreatingCodigo(false)
+        }
     }
 
     const handleAddToExistingAgrupador = () => {
@@ -913,7 +1100,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
                 id: r.id,
                 numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                rcmType: r.rcmType
+                rcmType: r.rcmType,
+                numeroRcm: r.numeroRcm
             }))
             : []
 
@@ -954,8 +1142,166 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
         handleCloseCodigoPopup()
     }
 
-    const handleDeleteAgrupador = (agrupadorId: string) => {
+    const handleDeleteAgrupador = async (agrupadorId: string) => {
+        const agrupador = codigosAgrupadores.find(a => a.id === agrupadorId)
+
+        // Eliminar de la base de datos si tiene dbId
+        if (agrupador?.dbId) {
+            try {
+                await fetch(`/api/codigo-agrupador/${agrupador.dbId}`, { method: 'DELETE' })
+            } catch (err) {
+                console.error('Error al eliminar código agrupador de la DB:', err)
+            }
+        }
+
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
+    }
+
+    const computeValidaciones = () => {
+        // V1: Todos los RCMs están vinculados a al menos un código agrupador
+        const rcmIdsAgrupados = new Set<number>()
+        codigosAgrupadores.forEach(ag => ag.rcmsVinculados.forEach(r => rcmIdsAgrupados.add(r.id)))
+        const v1 = savedRcms.every(rcm => rcmIdsAgrupados.has(rcm.id))
+
+        // V2: Para RCMs con vencimiento, la suma de cantidades de submuestras = cantidadMuestras
+        const v2 = savedRcms.every(rcm => {
+            if (!rcm.tieneVencimiento || !rcm.submuestrasVencimiento?.length) return true
+            const sumaSubmuestras = rcm.submuestrasVencimiento.reduce((acc, s) => acc + (s.cantidad || 0), 0)
+            return sumaSubmuestras === parseInt(rcm.cantidadMuestras || '1')
+        })
+
+        // V3: No hay códigos agrupadores sin RCMs vinculados
+        const v3 = codigosAgrupadores.every(ag => ag.rcmsVinculados.length > 0)
+
+        // V4: Todos los RCMs de un mismo agrupador tienen la misma área
+        const v4 = codigosAgrupadores.every(ag => {
+            const areas = ag.rcmsVinculados.map(rv => savedRcms.find(r => r.id === rv.id)?.area).filter(Boolean)
+            return areas.length === 0 || new Set(areas).size === 1
+        })
+
+        // V5: Todos los RCMs tienen al menos 1 ensayo registrado
+        const v5 = savedRcms.every(rcm => rcm.ensayos.length > 0)
+
+        const totalRcms = savedRcms.length
+        const tipoControl = savedRcms.filter(r => r.rcmType === 'Control').length
+        const tipoMuestra = savedRcms.filter(r => r.rcmType === 'Muestra').length
+        const tipoServicio = savedRcms.filter(r => r.rcmType === 'Servicio').length
+        const codigosProducto = codigosAgrupadores.length
+        const modoPxQ = codigosAgrupadores.filter(a => a.facturacion === 'Unitario').length
+        const modoFijo = codigosAgrupadores.filter(a => a.facturacion === 'Fijo').length
+
+        return { v1, v2, v3, v4, v5, totalRcms, tipoControl, tipoMuestra, tipoServicio, codigosProducto, modoPxQ, modoFijo }
+    }
+
+    const handleGuardarTodo = async () => {
+        if (savedRcms.length === 0) return
+        setIsSaving(true)
+        try {
+            const today = getTodayDateForInput()
+            const payload = {
+                rcms: savedRcms.map(rcm => ({
+                    dbId: rcm.dbId ?? undefined,
+                    id: rcm.id,
+                    rcmType: rcm.rcmType,
+                    sede: rcm.sede,
+                    areaId: areas.find(a => a.nombre === rcm.area)?.id ?? null,
+                    familiaId: todasLasFamilias.find(f => f.nombre === rcm.tipoServicio)?.id ?? null,
+                    fechaCodificacion: today,
+                    fechaServicio: rcm.fechaServicio,
+                    fechaMuestreo: rcm.fechaMuestreo || rcm.fechaServicio,
+                    fechaIngreso: today,
+                    numeroTarjeta: rcm.numeroTarjeta,
+                    tipoMaterial: rcm.tipoMaterial,
+                    item: rcm.item,
+                    grado: rcm.grado,
+                    elemento: rcm.elemento,
+                    procedencia: rcm.procedencia,
+                    ubicacionSector: rcm.ubicacionSector,
+                    observacionItem: rcm.observacionItem,
+                    cota1: rcm.cota1,
+                    cota2: rcm.cota2,
+                    informeEnsayo: rcm.informeEnsayo ?? true,
+                    cantidadMuestras: parseInt(rcm.cantidadMuestras) || 1,
+                    vencimiento: rcm.tieneVencimiento ?? false,
+                    tomaMuestra: rcm.tomaMuestra,
+                    ensayos: rcm.ensayos.map(e => ({
+                        productoId: e.productoId,
+                        sku: e.sku,
+                        nombre: e.nombre,
+                        norma: e.norma,
+                        cantidad: e.cantidad,
+                        observacion: e.observacion,
+                        estadoOperativo: e.estadoOperativo,
+                        esPaquete: e.esPaquete,
+                        subProductos: e.subProductos?.map(sp => ({
+                            productoId: sp.productoId,
+                            sku: sp.sku,
+                            nombre: sp.nombre,
+                            norma: sp.norma,
+                            cantidad: sp.cantidad,
+                            observacion: sp.observacion,
+                        })),
+                    })),
+                    submuestrasVencimiento: rcm.submuestrasVencimiento,
+                    ordenTrabajoId: otData?.id,
+                    clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+                    obraId: otData?.obraId ?? otData?.obra?.id ?? null,
+                })),
+                codigosAgrupadores: codigosAgrupadores.map(ag => ({
+                    id: ag.id,
+                    codigoId: ag.codigoId,
+                    codigoNombre: ag.codigoNombre,
+                    descripcionServicio: ag.descripcionServicio,
+                    cantidad: ag.cantidad,
+                    unidad: ag.unidad,
+                    facturacion: ag.facturacion,
+                    ensayos: ag.ensayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
+                    rcmsVinculados: ag.rcmsVinculados.map(r => ({ id: r.id })),
+                })),
+                ordenTrabajoId: otData?.id ?? null,
+                clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
+                obraId: otData?.obraId ?? otData?.obra?.id ?? null,
+            }
+
+            const response = await fetch('/api/rcm/guardar-lote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
+
+            if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}))
+                throw new Error(errBody.message || 'Error al guardar los RCMs')
+            }
+
+            const result = await response.json()
+
+            // Actualizar savedRcms con los IDs reales de la DB
+            setSavedRcms(prev =>
+                prev.map((rcm, idx) => ({
+                    ...rcm,
+                    dbId: result.rcms[idx]?.id ?? rcm.dbId,
+                    numeroRcm: result.rcms[idx]?.id
+                        ? result.rcms[idx].id.toString()
+                        : rcm.numeroRcm,
+                }))
+            )
+
+            // Actualizar codigosAgrupadores con los IDs reales de la DB
+            setCodigosAgrupadores(prev =>
+                prev.map(ag => {
+                    const saved = result.agrupadores?.find((a: { id: number; codigoId: string }) => a.codigoId === ag.codigoId)
+                    return saved ? { ...ag, dbId: saved.id } : ag
+                })
+            )
+
+            const total = result.rcms?.length ?? savedRcms.length
+            setSuccessMessage(`${total} RCM${total !== 1 ? 's' : ''} guardado${total !== 1 ? 's' : ''} exitosamente`)
+        } catch (error) {
+            setErrorVencimiento(error instanceof Error ? error.message : 'Error al guardar')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const handleToggleRcmSelection = (rcmId: number) => {
@@ -1031,7 +1377,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
     }
 
     const handleSelectProductForSku = (producto: ProductoType) => {
-        setDialogSkuSearch(producto.sku || producto.nombre)
+        const sku = producto.sku || producto.nombre
+        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: producto.id }])
+        setDialogSkuSearch('')
         handleCloseSkuSearch()
     }
 
@@ -1525,6 +1873,16 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             observer?.disconnect()
         }
     }, [updateCardRect])
+
+    // Si todos los RCMs seleccionados son del mismo tipo y misma área, se puede agrupar
+    const selectedRcmsData = savedRcms.filter(r => selectedRcmIds.includes(r.id))
+    const canAgrupar = selectedRcmsData.length > 0
+        && selectedRcmsData.every(r => r.rcmType === selectedRcmsData[0].rcmType)
+        && selectedRcmsData.every(r => r.area === selectedRcmsData[0].area)
+    // Área heredada de los RCMs seleccionados (o del área del formulario activo)
+    const dialogAreaNombre = selectedRcmsData.length > 0
+        ? (selectedRcmsData[0].area || '—')
+        : (areas.find(a => a.id === area)?.nombre || '—')
 
     return (
         <>
@@ -2958,8 +3316,9 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             color='primary'
                                             sx={{ textTransform: 'none', px: 4 }}
                                             onClick={handleSaveRcm}
+                                            disabled={isSavingRcm}
                                         >
-                                            Guardar RCM
+                                            {isSavingRcm ? 'Guardando...' : 'Guardar RCM'}
                                         </Button>
                                     </Box>
                                 </Box>
@@ -3046,7 +3405,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 }}
                                             />
                                             <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                                {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                             </Typography>
 
                                             {/* Mostrar estado: Pendiente de agrupar (amarillo-naranja) */}
@@ -3508,7 +3867,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 }}
                                             />
                                             <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                                {rcm.numeroRcm || `RCM-${String(rcm.id).padStart(3, '0')}`}
+                                                {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                             </Typography>
 
                                             {/* Mostrar estado: Agrupado (verde) */}
@@ -3651,17 +4010,17 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         </Box>
                     )}
 
-                    {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados */}
+                    {/* Botón flotante de agrupación - solo visible cuando hay RCMs seleccionados del mismo tipo */}
                     <Box
                         sx={{
                             position: 'fixed',
                             bottom: 32,
                             left: '50%',
-                            transform: selectedRcmIds.length > 0
+                            transform: canAgrupar
                                 ? 'translateX(-50%) translateY(0)'
                                 : 'translateX(-50%) translateY(120px)',
-                            opacity: selectedRcmIds.length > 0 ? 1 : 0,
-                            pointerEvents: selectedRcmIds.length > 0 ? 'auto' : 'none',
+                            opacity: canAgrupar ? 1 : 0,
+                            pointerEvents: canAgrupar ? 'auto' : 'none',
                             transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease',
                             zIndex: 1300,
                         }}
@@ -3749,6 +4108,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             <Button
                                 variant='contained'
                                 startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
+                                disabled={isSaving}
+                                onClick={() => setShowPreFinalizacion(true)}
                                 sx={{
                                     textTransform: 'none',
                                     borderRadius: '8px',
@@ -3758,7 +4119,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     '&:hover': { bgcolor: '#1565C0' }
                                 }}
                             >
-                                Finalizar Codificación
+                                {isSaving ? 'Guardando...' : 'Finalizar Codificación'}
                             </Button>
                         </Box>
 
@@ -3789,19 +4150,24 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             {/* RCMs Vinculados */}
                                             <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {agrupador.rcmsVinculados.map((rcm, idx) => (
-                                                        <Chip
-                                                            key={idx}
-                                                            label={`RCM-${idx + 1}`}
-                                                            size='small'
-                                                            sx={{
-                                                                bgcolor: '#EEF2FF',
-                                                                color: '#4338CA',
-                                                                fontWeight: 600,
-                                                                fontSize: '0.75rem'
-                                                            }}
-                                                        />
-                                                    ))}
+                                                    {agrupador.rcmsVinculados.map((rcm, idx) => {
+                                                        const fullRcm = savedRcms.find(r => r.id === rcm.id)
+                                                        const rcmCode = rcm.numeroRcm || fullRcm?.numeroRcm
+                                                        const rcmLabel = rcmCode ? `RCM-${String(rcmCode).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                                        return (
+                                                            <Chip
+                                                                key={idx}
+                                                                label={rcmLabel}
+                                                                size='small'
+                                                                sx={{
+                                                                    bgcolor: '#EEF2FF',
+                                                                    color: '#4338CA',
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.75rem'
+                                                                }}
+                                                            />
+                                                        )
+                                                    })}
                                                 </Box>
                                             </td>
 
@@ -4099,6 +4465,23 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                 </Alert>
             </Snackbar>
 
+            {/* Snackbar de éxito al guardar */}
+            <Snackbar
+                open={Boolean(successMessage)}
+                autoHideDuration={5000}
+                onClose={() => setSuccessMessage('')}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setSuccessMessage('')}
+                    severity='success'
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                >
+                    {successMessage}
+                </Alert>
+            </Snackbar>
+
             {/* Snackbar para advertencia de edición */}
             <Snackbar
                 open={showEditWarning}
@@ -4248,7 +4631,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                                     {selectedRcmIds.map((id, idx) => {
                                         const rcm = savedRcms.find(r => r.id === id)
-                                        const label = rcm?.numeroRcm || `RCM-${String(idx + 1).padStart(3, '0')}`
+                                        const label = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                        // Now uses actual RCM code from savedRcms
                                         return (
                                             <Chip
                                                 key={id}
@@ -4269,72 +4653,86 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             </Box>
                         )}
 
-                        {/* Selector de modo: existente vs nuevo (solo si hay agrupadores) */}
-                        {codigosAgrupadores.length > 0 && (
-                            <Box
+                        {/* Selector de modo: Crear nuevo / Añadir a existente */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                bgcolor: '#F3F4F6',
+                                borderRadius: '8px',
+                                p: 0.5,
+                                gap: 0.5
+                            }}
+                        >
+                            <Button
+                                fullWidth
+                                size='small'
+                                variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
+                                onClick={() => setDialogMode('nuevo')}
                                 sx={{
-                                    display: 'flex',
-                                    bgcolor: '#F3F4F6',
-                                    borderRadius: '8px',
-                                    p: 0.5,
-                                    gap: 0.5
+                                    textTransform: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '0.82rem',
+                                    ...(dialogMode === 'nuevo' ? {
+                                        bgcolor: 'white',
+                                        color: 'primary.main',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                        '&:hover': { bgcolor: 'white' }
+                                    } : {
+                                        color: 'text.secondary',
+                                        '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                    })
                                 }}
                             >
-                                <Button
-                                    fullWidth
-                                    size='small'
-                                    variant={dialogMode === 'existente' ? 'contained' : 'text'}
-                                    onClick={() => {
-                                        setDialogMode('existente')
-                                        if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
-                                            setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
-                                        }
-                                    }}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '6px',
-                                        fontWeight: 600,
-                                        fontSize: '0.82rem',
-                                        ...(dialogMode === 'existente' ? {
-                                            bgcolor: 'white',
-                                            color: 'primary.main',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                            '&:hover': { bgcolor: 'white' }
-                                        } : {
-                                            color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
-                                        })
-                                    }}
-                                >
-                                    Agregar a código existente
-                                </Button>
-                                <Button
-                                    fullWidth
-                                    size='small'
-                                    variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
-                                    onClick={() => setDialogMode('nuevo')}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: '6px',
-                                        fontWeight: 600,
-                                        fontSize: '0.82rem',
-                                        ...(dialogMode === 'nuevo' ? {
-                                            bgcolor: 'white',
-                                            color: 'primary.main',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                            '&:hover': { bgcolor: 'white' }
-                                        } : {
-                                            color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
-                                        })
-                                    }}
-                                >
-                                    Crear nuevo código
-                                </Button>
+                                + Crear nuevo código
+                            </Button>
+                            <Button
+                                fullWidth
+                                size='small'
+                                variant={dialogMode === 'existente' ? 'contained' : 'text'}
+                                onClick={() => {
+                                    setDialogMode('existente')
+                                    if (!selectedExistingAgrupadorId && codigosAgrupadores.length > 0) {
+                                        setSelectedExistingAgrupadorId(codigosAgrupadores[0].id)
+                                    }
+                                }}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '0.82rem',
+                                    ...(dialogMode === 'existente' ? {
+                                        bgcolor: 'white',
+                                        color: 'primary.main',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                        '&:hover': { bgcolor: 'white' }
+                                    } : {
+                                        color: 'text.secondary',
+                                        '&:hover': { bgcolor: 'transparent', color: 'text.primary' }
+                                    })
+                                }}
+                            >
+                                Añadir a código existente
+                            </Button>
+                        </Box>
+
+                        {/* MODO: Añadir a código existente */}
+                        {dialogMode === 'existente' && codigosAgrupadores.length === 0 && (
+                            <Box
+                                sx={{
+                                    p: 2.5,
+                                    borderRadius: '8px',
+                                    border: '1px dashed',
+                                    borderColor: 'divider',
+                                    bgcolor: '#FAFAFA',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                <Typography variant='body2' color='text.secondary'>
+                                    No hay códigos producto creados aún. Usa <strong>+ Crear nuevo código</strong> para crear el primero.
+                                </Typography>
                             </Box>
                         )}
-
-                        {/* MODO: Agregar a código existente */}
                         {dialogMode === 'existente' && codigosAgrupadores.length > 0 && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary' }}>
@@ -4413,7 +4811,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                         )}
 
                         {/* MODO: Crear nuevo código */}
-                        {(dialogMode === 'nuevo' || codigosAgrupadores.length === 0) && (
+                        {dialogMode === 'nuevo' && (
                             <>
                                 {/* Área (heredado) + SKU Producto */}
                                 <Box sx={{ display: 'flex', gap: 2 }}>
@@ -4424,7 +4822,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         <TextField
                                             fullWidth
                                             size='small'
-                                            value={areas.find(a => a.id === area)?.nombre || '—'}
+                                            value={dialogAreaNombre}
                                             disabled
                                             InputProps={{ readOnly: true }}
                                         />
@@ -4462,6 +4860,45 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                         />
                                     </Box>
                                 </Box>
+
+                                {/* Lista de SKUs agregados */}
+                                {dialogSkus.length > 0 && (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {dialogSkus.map((item, idx) => (
+                                            <Box
+                                                key={idx}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    px: 1.5,
+                                                    py: 0.75,
+                                                    borderRadius: '6px',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    bgcolor: '#F8FAFC'
+                                                }}
+                                            >
+                                                <InventoryIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+                                                <Typography variant='body2' sx={{ fontWeight: 700, fontFamily: 'monospace', color: 'primary.main', flexShrink: 0 }}>
+                                                    {item.sku}
+                                                </Typography>
+                                                {item.nombre !== item.sku && (
+                                                    <Typography variant='body2' color='text.secondary' noWrap sx={{ flex: 1 }}>
+                                                        {item.nombre}
+                                                    </Typography>
+                                                )}
+                                                <IconButton
+                                                    size='small'
+                                                    onClick={() => setDialogSkus(prev => prev.filter((_, i) => i !== idx))}
+                                                    sx={{ ml: 'auto', p: 0.25, flexShrink: 0 }}
+                                                >
+                                                    <CloseIcon sx={{ fontSize: 14 }} />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
 
                                 {/* Descripción del Servicio */}
                                 <Box>
@@ -4505,8 +4942,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 px: 1.5,
                                                 borderRadius: '8px',
                                                 border: '1px solid',
-                                                borderColor: dialogSkuSearch.trim() ? '#FDE68A' : 'divider',
-                                                bgcolor: dialogSkuSearch.trim() ? '#FEF3C7' : '#F9FAFB',
+                                                borderColor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FDE68A' : 'divider',
+                                                bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FEF3C7' : '#F9FAFB',
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
@@ -4515,7 +4952,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                     width: 8,
                                                     height: 8,
                                                     borderRadius: '50%',
-                                                    bgcolor: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
                                                     flexShrink: 0,
                                                     transition: 'background-color 0.2s ease'
                                                 }}
@@ -4524,12 +4961,12 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                 variant='body2'
                                                 sx={{
                                                     fontWeight: 600,
-                                                    color: dialogSkuSearch.trim() ? '#D97706' : 'primary.main',
+                                                    color: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
                                                     fontSize: '0.8rem',
                                                     transition: 'color 0.2s ease'
                                                 }}
                                             >
-                                                {dialogSkuSearch.trim()
+                                                {(dialogSkus.length > 0 || dialogSkuSearch.trim())
                                                     ? 'Fijo — SKU \u00d7 Cantidad'
                                                     : 'Unitario — P\u00d7Q por ensayos'
                                                 }
@@ -4575,7 +5012,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     <Button
                         variant='contained'
                         startIcon={<CheckCircleIcon />}
-                        disabled={dialogMode === 'existente' && !selectedExistingAgrupadorId}
+                        disabled={(dialogMode === 'existente' && !selectedExistingAgrupadorId) || isCreatingCodigo}
                         onClick={dialogMode === 'existente' ? handleAddToExistingAgrupador : handleConfirmCodigo}
                         sx={{
                             textTransform: 'none',
@@ -4586,7 +5023,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                             '&:hover': { bgcolor: 'primary.dark' }
                         }}
                     >
-                        {dialogMode === 'existente' ? '✓ Agregar al código' : '✓ Crear Código Producto'}
+                        {dialogMode === 'existente' ? '✓ Agregar al código' : isCreatingCodigo ? 'Generando código...' : '✓ Crear Código Producto'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -4855,6 +5292,162 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                     </Button>
                 </Box>
             </Popover>
+
+            {/* Dialog: Validación Pre-Finalización */}
+            {showPreFinalizacion && (() => {
+                const val = computeValidaciones()
+                const allPassed = val.v1 && val.v2 && val.v3 && val.v4 && val.v5
+
+                const validaciones = [
+                    {
+                        key: 'v1',
+                        label: 'V1 — RCMs sin Código Producto',
+                        desc: val.v1 ? 'Todos los RCMs están agrupados correctamente' : 'Hay RCMs sin código producto asignado',
+                        ok: val.v1,
+                    },
+                    {
+                        key: 'v2',
+                        label: 'V2 — Submuestras',
+                        desc: val.v2 ? 'Cantidades cuadradas con muestras declaradas' : 'Hay submuestras con cantidades inconsistentes',
+                        ok: val.v2,
+                    },
+                    {
+                        key: 'v3',
+                        label: 'V3 — Códigos vacíos',
+                        desc: val.v3 ? 'Sin códigos huérfanos sin RCMs' : 'Hay códigos agrupadores sin RCMs vinculados',
+                        ok: val.v3,
+                    },
+                    {
+                        key: 'v4',
+                        label: 'V4 — Mezcla de Áreas',
+                        desc: val.v4 ? 'Áreas homogéneas en todos los códigos' : 'Hay códigos con RCMs de distintas áreas',
+                        ok: val.v4,
+                    },
+                    {
+                        key: 'v5',
+                        label: 'V5 — Mínimo 1 ensayo',
+                        desc: val.v5 ? 'Todos los RCMs tienen al menos 1 ensayo registrado' : 'Hay RCMs sin ensayos registrados',
+                        ok: val.v5,
+                    },
+                ]
+
+                return (
+                    <Dialog
+                        open={showPreFinalizacion}
+                        onClose={() => setShowPreFinalizacion(false)}
+                        maxWidth='sm'
+                        fullWidth
+                        PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                fontWeight: 700,
+                                fontSize: '1.1rem',
+                                pb: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}
+                        >
+                            Validación Pre-Finalización
+                            <IconButton size='small' onClick={() => setShowPreFinalizacion(false)} sx={{ color: 'text.secondary' }}>
+                                <CloseIcon fontSize='small' />
+                            </IconButton>
+                        </DialogTitle>
+
+                        <Divider />
+
+                        <DialogContent sx={{ pt: 2, pb: 1 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                {validaciones.map(v => (
+                                    <Box
+                                        key={v.key}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.5,
+                                            p: 1.5,
+                                            borderRadius: '8px',
+                                            border: '1px solid',
+                                            borderColor: v.ok ? 'success.light' : 'error.light',
+                                            bgcolor: v.ok ? 'success.50' : 'error.50',
+                                        }}
+                                    >
+                                        {v.ok
+                                            ? <CheckCircleIcon sx={{ color: 'success.main', fontSize: 22, flexShrink: 0 }} />
+                                            : <WarningAmberIcon sx={{ color: 'error.main', fontSize: 22, flexShrink: 0 }} />
+                                        }
+                                        <Box>
+                                            <Typography variant='body2' sx={{ fontWeight: 700, color: v.ok ? 'success.dark' : 'error.dark' }}>
+                                                {v.label}
+                                            </Typography>
+                                            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
+                                                {v.desc}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                ))}
+
+                                {/* Resumen de Codificación */}
+                                <Box sx={{ mt: 1, p: 2, borderRadius: '8px', bgcolor: 'action.hover' }}>
+                                    <Typography variant='body2' sx={{ fontWeight: 700, mb: 1.5 }}>
+                                        Resumen de Codificación
+                                    </Typography>
+                                    <Grid container spacing={1}>
+                                        {[
+                                            { label: 'Total RCMs', value: val.totalRcms },
+                                            { label: 'Tipo Muestra', value: val.tipoMuestra },
+                                            { label: 'Tipo Control', value: val.tipoControl },
+                                            { label: 'Tipo Servicio', value: val.tipoServicio },
+                                            { label: 'Códigos Producto', value: val.codigosProducto },
+                                            { label: 'Modo Fijo', value: val.modoFijo },
+                                            { label: 'Modo P×Q', value: val.modoPxQ },
+                                        ].map(item => (
+                                            <Grid item xs={6} key={item.label}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant='caption' color='text.secondary'>{item.label}</Typography>
+                                                    <Typography variant='caption' sx={{ fontWeight: 700 }}>{item.value}</Typography>
+                                                </Box>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                    <Divider sx={{ my: 1.5 }} />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant='caption' color='text.secondary'>OT quedará en estado:</Typography>
+                                        <Chip
+                                            label='Codificada'
+                                            size='small'
+                                            sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600, fontSize: '0.7rem' }}
+                                        />
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </DialogContent>
+
+                        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+                            <Button
+                                onClick={() => setShowPreFinalizacion(false)}
+                                variant='outlined'
+                                sx={{ textTransform: 'none', borderRadius: '8px' }}
+                            >
+                                Volver a Revisar
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    setShowPreFinalizacion(false)
+                                    await handleGuardarTodo()
+                                }}
+                                variant='contained'
+                                disabled={!allPassed || isSaving}
+                                startIcon={<CheckCircleIcon />}
+                                sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
+                            >
+                                {isSaving ? 'Guardando...' : 'Confirmar y Finalizar'}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                )
+            })()}
         </>
     )
 }

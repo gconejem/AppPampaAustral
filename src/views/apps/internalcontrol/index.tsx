@@ -88,10 +88,10 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
       const fetchOtData = async () => {
         try {
           setLoading(true)
-          const response = await fetch(`/api/ot/${otIdParam}`)
+          const otResponse = await fetch(`/api/ot/${otIdParam}`)
 
-          if (!response.ok) throw new Error('Error al cargar datos de la OT')
-          const data = await response.json()
+          if (!otResponse.ok) throw new Error('Error al cargar datos de la OT')
+          const data = await otResponse.json()
 
           setOtData(data)
         } catch (error) {

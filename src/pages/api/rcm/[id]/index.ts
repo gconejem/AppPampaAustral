@@ -5,38 +5,32 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-interface Servicio {
-    codigo: string
+interface SubProducto {
+    productoId: number
+    sku: string
     nombre: string
-    cantidad: string | number
-    productoId?: number
-    estado?: string
+    norma?: string
+    cantidad: number
+    observacion?: string
 }
 
-interface Probeta {
-    numero: number
-    fechaConfeccion: string
+interface Ensayo {
+    productoId: number
+    sku: string
+    nombre: string
+    norma?: string
     cantidad: number
+    observacion?: string
+    estadoOperativo?: string
+    esPaquete?: boolean
+    subProductos?: SubProducto[]
+}
+
+interface SubMuestraVenc {
+    numero: number
     dias: number
     fechaVencimiento: string
-    estado?: string
-}
-
-interface Muestra {
-    numeroMuestra?: string
-    numeroTarjeta?: string
-    tipoMaterial: string
-    elemento: string
-    item: string
-    grado: string
-    procedencia: string
-    cotas: string
-    ubicacionSector: string
-    vencimiento: boolean
-    observaciones: string
-    estadoMuestra?: string
-    servicios: Servicio[]
-    probetas: Probeta[]
+    cantidad: number
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -55,29 +49,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
         try {
             const rcm = await prisma.rCM.findUnique({
-                where: {
-                    id: rcmId
-                },
+                where: { id: rcmId },
                 include: {
-                    servicios: {
-                        include: {
-                            producto: true
-                        }
-                    },
+                    servicios: { include: { subProductos: true, producto: true } },
                     muestras: {
                         include: {
-                            servicios: {
-                                include: {
-                                    producto: true
-                                }
-                            },
-                            probetas: true
-                        }
+                            servicios: { include: { producto: true } },
+                            probetas: true,
+                        },
                     },
                     cliente: true,
                     obra: true,
-                    ordenTrabajo: true
-                }
+                    ordenTrabajo: true,
+                    area: true,
+                    familia: true,
+                    codigoAgrupador: true,
+                },
             })
 
             if (!rcm) {
@@ -91,172 +78,182 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     } else if (req.method === 'PUT') {
         try {
-            const { fechaCodificacion, fechaMuestreo, fechaIngreso, fechaEntrega, servicios, muestras, observaciones, estadoOperativo } = req.body
+            const {
+                rcmType,
+                sede,
+                areaId,
+                familiaId,
+                fechaCodificacion,
+                fechaServicio,
+                fechaMuestreo,
+                fechaIngreso,
+                fechaEntrega,
+                observaciones,
+                observacionItem,
+                informeEnsayo,
+                codigoAgrupadorId,
+                numeroTarjeta,
+                tipoMaterial,
+                item,
+                procedencia,
+                ubicacionSector,
+                grado,
+                elemento,
+                cantidadMuestras,
+                vencimiento,
+                fechaConfeccion,
+                tomaMuestra,
+                codigoProducto,
+                cota1,
+                cota2,
+                ensayos = [],
+                submuestrasVencimiento = [],
+                estadoOperativo,
+            } = req.body
 
-            // Obtener el RCM actual
             const rcmActual = await prisma.rCM.findUnique({
                 where: { id: rcmId },
-                include: {
-                    servicios: true,
-                    muestras: {
-                        include: {
-                            servicios: true,
-                            probetas: true
-                        }
-                    }
-                }
+                select: { id: true, numeroRcm: true },
             })
 
             if (!rcmActual) {
                 return res.status(404).json({ error: 'RCM no encontrado' })
             }
 
-            // Obtener los productos por su código
-            const codigosServicios = [
-                ...servicios.map((s: Servicio) => s.codigo),
-                ...muestras.flatMap((m: Muestra) => m.servicios.map(s => s.codigo))
+            // Resolver productoIds
+            const skus = [
+                ...ensayos.map((e: Ensayo) => e.sku),
+                ...ensayos.flatMap((e: Ensayo) => (e.subProductos ?? []).map((s: SubProducto) => s.sku)),
             ]
 
             const productos = await prisma.producto.findMany({
-                where: {
-                    sku: {
-                        in: codigosServicios
-                    }
-                }
+                where: { sku: { in: skus } },
+                select: { productoId: true, sku: true },
             })
 
-            const productosMap = productos.reduce((acc: Record<string, number>, prod) => {
-                acc[prod.sku] = prod.productoId
-                return acc
-            }, {})
+            const productosMap: Record<string, number> = {}
+            for (const p of productos) productosMap[p.sku] = p.productoId
 
-            // Eliminar servicios y muestras existentes
-            await prisma.servicioRCM.deleteMany({
-                where: { rcmId }
+            // Cascading delete: subProductos → serviciosRCM → probetas → serviciosMuestra → muestras
+            await prisma.subProductoServicioRCM.deleteMany({
+                where: { servicioRcm: { rcmId } },
             })
+            await prisma.servicioRCM.deleteMany({ where: { rcmId } })
+            await prisma.probeta.deleteMany({ where: { muestra: { rcmId } } })
+            await prisma.servicioMuestra.deleteMany({ where: { muestra: { rcmId } } })
+            await prisma.muestra.deleteMany({ where: { rcmId } })
 
-            await prisma.probeta.deleteMany({
-                where: {
-                    muestra: {
-                        rcmId
-                    }
-                }
-            })
+            const estadoInicial = rcmType === 'Control' ? 'ENSAYADO' : rcmType === 'Servicio' ? 'EJECUTADO' : estadoOperativo ?? 'CODIFICADO'
 
-            await prisma.servicioMuestra.deleteMany({
-                where: {
-                    muestra: {
-                        rcmId
-                    }
-                }
-            })
-
-            await prisma.muestra.deleteMany({
-                where: { rcmId }
-            })
-
-            // Calcular el estado operativo basado en las muestras si no se proporciona
-            let estadoOperativoFinal = estadoOperativo
-            if (!estadoOperativoFinal) {
-                const todasEnsayadas = muestras.every((m: Muestra) => m.estadoMuestra === 'ENSAYADO')
-                const algunaEnsayada = muestras.some((m: Muestra) => m.estadoMuestra === 'ENSAYADO')
-
-                if (todasEnsayadas) {
-                    estadoOperativoFinal = 'ENSAYADO'
-                } else if (algunaEnsayada) {
-                    estadoOperativoFinal = 'EN_PROCESO'
-                } else {
-                    estadoOperativoFinal = 'CODIFICADO'
-                }
-            }
-
-            // Actualizar el RCM
             const rcmActualizado = await prisma.rCM.update({
                 where: { id: rcmId },
                 data: {
+                    rcmType: rcmType ?? undefined,
+                    sede: sede ?? null,
+                    areaId: areaId ?? null,
+                    familiaId: familiaId ?? null,
                     fechaCodificacion: new Date(fechaCodificacion),
-                    fechaMuestreo: new Date(fechaMuestreo),
+                    fechaServicio: fechaServicio ? new Date(fechaServicio) : null,
+                    fechaMuestreo: new Date(fechaMuestreo ?? fechaServicio ?? fechaCodificacion),
                     fechaIngreso: new Date(fechaIngreso),
                     fechaEntrega: fechaEntrega ? new Date(fechaEntrega) : null,
-                    observaciones,
-                    estadoOperativo: estadoOperativoFinal,
+                    observaciones: observaciones ?? null,
+                    observacionItem: observacionItem ?? null,
+                    informeEnsayo: informeEnsayo ?? true,
+                    codigoAgrupadorId: codigoAgrupadorId ?? null,
+                    numeroTarjeta: numeroTarjeta ?? null,
+                    tipoMaterial: tipoMaterial ?? null,
+                    item: item ?? null,
+                    procedencia: procedencia ?? null,
+                    ubicacionSector: ubicacionSector ?? null,
+                    grado: grado ?? null,
+                    elemento: elemento ?? null,
+                    cantidadMuestras: cantidadMuestras ? parseInt(cantidadMuestras.toString()) : null,
+                    vencimiento: vencimiento ?? false,
+                    fechaConfeccion: fechaConfeccion ? new Date(fechaConfeccion) : null,
+                    tomaMuestra: tomaMuestra ?? null,
+                    codigoProducto: codigoProducto ?? null,
+                    cota1: cota1 ?? null,
+                    cota2: cota2 ?? null,
+                    estadoOperativo: estadoInicial,
                     servicios: {
-                        create: servicios
-                            .filter((servicio: Servicio) => productosMap[servicio.codigo])
-                            .map((servicio: Servicio) => ({
-                                codigo: servicio.codigo,
-                                nombre: servicio.nombre,
-                                cantidad: parseInt(servicio.cantidad.toString()),
-                                estado: servicio.estado || 'CODIFICADO',
-                                producto: {
-                                    connect: {
-                                        productoId: productosMap[servicio.codigo]
+                        create: ensayos
+                            .filter((e: Ensayo) => productosMap[e.sku] !== undefined)
+                            .map((e: Ensayo) => ({
+                                codigo: e.sku,
+                                nombre: e.nombre,
+                                cantidad: e.cantidad,
+                                estado: e.estadoOperativo ?? estadoInicial,
+                                norma: e.norma ?? null,
+                                observacion: e.observacion ?? null,
+                                estadoOperativo: e.estadoOperativo ?? estadoInicial,
+                                esPaquete: e.esPaquete ?? false,
+                                producto: { connect: { productoId: productosMap[e.sku] } },
+                                subProductos: e.esPaquete && (e.subProductos?.length ?? 0) > 0
+                                    ? {
+                                        create: (e.subProductos ?? [])
+                                            .filter((s: SubProducto) => productosMap[s.sku] !== undefined)
+                                            .map((s: SubProducto) => ({
+                                                sku: s.sku,
+                                                nombre: s.nombre,
+                                                norma: s.norma ?? null,
+                                                cantidad: s.cantidad,
+                                                observacion: s.observacion ?? null,
+                                                producto: { connect: { productoId: productosMap[s.sku] } },
+                                            })),
                                     }
-                                }
-                            }))
+                                    : undefined,
+                            })),
                     },
                     muestras: {
-                        create: muestras.map((muestra: Muestra, index: number) => ({
-                            numeroMuestra: muestra.numeroMuestra || `${rcmActual.numeroRcm}-${(index + 1).toString().padStart(2, '0')}`,
-                            numeroTarjeta: muestra.numeroTarjeta || null,
-                            tipoMaterial: muestra.tipoMaterial,
-                            elemento: muestra.elemento,
-                            item: muestra.item,
-                            grado: muestra.grado,
-                            procedencia: muestra.procedencia,
-                            cotas: muestra.cotas,
-                            ubicacionSector: muestra.ubicacionSector,
-                            vencimiento: muestra.vencimiento,
-                            observaciones: muestra.observaciones,
-                            estadoMuestra: muestra.estadoMuestra || 'CODIFICADO',
-                            servicios: {
-                                create: muestra.servicios
-                                    .filter(servicio => productosMap[servicio.codigo])
-                                    .map(servicio => ({
-                                        codigo: servicio.codigo,
-                                        nombre: servicio.nombre,
-                                        cantidad: parseInt(servicio.cantidad.toString()),
-                                        estado: servicio.estado || 'CODIFICADO',
-                                        producto: {
-                                            connect: {
-                                                productoId: productosMap[servicio.codigo]
-                                            }
-                                        }
-                                    }))
-                            },
-                            probetas:
-                                muestra.vencimiento && muestra.probetas?.length > 0
+                        create: [
+                            {
+                                numeroMuestra: `${rcmActual.numeroRcm}-01`,
+                                numeroTarjeta: numeroTarjeta ?? null,
+                                tipoMaterial: tipoMaterial ?? null,
+                                elemento: elemento ?? null,
+                                item: item ?? null,
+                                grado: grado ?? null,
+                                procedencia: procedencia ?? null,
+                                cotas: cota1 && cota2 ? `${cota1} - ${cota2}` : cota1 ?? cota2 ?? null,
+                                ubicacionSector: ubicacionSector ?? null,
+                                vencimiento: vencimiento ?? false,
+                                observaciones: observaciones ?? null,
+                                cantidadMuestras: cantidadMuestras ? parseInt(cantidadMuestras.toString()) : null,
+                                estadoMuestra: estadoInicial,
+                                servicios: {
+                                    create: ensayos
+                                        .filter((e: Ensayo) => productosMap[e.sku] !== undefined)
+                                        .map((e: Ensayo) => ({
+                                            codigo: e.sku,
+                                            nombre: e.nombre,
+                                            cantidad: e.cantidad,
+                                            estado: e.estadoOperativo ?? estadoInicial,
+                                            producto: { connect: { productoId: productosMap[e.sku] } },
+                                        })),
+                                },
+                                probetas: vencimiento && submuestrasVencimiento.length > 0
                                     ? {
-                                        create: muestra.probetas.map((probeta: Probeta) => ({
-                                            numero: probeta.numero,
-                                            fechaConfeccion: new Date(probeta.fechaConfeccion),
-                                            cantidad: probeta.cantidad,
-                                            dias: probeta.dias,
-                                            fechaVencimiento: new Date(probeta.fechaVencimiento),
-                                            estado: probeta.estado || 'CODIFICADO'
-                                        }))
+                                        create: submuestrasVencimiento.map((s: SubMuestraVenc, idx: number) => ({
+                                            numero: s.numero ?? idx + 1,
+                                            fechaConfeccion: fechaConfeccion ? new Date(fechaConfeccion) : new Date(fechaCodificacion),
+                                            cantidad: s.cantidad,
+                                            dias: s.dias,
+                                            fechaVencimiento: new Date(s.fechaVencimiento),
+                                            estado: 'CODIFICADO',
+                                        })),
                                     }
-                                    : undefined
-                        }))
-                    }
+                                    : undefined,
+                            },
+                        ],
+                    },
                 },
                 include: {
-                    servicios: {
-                        include: {
-                            producto: true
-                        }
-                    },
-                    muestras: {
-                        include: {
-                            servicios: {
-                                include: {
-                                    producto: true
-                                }
-                            },
-                            probetas: true
-                        }
-                    }
-                }
+                    servicios: { include: { subProductos: true, producto: true } },
+                    muestras: { include: { servicios: true, probetas: true } },
+                    area: true,
+                    familia: true,
+                },
             })
 
             res.status(200).json(rcmActualizado)
@@ -265,43 +262,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             res.status(500).json({
                 error: 'Error al actualizar el RCM',
                 message: error instanceof Error ? error.message : 'Error desconocido',
-                details: error
             })
         }
     } else if (req.method === 'DELETE') {
         try {
-            // Eliminar probetas primero
-            await prisma.probeta.deleteMany({
-                where: {
-                    muestra: {
-                        rcmId
-                    }
-                }
-            })
-
-            // Eliminar servicios de muestras
-            await prisma.servicioMuestra.deleteMany({
-                where: {
-                    muestra: {
-                        rcmId
-                    }
-                }
-            })
-
-            // Eliminar muestras
-            await prisma.muestra.deleteMany({
-                where: { rcmId }
-            })
-
-            // Eliminar servicios del RCM
-            await prisma.servicioRCM.deleteMany({
-                where: { rcmId }
-            })
-
-            // Eliminar el RCM
-            await prisma.rCM.delete({
-                where: { id: rcmId }
-            })
+            await prisma.subProductoServicioRCM.deleteMany({ where: { servicioRcm: { rcmId } } })
+            await prisma.servicioRCM.deleteMany({ where: { rcmId } })
+            await prisma.probeta.deleteMany({ where: { muestra: { rcmId } } })
+            await prisma.servicioMuestra.deleteMany({ where: { muestra: { rcmId } } })
+            await prisma.muestra.deleteMany({ where: { rcmId } })
+            await prisma.rCM.delete({ where: { id: rcmId } })
 
             res.status(200).json({ message: 'RCM eliminado exitosamente' })
         } catch (error) {
@@ -312,3 +282,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(405).json({ error: 'Método no permitido' })
     }
 }
+
