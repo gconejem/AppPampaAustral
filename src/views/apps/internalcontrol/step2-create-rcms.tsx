@@ -1,4 +1,4 @@
-﻿// MUI Imports
+// MUI Imports
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
@@ -138,7 +138,7 @@ interface CodigoAgrupador {
     dbId?: number              // DB id after persisting
     codigoId: string
     codigoNombre: string
-    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string }>
+    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string; numeroRcm?: string }>
     ensayos: Array<{ productoId: number; sku: string; nombre: string }>
     descripcionServicio: string
     cantidad: number
@@ -992,7 +992,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
                 id: r.id,
                 numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                rcmType: r.rcmType
+                rcmType: r.rcmType,
+                numeroRcm: r.numeroRcm
             }))
             : showRcmCard
                 ? [{ id: Date.now(), numeroTarjeta: numeroTarjeta || 'Actual', rcmType: rcmType }]
@@ -1071,7 +1072,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
                 id: r.id,
                 numeroTarjeta: r.numeroTarjeta || r.numeroRcm || `T-${r.id}`,
-                rcmType: r.rcmType
+                rcmType: r.rcmType,
+                numeroRcm: r.numeroRcm
             }))
             : []
 
@@ -4107,10 +4109,14 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                             {/* RCMs Vinculados */}
                                             <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {agrupador.rcmsVinculados.map((rcm, idx) => (
+                                                    {agrupador.rcmsVinculados.map((rcm, idx) => {
+                                                        const fullRcm = savedRcms.find(r => r.id === rcm.id)
+                                                        const rcmCode = rcm.numeroRcm || fullRcm?.numeroRcm
+                                                        const rcmLabel = rcmCode ? `RCM-${String(rcmCode).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                                        return (
                                                         <Chip
                                                             key={idx}
-                                                            label={`RCM-${idx + 1}`}
+                                                            label={rcmLabel}
                                                             size='small'
                                                             sx={{
                                                                 bgcolor: '#EEF2FF',
@@ -4119,7 +4125,8 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                                                 fontSize: '0.75rem'
                                                             }}
                                                         />
-                                                    ))}
+                                                        )
+                                                    })}
                                                 </Box>
                                             </td>
 
@@ -4584,6 +4591,7 @@ const Step2CreateRcms = ({ ensayosAsociados, setEnsayosAsociados, savedRcms, set
                                     {selectedRcmIds.map((id, idx) => {
                                         const rcm = savedRcms.find(r => r.id === id)
                                         const label = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                        // Now uses actual RCM code from savedRcms
                                         return (
                                             <Chip
                                                 key={id}
