@@ -504,6 +504,7 @@ Condiciones para terreno y accesos
                       <li>El <strongZcliente es responsable de verificar la exactitud de la información en OC y documentos enviados para facturación.</strong> Pampa Austral Ltda. no asume responsabilidad por errores en estos documentos, evitando así retrasos en la facturación, pago y entrega de informes.</li>
                       <li>No se emitirán facturas a razones sociales de terceros.</li>
                       <li>Si la facturación requiere la aprobación de la <strong>Minuta de Trabajo</strong>, el <strong><u>plazo máximo para ello será de 5 días</u></strong>. Transcurrido ese plazo sin observaciones, se considera aprobada.</li>
+                      <li>Laboratorio Pampa Austral Ltda. no acepta Órdenes de Compra que contemplen retenciones sobre los montos facturados. En caso de que la OC recibida incluya cláusulas de retención, el Laboratorio se reserva el derecho de rechazarla y solicitar su reemisión como condición previa al inicio del servicio.</li>
                     </ol>
                   <li><strong>Programación de servicios en terreno:</strong></li>
                     <ol type="a">
