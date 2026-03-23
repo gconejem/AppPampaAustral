@@ -491,11 +491,10 @@ Condiciones para terreno y accesos
           ${observacionesYNotasHTML}
 
           <!-- Primera página de Términos y Condiciones -->
-          <div style="page-break-before: always; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;">
-            <div style="margin: 24px 32px 24px 8px;">
-              <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
-              <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
-                <br>
+          <div style="page-break-before: always; width: 100%;">
+            <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
+            <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
+              <br>
                 <ol>
                   <li><strong>Formalización del Servicio y Condiciones de Facturación:</strong></li>
                     <ol type="a">
@@ -538,8 +537,7 @@ Condiciones para terreno y accesos
                       <li>El <strong>comprobante de pago</strong> debe enviarse a <strong>facturacion@pampaustral.cl</strong> con copia a <strong>contacto@pampaustral.cl</strong>, indicando: <strong>número de factura y cotización correspondiente.</strong></li>
                       <li>En caso de morosidad, el laboratorio podrá suspender o finalizar los servicios y en caso de persistir, informar al boletín comercial. El cliente asume costos legales e intereses.</li>
                     </ol>
-                </ol>
-              </div>
+              </ol>
             </div>
           </div>
 

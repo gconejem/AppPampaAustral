@@ -514,7 +514,7 @@ Condiciones para terreno y accesos
           ${observacionesYNotasHTML}
 
           <!-- Primera página de Términos y Condiciones -->
-          <div style="page-break-before: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;">
+          <div style="page-break-before: always; width: 100%;">
             <h2 style="font-size: 1.25rem; color: #736e7d; font-family: 'Inter', sans-serif; margin-top: 40px; text-align: center; width: 100%;">TÉRMINOS Y CONDICIONES DEL SERVICIO</h2>
             <div class="terminos-condiciones" style="font-size: 12px; color: #736e7d; font-family: 'Inter', sans-serif; text-align: justify;">
               <br>
