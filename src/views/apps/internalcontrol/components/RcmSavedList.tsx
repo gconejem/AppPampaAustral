@@ -47,6 +47,38 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
     onSetActionBarRcmId, onSetSelectedRcmIds,
 }) => {
 
+    const renderVencimientoPill = (rcm: RCMData) => {
+        if (!rcm.tieneVencimiento || !rcm.submuestrasVencimiento || rcm.submuestrasVencimiento.length === 0) return null
+        
+        // Obtenemos las fechas únicas y válidas (vienen como YYYY-MM-DD)
+        const fechasValidas = rcm.submuestrasVencimiento
+            .map(sub => sub.fechaVencimiento)
+            .filter(f => !!f)
+
+        if (fechasValidas.length === 0) return null
+        
+        // Ordenado alfabético sobre ISO (YYYY-MM-DD) funciona correctamente
+        const uniqueSortedFechas = [...new Set(fechasValidas)].sort()
+        
+        const label = uniqueSortedFechas.length === 1
+            ? formatDateOnly(uniqueSortedFechas[0])
+            : `${formatDateOnly(uniqueSortedFechas[0])} \u2192 ${formatDateOnly(uniqueSortedFechas[uniqueSortedFechas.length - 1])}`
+            
+        return (
+            <Chip
+                label={label}
+                size='small'
+                sx={{ 
+                    fontWeight: 600, 
+                    bgcolor: '#FFF9C4', 
+                    color: '#7B6A00', 
+                    border: '1px solid #F9E21B', 
+                    fontSize: '0.75rem' 
+                }}
+            />
+        )
+    }
+
     const renderRcmHeaderFields = (rcm: RCMData) => {
         if (rcm.rcmType === 'Muestra') {
             return (
@@ -56,27 +88,14 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                     {rcm.numeroTarjeta && (
                         <><Typography variant='body2' color='text.secondary'>|</Typography>
-                            <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
-                    )}
+                            <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>)
+                    }
                     {rcm.tomaMuestra && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>#{rcm.tomaMuestra}</Typography></>}
                     {rcm.tipoMaterial && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoMaterial}</Typography></>}
                     {rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
-                    {rcm.procedencia && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.procedencia}</Typography></>}
-                    <>
-                        <Typography variant='body2' color='text.secondary'>|</Typography>
-                        <Typography variant='body2'>
-                            {(() => {
-                                const fechaMuestreo = rcm.fechaMuestreo ? formatDateOnly(rcm.fechaMuestreo) : formatDateOnly(rcm.fechaServicio)
-                                if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                    const fechas = rcm.submuestrasVencimiento.map(sub => sub.fechaVencimiento).filter(f => !!f).sort()
-                                    if (fechas.length === 0) return fechaMuestreo
-                                    if (fechas.length === 1) return `${fechaMuestreo} [vence ${formatDateOnly(fechas[0])}]`
-                                    return `${fechaMuestreo} [vence ${formatDateOnly(fechas[0])} — ${formatDateOnly(fechas[fechas.length - 1])}]`
-                                }
-                                return fechaMuestreo
-                            })()}
-                        </Typography>
-                    </>
+                    {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                        <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
+                    )}
                     {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{rcm.cantidadMuestras}</Typography></>}
                 </>
             )
@@ -205,7 +224,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                     </Box>
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                    <IconButton size='small'>
+                                    <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
                                         <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
                                     </IconButton>
                                     <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
@@ -277,20 +296,9 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
                                         )}
                                         {rcm.ensayos.length > 0 && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
-                                        <>
-                                            <Typography variant='body2' color='text.secondary'>|</Typography>
-                                            <Typography variant='body2'>
-                                                {(() => {
-                                                    if (rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0) {
-                                                        const fechas = rcm.submuestrasVencimiento.map(sub => sub.fechaVencimiento).filter(f => !!f).sort()
-                                                        if (fechas.length === 0) return formatDateOnly(rcm.fechaServicio)
-                                                        if (fechas.length === 1) return formatDateOnly(fechas[0])
-                                                        return `${formatDateOnly(fechas[0])} - ${formatDateOnly(fechas[fechas.length - 1])}`
-                                                    }
-                                                    return formatDateOnly(rcm.fechaServicio)
-                                                })()}
-                                            </Typography>
-                                        </>
+                                        {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                            <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
+                                        )}
                                         {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
                                     </Box>
                                 </Box>
@@ -298,7 +306,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                     {rcm.tipoServicio?.toLowerCase() === 'dosificación' && (
                                         <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
                                     )}
-                                    <IconButton size='small'>
+                                    <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
                                         <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
                                     </IconButton>
                                     <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
