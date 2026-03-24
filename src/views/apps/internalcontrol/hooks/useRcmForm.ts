@@ -20,12 +20,16 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
     }
 
     const getFechaServicioForInput = () => {
-        if (otData?.fechaServicio) {
-            const dateMatch = otData.fechaServicio.match(/^(\d{4})-(\d{2})-(\d{2})/)
-            if (dateMatch) {
-                return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
+        // El usuario requiere que se muestre la fecha de la OT (createdAt en otData)
+        const dateStr = otData?.createdAt || otData?.fechaServicio
+        if (dateStr) {
+            const date = new Date(dateStr)
+            if (!isNaN(date.getTime())) {
+                const year = date.getFullYear()
+                const month = String(date.getMonth() + 1).padStart(2, '0')
+                const day = String(date.getDate()).padStart(2, '0')
+                return `${year}-${month}-${day}`
             }
-            return otData.fechaServicio
         }
         return getTodayDateForInput()
     }
