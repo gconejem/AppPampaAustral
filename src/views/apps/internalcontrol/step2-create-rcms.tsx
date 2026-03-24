@@ -35,6 +35,7 @@ const Step2CreateRcms = ({
     savedRcms, setSavedRcms,
     otData, initialRcmType, onClearInitialRcmType,
     onDraftCountChange, onAgrupadosCountChange,
+    onRegisterFinalizar, onIsSavingChange,
 }: Step2CreateRcmsProps) => {
 
     // ═══════════════════════════════════════
@@ -145,6 +146,16 @@ const Step2CreateRcms = ({
     }, [codigoReal.codigosAgrupadores])
 
     useEffect(() => {
+        onIsSavingChange?.(crud.isSaving)
+    }, [crud.isSaving])
+
+    // Registrar la función de finalizar en el padre al montar
+    useEffect(() => {
+        onRegisterFinalizar?.(() => codigoReal.setShowPreFinalizacion(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    useEffect(() => {
         if (initialRcmType && !form.showRcmCard) {
             form.setShowRcmCard(true)
             form.setRcmType(initialRcmType)
@@ -184,7 +195,7 @@ const Step2CreateRcms = ({
     return (
         <>
             <Card ref={cardRef}>
-                <Box sx={{ p: 6 }}>
+                <Box sx={{ p: 6, pb: codigoReal.codigosAgrupadores.length === 0 ? 'calc(12vh + 48px)' : '348px' }}>
                     {/* Title row */}
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 4 }}>
                         <Box>

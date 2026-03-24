@@ -1,7 +1,7 @@
 'use client'
 
 // MUI Imports
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useSearchParams } from 'next/navigation'
 
@@ -69,6 +69,12 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   // Estados para contadores en tiempo real
   const [openDraftCount, setOpenDraftCount] = useState(0) // Borradores (formularios abiertos sin guardar)
   const [agrupadosCount, setAgrupadosCount] = useState(0) // RCMs con Código Producto asignado
+  const [isSaving, setIsSaving] = useState(false)
+  const finalizarRef = useRef<(() => void) | null>(null)
+
+  const handleFinalizarCodificacion = () => {
+    finalizarRef.current?.()
+  }
 
   // Cálculo de contadores
   const borradores = openDraftCount
@@ -119,6 +125,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           pendientes={pendientes}
           agrupados={agrupados}
           totalRcms={totalRcms}
+          onFinalizarCodificacion={handleFinalizarCodificacion}
+          isSaving={isSaving}
         />
       </Grid>
 
@@ -134,6 +142,8 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           onClearInitialRcmType={() => setInitialRcmType('')}
           onDraftCountChange={setOpenDraftCount}
           onAgrupadosCountChange={setAgrupadosCount}
+          onIsSavingChange={setIsSaving}
+          onRegisterFinalizar={(fn: () => void) => { finalizarRef.current = fn }}
         />
       </Grid>
     </Grid>

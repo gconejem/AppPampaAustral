@@ -46,7 +46,7 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                 boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
                 borderRadius: '0 0 8px 8px',
                 ...(codigosAgrupadores.length === 0 && {
-                    height: '25vh',
+                    height: '12vh',
                     display: 'flex',
                     flexDirection: 'column',
                 }),

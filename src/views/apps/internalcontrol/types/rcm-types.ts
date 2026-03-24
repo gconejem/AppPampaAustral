@@ -113,4 +113,6 @@ export interface Step2CreateRcmsProps {
     onClearInitialRcmType?: () => void
     onDraftCountChange?: (count: number) => void
     onAgrupadosCountChange?: (count: number) => void
+    onRegisterFinalizar?: (fn: () => void) => void
+    onIsSavingChange?: (isSaving: boolean) => void
 }

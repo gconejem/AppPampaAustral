@@ -24,9 +24,12 @@ interface HeaderProps {
   pendientes?: number
   agrupados?: number
   totalRcms?: number
+  // Finalizar codificación
+  onFinalizarCodificacion?: () => void
+  isSaving?: boolean
 }
 
-const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0 }: HeaderProps) => {
+const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0, onFinalizarCodificacion, isSaving = false }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -170,9 +173,10 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
               color='primary'
               startIcon={<CheckIcon />}
               sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}
-              disabled={!hasSavedRcms}
+              disabled={!hasSavedRcms || pendientes > 0 || isSaving}
+              onClick={onFinalizarCodificacion}
             >
-              Finalizar Codificación
+              {isSaving ? 'Guardando...' : 'Finalizar Codificación'}
             </Button>
           </Box>
         </Box>
