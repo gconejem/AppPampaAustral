@@ -343,7 +343,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                             onChange={(e) => { setErrorVencimiento(''); setCantidadMuestras(e.target.value) }} required fullWidth />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
-                                        <FormControlLabel control={<Checkbox checked={tieneVencimiento} onChange={(e) => setTieneVencimiento(e.target.checked)} />} label='Vencimiento' />
+                                        <FormControlLabel control={<Checkbox checked={tieneVencimiento} onChange={(e) => setTieneVencimiento(e.target.checked)} />} label='Vencimiento (activa Submuestras)' />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControlLabel control={<Checkbox checked={informeEnsayo} onChange={(e) => setInformeEnsayo(e.target.checked)} />} label='Informe Ensayo' />
