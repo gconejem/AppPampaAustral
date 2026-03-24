@@ -159,6 +159,20 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         }
     }, [area])
 
+    // Recalculate fechaVencimiento for all submuestras when fechaConfeccion changes
+    React.useEffect(() => {
+        if (!tieneVencimiento || !fechaConfeccion || submuestrasVencimiento.length === 0) return
+        const updated = submuestrasVencimiento.map(s => {
+            if (s.dias <= 0) return s
+            const fechaBase = new Date(fechaConfeccion + 'T00:00:00')
+            fechaBase.setDate(fechaBase.getDate() + s.dias)
+            const fechaVencimiento = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
+            return { ...s, fechaVencimiento }
+        })
+        setSubmuestrasVencimiento(updated)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fechaConfeccion])
+
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
 
     if (!showRcmCard) return null
@@ -768,7 +782,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                             <TextField size='small' type='number' value={submuestra.dias}
                                                                 onChange={(e) => {
                                                                     const dias = parseInt(e.target.value) || 0
-                                                                    const fechaBase = new Date((fechaCodificacion || getTodayDateForInput()) + 'T00:00:00')
+                                                                    const baseStr = fechaConfeccion || fechaCodificacion || getTodayDateForInput()
+                                                                    const fechaBase = new Date(baseStr + 'T00:00:00')
                                                                     fechaBase.setDate(fechaBase.getDate() + dias)
                                                                     const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
                                                                     setSubmuestrasVencimiento(submuestrasVencimiento.map(s => s.id === submuestra.id ? { ...s, dias, fechaVencimiento: fechaVenc } : s))
