@@ -16,6 +16,7 @@ import {
     Collapse,
     Divider,
     Alert,
+    Tooltip,
 } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -31,7 +32,8 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import InventoryIcon from '@mui/icons-material/Inventory'
-import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento } from '../types/rcm-types'
+import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType } from '../types/rcm-types'
+import ProductSearchInline from './ProductSearchInline'
 
 // The form prop type matches the return of useRcmForm
 interface FormState {
@@ -93,17 +95,30 @@ interface RcmDraftFormProps {
     todasLasFamilias: FamiliaType[]
     isEditingRcm: boolean
     isSavingRcm: boolean
-    onOpenSearchPopover: (event: React.MouseEvent<HTMLElement>) => void
     onSaveRcm: () => void
     onCancelEdit: () => void
+    // New search-related props for inline rendering
+    searchTerm: string
+    onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+    paginatedProductos: ProductoType[]
+    totalProductos: number
+    productsPage: number
+    onPageChange: (page: number) => void
+    showOnlyPaquetes: boolean
+    onShowOnlyPaquetesChange: () => void
+    onSelectProduct: (producto: ProductoType) => void
 }
 
 const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     form, ensayoHandlers, ensayosAsociados,
     areas, todasLasFamilias,
     isEditingRcm, isSavingRcm,
-    onOpenSearchPopover, onSaveRcm, onCancelEdit,
+    onSaveRcm, onCancelEdit,
+    searchTerm, onSearchChange, paginatedProductos,
+    totalProductos, productsPage, onPageChange,
+    showOnlyPaquetes, onShowOnlyPaquetesChange, onSelectProduct
 }) => {
+
     const {
         fechaCodificacion, fechaServicio, setFechaServicio,
         fechaIngreso, setFechaIngreso, fechaEntrega, setFechaEntrega,
@@ -135,6 +150,14 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         handleConfirmEnsayo, handleCancelEnsayo,
         handleChangeCantidad, handleKeyPressQuantity, handleChangeObservacion,
     } = ensayoHandlers
+
+    const [showSearch, setShowSearch] = React.useState(false)
+
+    React.useEffect(() => {
+        if (!area) {
+            setShowSearch(false)
+        }
+    }, [area])
 
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
 
@@ -494,10 +517,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         {/* ═══ Ensayos Asociados ═══ */}
                         <Box sx={{ mt: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                <Typography variant='h6' sx={{ fontWeight: 600 }}>Ensayos Asociados</Typography>
-                                <Button startIcon={<SearchIcon />} variant='outlined' sx={{ textTransform: 'none' }} onClick={onOpenSearchPopover}>
-                                    Buscar ensayo
-                                </Button>
+                                <Typography variant='h6' sx={{ fontWeight: 600 }}>Ensayos y servicios asociados</Typography>
                             </Box>
 
                             {ensayosAsociados.length === 0 ? (
@@ -642,6 +662,49 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                     </table>
                                 </Box>
                             )}
+
+                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 2 }}>
+                                <Tooltip title={!area ? 'Seleccione un Área para buscar ensayos' : ''}>
+                                    <span>
+                                        <Button
+                                            variant='outlined'
+                                            color={showSearch ? 'error' : 'primary'}
+                                            startIcon={showSearch ? <CloseIcon /> : <SearchIcon />}
+                                            onClick={() => setShowSearch(!showSearch)}
+                                            sx={{ textTransform: 'none' }}
+                                            disabled={!area}
+                                        >
+                                            {showSearch ? 'Cerrar buscador' : 'Buscar ensayo'}
+                                        </Button>
+                                    </span>
+                                </Tooltip>
+                                {!area ? (
+                                    <Typography variant="caption" color="error">
+                                        * Selecciona un Área para buscar ensayos.
+                                    </Typography>
+                                ) : (
+                                    showSearch && (
+                                        <Typography variant="caption" color="text.secondary">
+                                            Explora y selecciona los ensayos para añadirlos a la tabla superior.
+                                        </Typography>
+                                    )
+                                )}
+                            </Box>
+
+                            <Collapse in={showSearch} timeout="auto" unmountOnExit>
+                                <ProductSearchInline
+                                    searchTerm={searchTerm}
+                                    onSearchChange={onSearchChange}
+                                    paginatedProductos={paginatedProductos}
+                                    totalProductos={totalProductos}
+                                    productsPage={productsPage}
+                                    onPageChange={onPageChange}
+                                    areaName={areas.find(a => a.id === area)?.nombre}
+                                    showOnlyPaquetes={showOnlyPaquetes}
+                                    onShowOnlyPaquetesChange={onShowOnlyPaquetesChange}
+                                    onSelectProduct={onSelectProduct}
+                                />
+                            </Collapse>
                         </Box>
 
                         {/* ═══ Submuestras con Vencimiento ═══ */}

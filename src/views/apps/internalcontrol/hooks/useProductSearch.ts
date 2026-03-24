@@ -7,9 +7,10 @@ interface UseProductSearchParams {
     anchorEl: HTMLElement | null
     agrupadorSearchAnchor: HTMLElement | null
     skuSearchAnchor: HTMLElement | null
+    isInline?: boolean
 }
 
-export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSearchAnchor }: UseProductSearchParams) {
+export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSearchAnchor, isInline }: UseProductSearchParams) {
     const [searchTerm, setSearchTerm] = useState('')
     const [productsPage, setProductsPage] = useState(0)
     const [allProductos, setAllProductos] = useState<ProductoType[]>([])
@@ -78,7 +79,7 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
 
     // Cargar productos con filtros
     useEffect(() => {
-        if (!anchorEl && !agrupadorSearchAnchor && !skuSearchAnchor) return
+        if (!anchorEl && !agrupadorSearchAnchor && !skuSearchAnchor && !isInline) return
 
         const fetchProductos = async () => {
             try {
@@ -117,7 +118,7 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, searchTerm, area, areas, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, isInline, searchTerm, area, areas, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {

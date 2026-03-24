@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import type { EnsayoAsociado, SubProducto, ProductoType } from '../types/rcm-types'
 
 interface UseEnsayosParams {
@@ -12,21 +12,6 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
     const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedEnsayoId, setSelectedEnsayoId] = useState<number | null>(null)
 
-    // Focus en el campo de cantidad cuando se agrega un nuevo ensayo (no paquete)
-    useEffect(() => {
-        if (ensayosAsociados.length > 0 && lastEnsayoCantidadRef.current) {
-            const lastEnsayo = ensayosAsociados[ensayosAsociados.length - 1]
-            if (lastEnsayo.esPaquete) return
-
-            setTimeout(() => {
-                const inputElement = lastEnsayoCantidadRef.current?.querySelector('input')
-                if (inputElement) {
-                    inputElement.focus()
-                    inputElement.select()
-                }
-            }, 0)
-        }
-    }, [ensayosAsociados.length])
 
     const handleSelectProduct = async (producto: ProductoType) => {
         const idProducto = (producto as any).productoId || producto.id
@@ -83,7 +68,6 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
             }
 
             setEnsayosAsociados(prev => [...prev, nuevoEnsayo])
-            setEnsayosPendientes(prev => new Set([...prev, nuevoEnsayo.id]))
         }
     }
 

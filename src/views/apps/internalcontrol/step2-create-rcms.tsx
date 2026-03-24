@@ -44,18 +44,16 @@ const Step2CreateRcms = ({
     const form = useRcmForm({ otData })
     const ensayoHooks = useEnsayos({ ensayosAsociados, setEnsayosAsociados })
 
-    // Main search popover anchor (managed here since it bridges form & productSearch)
-    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-
     // Lifted anchor states to break circular dependency between useCodigoAgrupador & useProductSearch
     const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
     const [skuSearchAnchor, setSkuSearchAnchor] = useState<HTMLElement | null>(null)
 
     const productSearch = useProductSearch({
         area: form.area,
-        anchorEl,
+        anchorEl: null,
         agrupadorSearchAnchor,
         skuSearchAnchor,
+        isInline: true
     })
 
     const codigoReal = useCodigoAgrupador({
@@ -169,22 +167,6 @@ const Step2CreateRcms = ({
         form.autoEnableVencimiento(productSearch.areas)
     }, [form.area, productSearch.areas])
 
-    // ═══════════════════════════════════════
-    // SEARCH POPOVER HANDLERS
-    // ═══════════════════════════════════════
-    const handleOpenSearchPopover = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorEl(event.currentTarget)
-        if (form.area && productSearch.areas.length > 0) {
-            productSearch.setSelectedAreaId(form.area as number)
-        }
-    }
-
-    const handleCloseSearchPopover = () => {
-        setAnchorEl(null)
-        productSearch.setSearchTerm('')
-        productSearch.setProductsPage(0)
-    }
-
     const handleQuickDuplicate = (rcmId: number) => {
         crud.handleDuplicateInline(rcmId)
     }
@@ -238,9 +220,17 @@ const Step2CreateRcms = ({
                         todasLasFamilias={productSearch.todasLasFamilias}
                         isEditingRcm={crud.isEditingRcm}
                         isSavingRcm={crud.isSavingRcm}
-                        onOpenSearchPopover={handleOpenSearchPopover}
                         onSaveRcm={crud.handleSaveRcm}
                         onCancelEdit={crud.handleCancelEdit}
+                        searchTerm={productSearch.searchTerm}
+                        onSearchChange={productSearch.handleSearchChange}
+                        paginatedProductos={productSearch.paginatedProductos}
+                        totalProductos={productSearch.totalProductos}
+                        productsPage={productSearch.productsPage}
+                        onPageChange={productSearch.setProductsPage}
+                        showOnlyPaquetes={productSearch.showOnlyPaquetes}
+                        onShowOnlyPaquetesChange={productSearch.handleShowOnlyPaquetesChange}
+                        onSelectProduct={ensayoHooks.handleSelectProduct}
                     />
 
                     {/* Saved RCM lists */}
@@ -299,26 +289,6 @@ const Step2CreateRcms = ({
                     <DeleteIcon fontSize='small' sx={{ mr: 1 }} /> Eliminar
                 </MenuItem>
             </Menu>
-
-            {/* Main ensayo search popover */}
-            <ProductSearchPopover
-                anchorEl={anchorEl}
-                onClose={handleCloseSearchPopover}
-                searchTerm={productSearch.searchTerm}
-                onSearchChange={productSearch.handleSearchChange}
-                paginatedProductos={productSearch.paginatedProductos}
-                totalProductos={productSearch.totalProductos}
-                productsPage={productSearch.productsPage}
-                onPageChange={productSearch.setProductsPage}
-                areaName={productSearch.areas.find(a => a.id === form.area)?.nombre}
-                showOnlyPaquetes={productSearch.showOnlyPaquetes}
-                onShowOnlyPaquetesChange={productSearch.handleShowOnlyPaquetesChange}
-                onSelectProduct={async (producto) => {
-                    await ensayoHooks.handleSelectProduct(producto)
-                    handleCloseSearchPopover()
-                }}
-                zIndex={1300}
-            />
 
             {/* SKU search popover (for Código dialog) */}
             <ProductSearchPopover
