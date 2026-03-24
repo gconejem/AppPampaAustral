@@ -85,6 +85,9 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
 
         if (shouldHaveVencimiento) {
             setTieneVencimiento(true)
+        } else {
+            setTieneVencimiento(false)
+            setSubmuestrasVencimiento([])
         }
     }
 
