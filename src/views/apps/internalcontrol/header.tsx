@@ -318,7 +318,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
             </Grid>
 
             {/* Segunda fila - 5 columnas (OBRA ocupa 2) */}
-            <Grid item xs={4.8}>
+            <Grid item xs={2.4}>
               <Box>
                 <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5, display: 'block' }}>
                   OBRA
