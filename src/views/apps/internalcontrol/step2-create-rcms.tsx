@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -302,7 +302,10 @@ const Step2CreateRcms = ({
                 areaName={productSearch.areas.find(a => a.id === form.area)?.nombre}
                 showOnlyPaquetes={productSearch.showOnlyPaquetes}
                 onShowOnlyPaquetesChange={productSearch.handleShowOnlyPaquetesChange}
-                onSelectProduct={ensayoHooks.handleSelectProduct}
+                onSelectProduct={async (producto) => {
+                    await ensayoHooks.handleSelectProduct(producto)
+                    handleCloseSearchPopover()
+                }}
                 zIndex={1300}
             />
 
