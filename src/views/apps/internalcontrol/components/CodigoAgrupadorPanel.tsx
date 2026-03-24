@@ -51,9 +51,9 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
         >
             {/* Título y botón Finalizar Codificación */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 1.5 }}>
-                <Box>
-                    <Typography variant='subtitle1' sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-                        Códigos Agrupadores (Productos)
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, lineHeight: 1.3, color: 'text.primary' }}>
+                        Códigos Producto
                     </Typography>
                     <Typography variant='caption' color='text.secondary'>
                         Productos comerciales facturables generados
