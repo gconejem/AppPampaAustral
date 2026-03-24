@@ -459,22 +459,26 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                     <Grid item xs={12} md={3}>
                                         <TextField label='Elemento' value={elemento} onChange={(e) => setElemento(e.target.value)} fullWidth />
                                     </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Grado</InputLabel>
-                                            <Select label='Grado' value={grado} onChange={(e) => setGrado(e.target.value)}>
-                                                <MenuItem value=''>Seleccionar...</MenuItem>
-                                                {['G5', 'G10', 'G15', 'G20', 'G25', 'G30', 'G35', 'G40'].map(g =>
-                                                    <MenuItem key={g} value={g}>{g}</MenuItem>)}
-                                                <MenuItem value='Otro'>Otro...</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    {grado === 'Otro' && (
-                                        <Grid item xs={12} md={3}>
-                                            <TextField label='Especificar Grado' value={customGrado}
-                                                onChange={(e) => setCustomGrado(e.target.value)} fullWidth required placeholder='Ingrese el grado' />
-                                        </Grid>
+                                    {areaName !== 'elementos y componentes' && (
+                                        <>
+                                            <Grid item xs={12} md={3}>
+                                                <FormControl fullWidth>
+                                                    <InputLabel>Grado</InputLabel>
+                                                    <Select label='Grado' value={grado} onChange={(e) => setGrado(e.target.value)}>
+                                                        <MenuItem value=''>Seleccionar...</MenuItem>
+                                                        {['G5', 'G10', 'G15', 'G20', 'G25', 'G30', 'G35', 'G40'].map(g =>
+                                                            <MenuItem key={g} value={g}>{g}</MenuItem>)}
+                                                        <MenuItem value='Otro'>Otro...</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            {grado === 'Otro' && (
+                                                <Grid item xs={12} md={3}>
+                                                    <TextField label='Especificar Grado' value={customGrado}
+                                                        onChange={(e) => setCustomGrado(e.target.value)} fullWidth required placeholder='Ingrese el grado' />
+                                                </Grid>
+                                            )}
+                                        </>
                                     )}
                                 </Grid>
                             </Box>
