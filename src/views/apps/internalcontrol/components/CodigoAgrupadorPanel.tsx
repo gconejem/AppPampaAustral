@@ -33,8 +33,6 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
     onChangeDescripcion, onChangeCantidad, onChangeFacturacion,
     onDeleteAgrupador,
 }) => {
-    if (codigosAgrupadores.length === 0) return null
-
     return (
         <Box
             sx={{
@@ -47,6 +45,11 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                 borderTop: '2px solid #E5E7EB',
                 boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
                 borderRadius: '0 0 8px 8px',
+                ...(codigosAgrupadores.length === 0 && {
+                    height: '25vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }),
             }}
         >
             {/* Título y botón Finalizar Codificación */}
@@ -59,21 +62,30 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                         Productos comerciales facturables generados
                     </Typography>
                 </Box>
-                <Button
-                    variant='contained'
-                    startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
-                    disabled={isSaving}
-                    onClick={onFinalizarCodificacion}
-                    sx={{
-                        textTransform: 'none', borderRadius: '8px', fontWeight: 600, px: 3,
-                        bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' }
-                    }}
-                >
-                    {isSaving ? 'Guardando...' : 'Finalizar Codificación'}
-                </Button>
+                {codigosAgrupadores.length > 0 && (
+                    <Button
+                        variant='contained'
+                        startIcon={<CheckCircleIcon sx={{ color: 'white' }} />}
+                        disabled={isSaving}
+                        onClick={onFinalizarCodificacion}
+                        sx={{
+                            textTransform: 'none', borderRadius: '8px', fontWeight: 600, px: 3,
+                            bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' }
+                        }}
+                    >
+                        {isSaving ? 'Guardando...' : 'Finalizar Codificación'}
+                    </Button>
+                )}
             </Box>
 
             {/* Tabla de Códigos Agrupadores */}
+            {codigosAgrupadores.length === 0 ? (
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3 }}>
+                    <Typography variant='body2' color='text.disabled' sx={{ fontStyle: 'italic' }}>
+                        Sin Códigos Producto aún — selecciona RCMs tipo Muestra y presiona &quot;Agrupar&quot;
+                    </Typography>
+                </Box>
+            ) : (
             <Box sx={{ overflowX: 'auto', maxHeight: '250px', overflowY: 'auto', px: 1 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -220,6 +232,7 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                     </tbody>
                 </table>
             </Box>
+            )}
         </Box>
     )
 }
