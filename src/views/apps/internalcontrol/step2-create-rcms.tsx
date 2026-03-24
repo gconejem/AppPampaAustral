@@ -82,6 +82,7 @@ const Step2CreateRcms = ({
         setShowRcmCard: form.setShowRcmCard,
         setErrorVencimiento: form.setErrorVencimiento,
         clearEnsayosPendientes: ensayoHooks.clearPendientes,
+        resetSearchFilters: productSearch.resetSearchFilters,
     })
 
     // ═══════════════════════════════════════

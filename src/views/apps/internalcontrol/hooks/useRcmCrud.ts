@@ -45,6 +45,7 @@ interface UseRcmCrudParams {
     setShowRcmCard: (v: boolean) => void
     setErrorVencimiento: (v: string) => void
     clearEnsayosPendientes: () => void
+    resetSearchFilters?: () => void
 }
 
 export function useRcmCrud({
@@ -53,7 +54,7 @@ export function useRcmCrud({
     areas, todasLasFamilias, otData,
     getFormValues, getTodayDateForInput, resetForm, populateFormFromRcm,
     hasUnsavedChanges, setShowRcmCard, setErrorVencimiento,
-    clearEnsayosPendientes,
+    clearEnsayosPendientes, resetSearchFilters,
 }: UseRcmCrudParams) {
     // Estado de edición
     const [isEditingRcm, setIsEditingRcm] = useState(false)
@@ -114,6 +115,7 @@ export function useRcmCrud({
         resetForm(type)
         setEnsayosAsociados([])
         clearEnsayosPendientes()
+        resetSearchFilters?.()
     }
 
     const handleConfirmNewRcm = () => {

@@ -156,6 +156,12 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         setProductsPage(0)
     }
 
+    const resetSearchFilters = () => {
+        setShowOnlyPaquetes(false)
+        setSearchTerm('')
+        setProductsPage(0)
+    }
+
     const handleClearFilters = () => {
         setSelectedAreaId(null)
         setSelectedTipo('')
@@ -191,5 +197,6 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         handleFamiliaChange,
         handleShowOnlyPaquetesChange,
         handleClearFilters,
+        resetSearchFilters,
     }
 }
