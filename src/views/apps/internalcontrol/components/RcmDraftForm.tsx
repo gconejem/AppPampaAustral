@@ -266,9 +266,9 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         <Chip label={rcmType.toUpperCase()}
                             sx={{ fontWeight: 'bold', backgroundColor: rcmType === 'Muestra' ? '#1976d2' : rcmType === 'Control' ? '#e91e63' : '#424242', color: '#ffffff' }} />
                         <Typography variant='body2' sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Nuevo RCM</span>
+                            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{isEditingRcm ? 'Editar RCM' : 'Nuevo RCM'}</span>
                             <span style={{ color: '#616161' }}>—</span>
-                            <span style={{ color: '#616161', fontSize: '0.8rem' }}>completa los datos y guarda al finalizar</span>
+                            <span style={{ color: '#616161', fontSize: '0.8rem' }}>{isEditingRcm ? 'modifica los datos y actualiza al finalizar' : 'completa los datos y guarda al finalizar'}</span>
                         </Typography>
                         {numeroTarjeta && <Typography variant='body1' sx={{ fontWeight: 600 }}>Tarjeta: {numeroTarjeta}</Typography>}
                         {(tipoMaterial || item) && (
@@ -842,7 +842,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                             <Button variant='outlined' sx={{ textTransform: 'none', px: 4, bgcolor: 'white', color: '#616161', borderColor: '#BDBDBD', '&:hover': { bgcolor: '#F5F5F5', borderColor: '#9E9E9E' } }} onClick={onCancelEdit}>Cancelar</Button>
                             <Button variant='contained' color='primary' sx={{ textTransform: 'none', px: 4 }} onClick={onSaveRcm} disabled={isSavingRcm}>
-                                {isSavingRcm ? 'Guardando...' : 'Guardar RCM'}
+                                {isSavingRcm ? 'Guardando...' : isEditingRcm ? 'Actualizar RCM' : 'Guardar RCM'}
                             </Button>
                         </Box>
                     </Box>
