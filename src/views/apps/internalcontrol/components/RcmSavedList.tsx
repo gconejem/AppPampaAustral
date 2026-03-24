@@ -195,7 +195,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                     <Box onClick={(e) => e.stopPropagation()}>
                                         <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
                                     </Box>
-                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242', color: '#ffffff' }} />
+                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
                                     <Typography variant='body2' sx={{ fontWeight: 600 }}>
                                         {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                     </Typography>
@@ -264,7 +264,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                         <Box key={rcm.id} sx={{ bgcolor: '#E8F5E9', borderRadius: '8px', overflow: 'hidden', mb: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#E8F5E9', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#1976d2' : rcm.rcmType === 'Control' ? '#e91e63' : '#424242', color: '#ffffff' }} />
+                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
                                     <Typography variant='body2' sx={{ fontWeight: 600 }}>
                                         {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
                                     </Typography>
