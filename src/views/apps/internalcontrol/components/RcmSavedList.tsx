@@ -7,6 +7,8 @@ import {
     IconButton,
     Checkbox,
     Collapse,
+    Divider,
+    TextField,
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -15,6 +17,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface RcmSavedListProps {
@@ -157,35 +161,164 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         </Box>
     )
 
-    const renderSubmuestrasTable = (submuestras: NonNullable<RCMData['submuestrasVencimiento']>) => (
-        <>
-            <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, mt: 4 }}>
-                Submuestras con Vencimiento ({submuestras.length})
-            </Typography>
-            <Box sx={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#F5F5F5' }}>
-                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '80px' }}>N°</th>
-                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Días</th>
-                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '200px' }}>Fecha Vencimiento</th>
-                            <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '120px' }}>Cantidad</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {submuestras.map((submuestra) => (
-                            <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                                <td style={{ padding: '12px', textAlign: 'center' }}><Typography variant='body2'>{submuestra.numero}</Typography></td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}><Typography variant='body2'>{submuestra.dias}</Typography></td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}><Typography variant='body2'>{formatDateOnly(submuestra.fechaVencimiento)}</Typography></td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}><Typography variant='body2'>{submuestra.cantidad}</Typography></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+    // ── Compact submuestra chips (one line each) ──────────────────────────────
+    const renderSubmuestrasPills = (submuestras: NonNullable<RCMData['submuestrasVencimiento']>) => {
+        const totalUnidades = submuestras.reduce((s, sub) => s + sub.cantidad, 0)
+        return (
+            <Box sx={{ mt: 3 }}>
+                <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1 }}>
+                    Detalle de Submuestras — {submuestras.length} grupo{submuestras.length !== 1 ? 's' : ''}, {totalUnidades} unidades en total
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {submuestras.map(sub => (
+                        <Chip
+                            key={sub.id}
+                            label={
+                                <>
+                                    <strong>#{sub.numero}</strong>
+                                    {' · '}{sub.dias}d
+                                    {sub.fechaVencimiento ? ` · ${formatDateOnly(sub.fechaVencimiento)}` : ''}
+                                    {' · ×'}{sub.cantidad}
+                                </>
+                            }
+                            size='small'
+                            sx={{ fontWeight: 500, fontSize: '0.8rem', bgcolor: '#FFF9C4', border: '1px solid #F9E21B', color: '#5a4a00' }}
+                        />
+                    ))}
+                </Box>
             </Box>
-        </>
-    )
+        )
+    }
+
+    // ── Shared expanded body for Pendientes and Agrupados ─────────────────────
+    const renderExpandedContent = (rcm: RCMData) => {
+        const areaName = rcm.area?.toLowerCase() || ''
+        const esHormigon = areaName === 'hormigón' || areaName === 'hormigon'
+        const esElementosComponentes = areaName === 'elementos y componentes'
+        const esAsfalto = areaName === 'asfalto'
+        const esSuelo = areaName === 'suelo'
+        const tieneCamposDinamicos = esHormigon || esElementosComponentes || esAsfalto || esSuelo
+
+        // Helper: a single date-cell, always rendered
+        const dateCell = (label: string, value?: string) => (
+            <Box sx={{ minWidth: 120 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>{label}</Typography>
+                <Typography variant='body2' sx={{ fontWeight: 600 }}>{value ? formatDateOnly(value) : '—'}</Typography>
+            </Box>
+        )
+
+        // Helper: a single text-cell, always rendered
+        const textCell = (label: string, value?: string) => (
+            <Box sx={{ minWidth: 120 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>{label}</Typography>
+                <Typography variant='body2'>{value || '—'}</Typography>
+            </Box>
+        )
+
+        return (
+            <Box sx={{ p: 3, bgcolor: 'white' }}>
+                {/* ── FILA 1: FECHAS ─────────────────────────── */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2 }}>
+                    {dateCell('Fecha Codificación', rcm.fechaCodificacion)}
+                    {dateCell('Fecha Muestreo', rcm.fechaMuestreo)}
+                    {dateCell('Fecha Ingreso', rcm.fechaIngreso)}
+                    {dateCell('Fecha Entrega', rcm.fechaEntrega)}
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+
+                {/* ── FILA 2: PROCEDENCIA / UBICACIÓN / CANTIDAD / CHECKS ── */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2, alignItems: 'flex-end' }}>
+                    {textCell('Procedencia', rcm.procedencia)}
+                    {textCell('Ubicación / Sector', rcm.ubicacionSector)}
+                    {rcm.cantidadMuestras && (
+                        <Box sx={{ minWidth: 80 }}>
+                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
+                            <Typography variant='body2' sx={{ fontWeight: 700 }}>×{rcm.cantidadMuestras}</Typography>
+                        </Box>
+                    )}
+                    {/* Informe check — siempre azul */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.2 }}>
+                        {rcm.informeEnsayo
+                            ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} />
+                            : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                        <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
+                    </Box>
+                    {/* Vencimiento check — azul también */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.2 }}>
+                        {rcm.tieneVencimiento
+                            ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} />
+                            : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                        <Typography variant='body2' sx={{ color: rcm.tieneVencimiento ? '#1976d2' : 'text.disabled' }}>Vencimiento</Typography>
+                    </Box>
+                </Box>
+
+                {/* ── FILA 3: CAMPOS DINÁMICOS (según área) ─── */}
+                {tieneCamposDinamicos && (
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #f3e5f5', borderRadius: 2, bgcolor: '#fdf6ff' }}>
+                        <Typography variant='overline' sx={{ fontWeight: 800, letterSpacing: 2, color: '#e91e8c', display: 'block', mb: 1.5 }}>
+                            Campos Dinámicos — {rcm.area}
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {/* Fecha Confección aparece para Hormigón, E&C y Asfalto */}
+                            {(esHormigon || esElementosComponentes || esAsfalto) && (
+                                <Box sx={{ minWidth: 120 }}>
+                                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Fecha Confección</Typography>
+                                    <Typography variant='body2'>{rcm.fechaConfeccion ? formatDateOnly(rcm.fechaConfeccion) : '—'}</Typography>
+                                </Box>
+                            )}
+                            {/* Elemento aparece para Hormigón y E&C */}
+                            {(esHormigon || esElementosComponentes) && (
+                                <Box sx={{ minWidth: 120 }}>
+                                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Elemento</Typography>
+                                    <Typography variant='body2'>{rcm.elemento || '—'}</Typography>
+                                </Box>
+                            )}
+                            {/* Grado solo Hormigón */}
+                            {esHormigon && (
+                                <Box sx={{ minWidth: 80 }}>
+                                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Grado</Typography>
+                                    <Typography variant='body2'>{rcm.grado || '—'}</Typography>
+                                </Box>
+                            )}
+                            {/* Cotas solo Suelo */}
+                            {esSuelo && (
+                                <>
+                                    <Box sx={{ minWidth: 80 }}>
+                                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cota 1</Typography>
+                                        <Typography variant='body2'>{rcm.cota1 || '—'}</Typography>
+                                    </Box>
+                                    <Box sx={{ minWidth: 80 }}>
+                                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cota 2</Typography>
+                                        <Typography variant='body2'>{rcm.cota2 || '—'}</Typography>
+                                    </Box>
+                                </>
+                            )}
+                        </Box>
+                    </Box>
+                )}
+
+                {/* ── ENSAYOS Y SERVICIOS ASOCIADOS ──────────── */}
+                <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                    Ensayos y servicios asociados ({rcm.ensayos.length})
+                </Typography>
+                {renderEnsayosTable(rcm.ensayos)}
+
+                {/* ── SUBMUESTRAS COMPACTAS ───────────────────── */}
+                {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 &&
+                    renderSubmuestrasPills(rcm.submuestrasVencimiento)}
+
+                {/* ── OBSERVACIÓN ────────────────────────────── */}
+                <Box sx={{ mt: 3 }}>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1 }}>Observación</Typography>
+                    <TextField
+                        multiline rows={2} fullWidth size='small' disabled
+                        value={rcm.observacionItem || ''}
+                        placeholder='Sin observaciones'
+                    />
+                </Box>
+            </Box>
+        )
+    }
 
     return (
         <>
@@ -235,13 +368,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
 
                             {/* Expandible content */}
                             <Collapse in={expandedSavedRcms[rcm.id]}>
-                                <Box sx={{ p: 3, bgcolor: 'white' }}>
-                                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
-                                        Ensayos Asociados ({rcm.ensayos.length})
-                                    </Typography>
-                                    {renderEnsayosTable(rcm.ensayos)}
-                                    {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && renderSubmuestrasTable(rcm.submuestrasVencimiento)}
-                                </Box>
+                                {renderExpandedContent(rcm)}
                             </Collapse>
 
                             {/* Action bar */}
@@ -315,10 +442,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                 </Box>
                             </Box>
                             <Collapse in={expandedSavedRcms[rcm.id]}>
-                                <Box sx={{ p: 3, bgcolor: 'white' }}>
-                                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>Ensayos Asociados ({rcm.ensayos.length})</Typography>
-                                    {renderEnsayosTable(rcm.ensayos)}
-                                </Box>
+                                {renderExpandedContent(rcm)}
                             </Collapse>
                         </Box>
                     ))}
