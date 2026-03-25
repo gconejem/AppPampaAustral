@@ -67,6 +67,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
     const [procedencia, setProcedencia] = useState('')
     const [ubicacionSector, setUbicacionSector] = useState('')
     const [observacionItem, setObservacionItem] = useState('')
+    const [observaciones, setObservaciones] = useState('')
     const [cantidadMuestras, setCantidadMuestras] = useState('1')
     const [informeEnsayo, setInformeEnsayo] = useState(true)
 
@@ -114,6 +115,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setProcedencia('')
         setUbicacionSector('')
         setObservacionItem('')
+        setObservaciones('')
         setCantidadMuestras('1')
         setFechaServicio(getFechaServicioForInput())
         setFechaIngreso(getTodayDateForInput())
@@ -187,6 +189,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setCota1(rcm.cota1 || '')
         setCota2(rcm.cota2 || '')
         setObservacionItem(rcm.observacionItem || '')
+        setObservaciones(rcm.observaciones || '')
         setInformeEnsayo(rcm.informeEnsayo !== undefined ? rcm.informeEnsayo : rcm.rcmType !== 'Servicio')
         setTomaMuestra(rcm.tomaMuestra || '')
         setCantidadMuestras(rcm.cantidadMuestras)
@@ -225,6 +228,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         procedencia,
         ubicacionSector,
         observacionItem,
+        observaciones,
         cantidadMuestras,
         informeEnsayo,
         tieneVencimiento,
@@ -316,6 +320,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         procedencia, setProcedencia,
         ubicacionSector, setUbicacionSector,
         observacionItem, setObservacionItem,
+        observaciones, setObservaciones,
         cantidadMuestras, setCantidadMuestras,
         informeEnsayo, setInformeEnsayo,
         tieneVencimiento, setTieneVencimiento,

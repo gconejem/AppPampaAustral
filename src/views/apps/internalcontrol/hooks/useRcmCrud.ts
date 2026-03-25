@@ -33,6 +33,7 @@ interface UseRcmCrudParams {
         procedencia: string
         ubicacionSector: string
         observacionItem: string
+        observaciones: string
         cantidadMuestras: string
         informeEnsayo: boolean
         tieneVencimiento: boolean
@@ -233,6 +234,7 @@ export function useRcmCrud({
             cota1: formValues.cota1,
             cota2: formValues.cota2,
             observacionItem: formValues.observacionItem,
+            observaciones: formValues.observaciones,
             informeEnsayo: formValues.informeEnsayo,
             tomaMuestra: formValues.tomaMuestra,
             cantidadMuestras: parseInt(formValues.cantidadMuestras) || 1,
@@ -308,6 +310,7 @@ export function useRcmCrud({
                 cota1: formValues.cota1,
                 cota2: formValues.cota2,
                 observacionItem: formValues.observacionItem,
+                observaciones: formValues.observaciones,
                 informeEnsayo: formValues.informeEnsayo,
                 ensayos: [...ensayosAsociados],
                 fechaServicio: formValues.fechaServicio,
@@ -449,6 +452,7 @@ export function useRcmCrud({
                     procedencia: rcm.procedencia,
                     ubicacionSector: rcm.ubicacionSector,
                     observacionItem: rcm.observacionItem,
+                    observaciones: rcm.observaciones,
                     cota1: rcm.cota1,
                     cota2: rcm.cota2,
                     informeEnsayo: rcm.informeEnsayo ?? true,

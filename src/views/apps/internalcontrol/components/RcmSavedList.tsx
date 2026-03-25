@@ -53,31 +53,31 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
 
     const renderVencimientoPill = (rcm: RCMData) => {
         if (!rcm.tieneVencimiento || !rcm.submuestrasVencimiento || rcm.submuestrasVencimiento.length === 0) return null
-        
+
         // Obtenemos las fechas únicas y válidas (vienen como YYYY-MM-DD)
         const fechasValidas = rcm.submuestrasVencimiento
             .map(sub => sub.fechaVencimiento)
             .filter(f => !!f)
 
         if (fechasValidas.length === 0) return null
-        
+
         // Ordenado alfabético sobre ISO (YYYY-MM-DD) funciona correctamente
         const uniqueSortedFechas = [...new Set(fechasValidas)].sort()
-        
+
         const label = uniqueSortedFechas.length === 1
             ? formatDateOnly(uniqueSortedFechas[0])
             : `${formatDateOnly(uniqueSortedFechas[0])} \u2192 ${formatDateOnly(uniqueSortedFechas[uniqueSortedFechas.length - 1])}`
-            
+
         return (
             <Chip
                 label={label}
                 size='small'
-                sx={{ 
-                    fontWeight: 600, 
-                    bgcolor: '#FFF9C4', 
-                    color: '#7B6A00', 
-                    border: '1px solid #F9E21B', 
-                    fontSize: '0.75rem' 
+                sx={{
+                    fontWeight: 600,
+                    bgcolor: '#FFF9C4',
+                    color: '#7B6A00',
+                    border: '1px solid #F9E21B',
+                    fontSize: '0.75rem'
                 }}
             />
         )
@@ -307,12 +307,12 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 &&
                     renderSubmuestrasPills(rcm.submuestrasVencimiento)}
 
-                {/* ── OBSERVACIÓN ────────────────────────────── */}
+                {/* ── OBSERVACIONES GENERALES ────────────────── */}
                 <Box sx={{ mt: 3 }}>
-                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1 }}>Observación</Typography>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1 }}>Observaciones</Typography>
                     <TextField
                         multiline rows={2} fullWidth size='small' disabled
-                        value={rcm.observacionItem || ''}
+                        value={rcm.observaciones || ''}
                         placeholder='Sin observaciones'
                     />
                 </Box>

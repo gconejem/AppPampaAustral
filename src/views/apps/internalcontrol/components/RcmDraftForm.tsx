@@ -63,6 +63,7 @@ interface FormState {
     procedencia: string; setProcedencia: (v: string) => void
     ubicacionSector: string; setUbicacionSector: (v: string) => void
     observacionItem: string; setObservacionItem: (v: string) => void
+    observaciones: string; setObservaciones: (v: string) => void
     cantidadMuestras: string; setCantidadMuestras: (v: string) => void
     informeEnsayo: boolean; setInformeEnsayo: (v: boolean) => void
     tieneVencimiento: boolean; setTieneVencimiento: (v: boolean) => void
@@ -134,6 +135,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         cota1, setCota1, cota2, setCota2,
         procedencia, setProcedencia, ubicacionSector, setUbicacionSector,
         observacionItem, setObservacionItem,
+        observaciones, setObservaciones,
         cantidadMuestras, setCantidadMuestras,
         informeEnsayo, setInformeEnsayo,
         tieneVencimiento, setTieneVencimiento,
@@ -170,7 +172,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
             return { ...s, fechaVencimiento }
         })
         setSubmuestrasVencimiento(updated)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fechaConfeccion])
 
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
@@ -835,7 +837,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         {/* Observaciones */}
                         <Box sx={{ mt: 4 }}>
                             <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>Observaciones</Typography>
-                            <TextField multiline rows={3} fullWidth />
+                            <TextField multiline rows={3} fullWidth value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder='Ingrese observaciones generales...' />
                         </Box>
 
                         {/* Botón Guardar / Cancelar */}
