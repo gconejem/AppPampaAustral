@@ -145,8 +145,12 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                 <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{ensayo.sku}</Typography>
                             </td>
                             <td style={{ padding: '12px' }}>
-                                <Typography variant='body2'>{ensayo.nombre}</Typography>
-                                {ensayo.norma && <Typography variant='caption' color='text.secondary'>{ensayo.norma}</Typography>}
+                                <Typography variant='body2' sx={{ fontWeight: 700, display: 'inline' }}>{ensayo.nombre}</Typography>
+                                {ensayo.norma && (
+                                    <Typography variant='body2' color='text.secondary' sx={{ display: 'inline', ml: 1 }}>
+                                        {ensayo.norma}
+                                    </Typography>
+                                )}
                             </td>
                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                 <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
@@ -218,7 +222,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         return (
             <Box sx={{ p: 3, bgcolor: 'white' }}>
                 {/* ── FILA 1: FECHAS ─────────────────────────── */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2 }}>
                     {dateCell('Fecha Codificación', rcm.fechaCodificacion)}
                     {dateCell('Fecha Muestreo', rcm.fechaMuestreo)}
                     {dateCell('Fecha Ingreso', rcm.fechaIngreso)}
@@ -227,28 +231,30 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 <Divider sx={{ mb: 2 }} />
 
                 {/* ── FILA 2: PROCEDENCIA / UBICACIÓN / CANTIDAD / CHECKS ── */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, mb: 2, alignItems: 'flex-end' }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2, alignItems: 'center' }}>
                     {textCell('Procedencia', rcm.procedencia)}
                     {textCell('Ubicación / Sector', rcm.ubicacionSector)}
-                    {rcm.cantidadMuestras && (
-                        <Box sx={{ minWidth: 80 }}>
-                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
-                            <Typography variant='body2' sx={{ fontWeight: 700 }}>×{rcm.cantidadMuestras}</Typography>
+
+                    {rcm.cantidadMuestras
+                        ? (
+                            <Box sx={{ minWidth: 120 }}>
+                                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
+                                <Typography variant='body2' sx={{ fontWeight: 700 }}>×{rcm.cantidadMuestras}</Typography>
+                            </Box>
+                        )
+                        : <Box />
+                    }
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {rcm.informeEnsayo ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                            <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
                         </Box>
-                    )}
-                    {/* Informe check — siempre azul */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.2 }}>
-                        {rcm.informeEnsayo
-                            ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} />
-                            : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
-                        <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
-                    </Box>
-                    {/* Vencimiento check — azul también */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.2 }}>
-                        {rcm.tieneVencimiento
-                            ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} />
-                            : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
-                        <Typography variant='body2' sx={{ color: rcm.tieneVencimiento ? '#1976d2' : 'text.disabled' }}>Vencimiento</Typography>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {rcm.tieneVencimiento ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                            <Typography variant='body2' sx={{ color: rcm.tieneVencimiento ? '#1976d2' : 'text.disabled' }}>Vencimiento</Typography>
+                        </Box>
                     </Box>
                 </Box>
 
