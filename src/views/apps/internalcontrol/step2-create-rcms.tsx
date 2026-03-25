@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -151,7 +151,7 @@ const Step2CreateRcms = ({
     // Registrar la función de finalizar en el padre al montar
     useEffect(() => {
         onRegisterFinalizar?.(() => codigoReal.setShowPreFinalizacion(true))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
@@ -343,6 +343,9 @@ const Step2CreateRcms = ({
                 showCancelConfirm={crud.showCancelConfirm}
                 handleConfirmCancel={crud.handleConfirmCancel}
                 handleDismissCancelConfirm={crud.handleDismissCancelConfirm}
+                showDeleteConfirm={crud.showDeleteConfirm}
+                handleConfirmDelete={crud.handleConfirmDelete}
+                handleDismissDeleteConfirm={crud.handleDismissDeleteConfirm}
                 showPreFinalizacion={codigoReal.showPreFinalizacion}
                 setShowPreFinalizacion={codigoReal.setShowPreFinalizacion}
                 computeValidaciones={codigoReal.computeValidaciones}

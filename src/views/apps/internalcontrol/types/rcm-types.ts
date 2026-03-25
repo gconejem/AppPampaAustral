@@ -66,10 +66,15 @@ export interface RCMData {
     cota1?: string
     cota2?: string
     observacionItem?: string
+    observaciones?: string
     informeEnsayo?: boolean
     ensayos: EnsayoAsociado[]
     fechaServicio: string
+    fechaCodificacion?: string
     fechaMuestreo?: string
+    fechaIngreso?: string
+    fechaEntrega?: string
+    fechaConfeccion?: string
     tomaMuestra?: string
     cantidadMuestras: string
     numeroRcm?: string
