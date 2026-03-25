@@ -37,6 +37,10 @@ interface RcmDialogsProps {
     showCancelConfirm: boolean
     handleConfirmCancel: () => void
     handleDismissCancelConfirm: () => void
+    // Delete confirm dialog
+    showDeleteConfirm: boolean
+    handleConfirmDelete: () => void
+    handleDismissDeleteConfirm: () => void
     // Pre-finalization dialog
     showPreFinalizacion: boolean
     setShowPreFinalizacion: (show: boolean) => void
@@ -55,6 +59,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
     showEditWarning, setShowEditWarning,
     showConfirmNewRcm, handleConfirmNewRcm, handleCancelNewRcm,
     showCancelConfirm, handleConfirmCancel, handleDismissCancelConfirm,
+    showDeleteConfirm, handleConfirmDelete, handleDismissDeleteConfirm,
     showPreFinalizacion, setShowPreFinalizacion,
     computeValidaciones, handleGuardarTodo, isSaving,
 }) => {
@@ -181,6 +186,44 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                         sx={{ textTransform: 'none' }}
                     >
                         Volver al formulario
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Dialog de confirmación para eliminar RCM */}
+            <Dialog
+                open={showDeleteConfirm}
+                onClose={handleDismissDeleteConfirm}
+                maxWidth='sm'
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: '12px', overflow: 'hidden' }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WarningAmberIcon sx={{ color: '#D32F2F', fontSize: 28 }} />
+                    ¿Eliminar RCM?
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Este RCM se eliminará permanentemente. ¿Deseas continuar?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={handleDismissDeleteConfirm}
+                        variant='outlined'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleConfirmDelete}
+                        variant='contained'
+                        color='error'
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Eliminar
                     </Button>
                 </DialogActions>
             </Dialog>

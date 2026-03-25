@@ -70,6 +70,8 @@ export function useRcmCrud({
     const [showEditWarning, setShowEditWarning] = useState(false)
     const [showConfirmNewRcm, setShowConfirmNewRcm] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [rcmIdToDelete, setRcmIdToDelete] = useState<number | null>(null)
     const [pendingRcmType, setPendingRcmType] = useState<string>('')
 
     // Menus
@@ -384,19 +386,37 @@ export function useRcmCrud({
         handleCloseRcmMenu()
     }
 
-    const handleDeleteRcm = async () => {
-        if (selectedRcmId !== null) {
-            const rcmToDelete = savedRcms.find(r => r.id === selectedRcmId)
-            if (rcmToDelete?.dbId) {
-                try {
-                    await fetch(`/api/rcm/${rcmToDelete.dbId}`, { method: 'DELETE' })
-                } catch {
-                    // ignorar error de red, igual remover de la UI
-                }
+    const performDeleteRcm = async (rcmId: number) => {
+        const rcmToDelete = savedRcms.find(r => r.id === rcmId)
+        if (rcmToDelete?.dbId) {
+            try {
+                await fetch(`/api/rcm/${rcmToDelete.dbId}`, { method: 'DELETE' })
+            } catch {
+                // ignorar error de red, igual remover de la UI
             }
-            setSavedRcms(savedRcms.filter(r => r.id !== selectedRcmId))
+        }
+        setSavedRcms(prev => prev.filter(r => r.id !== rcmId))
+    }
+
+    const handleDeleteRcm = () => {
+        if (selectedRcmId !== null) {
+            setRcmIdToDelete(selectedRcmId)
+            setShowDeleteConfirm(true)
         }
         handleCloseRcmMenu()
+    }
+
+    const handleConfirmDelete = async () => {
+        if (rcmIdToDelete !== null) {
+            await performDeleteRcm(rcmIdToDelete)
+        }
+        setRcmIdToDelete(null)
+        setShowDeleteConfirm(false)
+    }
+
+    const handleDismissDeleteConfirm = () => {
+        setRcmIdToDelete(null)
+        setShowDeleteConfirm(false)
     }
 
     const handleDuplicateRcm = () => {
@@ -545,6 +565,7 @@ export function useRcmCrud({
         showEditWarning, setShowEditWarning,
         showConfirmNewRcm,
         showCancelConfirm,
+        showDeleteConfirm,
         pendingRcmType,
         // Menus
         newRcmMenuAnchor, setNewRcmMenuAnchor,
@@ -563,6 +584,9 @@ export function useRcmCrud({
         handleCancelEdit,
         handleConfirmCancel,
         handleDismissCancelConfirm,
+        showDeleteConfirm,
+        handleConfirmDelete,
+        handleDismissDeleteConfirm,
         handleSaveRcm,
         handleToggleSavedRcm,
         handleOpenRcmMenu,
