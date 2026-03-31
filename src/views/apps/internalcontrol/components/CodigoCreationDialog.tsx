@@ -90,7 +90,8 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                                 {selectedRcmIds.map((id, idx) => {
                                     const rcm = savedRcms.find(r => r.id === id)
-                                    const label = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                    const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                    const label = rcm?.tipoServicio ? `${rcmNum} - ${rcm.tipoServicio}` : rcmNum
                                     return (
                                         <Chip
                                             key={id}
