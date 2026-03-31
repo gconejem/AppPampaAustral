@@ -19,6 +19,7 @@ import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import CloseIcon from '@mui/icons-material/Close'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface RcmSavedListProps {
@@ -348,7 +349,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     {rcmsCreados.map(rcm => {
                         const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
                         return (
-                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
+                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2enpx solid ${rcmBorderColor}` }}>
                                 {/* Header */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F5F5F5', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
@@ -381,25 +382,32 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
 
                                 {/* Action bar */}
                                 {actionBarRcmId === rcm.id && !showRcmCard && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5, px: 2, py: 1.5, bgcolor: '#EEEEEE', borderTop: '1px solid #E0E0E0' }}>
-                                        <Button variant='contained' size='small' startIcon={<AddIcon />} onClick={onNewRcmClick}
-                                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' } }}>
-                                            Nuevo RCM
-                                        </Button>
-                                        <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />}
-                                            onClick={() => onQuickDuplicate(rcm.id)}
-                                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#1976D2', color: '#1976D2', bgcolor: 'white', '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' } }}>
-                                            Duplicar este
-                                        </Button>
-                                        <Button variant='outlined' size='small' startIcon={<LayersIcon />}
-                                            onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e) }}
-                                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
-                                            Asociar a Producto
-                                        </Button>
-                                        <Button variant='text' size='small' onClick={() => onSetActionBarRcmId(null)}
-                                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', color: '#666', '&:hover': { bgcolor: '#E0E0E0' } }}>
-                                            Cerrar
-                                        </Button>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, px: 2, py: 1.5, bgcolor: '#EEEEEE', borderTop: '1px solid #E0E0E0' }}>
+                                        {/* Left: saved label */}
+                                        <Typography variant='body2' sx={{ fontWeight: 700, color: '#0D47A1', whiteSpace: 'nowrap', pl: '5px' }}>
+                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')} guardado` : 'RCM guardado'}
+                                        </Typography>
+                                        {/* Right: actions */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Button variant='contained' size='small' startIcon={<AddIcon />} onClick={onNewRcmClick}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' } }}>
+                                                Nuevo RCM
+                                            </Button>
+                                            <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />}
+                                                onClick={() => onQuickDuplicate(rcm.id)}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#1976D2', color: '#1976D2', bgcolor: 'white', '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' } }}>
+                                                Duplicar
+                                            </Button>
+                                            <Button variant='outlined' size='small' startIcon={<LayersIcon />}
+                                                onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e) }}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
+                                                Agrupar
+                                            </Button>
+                                            <IconButton size='small' onClick={() => onSetActionBarRcmId(null)}
+                                                sx={{ color: '#666', '&:hover': { bgcolor: '#E0E0E0' } }}>
+                                                <CloseIcon fontSize='small' />
+                                            </IconButton>
+                                        </Box>
                                     </Box>
                                 )}
                             </Box>

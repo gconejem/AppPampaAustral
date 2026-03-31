@@ -86,7 +86,7 @@ export function useRcmCrud({
     useEffect(() => {
         if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current)
         if (actionBarRcmId !== null) {
-            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 10000)
+            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 30000)
         }
         return () => { if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current) }
     }, [actionBarRcmId])
@@ -584,7 +584,6 @@ export function useRcmCrud({
         handleCancelEdit,
         handleConfirmCancel,
         handleDismissCancelConfirm,
-        showDeleteConfirm,
         handleConfirmDelete,
         handleDismissDeleteConfirm,
         handleSaveRcm,
