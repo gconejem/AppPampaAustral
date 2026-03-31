@@ -407,11 +407,11 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 Agrupar
                                             </Button>
                                             {rcm.rcmType === 'Muestra' && (
-                                                <Button variant='outlined' size='small'
+                                                <Button variant='contained' size='small'
                                                     onClick={() => onCodigoUnoAUno(rcm.id)}
                                                     disabled={isCreatingCodigo}
                                                     startIcon={isCreatingCodigo ? <CircularProgress size={14} color='inherit' /> : undefined}
-                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', borderColor: '#2E7D32', color: '#2E7D32', bgcolor: 'white', '&:hover': { bgcolor: '#E8F5E9', borderColor: '#1B5E20' } }}>
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', bgcolor: '#2E7D32', color: 'white', '&:hover': { bgcolor: '#1B5E20' }, '&:disabled': { bgcolor: '#A5D6A7', color: 'white' } }}>
                                                     Código 1:1
                                                 </Button>
                                             )}
