@@ -253,6 +253,8 @@ const Step2CreateRcms = ({
                         onQuickDuplicate={handleQuickDuplicate}
                         onSetActionBarRcmId={crud.setActionBarRcmId}
                         onSetSelectedRcmIds={codigoReal.setSelectedRcmIds}
+                        onCodigoUnoAUno={(rcmId) => codigoReal.handleCodigoUnoAUno(rcmId, form.setErrorVencimiento)}
+                        isCreatingCodigo={codigoReal.isCreatingCodigo}
                     />
                 </Box>
             </Card>

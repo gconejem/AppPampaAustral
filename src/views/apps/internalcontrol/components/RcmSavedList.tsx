@@ -9,6 +9,7 @@ import {
     Collapse,
     Divider,
     TextField,
+    CircularProgress,
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -41,6 +42,8 @@ interface RcmSavedListProps {
     onQuickDuplicate: (rcmId: number) => void
     onSetActionBarRcmId: (id: number | null) => void
     onSetSelectedRcmIds: (ids: number[]) => void
+    onCodigoUnoAUno: (rcmId: number) => void
+    isCreatingCodigo: boolean
 }
 
 const RcmSavedList: React.FC<RcmSavedListProps> = ({
@@ -49,7 +52,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
     codigosAgrupadores, canAgrupar, savedRcms,
     onToggleSavedRcm, onToggleRcmSelection, onOpenRcmMenu,
     onNewRcmClick, onOpenCodigoPopup, onQuickDuplicate,
-    onSetActionBarRcmId, onSetSelectedRcmIds,
+    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno, isCreatingCodigo,
 }) => {
 
     const renderVencimientoPill = (rcm: RCMData) => {
@@ -403,6 +406,15 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
                                                 Agrupar
                                             </Button>
+                                            {rcm.rcmType === 'Muestra' && (
+                                                <Button variant='outlined' size='small'
+                                                    onClick={() => onCodigoUnoAUno(rcm.id)}
+                                                    disabled={isCreatingCodigo}
+                                                    startIcon={isCreatingCodigo ? <CircularProgress size={14} color='inherit' /> : undefined}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', borderColor: '#2E7D32', color: '#2E7D32', bgcolor: 'white', '&:hover': { bgcolor: '#E8F5E9', borderColor: '#1B5E20' } }}>
+                                                    Código 1:1
+                                                </Button>
+                                            )}
                                             <IconButton size='small' onClick={() => onSetActionBarRcmId(null)}
                                                 sx={{ color: '#666', '&:hover': { bgcolor: '#E0E0E0' } }}>
                                                 <CloseIcon fontSize='small' />
