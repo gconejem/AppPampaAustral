@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -92,8 +92,8 @@ const Step2CreateRcms = ({
     codigoReal.codigosAgrupadores.forEach(ag => {
         ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
     })
-    const rcmsCreados = savedRcms.filter(rcm => !rcmIdsAgrupados.has(rcm.id))
-    const rcmsAgrupados = savedRcms.filter(rcm => rcmIdsAgrupados.has(rcm.id))
+    const rcmsCreados = savedRcms.filter(rcm => !rcmIdsAgrupados.has(rcm.id)).sort((a, b) => b.id - a.id)
+    const rcmsAgrupados = savedRcms.filter(rcm => rcmIdsAgrupados.has(rcm.id)).sort((a, b) => b.id - a.id)
 
     const selectedRcmsData = savedRcms.filter(r => codigoReal.selectedRcmIds.includes(r.id))
     const canAgrupar = selectedRcmsData.length > 0
