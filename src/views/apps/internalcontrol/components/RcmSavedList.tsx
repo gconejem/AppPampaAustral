@@ -352,7 +352,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     {rcmsCreados.map(rcm => {
                         const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
                         return (
-                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2enpx solid ${rcmBorderColor}` }}>
+                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
                                 {/* Header */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F5F5F5', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
