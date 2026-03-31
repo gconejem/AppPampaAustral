@@ -77,6 +77,14 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         fetchFamilias()
     }, [selectedAreaId])
 
+    // Resetear a página 1 cada vez que se abre el popover de SKU
+    useEffect(() => {
+        if (skuSearchAnchor) {
+            setProductsPage(0)
+            setSearchTerm('')
+        }
+    }, [skuSearchAnchor])
+
     // Cargar productos con filtros
     useEffect(() => {
         if (!anchorEl && !agrupadorSearchAnchor && !skuSearchAnchor && !isInline) return
@@ -90,23 +98,19 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
 
                 if (searchTerm) params.append('q', searchTerm)
 
-                const currentAreaName = areas.find(a => a.id === area)?.nombre
+                // Cuando el SKU search está abierto, usar el área del RCM seleccionado (selectedAreaId).
+                // En los demás contextos (form inline, agrupador), usar el área del formulario (area).
+                const effectiveAreaId = skuSearchAnchor ? selectedAreaId : (area || null)
+                const currentAreaName = areas.find(a => a.id === effectiveAreaId)?.nombre
                 if (currentAreaName) params.append('area', currentAreaName)
 
                 if (showOnlyPaquetes) params.append('esPaquete', 'true')
 
-                console.log('Cargando productos con params:', params.toString())
                 const response = await fetch(`/api/productos/search?${params.toString()}`)
 
                 if (response.ok) {
                     const data = await response.json()
-                    console.log('Productos cargados:', data)
-
                     const productosArray = Array.isArray(data) ? data : (data.productos || [])
-
-                    console.log('Array de productos:', productosArray)
-                    console.log('Cantidad de productos:', productosArray.length)
-
                     setAllProductos(productosArray)
                     setTotalProductos(productosArray.length)
                 } else {
@@ -118,7 +122,7 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         }
 
         fetchProductos()
-    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, isInline, searchTerm, area, areas, showOnlyPaquetes])
+    }, [anchorEl, agrupadorSearchAnchor, skuSearchAnchor, isInline, searchTerm, area, areas, selectedAreaId, showOnlyPaquetes])
 
     // Aplicar paginación local
     useEffect(() => {

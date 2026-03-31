@@ -47,6 +47,7 @@ interface UseRcmCrudParams {
     setErrorVencimiento: (v: string) => void
     clearEnsayosPendientes: () => void
     resetSearchFilters?: () => void
+    onAutoAgrupar?: (newRcm: RCMData, setError: (msg: string) => void) => Promise<void>
 }
 
 export function useRcmCrud({
@@ -55,7 +56,7 @@ export function useRcmCrud({
     areas, todasLasFamilias, otData,
     getFormValues, getTodayDateForInput, resetForm, populateFormFromRcm,
     hasUnsavedChanges, setShowRcmCard, setErrorVencimiento,
-    clearEnsayosPendientes, resetSearchFilters,
+    clearEnsayosPendientes, resetSearchFilters, onAutoAgrupar,
 }: UseRcmCrudParams) {
     // Estado de edición
     const [isEditingRcm, setIsEditingRcm] = useState(false)
@@ -86,7 +87,7 @@ export function useRcmCrud({
     useEffect(() => {
         if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current)
         if (actionBarRcmId !== null) {
-            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 10000)
+            actionBarTimerRef.current = setTimeout(() => setActionBarRcmId(null), 30000)
         }
         return () => { if (actionBarTimerRef.current) clearTimeout(actionBarTimerRef.current) }
     }, [actionBarRcmId])
@@ -330,6 +331,11 @@ export function useRcmCrud({
 
             setSavedRcms(prev => [...prev, newRcm])
             setActionBarRcmId(newRcm.id)
+
+            // Auto-agrupar 1:1 para Control y Servicio
+            if ((formValues.rcmType === 'Control' || formValues.rcmType === 'Servicio') && onAutoAgrupar) {
+                await onAutoAgrupar(newRcm, setErrorVencimiento)
+            }
 
             // Limpiar estado de edición y duplicación
             setIsEditingRcm(false)
@@ -584,7 +590,6 @@ export function useRcmCrud({
         handleCancelEdit,
         handleConfirmCancel,
         handleDismissCancelConfirm,
-        showDeleteConfirm,
         handleConfirmDelete,
         handleDismissDeleteConfirm,
         handleSaveRcm,

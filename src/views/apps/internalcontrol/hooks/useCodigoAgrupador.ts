@@ -329,6 +329,72 @@ export function useCodigoAgrupador({
         ))
     }
 
+    /** Agrupar un RCM directamente en un código nuevo sin pasar por la modal (relación 1:1) */
+    const handleCodigoUnoAUno = async (
+        rcmOrId: RCMData | number,
+        setErrorVencimiento: (msg: string) => void,
+    ) => {
+        const rcm = typeof rcmOrId === 'number'
+            ? savedRcms.find(r => r.id === rcmOrId)
+            : rcmOrId
+        if (!rcm) return
+
+        const rcmRef = { id: rcm.id, numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`, rcmType: rcm.rcmType, numeroRcm: rcm.numeroRcm }
+
+        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+        const seenIds = new Set<number>()
+        rcm.ensayos.forEach(e => {
+            if (!seenIds.has(e.productoId)) {
+                seenIds.add(e.productoId)
+                allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+            }
+        })
+
+        setIsCreatingCodigo(true)
+        try {
+            const res = await fetch('/api/codigo-agrupador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    descripcionServicio: null,
+                    cantidad: 1,
+                    unidad: 'unid',
+                    facturacion: 'Unitario',
+                    ensayos: allEnsayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
+                    ordenTrabajoId: otData?.id ?? null,
+                }),
+            })
+
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}))
+                throw new Error(errBody.error || 'Error al crear código de producto')
+            }
+
+            const created = await res.json()
+
+            const newAgrupador: CodigoAgrupador = {
+                id: created.codigoNombre,
+                dbId: created.id,
+                codigoId: created.codigoId,
+                codigoNombre: created.codigoNombre,
+                rcmsVinculados: [rcmRef],
+                ensayos: allEnsayos,
+                descripcionServicio: '',
+                cantidad: 1,
+                unidad: 'unid',
+                facturacion: 'Unitario',
+            }
+
+            setCodigosAgrupadores(prev => [...prev, newAgrupador])
+            setSelectedRcmIds([])
+        } catch (err) {
+            console.error('Error al crear código 1:1:', err)
+            setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear código de producto')
+        } finally {
+            setIsCreatingCodigo(false)
+        }
+    }
+
     const handleCrearNuevoCodigo = () => {
         if (!newCodigoNombre.trim()) return
         const newCodigo = {
@@ -419,6 +485,7 @@ export function useCodigoAgrupador({
         handleSelectProductForSku,
         handleRemoveEnsayoFromAgrupador,
         handleCrearNuevoCodigo,
+        handleCodigoUnoAUno,
         computeValidaciones,
     }
 }

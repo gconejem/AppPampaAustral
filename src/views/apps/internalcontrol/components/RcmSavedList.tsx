@@ -9,6 +9,7 @@ import {
     Collapse,
     Divider,
     TextField,
+    CircularProgress,
 } from '@mui/material'
 import { formatDateOnly } from '@/utils/dateUtils'
 import AddIcon from '@mui/icons-material/Add'
@@ -19,6 +20,7 @@ import LayersIcon from '@mui/icons-material/Layers'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import CloseIcon from '@mui/icons-material/Close'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface RcmSavedListProps {
@@ -40,6 +42,8 @@ interface RcmSavedListProps {
     onQuickDuplicate: (rcmId: number) => void
     onSetActionBarRcmId: (id: number | null) => void
     onSetSelectedRcmIds: (ids: number[]) => void
+    onCodigoUnoAUno: (rcmId: number) => void
+    isCreatingCodigo: boolean
 }
 
 const RcmSavedList: React.FC<RcmSavedListProps> = ({
@@ -48,7 +52,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
     codigosAgrupadores, canAgrupar, savedRcms,
     onToggleSavedRcm, onToggleRcmSelection, onOpenRcmMenu,
     onNewRcmClick, onOpenCodigoPopup, onQuickDuplicate,
-    onSetActionBarRcmId, onSetSelectedRcmIds,
+    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno, isCreatingCodigo,
 }) => {
 
     const renderVencimientoPill = (rcm: RCMData) => {
@@ -345,63 +349,82 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                         <Typography variant='h6' sx={{ fontWeight: 600 }}>Creados (Pendientes de Agrupar)</Typography>
                         <Chip label={rcmsCreados.length} size='small' sx={{ fontWeight: 700, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', minWidth: 28 }} />
                     </Box>
-                    {rcmsCreados.map(rcm => (
-                        <Box key={rcm.id} sx={{ bgcolor: '#E3F2FD', borderRadius: '8px', overflow: 'hidden', mb: 2 }}>
-                            {/* Header */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#E3F2FD', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                    <Box onClick={(e) => e.stopPropagation()}>
-                                        <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
+                    {rcmsCreados.map(rcm => {
+                        const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
+                        return (
+                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
+                                {/* Header */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F5F5F5', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                        <Box onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
+                                        </Box>
+                                        <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
+                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
+                                        </Typography>
+                                        <Chip label='Pendiente de agrupar' size='small' sx={{ fontWeight: 600, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' }} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                            {renderRcmHeaderFields(rcm)}
+                                        </Box>
                                     </Box>
-                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
-                                    <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                        {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
-                                    </Typography>
-                                    <Chip label='Pendiente de agrupar' size='small' sx={{ fontWeight: 600, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' }} />
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                        {renderRcmHeaderFields(rcm)}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
+                                            <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+                                        </IconButton>
+                                        <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
+                                            <MoreVertIcon />
+                                        </IconButton>
                                     </Box>
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                    <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
-                                        <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-                                    </IconButton>
-                                    <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
+
+                                {/* Expandible content */}
+                                <Collapse in={expandedSavedRcms[rcm.id]}>
+                                    {renderExpandedContent(rcm)}
+                                </Collapse>
+
+                                {/* Action bar */}
+                                {actionBarRcmId === rcm.id && !showRcmCard && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, px: 2, py: 1.5, bgcolor: '#EEEEEE', borderTop: '1px solid #E0E0E0' }}>
+                                        {/* Left: saved label */}
+                                        <Typography variant='body2' sx={{ fontWeight: 700, color: '#0D47A1', whiteSpace: 'nowrap', pl: '5px' }}>
+                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')} guardado` : 'RCM guardado'}
+                                        </Typography>
+                                        {/* Right: actions */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Button variant='contained' size='small' startIcon={<AddIcon />} onClick={onNewRcmClick}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' } }}>
+                                                Nuevo RCM
+                                            </Button>
+                                            <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />}
+                                                onClick={() => onQuickDuplicate(rcm.id)}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#1976D2', color: '#1976D2', bgcolor: 'white', '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' } }}>
+                                                Duplicar
+                                            </Button>
+                                            <Button variant='outlined' size='small' startIcon={<LayersIcon />}
+                                                onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e) }}
+                                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
+                                                Agrupar
+                                            </Button>
+                                            {rcm.rcmType === 'Muestra' && (
+                                                <Button variant='contained' size='small'
+                                                    onClick={() => onCodigoUnoAUno(rcm.id)}
+                                                    disabled={isCreatingCodigo}
+                                                    startIcon={isCreatingCodigo ? <CircularProgress size={14} color='inherit' /> : undefined}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', bgcolor: '#2E7D32', color: 'white', '&:hover': { bgcolor: '#1B5E20' }, '&:disabled': { bgcolor: '#A5D6A7', color: 'white' } }}>
+                                                    Código 1:1
+                                                </Button>
+                                            )}
+                                            <IconButton size='small' onClick={() => onSetActionBarRcmId(null)}
+                                                sx={{ color: '#666', '&:hover': { bgcolor: '#E0E0E0' } }}>
+                                                <CloseIcon fontSize='small' />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                )}
                             </Box>
-
-                            {/* Expandible content */}
-                            <Collapse in={expandedSavedRcms[rcm.id]}>
-                                {renderExpandedContent(rcm)}
-                            </Collapse>
-
-                            {/* Action bar */}
-                            {actionBarRcmId === rcm.id && !showRcmCard && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5, px: 2, py: 1.5, bgcolor: '#BBDEFB', borderTop: '1px solid #90CAF9' }}>
-                                    <Button variant='contained' size='small' startIcon={<AddIcon />} onClick={onNewRcmClick}
-                                        sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', bgcolor: '#1976D2', '&:hover': { bgcolor: '#1565C0' } }}>
-                                        Nuevo RCM
-                                    </Button>
-                                    <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />}
-                                        onClick={() => onQuickDuplicate(rcm.id)}
-                                        sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#1976D2', color: '#1976D2', bgcolor: 'white', '&:hover': { bgcolor: '#E3F2FD', borderColor: '#1565C0' } }}>
-                                        Duplicar este
-                                    </Button>
-                                    <Button variant='outlined' size='small' startIcon={<LayersIcon />}
-                                        onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e) }}
-                                        sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
-                                        Asociar a Producto
-                                    </Button>
-                                    <Button variant='text' size='small' onClick={() => onSetActionBarRcmId(null)}
-                                        sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', color: '#666', '&:hover': { bgcolor: '#E0E0E0' } }}>
-                                        Cerrar
-                                    </Button>
-                                </Box>
-                            )}
-                        </Box>
-                    ))}
+                        )
+                    })}
                 </Box>
             )}
 
@@ -412,46 +435,49 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                         <Typography variant='h6' sx={{ fontWeight: 600 }}>Agrupados</Typography>
                         <Chip label={rcmsAgrupados.length} size='small' sx={{ fontWeight: 700, bgcolor: '#E8F5E9', color: '#2E7D32', border: '1px solid #81C784', minWidth: 28 }} />
                     </Box>
-                    {rcmsAgrupados.map(rcm => (
-                        <Box key={rcm.id} sx={{ bgcolor: '#E8F5E9', borderRadius: '8px', overflow: 'hidden', mb: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#E8F5E9', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                    <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
-                                    <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                        {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
-                                    </Typography>
-                                    <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                        {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
-                                        {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
-                                        {rcm.numeroTarjeta && (
-                                            <><Typography variant='body2' color='text.secondary'>|</Typography>
-                                                <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
+                    {rcmsAgrupados.map(rcm => {
+                        const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
+                        return (
+                            <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F5F5F5', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                        <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
+                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
+                                        </Typography>
+                                        <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                            {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
+                                            {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
+                                            {rcm.numeroTarjeta && (
+                                                <><Typography variant='body2' color='text.secondary'>|</Typography>
+                                                    <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
+                                            )}
+                                            {rcm.ensayos.length > 0 && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
+                                            {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                                <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
+                                            )}
+                                            {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        {rcm.tipoServicio?.toLowerCase() === 'dosificación' && (
+                                            <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
                                         )}
-                                        {rcm.ensayos.length > 0 && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
-                                        {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
-                                            <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
-                                        )}
-                                        {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
+                                        <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
+                                            <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+                                        </IconButton>
+                                        <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
+                                            <MoreVertIcon />
+                                        </IconButton>
                                     </Box>
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-                                    {rcm.tipoServicio?.toLowerCase() === 'dosificación' && (
-                                        <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
-                                    )}
-                                    <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
-                                        <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-                                    </IconButton>
-                                    <IconButton size='small' onClick={(e) => onOpenRcmMenu(e, rcm.id)}>
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
+                                <Collapse in={expandedSavedRcms[rcm.id]}>
+                                    {renderExpandedContent(rcm)}
+                                </Collapse>
                             </Box>
-                            <Collapse in={expandedSavedRcms[rcm.id]}>
-                                {renderExpandedContent(rcm)}
-                            </Collapse>
-                        </Box>
-                    ))}
+                        )
+                    })}
                 </Box>
             )}
 
