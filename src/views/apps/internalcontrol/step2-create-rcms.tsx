@@ -13,7 +13,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 // Types
-import type { Step2CreateRcmsProps } from './types/rcm-types'
+import type { Step2CreateRcmsProps, RCMData } from './types/rcm-types'
 
 // Hooks
 import { useRcmForm } from './hooks/useRcmForm'
@@ -68,6 +68,10 @@ const Step2CreateRcms = ({
         setSkuSearchAnchor,
     })
 
+    const codigoUnoAUnoRef = React.useRef<(rcm: RCMData, setError: (msg: string) => void) => Promise<void>>(
+        async () => { /* se sobreescribe después */ }
+    )
+
     const crud = useRcmCrud({
         savedRcms, setSavedRcms,
         ensayosAsociados, setEnsayosAsociados,
@@ -83,6 +87,7 @@ const Step2CreateRcms = ({
         setErrorVencimiento: form.setErrorVencimiento,
         clearEnsayosPendientes: ensayoHooks.clearPendientes,
         resetSearchFilters: productSearch.resetSearchFilters,
+        onAutoAgrupar: (newRcm, setError) => codigoUnoAUnoRef.current(newRcm, setError),
     })
 
     // ═══════════════════════════════════════
@@ -136,6 +141,13 @@ const Step2CreateRcms = ({
     // ═══════════════════════════════════════
     // EFFECTS
     // ═══════════════════════════════════════
+
+    // Mantener ref actualizado con el handler 1:1 más reciente
+    useEffect(() => {
+        codigoUnoAUnoRef.current = (rcm: RCMData, setError: (msg: string) => void) =>
+            codigoReal.handleCodigoUnoAUno(rcm, setError)
+    })
+
     useEffect(() => {
         onDraftCountChange?.(form.showRcmCard ? 1 : 0)
     }, [form.showRcmCard])

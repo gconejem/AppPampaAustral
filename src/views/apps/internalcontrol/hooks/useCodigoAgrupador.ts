@@ -331,10 +331,12 @@ export function useCodigoAgrupador({
 
     /** Agrupar un RCM directamente en un código nuevo sin pasar por la modal (relación 1:1) */
     const handleCodigoUnoAUno = async (
-        rcmId: number,
+        rcmOrId: RCMData | number,
         setErrorVencimiento: (msg: string) => void,
     ) => {
-        const rcm = savedRcms.find(r => r.id === rcmId)
+        const rcm = typeof rcmOrId === 'number'
+            ? savedRcms.find(r => r.id === rcmOrId)
+            : rcmOrId
         if (!rcm) return
 
         const rcmRef = { id: rcm.id, numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`, rcmType: rcm.rcmType, numeroRcm: rcm.numeroRcm }
