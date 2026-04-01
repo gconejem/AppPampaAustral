@@ -47,6 +47,8 @@ import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
@@ -422,6 +424,26 @@ const UserListTable2 = ({
   const [histRows, setHistRows] = useState<any[]>([])
   const [histLoading, setHistLoading] = useState(false)
 
+  // Dialog: Gestionar Informe (nuevo)
+  const [informeDialogOpen, setInformeDialogOpen] = useState(false)
+  const [informeDialogLoading, setInformeDialogLoading] = useState(false)
+  const [informeDialogCodigoId, setInformeDialogCodigoId] = useState<number | null>(null)
+  const [informeDialogRcmId, setInformeDialogRcmId] = useState<number | null>(null)
+  const [informeDialogMeta, setInformeDialogMeta] = useState<any>(null)
+  const [informeDialogData, setInformeDialogData] = useState<any>(null)
+  const [informeDrafts, setInformeDrafts] = useState<
+    Array<{ id: string; numero: string; observaciones: string; anexoPrev: string }>
+  >([])
+  const [informeDialogErrors, setInformeDialogErrors] = useState<{ general?: string; numero?: string }>({})
+  const [savingInformeDialog, setSavingInformeDialog] = useState(false)
+
+  // Dialog: Ficha Código Producto (nuevo)
+  const [codigoDialogOpen, setCodigoDialogOpen] = useState(false)
+  const [codigoDialogLoading, setCodigoDialogLoading] = useState(false)
+  const [codigoDialogMeta, setCodigoDialogMeta] = useState<any>(null)
+  const [codigoDialogData, setCodigoDialogData] = useState<any>(null)
+  const [codigoDialogDigitadoAt, setCodigoDialogDigitadoAt] = useState<string | null>(null)
+
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
@@ -433,6 +455,226 @@ const UserListTable2 = ({
   const handleCloseMarkMenu = () => {
     setMarkAnchorEl(null)
     setMarkRowId(null)
+  }
+
+  const openInformeDialog = async (codigoAgrupadorId: number | null, representativeRcmId: number, meta?: any) => {
+    setInformeDialogCodigoId(codigoAgrupadorId)
+    setInformeDialogRcmId(representativeRcmId)
+    setInformeDialogMeta(meta ?? null)
+    setInformeDialogData(null)
+    setInformeDrafts([])
+    setInformeDialogErrors({})
+    setInformeDialogOpen(true)
+
+    if (!codigoAgrupadorId) return
+
+    try {
+      setInformeDialogLoading(true)
+      const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}`)
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(txt || 'No se pudo cargar el detalle del código')
+      }
+      const json = await res.json()
+      setInformeDialogData(json)
+    } catch (e) {
+      console.error('openInformeDialog error', e)
+      setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo cargar la información del código.' }))
+    } finally {
+      setInformeDialogLoading(false)
+    }
+  }
+
+  const closeInformeDialog = () => {
+    if (savingInformeDialog) return
+    setInformeDialogOpen(false)
+    setInformeDialogLoading(false)
+    setInformeDialogCodigoId(null)
+    setInformeDialogRcmId(null)
+    setInformeDialogMeta(null)
+    setInformeDialogData(null)
+    setInformeDrafts([])
+    setInformeDialogErrors({})
+  }
+
+  const parseInformeNumber = (raw: any) => {
+    const s = String(raw ?? '').trim()
+    if (!s) return null
+    const direct = Number(s)
+    if (Number.isFinite(direct) && direct > 0) return direct
+    const m = s.match(/(\d+)\s*$/)
+    if (m) {
+      const n = Number(m[1])
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return null
+  }
+
+  const formatInformeMock = (informe: any, whenIso?: string | null) => {
+    const n = parseInformeNumber(informe)
+    if (n == null) return null
+    const when = whenIso ? new Date(whenIso) : null
+    const year = when && !Number.isNaN(when.getTime()) ? when.getFullYear() : new Date().getFullYear()
+    return `INF-${year}-${String(n).padStart(3, '0')}`
+  }
+
+  const computeEnsayosFromServicios = (servicios?: Array<{ cantidad?: number | null; estadoOperativo?: string | null }>) => {
+    let total = 0
+    let ensayados = 0
+    for (const s of servicios ?? []) {
+      const qty = Number(s?.cantidad ?? 0)
+      total += qty
+      if (String(s?.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
+    }
+    return { total, ensayados }
+  }
+
+  const openCodigoProductoDialog = async (row: any) => {
+    setCodigoDialogMeta(row)
+    setCodigoDialogData(null)
+    setCodigoDialogDigitadoAt(null)
+    setCodigoDialogOpen(true)
+
+    const codigoId = Number(row?.id)
+    const repRcmId = Number(row?.representativeRcmId)
+
+    try {
+      setCodigoDialogLoading(true)
+
+      // 1) detalle del código
+      if (Number.isFinite(codigoId) && codigoId > 0) {
+        const res = await fetch(`/api/codigo-agrupador/${codigoId}`)
+        if (res.ok) {
+          const json = await res.json().catch(() => null)
+          setCodigoDialogData(json)
+        }
+      }
+
+      // 2) fecha último DIGITADO desde historial del representative RCM
+      if (Number.isFinite(repRcmId) && repRcmId > 0) {
+        const cached = historyCache.get(repRcmId)
+        const rows = cached
+          ? cached
+          : await (async () => {
+              const res = await fetch(`/api/rcm/${repRcmId}/history`)
+              if (!res.ok) return []
+              const json = await res.json().catch(() => [])
+              const arr = Array.isArray(json) ? json : []
+              historyCache.set(repRcmId, arr)
+              return arr
+            })()
+
+        const hit = (rows ?? []).find((h: any) => {
+          const est = String(h?.estNuevo ?? h?.tipoEstado ?? '').trim().toUpperCase()
+          return est === 'DIGITADO'
+        })
+        const when = hit?.fechaAccion ?? hit?.createdAt ?? null
+        if (when) setCodigoDialogDigitadoAt(String(when))
+      }
+    } catch (e) {
+      console.error('openCodigoProductoDialog error', e)
+    } finally {
+      setCodigoDialogLoading(false)
+    }
+  }
+
+  const closeCodigoProductoDialog = () => {
+    setCodigoDialogOpen(false)
+    setCodigoDialogLoading(false)
+    setCodigoDialogMeta(null)
+    setCodigoDialogData(null)
+    setCodigoDialogDigitadoAt(null)
+  }
+
+  const validateInformeDialog = () => {
+    const nums = informeDrafts.map(d => parseInformeNumber(d.numero)).filter((n): n is number => typeof n === 'number')
+    const primary = parseInformeNumber(informeDrafts[0]?.numero)
+
+    const errors: { general?: string; numero?: string } = {}
+    if (!informeDialogRcmId) errors.general = 'RCM no seleccionado'
+    if (informeDrafts.length === 0) errors.numero = 'Agregue al menos un informe'
+    else if (primary == null) errors.numero = 'Ingrese N° de informe (Informe 1)'
+    setInformeDialogErrors(errors)
+    return { ok: Object.keys(errors).length === 0, nums, primary }
+  }
+
+  const handleConfirmInformeDialog = async () => {
+    const { ok, primary } = validateInformeDialog()
+    if (!ok) return
+
+    const rcmId = informeDialogRcmId
+    if (!rcmId) return
+
+    const informeToPersist = primary
+    if (informeToPersist == null) return
+
+    try {
+      setSavingInformeDialog(true)
+      const prevState = getCurrentStateForRow(rcmId)
+
+      const payload: any = {
+        tipo: 'Ope',
+        tipoEstado: 'DIGITADO',
+        motivo: null,
+        observacion: null,
+        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : null,
+        estPrev: prevState ?? null,
+        estNuevo: 'DIGITADO',
+        informe: informeToPersist
+      }
+
+      const res = await fetch(`/api/rcm/${rcmId}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        console.error('Failed to save informe history:', res.status, txt)
+        throw new Error('Error al guardar informe')
+      }
+
+      const created = await res.json().catch(() => null)
+
+      // actualizar fila en UI (estado + N° informe)
+      setData(prev =>
+        prev.map(d =>
+          d.id === rcmId || (d as any).representativeRcmId === rcmId
+            ? { ...d, estadoOperativo: 'DIGITADO', informe: informeToPersist }
+            : d
+        )
+      )
+      setFilteredData(prev =>
+        prev.map(d =>
+          d.id === rcmId || (d as any).representativeRcmId === rcmId
+            ? { ...d, estadoOperativo: 'DIGITADO', informe: informeToPersist }
+            : d
+        )
+      )
+
+      // cache historial
+      const newHistEntry = created ?? {
+        tipo: payload.tipo,
+        funcionario: payload.funcionario ?? 'Usuario',
+        estAnterior: payload.estPrev ?? null,
+        estNuevo: payload.estNuevo ?? null,
+        informe: payload.informe ?? null,
+        fechaAccion: new Date().toISOString(),
+        observacion: payload.observacion ?? null
+      }
+      historyCache.set(rcmId, [newHistEntry, ...(historyCache.get(rcmId) ?? [])])
+      if (histDialogOpen && histRowId === rcmId) {
+        setHistRows(prev => [newHistEntry, ...prev])
+      }
+
+      closeInformeDialog()
+    } catch (e) {
+      console.error('handleConfirmInformeDialog error', e)
+      setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo confirmar el informe.' }))
+    } finally {
+      setSavingInformeDialog(false)
+    }
   }
 
   const openMarkDialogForRow = (action: string, rowId?: number | null) => {
@@ -447,10 +689,49 @@ const UserListTable2 = ({
     setMarkDialogOpen(true)
   }
 
+  const findAggregatedRowByRepresentativeRcmId = (rcmId: number) => {
+    const fromData = data.find(d => Number((d as any).representativeRcmId) === rcmId)
+    if (fromData) return fromData
+    return filteredData.find(d => Number((d as any).representativeRcmId) === rcmId) ?? null
+  }
+
+  const openInformeDialogFromMark = async (rcmId: number) => {
+    const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
+    if (!agg) {
+      // abrir de todas formas, pero sin detalle (no debería pasar si se ejecuta desde una fila visible)
+      await openInformeDialog(null, rcmId, null)
+      setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo asociar el RCM a un Código Producto.' }))
+      handleCloseMarkMenu()
+      return
+    }
+
+    await openInformeDialog((agg as any).id, rcmId, {
+      codigoNombre: (agg as any).codigoNombre,
+      ss: (agg as any).ss,
+      ot: (agg as any).ot,
+      cliente: (agg as any).cliente,
+      obra: (agg as any).obra,
+      area: (agg as any).area,
+      familia: (agg as any).familia
+    })
+    handleCloseMarkMenu()
+  }
+
   const handleMarkAction = async (action: string, rowId?: number | null) => {
+    // DIGITADO ahora usa el nuevo popup "Gestionar Informe"
+    if (action === 'DIGITADO') {
+      const rcmId = rowId ?? markRowId ?? null
+      if (!rcmId) {
+        console.warn('handleMarkAction: missing rowId for DIGITADO')
+        handleCloseMarkMenu()
+        return
+      }
+      await openInformeDialogFromMark(rcmId)
+      return
+    }
+
     // acciones que requieren diálogo (incluye las que ahora exigen observación obligatoria)
     const ACTIONS_REQUIRING_DIALOG = new Set([
-      'DIGITADO',
       'EVENTO',
       'CERRADO_OP',
       'ENVIADO_DIGITACION',
@@ -1306,6 +1587,17 @@ const UserListTable2 = ({
 
             <IconButton
               size='small'
+              title='Código Producto'
+              onClick={e => {
+                e.stopPropagation()
+                openCodigoProductoDialog(row.original)
+              }}
+            >
+              <AssignmentOutlinedIcon fontSize='small' />
+            </IconButton>
+
+            <IconButton
+              size='small'
               title='Marcar'
               disabled={!row.original.representativeRcmId}
               onClick={e => {
@@ -1315,6 +1607,27 @@ const UserListTable2 = ({
               }}
             >
               <CheckBoxOutlinedIcon fontSize='small' />
+            </IconButton>
+
+            <IconButton
+              size='small'
+              title='Informes'
+              disabled={!row.original.representativeRcmId}
+              onClick={e => {
+                e.stopPropagation()
+                if (!row.original.representativeRcmId) return
+                openInformeDialog(row.original.id, row.original.representativeRcmId, {
+                  codigoNombre: row.original.codigoNombre,
+                  ss: row.original.ss,
+                  ot: row.original.ot,
+                  cliente: row.original.cliente,
+                  obra: row.original.obra,
+                  area: row.original.area,
+                  familia: row.original.familia
+                })
+              }}
+            >
+              <DescriptionOutlinedIcon fontSize='small' />
             </IconButton>
 
             <IconButton
@@ -1622,19 +1935,649 @@ const UserListTable2 = ({
         })()}
       </Menu>
 
+      {/* Dialog: Código Producto (nuevo) */}
+      <Dialog open={codigoDialogOpen} onClose={closeCodigoProductoDialog} maxWidth='md' fullWidth>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant='subtitle1' sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                {`Código Producto — ${String(codigoDialogMeta?.codigoNombre ?? codigoDialogData?.codigoNombre ?? '').trim() || '—'}`}
+              </Typography>
+              <Typography
+                variant='caption'
+                color='text.secondary'
+                sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {(() => {
+                  const ot = String(codigoDialogMeta?.ot ?? '').trim()
+                  const clienteName =
+                    String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
+                    String(codigoDialogMeta?.clienteNombre ?? '').trim()
+                  const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
+                  const obraTxt = obraNum ? `Obra ${obraNum}` : ''
+                  return [ot ? `OT ${ot}` : '', clienteName, obraTxt].filter(Boolean).join(' · ') || ' '
+                })()}
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              {(() => {
+                const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
+                if (!op) return null
+                const info = getOperationalInfo(op)
+                const label = OPERATIONAL_STATES.find(s => s.value === String(op).trim().toUpperCase())?.label ?? op
+                const dateTxt = codigoDialogDigitadoAt ? ` (${formatDateDDMMYYYYDateOnly(codigoDialogDigitadoAt)})` : ''
+                return (
+                  <Chip
+                    size='small'
+                    label={`${label}${String(op).trim().toUpperCase() === 'DIGITADO' ? dateTxt : ''}`}
+                    sx={{
+                      bgcolor: info.bgcolor,
+                      color: info.colorText,
+                      border: `1px solid ${info.border}`,
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                      borderRadius: 999
+                    }}
+                  />
+                )
+              })()}
+
+              {(() => {
+                const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
+                if (!adm) return null
+                const info = getAdministrativeInfo(adm)
+                return (
+                  <Chip
+                    size='small'
+                    label={adm}
+                    sx={{
+                      bgcolor: info.bgcolor,
+                      color: info.colorText,
+                      border: `1px solid ${info.border}`,
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                      borderRadius: 999
+                    }}
+                  />
+                )
+              })()}
+
+              {(() => {
+                const inf = formatInformeMock(codigoDialogMeta?.informe, codigoDialogDigitadoAt)
+                if (!inf) return null
+                return (
+                  <Chip
+                    size='small'
+                    label={inf}
+                    variant='outlined'
+                    sx={{ fontWeight: 800, borderRadius: 999 }}
+                  />
+                )
+              })()}
+
+              <IconButton aria-label='Cerrar' onClick={closeCodigoProductoDialog} size='small'>
+                <CloseIcon fontSize='small' />
+              </IconButton>
+            </Box>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 0.5 }}>
+          <Divider sx={{ mb: 2 }} />
+
+          {/* tarjetas resumen */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 1.5, mb: 2 }}>
+            {(
+              [
+                { k: 'FECHA CODIFICACIÓN', v: formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-' },
+                { k: 'ÁREA', v: String(codigoDialogMeta?.area ?? '').trim() || '-' },
+                { k: 'TIPO DE SERVICIO', v: String(codigoDialogMeta?.familia ?? '').trim() || '-' },
+                { k: 'SOLICITUD DE SERVICIO', v: String(codigoDialogMeta?.ss ?? '').trim() || '-' },
+                { k: 'DESCRIPCIÓN', v: String(codigoDialogData?.descripcionServicio ?? '').trim() || '-' },
+                { k: 'SEDE(S)', v: String(codigoDialogMeta?.ciudad ?? '').trim() || '-' }
+              ] as Array<{ k: string; v: string }>
+            ).map(item => (
+              <Paper
+                key={item.k}
+                variant='outlined'
+                sx={theme => ({
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.text.primary, 0.03),
+                  borderColor: alpha(theme.palette.text.primary, 0.08)
+                })}
+              >
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block' }}>
+                  {item.k}
+                </Typography>
+                <Typography variant='body2'>
+                  {item.v}
+                </Typography>
+              </Paper>
+            ))}
+          </Box>
+
+          {/* SKUs */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
+              SKUs del Código Producto
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {(() => {
+                const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
+                const uniq = new Map<string, { sku: string; nombre: string }>()
+                for (const e of ens) {
+                  const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
+                  const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
+                  if (!sku) continue
+                  if (!uniq.has(sku)) uniq.set(sku, { sku, nombre })
+                }
+                const items = Array.from(uniq.values())
+                if (items.length === 0) return <Typography variant='body2'>-</Typography>
+                return items.slice(0, 24).map(it => (
+                  <Chip
+                    key={it.sku}
+                    size='small'
+                    label={`${it.sku} — ${it.nombre || ''}`.trim()}
+                    sx={{ fontWeight: 800, borderRadius: 999, bgcolor: alpha('#3b82f6', 0.12) }}
+                  />
+                ))
+              })()}
+            </Box>
+          </Box>
+
+          {/* RCMs vinculados */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
+              RCMs vinculados ({Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms.length : 0})
+            </Typography>
+
+            <Paper variant='outlined' sx={{ borderRadius: 2, overflow: 'hidden' }}>
+              <Box sx={{ p: 0 }}>
+                <TableContainer>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 800 }}>N° RCM</TableCell>
+                        <TableCell align='center' sx={{ fontWeight: 800 }}>TIPO</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>ENSAYOS Y SERVICIOS</TableCell>
+                        <TableCell align='center' sx={{ fontWeight: 800 }}>ESTADO</TableCell>
+                        <TableCell align='right' sx={{ fontWeight: 800 }} />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {codigoDialogLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
+                            <CircularProgress size={24} />
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        (Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []).map((r: any) => {
+                          const ens = computeEnsayosFromServicios(r?.servicios)
+                          const pct = ens.total > 0 ? Math.round((ens.ensayados / ens.total) * 100) : 0
+                          const op = String(r?.estadoOperativo ?? '').trim()
+                          const opInfo = getOperationalInfo(op)
+
+                          const rcmLabel = (() => {
+                            const raw = String(r?.numeroRcm ?? '').trim()
+                            if (!raw) return `RCM-${String(r?.id ?? '').padStart(3, '0')}`
+                            if (/^RCM-\d+/i.test(raw)) return raw
+                            if (/^\d+$/.test(raw)) return `RCM-${raw.padStart(3, '0')}`
+                            return raw
+                          })()
+
+                          return (
+                            <TableRow key={String(r?.id)}>
+                              <TableCell sx={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>{rcmLabel}</TableCell>
+                              <TableCell align='center'>
+                                <Chip
+                                  size='small'
+                                  label={String(r?.rcmType ?? 'MUESTRA').toUpperCase()}
+                                  sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 800, fontSize: '0.72rem' }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                  <Box sx={{ width: 90 }}>
+                                    <Box sx={{ height: 6, borderRadius: 999, bgcolor: alpha('#000', 0.08), overflow: 'hidden' }}>
+                                      <Box sx={{ height: 6, width: `${pct}%`, bgcolor: 'success.main' }} />
+                                    </Box>
+                                  </Box>
+                                  <Typography variant='caption' sx={{ fontWeight: 800 }}>{`${ens.ensayados}/${ens.total}`}</Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell align='center'>
+                                <Chip
+                                  size='small'
+                                  label={OPERATIONAL_STATES.find(s => s.value === op.toUpperCase())?.label ?? op || '-'}
+                                  sx={{
+                                    bgcolor: opInfo.bgcolor,
+                                    color: opInfo.colorText,
+                                    border: `1px solid ${opInfo.border}`,
+                                    textTransform: 'uppercase',
+                                    fontWeight: 700,
+                                    fontSize: '0.72rem',
+                                    borderRadius: 2
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell align='right'>
+                                <Button
+                                  size='small'
+                                  variant='outlined'
+                                  onClick={() => {
+                                    const id = Number(r?.id)
+                                    if (!id) return
+                                    if (typeof window === 'undefined') return
+                                    const parts = window.location.pathname.split('/').filter(Boolean)
+                                    const lang = parts[0] || 'en'
+                                    window.open(`${window.location.origin}/${lang}/apps/rcm-edit/${id}?readonly=1`, '_blank')
+                                  }}
+                                  sx={{ textTransform: 'none', borderRadius: 999 }}
+                                >
+                                  Ver más {'>'}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Paper>
+          </Box>
+
+          {/* Informes a generar (mockup) */}
+          <Box sx={{ mb: 1 }}>
+            <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
+              Informes a generar
+            </Typography>
+
+            <Paper
+              variant='outlined'
+              sx={theme => ({
+                p: 2,
+                borderRadius: 2,
+                borderColor: alpha(theme.palette.success.main, 0.55),
+                bgcolor: alpha(theme.palette.success.main, 0.08)
+              })}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                  <CheckBoxOutlinedIcon sx={{ color: 'success.main' }} fontSize='small' />
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                      {String(codigoDialogMeta?.familia ?? 'Informe').trim() || 'Informe'}
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                      R-L-002 · Manual · Listo para generar
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography variant='body2' sx={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>
+                  {formatInformeMock(codigoDialogMeta?.informe, codigoDialogDigitadoAt) ?? 'INF-2026-034'}
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={closeCodigoProductoDialog} sx={{ textTransform: 'none' }}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog: Gestionar Informe (nuevo) */}
+      <Dialog open={informeDialogOpen} onClose={closeInformeDialog} maxWidth='md' fullWidth>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant='subtitle1' sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                Gestionar Informe
+              </Typography>
+              <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {(() => {
+                  const code = String(informeDialogMeta?.codigoNombre ?? informeDialogData?.codigoNombre ?? '').trim()
+                  const clienteName =
+                    String(informeDialogMeta?.cliente?.razonSocial ?? informeDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
+                    String(informeDialogData?.cliente?.razonSocial ?? informeDialogData?.cliente?.nombreCliente ?? '').trim()
+                  const obraNum = String(informeDialogMeta?.obra?.numeroObra ?? '').trim()
+                  const obraName = String(informeDialogMeta?.obra?.nombreObra ?? '').trim()
+                  const obraTxt = obraNum || obraName ? `Obra ${obraNum || obraName}` : ''
+                  return [code, clienteName, obraTxt].filter(Boolean).join(' - ') || ' '
+                })()}
+              </Typography>
+            </Box>
+
+            <IconButton aria-label='Cerrar' onClick={closeInformeDialog} size='small'>
+              <CloseIcon fontSize='small' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 0.5 }}>
+          <Divider sx={{ mb: 2 }} />
+
+          {informeDialogErrors.general && (
+            <Typography variant='body2' color='error' sx={{ mb: 2 }}>
+              {informeDialogErrors.general}
+            </Typography>
+          )}
+
+          <Paper
+            variant='outlined'
+            sx={theme => ({
+              p: 2,
+              mb: 2,
+              bgcolor: alpha(theme.palette.primary.main, 0.05),
+              borderColor: alpha(theme.palette.primary.main, 0.22)
+            })}
+          >
+            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block' }}>
+              DESCRIPCIÓN DEL SERVICIO
+            </Typography>
+            <Typography variant='subtitle2' sx={{ fontWeight: 800, mt: 0.25 }}>
+              {String(informeDialogData?.descripcionServicio ?? '').trim() || '—'}
+            </Typography>
+            <Typography variant='caption' color='text.secondary'>
+              {(() => {
+                const area = String(informeDialogMeta?.area ?? '').trim()
+                const familia = String(informeDialogMeta?.familia ?? '').trim()
+                const ot = String(informeDialogMeta?.ot ?? '').trim()
+                const ss = String(informeDialogMeta?.ss ?? '').trim()
+                const parts = [area, familia].filter(Boolean).join(' - ')
+                const trail = [ot ? `OT ${ot}` : '', ss ? `SS ${ss}` : ''].filter(Boolean).join(' · ')
+                return [parts, trail].filter(Boolean).join(' · ') || ' '
+              })()}
+            </Typography>
+          </Paper>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+            <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+              Informes manuales{' '}
+              <Typography component='span' variant='caption' color='text.secondary'>
+                — {(informeDialogData?.ensayos?.length ?? 0)} SKU{(informeDialogData?.ensayos?.length ?? 0) === 1 ? '' : 's'}
+              </Typography>
+            </Typography>
+
+            <Button
+              variant='contained'
+              size='small'
+              onClick={() => {
+                setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+                setInformeDrafts(prev => {
+                  if (prev.length >= 10) return prev
+                  const nextId = `${Date.now()}-${prev.length + 1}`
+                  return [...prev, { id: nextId, numero: '', observaciones: '', anexoPrev: '' }]
+                })
+              }}
+              sx={{ textTransform: 'none', borderRadius: 2 }}
+            >
+              + Añadir informe
+            </Button>
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+              SKUS A INCLUIR:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {(informeDialogData?.ensayos ?? []).slice(0, 24).map((e: any, idx: number) => (
+                <Box key={`${e?.id ?? idx}`} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip size='small' label={String(e?.sku ?? e?.producto?.sku ?? '').trim() || '—'} sx={{ fontWeight: 800 }} />
+                  <Typography variant='body2' sx={{ whiteSpace: 'nowrap' }}>
+                    {String(e?.nombre ?? e?.producto?.nombre ?? '').trim() || '—'}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {informeDialogLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : informeDrafts.length === 0 ? (
+            <Paper
+              variant='outlined'
+              sx={theme => ({
+                p: 3,
+                mb: 2,
+                borderStyle: 'dashed',
+                borderColor: alpha(theme.palette.text.primary, 0.2),
+                bgcolor: alpha(theme.palette.text.primary, 0.02),
+                textAlign: 'center'
+              })}
+            >
+              <Typography variant='body2' color='text.secondary'>
+                Haz click en <strong>+ Añadir informe</strong> para crear el primer informe.
+              </Typography>
+              <Typography variant='caption' color='text.secondary'>
+                Puedes crear tantos informes como necesites (1 por tipo de resultado).
+              </Typography>
+            </Paper>
+          ) : (
+            <Box sx={{ mb: 2 }}>
+              {informeDrafts.map((d, idx) => (
+                (() => {
+                  const isOk = parseInformeNumber(d.numero) != null
+                  return (
+                <Paper
+                  key={d.id}
+                  variant='outlined'
+                  sx={theme => ({
+                    p: 2,
+                    mb: 2,
+                    borderRadius: 2,
+                    borderColor: isOk ? alpha(theme.palette.success.main, 0.55) : alpha(theme.palette.text.primary, 0.18),
+                    bgcolor: isOk ? alpha(theme.palette.success.main, 0.08) : 'transparent'
+                  })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                      <CheckBoxOutlinedIcon fontSize='small' sx={theme => ({ color: isOk ? theme.palette.success.main : theme.palette.text.disabled })} />
+                      <Typography variant='subtitle2' sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
+                        Informe {idx + 1}
+                      </Typography>
+                    </Box>
+
+                    <IconButton
+                      size='small'
+                      aria-label='Eliminar informe'
+                      onClick={() => setInformeDrafts(prev => prev.filter(x => x.id !== d.id))}
+                      sx={{ color: 'error.main' }}
+                    >
+                      <CloseIcon fontSize='small' />
+                    </IconButton>
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                    <TextField
+                      label='N° INFORME *'
+                      placeholder='Ej: INF-2026-045'
+                      value={d.numero}
+                      onChange={e => {
+                        const v = e.target.value
+                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, numero: v } : x)))
+                        if (informeDialogErrors.numero) setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+                      }}
+                      size='small'
+                      fullWidth
+                      error={!!informeDialogErrors.numero && idx === 0}
+                      helperText={idx === 0 ? informeDialogErrors.numero : undefined}
+                    />
+
+                    <TextField
+                      label='OBSERVACIONES'
+                      placeholder='Ej: Informe de suelo — Calicata Cal-1'
+                      value={d.observaciones}
+                      onChange={e => {
+                        const v = e.target.value
+                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, observaciones: v } : x)))
+                      }}
+                      size='small'
+                      fullWidth
+                    />
+                  </Box>
+
+                  <Box sx={{ mt: 2 }}>
+                    <TextField
+                      label='ANEXO — N° DE VERSIÓN ANTERIOR (OPCIONAL)'
+                      placeholder='Si este informe reemplaza a otro, indica el N° anterior (ej: INF-2026-040)'
+                      value={d.anexoPrev}
+                      onChange={e => {
+                        const v = e.target.value
+                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, anexoPrev: v } : x)))
+                      }}
+                      size='small'
+                      fullWidth
+                    />
+                  </Box>
+                </Paper>
+                  )
+                })()
+              ))}
+
+              <Button
+                variant='outlined'
+                fullWidth
+                onClick={() => {
+                  setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+                  setInformeDrafts(prev => {
+                    if (prev.length >= 10) return prev
+                    const nextId = `${Date.now()}-${prev.length + 1}`
+                    return [...prev, { id: nextId, numero: '', observaciones: '', anexoPrev: '' }]
+                  })
+                }}
+                sx={theme => ({
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  borderStyle: 'dashed',
+                  borderColor: alpha(theme.palette.primary.main, 0.55)
+                })}
+              >
+                + Añadir otro informe
+              </Button>
+            </Box>
+          )}
+
+          {(() => {
+            const total = informeDrafts.length
+            const assigned = informeDrafts.filter(d => parseInformeNumber(d.numero) != null).length
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mt: 1 }}>
+                <Box>
+                  <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+                    {assigned} de {total} informes con N° asignado
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary'>
+                    Al confirmar, el CP pasa a Digitado y el N° queda visible en la tabla.
+                  </Typography>
+                </Box>
+                <Typography variant='h4' color='text.disabled' sx={{ fontWeight: 800 }}>
+                  {assigned}/{total}
+                </Typography>
+              </Box>
+            )
+          })()}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={closeInformeDialog} sx={{ textTransform: 'none' }}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            onClick={handleConfirmInformeDialog}
+            disabled={savingInformeDialog || parseInformeNumber(informeDrafts[0]?.numero) == null}
+            sx={{ textTransform: 'none', borderRadius: 2 }}
+          >
+            {savingInformeDialog ? 'Confirmando…' : 'Confirmar y marcar como Digitado'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Dialog: Form "Estado Muestra" para acciones (Digitado, EVENTO, CERRADO_OP, ...) */}
       <Dialog open={markDialogOpen} onClose={handleCancelMarkDialog} maxWidth='sm' fullWidth>
-        <DialogTitle>Estado Muestra</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              {(() => {
+                const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                const currentInfo = getOperationalInfo(currentState)
+                const currentLabel = OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || 'Estado')
+                return (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Chip
+                      size='small'
+                      label={currentLabel}
+                      sx={{
+                        bgcolor: currentInfo.bgcolor,
+                        color: currentInfo.colorText,
+                        border: `1px solid ${currentInfo.border}`,
+                        fontWeight: 700,
+                        borderRadius: 2
+                      }}
+                    />
+                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {formatDateDDMMYYYYDateOnlyDash(new Date())}
+                    </Typography>
+                  </Box>
+                )
+              })()}
+            </Box>
+
+            <IconButton aria-label='Cerrar' onClick={handleCancelMarkDialog} size='small'>
+              <CloseIcon fontSize='small' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 0.5 }}>
+          <Divider sx={{ mb: 2 }} />
+
+          {(() => {
+            const targetLabel = OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')
+            if (!targetLabel) return null
+            return (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, display: 'block', mb: 0.75 }}>
+                  Avanzar a:
+                </Typography>
+                <Box
+                  sx={theme => ({
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.55)}`,
+                    bgcolor: alpha(theme.palette.primary.main, 0.06),
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1.25,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 2
+                  })}
+                >
+                  <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+                    {targetLabel}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+                    {markDialogAction === 'ENSAYADO' ? 'Todos los ensayos completados' : ' '}
+                  </Typography>
+                </Box>
+              </Box>
+            )
+          })()}
+
           {markDialogAction === 'DIGITADO' && (
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
-              <FormControl fullWidth size='small'>
-                <InputLabel id='mark-action-label'>Acción</InputLabel>
-                <Select labelId='mark-action-label' value={markDialogAction ?? ''} label='Acción' disabled>
-                  <MenuItemMUI value='DIGITADO'>Digitado</MenuItemMUI>
-                </Select>
-              </FormControl>
-
               <TextField
                 label='N° de Informe'
                 value={informeNumber}
@@ -1649,38 +2592,21 @@ const UserListTable2 = ({
 
           {(markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <FormControl fullWidth size='small'>
-                  <InputLabel id='mark-action-state-label'>Estado</InputLabel>
-                  <Select
-                    labelId='mark-action-state-label'
-                    value={markDialogAction ?? ''}
-                    label='Estado'
-                    disabled
-                  >
-                    <MenuItemMUI value={markDialogAction ?? ''}>
-
-                      {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
-                    </MenuItemMUI>
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth size='small' error={!!formErrors.eventType}>
-                  <InputLabel id='event-type-label'>Tipo</InputLabel>
-                  <Select
-                    labelId='event-type-label'
-                    value={eventType}
-                    label='Tipo'
-                    onChange={e => setEventType(String(e.target.value))}
-                    size='small'
-                  >
-                    <MenuItemMUI value='INFO_PENDIENTE'>Información Pendiente</MenuItemMUI>
-                    <MenuItemMUI value='ERROR_INTERNO'>Error Interno</MenuItemMUI>
-                    <MenuItemMUI value='CORRECCION'>Corrección</MenuItemMUI>
-                  </Select>
-                  {formErrors.eventType && <FormHelperText>{formErrors.eventType}</FormHelperText>}
-                </FormControl>
-              </Box>
+              <FormControl fullWidth size='small' error={!!formErrors.eventType}>
+                <InputLabel id='event-type-label'>Tipo</InputLabel>
+                <Select
+                  labelId='event-type-label'
+                  value={eventType}
+                  label='Tipo'
+                  onChange={e => setEventType(String(e.target.value))}
+                  size='small'
+                >
+                  <MenuItemMUI value='INFO_PENDIENTE'>Información Pendiente</MenuItemMUI>
+                  <MenuItemMUI value='ERROR_INTERNO'>Error Interno</MenuItemMUI>
+                  <MenuItemMUI value='CORRECCION'>Corrección</MenuItemMUI>
+                </Select>
+                {formErrors.eventType && <FormHelperText>{formErrors.eventType}</FormHelperText>}
+              </FormControl>
 
               <TextField
                 label='Motivo'
@@ -1693,7 +2619,7 @@ const UserListTable2 = ({
               />
 
               <TextField
-                label='Observaciones'
+                label='Observación (opcional)'
                 value={correctionObservaciones}
                 onChange={e => setCorrectionObservaciones(e.target.value)}
                 size='small'
@@ -1707,15 +2633,6 @@ const UserListTable2 = ({
           {/* Estados que requieren observación obligatoria */}
           {['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-              <FormControl fullWidth size='small'>
-                <InputLabel id='mark-action-label-obs'>Acción</InputLabel>
-                <Select labelId='mark-action-label-obs' value={markDialogAction ?? ''} label='Acción' disabled>
-                  <MenuItemMUI value={markDialogAction ?? ''}>
-                    {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
-                  </MenuItemMUI>
-                </Select>
-              </FormControl>
-
               <TextField
                 label='Observación (obligatoria)'
                 value={correctionObservaciones}
@@ -1730,15 +2647,34 @@ const UserListTable2 = ({
                 error={!!formErrors.observacion}
                 helperText={formErrors.observacion || 'Ingrese una observación antes de confirmar el cambio de estado.'}
               />
+
+              <Typography variant='caption' color='text.secondary'>
+                Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
+              </Typography>
             </Box>
           )}
 
-          {/* Otros actions pueden añadirse aquí con condiciones similares */}
+          {/* Nota visual (no afecta lógica) */}
+          {!['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
+            <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
+              Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelMarkDialog}>Cerrar</Button>
-          <Button variant='contained' onClick={handleSaveMarkDialog} disabled={savingHistory || !validateMarkDialog(false)}>
-            {savingHistory ? 'Guardando...' : 'Guardar'}
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelMarkDialog} sx={{ textTransform: 'none' }}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            onClick={handleSaveMarkDialog}
+            disabled={savingHistory || !validateMarkDialog(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            {savingHistory
+              ? 'Guardando...'
+              : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
           </Button>
         </DialogActions>
       </Dialog>
