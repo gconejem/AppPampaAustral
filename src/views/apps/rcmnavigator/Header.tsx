@@ -44,8 +44,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedFamilia('') // Resetear familia cuando cambia el área
 
     // obtener nombre desde areaOptions (no usar variable indefinida)
-    const found = (areaOptions ?? []).find((a: any) => String(a.id) === String(value) || String(a.value) === String(value))
-    const name = found ? (found.nombre ?? found.name ?? found.label ?? found.text ?? '') : ''
+    const found = (areaOptions ?? []).find(a => String(a.id) === String(value))
+    const name = found?.nombre ?? ''
     setSelectedAreaName(name)
 
     // emitir inmediatamente con id + nombre (familia reseteada)
@@ -325,6 +325,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
       </Grid>
+
     </Box>
   )
 }

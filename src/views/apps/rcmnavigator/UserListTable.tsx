@@ -4,7 +4,6 @@
 import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
-import { useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -14,12 +13,11 @@ import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
-import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import TablePagination from '@mui/material/TablePagination'
-import { styled } from '@mui/material/styles'
+import { styled, alpha } from '@mui/material/styles'
 import type { TextFieldProps } from '@mui/material/TextField'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -35,6 +33,7 @@ import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import Paper from '@mui/material/Paper'
+import CloseIcon from '@mui/icons-material/Close'
 
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
@@ -48,9 +47,6 @@ import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DownloadIcon from '@mui/icons-material/Download'
-
-// Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
@@ -61,7 +57,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+import type { ColumnDef, FilterFn } from '@tanstack/table-core'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Style Imports
@@ -160,6 +156,19 @@ const getAdministrativeStateColor = (raw?: string) => {
 // RCM type (kept)
 interface RCM {
   id: number
+  // Tabla principal ahora muestra Códigos Producto (agrupadores)
+  codigoNombre?: string | null
+  ss?: string | null
+  totalRcms?: number | null
+  conEvento?: boolean
+  informe?: number | null
+  ensayos?: { ensayados: number; total: number } | null
+  estadoOperativoCounts?: Record<string, number>
+  estadoAdministrativoCounts?: Record<string, number>
+  ciudad?: string | null
+  representativeRcmId?: number | null
+
+  // campos comunes usados por filtros/tabla
   numeroRcm: string
   ot?: string
   fechaCodificacion: string
@@ -174,12 +183,16 @@ interface RCM {
   familia?: string
   obra?: {
     numeroObra?: string
-  }
+    nombreObra?: string
+  } | null
   servicios?: Array<{
     codigo: string
     nombre: string
     cantidad: number
   }>
+
+  // Compatibilidad con lógica legacy (menús/diálogos que quedan deshabilitados)
+  [key: string]: any
 }
 
 interface Filters {
@@ -196,14 +209,29 @@ interface Filters {
 // Component
 const columnHelper = createColumnHelper<RCM>()
 
-const UserListTable2 = ({ filters }: { filters?: Filters }) => {
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+const UserListTable2 = ({
+  filters,
+  onSelectCodigo,
+  forceShowSs,
+  onForceShowSsChange
+}: {
+  filters?: Filters
+  onSelectCodigo?: (codigoAgrupadorId: number) => void
+  forceShowSs?: boolean
+  onForceShowSsChange?: (next: boolean) => void
+}) => {
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
   const [savingHistory, setSavingHistory] = useState(false)
-  const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
+  const [formErrors, setFormErrors] = useState<{
+    eventType?: string
+    motivo?: string
+    informeNumber?: string
+    observacion?: string
+    general?: string
+  }>({})
 
 
   // helper: convertir hex -> rgba
@@ -259,6 +287,32 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [menuRowId, setMenuRowId] = useState<number | null>(null)
 
+  const normalizeStateKey = (raw?: string | null) => {
+    const s = String(raw ?? '').trim()
+    if (!s) return null
+    if (s.includes('_')) return s.toUpperCase()
+    return s.toUpperCase().replace(/\s+/g, '_')
+  }
+
+  const pickStateFromCounts = (counts: Record<string, number> | undefined, priority: string[]) => {
+    if (!counts) return null
+    for (const p of priority) {
+      if ((counts[p] ?? 0) > 0) return p
+    }
+    const keys = Object.keys(counts)
+    if (!keys.length) return null
+    let best: string | null = null
+    let bestN = -1
+    for (const k of keys) {
+      const n = Number(counts[k] ?? 0)
+      if (n > bestN) {
+        bestN = n
+        best = k
+      }
+    }
+    return best
+  }
+
   // Menu "Marcar" state (falta declararlo)
   const [markAnchorEl, setMarkAnchorEl] = useState<null | HTMLElement>(null)
   const [markRowId, setMarkRowId] = useState<number | null>(null)
@@ -277,12 +331,52 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   // ---- Helpers que dependen de `data` (dentro del componente) ----
   const normalizeState = (s?: string) => (s ?? '').toString().toUpperCase().trim()
 
+  const normalizeStateForCompare = (raw?: any) => {
+    const key = normalizeStateKey(raw)
+    return key ?? normalizeState(raw)
+  }
+
+  const formatStateForChip = (raw?: any) => {
+    const key = normalizeStateForCompare(raw)
+    if (!key) return '-'
+    return String(key).replace(/_/g, ' ')
+  }
+
   const getCurrentStateForRow = (rowId?: number | null) => {
     if (rowId == null) return ''
-    const r = data.find(d => d.id === rowId)
+    const target = Number(rowId)
+    const r = data.find(d => {
+      const dId = Number((d as any).id)
+      const rep = (d as any).representativeRcmId
+      const repId = rep == null ? null : Number(rep)
+      return dId === target || (repId != null && repId === target)
+    })
     if (!r) return ''
-    const s = r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
-    return normalizeState(s)
+
+    // 1) prefer explicit estadoOperativo
+    const s1 = r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
+    const key1 = normalizeStateKey(s1) ?? normalizeState(s1)
+    if (key1) return key1
+
+    // 2) fallback: infer from aggregated counts (if available)
+    const counts = (r as any).estadoOperativoCounts as Record<string, number> | undefined
+    if (counts && typeof counts === 'object') {
+      const inferred = pickStateFromCounts(counts, [
+        'EVENTO',
+        'EN_PROCESO',
+        'CODIFICADO',
+        'ENSAYADO',
+        'ENVIADO_DIGITACION',
+        'DIGITADO',
+        'REVISADO',
+        'FIRMADO',
+        'ENVIADO'
+      ])
+      const key2 = normalizeStateKey(inferred) ?? normalizeState(inferred ?? '')
+      if (key2) return key2
+    }
+
+    return ''
   }
 
   // Devuelve los estados para el popup "marcar"
@@ -393,7 +487,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     try {
       // optimista: actualizar UI localmente
-      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: action } : d)))
+      setData(prev => prev.map(d => (d.id === rowId || d.representativeRcmId === rowId ? { ...d, estadoOperativo: action } : d)))
 
       const res = await fetch(`/api/rcm/${rowId}/history`, {
         method: 'POST',
@@ -425,7 +519,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     } catch (err) {
       // revertir optimista en caso de error
       console.error('Error marcar (inmediato):', err)
-      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: prevState } : d)))
+      setData(prev => prev.map(d => (d.id === rowId || d.representativeRcmId === rowId ? { ...d, estadoOperativo: prevState } : d)))
       // opcional: mostrar aviso al usuario
       alert('No se pudo actualizar el estado. Ver consola para detalles.')
     } finally {
@@ -463,6 +557,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const handleSaveMarkDialog = async () => {
     try {
       const rcmId = markDialogRowId
+      if (rcmId == null) return
       if (!validateMarkDialog()) {
         // mostrar feedback rápido en consola / UI
         console.warn('Validation failed', formErrors)
@@ -499,8 +594,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const created = await res.json().catch(() => null)
 
       // actualizar sólo el registro afectado en el estado local (optimista / definitivo)
-      setData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
-      setFilteredData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
+      setData(prev =>
+        prev.map(d =>
+          d.id === rcmId || d.representativeRcmId === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d
+        )
+      )
+      setFilteredData(prev =>
+        prev.map(d =>
+          d.id === rcmId || d.representativeRcmId === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d
+        )
+      )
 
       // actualizar caché de historial y vistas abiertas
       const newHistEntry = created ?? {
@@ -596,19 +699,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
-    const row = findRowById(rowId)
-    if (!row) {
-      console.warn('handleEdit: row not found', rowId, {
-        dataIds: data.map(d => (d as any).id ?? (d as any)._id),
-        filteredIds: filteredData.map(d => (d as any).id ?? (d as any)._id)
-      })
-      handleCloseRowMenu()
-      return
-    }
-
-    // Si es modo edición (no readonly), redirigir a la página de edición de RCM
+    // Si es modo edición (no readonly), podemos ir directo por id sin necesitar lookup de fila.
+    // En esta pantalla (Códigos Producto) el menú usa un RCM representativo.
     if (!opts?.readonly) {
-      const target = `${window.location.origin}/en/apps/rcm-edit/${rowId}`
+      const parts = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [])
+      const lang = parts[0] || 'en'
+      const target = `${window.location.origin}/${lang}/apps/rcm-edit/${rowId}`
       try {
         const newWin = window.open(target, '_blank')
         if (newWin) {
@@ -628,6 +724,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       } catch (e) {
         window.location.href = target
       }
+      handleCloseRowMenu()
+      return
+    }
+
+    const row = findRowById(rowId)
+    if (!row) {
+      console.warn('handleEdit: row not found', rowId, {
+        dataIds: data.map(d => (d as any).id ?? (d as any)._id),
+        filteredIds: filteredData.map(d => (d as any).id ?? (d as any)._id)
+      })
       handleCloseRowMenu()
       return
     }
@@ -682,33 +788,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (typeof window !== 'undefined' && rowId != null) window.open(`/informes/generar/${rowId}`, '_blank')
   }
 
-  // mock helper para historial (añadir aquí)
-  const getMockHistEntries = (rowId: number | null) => {
-    return [
-      {
-        registro: '04/03/2024-17:07',
-        funcionario: 'Paola Mena',
-        tipo: 'Ope',
-        estAnterior: 'Firmado',
-        estNuevo: 'Env-Cliente',
-        informe: 1,
-        fechaAccion: '04/03/2024',
-        observacion: 'Codificar, automático'
-      },
-      {
-        registro: '04/03/2024-18:10',
-        funcionario: 'Cristian Salinas',
-        tipo: 'Adm',
-        estAnterior: 'Facturado',
-        estNuevo: 'Pagado',
-        informe: '---',
-        fechaAccion: '04/03/2024',
-        observacion: 'Procesar Abonos, automático'
-      }
-    ]
-  }
-
   const handleHistorial = async (rowId: number | null) => {
+    // Asegurar que el menú contextual se cierre SIEMPRE
+    handleCloseRowMenu()
+
     if (!rowId) {
       console.warn('handleHistorial: no rowId provided')
       return
@@ -716,7 +799,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     // UX: abrir diálogo de inmediato y mostrar spinner mientras carga
     setHistRowId(rowId)
-    setHistRows([])
     setHistDialogOpen(true)
 
     // revisar caché primero
@@ -727,9 +809,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       return
     }
 
+    setHistRows([])
     setHistLoading(true)
     try {
-      // si tu API soporta limitar campos/registros, añade query params (?limit=20)
       const res = await fetch(`/api/rcm/${rowId}/history`)
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
@@ -737,16 +819,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         throw new Error('Error loading history')
       }
       const json = await res.json()
-      const rows = Array.isArray(json) ? json : []
+      const rows = (Array.isArray(json) ? json : []).slice().sort((a: any, b: any) => {
+        const ta = new Date(a?.fechaAccion ?? 0).getTime()
+        const tb = new Date(b?.fechaAccion ?? 0).getTime()
+        return tb - ta
+      })
+
       // guardar en caché para evitar refetchs posteriores
       historyCache.set(rowId, rows)
       setHistRows(rows)
     } catch (err) {
-      console.error('Error loading history (fallback to mock):', err)
-      setHistRows(getMockHistEntries(rowId))
+      console.error('Error loading history:', err)
+      setHistRows([])
     } finally {
       setHistLoading(false)
-      handleCloseRowMenu()
     }
   }
 
@@ -754,381 +840,81 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setHistDialogOpen(false)
     setHistRowId(null)
     setHistRows([])
+    setHistLoading(false)
   }
 
-  // Fetch RCMs
+  // Fetch Códigos Producto (seguimiento)
   useEffect(() => {
-    const fetchRCMs = async () => {
+    const fetchCodigos = async () => {
       try {
-        const res = await fetch('/api/rcm')
+        const res = await fetch('/api/codigo-agrupador/seguimiento')
         const result = await res.json()
         const raw = Array.isArray(result) ? result : []
 
-        // --- fetch obras (igual que ya tienes) ---
-        const obraIds = Array.from(new Set(raw.map((r: any) => (r.obraId ?? r.obra?.id) as number).filter(Boolean))) as number[]
-        const obraMap: Record<number, any> = {}
-        await Promise.all(
-          obraIds.map(async id => {
-            try {
-              const or = await fetch(`/api/obra/${id}`)
-              if (!or.ok) {
-                const txt = await or.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn(`obra ${id} responded not ok:`, or.status, txt.slice(0, 300))
-                return
-              }
-              const ct = (or.headers.get('content-type') || '').toLowerCase()
-              if (ct.includes('application/json')) {
-                obraMap[id] = await or.json()
-              } else {
-                const txt = await or.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn(`obra ${id} returned non-json:`, txt.slice(0, 400))
-                return
-              }
-            } catch (e) {
-              console.warn('No se pudo cargar obra', id, e)
-            }
-          })
-        )
+        const normalized: RCM[] = raw.map((r: any) => {
+          const opCounts = (r?.estadoOperativoCounts ?? {}) as Record<string, number>
+          const adCounts = (r?.estadoAdministrativoCounts ?? {}) as Record<string, number>
 
-        // --- fetch ordenes de trabajo por id (para obtener correlativ) ---
-        const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
-        const ordenMap: Record<string | number, any> = {}
-        if (ordenIds.length) {
-          try {
-            const q = ordenIds.map(encodeURIComponent).join(',')
-            const br = await fetch(`/api/ordenes?ids=${q}`)
-            if (br.ok) {
-              const ct = (br.headers.get('content-type') || '').toLowerCase()
-              if (ct.includes('application/json')) {
-                const list = await br.json()
-                if (Array.isArray(list)) {
-                  list.forEach((o: any) => {
-                    const key = o.id ?? o._id ?? o.key ?? o.ordenTrabajoId ?? o.correlativ ?? o.correlativo
-                    if (key) {
-                      ordenMap[String(key)] = o
-                      if (o.id) ordenMap[String(o.id)] = o
-                      const correl = o.correlativ ?? o.correlativo ?? o.numero ?? o.nro
-                      if (correl) ordenMap[String(correl)] = o
-                    }
-                  })
-                }
-              } else {
-                const txt = await br.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn('Batch /api/ordenes responded with non-json. sample:', txt.slice(0, 400))
-                // fallback a fetch individual
-                await Promise.all(
-                  ordenIds.map(async id => {
-                    try {
-                      const or = await fetch(`/api/ordenTrabajo/${id}`)
-                      if (!or.ok) return
-                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                      if (ct2.includes('application/json')) {
-                        ordenMap[String(id)] = await or.json()
-                      } else {
-                        const t = await or.text().catch(() => '')
-                        // eslint-disable-next-line no-console
-                        console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
-                      }
-                    } catch (err) {
-                      // eslint-disable-next-line no-console
-                      console.warn('No se pudo cargar ordenTrabajo', id, err)
-                    }
-                  })
-                )
-              }
-            } else {
-              // batch endpoint responded not ok -> fallback individual
-              await Promise.all(
-                ordenIds.map(async id => {
-                  try {
-                    const or = await fetch(`/api/ordenTrabajo/${id}`)
-                    if (!or.ok) return
-                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                    if (ct2.includes('application/json')) {
-                      ordenMap[String(id)] = await or.json()
-                    } else {
-                      const t = await or.text().catch(() => '')
-                      // eslint-disable-next-line no-console
-                      console.warn(`ordenTrabajo ${id} returned non-json:`, t.slice(0, 300))
-                    }
-                  } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.warn('No se pudo cargar ordenTrabajo', id, err)
-                  }
-                })
-              )
-            }
-          } catch (err) {
-            // en error, fallback a fetch individual
-            await Promise.all(
-              ordenIds.map(async id => {
-                try {
-                  const or = await fetch(`/api/ordenTrabajo/${id}`)
-                  if (!or.ok) return
-                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                  if (ct2.includes('application/json')) {
-                    ordenMap[String(id)] = await or.json()
-                  } else {
-                    const t = await or.text().catch(() => '')
-                    // eslint-disable-next-line no-console
-                    console.warn(`ordenTrabajo ${id} returned non-json (fallback):`, t.slice(0, 300))
-                  }
-                } catch (e) {
-                  // eslint-disable-next-line no-console
-                  console.warn('No se pudo cargar ordenTrabajo', id, e)
-                }
-              })
-            )
-          }
-        }
+          const opMain = pickStateFromCounts(opCounts, [
+            'EVENTO',
+            'EN_PROCESO',
+            'CODIFICADO',
+            'ENSAYADO',
+            'ENVIADO_DIGITACION',
+            'DIGITADO',
+            'REVISADO',
+            'FIRMADO',
+            'ENVIADO'
+          ])
 
-        // --- helper para extraer correlativo de un objeto orden (busca keys comunes y en nested 1 nivel) ---
-        const findOrderCorrel = (o: any) => {
-          if (!o || typeof o !== 'object') return undefined
-          const keys = Object.keys(o)
-          // prioridad por nombres comunes
-          const prefer = ['correlativ', 'correlativo', 'correlacion', 'correl', 'correlativoNumero', 'numero', 'nro', 'nroOrden', 'correl_id']
-          for (const p of prefer) {
-            if (p in o && (o[p] || o[p] === 0)) return o[p]
-          }
-          // buscar cualquier key que contenga 'correl' o 'numero'
-          for (const k of keys) {
-            if (/correl|numero|nro/i.test(k) && (o[k] || o[k] === 0)) return o[k]
-          }
-          // buscar 1 nivel nested
-          for (const k of keys) {
-            const v = o[k]
-            if (v && typeof v === 'object') {
-              const nested = findOrderCorrel(v)
-              if (nested) return nested
-            }
-          }
-          return undefined
-        }
+          const adMain = pickStateFromCounts(adCounts, ['PAGADO', 'PENDIENTE', 'FACTURADO', 'ENVIADO'])
 
-        // DEBUG: mostrar muestra de ordenMap para inspección (temporal)
-        try {
-          if (Object.keys(ordenMap).length) {
-            const sampleKey = Object.keys(ordenMap)[0]
-            // eslint-disable-next-line no-console
-            console.debug('ordenMap sample key:', sampleKey, 'value:', ordenMap[sampleKey])
-            // eslint-disable-next-line no-console
-            console.debug('extracted correl (sample):', findOrderCorrel(ordenMap[sampleKey]))
-          }
-        } catch (e) {
-          /* ignore debug errors */
-        }
-
-        // --- fetch clientes por clienteId (batch + fallback individual) ---
-        const clienteIds = Array.from(
-          new Set(
-            raw
-              .map((r: any) => r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id)
-              .filter(Boolean)
-              .map((x: any) => String(x))
-          )
-        )
-        const clienteMap: Record<string, any> = {}
-        if (clienteIds.length) {
-          try {
-            const q = clienteIds.map(encodeURIComponent).join(',')
-            const br = await fetch(`/api/clientes?ids=${q}`)
-            if (br.ok) {
-              const ct = (br.headers.get('content-type') || '').toLowerCase()
-              if (ct.includes('application/json')) {
-                const list = await br.json()
-                if (Array.isArray(list)) {
-                  list.forEach((c: any) => {
-                    const key = c.id ?? c._id ?? c.clienteId ?? c.cliente_id
-                    if (key) clienteMap[String(key)] = c
-                  })
-                }
-              } else {
-                const txt = await br.text().catch(() => '')
-                // eslint-disable-next-line no-console
-                console.warn('Batch /api/clientes responded with non-json. sample:', txt.slice(0, 400))
-                // fallback individual
-                await Promise.all(
-                  clienteIds.map(async id => {
-                    try {
-                      const or = await fetch(`/api/cliente/${id}`)
-                      if (!or.ok) return
-                      const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                      if (ct2.includes('application/json')) {
-                        clienteMap[String(id)] = await or.json()
-                      } else {
-                        const t = await or.text().catch(() => '')
-                        // eslint-disable-next-line no-console
-                        console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
-                      }
-                    } catch (err) {
-                      // eslint-disable-next-line no-console
-                      console.warn('No se pudo cargar cliente', id, err)
-                    }
-                  })
-                )
-              }
-            } else {
-              // batch endpoint not ok -> fallback individual
-              await Promise.all(
-                clienteIds.map(async id => {
-                  try {
-                    const or = await fetch(`/api/cliente/${id}`)
-                    if (!or.ok) return
-                    const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                    if (ct2.includes('application/json')) {
-                      clienteMap[String(id)] = await or.json()
-                    } else {
-                      const t = await or.text().catch(() => '')
-                      // eslint-disable-next-line no-console
-                      console.warn(`cliente ${id} returned non-json:`, t.slice(0, 300))
-                    }
-                  } catch (e) {
-                    // eslint-disable-next-line no-console
-                    console.warn('No se pudo cargar cliente', id, e)
-                  }
-                })
-              )
-            }
-          } catch (err) {
-            // on error -> try individual
-            await Promise.all(
-              clienteIds.map(async id => {
-                try {
-                  const or = await fetch(`/api/cliente/${id}`)
-                  if (!or.ok) return
-                  const ct2 = (or.headers.get('content-type') || '').toLowerCase()
-                  if (ct2.includes('application/json')) {
-                    clienteMap[String(id)] = await or.json()
-                  } else {
-                    const t = await or.text().catch(() => '')
-                    // eslint-disable-next-line no-console
-                    console.warn(`cliente ${id} returned non-json (fallback):`, t.slice(0, 300))
-                  }
-                } catch (e) {
-                  // eslint-disable-next-line no-console
-                  console.warn('No se pudo cargar cliente (fallback)', id, e)
-                }
-              })
-            )
-          }
-        }
-
-        // DEBUG: mostrar muestra de clienteMap
-        if (Object.keys(clienteMap).length) {
-          // eslint-disable-next-line no-console
-          console.debug('clienteMap sample:', Object.keys(clienteMap)[0], clienteMap[Object.keys(clienteMap)[0]])
-        }
-
-        // normalizar y enriquecer
-        const normalized = raw.map((r: any) => {
-          const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
-          const numeroObra =
-            obraObj?.numeroObra ??
-            obraObj?.numero_obra ??
-            obraObj?.numero ??
-            obraObj?.numeroobra ??
-            (r.obraId ? String(r.obraId) : undefined)
-
-          // normalizar cliente: puede venir como string, objeto con keys distintas o en raíz
-          let rawCliente = r.cliente ?? r.clienteData ?? r.clienteInfo ?? null
-          // si no hay objeto cliente, intentar resolver desde clienteMap usando clienteId
-          if (!rawCliente) {
-            const cid = r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id ?? null
-            if (cid != null) {
-              rawCliente = clienteMap[String(cid)] ?? rawCliente
-            }
-          }
-          let clienteNombre: string | undefined = undefined
-          let clienteComuna: string | undefined = undefined
-          if (rawCliente) {
-            if (typeof rawCliente === 'string') {
-              clienteNombre = rawCliente
-            } else if (typeof rawCliente === 'object') {
-              clienteNombre = rawCliente.nombreCliente ?? rawCliente.nombre ?? rawCliente.name ?? rawCliente.razonSocial ?? rawCliente.razon_social ?? rawCliente.nombre_cliente
-              clienteComuna = rawCliente.comuna ?? rawCliente.comunaName ?? rawCliente.comuna_nombre ?? rawCliente.city ?? rawCliente.localidad
-            }
-          }
-          // fallback a campos en raíz si existen
-          clienteNombre = clienteNombre ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente_name ?? r.cliente_nombre ?? r.nombre
-          clienteComuna = clienteComuna ?? r.clienteComuna ?? r.comuna ?? r.comunaCliente ?? null
-
-          // DEBUG: logear información para investigar por qué cliente/comuna quedan vacíos
-          // eslint-disable-next-line no-console
-          console.debug('normalizeCliente:', {
-            rowId: r.id ?? r._id ?? null,
-            rawCliente,
-            resolvedNombre: clienteNombre,
-            resolvedComuna: clienteComuna,
-            fallbacks: {
-              r_cliente: r.cliente,
-              r_clienteNombre: r.clienteNombre,
-              r_comuna: r.comuna,
-              r_clienteComuna: r.clienteComuna
-            }
-          })
-
-          // intentar obtener correlativo desde varios posibles campos del objeto orden
-          const orderKey = r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? ''
-          const orderObj = ordenMap[orderKey] ?? ordenMap[String(orderKey)] ?? ordenMap[r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? ''] ?? null
-          const orderCorrel = orderObj ? findOrderCorrel(orderObj) : undefined
-
-          // Normalizar ordenTrabajo: incluir correlativo si se encuentra; mantener ordenTrabajoId como fallback
-          const ordenTrabajoNormalized = {
-            ...(r.ordenTrabajo ?? orderObj ?? {}),
-            correlativo: orderCorrel ?? r.ordenTrabajo?.correlativ ?? r.ordenTrabajo?.correlativo ?? undefined,
-            id: r.ordenTrabajoId ?? (r.ordenTrabajo && (r.ordenTrabajo.id ?? r.ordenTrabajo._id)) ?? undefined
-          }
-
-          // otDisplay: mostrar correlativo real si existe, sino null (para mostrar '-' en UI)
-          const otDisplay = ordenTrabajoNormalized.correlativo ?? (r.ot && typeof r.ot === 'string' && !/[a-zA-Z]/.test(r.ot) ? r.ot : null)
-
-          const otCorrel =
-            // mantener campo ot original por compatibilidad, pero preferir otDisplay para mostrar
-            r.ot ?? ordenTrabajoNormalized.correlativo ?? orderCorrel ?? orderObj?.correlativ ?? orderObj?.correlativo ?? orderObj?.numero ?? r.ordenTrabajoId ?? null
+          const clienteNombre = r?.cliente?.razonSocial ?? r?.cliente?.nombreCliente ?? null
+          const comuna = r?.ciudad ?? r?.obra?.comuna ?? r?.cliente?.comuna ?? r?.cliente?.ciudad ?? null
 
           return {
-            ...r,
-            // preserve original ot, add normalized ordenTrabajo and otDisplay
-            ot: otCorrel,
-            ordenTrabajo: ordenTrabajoNormalized,
-            otDisplay,
-            // normalizar cliente en estructura uniforme
-            cliente: {
-              nombreCliente: clienteNombre ?? null,
-              comuna: clienteComuna ?? null,
-              // mantener el raw por si hace falta
-              raw: rawCliente ?? null
-            },
-            // Normalizar y asegurar estadoAdministrativo en cada fila (fallbacks comunes)
-            estadoAdministrativo:
-              r.estadoAdministrativo ??
-              r.estado_administrativo ??
-              r.estadoAdm ??
-              r.estado_adm ??
-              r.administrativo ??
-              '',
-            estadoOperativo:
-              r.estadoOperativo ??
-              (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ??
-              '',
-            obra: { ...(obraObj ?? {}), numeroObra }
-          }
+            id: Number(r.id),
+            numeroRcm: String(r.codigoNombre ?? ''),
+            codigoNombre: r.codigoNombre ?? null,
+            representativeRcmId: (r?.representativeRcmId ?? null) as number | null,
+            ss: r.ss ?? null,
+            ot: r.ot ?? null,
+            totalRcms: r.totalRcms ?? 0,
+            conEvento: Boolean(r.conEvento),
+            informe: (r.informe ?? null) as number | null,
+            ensayos: r.ensayos ?? null,
+            estadoOperativoCounts: opCounts,
+            estadoAdministrativoCounts: adCounts,
+
+            ciudad: comuna ?? null,
+
+            fechaCodificacion: r.fechaCodificacionMin ?? '',
+            fechaMuestreo: r.fechaMuestreoMin ?? '',
+            estadoOperativo: opMain ?? undefined,
+            estadoAdministrativo: adMain ?? undefined,
+
+            area: r.areaNombre ?? null,
+            familia: r.familiaNombre ?? null,
+            cliente: { nombreCliente: clienteNombre ?? undefined, comuna: comuna ?? undefined },
+            obra: r?.obra
+              ? {
+                  numeroObra: r.obra.numeroObra ?? undefined,
+                  nombreObra: (r.obra as any).nombreObra ?? undefined
+                }
+              : null
+          } as RCM
         })
 
         setData(normalized)
         applyDateFilter(normalized, filters)
       } catch (err) {
-        console.error('Error fetching RCMs:', err)
+        console.error('Error fetching Códigos Producto:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchRCMs()
+    fetchCodigos()
   }, [])
 
   // aplicar filtro cuando cambian filters
@@ -1180,6 +966,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return `${dd}/${mm}/${yyyy}`
   }
 
+  // helper: formatear fecha a DD-MM-AAAA (sin hora)
+  const formatDateDDMMYYYYDateOnlyDash = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    return `${dd}-${mm}-${yyyy}`
+  }
+
+  const formatTimeHHmm = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const hh = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${min}`
+  }
+
+  const daysBetween = (from: any, to: any) => {
+    const d1 = toDateOnly(from)
+    const d2 = toDateOnly(to)
+    if (!d1 || !d2) return null
+    const diff = d2.getTime() - d1.getTime()
+    return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
+  }
+
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
@@ -1211,328 +1025,210 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       }
     }
 
-    // Estado Operativo filtering (if provided) — case-insensitive contains
+    // Estado Operativo filtering (if provided)
     if (filters && filters.estadoOperativo) {
-      const q = String(filters.estadoOperativo).toLowerCase()
+      const qKey = normalizeStateKey(filters.estadoOperativo)
+      const qNorm = normalizeText(filters.estadoOperativo)
       result = result.filter(r => {
-        const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ?? '')
-        return String(op).toLowerCase().includes(q)
+        const counts = r.estadoOperativoCounts
+        if (qKey && counts && (counts[qKey] ?? 0) > 0) return true
+        return normalizeText(r.estadoOperativo ?? '').includes(qNorm)
       })
     }
 
-    // Estado Administrativo filtering (if provided) — case-insensitive contains
+    // Estado Administrativo filtering (if provided)
     if (filters && filters.estadoAdministrativo) {
-      const qAdm = String(filters.estadoAdministrativo).toLowerCase()
+      const qKey = normalizeStateKey(filters.estadoAdministrativo)
+      const qNorm = normalizeText(filters.estadoAdministrativo)
       result = result.filter(r => {
-        const adm =
-          r.estadoAdministrativo ??
-          r.estado_administrativo ??
-          r.estadoAdm ??
-          r.estado_adm ??
-          r.administrativo ??
-          (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estadoAdministrativo ?? '' : '') ??
-          ''
-        return String(adm).toLowerCase().includes(qAdm)
+        const counts = r.estadoAdministrativoCounts
+        if (qKey && counts && (counts[qKey] ?? 0) > 0) return true
+        return normalizeText(r.estadoAdministrativo ?? '').includes(qNorm)
       })
     }
 
-    // Area filtering: prefer header.areaName, fallback to header.area or areaId.
-    // Compara por nombre normalizado (quita acentos, case-insensitive). Si se envía id numérico, lo acepta.
-    const areaValue = (filters as any)?.areaName ?? (filters as any)?.area ?? (filters as any)?.areaId ?? null
-    if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).toString().trim() !== '') {
-      const raw = areaValue
-      const rawNorm = normalizeText(raw)
-      const isNumeric = /^[0-9]+$/.test(String(raw).trim())
-      const targetNum = isNumeric ? Number(raw) : null
-
-      result = result.filter((r: any) => {
-        // quick arrays if present
-        const areaNamesArr = Array.isArray(r._areaNames) ? r._areaNames.map((x: any) => normalizeText(x)) : []
-        const areaIdsArr = Array.isArray(r._areaIds) ? r._areaIds.map((x: any) => Number(x)) : []
-        if (isNumeric) {
-          if (areaIdsArr.some((id: number) => Number(id) === targetNum)) return true
-        } else {
-          if (areaNamesArr.some((nm: string) => nm.includes(rawNorm))) return true
-        }
-
-        // check common top-level fields
-        try {
-          // r.area puede ser string o objeto { nombre | name }
-          const topAreaName = r.area?.nombre ?? r.area?.name ?? r.area
-          if (!isNumeric && topAreaName && normalizeText(topAreaName).includes(rawNorm)) return true
-          if (isNumeric) {
-            if (r.area && !isNaN(Number(r.area)) && Number(r.area) === targetNum) return true
-            if (r.areaId && Number(r.areaId) === targetNum) return true
-          }
-        } catch (e) {
-          // noop
-        }
-
-        // check servicios.producto.area fields (robusto)
-        if (Array.isArray(r.servicios)) {
-          for (const s of r.servicios) {
-            const p: any = s?.producto ?? s?.product ?? null
-            if (!p) continue
-            // textual candidates
-            const candNames = [
-              p.area?.nombre ?? p.area?.name ?? p.area ?? p.productoArea ?? p.producto_area ?? null
-            ]
-            for (const cn of candNames) {
-              if (!cn) continue
-              if (!isNumeric && normalizeText(cn).includes(rawNorm)) return true
-            }
-            // numeric candidates
-            const candIds = [p.area?.id ?? p.areaId ?? p.area_id ?? p.productoArea?.id ?? null]
-            for (const cid of candIds) {
-              if (cid === null || typeof cid === 'undefined') continue
-              if (isNumeric && Number(cid) === targetNum) return true
-            }
-          }
-        }
-
-        return false
-      })
+    // Area filtering: comparar por nombre (Header entrega areaName)
+    const areaValue = (filters as any)?.areaName ?? null
+    if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).trim() !== '') {
+      const rawNorm = normalizeText(areaValue)
+      result = result.filter(r => normalizeText(r.area ?? '').includes(rawNorm))
     }
 
-    // Familia filtering: comparar por nombre (normalizado). Si se envía id numérico lo acepta como fallback.
+    // Familia filtering: comparar por nombre
     const familiaValue = (filters as any)?.familia ?? null
-    if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).toString().trim() !== '') {
-      const rawF = familiaValue
-      const rawFNorm = normalizeText(rawF)
-      const rawFTokens = rawFNorm.split(' ').filter(Boolean)
-      const isNumF = /^[0-9]+$/.test(String(familiaValue).trim())
-      const targetF = isNumF ? Number(familiaValue) : null
-
-      const tokenMatch = (candidateNorm: string) => {
-        if (!candidateNorm) return false
-        if (candidateNorm.includes(rawFNorm)) return true
-        // require that every token in rawF is present in candidate (order-insensitive)
-        const candTokens = candidateNorm.split(' ').filter(Boolean)
-        return rawFTokens.every(t => candTokens.includes(t))
-      }
-
-      result = result.filter((r: any) => {
-        // gather textual and numeric candidates
-        const famNames = Array.isArray(r._familiaNames) ? r._familiaNames.map((x: any) => normalizeText(x)) : []
-        const famIds = Array.isArray(r._familiaIds) ? r._familiaIds.map((x: any) => Number(x)) : []
-
-        // 1) numeric match
-        if (isNumF) {
-          if (famIds.some(id => Number(id) === targetF)) return true
-        }
-
-        // 2) names in cached arrays
-        if (!isNumF && famNames.some(nm => tokenMatch(nm))) return true
-
-        // 3) top-level familia (string or object)
-        try {
-          const topFamRaw = r.familia?.nombre ?? r.familia?.name ?? r.familia ?? ''
-          const topFam = normalizeText(topFamRaw)
-          if (!isNumF && tokenMatch(topFam)) return true
-          if (isNumF && topFamRaw && !isNaN(Number(topFamRaw)) && Number(topFamRaw) === targetF) return true
-        } catch (e) {
-          /* noop */
-        }
-
-        // 4) servicios.producto.familia candidates
-        if (Array.isArray(r.servicios)) {
-          for (const s of r.servicios) {
-            const p: any = s?.producto ?? s?.product ?? null
-            if (!p) continue
-            const famCandidates = [
-              p.familia ?? p.familia?.nombre ?? p.familia?.name ?? p.productoFamilia ?? p.producto_familia ?? null
-            ]
-            for (const fc of famCandidates) {
-              if (!fc) continue
-              const fcNorm = normalizeText(fc)
-              if (!isNumF && tokenMatch(fcNorm)) return true
-              if (isNumF && !isNaN(Number(fc)) && Number(fc) === targetF) return true
-              if (isNumF && String(fc) === String(familiaValue)) return true
-            }
-          }
-        }
-
-        // DEBUG: no match for this row -> print diagnostic for investigation
-        // (mantener sólo mientras debuggeas)
-        // eslint-disable-next-line no-console
-        console.debug('Familia filter: row excluded', {
-          id: r.id,
-          requested: rawF,
-          requestedNorm: rawFNorm,
-          famNames,
-          famIds,
-          topFamilia: r.familia,
-          serviciosSample: Array.isArray(r.servicios) ? r.servicios.slice(0, 3).map((s: any) => ({ producto: s.producto ?? s.product })) : []
-        })
-        return false
-      })
+    if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).trim() !== '') {
+      const rawNorm = normalizeText(familiaValue)
+      result = result.filter(r => normalizeText(r.familia ?? '').includes(rawNorm))
     }
 
     console.log('applyDateFilter result count:', result.length)
     setFilteredData(result)
   }
 
-  const { lang: locale } = useParams()
+  // SS se repite mucho: mostrar columna solo cuando aporte contexto.
+  // Regla: mostrar si hay >1 SS distinto, o si hay mezcla de (un SS + vacíos).
+  const showSsColumnAuto = useMemo(() => {
+    const rawValues = filteredData.map(r => String(r.ss ?? '').trim())
+    const nonEmpty = rawValues.filter(Boolean)
+
+    // No hay SS en el dataset actual -> no mostrar
+    if (nonEmpty.length === 0) return false
+
+    const distinct = new Set(nonEmpty)
+    if (distinct.size > 1) return true
+
+    // Un solo SS pero hay filas sin SS -> mostrar para detectar la diferencia
+    const hasEmpty = rawValues.some(v => !v)
+    return hasEmpty
+  }, [filteredData])
+
+  const showSsColumn = Boolean(forceShowSs) || showSsColumnAuto
 
   const columns = useMemo((): ColumnDef<RCM>[] => {
+    const ssColumn: ColumnDef<RCM> = {
+      id: 'ss',
+      header: 'SS',
+      accessorKey: 'ss',
+      cell: ({ row }) => <Typography variant='body2'>{row.original.ss ?? '-'}</Typography>
+    }
+
     return [
       {
-        id: 'select',
-        header: ({ table }) => {
-          const visibleIds = table.getRowModel().rows.map(r => r.id)
-          const allSelected = visibleIds.length > 0 && visibleIds.every(id => Boolean((rowSelection as any)[id]))
-          const someSelected = visibleIds.some(id => Boolean((rowSelection as any)[id]))
-
-          return (
-            <Checkbox
-              size='small'
-              checked={allSelected}
-              indeterminate={!allSelected && someSelected}
-              onChange={() => {
-                // si no están todos seleccionados => seleccionar todos visibles, si ya lo están => deseleccionar todo
-                if (!allSelected) {
-                  const next: any = {}
-                  visibleIds.forEach(id => (next[id] = true))
-                  setRowSelection(next)
-                } else {
-                  setRowSelection({}) // deselecciona todo
-                }
-              }}
-            />
-          )
-        },
-        cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
+        id: 'codigo',
+        header: 'CÓDIGO',
+        accessorFn: r => r.codigoNombre ?? r.numeroRcm,
+        cell: ({ row }) => <Typography variant='body2' sx={{ fontWeight: 700 }}>{row.original.codigoNombre ?? row.original.numeroRcm}</Typography>
       },
-      {
-        id: 'rcm',
-        header: 'RCM',
-        accessorKey: 'numeroRcm',
-        cell: ({ row }) => <Typography variant='body2'>{row.original.numeroRcm}</Typography>
-      },
+      ...(showSsColumn ? [ssColumn] : []),
       {
         id: 'ot',
         header: 'OT',
-        accessorFn: (r: any) => r.otDisplay ?? r.ot ?? r.ordenTrabajo?.correlativo ?? r.ordenTrabajoId ?? null,
-        cell: ({ row }: any) => {
-          const display = row.original.otDisplay ?? null
-          const ordenId = row.original.ordenTrabajo?.id ?? row.original.ordenTrabajoId ?? null
-          if (display) {
-            return <Typography variant='body2'>{display}</Typography>
-          }
-          // no correlativo: mostrar '-' pero dejar ordenTrabajoId en tooltip para rastreo
-          if (ordenId) {
-            // eslint-disable-next-line no-console
-            console.debug('No correlativo for row', row.original.id, 'ordenTrabajoId:', ordenId)
-            return (
-              <Typography variant='body2' title={`ordenTrabajoId: ${ordenId}`}>
-                -
-              </Typography>
-            )
-          }
-          return <Typography variant='body2'>-</Typography>
-        }
+        accessorKey: 'ot',
+        cell: ({ row }) => <Typography variant='body2'>{row.original.ot ?? '-'}</Typography>
       },
       {
         id: 'fechaCod',
-        header: 'Fecha Cod.',
+        header: 'FECHA COD.',
         accessorKey: 'fechaCodificacion',
-        cell: ({ row }) => <span>{row.original.fechaCodificacion ? new Date(row.original.fechaCodificacion).toLocaleDateString() : '-'}</span>
-      },
-      {
-        id: 'fechaMues',
-        header: 'Fecha Mues.',
-        accessorKey: 'fechaMuestreo',
-        cell: ({ row }) => <span>{row.original.fechaMuestreo ? new Date(row.original.fechaMuestreo).toLocaleDateString() : '-'}</span>
-      },
-      {
-        id: 'area',
-        header: 'ÁREA',
-        accessorFn: (r: any) => {
-          const svc = Array.isArray(r.servicios) ? r.servicios.find((s: any) => s?.producto && (s.producto.area || s.producto?.area)) : undefined
-          return svc?.producto?.area ?? r.area ?? r.cliente?.nombreCliente ?? '-'
+        sortingFn: (rowA, rowB, columnId) => {
+          const aRaw = rowA.getValue(columnId) as any
+          const bRaw = rowB.getValue(columnId) as any
+          const aTime = aRaw ? new Date(aRaw).getTime() : 0
+          const bTime = bRaw ? new Date(bRaw).getTime() : 0
+          return aTime === bTime ? 0 : aTime > bTime ? 1 : -1
         },
-        cell: ({ row }: any) => {
-          const svc = Array.isArray(row.original.servicios)
-            ? row.original.servicios.find((s: any) => s?.producto && s.producto.area)
-            : null
-          const areaVal = svc?.producto?.area ?? row.original.area ?? row.original.cliente?.nombreCliente ?? '-'
-          return <span>{areaVal}</span>
-        }
+        sortDescFirst: true,
+        cell: ({ row }) => <span>{formatDateDDMMYYYYDateOnly(row.original.fechaCodificacion)}</span>
       },
-
       {
-        id: 'cliente',
-        header: 'CLIENTE',
-        accessorFn: (r: any) =>
-          r.cliente?.nombreCliente ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente ?? (typeof r.cliente === 'string' ? r.cliente : '-') ?? '-',
-        cell: ({ row }: any) => {
-          const val =
+        id: 'clienteObra',
+        header: 'CLIENTE - OBRA',
+        accessorFn: r => {
+          const cliente =
+            r.cliente?.nombreCliente ??
+            (r as any).clienteNombre ??
+            (r as any).nombreCliente ??
+            (typeof (r as any).cliente === 'string' ? (r as any).cliente : null)
+          const obra = r.obra?.nombreObra ?? r.obra?.numeroObra ?? null
+          const parts = [cliente, obra].map(v => String(v ?? '').trim()).filter(Boolean)
+          return parts.length ? parts.join(' - ') : '-'
+        },
+        cell: ({ row }) => {
+          const cliente =
             row.original.cliente?.nombreCliente ??
-            row.original.clienteNombre ??
-            row.original.nombreCliente ??
-            (typeof row.original.cliente === 'string' ? row.original.cliente : undefined) ??
-            '-'
-          // eslint-disable-next-line no-console
-          console.debug('cliente cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedCliente: val })
-          return <Typography variant='body2'>{val}</Typography>
-        }
-      },
+            (row.original as any).clienteNombre ??
+            (row.original as any).nombreCliente ??
+            (typeof (row.original as any).cliente === 'string' ? (row.original as any).cliente : null) ??
+            null
+          const obraNombre = row.original.obra?.nombreObra ?? null
+          const obraNumero = row.original.obra?.numeroObra ?? null
+          const ciudad = row.original.ciudad ?? null
 
-      {
-        id: 'comuna',
-        header: 'COMUNA',
-        accessorFn: (r: any) =>
-          r.cliente?.comuna ?? r.comuna ?? r.clienteComuna ?? r.comunaCliente ?? '-',
-        cell: ({ row }: any) => {
-          const val =
-            row.original.cliente?.comuna ??
-            row.original.comuna ??
-            row.original.clienteComuna ??
-            row.original.comunaCliente ??
-            '-'
-          // eslint-disable-next-line no-console
-          console.debug('comuna cell render', { id: row.original.id, clienteRaw: row.original.cliente, computedComuna: val })
-          return <Typography variant='body2'>{val}</Typography>
+          const clienteText = String(cliente ?? '').trim()
+
+          // Mantener el diseño del ejemplo: cliente arriba, obra abajo.
+          // En la segunda línea priorizamos el número de obra (más "tipo ejemplo"),
+          // y dejamos el nombre disponible como tooltip si existe.
+          const obraMain = String(obraNumero ?? obraNombre ?? '').trim()
+          const obraLabel = obraMain ? `Obra ${obraMain}` : ''
+          const ciudadText = String(ciudad ?? '').trim()
+          const secondLine = [obraLabel, ciudadText].filter(Boolean).join('  ')
+
+          const title = [clienteText, obraNombre ? `Obra: ${obraNombre}` : null, ciudadText ? `Ciudad: ${ciudadText}` : null]
+            .filter(Boolean)
+            .join('\n')
+
+          if (!clienteText && !secondLine) {
+            return <Typography variant='body2'>-</Typography>
+          }
+
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }} title={title}>
+              <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                {clienteText || '-'}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                {secondLine || '-'}
+              </Typography>
+            </Box>
+          )
         }
       },
       {
-        id: 'familia',
-        header: 'FAMILIA',
-        accessorFn: (r: any) => {
-          const svc = Array.isArray(r.servicios)
-            ? r.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
-            : undefined
-          return svc?.producto?.familia ?? r.familia ?? '-'
+        id: 'ciudad',
+        header: 'CIUDAD',
+        accessorFn: r => r.ciudad ?? r.cliente?.comuna ?? (r as any).comuna ?? '-',
+        cell: ({ row }) => <Typography variant='body2'>{(row.getValue('ciudad') as string) ?? '-'}</Typography>
+      },
+      {
+        id: 'areaServicio',
+        header: 'ÁREA - SERVICIO',
+        accessorFn: r => {
+          const area = String(r.area ?? '').trim()
+          const servicio = String(r.familia ?? '').trim()
+          const parts = [area, servicio].filter(Boolean)
+          return parts.length ? parts.join(' - ') : '-'
         },
-        cell: ({ row }: any) => {
-          const svc = Array.isArray(row.original.servicios)
-            ? row.original.servicios.find((s: any) => s?.producto && (s.producto.familia || s.producto?.familia))
-            : null
-          const fam = svc?.producto?.familia ?? row.original.familia ?? '-'
-          return <span>{fam}</span>
+        cell: ({ row }) => {
+          const areaText = String(row.original.area ?? '').trim()
+          const servicioText = String(row.original.familia ?? '').trim()
+
+          const title = [areaText, servicioText].filter(Boolean).join('\n')
+
+          if (!areaText && !servicioText) {
+            return <Typography variant='body2'>-</Typography>
+          }
+
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }} title={title}>
+              <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                {areaText || '-'}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                {servicioText || '-'}
+              </Typography>
+            </Box>
+          )
         }
       },
       {
-        id: 'muestras',
-        header: '# MUES.',
-        accessorFn: r => (Array.isArray(r.servicios) ? r.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0),
-        cell: ({ row }) => <span>{Array.isArray(row.original.servicios) ? row.original.servicios.reduce((s, it) => s + (it.cantidad ?? 0), 0) : 0}</span>
+        id: 'totalRcms',
+        header: '# RCMS',
+        accessorKey: 'totalRcms',
+        cell: ({ row }) => <span>{row.original.totalRcms ?? 0}</span>
       },
       {
         id: 'estOp',
-        header: 'Est. Operativo',
+        header: 'EST. OPERATIVO',
         accessorKey: 'estadoOperativo',
         cell: ({ row }) => {
-          const op =
-            row.original.estadoOperativo ??
-            (Array.isArray(row.original.servicios) && row.original.servicios.length
-              ? (row.original.servicios[0] as any).estado
-              : null)
-          const info = getOperationalInfo(op)
+          const opRaw = row.original.estadoOperativo ?? null
+          const opLabel = opRaw ? (OPERATIONAL_STATES.find(s => s.value === opRaw)?.label ?? opRaw) : '-'
+          const info = getOperationalInfo(opRaw ?? undefined)
           return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Chip
-                label={op ?? '-'}
+                label={opLabel}
                 title={info.hex ?? ''}
                 size='small'
                 variant='filled'
@@ -1556,7 +1252,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       },
       {
         id: 'estadoAdministrativo',
-        header: 'EST. ADMINISTRATIVO',
+        header: 'EST. ADM.',
         accessorKey: 'estadoAdministrativo',
         cell: ({ row }) => {
           const raw = row.original.estadoAdministrativo ?? row.original.estado_administrativo ?? ''
@@ -1587,102 +1283,101 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
-        id: 'nobra',
-        header: 'N° OBRA',
-        accessorFn: r =>
-          r.obra?.numeroObra ??
-          r.obra?.numero_obra ??
-          r.obra?.numero ??
-          r.obra?.numeroobra ??
-          r.obraId ??
-          '-',
-        cell: ({ row }) => {
-          const val = row.getValue('nobra') as string
-          return <span>{val ?? '-'}</span>
-        }
+        id: 'informe',
+        header: 'N° INFORME',
+        accessorKey: 'informe',
+        cell: ({ row }) => <span>{row.original.informe ?? '-'}</span>
       },
       {
         id: 'acciones',
         header: 'ACCIONES',
         cell: ({ row }) => (
-          <Stack direction='row' spacing={1}>
-            <IconButton size='small' title='Ver' onClick={() => handleEdit(row.original.id, { readonly: true })}>
+          <Box onClick={e => e.stopPropagation()} sx={{ display: 'inline-flex', justifyContent: 'center' }}>
+            <IconButton
+              size='small'
+              title='Ver detalle'
+              onClick={e => {
+                e.stopPropagation()
+                onSelectCodigo?.(row.original.id)
+              }}
+            >
               <VisibilityIcon fontSize='small' />
             </IconButton>
 
             <IconButton
               size='small'
               title='Marcar'
-              onClick={(e) => handleOpenMarkMenu(e, row.original.id)}
+              disabled={!row.original.representativeRcmId}
+              onClick={e => {
+                e.stopPropagation()
+                if (!row.original.representativeRcmId) return
+                handleOpenMarkMenu(e as any, row.original.representativeRcmId)
+              }}
             >
               <CheckBoxOutlinedIcon fontSize='small' />
             </IconButton>
 
-            <IconButton size='small' title='Más' onClick={e => handleOpenRowMenu(e, row.original.id)}>
+            <IconButton
+              size='small'
+              title='Más acciones'
+              disabled={!row.original.representativeRcmId}
+              onClick={e => {
+                e.stopPropagation()
+                if (!row.original.representativeRcmId) return
+                handleOpenRowMenu(e as any, row.original.representativeRcmId)
+              }}
+            >
               <MoreVertIcon fontSize='small' />
             </IconButton>
-          </Stack>
+          </Box>
         )
       }
     ]
-  }, [rowSelection])
+  }, [onSelectCodigo, showSsColumn])
+
+  const searchedData = useMemo(() => {
+    const q = String(globalFilter ?? '').toLowerCase().trim()
+    if (!q) return filteredData
+    return filteredData.filter(item =>
+      [
+        item.codigoNombre,
+        item.numeroRcm,
+        item.ss,
+        item.ot,
+        item.ciudad,
+        item.area,
+        item.familia,
+        item.obra?.numeroObra,
+        item.cliente?.nombreCliente,
+        item.estadoOperativo,
+        item.estadoAdministrativo,
+        item.informe
+      ]
+        .filter(v => v !== null && typeof v !== 'undefined')
+        .some(v => String(v).toLowerCase().includes(q))
+    )
+  }, [filteredData, globalFilter])
 
   const table = useReactTable({
-    data: filteredData,
+    data: searchedData,
     columns,
+    filterFns: {
+      fuzzy: fuzzyFilter,
+      global: fuzzyFilter
+    } as any,
+    initialState: {
+      sorting: [{ id: 'fechaCod', desc: true }]
+    },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel()
   })
 
-  // <-- añadir: conteo de filas seleccionadas
-  const selectedCount = useMemo(() => {
-    return Object.values(rowSelection as any).filter(Boolean).length
-  }, [rowSelection])
-
-  // EXPORT: exportar sólo filas seleccionadas a CSV (si no hay selección, no hace nada)
-  const handleExport = () => {
-    try {
-      const selectedIds = Object.keys(rowSelection).filter(id => (rowSelection as any)[id])
-      if (!selectedIds.length) return
-
-      // columnas visibles (excluir columnas no deseadas como select/acciones)
-      const cols = table.getAllLeafColumns().filter(c => !['select', 'acciones'].includes(c.id))
-      const headers = cols.map(c => (typeof c.columnDef.header === 'string' ? c.columnDef.header : c.id))
-
-      // construir filas para los ids seleccionados
-      const rows = selectedIds.map(id => {
-        const row = table.getRowModel().rows.find(r => r.id === id)
-        return cols
-          .map(c => {
-            const v = row ? row.getValue(c.id) : ''
-            if (v === null || v === undefined) return '""'
-            const s = typeof v === 'object' ? JSON.stringify(v) : String(v)
-            // escapar comillas dobles para CSV y envolver en comillas
-            return '"' + s.replace(/"/g, '""') + '"'
-          })
-          .join(',')
-      })
-
-      const headerRow = headers.map(h => '"' + String(h).replace(/"/g, '""') + '"').join(',')
-      const csv = [headerRow, ...rows].join('\r\n')
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'rcms_selected_export.csv'
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('Export error', err)
-    }
-  }
 
   // reemplazado: indicadores usando OPERATIONAL_STATES.value para comparaciones
   const indicators = useMemo(() => {
-    const total = filteredData.length
+    const total = searchedData.length
 
     // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
     const normOp = (raw?: string) => {
@@ -1717,7 +1412,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     } as const
 
     const countIf = (pred: (opVal: string, adm: string) => boolean) =>
-      filteredData.reduce((acc, d) => {
+      searchedData.reduce((acc, d) => {
         const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
         const admRaw = d.estadoAdministrativo ?? ''
         const opVal = normOp(opRaw)
@@ -1740,16 +1435,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     })
 
     // Por Revisar: REVISADO o admin menciona revisar/revisado
-    const porRevisar = countIf((op, adm) => op === S.DIGITADO)
+    const porRevisar = countIf(op => op === S.DIGITADO)
 
     // Por Corregir: estado EVENTO 
-    const porCorregir = countIf((op, adm) => op === S.EVENTO)
+    const porCorregir = countIf(op => op === S.EVENTO)
 
     // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
-    const porFirmar = countIf((op, adm) => op === S.REVISADO)
+    const porFirmar = countIf(op => op === S.REVISADO)
 
     // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
-    const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
+    const porEnviarFirmados = countIf(op => op === S.FIRMADO)
 
     // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
     const firmadosPagados = countIf((op, adm) => {
@@ -1775,7 +1470,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       porEnviarFirmados,
       firmadosPagados
     }
-  }, [filteredData])
+  }, [searchedData])
 
   if (loading) return <div>Cargando...</div>
 
@@ -1785,7 +1480,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       <CardHeader
         title={
           <Box display='flex' alignItems='center' justifyContent='space-between' gap={2}>
-            <Typography variant='h6'>RCMs</Typography>
+            <Typography variant='h6'>Códigos Producto</Typography>
           </Box>
         }
       />
@@ -1828,53 +1523,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       <Divider />
 
-      {/* New toolbar row: Exportar + contador + Buscar (separate row under title) */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            variant='outlined'
-            startIcon={<DownloadIcon />}
-            size='small'
-            onClick={handleExport}
-            disabled={selectedCount === 0}
-            title={selectedCount === 0 ? 'Seleccione filas para exportar' : 'Exportar filas seleccionadas'}
-          >
-            Exportar
-          </Button>
-
-          {/* contador de seleccionados (visible solo si hay al menos 1) */}
-          {selectedCount > 0 && (
-            <Typography variant='body2' color='text.secondary'>
-              {selectedCount} fila{selectedCount > 1 ? 's' : ''} seleccionada{selectedCount > 1 ? 's' : ''}
-            </Typography>
-          )}
-        </Box>
+      {/* Toolbar row: Mostrar/Ocultar SS + Buscar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, gap: 2 }}>
+        <Button
+          variant='text'
+          size='small'
+          onClick={() => onForceShowSsChange?.(!Boolean(forceShowSs))}
+          disabled={!onForceShowSsChange}
+          title='Mostrar/ocultar columna SS'
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          {forceShowSs ? 'Ocultar' : 'Mostrar'}
+        </Button>
 
         <Box sx={{ width: 300 }}>
           <DebouncedInput
             value={globalFilter}
             onChange={(v: any) => {
               setGlobalFilter(String(v))
-              const q = String(v).toLowerCase()
-              if (!q) {
-                setFilteredData(data)
-                return
-              }
-              const filtered = data.filter(item =>
-                [
-                  item.numeroRcm,
-                  item.ot,
-                  item.area,
-                  item.familia,
-                  item.obra?.numeroObra,
-                  item.cliente?.nombreCliente
-                ]
-                  .filter(Boolean)
-                  .some(s => String(s).toLowerCase().includes(q))
-              )
-              setFilteredData(filtered)
             }}
-            placeholder='Buscar RCM, OT, ÁREA, FAMILIA...'
+            placeholder='Buscar CÓDIGO, SS, OT, ÁREA, SERVICIO...'
             fullWidth
             size='small'
           />
@@ -1898,7 +1566,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map(row => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                onClick={() => {
+                  onSelectCodigo?.(row.original.id)
+                }}
+                style={{ cursor: onSelectCodigo ? 'pointer' : 'default' }}
+              >
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1984,7 +1658,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     label='Estado'
                     disabled
                   >
-                    <MenuItemMUI value={markDialogAction}>
+                    <MenuItemMUI value={markDialogAction ?? ''}>
 
                       {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
                     </MenuItemMUI>
@@ -2036,7 +1710,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               <FormControl fullWidth size='small'>
                 <InputLabel id='mark-action-label-obs'>Acción</InputLabel>
                 <Select labelId='mark-action-label-obs' value={markDialogAction ?? ''} label='Acción' disabled>
-                  <MenuItemMUI value={markDialogAction}>
+                  <MenuItemMUI value={markDialogAction ?? ''}>
                     {OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? markDialogAction}
                   </MenuItemMUI>
                 </Select>
@@ -2082,43 +1756,165 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         <MenuItem disabled title="Generar Informe deshabilitado">Generar Informe</MenuItem>
       </Menu>
 
-      {/* Dialog: Historial (mock) */}
+      {/* Dialog: Historial */}
       <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
-        <DialogTitle>Historial</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant='subtitle1' sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                Historial de cambios
+              </Typography>
+              {(() => {
+                if (!histRowId) return null
+                const r = data.find(d => d.representativeRcmId === histRowId)
+                const code = (r?.codigoNombre ?? r?.numeroRcm ?? '').toString().trim()
+                const obraName = (r?.obra?.nombreObra ?? '').toString().trim()
+                const obraNum = (r?.obra?.numeroObra ?? '').toString().trim()
+                const obraTxt = obraName || obraNum ? `${obraName || obraNum}` : ''
+                const parts = [code, obraTxt].filter(Boolean)
+                if (!parts.length) return null
+                return (
+                  <Typography
+                    variant='caption'
+                    color='text.secondary'
+                    sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {parts.join(' - ')}
+                  </Typography>
+                )
+              })()}
+            </Box>
+
+            <IconButton aria-label='Cerrar' onClick={handleCloseHistDialog} size='small'>
+              <CloseIcon fontSize='small' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {(() => {
+            if (!histRowId) return null
+            const stateFromRow = getCurrentStateForRow(histRowId)
+            const stateFromHistory = normalizeStateForCompare((histRows ?? [])[0]?.estNuevo)
+            const currentState = stateFromRow || stateFromHistory || ''
+            const currentInfo = getOperationalInfo(currentState)
+            // histRows está ordenado desc; primer match es el último cambio hacia el estado actual
+            const sinceEntry = (histRows ?? []).find(h => normalizeStateForCompare(h?.estNuevo) === normalizeStateForCompare(currentState))
+            const sinceDate = sinceEntry?.fechaAccion ?? null
+            const days = sinceDate ? daysBetween(sinceDate, new Date()) : null
+            const desdeTxt = sinceDate ? formatDateDDMMYYYYDateOnlyDash(sinceDate) : null
+
+            const metaRow = data.find(d => d.representativeRcmId === histRowId)
+            const eventoActivo = Boolean(metaRow?.conEvento) || normalizeState(currentState) === 'EVENTO'
+
+            return (
+              <Paper
+                variant='outlined'
+                sx={theme => ({
+                  p: 2,
+                  mt: 1,
+                  mb: 2,
+                  bgcolor: alpha(theme.palette.warning.main, 0.16),
+                  borderColor: alpha(theme.palette.warning.main, 0.35)
+                })}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+                    <Typography variant='caption' sx={{ fontWeight: 600 }}>
+                      Estado actual:
+                    </Typography>
+                    <Chip
+                      label={currentState || '-'}
+                      size='small'
+                      variant='filled'
+                      sx={{
+                        bgcolor: currentInfo.bgcolor,
+                        color: currentInfo.colorText,
+                        border: `1px solid ${currentInfo.border}`,
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        borderRadius: 2
+                      }}
+                    />
+                    {desdeTxt && (
+                      <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+                        desde {desdeTxt}{days != null ? ` (${days} días)` : ''}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {eventoActivo && <Chip size='small' color='error' label='1 evento activo' />}
+                </Box>
+              </Paper>
+            )
+          })()}
+
           {histLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper} variant='outlined'>
-              <Table size='small'>
-                <TableHead>
+            <TableContainer
+              component={Paper}
+              variant='outlined'
+              sx={theme => ({
+                '& .MuiTableCell-root': {
+                  fontSize: theme.typography.caption.fontSize,
+                  py: 1,
+                  verticalAlign: 'top'
+                }
+              })}
+            >
+              <Table size='small' sx={{ tableLayout: 'fixed', width: '100%' }}>
+                <TableHead
+                  sx={{
+                    '& .MuiTableCell-root': {
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center'
+                    }
+                  }}
+                >
                   <TableRow>
-                    <TableCell>REGISTRO</TableCell>
-                    <TableCell>FUNCIONARIO</TableCell>
-                    <TableCell align='center'>TIPO</TableCell>
-                    <TableCell align='center'>EST. ANTERIOR</TableCell>
-                    <TableCell align='center'>EST. NUEVO</TableCell>
-                    <TableCell align='center'>INFORME</TableCell>
-                    <TableCell align='center'>FECHA ACCIÓN</TableCell>
-                    <TableCell>OBSERVACIÓN</TableCell>
+                    <TableCell align='center' sx={{ width: 112 }}>REGISTRO</TableCell>
+                    <TableCell align='center' sx={{ width: 120 }}>FUNCIONARIO</TableCell>
+                    <TableCell align='center' sx={{ width: 176 }}>TIPO</TableCell>
+                    <TableCell align='center' sx={{ width: 176 }}>EST. ANTERIOR</TableCell>
+                    <TableCell align='center' sx={{ width: 176 }}>EST. NUEVO</TableCell>
+                    <TableCell align='center' sx={{ width: 140 }}>MOTIVO</TableCell>
+                    <TableCell align='center' sx={{ width: 90 }}>INFORME</TableCell>
+                    <TableCell align='center' sx={{ width: 112 }}>FEC. ACCIÓN</TableCell>
+                    <TableCell sx={{ width: 260 }}>OBSERVACIONES</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {histRows.map((h, i) => (
                     <TableRow key={i}>
-                      {/* REGISTRO: keep datetime */}
-                      <TableCell>{formatDateDDMMYYYY(h.fechaAccion)}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        <Typography
+                          variant='body2'
+                          sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.1, whiteSpace: 'nowrap' }}
+                        >
+                          {formatDateDDMMYYYYDateOnlyDash(h.fechaAccion)}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+                          {formatTimeHHmm(h.fechaAccion)}
+                        </Typography>
+                      </TableCell>
                       <TableCell>{h.funcionario}</TableCell>
-                      <TableCell align='center'>{h.tipo}</TableCell>
-                      <TableCell align='center'>
+                      <TableCell>
+                        {(() => {
+                          const raw = String(h.tipo ?? '-')
+                          const label = raw && raw !== 'null' && raw !== 'undefined' ? raw : '-'
+                          return <Chip label={label} size='small' variant='filled' />
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         {(() => {
                           const info = getOperationalInfo(h.estAnterior)
                           return (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Chip
-                                label={h.estAnterior ?? '-'}
+                                label={formatStateForChip(h.estAnterior)}
                                 size='small'
                                 variant='filled'
                                 sx={{
@@ -2137,33 +1933,44 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           )
                         })()}
                       </TableCell>
-                      <TableCell align='center'>
+                      <TableCell>
                         {(() => {
                           const info = getOperationalInfo(h.estNuevo)
                           return (
-                            <Chip
-                              label={h.estNuevo ?? '-'}
-                              size='small'
-                              variant='filled'
-                              sx={{
-                                bgcolor: info.bgcolor,
-                                color: info.colorText,
-                                border: `1px solid ${info.border}`,
-                                textTransform: 'uppercase',
-                                fontWeight: 700,
-                                fontSize: '0.72rem',
-                                borderRadius: 2,
-                                px: 1,
-                                py: 0.4
-                              }}
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Chip
+                                label={formatStateForChip(h.estNuevo)}
+                                size='small'
+                                variant='filled'
+                                sx={{
+                                  bgcolor: info.bgcolor,
+                                  color: info.colorText,
+                                  border: `1px solid ${info.border}`,
+                                  textTransform: 'uppercase',
+                                  fontWeight: 700,
+                                  fontSize: '0.72rem',
+                                  borderRadius: 2,
+                                  px: 1,
+                                  py: 0.4
+                                }}
+                              />
+                            </Box>
                           )
                         })()}
                       </TableCell>
-                      <TableCell align='center'>{h.informe}</TableCell>
-                      {/* FECHA ACCIÓN: only date DD/MM/AAAA */}
-                      <TableCell align='center'>{formatDateDDMMYYYYDateOnly(h.fechaAccion)}</TableCell>
-                      <TableCell>{h.observacion}</TableCell>
+                      <TableCell>{h.motivo ?? '-'}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{h.informe ?? '-'}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDateDDMMYYYYDateOnlyDash(h.fechaAccion)}</TableCell>
+                      <TableCell
+                        title={typeof h.observacion === 'string' ? h.observacion : h.observacion == null ? '' : String(h.observacion)}
+                        sx={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {h.observacion ?? '-'}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

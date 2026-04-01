@@ -1,13 +1,15 @@
 'use client'
-// MUI Imports
-import Grid from '@mui/material/Grid'
 import { useState } from 'react'
 
 // Component Imports
 import Header from './Header'
+import CodigoProductoDetallePanel from './CodigoProductoDetallePanel'
 import UserListTable2 from './UserListTable'
 
 export default function RcmNavigatorPage() {
+  const [selectedCodigoId, setSelectedCodigoId] = useState<number | null>(null)
+  const [showSs, setShowSs] = useState(false)
+
   const [filters, setFilters] = useState<{
     dateField?: 'fecha_codificacion' | 'fecha_muestreo'
     start?: string
@@ -22,7 +24,13 @@ export default function RcmNavigatorPage() {
   return (
     <div>
       <Header onFiltersChange={(f) => setFilters(f)} />
-      <UserListTable2 filters={filters} />
+      <UserListTable2
+        filters={filters}
+        onSelectCodigo={setSelectedCodigoId}
+        forceShowSs={showSs}
+        onForceShowSsChange={setShowSs}
+      />
+      <CodigoProductoDetallePanel codigoAgrupadorId={selectedCodigoId} />
     </div>
   )
 }

@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // devolver historial para el RCM
             const rows = await prisma.rCMHistory.findMany({
                 where: { rcmId },
-                orderBy: { id: 'asc' }
+                orderBy: [{ fechaAccion: 'desc' }, { id: 'desc' }]
             })
             return res.status(200).json(rows)
         }

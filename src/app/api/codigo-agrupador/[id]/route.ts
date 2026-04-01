@@ -4,18 +4,65 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-type Params = { params: Promise<{ id: string }> }
+type Params = { params: { id: string } }
 
 export async function GET(_request: Request, { params }: Params) {
-    const { id } = await params
+    const { id } = params
     const agrupadorId = parseInt(id)
     if (isNaN(agrupadorId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
     const agrupador = await prisma.codigoAgrupador.findUnique({
         where: { id: agrupadorId },
-        include: {
-            ensayos: { include: { producto: true } },
-            rcms: { select: { id: true, numeroRcm: true, rcmType: true, numeroTarjeta: true, estadoOperativo: true } },
+        select: {
+            id: true,
+            codigoNombre: true,
+            descripcionServicio: true,
+            ordenTrabajo: {
+                select: {
+                    clave: true,
+                    correlativ: true,
+                },
+            },
+            ensayos: {
+                include: { producto: true },
+            },
+            rcms: {
+                orderBy: { numeroRcm: 'asc' },
+                select: {
+                    id: true,
+                    numeroRcm: true,
+                    numeroTarjeta: true,
+                    rcmType: true,
+                    estadoOperativo: true,
+                    estadoAdministrativo: true,
+                    tipoMaterial: true,
+                    item: true,
+                    tomaMuestra: true,
+                    procedencia: true,
+                    ubicacionSector: true,
+                    area: { select: { nombre: true } },
+                    familia: { select: { nombre: true } },
+                    servicios: {
+                        select: {
+                            cantidad: true,
+                            estadoOperativo: true,
+                        },
+                    },
+                    RCMHistory: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                        select: {
+                            tipo: true,
+                            tipoEstado: true,
+                            estNuevo: true,
+                            motivo: true,
+                            observacion: true,
+                            createdAt: true,
+                            fechaAccion: true,
+                        },
+                    },
+                },
+            },
         },
     })
 
@@ -24,7 +71,7 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function PUT(request: Request, { params }: Params) {
-    const { id } = await params
+    const { id } = params
     const agrupadorId = parseInt(id)
     if (isNaN(agrupadorId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
@@ -87,7 +134,7 @@ export async function PUT(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-    const { id } = await params
+    const { id } = params
     const agrupadorId = parseInt(id)
     if (isNaN(agrupadorId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 

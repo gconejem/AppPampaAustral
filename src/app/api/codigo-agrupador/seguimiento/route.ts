@@ -1,0 +1,278 @@
+import { NextResponse } from 'next/server'
+
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+const lower = (v: unknown) => String(v ?? '').toLowerCase()
+
+const isEnsayadoEstado = (estadoOperativo?: string | null) => {
+  return String(estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO'
+}
+
+// Placeholder (pendiente de definición formal): evento sin resolver si el ÚLTIMO historial queda en corrección
+const isEventoSinResolver = (lastEstNuevo?: string | null) => {
+  const s = lower(lastEstNuevo)
+  return s.includes('en_correccion') || s.includes('correccion') || s.includes('correg')
+}
+
+const normalizeStateKey = (raw?: string | null) => {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  if (s.includes('_')) return s.toUpperCase()
+  return s.toUpperCase().replace(/\s+/g, '_')
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const ordenTrabajoId = searchParams.get('ordenTrabajoId')
+
+    const where = ordenTrabajoId ? { ordenTrabajoId } : {}
+
+    const agrupadores = await prisma.codigoAgrupador.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        ordenTrabajo: {
+          select: {
+            id: true,
+            clave: true,
+            correlativ: true,
+            agenda: {
+              select: {
+                id: true,
+                comuna: true,
+                region: true,
+                cliente: {
+                  select: {
+                    clienteId: true,
+                    razonSocial: true,
+                    nombreCliente: true,
+                    comuna: true,
+                    ciudad: true,
+                  },
+                },
+                obra: {
+                  select: {
+                    obraId: true,
+                    numeroObra: true,
+                    nombreObra: true,
+                    comuna: true,
+                    region: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+    })
+
+    const agrupadorIds = agrupadores.map(a => a.id)
+    const codigoKeys = Array.from(
+      new Set(
+        agrupadores
+          .flatMap(a => [a.codigoNombre, a.codigoId])
+          .map(v => String(v ?? '').trim())
+          .filter(Boolean)
+      )
+    )
+
+    // En prod suele existir RCM.codigoProducto (string) con valores tipo PRD-006,
+    // aunque no siempre se seteó RCM.codigoAgrupadorId.
+    // Para poblar la tabla, traemos RCMs por ambos caminos.
+    const rcms = await prisma.rCM.findMany({
+      where: {
+        ...(ordenTrabajoId ? { ordenTrabajoId } : {}),
+        OR: [
+          agrupadorIds.length ? { codigoAgrupadorId: { in: agrupadorIds } } : undefined,
+          codigoKeys.length ? { codigoProducto: { in: codigoKeys } } : undefined
+        ].filter(Boolean) as any,
+      },
+      select: {
+        id: true,
+        numeroRcm: true,
+        fechaCodificacion: true,
+        fechaMuestreo: true,
+        estadoOperativo: true,
+        estadoAdministrativo: true,
+        ordenTrabajoId: true,
+        codigoAgrupadorId: true,
+        codigoProducto: true,
+        area: { select: { id: true, nombre: true } },
+        familia: { select: { id: true, nombre: true } },
+        cliente: {
+          select: {
+            clienteId: true,
+            razonSocial: true,
+            nombreCliente: true,
+            comuna: true,
+            ciudad: true
+          }
+        },
+        obra: {
+          select: {
+            obraId: true,
+            numeroObra: true,
+            nombreObra: true,
+            comuna: true,
+            region: true
+          }
+        },
+        servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true } },
+        RCMHistory: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { estNuevo: true, informe: true, createdAt: true }
+        }
+      }
+    })
+
+    // index: prefer match by (ordenTrabajoId + codigoNombre)
+    const agrupadorByOtAndCodigo = new Map<string, number>()
+    const agrupadorByCodigo = new Map<string, number>()
+    for (const a of agrupadores) {
+      const otId = a.ordenTrabajo?.id ?? a.ordenTrabajoId ?? ''
+      const codigoNombre = String(a.codigoNombre ?? '').trim()
+      const codigoId = String(a.codigoId ?? '').trim()
+
+      if (otId && codigoNombre) agrupadorByOtAndCodigo.set(`${otId}::${codigoNombre}`, a.id)
+      if (otId && codigoId) agrupadorByOtAndCodigo.set(`${otId}::${codigoId}`, a.id)
+
+      if (codigoNombre && !agrupadorByCodigo.has(codigoNombre)) agrupadorByCodigo.set(codigoNombre, a.id)
+      if (codigoId && !agrupadorByCodigo.has(codigoId)) agrupadorByCodigo.set(codigoId, a.id)
+    }
+
+    const rcmsByAgrupadorId = new Map<number, typeof rcms>()
+    for (const a of agrupadores) rcmsByAgrupadorId.set(a.id, [])
+
+    for (const r of rcms) {
+      if (r.codigoAgrupadorId && rcmsByAgrupadorId.has(r.codigoAgrupadorId)) {
+        rcmsByAgrupadorId.get(r.codigoAgrupadorId)!.push(r)
+        continue
+      }
+
+      const codigo = String(r.codigoProducto ?? '').trim() || null
+      if (!codigo) continue
+
+      const otId = r.ordenTrabajoId ?? ''
+      const byOtKey = otId ? agrupadorByOtAndCodigo.get(`${otId}::${codigo}`) : undefined
+      const targetId = byOtKey ?? agrupadorByCodigo.get(codigo)
+      if (!targetId) continue
+
+      rcmsByAgrupadorId.get(targetId)?.push(r)
+    }
+
+    const rows = agrupadores.map(ag => {
+      const rcmsForAg = rcmsByAgrupadorId.get(ag.id) ?? []
+
+      // RCM representativo para acciones (el más reciente por fecha de codificación)
+      let representativeRcmId: number | null = null
+      let representativeRcmFecha: Date | null = null
+      for (const r of rcmsForAg) {
+        if (!r.fechaCodificacion) continue
+        if (!representativeRcmFecha || r.fechaCodificacion > representativeRcmFecha) {
+          representativeRcmFecha = r.fechaCodificacion
+          representativeRcmId = r.id
+        }
+      }
+
+      // FECHA COD / MUESTREO: primera del grupo (min)
+      let fechaCodMinIso: string | null = null
+      let fechaMuesMinIso: string | null = null
+      for (const r of rcmsForAg) {
+        const iso = r.fechaCodificacion ? r.fechaCodificacion.toISOString() : null
+        if (iso && (!fechaCodMinIso || iso < fechaCodMinIso)) fechaCodMinIso = iso
+
+        const isoM = r.fechaMuestreo ? r.fechaMuestreo.toISOString() : null
+        if (isoM && (!fechaMuesMinIso || isoM < fechaMuesMinIso)) fechaMuesMinIso = isoM
+      }
+
+      // Conteos por estado (para filtros/indicadores en UI)
+      const estadoOperativoCounts: Record<string, number> = {}
+      const estadoAdministrativoCounts: Record<string, number> = {}
+      for (const r of rcmsForAg) {
+        const opKey = normalizeStateKey(r.estadoOperativo)
+        if (opKey) estadoOperativoCounts[opKey] = (estadoOperativoCounts[opKey] ?? 0) + 1
+
+        const adKey = normalizeStateKey(r.estadoAdministrativo)
+        if (adKey) estadoAdministrativoCounts[adKey] = (estadoAdministrativoCounts[adKey] ?? 0) + 1
+      }
+
+      // Área / Familia: primera no vacía (se asume consistencia dentro del código)
+      const firstArea = rcmsForAg.find(r => r.area?.nombre)?.area?.nombre ?? null
+      const firstFamilia = rcmsForAg.find(r => r.familia?.nombre)?.familia?.nombre ?? null
+
+      // Cliente/Obra/Ciudad: primera no vacía (fallbacks)
+      const firstCliente = rcmsForAg.find(r => r.cliente?.razonSocial || r.cliente?.nombreCliente)?.cliente ?? null
+      const firstObra = rcmsForAg.find(r => r.obra?.numeroObra || r.obra?.nombreObra)?.obra ?? null
+
+      // Fallback: OrdenTrabajo -> Agenda -> Cliente/Obra (cuando RCM no trae cliente/obra)
+      const agenda = ag.ordenTrabajo?.agenda ?? null
+      const fallbackCliente = firstCliente ?? agenda?.cliente ?? null
+      const fallbackObra = firstObra ?? agenda?.obra ?? null
+
+      const ciudad =
+        firstObra?.comuna ??
+        agenda?.comuna ??
+        fallbackObra?.comuna ??
+        firstCliente?.comuna ??
+        firstCliente?.ciudad ??
+        fallbackCliente?.comuna ??
+        fallbackCliente?.ciudad ??
+        null
+
+      // Ensayos (desde ServicioRCM)
+      let ensayosTotal = 0
+      let ensayosEnsayados = 0
+      for (const r of rcmsForAg) {
+        for (const s of r.servicios ?? []) {
+          const qty = Number(s.cantidad ?? 0)
+          ensayosTotal += qty
+          if (isEnsayadoEstado(s.estadoOperativo)) ensayosEnsayados += qty
+        }
+      }
+
+      // N° Informe (max) desde el último historial traído por RCM (si existe)
+      let informeMax: number | null = null
+      for (const r of rcmsForAg) {
+        const inf = r.RCMHistory?.[0]?.informe ?? null
+        if (inf === null || inf === undefined) continue
+        const n = Number(inf)
+        if (Number.isFinite(n) && (informeMax === null || n > informeMax)) informeMax = n
+      }
+
+      // Con Evento (placeholder)
+      const conEvento = rcmsForAg.some(r => isEventoSinResolver(r.RCMHistory?.[0]?.estNuevo ?? null))
+
+      return {
+        id: ag.id,
+        codigoId: ag.codigoId,
+        codigoNombre: ag.codigoNombre,
+        representativeRcmId,
+        ss: ag.ordenTrabajo?.clave ?? null,
+        ot: ag.ordenTrabajo?.correlativ ?? null,
+        ordenTrabajoId: ag.ordenTrabajo?.id ?? ag.ordenTrabajoId ?? null,
+        fechaCodificacionMin: fechaCodMinIso,
+        fechaMuestreoMin: fechaMuesMinIso,
+        areaNombre: firstArea,
+        familiaNombre: firstFamilia,
+        ciudad,
+        cliente: fallbackCliente,
+        obra: fallbackObra,
+        totalRcms: rcmsForAg.length,
+        estadoOperativoCounts,
+        estadoAdministrativoCounts,
+        ensayos: { ensayados: ensayosEnsayados, total: ensayosTotal },
+        informe: informeMax,
+        conEvento
+      }
+    })
+
+    return NextResponse.json(rows)
+  } catch (error) {
+    console.error('Error en seguimiento de códigos producto:', error)
+    return NextResponse.json({ error: 'Error al obtener seguimiento de códigos producto' }, { status: 500 })
+  }
+}
