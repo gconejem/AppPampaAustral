@@ -19,9 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         if (req.method === 'GET') {
             // devolver historial para el RCM
+            const takeRaw = Array.isArray(req.query.take) ? req.query.take[0] : (req.query.take as any)
+            const take = takeRaw != null ? Number(takeRaw) : null
             const rows = await prisma.rCMHistory.findMany({
                 where: { rcmId },
-                orderBy: [{ fechaAccion: 'desc' }, { id: 'desc' }]
+                orderBy: [{ fechaAccion: 'desc' }, { id: 'desc' }],
+                ...(Number.isFinite(take) && (take as number) > 0 ? { take: Math.min(500, Math.max(1, take as number)) } : {})
             })
             return res.status(200).json(rows)
         }
@@ -36,7 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 funcionario,
                 estPrev,
                 estNuevo,
-                informe
+                informe,
+                aplicadoA
             } = req.body ?? {}
 
             const finalTipo = typeof tipo === 'string' && tipo.trim() ? tipo : 'Ope'
@@ -47,16 +51,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         ? usuario
                         : 'Usuario'
 
+            // Si el front no envía estPrev (o viene vacío), usar el estado actual desde BBDD.
+            // Esto evita que el historial muestre "-" en EST. ANTERIOR.
+            const dbPrev = await prisma.rCM.findUnique({
+                where: { id: rcmId },
+                select: { estadoOperativo: true }
+            })
+            const finalEstPrev =
+                (typeof estPrev === 'string' && estPrev.trim())
+                    ? estPrev.trim()
+                    : (typeof estPrev === 'string' ? null : (estPrev ?? null)) ?? dbPrev?.estadoOperativo ?? null
+
             const created = await prisma.rCMHistory.create({
                 data: {
                     rcmId,
-                    ...(typeof finalTipo === 'string' ? { tipo: finalTipo } : {}),
+                    tipo: finalTipo,
                     funcionario: finalFuncionario,
                     fechaAccion: new Date(),
-                    estAnterior: estPrev ?? null,
+                    estAnterior: finalEstPrev,
                     estNuevo: estNuevo ?? null,
                     observacion: observacion ?? motivo ?? null,
                     informe: informe ?? null,
+                    aplicadoA: (typeof aplicadoA === 'string' && aplicadoA.trim()) ? aplicadoA.trim() : null,
                     ...(typeof tipoEstado === 'string' ? { tipoEstado } : {}),
                     ...(typeof motivo === 'string' ? { motivo } : {})
                 }
@@ -65,10 +81,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // actualizar estado operativo en RCM si corresponde (no fatal)
             if (estNuevo) {
                 try {
-                    await prisma.rCM.update({
-                        where: { id: rcmId },
-                        data: { estadoOperativo: estNuevo }
-                    })
+                    const appliedKey = String(aplicadoA ?? '').trim().toUpperCase()
+                    const applyToCp = appliedKey === 'CP' || appliedKey === 'CODIGO_PRODUCTO' || appliedKey === 'CODIGO PRODUCTO'
+
+                    const isEvento =
+                        String(tipoEstado ?? '').trim().toUpperCase() === 'EVENTO' ||
+                        String(finalTipo ?? '').trim() === 'Evento Abierto'
+
+                    // Si la acción se aplica al CP (Código Producto), hay que propagar el estado a todos los RCM
+                    // del mismo agrupador para que el seguimiento (que agrupa por CP) refleje el cambio.
+                    if (applyToCp || isEvento) {
+                        const base = await prisma.rCM.findUnique({
+                            where: { id: rcmId },
+                            select: { codigoAgrupadorId: true, codigoProducto: true, ordenTrabajoId: true }
+                        })
+
+                        if (base?.codigoAgrupadorId) {
+                            await prisma.rCM.updateMany({
+                                where: { codigoAgrupadorId: base.codigoAgrupadorId },
+                                data: { estadoOperativo: estNuevo }
+                            })
+                        } else if (base?.codigoProducto && base?.ordenTrabajoId) {
+                            await prisma.rCM.updateMany({
+                                where: { codigoProducto: base.codigoProducto, ordenTrabajoId: base.ordenTrabajoId },
+                                data: { estadoOperativo: estNuevo }
+                            })
+                        } else {
+                            await prisma.rCM.update({
+                                where: { id: rcmId },
+                                data: { estadoOperativo: estNuevo }
+                            })
+                        }
+                    } else {
+                        await prisma.rCM.update({
+                            where: { id: rcmId },
+                            data: { estadoOperativo: estNuevo }
+                        })
+                    }
                 } catch (e) {
                     // no bloquear la creación del historial si falla la actualización del RCM
                     // eslint-disable-next-line no-console

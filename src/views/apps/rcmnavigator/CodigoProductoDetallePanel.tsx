@@ -12,8 +12,12 @@ import LinearProgress from '@mui/material/LinearProgress'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Paper from '@mui/material/Paper'
+import { alpha } from '@mui/material/styles'
 
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import CloseIcon from '@mui/icons-material/Close'
 
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 
@@ -68,9 +72,26 @@ const normalizeStateKey = (raw?: string | null) => {
   return s.toUpperCase().replace(/\s+/g, '_')
 }
 
-const isEventoSinResolver = (lastEstNuevo?: string | null) => {
-  const s = String(lastEstNuevo ?? '').toLowerCase()
-  return s.includes('en_correccion') || s.includes('correccion') || s.includes('correg')
+const isEventoAbierto = (h: Pick<HistoryEntry, 'tipo' | 'tipoEstado'> | null | undefined) => {
+  const tipo = String(h?.tipo ?? '').trim()
+  const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+  return tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
+}
+
+const isEventoCerrado = (h: Pick<HistoryEntry, 'tipo' | 'tipoEstado'> | null | undefined) => {
+  const tipo = String(h?.tipo ?? '').trim()
+  const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+  return tipo === 'Evento Cerrado' || tipoEstado === 'EVENTO_CERRADO'
+}
+
+// Evento activo: existe "Evento Abierto" posterior al último "Evento Cerrado".
+// Historial viene ordenado DESC desde API.
+const findEventoActivo = (history: HistoryEntry[] | null | undefined) => {
+  for (const h of history ?? []) {
+    if (isEventoCerrado(h)) return null
+    if (isEventoAbierto(h)) return h
+  }
+  return null
 }
 
 const formatRcmLabel = (numeroRcm?: string | null) => {
@@ -135,10 +156,29 @@ const getOperativeChipSx = (state?: string | null) => {
   } as const
 }
 
-export default function CodigoProductoDetallePanel({ codigoAgrupadorId }: { codigoAgrupadorId: number | null }) {
+export default function CodigoProductoDetallePanel({
+  codigoAgrupadorId,
+  onClose,
+  onResolveEvento
+}: {
+  codigoAgrupadorId: number | null
+  onClose?: () => void
+  onResolveEvento?: (rcmId: number) => void
+}) {
   const [tab, setTab] = useState<'rcms' | 'eventos'>('rcms')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<AgrupadorDetalle | null>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  useEffect(() => {
+    const onRefresh = () => {
+      if (!codigoAgrupadorId) return
+      setRefreshTick(t => t + 1)
+    }
+
+    window.addEventListener('rcmnavigator:codigo-detalle-refresh', onRefresh as any)
+    return () => window.removeEventListener('rcmnavigator:codigo-detalle-refresh', onRefresh as any)
+  }, [codigoAgrupadorId])
 
   useEffect(() => {
     if (!codigoAgrupadorId) {
@@ -152,7 +192,8 @@ export default function CodigoProductoDetallePanel({ codigoAgrupadorId }: { codi
       setLoading(true)
 
       try {
-        const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}`)
+        // Evitar respuestas cacheadas luego de acciones (p.ej. cerrar evento)
+        const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?t=${refreshTick}`, { cache: 'no-store' })
         const json = await res.json()
         if (cancelled) return
 
@@ -171,18 +212,16 @@ export default function CodigoProductoDetallePanel({ codigoAgrupadorId }: { codi
     return () => {
       cancelled = true
     }
-  }, [codigoAgrupadorId])
+  }, [codigoAgrupadorId, refreshTick])
 
   const rcms = data?.rcms ?? []
 
   const eventos = useMemo(() => {
     return rcms
       .map(r => {
-        const last = (r.RCMHistory ?? [])[0] ?? null
-        if (!last) return null
-        if (!isEventoSinResolver(last.estNuevo ?? null)) return null
-
-        return { rcm: r, last }
+        const active = findEventoActivo(r.RCMHistory)
+        if (!active) return null
+        return { rcm: r, last: active }
       })
       .filter(Boolean) as Array<{ rcm: RcmRow; last: HistoryEntry }>
   }, [rcms])
@@ -228,6 +267,12 @@ export default function CodigoProductoDetallePanel({ codigoAgrupadorId }: { codi
                 <Chip size='small' label={data.ordenTrabajo.clave} variant='outlined' sx={{ fontWeight: 700 }} />
               ) : null}
               {loading ? <Chip size='small' label='Cargando…' variant='outlined' /> : null}
+
+              {onClose ? (
+                <IconButton size='small' aria-label='Cerrar' onClick={onClose}>
+                  <CloseIcon fontSize='small' />
+                </IconButton>
+              ) : null}
             </Box>
           </Box>
         }
@@ -322,41 +367,79 @@ export default function CodigoProductoDetallePanel({ codigoAgrupadorId }: { codi
               Sin eventos para este código.
             </Typography>
           ) : (
-            <div className='overflow-x-auto'>
-              <table className={tableStyles.table}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left' }}>RCM</th>
-                    <th style={{ textAlign: 'center' }}>ESTADO</th>
-                    <th style={{ textAlign: 'left' }}>MOTIVO</th>
-                    <th style={{ textAlign: 'left' }}>OBSERVACIÓN</th>
-                    <th style={{ textAlign: 'center' }}>FECHA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eventos.map(({ rcm, last }) => {
-                    const when = last.fechaAccion ?? last.createdAt ?? null
-                    return (
-                      <tr key={rcm.id}>
-                        <td style={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>{formatRcmLabel(rcm.numeroRcm)}</td>
-                        <td style={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              {eventos.map(({ rcm, last }) => {
+                const when = String(last.fechaAccion ?? last.createdAt ?? '').trim() || null
+
+                const motivo = String(last.motivo ?? '').trim()
+                const [head, ...rest] = motivo.split(' - ')
+                const evTipo = (head || 'Evento').trim()
+                const evMotivo = (rest.join(' - ') || '').trim()
+
+                const obs = String(last.observacion ?? '').trim()
+                const obsLine = obs ? (obs.split(/\r?\n/).find(l => String(l).trim()) ?? '') : ''
+
+                return (
+                  <Paper
+                    key={rcm.id}
+                    variant='outlined'
+                    sx={theme => ({
+                      p: 1.25,
+                      borderRadius: 2,
+                      borderColor: alpha(theme.palette.error.main, 0.35),
+                      bgcolor: alpha(theme.palette.error.main, 0.06)
+                    })}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                           <Chip
                             size='small'
-                            label={(last.estNuevo ?? 'EVENTO').toUpperCase()}
-                            color='warning'
-                            variant='outlined'
-                            sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+                            label={evTipo}
+                            sx={theme => ({
+                              fontWeight: 900,
+                              borderRadius: 999,
+                              bgcolor: alpha(theme.palette.error.main, 0.16),
+                              color: theme.palette.error.main
+                            })}
                           />
-                        </td>
-                        <td>{last.motivo ?? '-'}</td>
-                        <td>{last.observacion ?? '-'}</td>
-                        <td style={{ textAlign: 'center' }}>{when ? new Date(when).toLocaleDateString() : '-'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800 }}>
+                            {formatRcmLabel(rcm.numeroRcm)}
+                          </Typography>
+                          {when ? (
+                            <Typography variant='caption' color='text.secondary'>
+                              {new Date(when).toLocaleDateString()}
+                            </Typography>
+                          ) : null}
+                        </Box>
+
+                        {evMotivo ? (
+                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                            {evMotivo}
+                          </Typography>
+                        ) : null}
+
+                        {obsLine ? (
+                          <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                            {obsLine}
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      <Button
+                        size='small'
+                        variant='outlined'
+                        color='success'
+                        onClick={() => onResolveEvento?.(rcm.id)}
+                        sx={{ textTransform: 'none', borderRadius: 999, whiteSpace: 'nowrap' }}
+                      >
+                        Resolver
+                      </Button>
+                    </Box>
+                  </Paper>
+                )
+              })}
+            </Box>
           )}
         </Box>
       )}

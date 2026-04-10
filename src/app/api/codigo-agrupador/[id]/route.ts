@@ -6,64 +6,116 @@ export const dynamic = 'force-dynamic'
 
 type Params = { params: { id: string } }
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
     const { id } = params
     const agrupadorId = parseInt(id)
     if (isNaN(agrupadorId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
+    const url = new URL(request.url)
+    const view = String(url.searchParams.get('view') ?? '').trim().toLowerCase()
+    const isSkusView = view === 'skus' || view === 'informe' || view === 'informes'
+    const isDialogView = view === 'dialog' || view === 'popup' || view === 'lite'
+
     const agrupador = await prisma.codigoAgrupador.findUnique({
         where: { id: agrupadorId },
-        select: {
-            id: true,
-            codigoNombre: true,
-            descripcionServicio: true,
-            ordenTrabajo: {
-                select: {
-                    clave: true,
-                    correlativ: true,
-                },
-            },
-            ensayos: {
-                include: { producto: true },
-            },
-            rcms: {
-                orderBy: { numeroRcm: 'asc' },
-                select: {
+        select: isSkusView
+            ? {
+                id: true,
+                codigoNombre: true,
+                descripcionServicio: true,
+                ordenTrabajo: { select: { clave: true, correlativ: true } },
+                ensayos: {
+                    select: {
+                        sku: true,
+                        nombre: true,
+                        producto: { select: { sku: true, nombre: true } }
+                    }
+                }
+            }
+            : isDialogView
+                ? {
                     id: true,
-                    numeroRcm: true,
-                    numeroTarjeta: true,
-                    rcmType: true,
-                    estadoOperativo: true,
-                    estadoAdministrativo: true,
-                    tipoMaterial: true,
-                    item: true,
-                    tomaMuestra: true,
-                    procedencia: true,
-                    ubicacionSector: true,
-                    area: { select: { nombre: true } },
-                    familia: { select: { nombre: true } },
-                    servicios: {
+                    codigoNombre: true,
+                    descripcionServicio: true,
+                    ordenTrabajo: { select: { clave: true, correlativ: true } },
+                    ensayos: {
                         select: {
-                            cantidad: true,
-                            estadoOperativo: true,
+                            sku: true,
+                            nombre: true,
+                            producto: { select: { sku: true, nombre: true } }
+                        }
+                    },
+                    rcms: {
+                        orderBy: { numeroRcm: 'asc' },
+                        select: {
+                            id: true,
+                            RCMHistory: {
+                                orderBy: { createdAt: 'desc' },
+                                take: 1,
+                                select: {
+                                    tipo: true,
+                                    tipoEstado: true,
+                                    motivo: true,
+                                    observacion: true,
+                                    createdAt: true,
+                                    fechaAccion: true,
+                                    estNuevo: true
+                                }
+                            }
+                        }
+                    }
+                }
+                : {
+                    id: true,
+                    codigoNombre: true,
+                    descripcionServicio: true,
+                    ordenTrabajo: {
+                        select: {
+                            clave: true,
+                            correlativ: true,
                         },
                     },
-                    RCMHistory: {
-                        orderBy: { createdAt: 'desc' },
-                        take: 1,
+                    ensayos: {
+                        include: { producto: true },
+                    },
+                    rcms: {
+                        orderBy: { numeroRcm: 'asc' },
                         select: {
-                            tipo: true,
-                            tipoEstado: true,
-                            estNuevo: true,
-                            motivo: true,
-                            observacion: true,
-                            createdAt: true,
-                            fechaAccion: true,
+                            id: true,
+                            numeroRcm: true,
+                            numeroTarjeta: true,
+                            rcmType: true,
+                            estadoOperativo: true,
+                            estadoAdministrativo: true,
+                            tipoMaterial: true,
+                            item: true,
+                            tomaMuestra: true,
+                            procedencia: true,
+                            ubicacionSector: true,
+                            area: { select: { nombre: true } },
+                            familia: { select: { nombre: true } },
+                            servicios: {
+                                select: {
+                                    cantidad: true,
+                                    estadoOperativo: true,
+                                },
+                            },
+                            RCMHistory: {
+                                orderBy: { createdAt: 'desc' },
+                                take: 20,
+                                select: {
+                                    tipo: true,
+                                    tipoEstado: true,
+                                    estNuevo: true,
+                                    motivo: true,
+                                    observacion: true,
+                                    createdAt: true,
+                                    fechaAccion: true,
+                                },
+                            },
                         },
                     },
                 },
-            },
-        },
     })
 
     if (!agrupador) return NextResponse.json({ error: 'Agrupador no encontrado' }, { status: 404 })

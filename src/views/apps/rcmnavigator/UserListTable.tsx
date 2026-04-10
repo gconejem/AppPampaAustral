@@ -1,9 +1,26 @@
 'use client'
 
 // ...existing code...
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+// NextAuth
+import { useSession } from 'next-auth/react'
 
 // Next Imports
+import { usePathname } from 'next/navigation'
+
+// TanStack React Table
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type FilterFn
+} from '@tanstack/react-table'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -17,7 +34,7 @@ import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import TablePagination from '@mui/material/TablePagination'
-import { styled, alpha } from '@mui/material/styles'
+import { styled, alpha, lighten } from '@mui/material/styles'
 import type { TextFieldProps } from '@mui/material/TextField'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -34,6 +51,17 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import Paper from '@mui/material/Paper'
 import CloseIcon from '@mui/icons-material/Close'
+import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined'
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import Popover from '@mui/material/Popover'
+import Radio from '@mui/material/Radio'
 
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
@@ -43,75 +71,8 @@ import FormHelperText from '@mui/material/FormHelperText'
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 
-// Icons
-import VisibilityIcon from '@mui/icons-material/Visibility'
-import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
-import { rankItem } from '@tanstack/match-sorter-utils'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel
-} from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/table-core'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
-
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-
-// ...existing code...
-declare module '@tanstack/table-core' {
-  interface FilterFns {
-    fuzzy: FilterFn<unknown>
-  }
-  interface FilterMeta {
-    itemRank: RankingInfo
-  }
-}
-
-// Styled Components
-const Icon = styled('i')({})
-
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  const itemRank = rankItem(row.getValue(columnId), value)
-  addMeta({ itemRank })
-  return itemRank.passed
-}
-
-const DebouncedInput = ({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number
-  onChange: (value: string | number) => void
-  debounce?: number
-} & Omit<TextFieldProps, 'onChange'>) => {
-  const [value, setValue] = useState(initialValue)
-  useEffect(() => setValue(initialValue), [initialValue])
-  useEffect(() => {
-    const timeout = setTimeout(() => onChange(value), debounce)
-    return () => clearTimeout(timeout)
-  }, [value])
-  return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
-}
-
-// Small helpers for status color mapping
-const statusColor = (s?: string) => {
-  if (!s) return 'default'
-  const key = s.toString().toLowerCase()
-  if (['codificado', 'activo', 'a', 'ok', 'firmado'].some(k => key.includes(k))) return 'success'
-  if (['pendiente', 'p', 'pend'].some(k => key.includes(k))) return 'warning'
-  if (['rechazado', 'cancelado', 'inactivo'].some(k => key.includes(k))) return 'error'
-  return 'default'
-}
 
 // normalizar texto: quitar diacríticos, pasar a minúsculas y trim
 function normalizeText(v: any) {
@@ -134,10 +95,44 @@ function normalizeText(v: any) {
     // colapsar múltiples espacios y trim
     s = s.replace(/\s+/g, ' ').trim()
 
-    return s.toLowerCase()
-  } catch (e) {
-    return String(v).toLowerCase().replace(/\s+/g, ' ').trim()
+    return s
+  } catch {
+    return ''
   }
+}
+
+const DebouncedInput = ({
+  value: initialValue,
+  onChange,
+  debounce = 400,
+  ...props
+}: {
+  value: string | number
+  onChange: (value: string | number) => void
+  debounce?: number
+} & Omit<TextFieldProps, 'value' | 'onChange'>) => {
+  const [value, setValue] = useState(initialValue)
+
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value)
+    }, debounce)
+
+    return () => clearTimeout(timeout)
+  }, [value, debounce, onChange])
+
+  return (
+    <TextField
+      {...props}
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      size={props.size ?? 'small'}
+    />
+  )
 }
 
 // helper: obtener color de estado administrativo (acepta value o label)
@@ -201,11 +196,20 @@ interface Filters {
   dateField?: 'fecha_codificacion' | 'fecha_muestreo'
   start?: string
   end?: string
-  estadoOperativo?: string
-  estadoAdministrativo?: string
+  estadoOperativo?: string | string[]
+  estadoAdministrativo?: string | string[]
+  conEvento?: boolean
   areaId?: number | null
   areaName?: string | null
   familia?: string | null
+}
+
+const fuzzyFilter: FilterFn<RCM> = (row, columnId, value) => {
+  const raw = row.getValue(columnId)
+  const haystack = normalizeText(raw).toLowerCase()
+  const needle = normalizeText(value).toLowerCase()
+  if (!needle) return true
+  return haystack.includes(needle)
 }
 
 // Component
@@ -213,15 +217,25 @@ const columnHelper = createColumnHelper<RCM>()
 
 const UserListTable2 = ({
   filters,
-  onSelectCodigo,
-  forceShowSs,
-  onForceShowSsChange
+  onFiltersChange,
+  onSelectCodigo
 }: {
   filters?: Filters
+  onFiltersChange?: (filters?: Filters) => void
   onSelectCodigo?: (codigoAgrupadorId: number) => void
-  forceShowSs?: boolean
-  onForceShowSsChange?: (next: boolean) => void
 }) => {
+  const { data: session } = useSession()
+
+  const getCurrentUserName = () => {
+    const name = session?.user?.name
+    if (typeof name === 'string' && name.trim()) return name.trim()
+
+    const email = session?.user?.email
+    if (typeof email === 'string' && email.trim()) return email.trim()
+
+    return null
+  }
+
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
@@ -329,6 +343,7 @@ const UserListTable2 = ({
   const [correctionObservaciones, setCorrectionObservaciones] = useState<string>('')
   // Tipo de Evento: 'INFO_PENDIENTE' | 'ERROR_INTERNO' | 'CORRECCION'
   const [eventType, setEventType] = useState<string>('')
+  const [eventReturnState, setEventReturnState] = useState<string>('')
 
   // ---- Helpers que dependen de `data` (dentro del componente) ----
   const normalizeState = (s?: string) => (s ?? '').toString().toUpperCase().trim()
@@ -381,6 +396,11 @@ const UserListTable2 = ({
     return ''
   }
 
+  const getAppliedAForRow = (rowId?: number | null) => {
+    // Por ahora el historial se aplica a "CP" (Código Producto)
+    return 'CP'
+  }
+
   // Devuelve los estados para el popup "marcar"
   // Reglas:
   // 1) Si el estado actual es EVENTO o CERRADO_OP -> mostrar todos los estados (el actual disabled)
@@ -423,6 +443,12 @@ const UserListTable2 = ({
   const [histRowId, setHistRowId] = useState<number | null>(null)
   const [histRows, setHistRows] = useState<any[]>([])
   const [histLoading, setHistLoading] = useState(false)
+  const [histCodigoData, setHistCodigoData] = useState<any>(null)
+
+  // Popover de ayuda para estados operativos (según imágenes)
+  const [opHelpAnchorEl, setOpHelpAnchorEl] = useState<HTMLElement | null>(null)
+  const [opHelpState, setOpHelpState] = useState<string | null>(null)
+  const [opHelpDate, setOpHelpDate] = useState<any>(null)
 
   // Dialog: Gestionar Informe (nuevo)
   const [informeDialogOpen, setInformeDialogOpen] = useState(false)
@@ -443,10 +469,15 @@ const UserListTable2 = ({
   const [codigoDialogMeta, setCodigoDialogMeta] = useState<any>(null)
   const [codigoDialogData, setCodigoDialogData] = useState<any>(null)
   const [codigoDialogDigitadoAt, setCodigoDialogDigitadoAt] = useState<string | null>(null)
+  const [codigoDialogOpAt, setCodigoDialogOpAt] = useState<string | null>(null)
 
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
+
+  // cache liviana para título de Historial (codigoAgrupadorId -> {codigoNombre, descripcionServicio})
+  const codigoLiteCache: Map<number, any> = (global as any).__RCM_CODIGO_LITE_CACHE__ || new Map()
+    ; (global as any).__RCM_CODIGO_LITE_CACHE__ = codigoLiteCache
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
@@ -470,7 +501,8 @@ const UserListTable2 = ({
 
     try {
       setInformeDialogLoading(true)
-      const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}`)
+      // Vista liviana: este diálogo sólo necesita descripción + SKUs
+      const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?view=skus`)
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
         throw new Error(txt || 'No se pudo cargar el detalle del código')
@@ -510,14 +542,6 @@ const UserListTable2 = ({
     return null
   }
 
-  const formatInformeMock = (informe: any, whenIso?: string | null) => {
-    const n = parseInformeNumber(informe)
-    if (n == null) return null
-    const when = whenIso ? new Date(whenIso) : null
-    const year = when && !Number.isNaN(when.getTime()) ? when.getFullYear() : new Date().getFullYear()
-    return `INF-${year}-${String(n).padStart(3, '0')}`
-  }
-
   const computeEnsayosFromServicios = (servicios?: Array<{ cantidad?: number | null; estadoOperativo?: string | null }>) => {
     let total = 0
     let ensayados = 0
@@ -533,6 +557,7 @@ const UserListTable2 = ({
     setCodigoDialogMeta(row)
     setCodigoDialogData(null)
     setCodigoDialogDigitadoAt(null)
+    setCodigoDialogOpAt(null)
     setCodigoDialogOpen(true)
 
     const codigoId = Number(row?.id)
@@ -541,35 +566,52 @@ const UserListTable2 = ({
     try {
       setCodigoDialogLoading(true)
 
-      // 1) detalle del código
-      if (Number.isFinite(codigoId) && codigoId > 0) {
-        const res = await fetch(`/api/codigo-agrupador/${codigoId}`)
-        if (res.ok) {
-          const json = await res.json().catch(() => null)
-          setCodigoDialogData(json)
-        }
-      }
+      const detailPromise =
+        Number.isFinite(codigoId) && codigoId > 0
+          ? fetch(`/api/codigo-agrupador/${codigoId}?view=dialog`)
+              .then(async res => {
+                if (!res.ok) return null
+                return (await res.json().catch(() => null)) as any
+              })
+          : Promise.resolve(null)
 
-      // 2) fecha último DIGITADO desde historial del representative RCM
-      if (Number.isFinite(repRcmId) && repRcmId > 0) {
-        const cached = historyCache.get(repRcmId)
-        const rows = cached
-          ? cached
-          : await (async () => {
-              const res = await fetch(`/api/rcm/${repRcmId}/history`)
+      const historyPromise =
+        Number.isFinite(repRcmId) && repRcmId > 0
+          ? (async () => {
+              const cached = historyCache.get(repRcmId)
+              if (cached) return cached
+
+              // Sólo necesitamos entradas recientes para fechas (DIGITADO / estado actual)
+              const res = await fetch(`/api/rcm/${repRcmId}/history?take=120`)
               if (!res.ok) return []
               const json = await res.json().catch(() => [])
               const arr = Array.isArray(json) ? json : []
               historyCache.set(repRcmId, arr)
               return arr
             })()
+          : Promise.resolve([])
 
+      const [detail, rows] = await Promise.all([detailPromise, historyPromise])
+      if (detail) setCodigoDialogData(detail)
+
+      // fechas desde historial del representative RCM
+      if (rows && Array.isArray(rows) && rows.length) {
         const hit = (rows ?? []).find((h: any) => {
           const est = String(h?.estNuevo ?? h?.tipoEstado ?? '').trim().toUpperCase()
           return est === 'DIGITADO'
         })
         const when = hit?.fechaAccion ?? hit?.createdAt ?? null
         if (when) setCodigoDialogDigitadoAt(String(when))
+
+        const currentOpKey = normalizeStateForCompare(row?.estadoOperativo)
+        if (currentOpKey) {
+          const opHit = (rows ?? []).find((h: any) => {
+            const est = normalizeStateForCompare(h?.estNuevo ?? h?.tipoEstado)
+            return est === currentOpKey
+          })
+          const opWhen = opHit?.fechaAccion ?? opHit?.createdAt ?? null
+          if (opWhen) setCodigoDialogOpAt(String(opWhen))
+        }
       }
     } catch (e) {
       console.error('openCodigoProductoDialog error', e)
@@ -584,6 +626,7 @@ const UserListTable2 = ({
     setCodigoDialogMeta(null)
     setCodigoDialogData(null)
     setCodigoDialogDigitadoAt(null)
+    setCodigoDialogOpAt(null)
   }
 
   const validateInformeDialog = () => {
@@ -617,9 +660,10 @@ const UserListTable2 = ({
         tipoEstado: 'DIGITADO',
         motivo: null,
         observacion: null,
-        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : null,
+        funcionario: getCurrentUserName() ?? 'Usuario',
         estPrev: prevState ?? null,
         estNuevo: 'DIGITADO',
+        aplicadoA: getAppliedAForRow(rcmId),
         informe: informeToPersist
       }
 
@@ -684,10 +728,35 @@ const UserListTable2 = ({
     setInformeNumber('')
     setCorrectionMotivo('')
     setCorrectionObservaciones('')
-    setEventType('')
+    // Para EVENTO, el tipo debe venir seleccionado por defecto
+    setEventType(action === 'EVENTO' ? 'INFO_PENDIENTE' : '')
+    if (action === 'EVENTO' && rowId != null) {
+      // Por regla de negocio: el estado actual debe venir preseleccionado
+      setEventReturnState(getCurrentStateForRow(rowId) || '')
+    } else {
+      setEventReturnState('')
+    }
     handleCloseMarkMenu()
     setMarkDialogOpen(true)
   }
+
+  // Permite que el panel de detalle dispare el flujo de "Cerrar evento".
+  useEffect(() => {
+    const onResolve = (ev: Event) => {
+      try {
+        const anyEv = ev as any
+        const rcmId = Number(anyEv?.detail?.rcmId)
+        if (!Number.isFinite(rcmId) || rcmId <= 0) return
+
+        openMarkDialogForRow('CERRAR_EVENTO', rcmId)
+      } catch (e) {
+        // noop
+      }
+    }
+
+    window.addEventListener('rcmnavigator:cerrar-evento', onResolve as any)
+    return () => window.removeEventListener('rcmnavigator:cerrar-evento', onResolve as any)
+  }, [openMarkDialogForRow])
 
   const findAggregatedRowByRepresentativeRcmId = (rcmId: number) => {
     const fromData = data.find(d => Number((d as any).representativeRcmId) === rcmId)
@@ -733,6 +802,7 @@ const UserListTable2 = ({
     // acciones que requieren diálogo (incluye las que ahora exigen observación obligatoria)
     const ACTIONS_REQUIRING_DIALOG = new Set([
       'EVENTO',
+      'CERRAR_EVENTO',
       'CERRADO_OP',
       'ENVIADO_DIGITACION',
       'REVISADO',
@@ -753,7 +823,7 @@ const UserListTable2 = ({
     }
 
     const prevState = getCurrentStateForRow(rowId)
-    const finalFuncionario = (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : 'Usuario'
+    const finalFuncionario = getCurrentUserName() ?? 'Usuario'
 
     const payload: any = {
       tipo: 'Ope',
@@ -763,6 +833,7 @@ const UserListTable2 = ({
       funcionario: finalFuncionario,
       estPrev: prevState ?? null,
       estNuevo: action,
+      aplicadoA: getAppliedAForRow(rowId),
       informe: null
     }
 
@@ -821,11 +892,26 @@ const UserListTable2 = ({
 
     if (markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') {
       if (!eventType) errors.eventType = 'Seleccione tipo'
-      if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Ingrese motivo'
+      if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Seleccione motivo'
+    }
+
+    if (markDialogAction === 'EVENTO') {
+      if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
+        errors.observacion = 'Ingrese observación'
+      }
+      if (!eventReturnState || !String(eventReturnState).trim()) {
+        errors.returnState = 'Seleccione estado destino'
+      }
+    }
+
+    if (markDialogAction === 'CERRAR_EVENTO') {
+      if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
+        errors.observacion = 'Ingrese observación'
+      }
     }
 
     // Para estos estados la observación es obligatoria
-    if (['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? ''))) {
+    if (['ENVIADO_DIGITACION', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? ''))) {
       if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
         errors.observacion = 'Ingrese observación obligatoria'
       }
@@ -847,14 +933,45 @@ const UserListTable2 = ({
 
       setSavingHistory(true)
 
+      const isEvento = markDialogAction === 'EVENTO'
+      const isCerrarEvento = markDialogAction === 'CERRAR_EVENTO'
+      const eventTypeLabel =
+        eventType === 'INFO_PENDIENTE'
+          ? 'Info Pendiente'
+          : eventType === 'ERROR_INTERNO'
+            ? 'Error Interno'
+            : eventType === 'CORRECCION'
+              ? 'Corrección'
+              : (eventType || 'Evento')
+
+      const currentStateForClose = isCerrarEvento ? (getCurrentStateForRow(rcmId) ?? null) : null
+
+      const buildEventoObservacion = () => {
+        const obs = String(correctionObservaciones ?? '').trim()
+        const dest = String(eventReturnState ?? '').trim()
+        if (!dest) return obs || null
+        if (!obs) return `Estado destino: ${dest}`
+        return `${obs}\n\nEstado destino: ${dest}`
+      }
+
       const payload: any = {
-        tipo: 'Ope', // <- forzar 'Ope' por defecto desde esta pantalla
-        tipoEstado: markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP' ? eventType || markDialogAction : markDialogAction,
-        motivo: correctionMotivo ?? null,
-        observacion: correctionObservaciones ?? null,
-        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : null,
+        tipo: isEvento ? 'Evento Abierto' : isCerrarEvento ? 'Evento Cerrado' : 'Ope',
+        tipoEstado:
+          isEvento
+            ? 'EVENTO'
+            : isCerrarEvento
+              ? 'EVENTO_CERRADO'
+              : (markDialogAction === 'CERRADO_OP' ? (eventType || markDialogAction) : markDialogAction),
+        motivo: isEvento
+          ? `${eventTypeLabel}${correctionMotivo && String(correctionMotivo).trim() ? ` - ${String(correctionMotivo).trim()}` : ''}`
+          : isCerrarEvento
+            ? 'Cierre de evento'
+            : (correctionMotivo ?? null),
+        observacion: isEvento ? buildEventoObservacion() : (correctionObservaciones ?? null),
+        funcionario: getCurrentUserName() ?? 'Usuario',
         estPrev: getCurrentStateForRow(markDialogRowId) ?? null,
-        estNuevo: markDialogAction ?? null,
+        estNuevo: isEvento ? (eventReturnState ?? null) : isCerrarEvento ? currentStateForClose : (markDialogAction ?? null),
+        aplicadoA: getAppliedAForRow(rcmId),
         informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null
       }
 
@@ -910,6 +1027,7 @@ const UserListTable2 = ({
       setCorrectionMotivo('')
       setCorrectionObservaciones('')
       setEventType('')
+      setEventReturnState('')
       setSavingHistory(false)
       // ya actualizamos localmente setData/setFilteredData.
       // Opcional: si el host expone una función para refrescar solo una fila, llámala
@@ -919,6 +1037,22 @@ const UserListTable2 = ({
         } catch (e) {
           /* noop */
         }
+      }
+
+      // Sincronizar con backend (conEvento, contadores, etc.)
+      try {
+        void refreshSeguimiento()
+      } catch {
+        /* noop */
+      }
+
+      // Notificar al panel de detalle (tabs RCMs/Eventos) que debe recargar.
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('rcmnavigator:codigo-detalle-refresh'))
+        }
+      } catch {
+        /* noop */
       }
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -935,6 +1069,7 @@ const UserListTable2 = ({
     setCorrectionMotivo('')
     setCorrectionObservaciones('')
     setEventType('')
+    setEventReturnState('')
   }
 
   const handleOpenRowMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
@@ -944,6 +1079,20 @@ const UserListTable2 = ({
   const handleCloseRowMenu = () => {
     setMenuAnchorEl(null)
     setMenuRowId(null)
+  }
+
+  const handleRegistrarEvento = (rowId: number | null) => {
+    handleCloseRowMenu()
+    if (!rowId) return
+    const current = normalizeStateKey(getCurrentStateForRow(rowId))
+    if (current === 'CODIFICADO') return
+    openMarkDialogForRow('EVENTO', rowId)
+  }
+
+  const handleCerrarEvento = (rowId: number | null) => {
+    handleCloseRowMenu()
+    if (!rowId) return
+    openMarkDialogForRow('CERRAR_EVENTO', rowId)
   }
 
   // helper robusto para localizar una fila por id (acepta number/string y _id)
@@ -1081,6 +1230,33 @@ const UserListTable2 = ({
     // UX: abrir diálogo de inmediato y mostrar spinner mientras carga
     setHistRowId(rowId)
     setHistDialogOpen(true)
+    setHistCodigoData(null)
+
+    // Para armar el subtítulo: buscar el Código Producto (agrupador) asociado y cargar su descripción
+    try {
+      const agg = data.find(d => d.representativeRcmId === rowId) ?? filteredData.find(d => d.representativeRcmId === rowId)
+      const codigoAgrupadorId = Number((agg as any)?.id)
+      if (Number.isFinite(codigoAgrupadorId) && codigoAgrupadorId > 0) {
+        const cachedLite = codigoLiteCache.get(codigoAgrupadorId)
+        if (cachedLite) {
+          setHistCodigoData(cachedLite)
+        } else {
+          // Vista liviana: sólo necesitamos descripcionServicio + codigoNombre
+          fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?view=dialog`, { cache: 'no-store' })
+            .then(r => (r.ok ? r.json() : null))
+            .then(json => {
+              if (!json) return
+              codigoLiteCache.set(codigoAgrupadorId, json)
+              setHistCodigoData(json)
+            })
+            .catch(() => {
+              /* noop */
+            })
+        }
+      }
+    } catch {
+      /* noop */
+    }
 
     // revisar caché primero
     const cached = historyCache.get(rowId)
@@ -1122,81 +1298,100 @@ const UserListTable2 = ({
     setHistRowId(null)
     setHistRows([])
     setHistLoading(false)
+    setHistCodigoData(null)
   }
 
+  const refreshSeguimiento = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/codigo-agrupador/seguimiento?ts=${Date.now()}`, { cache: 'no-store' })
+      const result = await res.json()
+      const raw = Array.isArray(result) ? result : []
+
+      const normalized: RCM[] = raw.map((r: any) => {
+        const opCounts = (r?.estadoOperativoCounts ?? {}) as Record<string, number>
+        const adCounts = (r?.estadoAdministrativoCounts ?? {}) as Record<string, number>
+
+        const opMain = pickStateFromCounts(opCounts, [
+          'EVENTO',
+          'EN_PROCESO',
+          'CODIFICADO',
+          'ENSAYADO',
+          'ENVIADO_DIGITACION',
+          'DIGITADO',
+          'REVISADO',
+          'FIRMADO',
+          'ENVIADO'
+        ])
+
+        const adMain = pickStateFromCounts(adCounts, ['SIN_INICIO', 'PAGADO', 'PENDIENTE', 'FACTURADO', 'ENVIADO'])
+
+        const clienteNombre = r?.cliente?.razonSocial ?? r?.cliente?.nombreCliente ?? null
+        const comuna = r?.ciudad ?? r?.obra?.comuna ?? r?.cliente?.comuna ?? r?.cliente?.ciudad ?? null
+
+        return {
+          id: Number(r.id),
+          numeroRcm: String(r.codigoNombre ?? ''),
+          codigoNombre: r.codigoNombre ?? null,
+          representativeRcmId: (r?.representativeRcmId ?? null) as number | null,
+          ss: r.ss ?? null,
+          ot: r.ot ?? null,
+          totalRcms: r.totalRcms ?? 0,
+          conEvento: Boolean(r.conEvento),
+          informe: (r.informe ?? null) as number | null,
+          ensayos: r.ensayos ?? null,
+          estadoOperativoCounts: opCounts,
+          estadoAdministrativoCounts: adCounts,
+
+          ciudad: comuna ?? null,
+
+          fechaCodificacion: r.fechaCodificacionMin ?? '',
+          fechaMuestreo: r.fechaMuestreoMin ?? '',
+          estadoOperativo: opMain ?? undefined,
+          estadoAdministrativo: adMain ?? undefined,
+
+          area: r.areaNombre ?? null,
+          familia: r.familiaNombre ?? null,
+          cliente: { nombreCliente: clienteNombre ?? undefined, comuna: comuna ?? undefined },
+          obra: r?.obra
+            ? {
+                numeroObra: r.obra.numeroObra ?? undefined,
+                nombreObra: (r.obra as any).nombreObra ?? undefined
+              }
+            : null
+        } as RCM
+      })
+
+      setData(normalized)
+      applyDateFilter(normalized, filters)
+    } catch (err) {
+      console.error('Error fetching Códigos Producto:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [filters])
+
   // Fetch Códigos Producto (seguimiento)
+  const pathname = usePathname()
   useEffect(() => {
-    const fetchCodigos = async () => {
-      try {
-        const res = await fetch('/api/codigo-agrupador/seguimiento')
-        const result = await res.json()
-        const raw = Array.isArray(result) ? result : []
+    refreshSeguimiento()
+  }, [refreshSeguimiento, pathname])
 
-        const normalized: RCM[] = raw.map((r: any) => {
-          const opCounts = (r?.estadoOperativoCounts ?? {}) as Record<string, number>
-          const adCounts = (r?.estadoAdministrativoCounts ?? {}) as Record<string, number>
-
-          const opMain = pickStateFromCounts(opCounts, [
-            'EVENTO',
-            'EN_PROCESO',
-            'CODIFICADO',
-            'ENSAYADO',
-            'ENVIADO_DIGITACION',
-            'DIGITADO',
-            'REVISADO',
-            'FIRMADO',
-            'ENVIADO'
-          ])
-
-          const adMain = pickStateFromCounts(adCounts, ['PAGADO', 'PENDIENTE', 'FACTURADO', 'ENVIADO'])
-
-          const clienteNombre = r?.cliente?.razonSocial ?? r?.cliente?.nombreCliente ?? null
-          const comuna = r?.ciudad ?? r?.obra?.comuna ?? r?.cliente?.comuna ?? r?.cliente?.ciudad ?? null
-
-          return {
-            id: Number(r.id),
-            numeroRcm: String(r.codigoNombre ?? ''),
-            codigoNombre: r.codigoNombre ?? null,
-            representativeRcmId: (r?.representativeRcmId ?? null) as number | null,
-            ss: r.ss ?? null,
-            ot: r.ot ?? null,
-            totalRcms: r.totalRcms ?? 0,
-            conEvento: Boolean(r.conEvento),
-            informe: (r.informe ?? null) as number | null,
-            ensayos: r.ensayos ?? null,
-            estadoOperativoCounts: opCounts,
-            estadoAdministrativoCounts: adCounts,
-
-            ciudad: comuna ?? null,
-
-            fechaCodificacion: r.fechaCodificacionMin ?? '',
-            fechaMuestreo: r.fechaMuestreoMin ?? '',
-            estadoOperativo: opMain ?? undefined,
-            estadoAdministrativo: adMain ?? undefined,
-
-            area: r.areaNombre ?? null,
-            familia: r.familiaNombre ?? null,
-            cliente: { nombreCliente: clienteNombre ?? undefined, comuna: comuna ?? undefined },
-            obra: r?.obra
-              ? {
-                  numeroObra: r.obra.numeroObra ?? undefined,
-                  nombreObra: (r.obra as any).nombreObra ?? undefined
-                }
-              : null
-          } as RCM
-        })
-
-        setData(normalized)
-        applyDateFilter(normalized, filters)
-      } catch (err) {
-        console.error('Error fetching Códigos Producto:', err)
-      } finally {
-        setLoading(false)
-      }
+  // Refrescar cuando el usuario vuelve a la app / pestaña
+  useEffect(() => {
+    const onFocus = () => refreshSeguimiento()
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshSeguimiento()
     }
 
-    fetchCodigos()
-  }, [])
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [refreshSeguimiento])
 
   // aplicar filtro cuando cambian filters
   useEffect(() => {
@@ -1258,6 +1453,69 @@ const UserListTable2 = ({
     return `${dd}-${mm}-${yyyy}`
   }
 
+  const openOperationalHelp = (e: React.MouseEvent<HTMLElement>, rawState: any, row: any) => {
+    const key = normalizeStateKey(rawState) ?? String(rawState ?? '').trim().toUpperCase()
+
+    // Sólo para los 4 estados requeridos
+    const allowed = new Set(['EN_PROCESO', 'CODIFICADO', 'ENVIADO_DIGITACION', 'ENVIADO'])
+    if (!allowed.has(key)) return
+
+    e.stopPropagation()
+    setOpHelpAnchorEl(e.currentTarget)
+    setOpHelpState(key)
+    // en imágenes se ve fecha; usamos fecha de codificación como referencia
+    setOpHelpDate((row as any)?.fechaCodificacion ?? null)
+  }
+
+  const closeOperationalHelp = () => {
+    setOpHelpAnchorEl(null)
+    setOpHelpState(null)
+    setOpHelpDate(null)
+  }
+
+  const getOperationalHelpCopy = (state: string | null) => {
+    switch (state) {
+      case 'EN_PROCESO':
+        return {
+          title: 'En Proceso',
+          tone: 'info' as const,
+          lines: [
+            'En Proceso se gestiona desde el Navegador RCM (Sala).',
+            'Este estado se actualiza automáticamente cuando los ensayos avanzan.',
+            'Desde aquí es solo visual.'
+          ]
+        }
+      case 'CODIFICADO':
+        return {
+          title: 'Codificado',
+          tone: 'info' as const,
+          lines: [
+            'Codificado se gestiona desde el Navegador RCM (Sala).',
+            'Este estado se actualiza automáticamente cuando los ensayos avanzan.',
+            'Desde aquí es solo visual.'
+          ]
+        }
+      case 'ENVIADO_DIGITACION':
+        return {
+          title: 'Enviado a Digitación',
+          tone: 'warning' as const,
+          lines: [
+            'Para avanzar a Digitado, usar el botón “Gestionar Informe”',
+            'en la columna Acciones. Allí se ingresan los N° de',
+            'informe y se confirma.'
+          ]
+        }
+      case 'ENVIADO':
+        return {
+          title: 'Enviado',
+          tone: 'success' as const,
+          lines: ['Estado final del flujo operativo']
+        }
+      default:
+        return null
+    }
+  }
+
   const formatTimeHHmm = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
@@ -1275,9 +1533,11 @@ const UserListTable2 = ({
     return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
   }
 
-  const applyDateFilter = (rows: RCM[], filters?: Filters) => {
-    console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
-
+  const filterRowsForNavigator = (
+    rows: RCM[],
+    filters?: Filters,
+    opts?: { ignoreOperational?: boolean; ignoreAdministrative?: boolean }
+  ) => {
     // start with all rows
     let result = rows.slice()
 
@@ -1289,8 +1549,6 @@ const UserListTable2 = ({
     } else if (dfRaw === 'fecha_muestreo' || dfRaw === 'fechamuestreo' || dfRaw === 'fecha-muestreo') {
       fieldName = 'fechaMuestreo'
     }
-
-    console.log('applyDateFilter -> using date field:', fieldName)
 
     // Date filtering (only if fieldName + start+end provided)
     if (fieldName && filters && filters.start && filters.end) {
@@ -1306,28 +1564,6 @@ const UserListTable2 = ({
       }
     }
 
-    // Estado Operativo filtering (if provided)
-    if (filters && filters.estadoOperativo) {
-      const qKey = normalizeStateKey(filters.estadoOperativo)
-      const qNorm = normalizeText(filters.estadoOperativo)
-      result = result.filter(r => {
-        const counts = r.estadoOperativoCounts
-        if (qKey && counts && (counts[qKey] ?? 0) > 0) return true
-        return normalizeText(r.estadoOperativo ?? '').includes(qNorm)
-      })
-    }
-
-    // Estado Administrativo filtering (if provided)
-    if (filters && filters.estadoAdministrativo) {
-      const qKey = normalizeStateKey(filters.estadoAdministrativo)
-      const qNorm = normalizeText(filters.estadoAdministrativo)
-      result = result.filter(r => {
-        const counts = r.estadoAdministrativoCounts
-        if (qKey && counts && (counts[qKey] ?? 0) > 0) return true
-        return normalizeText(r.estadoAdministrativo ?? '').includes(qNorm)
-      })
-    }
-
     // Area filtering: comparar por nombre (Header entrega areaName)
     const areaValue = (filters as any)?.areaName ?? null
     if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).trim() !== '') {
@@ -1335,44 +1571,69 @@ const UserListTable2 = ({
       result = result.filter(r => normalizeText(r.area ?? '').includes(rawNorm))
     }
 
-    // Familia filtering: comparar por nombre
+    // Familia/Tipo de Servicio filtering: comparar por nombre
     const familiaValue = (filters as any)?.familia ?? null
     if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).trim() !== '') {
       const rawNorm = normalizeText(familiaValue)
       result = result.filter(r => normalizeText(r.familia ?? '').includes(rawNorm))
     }
 
+    // Con Evento filtering
+    if (filters?.conEvento) {
+      result = result.filter(r => Boolean((r as any).conEvento))
+    }
+
+    // Estado Operativo filtering (multi-select)
+    if (!opts?.ignoreOperational && filters && (filters.estadoOperativo as any)) {
+      const rawList = Array.isArray(filters.estadoOperativo) ? filters.estadoOperativo : [filters.estadoOperativo]
+      const selected = rawList.map(v => String(v ?? '').trim()).filter(Boolean)
+
+      if (selected.length) {
+        const keys = selected.map(v => normalizeStateKey(v)).filter(Boolean) as string[]
+        const norms = selected.map(v => normalizeText(v))
+
+        result = result.filter(r => {
+          const counts = r.estadoOperativoCounts
+          if (keys.length && counts && typeof counts === 'object') {
+            if (keys.some(k => (counts as any)[k] && Number((counts as any)[k]) > 0)) return true
+          }
+          const opNorm = normalizeText(r.estadoOperativo ?? '')
+          return norms.some(n => opNorm.includes(n))
+        })
+      }
+    }
+
+    // Estado Administrativo filtering (multi-select)
+    if (!opts?.ignoreAdministrative && filters && (filters.estadoAdministrativo as any)) {
+      const rawList = Array.isArray(filters.estadoAdministrativo) ? filters.estadoAdministrativo : [filters.estadoAdministrativo]
+      const selected = rawList.map(v => String(v ?? '').trim()).filter(Boolean)
+
+      if (selected.length) {
+        const keys = selected.map(v => normalizeStateKey(v)).filter(Boolean) as string[]
+        const norms = selected.map(v => normalizeText(v))
+
+        result = result.filter(r => {
+          const counts = r.estadoAdministrativoCounts
+          if (keys.length && counts && typeof counts === 'object') {
+            if (keys.some(k => (counts as any)[k] && Number((counts as any)[k]) > 0)) return true
+          }
+          const adNorm = normalizeText(r.estadoAdministrativo ?? '')
+          return norms.some(n => adNorm.includes(n))
+        })
+      }
+    }
+
+    return result
+  }
+
+  const applyDateFilter = (rows: RCM[], filters?: Filters) => {
+    console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
+    const result = filterRowsForNavigator(rows, filters)
     console.log('applyDateFilter result count:', result.length)
     setFilteredData(result)
   }
 
-  // SS se repite mucho: mostrar columna solo cuando aporte contexto.
-  // Regla: mostrar si hay >1 SS distinto, o si hay mezcla de (un SS + vacíos).
-  const showSsColumnAuto = useMemo(() => {
-    const rawValues = filteredData.map(r => String(r.ss ?? '').trim())
-    const nonEmpty = rawValues.filter(Boolean)
-
-    // No hay SS en el dataset actual -> no mostrar
-    if (nonEmpty.length === 0) return false
-
-    const distinct = new Set(nonEmpty)
-    if (distinct.size > 1) return true
-
-    // Un solo SS pero hay filas sin SS -> mostrar para detectar la diferencia
-    const hasEmpty = rawValues.some(v => !v)
-    return hasEmpty
-  }, [filteredData])
-
-  const showSsColumn = Boolean(forceShowSs) || showSsColumnAuto
-
   const columns = useMemo((): ColumnDef<RCM>[] => {
-    const ssColumn: ColumnDef<RCM> = {
-      id: 'ss',
-      header: 'SS',
-      accessorKey: 'ss',
-      cell: ({ row }) => <Typography variant='body2'>{row.original.ss ?? '-'}</Typography>
-    }
-
     return [
       {
         id: 'codigo',
@@ -1380,7 +1641,6 @@ const UserListTable2 = ({
         accessorFn: r => r.codigoNombre ?? r.numeroRcm,
         cell: ({ row }) => <Typography variant='body2' sx={{ fontWeight: 700 }}>{row.original.codigoNombre ?? row.original.numeroRcm}</Typography>
       },
-      ...(showSsColumn ? [ssColumn] : []),
       {
         id: 'ot',
         header: 'OT',
@@ -1499,6 +1759,12 @@ const UserListTable2 = ({
         cell: ({ row }) => <span>{row.original.totalRcms ?? 0}</span>
       },
       {
+        id: 'informe',
+        header: 'N° INFORME',
+        accessorKey: 'informe',
+        cell: ({ row }) => <span>{row.original.informe ?? '-'}</span>
+      },
+      {
         id: 'estOp',
         header: 'EST. OPERATIVO',
         accessorKey: 'estadoOperativo',
@@ -1506,6 +1772,24 @@ const UserListTable2 = ({
           const opRaw = row.original.estadoOperativo ?? null
           const opLabel = opRaw ? (OPERATIONAL_STATES.find(s => s.value === opRaw)?.label ?? opRaw) : '-'
           const info = getOperationalInfo(opRaw ?? undefined)
+
+          const hasEvento = Boolean((row.original as any).conEvento)
+
+          const opKey = normalizeStateKey(opRaw) ?? String(opRaw ?? '').trim().toUpperCase()
+          const isHelpEnabled = ['EN_PROCESO', 'CODIFICADO', 'ENVIADO_DIGITACION', 'ENVIADO'].includes(opKey)
+
+          const repIdRaw = (row.original as any).representativeRcmId
+          const repId = repIdRaw == null ? null : Number(repIdRaw)
+          const canAdvanceToEnviadoDigitacion = opKey === 'ENSAYADO' && Number.isFinite(repId) && (repId as number) > 0
+
+          const canAdvanceToRevisado = opKey === 'DIGITADO' && Number.isFinite(repId) && (repId as number) > 0
+
+          const canAdvanceToFirmado = opKey === 'REVISADO' && Number.isFinite(repId) && (repId as number) > 0
+
+          const canAdvanceToEnviado = opKey === 'FIRMADO' && Number.isFinite(repId) && (repId as number) > 0
+
+          const isClickable = isHelpEnabled || canAdvanceToEnviadoDigitacion || canAdvanceToRevisado || canAdvanceToFirmado || canAdvanceToEnviado
+
           return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Chip
@@ -1513,6 +1797,41 @@ const UserListTable2 = ({
                 title={info.hex ?? ''}
                 size='small'
                 variant='filled'
+                icon={
+                  hasEvento ? (
+                    <ReportProblemOutlinedIcon
+                      fontSize='small'
+                      titleAccess='Con evento'
+                      sx={{ color: theme => `${theme.palette.error.main} !important` }}
+                    />
+                  ) : undefined
+                }
+                clickable={isClickable}
+                onClick={e => {
+                  if (canAdvanceToEnviadoDigitacion) {
+                    e.stopPropagation()
+                    openMarkDialogForRow('ENVIADO_DIGITACION', repId as number)
+                    return
+                  }
+                  if (canAdvanceToRevisado) {
+                    e.stopPropagation()
+                    openMarkDialogForRow('REVISADO', repId as number)
+                    return
+                  }
+                  if (canAdvanceToFirmado) {
+                    e.stopPropagation()
+                    openMarkDialogForRow('FIRMADO', repId as number)
+                    return
+                  }
+                  if (canAdvanceToEnviado) {
+                    e.stopPropagation()
+                    openMarkDialogForRow('ENVIADO', repId as number)
+                    return
+                  }
+                  if (isHelpEnabled) {
+                    openOperationalHelp(e as any, opRaw, row.original)
+                  }
+                }}
                 sx={{
                   bgcolor: info.bgcolor,
                   color: info.colorText,
@@ -1530,44 +1849,6 @@ const UserListTable2 = ({
             </Box>
           )
         }
-      },
-      {
-        id: 'estadoAdministrativo',
-        header: 'EST. ADM.',
-        accessorKey: 'estadoAdministrativo',
-        cell: ({ row }) => {
-          const raw = row.original.estadoAdministrativo ?? row.original.estado_administrativo ?? ''
-          const label = (typeof raw === 'string' && raw.trim()) ? raw : String(raw)
-          const info = getAdministrativeInfo(label)
-          return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Chip
-                label={label || '-'}
-                size='small'
-                variant='filled'
-                sx={{
-                  bgcolor: info.bgcolor,
-                  color: info.colorText,
-                  border: `1px solid ${info.border}`,
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  fontSize: '0.72rem',
-                  borderRadius: 2,
-                  px: 1,
-                  py: 0.4,
-                  minWidth: 84,
-                  justifyContent: 'center'
-                }}
-              />
-            </Box>
-          )
-        }
-      },
-      {
-        id: 'informe',
-        header: 'N° INFORME',
-        accessorKey: 'informe',
-        cell: ({ row }) => <span>{row.original.informe ?? '-'}</span>
       },
       {
         id: 'acciones',
@@ -1579,34 +1860,10 @@ const UserListTable2 = ({
               title='Ver detalle'
               onClick={e => {
                 e.stopPropagation()
-                onSelectCodigo?.(row.original.id)
-              }}
-            >
-              <VisibilityIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton
-              size='small'
-              title='Código Producto'
-              onClick={e => {
-                e.stopPropagation()
                 openCodigoProductoDialog(row.original)
               }}
             >
-              <AssignmentOutlinedIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton
-              size='small'
-              title='Marcar'
-              disabled={!row.original.representativeRcmId}
-              onClick={e => {
-                e.stopPropagation()
-                if (!row.original.representativeRcmId) return
-                handleOpenMarkMenu(e as any, row.original.representativeRcmId)
-              }}
-            >
-              <CheckBoxOutlinedIcon fontSize='small' />
+              <VisibilityIcon fontSize='small' />
             </IconButton>
 
             <IconButton
@@ -1646,7 +1903,7 @@ const UserListTable2 = ({
         )
       }
     ]
-  }, [onSelectCodigo, showSsColumn])
+  }, [onSelectCodigo])
 
   const searchedData = useMemo(() => {
     const q = String(globalFilter ?? '').toLowerCase().trim()
@@ -1688,104 +1945,163 @@ const UserListTable2 = ({
   })
 
 
-  // reemplazado: indicadores usando OPERATIONAL_STATES.value para comparaciones
+  // Indicadores del dashboard: NO deben verse afectados por filtros de estado.
+  // Respetan fecha/area/familia/conEvento, pero ignoran estadoOperativo/estadoAdministrativo.
   const indicators = useMemo(() => {
-    const total = searchedData.length
-
-    // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
+    // helper: normalizar estado operativo a value comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
     const normOp = (raw?: string) => {
       if (!raw) return ''
-      // usamos la función existente para normalizar (genera UPPERCASE)
       const u = normalizeState(raw)
-      // si el usuario pasó una label en texto (g. ej. "Codificado"), intentar mapear a value
       const byValue = OPERATIONAL_STATES.find(s => s.value === u)
       if (byValue) return byValue.value
-      // intentar mapear por label (sin tildes / case)
-      const rawNorm = (raw ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() ?? String(raw).toLowerCase()
-      const byLabel = OPERATIONAL_STATES.find(s => (s.label ?? '').toString().normalize?.('NFD')?.replace(/[\u0300-\u036f]/g, '').toLowerCase() === rawNorm)
+
+      const rawNorm =
+        (raw ?? '')
+          .toString()
+          .normalize?.('NFD')
+          ?.replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase() ?? String(raw).toLowerCase()
+      const byLabel = OPERATIONAL_STATES.find(
+        s =>
+          (s.label ?? '')
+            .toString()
+            .normalize?.('NFD')
+            ?.replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase() === rawNorm
+      )
       if (byLabel) return byLabel.value
-      // fallback: devolver UPPERCASE original para comparaciones textuales
+
       return u
     }
 
-    const normAdmText = (s?: string) => normalizeText(s ?? '')
-
-    // sets para cada tarjeta basadas en OPERATIONAL_STATES.value
-    const S = {
-      CODIFICADO: 'CODIFICADO',
-      EN_PROCESO: 'EN_PROCESO',
-      ENSAYADO: 'ENSAYADO',
-      ENVIADO_DIGITACION: 'ENVIADO_DIGITACION',
-      DIGITADO: 'DIGITADO',
-      REVISADO: 'REVISADO',
-      FIRMADO: 'FIRMADO',
-      ENVIADO: 'ENVIADO',
-      EVENTO: 'EVENTO',
-      CERRADO_OP: 'CERRADO_OP'
-    } as const
-
-    const countIf = (pred: (opVal: string, adm: string) => boolean) =>
-      searchedData.reduce((acc, d) => {
-        const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
-        const admRaw = d.estadoAdministrativo ?? ''
-        const opVal = normOp(opRaw)
-        const adm = normAdmText(admRaw)
-        return acc + (pred(opVal, adm) ? 1 : 0)
-      }, 0)
-
-    // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado')
-    const porEnsayar = countIf((op, adm) => {
-      if ([S.CODIFICADO, S.EN_PROCESO].includes(op as any)) return true
-      return adm.includes('ensayar') || adm.includes('codificad') || adm.includes('en proceso')
-    })
-
-    // Por Digitar: estado ENSAYADO o ENVIADO_DIGITACION (pendiente digitación) y NO estar ya DIGITADO
-    const porDigitar = countIf((op, adm) => {
-      if (op === S.ENSAYADO || op === S.ENVIADO_DIGITACION) return true
-      // fallback por administrativa que indique digitación pendiente (no digitado aún)
-      if (adm.includes('digit') && !adm.includes('digitad')) return true
+    const isConEvento = (d: RCM) => {
+      if (Boolean((d as any).conEvento)) return true
+      const counts = d.estadoOperativoCounts
+      if (counts && typeof counts === 'object' && Number(counts.EVENTO ?? 0) > 0) return true
       return false
-    })
+    }
 
-    // Por Revisar: REVISADO o admin menciona revisar/revisado
-    const porRevisar = countIf(op => op === S.DIGITADO)
+    const isPagado = (d: RCM) => {
+      const counts = d.estadoAdministrativoCounts
+      if (counts && typeof counts === 'object') {
+        return Number(counts.PAGADO ?? 0) > 0
+      }
 
-    // Por Corregir: estado EVENTO 
-    const porCorregir = countIf(op => op === S.EVENTO)
+      const raw = String((d as any).estadoAdministrativo ?? '').trim()
+      if (!raw) return false
+      const key = normalizeStateKey(raw)
+      if (key === 'PAGADO') return true
+      return normalizeText(raw).includes('pag')
+    }
 
-    // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
-    const porFirmar = countIf(op => op === S.REVISADO)
+    const isPendPago = (d: RCM) => {
+      // Interpretación simple: si NO está pagado y hay alguna señal de facturación/pendiente.
+      if (isPagado(d)) return false
 
-    // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
-    const porEnviarFirmados = countIf(op => op === S.FIRMADO)
+      const counts = d.estadoAdministrativoCounts
+      if (counts && typeof counts === 'object') {
+        if (Number(counts.FACTURADO ?? 0) > 0) return true
+        if (Number((counts as any).PENDIENTE ?? 0) > 0) return true
+      }
 
-    // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
-    const firmadosPagados = countIf((op, adm) => {
-      // requiere operativo exactamente FIRMADO (valor de OPERATIONAL_STATES)
-      if (op !== S.FIRMADO) return false
+      const raw = String((d as any).estadoAdministrativo ?? '').trim()
+      const norm = normalizeText(raw)
+      return norm.includes('factur') || norm.includes('pend')
+    }
 
-      // adm viene normalizado (lowercase, sin tildes) por normalizeText
-      // 1) comprobar por label mapeando ADMINISTRATIVE_STATES
-      const admMatch = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === adm)
-      if (admMatch) return admMatch.value === 'PAGADO'
+    const byState: Record<string, number> = {
+      CODIFICADO: 0,
+      EN_PROCESO: 0,
+      ENSAYADO: 0,
+      ENVIADO_DIGITACION: 0,
+      DIGITADO: 0,
+      REVISADO: 0,
+      FIRMADO: 0,
+      ENVIADO: 0
+    }
 
-      // 2) fallback textual (acepta 'pag', 'pagad', 'pagado')
-      return adm.includes('pag') || adm.includes('pagad') || adm.includes('pagado')
-    })
+    let conEventoTotal = 0
+    let conEventoEnProceso = 0
+    let pendPagoFirmado = 0
+    let pendPagoEnviado = 0
+
+    const indicatorRows = filterRowsForNavigator(data, filters, { ignoreOperational: true, ignoreAdministrative: true })
+
+    for (const d of indicatorRows) {
+      const opRaw =
+        d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? ((d.servicios[0] as any).estado ?? '') : '') ?? ''
+      const opVal = normOp(opRaw)
+
+      if (Object.prototype.hasOwnProperty.call(byState, opVal)) {
+        byState[opVal] += 1
+      }
+
+      const hasEvento = isConEvento(d)
+      if (hasEvento) {
+        conEventoTotal += 1
+        if (opVal === 'EN_PROCESO') conEventoEnProceso += 1
+      }
+
+      if (opVal === 'FIRMADO' && isPendPago(d)) pendPagoFirmado += 1
+      if (opVal === 'ENVIADO' && isPendPago(d)) pendPagoEnviado += 1
+    }
 
     return {
-      total,
-      porEnsayar,
-      porDigitar,
-      porRevisar,
-      porCorregir,
-      porFirmar,
-      porEnviarFirmados,
-      firmadosPagados
+      byState,
+      conEventoTotal,
+      conEventoEnProceso,
+      pendPagoFirmado,
+      pendPagoEnviado
     }
-  }, [searchedData])
+  }, [data, filters])
 
   if (loading) return <div>Cargando...</div>
+
+  const isDashboardCardActive = (key: string) => {
+    if (key === 'CON_EVENTO') return Boolean(filters?.conEvento)
+    const raw = (filters as any)?.estadoOperativo
+    if (Array.isArray(raw)) return raw.map(v => normalizeStateKey(v)).includes(key)
+    const current = normalizeStateKey(raw ?? null)
+    return Boolean(current) && current === key
+  }
+
+  const emitDashboardFilterToggle = (key: string) => {
+    if (!onFiltersChange) return
+
+    const prev = (filters ?? {}) as Filters
+    const next: Filters = { ...prev }
+
+    if (key === 'CON_EVENTO') {
+      next.conEvento = prev.conEvento ? undefined : true
+    } else {
+      const raw = (prev as any).estadoOperativo
+      const list = Array.isArray(raw) ? raw.slice() : raw ? [raw] : []
+      const normalized = list.map(v => normalizeStateKey(v)).filter(Boolean) as string[]
+      const has = normalized.includes(key)
+      const nextList = has ? normalized.filter(k => k !== key) : [...normalized, key]
+      next.estadoOperativo = nextList.length ? nextList : undefined
+    }
+
+    const isEmpty = (v: any) => {
+      if (v === null || typeof v === 'undefined') return true
+      if (typeof v === 'string') return v.trim() === ''
+      if (Array.isArray(v)) return v.length === 0
+      if (typeof v === 'boolean') return v === false
+      return false
+    }
+    const nextIsEmpty =
+      isEmpty(next.dateField) &&
+      isEmpty(next.start) &&
+      isEmpty(next.end) &&
+      isEmpty(next.estadoOperativo) &&
+      isEmpty(next.estadoAdministrativo) &&
+      isEmpty(next.conEvento) &&
+      isEmpty(next.areaId) &&
+      isEmpty(next.areaName) &&
+      isEmpty(next.familia)
+
+    onFiltersChange(nextIsEmpty ? undefined : next)
+  }
 
   return (
     <Card>
@@ -1803,59 +2119,116 @@ const UserListTable2 = ({
       {/* ROW: Dashboard indicadores (fila superior) */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
         {[
-          { label: 'Por Ensayar', value: indicators.porEnsayar },
-          { label: 'Por Digitar', value: indicators.porDigitar },
-          { label: 'Por Revisar', value: indicators.porRevisar },
-          { label: 'Por Corregir', value: indicators.porCorregir },
-          { label: 'Por Firmar', value: indicators.porFirmar },
-          { label: 'Por Enviar Cliente', value: indicators.porEnviarFirmados },
-          { label: 'Pagados Pendiente de Envío', value: indicators.firmadosPagados }
+          {
+            key: 'CODIFICADO',
+            label: 'Codificado',
+            value: indicators.byState.CODIFICADO
+          },
+          {
+            key: 'EN_PROCESO',
+            label: 'En Proceso',
+            value: indicators.byState.EN_PROCESO,
+            delta: indicators.conEventoEnProceso > 0 ? `Δ ${indicators.conEventoEnProceso} con evento` : null
+          },
+          {
+            key: 'ENSAYADO',
+            label: 'Ensayado',
+            value: indicators.byState.ENSAYADO
+          },
+          {
+            key: 'ENVIADO_DIGITACION',
+            label: 'Env. Digitación',
+            value: indicators.byState.ENVIADO_DIGITACION
+          },
+          {
+            key: 'DIGITADO',
+            label: 'Digitado',
+            value: indicators.byState.DIGITADO
+          },
+          {
+            key: 'REVISADO',
+            label: 'Revisado',
+            value: indicators.byState.REVISADO
+          },
+          {
+            key: 'FIRMADO',
+            label: 'Firmado',
+            value: indicators.byState.FIRMADO,
+            delta: indicators.pendPagoFirmado > 0 ? `Δ ${indicators.pendPagoFirmado} pend. pago` : null
+          },
+          {
+            key: 'ENVIADO',
+            label: 'Enviado',
+            value: indicators.byState.ENVIADO,
+            delta: indicators.pendPagoEnviado > 0 ? `Δ ${indicators.pendPagoEnviado} pend. pago` : null
+          },
+          {
+            key: 'CON_EVENTO',
+            label: 'Con Evento',
+            value: indicators.conEventoTotal
+          }
         ].map(item => (
           <Box
-            key={item.label}
+            key={item.key}
+            role='button'
+            tabIndex={0}
+            onClick={() => emitDashboardFilterToggle(item.key)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                emitDashboardFilterToggle(item.key)
+              }
+            }}
             sx={{
               minWidth: 140,
-              backgroundColor: '#fff',
+              backgroundColor: 'background.paper',
               borderRadius: 1,
-              boxShadow: 1,
+              boxShadow: isDashboardCardActive(item.key) ? 2 : 1,
               p: 1.25,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-start'
+              alignItems: 'flex-start',
+              cursor: 'pointer',
+              border: theme =>
+                isDashboardCardActive(item.key)
+                  ? `1px solid ${theme.palette.primary.main}`
+                  : `1px solid ${theme.palette.divider}`,
+              outline: 'none',
+              '&:hover': {
+                boxShadow: 2
+              },
+              '&:focus-visible': theme => ({
+                border: `1px solid ${theme.palette.primary.main}`
+              })
             }}
           >
-            <Typography variant='caption' color='text.secondary'>
+            <Typography variant='caption' color={item.key === 'CON_EVENTO' ? 'error.main' : 'text.secondary'}>
               {item.label}
             </Typography>
             <Typography variant='h6' sx={{ fontWeight: 700 }}>
               {item.value}
             </Typography>
+
+            {item.delta ? (
+              <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700, lineHeight: 1.1 }}>
+                {item.delta}
+              </Typography>
+            ) : null}
           </Box>
         ))}
       </Box>
 
       <Divider />
 
-      {/* Toolbar row: Mostrar/Ocultar SS + Buscar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, gap: 2 }}>
-        <Button
-          variant='text'
-          size='small'
-          onClick={() => onForceShowSsChange?.(!Boolean(forceShowSs))}
-          disabled={!onForceShowSsChange}
-          title='Mostrar/ocultar columna SS'
-          sx={{ whiteSpace: 'nowrap' }}
-        >
-          {forceShowSs ? 'Ocultar' : 'Mostrar'}
-        </Button>
-
+      {/* Toolbar row: Buscar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 2, gap: 2 }}>
         <Box sx={{ width: 300 }}>
           <DebouncedInput
             value={globalFilter}
             onChange={(v: any) => {
               setGlobalFilter(String(v))
             }}
-            placeholder='Buscar CÓDIGO, SS, OT, ÁREA, SERVICIO...'
+            placeholder='Buscar CÓDIGO, OT, ÁREA, SERVICIO...'
             fullWidth
             size='small'
           />
@@ -1906,6 +2279,97 @@ const UserListTable2 = ({
         onPageChange={(_, page) => table.setPageIndex(page)}
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
+
+      {/* Popover: Ayuda Estado Operativo */}
+      <Popover
+        open={Boolean(opHelpAnchorEl)}
+        anchorEl={opHelpAnchorEl}
+        onClose={closeOperationalHelp}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            width: 440,
+            maxWidth: 'calc(100vw - 32px)',
+            borderRadius: 2
+          }
+        }}
+      >
+        {(() => {
+          const copy = getOperationalHelpCopy(opHelpState)
+          if (!copy) return null
+
+          const st = OPERATIONAL_STATES.find(s => s.value === opHelpState)
+          const hex = st?.color ?? '#9E9E9E'
+          const bg = hexToRgba(hex, 0.12)
+          const border = hexToRgba(hex, 0.28)
+          const dateTxt = opHelpDate ? formatDateDDMMYYYYDateOnlyDash(opHelpDate) : ''
+          const title = st?.label ?? copy.title
+
+          const IconTone = copy.tone === 'success' ? CheckCircleOutlineIcon : InfoOutlinedIcon
+          const iconColor = copy.tone === 'success' ? 'success.main' : copy.tone === 'warning' ? 'warning.main' : 'info.main'
+
+          return (
+            <Box sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                  <Chip
+                    size='small'
+                    label={title}
+                    sx={{
+                      bgcolor: bg,
+                      border: `1px solid ${border}`,
+                      color: 'text.primary',
+                      fontWeight: 800
+                    }}
+                  />
+                  {dateTxt ? (
+                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                      {dateTxt}
+                    </Typography>
+                  ) : null}
+                </Box>
+
+                <IconButton size='small' onClick={closeOperationalHelp} aria-label='Cerrar'>
+                  <CloseIcon fontSize='small' />
+                </IconButton>
+              </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  bgcolor: bg,
+                  border: `1px solid ${border}`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <IconTone sx={{ mt: 0.25, color: iconColor }} fontSize='small' />
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant='body2' sx={{ fontWeight: 800, mb: 0.5 }}>
+                      {title}
+                    </Typography>
+                    {copy.lines.map((t, idx) => (
+                      <Typography key={idx} variant='body2' color='text.secondary' sx={{ lineHeight: 1.35 }}>
+                        {t}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.25 }}>
+                <ReplayOutlinedIcon sx={{ color: 'text.secondary' }} fontSize='small' />
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                  Retroceder: Registrar Evento → el declarante indica el estado destino.
+                </Typography>
+              </Box>
+            </Box>
+          )
+        })()}
+      </Popover>
 
       {/* Menu "Marcar" dinámico: sólo el siguiente estado permitido */}
       <Menu
@@ -1960,110 +2424,120 @@ const UserListTable2 = ({
               </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              {(() => {
-                const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
-                if (!op) return null
-                const info = getOperationalInfo(op)
-                const label = OPERATIONAL_STATES.find(s => s.value === String(op).trim().toUpperCase())?.label ?? op
-                const dateTxt = codigoDialogDigitadoAt ? ` (${formatDateDDMMYYYYDateOnly(codigoDialogDigitadoAt)})` : ''
-                return (
-                  <Chip
-                    size='small'
-                    label={`${label}${String(op).trim().toUpperCase() === 'DIGITADO' ? dateTxt : ''}`}
-                    sx={{
-                      bgcolor: info.bgcolor,
-                      color: info.colorText,
-                      border: `1px solid ${info.border}`,
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      fontSize: '0.72rem',
-                      borderRadius: 999
-                    }}
-                  />
-                )
-              })()}
-
-              {(() => {
-                const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
-                if (!adm) return null
-                const info = getAdministrativeInfo(adm)
-                return (
-                  <Chip
-                    size='small'
-                    label={adm}
-                    sx={{
-                      bgcolor: info.bgcolor,
-                      color: info.colorText,
-                      border: `1px solid ${info.border}`,
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      fontSize: '0.72rem',
-                      borderRadius: 999
-                    }}
-                  />
-                )
-              })()}
-
-              {(() => {
-                const inf = formatInformeMock(codigoDialogMeta?.informe, codigoDialogDigitadoAt)
-                if (!inf) return null
-                return (
-                  <Chip
-                    size='small'
-                    label={inf}
-                    variant='outlined'
-                    sx={{ fontWeight: 800, borderRadius: 999 }}
-                  />
-                )
-              })()}
-
-              <IconButton aria-label='Cerrar' onClick={closeCodigoProductoDialog} size='small'>
-                <CloseIcon fontSize='small' />
-              </IconButton>
-            </Box>
+            <IconButton aria-label='Cerrar' onClick={closeCodigoProductoDialog} size='small'>
+              <CloseIcon fontSize='small' />
+            </IconButton>
           </Box>
         </DialogTitle>
 
         <DialogContent sx={{ pt: 0.5 }}>
           <Divider sx={{ mb: 2 }} />
 
-          {/* tarjetas resumen */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 1.5, mb: 2 }}>
-            {(
-              [
-                { k: 'FECHA CODIFICACIÓN', v: formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-' },
-                { k: 'ÁREA', v: String(codigoDialogMeta?.area ?? '').trim() || '-' },
-                { k: 'TIPO DE SERVICIO', v: String(codigoDialogMeta?.familia ?? '').trim() || '-' },
-                { k: 'SOLICITUD DE SERVICIO', v: String(codigoDialogMeta?.ss ?? '').trim() || '-' },
-                { k: 'DESCRIPCIÓN', v: String(codigoDialogData?.descripcionServicio ?? '').trim() || '-' },
-                { k: 'SEDE(S)', v: String(codigoDialogMeta?.ciudad ?? '').trim() || '-' }
-              ] as Array<{ k: string; v: string }>
-            ).map(item => (
-              <Paper
-                key={item.k}
-                variant='outlined'
+          {/* Resumen (formato captura) */}
+          <Paper
+            variant='outlined'
+            sx={theme => ({
+              mb: 2,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+              borderColor: alpha(theme.palette.primary.main, 0.18)
+            })}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25, flex: 1 }}>
+                {[
+                  { k: 'FECHA COD.', v: formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-' },
+                  { k: 'ÁREA', v: String(codigoDialogMeta?.area ?? '').trim() || '-' },
+                  { k: 'TIPO SERVICIO', v: String(codigoDialogMeta?.familia ?? '').trim() || '-' },
+                  { k: 'SS', v: String(codigoDialogMeta?.ss ?? '').trim() || '-' },
+                  { k: 'SEDE(S)', v: String(codigoDialogMeta?.ciudad ?? '').trim() || '-' }
+                ].map(item => (
+                  <Box key={item.k} sx={{ minWidth: 0 }}>
+                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}>
+                      {item.k}
+                    </Typography>
+                    <Typography variant='body2' sx={{ lineHeight: 1.25 }}>
+                      {item.v}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, minWidth: 150 }}>
+                {(() => {
+                  const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
+                  if (!op) return null
+                  const info = getOperationalInfo(op)
+                  const label = OPERATIONAL_STATES.find(s => s.value === String(op).trim().toUpperCase())?.label ?? op
+                  const dateSrc = codigoDialogOpAt ?? (String(op).trim().toUpperCase() === 'DIGITADO' ? codigoDialogDigitadoAt : null)
+                  const dateTxt = dateSrc ? ` (${formatDateDDMMYYYYDateOnly(dateSrc)})` : ''
+                  return (
+                    <Chip
+                      size='small'
+                      label={`${label}${dateTxt}`}
+                      sx={{
+                        bgcolor: info.bgcolor,
+                        color: info.colorText,
+                        border: `1px solid ${info.border}`,
+                        textTransform: 'capitalize',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        borderRadius: 999
+                      }}
+                    />
+                  )
+                })()}
+
+                {(() => {
+                  const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
+                  if (!adm) return null
+                  const info = getAdministrativeInfo(adm)
+                  return (
+                    <Chip
+                      size='small'
+                      label={formatStateForChip(adm)}
+                      sx={{
+                        bgcolor: info.bgcolor,
+                        color: info.colorText,
+                        border: `1px solid ${info.border}`,
+                        textTransform: 'capitalize',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        borderRadius: 999
+                      }}
+                    />
+                  )
+                })()}
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Banner descripción (como en mockup) */}
+          {(() => {
+            const desc = String(codigoDialogData?.descripcionServicio ?? '').trim()
+            if (!desc) return null
+            return (
+              <Box
                 sx={theme => ({
-                  p: 1.5,
+                  mb: 2,
+                  p: 1.25,
                   borderRadius: 2,
-                  bgcolor: alpha(theme.palette.text.primary, 0.03),
-                  borderColor: alpha(theme.palette.text.primary, 0.08)
+                  bgcolor: alpha(theme.palette.primary.main, 0.06),
+                  borderLeft: `3px solid ${theme.palette.primary.main}`
                 })}
               >
-                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block' }}>
-                  {item.k}
+                <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+                  {desc}
                 </Typography>
-                <Typography variant='body2'>
-                  {item.v}
-                </Typography>
-              </Paper>
-            ))}
-          </Box>
+              </Box>
+            )
+          })()}
 
           {/* SKUs */}
           <Box sx={{ mb: 2 }}>
             <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
-              SKUs del Código Producto
+              SKUs del CP
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {(() => {
@@ -2081,151 +2555,159 @@ const UserListTable2 = ({
                   <Chip
                     key={it.sku}
                     size='small'
-                    label={`${it.sku} — ${it.nombre || ''}`.trim()}
-                    sx={{ fontWeight: 800, borderRadius: 999, bgcolor: alpha('#3b82f6', 0.12) }}
+                    label={`${it.sku} ${it.nombre || ''}`.trim()}
+                    sx={theme => ({
+                      fontWeight: 800,
+                      borderRadius: 999,
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.22)}`
+                    })}
                   />
                 ))
               })()}
             </Box>
           </Box>
 
-          {/* RCMs vinculados */}
+          {/* Informes (generados) — derivado de SKUs (mientras no exista fuente explícita) */}
           <Box sx={{ mb: 2 }}>
             <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
-              RCMs vinculados ({Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms.length : 0})
+              Informes (generados)
             </Typography>
 
-            <Paper variant='outlined' sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Box sx={{ p: 0 }}>
-                <TableContainer>
-                  <Table size='small'>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>N° RCM</TableCell>
-                        <TableCell align='center' sx={{ fontWeight: 800 }}>TIPO</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>ENSAYOS Y SERVICIOS</TableCell>
-                        <TableCell align='center' sx={{ fontWeight: 800 }}>ESTADO</TableCell>
-                        <TableCell align='right' sx={{ fontWeight: 800 }} />
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {codigoDialogLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
-                            <CircularProgress size={24} />
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        (Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []).map((r: any) => {
-                          const ens = computeEnsayosFromServicios(r?.servicios)
-                          const pct = ens.total > 0 ? Math.round((ens.ensayados / ens.total) * 100) : 0
-                          const op = String(r?.estadoOperativo ?? '').trim()
-                          const opInfo = getOperationalInfo(op)
+            {(() => {
+              const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
+              const uniq = new Map<string, { sku: string; nombre: string }>()
+              for (const e of ens) {
+                const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
+                const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
+                if (!sku) continue
+                if (!uniq.has(sku)) uniq.set(sku, { sku, nombre })
+              }
+              const items = Array.from(uniq.values())
+              if (items.length === 0) {
+                return <Typography variant='body2'>-</Typography>
+              }
 
-                          const rcmLabel = (() => {
-                            const raw = String(r?.numeroRcm ?? '').trim()
-                            if (!raw) return `RCM-${String(r?.id ?? '').padStart(3, '0')}`
-                            if (/^RCM-\d+/i.test(raw)) return raw
-                            if (/^\d+$/.test(raw)) return `RCM-${raw.padStart(3, '0')}`
-                            return raw
-                          })()
+              const totalEns = Number(codigoDialogMeta?.ensayos?.total ?? 0)
+              const ensayados = Number(codigoDialogMeta?.ensayos?.ensayados ?? 0)
+              const pend = Math.max(0, totalEns - ensayados)
 
-                          return (
-                            <TableRow key={String(r?.id)}>
-                              <TableCell sx={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>{rcmLabel}</TableCell>
-                              <TableCell align='center'>
-                                <Chip
-                                  size='small'
-                                  label={String(r?.rcmType ?? 'MUESTRA').toUpperCase()}
-                                  sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 800, fontSize: '0.72rem' }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                  <Box sx={{ width: 90 }}>
-                                    <Box sx={{ height: 6, borderRadius: 999, bgcolor: alpha('#000', 0.08), overflow: 'hidden' }}>
-                                      <Box sx={{ height: 6, width: `${pct}%`, bgcolor: 'success.main' }} />
-                                    </Box>
-                                  </Box>
-                                  <Typography variant='caption' sx={{ fontWeight: 800 }}>{`${ens.ensayados}/${ens.total}`}</Typography>
-                                </Box>
-                              </TableCell>
-                              <TableCell align='center'>
-                                <Chip
-                                  size='small'
-                                  label={OPERATIONAL_STATES.find(s => s.value === op.toUpperCase())?.label ?? op || '-'}
-                                  sx={{
-                                    bgcolor: opInfo.bgcolor,
-                                    color: opInfo.colorText,
-                                    border: `1px solid ${opInfo.border}`,
-                                    textTransform: 'uppercase',
-                                    fontWeight: 700,
-                                    fontSize: '0.72rem',
-                                    borderRadius: 2
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell align='right'>
-                                <Button
-                                  size='small'
-                                  variant='outlined'
-                                  onClick={() => {
-                                    const id = Number(r?.id)
-                                    if (!id) return
-                                    if (typeof window === 'undefined') return
-                                    const parts = window.location.pathname.split('/').filter(Boolean)
-                                    const lang = parts[0] || 'en'
-                                    window.open(`${window.location.origin}/${lang}/apps/rcm-edit/${id}?readonly=1`, '_blank')
-                                  }}
-                                  sx={{ textTransform: 'none', borderRadius: 999 }}
-                                >
-                                  Ver más {'>'}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            </Paper>
-          </Box>
+              const totalRcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms.length : 0
+              const rcmTxt = totalRcms > 0 ? `${totalRcms} RCM${totalRcms === 1 ? '' : 's'}` : null
 
-          {/* Informes a generar (mockup) */}
-          <Box sx={{ mb: 1 }}>
-            <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
-              Informes a generar
-            </Typography>
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {items.slice(0, 10).map((it, idx) => (
+                    <Paper
+                      key={it.sku}
+                      variant='outlined'
+                      sx={theme => ({
+                        p: 1.25,
+                        borderRadius: 1.75,
+                        borderColor: alpha(theme.palette.divider, 0.9)
+                      })}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                          <EmojiEventsOutlinedIcon fontSize='small' sx={{ color: 'warning.main' }} />
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                              {it.nombre || it.sku}
+                            </Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                              {`R-L-${String(idx + 1).padStart(3, '0')}`}{rcmTxt ? ` · ${rcmTxt}` : ''} · Manual
+                            </Typography>
+                          </Box>
+                        </Box>
 
-            <Paper
-              variant='outlined'
-              sx={theme => ({
-                p: 2,
-                borderRadius: 2,
-                borderColor: alpha(theme.palette.success.main, 0.55),
-                bgcolor: alpha(theme.palette.success.main, 0.08)
-              })}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                  <CheckBoxOutlinedIcon sx={{ color: 'success.main' }} fontSize='small' />
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant='body2' sx={{ fontWeight: 800 }}>
-                      {String(codigoDialogMeta?.familia ?? 'Informe').trim() || 'Informe'}
-                    </Typography>
-                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
-                      R-L-002 · Manual · Listo para generar
-                    </Typography>
-                  </Box>
+                        {pend > 0 ? (
+                          <Typography variant='caption' sx={{ fontWeight: 800, color: 'warning.main', whiteSpace: 'nowrap' }}>
+                            {pend} ens. pend.
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </Paper>
+                  ))}
                 </Box>
-                <Typography variant='body2' sx={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>
-                  {formatInformeMock(codigoDialogMeta?.informe, codigoDialogDigitadoAt) ?? 'INF-2026-034'}
-                </Typography>
-              </Box>
-            </Paper>
+              )
+            })()}
           </Box>
+
+          {/* (sin secciones extra: no mostrar tabla de RCMs ni "Informes a generar") */}
+
+          {/* Eventos activos */}
+          {(() => {
+            const rcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []
+            const activos = rcms
+              .map((r: any) => {
+                const last = Array.isArray(r?.RCMHistory) ? r.RCMHistory[0] : null
+                if (!last) return null
+                const tipo = String(last?.tipo ?? '').trim()
+                const tipoEstado = String(last?.tipoEstado ?? '').trim().toUpperCase()
+                const isOpen = tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
+                if (!isOpen) return null
+
+                const motivo = String(last?.motivo ?? '').trim()
+                const [head, ...rest] = motivo.split(' - ')
+                const evTipo = (head || 'Evento').trim()
+                const evMotivo = (rest.join(' - ') || '').trim()
+
+                const obs = String(last?.observacion ?? '').trim()
+                const obsLine = obs ? obs.split(/\r?\n/).find(l => String(l).trim()) ?? '' : ''
+
+                return { r, last, evTipo, evMotivo, obsLine }
+              })
+              .filter(Boolean) as Array<any>
+
+            if (activos.length === 0) return null
+
+            return (
+              <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+                  <ReportProblemOutlinedIcon fontSize='small' sx={{ color: 'error.main' }} />
+                  <Typography variant='subtitle2' sx={{ fontWeight: 800, color: 'error.main' }}>
+                    Eventos activos ({activos.length})
+                  </Typography>
+                </Box>
+
+                <Paper
+                  variant='outlined'
+                  sx={theme => ({
+                    p: 1.5,
+                    borderRadius: 2,
+                    borderColor: alpha(theme.palette.error.main, 0.45),
+                    bgcolor: alpha(theme.palette.error.main, 0.06)
+                  })}
+                >
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {activos.slice(0, 6).map((ev, idx) => (
+                      <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25, minWidth: 0 }}>
+                          <ReportProblemOutlinedIcon fontSize='small' sx={{ color: 'error.main', mt: 0.2 }} />
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant='caption' sx={{ fontWeight: 900, color: 'error.main', display: 'block' }}>
+                              {ev.evTipo}
+                            </Typography>
+                            {ev.evMotivo ? (
+                              <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 700 }}>
+                                {ev.evMotivo}
+                              </Typography>
+                            ) : null}
+                            {ev.obsLine ? (
+                              <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                                {ev.obsLine}
+                              </Typography>
+                            ) : null}
+                          </Box>
+                        </Box>
+
+                      </Box>
+                    ))}
+                  </Box>
+                </Paper>
+              </Box>
+            )
+          })()}
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -2510,29 +2992,49 @@ const UserListTable2 = ({
         <DialogTitle sx={{ pb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
-              {(() => {
-                const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
-                const currentInfo = getOperationalInfo(currentState)
-                const currentLabel = OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || 'Estado')
-                return (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                    <Chip
-                      size='small'
-                      label={currentLabel}
-                      sx={{
-                        bgcolor: currentInfo.bgcolor,
-                        color: currentInfo.colorText,
-                        border: `1px solid ${currentInfo.border}`,
-                        fontWeight: 700,
-                        borderRadius: 2
-                      }}
-                    />
-                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      {formatDateDDMMYYYYDateOnlyDash(new Date())}
-                    </Typography>
-                  </Box>
-                )
-              })()}
+              {markDialogAction === 'EVENTO' || markDialogAction === 'CERRAR_EVENTO' ? (
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2 }}>
+                    {markDialogAction === 'EVENTO' ? 'Registrar Evento' : 'Cerrar Evento'}
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {(() => {
+                      const rcmId = markDialogRowId
+                      if (!rcmId) return ''
+                      const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
+                      const code = String((agg as any)?.codigoNombre ?? '').trim()
+                      const cliente = String((agg as any)?.cliente?.razonSocial ?? (agg as any)?.cliente?.nombreCliente ?? '').trim()
+                      const obraNum = String((agg as any)?.obra?.numeroObra ?? '').trim()
+                      const parts = [code, cliente, obraNum ? `Obra ${obraNum}` : ''].filter(Boolean)
+                      return parts.join(' - ')
+                    })()}
+                  </Typography>
+                </Box>
+              ) : (
+                (() => {
+                  const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                  const currentInfo = getOperationalInfo(currentState)
+                  const currentLabel = OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || 'Estado')
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                      <Chip
+                        size='small'
+                        label={currentLabel}
+                        sx={{
+                          bgcolor: currentInfo.bgcolor,
+                          color: currentInfo.colorText,
+                          border: `1px solid ${currentInfo.border}`,
+                          fontWeight: 700,
+                          borderRadius: 2
+                        }}
+                      />
+                      <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {formatDateDDMMYYYYDateOnlyDash(new Date())}
+                      </Typography>
+                    </Box>
+                  )
+                })()
+              )}
             </Box>
 
             <IconButton aria-label='Cerrar' onClick={handleCancelMarkDialog} size='small'>
@@ -2544,37 +3046,352 @@ const UserListTable2 = ({
         <DialogContent sx={{ pt: 0.5 }}>
           <Divider sx={{ mb: 2 }} />
 
-          {(() => {
-            const targetLabel = OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')
-            if (!targetLabel) return null
-            return (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, display: 'block', mb: 0.75 }}>
-                  Avanzar a:
+          {markDialogAction === 'EVENTO' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Tipo de Evento */}
+              <Box>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                  TIPO DE EVENTO
                 </Typography>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {(
+                    [
+                      { value: 'INFO_PENDIENTE', label: 'Info Pendiente', tone: 'warning' as const },
+                      { value: 'ERROR_INTERNO', label: 'Error Interno', tone: 'error' as const },
+                      { value: 'CORRECCION', label: 'Corrección', tone: 'secondary' as const }
+                    ] as const
+                  ).map(opt => {
+                    const selected = eventType === opt.value
+
+                    return (
+                      <Button
+                        key={opt.value}
+                        onClick={() => {
+                          setEventType(opt.value)
+                          setCorrectionMotivo('')
+                        }}
+                        variant='outlined'
+                        size='small'
+                        sx={theme => ({
+                          ...(true && (() => {
+                            const mainColor = theme.palette[opt.tone].main
+                            return {
+                              borderColor: selected ? mainColor : theme.palette.divider,
+                              bgcolor: selected ? alpha(mainColor, 0.12) : 'transparent',
+                              color: selected ? mainColor : theme.palette.text.secondary
+                            }
+                          })()),
+                          textTransform: 'none',
+                          borderRadius: 999,
+                          fontWeight: 800,
+                          '&:hover': {
+                            bgcolor: selected ? undefined : alpha(theme.palette.action.hover, 0.7)
+                          }
+                        })}
+                      >
+                        {opt.label}
+                      </Button>
+                    )
+                  })}
+                </Box>
+
                 <Box
                   sx={theme => ({
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.55)}`,
-                    bgcolor: alpha(theme.palette.primary.main, 0.06),
+                    mt: 1.25,
+                    p: 1.25,
                     borderRadius: 2,
-                    px: 2,
-                    py: 1.25,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2
+                    bgcolor: alpha(theme.palette.action.hover, 0.8)
                   })}
                 >
-                  <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
-                    {targetLabel}
-                  </Typography>
-                  <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
-                    {markDialogAction === 'ENSAYADO' ? 'Todos los ensayos completados' : ' '}
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                    {eventType === 'ERROR_INTERNO'
+                      ? 'Error detectado en revisión interna. Requiere corrección — el CP debe retroceder al estado donde se puede corregir.'
+                      : eventType === 'CORRECCION'
+                        ? 'Corrección solicitada por el cliente post-envío. El CP debe volver a un estado anterior para ser revisado y reenviado.'
+                        : 'Falta información del cliente para completar el informe. El CP permanece en su estado actual hasta que llegue la info.'}
                   </Typography>
                 </Box>
+
+                {formErrors.eventType ? (
+                  <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700, mt: 0.75, display: 'block' }}>
+                    {formErrors.eventType}
+                  </Typography>
+                ) : null}
               </Box>
-            )
-          })()}
+
+              {/* Motivo */}
+              <Box>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                  MOTIVO *
+                </Typography>
+                <FormControl fullWidth size='small' error={!!formErrors.motivo}>
+                  <Select
+                    value={correctionMotivo}
+                    displayEmpty
+                    onChange={e => setCorrectionMotivo(String(e.target.value))}
+                    disabled={!eventType}
+                  >
+                    <MenuItemMUI value=''>— Seleccionar motivo —</MenuItemMUI>
+                    {(eventType === 'INFO_PENDIENTE'
+                      ? ['Falta datos del cliente', 'Especificación incompleta', 'Parámetro de diseño no entregado', 'Otro']
+                      : eventType === 'ERROR_INTERNO'
+                        ? ['Tipo en informe', 'Cálculo incorrecto', 'Norma incorrecta', 'Resultado fuera de rango', 'Error de identificación de muestra', 'Otro']
+                        : eventType === 'CORRECCION'
+                          ? ['Corrección solicitada por cliente', 'Dato adicional requerido post-envío', 'Cambio de especificación', 'Otro']
+                          : [])
+                      .map(m => (
+                        <MenuItemMUI key={m} value={m}>
+                          {m}
+                        </MenuItemMUI>
+                      ))}
+                  </Select>
+                  {formErrors.motivo ? <FormHelperText>{formErrors.motivo}</FormHelperText> : null}
+                </FormControl>
+              </Box>
+
+              {/* Observación */}
+              <Box>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                  OBSERVACIÓN *
+                </Typography>
+                <TextField
+                  value={correctionObservaciones}
+                  onChange={e => {
+                    setCorrectionObservaciones(e.target.value)
+                    if (formErrors.observacion) setFormErrors(prev => ({ ...prev, observacion: undefined }))
+                  }}
+                  size='small'
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  placeholder='Describe el problema con detalle suficiente para que quien lo resuelva entienda qué debe hacer...'
+                  error={!!formErrors.observacion}
+                  helperText={formErrors.observacion}
+                />
+              </Box>
+
+              {/* Estado destino */}
+              <Box>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                  ¿A QUÉ ESTADO DEBE IR EL CP PARA RESOLVER ESTE EVENTO? *
+                </Typography>
+
+                <Box
+                  sx={theme => ({
+                    p: 1.25,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+                    bgcolor: alpha(theme.palette.warning.main, 0.08),
+                    mb: 1.25
+                  })}
+                >
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                    El declarante envía el CP al estado donde se puede solucionar el problema. Ej: un error en el Digitado (para que lo corrijan y vuelvan a revisar).
+                  </Typography>
+                </Box>
+
+                {(() => {
+                  const all = [
+                    { value: 'CODIFICADO', desc: 'RCMs creados, sin ensayos iniciados' },
+                    { value: 'EN_PROCESO', desc: 'Al menos 1 ensayo iniciado en Sala' },
+                    { value: 'ENSAYADO', desc: 'Todos los ensayos completados' },
+                    { value: 'ENVIADO_DIGITACION', desc: 'Listo para que el digitador arme el paquete de informes' },
+                    { value: 'DIGITADO', desc: 'Informes emitidos, disponibles para revisión' },
+                    { value: 'REVISADO', desc: 'Revisado por Jefe de Laboratorio' },
+                    { value: 'FIRMADO', desc: 'Firmado (software externo)' },
+                    { value: 'ENVIADO', desc: 'Entregado al cliente' }
+                  ] as const
+
+                  const current = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                  const currentIndex = all.findIndex(s => s.value === current)
+                  // Regla de negocio: mostrar el estado actual y los estados hacia atrás.
+                  // NO se muestran estados hacia adelante.
+                  const visible = currentIndex >= 0 ? all.slice(0, currentIndex + 1) : all
+
+                  const selectedOpt = eventReturnState ? visible.find(v => v.value === eventReturnState) : undefined
+
+                  return (
+                    <>
+                      <Box
+                        sx={theme => ({
+                          display: 'grid',
+                          gridTemplateColumns: '1fr',
+                          gap: 1,
+                          '& .MuiChip-root': {
+                            fontWeight: 800,
+                            ...(true && (() => {
+                              const celeste = lighten(theme.palette.primary.main, 0.35)
+                              return {
+                                bgcolor: celeste,
+                                border: `1px solid ${celeste}`,
+                                color: theme.palette.common.white
+                              }
+                            })())
+                          }
+                        })}
+                      >
+                        {visible.map(opt => {
+                          const st = OPERATIONAL_STATES.find(s => s.value === opt.value)
+                          const selected = eventReturnState === opt.value
+
+                          return (
+                            <Box
+                              key={opt.value}
+                              role='button'
+                              tabIndex={0}
+                              onClick={() => {
+                                setEventReturnState(opt.value)
+                                if (formErrors.returnState) setFormErrors(prev => ({ ...prev, returnState: undefined }))
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setEventReturnState(opt.value)
+                                }
+                              }}
+                              sx={theme => ({
+                                border: `1px solid ${selected ? alpha(theme.palette.primary.main, 0.55) : theme.palette.divider}`,
+                                bgcolor: selected ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                p: 0.75,
+                                borderRadius: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.action.hover, 0.7)
+                                }
+                              })}
+                            >
+                              <Radio
+                                checked={selected}
+                                value={opt.value}
+                                size='small'
+                                sx={theme => {
+                                  return {
+                                    '&.Mui-checked': {
+                                      color: theme.palette.primary.main
+                                    }
+                                  }
+                                }}
+                              />
+                              <Chip size='small' label={st?.label ?? opt.value} />
+                              <Typography
+                                variant='caption'
+                                color='text.secondary'
+                                sx={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                              >
+                                {opt.desc}
+                              </Typography>
+                            </Box>
+                          )
+                        })}
+                      </Box>
+
+                      {selectedOpt ? (
+                        <Box
+                          sx={theme => ({
+                            mt: 1.25,
+                            p: 1.1,
+                            borderRadius: 2,
+                            bgcolor: alpha(theme.palette.action.hover, 0.8)
+                          })}
+                        >
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.4 }}>
+                            Descripción del estado seleccionado
+                          </Typography>
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>
+                            {selectedOpt.desc}
+                          </Typography>
+                        </Box>
+                      ) : null}
+                    </>
+                  )
+                })()}
+
+                {formErrors.returnState ? (
+                  <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700, mt: 0.5, display: 'block' }}>
+                    {formErrors.returnState}
+                  </Typography>
+                ) : null}
+              </Box>
+            </Box>
+          )}
+
+          {markDialogAction === 'CERRAR_EVENTO' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box
+                sx={theme => ({
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: `1px solid ${alpha(theme.palette.error.main, 0.25)}`,
+                  bgcolor: alpha(theme.palette.error.main, 0.06)
+                })}
+              >
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                  Al confirmar, se registra el cierre del evento y el indicador “Con evento” desaparece.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                  OBSERVACIÓN *
+                </Typography>
+                <TextField
+                  value={correctionObservaciones}
+                  onChange={e => {
+                    setCorrectionObservaciones(e.target.value)
+                    if (formErrors.observacion) setFormErrors(prev => ({ ...prev, observacion: undefined }))
+                  }}
+                  size='small'
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  placeholder='Indica cómo se resolvió el evento o por qué se cierra...'
+                  error={!!formErrors.observacion}
+                  helperText={formErrors.observacion}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {markDialogAction !== 'EVENTO' &&
+            (() => {
+              const targetLabel = OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')
+              if (!targetLabel) return null
+              return (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, display: 'block', mb: 0.75 }}>
+                    Avanzar a:
+                  </Typography>
+                  <Box
+                    sx={theme => ({
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.55)}`,
+                      bgcolor: alpha(theme.palette.primary.main, 0.06),
+                      borderRadius: 2,
+                      px: 2,
+                      py: 1.25,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 2
+                    })}
+                  >
+                    <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+                      {targetLabel}
+                    </Typography>
+                    <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+                      {markDialogAction === 'ENSAYADO'
+                        ? 'Todos los ensayos completados'
+                        : markDialogAction === 'REVISADO'
+                          ? 'Revisado por Jefe de Laboratorio'
+                          : ' '}
+                    </Typography>
+                  </Box>
+                </Box>
+              )
+            })()}
 
           {markDialogAction === 'DIGITADO' && (
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
@@ -2590,7 +3407,7 @@ const UserListTable2 = ({
             </Box>
           )}
 
-          {(markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP') && (
+          {markDialogAction === 'CERRADO_OP' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <FormControl fullWidth size='small' error={!!formErrors.eventType}>
                 <InputLabel id='event-type-label'>Tipo</InputLabel>
@@ -2630,8 +3447,27 @@ const UserListTable2 = ({
             </Box>
           )}
 
+          {markDialogAction === 'REVISADO' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                label='Observación (opcional)'
+                value={correctionObservaciones}
+                onChange={e => {
+                  setCorrectionObservaciones(e.target.value)
+                  if (formErrors.observacion) setFormErrors(prev => ({ ...prev, observacion: undefined }))
+                }}
+                size='small'
+                fullWidth
+                multiline
+                minRows={2}
+                error={!!formErrors.observacion}
+                helperText={formErrors.observacion}
+              />
+            </Box>
+          )}
+
           {/* Estados que requieren observación obligatoria */}
-          {['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
+          {['ENVIADO_DIGITACION', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <TextField
                 label='Observación (obligatoria)'
@@ -2655,7 +3491,8 @@ const UserListTable2 = ({
           )}
 
           {/* Nota visual (no afecta lógica) */}
-          {!['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
+          {markDialogAction !== 'EVENTO' &&
+            !['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
             <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
               Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
             </Typography>
@@ -2674,7 +3511,11 @@ const UserListTable2 = ({
           >
             {savingHistory
               ? 'Guardando...'
-              : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
+              : markDialogAction === 'EVENTO'
+                ? 'Confirmar'
+                : markDialogAction === 'CERRAR_EVENTO'
+                  ? 'Confirmar cierre'
+                : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2687,9 +3528,31 @@ const UserListTable2 = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={() => handleEdit(menuRowId)}>Editar</MenuItem>
-        <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
-        <MenuItem disabled title="Generar Informe deshabilitado">Generar Informe</MenuItem>
+        {(() => {
+          const rcmId = menuRowId
+          if (!rcmId) return null
+          const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
+          const hasEvento = Boolean((agg as any)?.conEvento)
+          const current = normalizeStateKey(getCurrentStateForRow(rcmId))
+          const canRegistrarEvento = current !== 'CODIFICADO'
+
+          return (
+            <>
+              <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
+              <MenuItem
+                onClick={() => handleRegistrarEvento(menuRowId)}
+                disabled={!canRegistrarEvento}
+                title={!canRegistrarEvento ? 'No aplica para estado Codificado' : undefined}
+              >
+                Registrar evento
+              </MenuItem>
+              {hasEvento ? <MenuItem onClick={() => handleCerrarEvento(menuRowId)}>Cerrar evento</MenuItem> : null}
+              <MenuItem disabled title='Generar Informe deshabilitado'>
+                Generar Informe
+              </MenuItem>
+            </>
+          )
+        })()}
       </Menu>
 
       {/* Dialog: Historial */}
@@ -2702,20 +3565,30 @@ const UserListTable2 = ({
               </Typography>
               {(() => {
                 if (!histRowId) return null
-                const r = data.find(d => d.representativeRcmId === histRowId)
-                const code = (r?.codigoNombre ?? r?.numeroRcm ?? '').toString().trim()
-                const obraName = (r?.obra?.nombreObra ?? '').toString().trim()
-                const obraNum = (r?.obra?.numeroObra ?? '').toString().trim()
-                const obraTxt = obraName || obraNum ? `${obraName || obraNum}` : ''
-                const parts = [code, obraTxt].filter(Boolean)
-                if (!parts.length) return null
+                const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
+                const code = (
+                  String(histCodigoData?.codigoNombre ?? r?.codigoNombre ?? r?.numeroRcm ?? '').trim()
+                )
+                const cliente =
+                  String(r?.cliente?.nombreCliente ?? (r as any)?.clienteNombre ?? (r as any)?.nombreCliente ?? '').trim() ||
+                  (typeof (r as any)?.cliente === 'string' ? String((r as any).cliente).trim() : '')
+                const obra = String(r?.obra?.nombreObra ?? r?.obra?.numeroObra ?? '').trim()
+                const descripcion = String(
+                  histCodigoData?.descripcionServicio ?? (r as any)?.descripcionServicio ?? ''
+                ).trim()
+
+                if (!code && !cliente && !obra && !descripcion) return null
+
+                const right = [cliente, obra, descripcion].filter(v => String(v ?? '').trim()).join(' - ')
+                const title = [code ? code : '', right ? `${code ? ', ' : ''}${right}` : ''].join('')
+                if (!title.trim()) return null
                 return (
                   <Typography
                     variant='caption'
                     color='text.secondary'
                     sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   >
-                    {parts.join(' - ')}
+                    {title}
                   </Typography>
                 )
               })()}
@@ -2727,61 +3600,72 @@ const UserListTable2 = ({
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
+
           {(() => {
             if (!histRowId) return null
-            const stateFromRow = getCurrentStateForRow(histRowId)
-            const stateFromHistory = normalizeStateForCompare((histRows ?? [])[0]?.estNuevo)
-            const currentState = stateFromRow || stateFromHistory || ''
-            const currentInfo = getOperationalInfo(currentState)
-            // histRows está ordenado desc; primer match es el último cambio hacia el estado actual
-            const sinceEntry = (histRows ?? []).find(h => normalizeStateForCompare(h?.estNuevo) === normalizeStateForCompare(currentState))
-            const sinceDate = sinceEntry?.fechaAccion ?? null
-            const days = sinceDate ? daysBetween(sinceDate, new Date()) : null
-            const desdeTxt = sinceDate ? formatDateDDMMYYYYDateOnlyDash(sinceDate) : null
+            const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
+            const currentState = getCurrentStateForRow(histRowId)
+            const info = getOperationalInfo(currentState)
+            const sinceHit = (histRows ?? []).find((h: any) => {
+              const est = normalizeStateForCompare(h?.estNuevo)
+              return currentState && est === currentState
+            })
+            const since = sinceHit?.fechaAccion ? new Date(sinceHit.fechaAccion) : null
+            const days = since ? Math.max(0, Math.floor((Date.now() - since.getTime()) / (1000 * 60 * 60 * 24))) : null
+            const hasEvento = Boolean((r as any)?.conEvento)
 
-            const metaRow = data.find(d => d.representativeRcmId === histRowId)
-            const eventoActivo = Boolean(metaRow?.conEvento) || normalizeState(currentState) === 'EVENTO'
+            if (!currentState && !hasEvento) return null
 
             return (
-              <Paper
-                variant='outlined'
+              <Box
                 sx={theme => ({
-                  p: 2,
-                  mt: 1,
                   mb: 2,
-                  bgcolor: alpha(theme.palette.warning.main, 0.16),
-                  borderColor: alpha(theme.palette.warning.main, 0.35)
+                  px: 2,
+                  py: 1.25,
+                  borderRadius: 2,
+                  border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`,
+                  bgcolor: alpha(theme.palette.warning.main, 0.08),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2
                 })}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
-                    <Typography variant='caption' sx={{ fontWeight: 600 }}>
-                      Estado actual:
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    Estado actual:
+                  </Typography>
+                  <Chip
+                    label={formatStateForChip(currentState)}
+                    size='small'
+                    variant='filled'
+                    sx={{
+                      bgcolor: info.bgcolor,
+                      color: info.colorText,
+                      border: `1px solid ${info.border}`,
+                      textTransform: 'uppercase',
+                      fontWeight: 800,
+                      borderRadius: 2
+                    }}
+                  />
+                  {since && (
+                    <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      desde {formatDateDDMMYYYYDateOnlyDash(since.toISOString())}
+                      {typeof days === 'number' ? ` (${days} día${days === 1 ? '' : 's'})` : ''}
                     </Typography>
-                    <Chip
-                      label={currentState || '-'}
-                      size='small'
-                      variant='filled'
-                      sx={{
-                        bgcolor: currentInfo.bgcolor,
-                        color: currentInfo.colorText,
-                        border: `1px solid ${currentInfo.border}`,
-                        textTransform: 'uppercase',
-                        fontWeight: 700,
-                        fontSize: '0.72rem',
-                        borderRadius: 2
-                      }}
-                    />
-                    {desdeTxt && (
-                      <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
-                        desde {desdeTxt}{days != null ? ` (${days} días)` : ''}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {eventoActivo && <Chip size='small' color='error' label='1 evento activo' />}
+                  )}
                 </Box>
-              </Paper>
+
+                {hasEvento && (
+                  <Chip
+                    size='small'
+                    color='error'
+                    variant='outlined'
+                    label='1 evento activo'
+                    sx={{ fontWeight: 700, borderRadius: 2 }}
+                  />
+                )}
+              </Box>
             )
           })()}
 
@@ -2811,15 +3695,15 @@ const UserListTable2 = ({
                   }}
                 >
                   <TableRow>
-                    <TableCell align='center' sx={{ width: 112 }}>REGISTRO</TableCell>
+                    <TableCell align='center' sx={{ width: 84 }}>REGISTRO</TableCell>
                     <TableCell align='center' sx={{ width: 120 }}>FUNCIONARIO</TableCell>
-                    <TableCell align='center' sx={{ width: 176 }}>TIPO</TableCell>
-                    <TableCell align='center' sx={{ width: 176 }}>EST. ANTERIOR</TableCell>
-                    <TableCell align='center' sx={{ width: 176 }}>EST. NUEVO</TableCell>
-                    <TableCell align='center' sx={{ width: 140 }}>MOTIVO</TableCell>
-                    <TableCell align='center' sx={{ width: 90 }}>INFORME</TableCell>
-                    <TableCell align='center' sx={{ width: 112 }}>FEC. ACCIÓN</TableCell>
-                    <TableCell sx={{ width: 260 }}>OBSERVACIONES</TableCell>
+                    <TableCell align='center' sx={{ width: 140 }}>APLICADO A</TableCell>
+                    <TableCell align='center' sx={{ width: 160 }}>TIPO</TableCell>
+                    <TableCell align='center' sx={{ width: 156 }}>EST. ANTERIOR</TableCell>
+                    <TableCell align='center' sx={{ width: 156 }}>EST. NUEVO</TableCell>
+                    <TableCell align='center' sx={{ width: 120 }}>NR</TableCell>
+                    <TableCell align='center' sx={{ width: 170 }}>MOTIVO</TableCell>
+                    <TableCell sx={{ width: 240 }}>OBSERVACIONES</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2836,7 +3720,8 @@ const UserListTable2 = ({
                           {formatTimeHHmm(h.fechaAccion)}
                         </Typography>
                       </TableCell>
-                      <TableCell>{h.funcionario}</TableCell>
+                      <TableCell>{h.funcionario ?? 'Usuario'}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>CP</TableCell>
                       <TableCell>
                         {(() => {
                           const raw = String(h.tipo ?? '-')
@@ -2894,9 +3779,8 @@ const UserListTable2 = ({
                           )
                         })()}
                       </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{''}</TableCell>
                       <TableCell>{h.motivo ?? '-'}</TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{h.informe ?? '-'}</TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDateDDMMYYYYDateOnlyDash(h.fechaAccion)}</TableCell>
                       <TableCell
                         title={typeof h.observacion === 'string' ? h.observacion : h.observacion == null ? '' : String(h.observacion)}
                         sx={{

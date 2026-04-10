@@ -6,6 +6,8 @@ import { useState, useMemo, useEffect } from 'react'
 // Next Imports
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+// NextAuth Imports
+import { useSession } from 'next-auth/react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -253,6 +255,17 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
 }
 
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
+    const { data: session } = useSession()
+
+    const getCurrentUserName = () => {
+      const name = session?.user?.name
+      if (typeof name === 'string' && name.trim()) return name.trim()
+
+      const email = session?.user?.email
+      if (typeof email === 'string' && email.trim()) return email.trim()
+
+      return null
+    }
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
@@ -450,7 +463,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
 
     const prevState = getCurrentStateForRow(rowId)
-    const finalFuncionario = (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : 'Usuario'
+    const finalFuncionario = getCurrentUserName() ?? 'Usuario'
 
     const payload: any = {
       tipo: 'Ope',
@@ -549,7 +562,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         tipoEstado: markDialogAction === 'EVENTO' || markDialogAction === 'CERRADO_OP' ? eventType || markDialogAction : markDialogAction,
         motivo: correctionMotivo ?? null,
         observacion: correctionObservaciones ?? null,
-        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__) ? (window as any).__USER_NAME__ : null,
+        funcionario: getCurrentUserName() ?? 'Usuario',
         estPrev: getCurrentStateForRow(markDialogRowId) ?? null,
         estNuevo: markDialogAction ?? null,
         informe: markDialogAction === 'DIGITADO' ? (Number(informeNumber) || null) : null
@@ -970,9 +983,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         tipo: 'CAMBIO_ESTADO',
         estAnterior: estadoActual,
         estNuevo: nuevoEstado,
-        funcionario: (typeof window !== 'undefined' && (window as any).__USER_NAME__)
-          ? (window as any).__USER_NAME__
-          : 'Usuario',
+        funcionario: getCurrentUserName() ?? 'Usuario',
         aplicadoA: 'SERVICIO',
         ensayoServicio: servicio?.nombre ?? servicio?.servicio?.nombre ?? null,
         observacion: `Cambio de estado de ${estadoActual} a ${nuevoEstado}`,

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Box, Grid, TextField, MenuItem, Typography, Button, FormControl, InputLabel, Select, Menu } from '@mui/material'
+import { useMemo, useState, useEffect } from 'react'
+import { Box, Grid, TextField, MenuItem, Typography, Button, FormControl, InputLabel, Select, Menu, Checkbox, ListItemText } from '@mui/material'
 
 // Importa el componente PickersRange
 import PickersRange from './date'
@@ -27,14 +27,38 @@ interface HeaderProps {
     dateField?: 'fecha_codificacion' | 'fecha_muestreo'
     start?: string
     end?: string
-    estadoOperativo?: string
-    estadoAdministrativo?: string
+    estadoOperativo?: string | string[]
+    estadoAdministrativo?: string | string[]
     areaId?: number | null
     familia?: string
   }) => void
 }
 
 const Header = ({ onFiltersChange }: HeaderProps) => {
+  const OP_ALL = '__ALL_OP__'
+  const AD_ALL = '__ALL_AD__'
+
+  const formatYMDLocal = (d: Date) => {
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  const computeDefaultDateRange = () => {
+    const end = new Date()
+    const start = new Date(end)
+    start.setMonth(start.getMonth() - 2)
+    return { start: formatYMDLocal(start), end: formatYMDLocal(end) }
+  }
+
+  const parseYMDToDate = (ymd?: string) => {
+    const s = String(ymd ?? '').trim()
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!m) return null
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  }
+
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedAreaName, setSelectedAreaName] = useState<string>('')
 
@@ -55,7 +79,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedFamilia, setSelectedFamilia] = useState('')
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
-  const [selectedEstadoAd, setSelectedEstadoAd] = useState<string>('')
+  const [selectedEstadoAd, setSelectedEstadoAd] = useState<string[]>([])
 
   // Menu Informes
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -114,8 +138,13 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     estAd = selectedEstadoAd,
     areaName = selectedAreaName
   ) => {
+    const hasAny = (v: any) => {
+      if (Array.isArray(v)) return v.length > 0
+      return Boolean(String(v ?? '').trim())
+    }
+
     // si no hay nada seleccionado, limpiar filtros
-    if (!df && !estOp && !areaId && !familia && !estAd && !areaName) {
+    if (!df && !hasAny(estOp) && !areaId && !familia && !hasAny(estAd) && !areaName) {
       console.log('Header -> emitFilters: no filters selected, clearing')
       onFiltersChange?.(undefined)
       return
@@ -124,8 +153,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (df) payload.dateField = df
     if (dr.start) payload.start = dr.start
     if (dr.end) payload.end = dr.end
-    if (estOp) payload.estadoOperativo = estOp
-    if (estAd) payload.estadoAdministrativo = estAd
+    if (hasAny(estOp)) payload.estadoOperativo = estOp
+    if (hasAny(estAd)) payload.estadoAdministrativo = estAd
     if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
     if (areaName) payload.areaName = areaName
     if (familia) payload.familia = familia
@@ -140,10 +169,33 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   }
 
   // permitir valor vacío '' = "Seleccione"
-  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('')
+  const [fechaCodificacionOption, setFechaCodificacionOption] = useState<'' | 'fecha_codificacion' | 'fecha_muestreo'>('fecha_codificacion')
 
-  const [dateRange, setDateRange] = useState<{ start?: string, end?: string }>({})
-  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
+  // Default: mostrar 2 meses hacia atrás
+  const [dateRange, setDateRange] = useState<{ start?: string, end?: string }>(computeDefaultDateRange)
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string[]>([])
+  const [pickerResetTick, setPickerResetTick] = useState(0)
+
+  const operationalStatesForFilter = useMemo(
+    () =>
+      (OPERATIONAL_STATES ?? []).filter((s: any) => {
+        const v = String(s?.value ?? '').trim()
+        return v && v !== 'EVENTO' && v !== 'CERRADO_OP'
+      }),
+    []
+  )
+
+  const operationalValues = useMemo(
+    () => operationalStatesForFilter.map((s: any) => String(s?.value ?? '').trim()).filter(Boolean),
+    [operationalStatesForFilter]
+  )
+  const administrativeValues = useMemo(
+    () => (ADMINISTRATIVE_STATES ?? []).map((s: any) => String(s?.value ?? '').trim()).filter(Boolean),
+    []
+  )
+
+  const isAllOpSelected = selectedEstadoOp.length > 0 && selectedEstadoOp.length === operationalValues.length
+  const isAllAdSelected = selectedEstadoAd.length > 0 && selectedEstadoAd.length === administrativeValues.length
 
   const handleFechaCodOptionChange = (value: string) => {
     const v = value as '' | 'fecha_codificacion' | 'fecha_muestreo'
@@ -152,15 +204,30 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     emitFilters(v, dateRange)
   }
 
-  const handleEstadoOpChange = (value: string) => {
-    setSelectedEstadoOp(value)
-    // emitir con los filtros actuales (incluirá estadoOperativo aunque no haya dateField)
-    emitFilters(fechaCodificacionOption, dateRange, value)
+  const handleEstadoOpChange = (raw: any) => {
+    const incoming = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : []
+    if (incoming.includes(OP_ALL)) {
+      const next = isAllOpSelected ? [] : operationalValues
+      setSelectedEstadoOp(next)
+      emitFilters(fechaCodificacionOption, dateRange, next)
+      return
+    }
+    const next = incoming.filter((v: any) => v !== OP_ALL)
+    setSelectedEstadoOp(next)
+    emitFilters(fechaCodificacionOption, dateRange, next)
   }
 
-  const handleEstadoAdChange = (value: string) => {
-    setSelectedEstadoAd(value)
-    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, value)
+  const handleEstadoAdChange = (raw: any) => {
+    const incoming = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : []
+    if (incoming.includes(AD_ALL)) {
+      const next = isAllAdSelected ? [] : administrativeValues
+      setSelectedEstadoAd(next)
+      emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, next)
+      return
+    }
+    const next = incoming.filter((v: any) => v !== AD_ALL)
+    setSelectedEstadoAd(next)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, next)
   }
 
   // handler que espera [Date|null, Date|null] o {start,end} o strings
@@ -169,11 +236,11 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     let end = ''
     if (Array.isArray(range)) {
       const s = range[0], e = range[1]
-      start = s ? (s instanceof Date ? s.toISOString().slice(0, 10) : String(s).slice(0, 10)) : ''
-      end = e ? (e instanceof Date ? e.toISOString().slice(0, 10) : String(e).slice(0, 10)) : ''
+      start = s ? (s instanceof Date ? formatYMDLocal(s) : String(s).slice(0, 10)) : ''
+      end = e ? (e instanceof Date ? formatYMDLocal(e) : String(e).slice(0, 10)) : ''
     } else if (range && (range.start || range.end)) {
-      start = range.start ? (new Date(range.start)).toISOString().slice(0, 10) : ''
-      end = range.end ? (new Date(range.end)).toISOString().slice(0, 10) : ''
+      start = range.start ? formatYMDLocal(new Date(range.start)) : ''
+      end = range.end ? formatYMDLocal(new Date(range.end)) : ''
     } else {
       start = ''; end = ''
     }
@@ -187,6 +254,27 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     // emitir valores iniciales (por si ya hay un rango preseleccionado)
     emitFilters()
   }, [])
+
+  const handleClearFilters = () => {
+    const nextDateRange = computeDefaultDateRange()
+
+    setFechaCodificacionOption('fecha_codificacion')
+    setDateRange(nextDateRange)
+    setPickerResetTick(t => t + 1)
+
+    setSelectedAreaId(null)
+    setSelectedAreaName('')
+    setSelectedFamilia('')
+    setSelectedEstadoOp([])
+    setSelectedEstadoAd([])
+
+    // Mantener fecha por defecto y liberar el resto.
+    onFiltersChange?.({
+      dateField: 'fecha_codificacion',
+      start: nextDateRange.start,
+      end: nextDateRange.end
+    })
+  }
 
   return (
     <Box
@@ -207,6 +295,16 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
         </Grid>
         <Grid item xs={6} />
         <Grid item xs={3} sx={{ textAlign: 'right' }}>
+          <Button
+            variant='outlined'
+            color='primary'
+            size='large'
+            sx={{ mr: 2, textTransform: 'none' }}
+            onClick={handleClearFilters}
+          >
+            Limpiar filtros
+          </Button>
+
           <Button variant='contained' color='primary' disabled size='large' sx={{ fontWeight: '' }} onClick={handleMenuOpen}>
             Informes
           </Button>
@@ -242,7 +340,12 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
         </Grid>
         <Grid item xs={12} sm={4}>
           {/* Rango de Fechas: pasar onChange */}
-          <PickersRange onChange={handleRangeChangeFlexible} />
+          <PickersRange
+            key={pickerResetTick}
+            onChange={handleRangeChangeFlexible}
+            initialStart={parseYMDToDate(dateRange.start) ?? undefined}
+            initialEnd={parseYMDToDate(dateRange.end) ?? undefined}
+          />
         </Grid>
 
       </Grid>
@@ -270,10 +373,10 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
-            <InputLabel id='familia-select'>Familia</InputLabel>
+            <InputLabel id='familia-select'>Tipo de Servicio</InputLabel>
             <Select
               labelId='familia-select'
-              label='Familia'
+              label='Tipo de Servicio'
               value={selectedFamilia}
               onChange={e => handleFamiliaChange(e.target.value)}
               disabled={!selectedAreaId}
@@ -289,21 +392,37 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
         </Grid>
 
         <Grid item xs={12} sm={3}>
-          <TextField
-            label='Estado Operativo'
-            size='small'
-            fullWidth
-            select
-            value={selectedEstadoOp}
-            onChange={(e) => handleEstadoOpChange(e.target.value)}
-          >
-            <MenuItem value=''>Seleccione</MenuItem>
-            {OPERATIONAL_STATES.map((s) => (
-              <MenuItem key={s.value} value={s.value}>
-                {s.label}
+          <FormControl fullWidth size='small'>
+            <InputLabel id='estado-op-select'>Estado Operativo</InputLabel>
+            <Select
+              labelId='estado-op-select'
+              label='Estado Operativo'
+              multiple
+              displayEmpty
+              value={selectedEstadoOp}
+              onChange={e => handleEstadoOpChange(e.target.value)}
+              renderValue={(selected) => {
+                const arr = Array.isArray(selected) ? selected : []
+                if (!arr.length) return 'Seleccione'
+                if (arr.length === operationalValues.length) return 'Todos'
+                return `${arr.length} seleccionado(s)`
+              }}
+            >
+              <MenuItem value={OP_ALL}>
+                <Checkbox
+                  checked={isAllOpSelected}
+                  indeterminate={selectedEstadoOp.length > 0 && !isAllOpSelected}
+                />
+                <ListItemText primary='Seleccionar todos' />
               </MenuItem>
-            ))}
-          </TextField>
+              {operationalStatesForFilter.map((s: any) => (
+                <MenuItem key={s.value} value={s.value}>
+                  <Checkbox checked={selectedEstadoOp.includes(s.value)} />
+                  <ListItemText primary={s.label} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
 
         <Grid item xs={12} sm={3}>
@@ -312,13 +431,28 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
             <Select
               labelId='estado-ad-select'
               label='Estado Administrativo'
+              multiple
+              displayEmpty
               value={selectedEstadoAd}
               onChange={e => handleEstadoAdChange(e.target.value)}
+              renderValue={(selected) => {
+                const arr = Array.isArray(selected) ? selected : []
+                if (!arr.length) return 'Seleccione'
+                if (arr.length === administrativeValues.length) return 'Todos'
+                return `${arr.length} seleccionado(s)`
+              }}
             >
-              <MenuItem value=''>Seleccione</MenuItem>
-              {ADMINISTRATIVE_STATES.map(s => (
+              <MenuItem value={AD_ALL}>
+                <Checkbox
+                  checked={isAllAdSelected}
+                  indeterminate={selectedEstadoAd.length > 0 && !isAllAdSelected}
+                />
+                <ListItemText primary='Seleccionar todos' />
+              </MenuItem>
+              {ADMINISTRATIVE_STATES.map((s: any) => (
                 <MenuItem key={s.value} value={s.value}>
-                  {s.label}
+                  <Checkbox checked={selectedEstadoAd.includes(s.value)} />
+                  <ListItemText primary={s.label} />
                 </MenuItem>
               ))}
             </Select>

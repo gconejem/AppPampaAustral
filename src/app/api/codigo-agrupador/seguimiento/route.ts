@@ -10,10 +10,26 @@ const isEnsayadoEstado = (estadoOperativo?: string | null) => {
   return String(estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO'
 }
 
-// Placeholder (pendiente de definición formal): evento sin resolver si el ÚLTIMO historial queda en corrección
-const isEventoSinResolver = (lastEstNuevo?: string | null) => {
-  const s = lower(lastEstNuevo)
-  return s.includes('en_correccion') || s.includes('correccion') || s.includes('correg')
+const isEventoAbierto = (h: { tipo?: string | null; tipoEstado?: string | null } | null | undefined) => {
+  const tipo = String(h?.tipo ?? '').trim()
+  const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+  return tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
+}
+
+const isEventoCerrado = (h: { tipo?: string | null; tipoEstado?: string | null } | null | undefined) => {
+  const tipo = String(h?.tipo ?? '').trim()
+  const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+  return tipo === 'Evento Cerrado' || tipoEstado === 'EVENTO_CERRADO'
+}
+
+// Evento sin resolver: existe un "Evento Abierto" posterior al último "Evento Cerrado".
+// Se evalúa sobre historial reciente (ordenado DESC).
+const isEventoSinResolver = (history: Array<{ tipo?: string | null; tipoEstado?: string | null }> | null | undefined) => {
+  for (const h of history ?? []) {
+    if (isEventoCerrado(h)) return false
+    if (isEventoAbierto(h)) return true
+  }
+  return false
 }
 
 const normalizeStateKey = (raw?: string | null) => {
@@ -123,8 +139,8 @@ export async function GET(request: Request) {
         servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true } },
         RCMHistory: {
           orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { estNuevo: true, informe: true, createdAt: true }
+          take: 20,
+          select: { estNuevo: true, tipo: true, tipoEstado: true, informe: true, createdAt: true }
         }
       }
     })
@@ -243,8 +259,8 @@ export async function GET(request: Request) {
         if (Number.isFinite(n) && (informeMax === null || n > informeMax)) informeMax = n
       }
 
-      // Con Evento (placeholder)
-      const conEvento = rcmsForAg.some(r => isEventoSinResolver(r.RCMHistory?.[0]?.estNuevo ?? null))
+      // Con Evento
+      const conEvento = rcmsForAg.some(r => isEventoSinResolver(r.RCMHistory))
 
       return {
         id: ag.id,
