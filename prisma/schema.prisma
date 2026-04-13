@@ -830,13 +830,14 @@ model Area {
 
 model Familia {
   id        Int      @id @default(autoincrement())
-  nombre    String   @unique
+  nombre    String
   areaId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   area      Area     @relation(fields: [areaId], references: [id])
   rcms      RCM[]
 
+  @@unique([nombre, areaId])
   @@index([areaId])
 }
 

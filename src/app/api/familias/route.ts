@@ -12,41 +12,39 @@ export async function GET(request: Request) {
     // Definir el orden personalizado de familias por área
     const ordenFamiliasPorArea: { [key: string]: string[] } = {
       'Suelo': [
-        'Controles y Muestreos Terreno',
-        'Análisis de Suelo',
+        'Controles Suelo',
+        'Análisis Suelo',
         'Mecánica de Suelo',
-        'Ensayos de Estructura',
-        'Aridos para Suelos'
+        'EMS - Ing',
+        'Otros'
       ],
       'Hormigón': [
         'Hormigón Fresco',
-        'Hormigón Endurecido',
-        'Testigos Hormigón',
-        'Áridos para Hormigón',
-        'Premezcladoras Hormigón',
-        'Otros Hormigón'
+        'Hormigón Edurecido',
+        'Dosificaciones Hormigón',
+        'Áridos para Hormigón / Mortero',
+        'Otros'
       ],
       'Asfalto': [
-        'Control de Mezclas Terreno',
+        'Control Terreno Asfalto',
+        'Testigos y Mezclas Asfálticas',
+        'Dosificaciones Asfalto',
         'Áridos para Asfalto',
-        'Testigos Y Mezclas',
-        'Otros Asfalto'
+        'Otros'
       ],
       'Elementos y Componentes': [
-        'Prefabricados de Hormigón',
-        'Otros Elementos y Componentes'
+        'Elementos y Componentes'
       ],
       'Áridos': [
-        'Muestreo de áridos',
-        'Análisis de áridos'
+        'Análisis de Áridos',
+        'Otros'
       ],
       'Otros': [
-        'Pintura'
+        'Pintura',
+        'Otros'
       ],
       'Servicios': [
-        'Adicionales',
-        'Profesionales',
-        'Otros Servicios'
+        'Servicios'
       ]
     }
 
