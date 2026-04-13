@@ -26,6 +26,9 @@ interface RcmDialogsProps {
     // Success snackbar
     successMessage: string
     setSuccessMessage: (msg: string) => void
+    // Info snackbar
+    infoMessage: string
+    setInfoMessage: (msg: string) => void
     // Edit warning snackbar
     showEditWarning: boolean
     setShowEditWarning: (show: boolean) => void
@@ -56,6 +59,7 @@ interface RcmDialogsProps {
 const RcmDialogs: React.FC<RcmDialogsProps> = ({
     errorVencimiento, setErrorVencimiento,
     successMessage, setSuccessMessage,
+    infoMessage, setInfoMessage,
     showEditWarning, setShowEditWarning,
     showConfirmNewRcm, handleConfirmNewRcm, handleCancelNewRcm,
     showCancelConfirm, handleConfirmCancel, handleDismissCancelConfirm,
@@ -96,6 +100,23 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                     sx={{ width: '100%' }}
                 >
                     {successMessage}
+                </Alert>
+            </Snackbar>
+
+            {/* Snackbar informativo para tarjeta duplicada */}
+            <Snackbar
+                open={Boolean(infoMessage)}
+                autoHideDuration={5000}
+                onClose={() => setInfoMessage('')}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setInfoMessage('')}
+                    severity='info'
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                >
+                    {infoMessage}
                 </Alert>
             </Snackbar>
 

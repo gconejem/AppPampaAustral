@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box,
     Typography,
@@ -93,6 +93,8 @@ const Step2CreateRcms = ({
     // ═══════════════════════════════════════
     // DERIVED STATE
     // ═══════════════════════════════════════
+    const [infoMessage, setInfoMessage] = useState('')
+
     const rcmIdsAgrupados = new Set<number>()
     codigoReal.codigosAgrupadores.forEach(ag => {
         ag.rcmsVinculados.forEach(rcm => rcmIdsAgrupados.add(rcm.id))
@@ -175,6 +177,23 @@ const Step2CreateRcms = ({
             onClearInitialRcmType?.()
         }
     }, [initialRcmType])
+
+    // Verificar si el número de tarjeta ya existe en los RCMs guardados
+    useEffect(() => {
+        const tarjeta = form.numeroTarjeta?.trim()
+        if (!tarjeta) {
+            setInfoMessage('')
+            return
+        }
+        const editingId = crud.editingRcmId
+        const duplicado = savedRcms.find(rcm => rcm.numeroTarjeta?.trim() === tarjeta && rcm.id !== editingId)
+        if (duplicado) {
+            const esAgrupado = rcmIdsAgrupados.has(duplicado.id)
+            setInfoMessage(`El Nº de Tarjeta "${tarjeta}" ya existe en los RCMs ${esAgrupado ? 'agrupados' : 'pendientes de agrupar'}`)
+        } else {
+            setInfoMessage('')
+        }
+    }, [form.numeroTarjeta, savedRcms, rcmIdsAgrupados, crud.editingRcmId])
 
     useEffect(() => {
         form.autoEnableVencimiento(productSearch.areas)
@@ -349,6 +368,8 @@ const Step2CreateRcms = ({
                 setErrorVencimiento={form.setErrorVencimiento}
                 successMessage={crud.successMessage}
                 setSuccessMessage={crud.setSuccessMessage}
+                infoMessage={infoMessage}
+                setInfoMessage={setInfoMessage}
                 showEditWarning={crud.showEditWarning}
                 setShowEditWarning={crud.setShowEditWarning}
                 showConfirmNewRcm={crud.showConfirmNewRcm}
