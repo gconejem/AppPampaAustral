@@ -6,6 +6,30 @@ export const dynamic = 'force-dynamic'
 
 const lower = (v: unknown) => String(v ?? '').toLowerCase()
 
+const normalizeText = (v: unknown) => {
+  try {
+    const s = String(v ?? '')
+      .replace(/\u00A0/g, ' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+    return s
+  } catch {
+    return ''
+  }
+}
+
+const normSku = (v: unknown) => String(v ?? '').trim()
+
+// Reglas de informes automáticos por SKU (definidas por negocio)
+const AUTO_SKU_DENSIDAD = '1000'
+const AUTO_SKU_COMPRESION = '2006'
+// Paquetes que incluyen compresión (ej: 2014); se puede extender.
+const AUTO_SKUS_COMPRESION_PACKAGES = new Set<string>(['2014'])
+
 const isEnsayadoEstado = (estadoOperativo?: string | null) => {
   return String(estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO'
 }
@@ -136,7 +160,7 @@ export async function GET(request: Request) {
             region: true
           }
         },
-        servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true } },
+        servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true, codigo: true, nombre: true } },
         RCMHistory: {
           orderBy: { createdAt: 'desc' },
           take: 20,
@@ -182,6 +206,20 @@ export async function GET(request: Request) {
 
     const rows = agrupadores.map(ag => {
       const rcmsForAg = rcmsByAgrupadorId.get(ag.id) ?? []
+
+      // N° de RCMs incluidos (para selección en informes manuales)
+      const rcmNumeros = Array.from(
+        new Set(
+          (rcmsForAg ?? [])
+            .map(r => String((r as any)?.numeroRcm ?? '').trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => {
+        const na = Number(a)
+        const nb = Number(b)
+        if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb
+        return String(a).localeCompare(String(b))
+      })
 
       // RCM representativo para acciones (el más reciente por fecha de codificación)
       let representativeRcmId: number | null = null
@@ -242,21 +280,43 @@ export async function GET(request: Request) {
       // Ensayos (desde ServicioRCM)
       let ensayosTotal = 0
       let ensayosEnsayados = 0
+
+      // Informes automáticos aplicables (se detecta por SKU/código de ServicioRCM)
+      let autoDensidad = false
+      let autoHormigon = false
       for (const r of rcmsForAg) {
         for (const s of r.servicios ?? []) {
           const qty = Number(s.cantidad ?? 0)
           ensayosTotal += qty
           if (isEnsayadoEstado(s.estadoOperativo)) ensayosEnsayados += qty
+
+          const sku = normSku((s as any)?.codigo)
+          const nm = normalizeText((s as any)?.nombre ?? '')
+
+          // (1) Informe Densidad -> SKU 1000 “Densidad en terreno - Método Nuclear”
+          if (!autoDensidad) {
+            if (sku === AUTO_SKU_DENSIDAD) autoDensidad = true
+            else if (nm.includes('densidad') && (nm.includes('terreno') || nm.includes('nuclear'))) autoDensidad = true
+          }
+
+          // (2) Informe Hormigón -> SKU 2006 “Compresión” (directo o dentro de paquete con compresión)
+          if (!autoHormigon) {
+            if (sku === AUTO_SKU_COMPRESION) autoHormigon = true
+            else if (AUTO_SKUS_COMPRESION_PACKAGES.has(sku)) autoHormigon = true
+            else if (nm.includes('compresion')) autoHormigon = true
+          }
         }
       }
 
       // N° Informe (max) desde el último historial traído por RCM (si existe)
       let informeMax: number | null = null
       for (const r of rcmsForAg) {
-        const inf = r.RCMHistory?.[0]?.informe ?? null
-        if (inf === null || inf === undefined) continue
-        const n = Number(inf)
-        if (Number.isFinite(n) && (informeMax === null || n > informeMax)) informeMax = n
+        for (const h of r.RCMHistory ?? []) {
+          const inf = (h as any)?.informe ?? null
+          if (inf === null || inf === undefined) continue
+          const n = Number(inf)
+          if (Number.isFinite(n) && (informeMax === null || n > informeMax)) informeMax = n
+        }
       }
 
       // Con Evento
@@ -267,6 +327,7 @@ export async function GET(request: Request) {
         codigoId: ag.codigoId,
         codigoNombre: ag.codigoNombre,
         representativeRcmId,
+        rcmNumeros,
         ss: ag.ordenTrabajo?.clave ?? null,
         ot: ag.ordenTrabajo?.correlativ ?? null,
         ordenTrabajoId: ag.ordenTrabajo?.id ?? ag.ordenTrabajoId ?? null,
@@ -281,6 +342,7 @@ export async function GET(request: Request) {
         estadoOperativoCounts,
         estadoAdministrativoCounts,
         ensayos: { ensayados: ensayosEnsayados, total: ensayosTotal },
+        autoTemplates: { DENSIDAD: autoDensidad, HORMIGON: autoHormigon },
         informe: informeMax,
         conEvento
       }
