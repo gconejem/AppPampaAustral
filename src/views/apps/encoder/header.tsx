@@ -162,7 +162,7 @@ const Header = ({ otData, tipoOT, loading, rcmEstado = 'CODIFICADO', numeroRcmPr
               variant='outlined'
               color='error'
               sx={{ fontWeight: 'bold', textTransform: 'none' }}
-              onClick={() => window.close()} // Cerrar la ventana al cancelar
+              onClick={() => window.close()}
             >
               Cancelar
             </Button>

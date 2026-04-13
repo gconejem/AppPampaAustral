@@ -237,7 +237,7 @@ export default function CodigoProductoDetallePanel({
     if (typeof window === 'undefined') return
     const parts = window.location.pathname.split('/').filter(Boolean)
     const lang = parts[0] || 'en'
-    const url = `${window.location.origin}/${lang}/apps/rcm-edit/${rcmId}`
+    const url = `${window.location.origin}/${lang}/apps/view-rcm/${rcmId}`
     window.open(url, '_blank')
   }
 
