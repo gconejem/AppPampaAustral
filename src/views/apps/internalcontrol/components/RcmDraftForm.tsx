@@ -175,6 +175,53 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fechaConfeccion])
 
+    // Preset para Área Hormigón + Tipo Servicio "Hormigón Fresco":
+    // 3 muestras → 1 probeta a 7 días, 2 probetas a 28 días
+    // Se desactiva si se cambia de área o tipo de servicio
+    const presetRef = React.useRef<{ area: number | '', tipoServicio: number | '' }>({ area: '', tipoServicio: '' })
+
+    React.useEffect(() => {
+        if (isEditingRcm) return
+        const areaObj = areas.find(a => a.id === area)
+        const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
+        const isHormigonFresco =
+            areaObj?.nombre?.toLowerCase() === 'hormigón' &&
+            familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
+
+        const calcFecha = (dias: number) => {
+            const baseStr = fechaConfeccion || fechaCodificacion || getTodayDateForInput()
+            const d = new Date(baseStr + 'T00:00:00')
+            d.setDate(d.getDate() + dias)
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        }
+
+        const areaOrTipoChanged = presetRef.current.area !== area || presetRef.current.tipoServicio !== tipoServicio
+        presetRef.current = { area, tipoServicio }
+
+        if (isHormigonFresco) {
+            if (areaOrTipoChanged) {
+                // Área/tipo cambió → crear preset completo
+                setCantidadMuestras('3')
+                setSubmuestrasVencimiento([
+                    { id: 1, submuestra: 'RCM - 1', numero: 1, dias: 7, fechaVencimiento: calcFecha(7), cantidad: 1 },
+                    { id: 2, submuestra: 'RCM - 2', numero: 2, dias: 28, fechaVencimiento: calcFecha(28), cantidad: 1 },
+                    { id: 3, submuestra: 'RCM - 3', numero: 3, dias: 28, fechaVencimiento: calcFecha(28), cantidad: 1 },
+                ])
+            } else if (fechaConfeccion && submuestrasVencimiento.length > 0) {
+                // Solo fechaConfeccion cambió → recalcular fechas
+                const updated = submuestrasVencimiento.map(s => {
+                    if (s.dias <= 0) return s
+                    return { ...s, fechaVencimiento: calcFecha(s.dias) }
+                })
+                setSubmuestrasVencimiento(updated)
+            }
+        } else if (areaOrTipoChanged) {
+            setCantidadMuestras('1')
+            setSubmuestrasVencimiento([])
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [area, tipoServicio, fechaConfeccion])
+
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
 
     if (!showRcmCard) return null
