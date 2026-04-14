@@ -190,8 +190,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
             familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
 
         const calcFecha = (dias: number) => {
-            const baseStr = fechaConfeccion || fechaCodificacion || getTodayDateForInput()
-            const d = new Date(baseStr + 'T00:00:00')
+            if (!fechaConfeccion) return ''
+            const d = new Date(fechaConfeccion + 'T00:00:00')
             d.setDate(d.getDate() + dias)
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         }
@@ -205,8 +205,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 setCantidadMuestras('3')
                 setSubmuestrasVencimiento([
                     { id: 1, submuestra: 'RCM - 1', numero: 1, dias: 7, fechaVencimiento: calcFecha(7), cantidad: 1 },
-                    { id: 2, submuestra: 'RCM - 2', numero: 2, dias: 28, fechaVencimiento: calcFecha(28), cantidad: 1 },
-                    { id: 3, submuestra: 'RCM - 3', numero: 3, dias: 28, fechaVencimiento: calcFecha(28), cantidad: 1 },
+                    { id: 2, submuestra: 'RCM - 2', numero: 2, dias: 28, fechaVencimiento: calcFecha(28), cantidad: 2 },
                 ])
             } else if (fechaConfeccion && submuestrasVencimiento.length > 0) {
                 // Solo fechaConfeccion cambió → recalcular fechas
@@ -837,11 +836,14 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                             <TextField size='small' type='number' value={submuestra.dias}
                                                                 onChange={(e) => {
                                                                     const dias = parseInt(e.target.value) || 0
-                                                                    const baseStr = fechaConfeccion || fechaCodificacion || getTodayDateForInput()
-                                                                    const fechaBase = new Date(baseStr + 'T00:00:00')
-                                                                    fechaBase.setDate(fechaBase.getDate() + dias)
-                                                                    const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
-                                                                    setSubmuestrasVencimiento(submuestrasVencimiento.map(s => s.id === submuestra.id ? { ...s, dias, fechaVencimiento: fechaVenc } : s))
+                                                                    if (fechaConfeccion) {
+                                                                        const fechaBase = new Date(fechaConfeccion + 'T00:00:00')
+                                                                        fechaBase.setDate(fechaBase.getDate() + dias)
+                                                                        const fechaVenc = `${fechaBase.getFullYear()}-${String(fechaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBase.getDate()).padStart(2, '0')}`
+                                                                        setSubmuestrasVencimiento(submuestrasVencimiento.map(s => s.id === submuestra.id ? { ...s, dias, fechaVencimiento: fechaVenc } : s))
+                                                                    } else {
+                                                                        setSubmuestrasVencimiento(submuestrasVencimiento.map(s => s.id === submuestra.id ? { ...s, dias, fechaVencimiento: '' } : s))
+                                                                    }
                                                                 }} sx={{ width: '100px' }} inputProps={{ min: 0 }} />
                                                         </td>
                                                         <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -851,13 +853,19 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                                     minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
                                                                     onChange={(newValue) => {
                                                                         const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
-                                                                        const fechaBase = new Date((fechaCodificacion || getTodayDateForInput()) + 'T00:00:00')
-                                                                        const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
-                                                                        const diffTime = fechaVenc.getTime() - fechaBase.getTime()
-                                                                        const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
-                                                                        setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                            s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 } : s
-                                                                        ))
+                                                                        if (fechaConfeccion && nuevaFecha) {
+                                                                            const fechaBase = new Date(fechaConfeccion + 'T00:00:00')
+                                                                            const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
+                                                                            const diffTime = fechaVenc.getTime() - fechaBase.getTime()
+                                                                            const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 } : s
+                                                                            ))
+                                                                        } else {
+                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                                s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: 0 } : s
+                                                                            ))
+                                                                        }
                                                                     }}
                                                                     slotProps={{ textField: { size: 'small', sx: { width: '170px' } } }}
                                                                 />
