@@ -205,7 +205,8 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         const esElementosComponentes = areaName === 'elementos y componentes'
         const esAsfalto = areaName === 'asfalto'
         const esSuelo = areaName === 'suelo'
-        const tieneCamposDinamicos = esHormigon || esElementosComponentes || esAsfalto || esSuelo
+        const esOtros = areaName === 'otros'
+        const tieneCamposDinamicos = esHormigon || esElementosComponentes || esAsfalto || esSuelo || esOtros
 
         // Helper: a single date-cell, always rendered
         const dateCell = (label: string, value?: string) => (
@@ -269,8 +270,8 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                             Campos Dinámicos — {rcm.area}
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                            {/* Fecha Confección aparece para Hormigón, E&C y Asfalto */}
-                            {(esHormigon || esElementosComponentes || esAsfalto) && (
+                            {/* Fecha Confección aparece para Hormigón, E&C, Asfalto y Otros */}
+                            {(esHormigon || esElementosComponentes || esAsfalto || esOtros) && (
                                 <Box sx={{ minWidth: 120 }}>
                                     <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Fecha Confección</Typography>
                                     <Typography variant='body2'>{rcm.fechaConfeccion ? formatDateOnly(rcm.fechaConfeccion) : '—'}</Typography>

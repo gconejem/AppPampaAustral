@@ -572,6 +572,21 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                             </Box>
                         )}
 
+                        {/* Campos dinámicos Área Otros */}
+                        {rcmType === 'Muestra' && areaName === 'otros' && (
+                            <Box sx={{ mt: 4, p: 3, border: '1px solid #f3e5f5', borderRadius: 2, bgcolor: '#fdf6ff' }}>
+                                <Typography variant='overline' sx={{ fontWeight: 800, letterSpacing: 2, color: '#e91e8c', display: 'block', mb: 2 }}>
+                                    Campos Dinámicos — Área Otros
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    <Grid item xs={6} md={3}>
+                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        )}
+
                         {/* ═══ Ensayos Asociados ═══ */}
                         <Box sx={{ mt: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
