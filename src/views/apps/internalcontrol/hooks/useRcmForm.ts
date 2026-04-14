@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react'
-import type { EnsayoAsociado, RCMData, SubmuestraVencimiento, AreaType, FamiliaType } from '../types/rcm-types'
+import type { EnsayoAsociado, RCMData, SubmuestraVencimiento, AreaType, FamiliaType, ParametroAreaType } from '../types/rcm-types'
 
 interface UseRcmFormParams {
     otData?: any
 }
 
 const STANDARD_SEDES = ['PA Chillán', 'PA Concepción', 'Cliente']
-const STANDARD_MATERIALS = ['Suelo granular', 'Suelo cohesivo', 'Hormigón', 'Asfalto']
-const STANDARD_ITEMS = ['Base', 'Subbase', 'Subrasante', 'Terraplén']
-const STANDARD_GRADES = ['1', '2', '3', '4']
 
 export function useRcmForm({ otData }: UseRcmFormParams) {
     const getTodayDateForInput = () => {
@@ -131,7 +128,8 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         rcm: RCMData,
         areas: AreaType[],
         todasLasFamilias: FamiliaType[],
-        mode: 'edit' | 'duplicate'
+        mode: 'edit' | 'duplicate',
+        parametrosArea: ParametroAreaType[] = []
     ) => {
         setRcmType(rcm.rcmType)
 
@@ -154,8 +152,14 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         // En duplicar, forzar nuevo número de tarjeta
         setNumeroTarjeta(mode === 'duplicate' ? '' : rcm.numeroTarjeta)
 
+        // Obtener opciones válidas para el área del RCM
+        const areaId = areaFound?.id
+        const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
+        const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
+        const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
+
         // Manejar tipoMaterial "Otro"
-        if (rcm.tipoMaterial && !STANDARD_MATERIALS.includes(rcm.tipoMaterial)) {
+        if (rcm.tipoMaterial && !validMaterials.includes(rcm.tipoMaterial)) {
             setTipoMaterial('Otro')
             setCustomTipoMaterial(rcm.tipoMaterial)
         } else {
@@ -164,7 +168,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         }
 
         // Manejar item "Otro"
-        if (rcm.item && !STANDARD_ITEMS.includes(rcm.item)) {
+        if (rcm.item && !validItems.includes(rcm.item)) {
             setItem('Otro')
             setCustomItem(rcm.item)
         } else {
@@ -173,7 +177,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         }
 
         // Manejar grado "Otro"
-        if (rcm.grado && !STANDARD_GRADES.includes(rcm.grado)) {
+        if (rcm.grado && !validGrades.includes(rcm.grado)) {
             setGrado('Otro')
             setCustomGrado(rcm.grado)
         } else {

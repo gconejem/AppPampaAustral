@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { RCMData, EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento } from '../types/rcm-types'
+import type { RCMData, EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ParametroAreaType } from '../types/rcm-types'
 
 interface UseRcmCrudParams {
     savedRcms: RCMData[]
@@ -8,6 +8,7 @@ interface UseRcmCrudParams {
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>
     areas: AreaType[]
     todasLasFamilias: FamiliaType[]
+    parametrosArea: ParametroAreaType[]
     otData?: any
     // Form helpers
     getFormValues: () => {
@@ -41,7 +42,7 @@ interface UseRcmCrudParams {
     }
     getTodayDateForInput: () => string
     resetForm: (type?: string) => void
-    populateFormFromRcm: (rcm: RCMData, areas: AreaType[], familias: FamiliaType[], mode: 'edit' | 'duplicate') => void
+    populateFormFromRcm: (rcm: RCMData, areas: AreaType[], familias: FamiliaType[], mode: 'edit' | 'duplicate', parametrosArea?: ParametroAreaType[]) => void
     hasUnsavedChanges: (isEditingRcm: boolean, originalRcm: RCMData | null, areas: AreaType[], familias: FamiliaType[], ensayos: EnsayoAsociado[]) => boolean
     setShowRcmCard: (v: boolean) => void
     setErrorVencimiento: (v: string) => void
@@ -53,7 +54,7 @@ interface UseRcmCrudParams {
 export function useRcmCrud({
     savedRcms, setSavedRcms,
     ensayosAsociados, setEnsayosAsociados,
-    areas, todasLasFamilias, otData,
+    areas, todasLasFamilias, parametrosArea, otData,
     getFormValues, getTodayDateForInput, resetForm, populateFormFromRcm,
     hasUnsavedChanges, setShowRcmCard, setErrorVencimiento,
     clearEnsayosPendientes, resetSearchFilters, onAutoAgrupar,
@@ -382,7 +383,7 @@ export function useRcmCrud({
             const rcmToEdit = savedRcms.find(r => r.id === selectedRcmId)
             if (rcmToEdit) {
                 setOriginalRcm({ ...rcmToEdit })
-                populateFormFromRcm(rcmToEdit, areas, todasLasFamilias, 'edit')
+                populateFormFromRcm(rcmToEdit, areas, todasLasFamilias, 'edit', parametrosArea)
                 setEnsayosAsociados([...rcmToEdit.ensayos])
                 setIsEditingRcm(true)
                 setEditingRcmId(selectedRcmId)
@@ -435,7 +436,7 @@ export function useRcmCrud({
         if (selectedRcmId !== null) {
             const rcmToDuplicate = savedRcms.find(r => r.id === selectedRcmId)
             if (rcmToDuplicate) {
-                populateFormFromRcm(rcmToDuplicate, areas, todasLasFamilias, 'duplicate')
+                populateFormFromRcm(rcmToDuplicate, areas, todasLasFamilias, 'duplicate', parametrosArea)
                 setEnsayosAsociados([...rcmToDuplicate.ensayos])
                 setIsDuplicatingRcm(true)
             }
@@ -447,7 +448,7 @@ export function useRcmCrud({
     const handleDuplicateInline = (rcmId: number) => {
         const rcmToDuplicate = savedRcms.find(r => r.id === rcmId)
         if (rcmToDuplicate) {
-            populateFormFromRcm(rcmToDuplicate, areas, todasLasFamilias, 'duplicate')
+            populateFormFromRcm(rcmToDuplicate, areas, todasLasFamilias, 'duplicate', parametrosArea)
             setEnsayosAsociados([...rcmToDuplicate.ensayos])
             setIsDuplicatingRcm(true)
         }

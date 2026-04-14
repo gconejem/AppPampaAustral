@@ -77,6 +77,7 @@ const Step2CreateRcms = ({
         ensayosAsociados, setEnsayosAsociados,
         areas: productSearch.areas,
         todasLasFamilias: productSearch.todasLasFamilias,
+        parametrosArea: productSearch.parametrosArea,
         otData,
         getFormValues: form.getFormValues,
         getTodayDateForInput: form.getTodayDateForInput,
@@ -250,6 +251,7 @@ const Step2CreateRcms = ({
                         ensayosAsociados={ensayosAsociados}
                         areas={productSearch.areas}
                         todasLasFamilias={productSearch.todasLasFamilias}
+                        parametrosArea={productSearch.parametrosArea}
                         isEditingRcm={crud.isEditingRcm}
                         isSavingRcm={crud.isSavingRcm}
                         onSaveRcm={crud.handleSaveRcm}

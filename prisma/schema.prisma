@@ -819,13 +819,27 @@ model Probeta {
 }
 
 model Area {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  familias  Familia[]
-  equipos   Equipo[]
-  rcms      RCM[]
+  id         Int             @id @default(autoincrement())
+  nombre     String          @unique
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  familias   Familia[]
+  equipos    Equipo[]
+  rcms       RCM[]
+  parametros ParametroArea[]
+}
+
+model ParametroArea {
+  id          Int      @id @default(autoincrement())
+  areaId      Int
+  tipo        String // MATERIAL, ITEM, GRADO
+  descripcion String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  area        Area     @relation(fields: [areaId], references: [id])
+
+  @@unique([areaId, tipo, descripcion])
+  @@index([areaId, tipo])
 }
 
 model Familia {

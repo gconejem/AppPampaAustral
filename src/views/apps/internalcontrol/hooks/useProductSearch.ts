@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { ProductoType, AreaType, FamiliaType } from '../types/rcm-types'
+import type { ProductoType, AreaType, FamiliaType, ParametroAreaType } from '../types/rcm-types'
 import { ITEMS_PER_PAGE } from '../types/rcm-types'
 
 interface UseProductSearchParams {
@@ -22,6 +22,7 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
     const [selectedTipo, setSelectedTipo] = useState('')
     const [selectedFamilia, setSelectedFamilia] = useState('')
     const [showOnlyPaquetes, setShowOnlyPaquetes] = useState(false)
+    const [parametrosArea, setParametrosArea] = useState<ParametroAreaType[]>([])
     const [totalProductos, setTotalProductos] = useState(0)
     const [paginatedProductos, setPaginatedProductos] = useState<ProductoType[]>([])
     const [filterResetKey, setFilterResetKey] = useState(0)
@@ -30,9 +31,10 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                const [areasResponse, familiasResponse] = await Promise.all([
+                const [areasResponse, familiasResponse, parametrosResponse] = await Promise.all([
                     fetch('/api/areas'),
-                    fetch('/api/familias')
+                    fetch('/api/familias'),
+                    fetch('/api/parametros-area')
                 ])
 
                 if (areasResponse.ok) {
@@ -48,6 +50,11 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
                         areaId: f.area?.id || 0
                     }))
                     setTodasLasFamilias(familiasConAreaId)
+                }
+
+                if (parametrosResponse.ok) {
+                    const parametrosData = await parametrosResponse.json()
+                    setParametrosArea(parametrosData)
                 }
             } catch (error) {
                 console.error('Error al cargar datos iniciales:', error)
@@ -186,6 +193,7 @@ export function useProductSearch({ area, anchorEl, agrupadorSearchAnchor, skuSea
         areas,
         familias,
         todasLasFamilias,
+        parametrosArea,
         tipos,
         selectedAreaId,
         setSelectedAreaId,

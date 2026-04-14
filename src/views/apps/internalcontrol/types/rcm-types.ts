@@ -108,6 +108,13 @@ export interface FamiliaType {
     areaId: number
 }
 
+export interface ParametroAreaType {
+    id: number
+    areaId: number
+    tipo: string
+    descripcion: string
+}
+
 export interface Step2CreateRcmsProps {
     ensayosAsociados: EnsayoAsociado[]
     setEnsayosAsociados: React.Dispatch<React.SetStateAction<EnsayoAsociado[]>>

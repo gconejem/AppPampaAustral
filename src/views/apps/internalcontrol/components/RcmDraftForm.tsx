@@ -32,7 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import InventoryIcon from '@mui/icons-material/Inventory'
-import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType } from '../types/rcm-types'
+import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType, ParametroAreaType } from '../types/rcm-types'
 import ProductSearchInline from './ProductSearchInline'
 
 // The form prop type matches the return of useRcmForm
@@ -94,6 +94,7 @@ interface RcmDraftFormProps {
     ensayosAsociados: EnsayoAsociado[]
     areas: AreaType[]
     todasLasFamilias: FamiliaType[]
+    parametrosArea: ParametroAreaType[]
     isEditingRcm: boolean
     isSavingRcm: boolean
     onSaveRcm: () => void
@@ -112,7 +113,7 @@ interface RcmDraftFormProps {
 
 const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     form, ensayoHandlers, ensayosAsociados,
-    areas, todasLasFamilias,
+    areas, todasLasFamilias, parametrosArea,
     isEditingRcm, isSavingRcm,
     onSaveRcm, onCancelEdit,
     searchTerm, onSearchChange, paginatedProductos,
@@ -252,7 +253,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 <FormControl fullWidth>
                     <InputLabel id={areaLabelId} shrink>Área</InputLabel>
                     <Select labelId={areaLabelId} label='Área' value={area} displayEmpty notched
-                        onChange={(e) => { setArea(e.target.value as number | ''); setTipoServicio('') }}>
+                        onChange={(e) => { setArea(e.target.value as number | ''); setTipoServicio(''); setTipoMaterial(''); setCustomTipoMaterial(''); setItem(''); setCustomItem(''); setGrado(''); setCustomGrado('') }}>
                         <MenuItem value='' disabled>Seleccionar área</MenuItem>
                         {areas.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre}</MenuItem>)}
                     </Select>
@@ -376,10 +377,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                         <FormControl fullWidth>
                                             <InputLabel>Tipo Material</InputLabel>
                                             <Select label='Tipo Material' value={tipoMaterial} onChange={(e) => setTipoMaterial(e.target.value)}>
-                                                <MenuItem value='Suelo granular'>Suelo granular</MenuItem>
-                                                <MenuItem value='Suelo cohesivo'>Suelo cohesivo</MenuItem>
-                                                <MenuItem value='Hormigón'>Hormigón</MenuItem>
-                                                <MenuItem value='Asfalto'>Asfalto</MenuItem>
+                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'MATERIAL').map(p =>
+                                                    <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                 <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
                                         </FormControl>
@@ -393,10 +392,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
                                             <Select label='Ítem' value={item} onChange={(e) => setItem(e.target.value)}>
-                                                <MenuItem value='Base'>Base</MenuItem>
-                                                <MenuItem value='Subbase'>Subbase</MenuItem>
-                                                <MenuItem value='Subrasante'>Subrasante</MenuItem>
-                                                <MenuItem value='Terraplén'>Terraplén</MenuItem>
+                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'ITEM').map(p =>
+                                                    <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                 <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
                                         </FormControl>
@@ -453,10 +450,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
                                             <Select label='Ítem' value={item} onChange={(e) => setItem(e.target.value)}>
-                                                <MenuItem value='Base'>Base</MenuItem>
-                                                <MenuItem value='Subbase'>Subbase</MenuItem>
-                                                <MenuItem value='Subrasante'>Subrasante</MenuItem>
-                                                <MenuItem value='Terraplén'>Terraplén</MenuItem>
+                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'ITEM').map(p =>
+                                                    <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                 <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
                                         </FormControl>
@@ -529,8 +524,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                     <InputLabel>Grado</InputLabel>
                                                     <Select label='Grado' value={grado} onChange={(e) => setGrado(e.target.value)}>
                                                         <MenuItem value=''>Seleccionar...</MenuItem>
-                                                        {['G5', 'G10', 'G15', 'G20', 'G25', 'G30', 'G35', 'G40'].map(g =>
-                                                            <MenuItem key={g} value={g}>{g}</MenuItem>)}
+                                                        {parametrosArea.filter(p => p.areaId === area && p.tipo === 'GRADO').map(p =>
+                                                            <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                         <MenuItem value='Otro'>Otro...</MenuItem>
                                                     </Select>
                                                 </FormControl>
