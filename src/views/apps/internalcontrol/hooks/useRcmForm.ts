@@ -117,6 +117,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setFechaServicio(getFechaServicioForInput())
         setFechaIngreso(getTodayDateForInput())
         setFechaEntrega('')
+        setFechaConfeccion('')
         setExpandedRcm(true)
         setTieneVencimiento(false)
         setSubmuestrasVencimiento([])
