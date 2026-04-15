@@ -20,6 +20,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import CloseIcon from '@mui/icons-material/Close'
 
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
+import ADMINISTRATIVE_STATES from '@/constants/administrativeStates'
 
 import tableStyles from '@core/styles/table.module.css'
 
@@ -45,6 +46,9 @@ type RcmRow = {
   rcmType?: string | null
   estadoOperativo?: string | null
   estadoAdministrativo?: string | null
+  sede?: string | null
+  cliente?: { razonSocial?: string | null; nombreCliente?: string | null } | null
+  obra?: { numeroObra?: string | null; nombreObra?: string | null; comuna?: string | null } | null
   tipoMaterial?: string | null
   item?: string | null
   tomaMuestra?: string | null
@@ -128,6 +132,13 @@ const computeEnsayos = (servicios?: Servicio[]) => {
   return { total, ensayados }
 }
 
+const normalizeHex6 = (hex: string) => {
+  const h = String(hex ?? '').trim()
+  // Algunos colores vienen como #RRGGBBAA. Quitamos el alfa porque lo manejamos con `alpha()`.
+  if (h.startsWith('#') && h.length === 9) return h.slice(0, 7)
+  return h
+}
+
 const getOperativeChipSx = (state?: string | null) => {
   const key = normalizeStateKey(state)
   const st = OPERATIONAL_STATES.find(item => item.value === key || String(item.label ?? '').toUpperCase() === String(key))
@@ -145,15 +156,86 @@ const getOperativeChipSx = (state?: string | null) => {
     } as const
   }
 
+  const base = normalizeHex6(hex)
+
   return {
-    bgcolor: `${hex}20`,
-    color: hex,
+    bgcolor: alpha(base, 0.18),
+    color: '#7c7778',
     border: '1px solid',
-    borderColor: `${hex}30`,
+    borderColor: alpha(base, 0.32),
     textTransform: 'uppercase',
     fontWeight: 700,
     fontSize: '0.72rem'
   } as const
+}
+
+const getAdministrativeChipSx = (state?: string | null) => {
+  const key = normalizeStateKey(state)
+  const st = ADMINISTRATIVE_STATES.find(item => item.value === key || String(item.label ?? '').toUpperCase() === String(key))
+  const hex = st?.color
+
+  // SIN_INICIO (muy claro) -> estilo neutro
+  if (!hex || key === 'SIN_INICIO') {
+    return {
+      bgcolor: 'action.hover',
+      color: 'text.secondary',
+      border: '1px solid',
+      borderColor: 'divider',
+      fontWeight: 800,
+      fontSize: '0.72rem'
+    } as const
+  }
+
+  const base = normalizeHex6(hex)
+
+  return {
+    bgcolor: alpha(base, 0.18),
+    color: '#7c7778',
+    border: '1px solid',
+    borderColor: alpha(base, 0.32),
+    fontWeight: 800,
+    fontSize: '0.72rem'
+  } as const
+}
+
+const formatDateDDMMYYYYDash = (v: any) => {
+  if (!v) return '-'
+  const d = v instanceof Date ? v : new Date(v)
+  if (isNaN(d.getTime())) return '-'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}-${mm}-${yyyy}`
+}
+
+const pickStateFromCounts = (counts: Record<string, number>, priority: string[]) => {
+  for (const p of priority) {
+    if (Number(counts[p] ?? 0) > 0) return p
+  }
+  const entries = Object.entries(counts).filter(([, v]) => Number(v) > 0)
+  if (!entries.length) return null
+  entries.sort((a, b) => Number(b[1]) - Number(a[1]))
+  return entries[0][0]
+}
+
+const findStateSince = (rcms: RcmRow[], stateKey: string) => {
+  let best: Date | null = null
+
+  for (const r of rcms ?? []) {
+    for (const h of r.RCMHistory ?? []) {
+      const k1 = normalizeStateKey(h.tipoEstado)
+      const k2 = normalizeStateKey(h.estNuevo)
+      if (k1 !== stateKey && k2 !== stateKey) continue
+
+      const raw = String(h.fechaAccion ?? h.createdAt ?? '').trim()
+      if (!raw) continue
+      const d = new Date(raw)
+      if (isNaN(d.getTime())) continue
+      if (!best || d > best) best = d
+    }
+  }
+
+  return best
 }
 
 export default function CodigoProductoDetallePanel({
@@ -216,6 +298,37 @@ export default function CodigoProductoDetallePanel({
 
   const rcms = data?.rcms ?? []
 
+  const headerStates = useMemo(() => {
+    const opCounts: Record<string, number> = {}
+    const adCounts: Record<string, number> = {}
+
+    for (const r of rcms ?? []) {
+      const opKey = normalizeStateKey(r.estadoOperativo)
+      if (opKey) opCounts[opKey] = (opCounts[opKey] ?? 0) + 1
+
+      const adKey = normalizeStateKey(r.estadoAdministrativo)
+      if (adKey) adCounts[adKey] = (adCounts[adKey] ?? 0) + 1
+    }
+
+    const opMain = pickStateFromCounts(opCounts, [
+      'EVENTO',
+      'EN_PROCESO',
+      'CODIFICADO',
+      'ENSAYADO',
+      'ENVIADO_DIGITACION',
+      'DIGITADO',
+      'REVISADO',
+      'FIRMADO',
+      'ENVIADO'
+    ])
+
+    const adMain = pickStateFromCounts(adCounts, ['SIN_INICIO', 'PAGADO', 'PENDIENTE', 'FACTURADO', 'ENVIADO'])
+
+    const opSince = opMain ? findStateSince(rcms, opMain) : null
+
+    return { opMain, adMain, opSince }
+  }, [rcms])
+
   const eventos = useMemo(() => {
     return rcms
       .map(r => {
@@ -247,18 +360,53 @@ export default function CodigoProductoDetallePanel({
     <Card sx={{ mt: 4 }}>
       <CardHeader
         title={
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap' }}>
-              <Typography variant='subtitle1' sx={{ fontWeight: 800 }}>
-                {data?.codigoNombre ?? `Código #${codigoAgrupadorId}`}
-              </Typography>
-              {data?.descripcionServicio ? (
-                <Typography variant='caption' color='text.secondary'>
-                  {data.descripcionServicio}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            {/* Fila superior: Código + Estados */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap', minWidth: 0 }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 800 }}>
+                  {data?.codigoNombre ?? `Código #${codigoAgrupadorId}`}
                 </Typography>
-              ) : null}
+                {data?.descripcionServicio ? (
+                  <Typography variant='caption' color='text.secondary'>
+                    {data.descripcionServicio}
+                  </Typography>
+                ) : null}
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+                {/* Estado Operativo + fecha */}
+                {headerStates.opMain ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1 }}>
+                    <Chip
+                      size='small'
+                      label={OPERATIONAL_STATES.find(s => s.value === headerStates.opMain)?.label ?? headerStates.opMain}
+                      sx={getOperativeChipSx(headerStates.opMain)}
+                    />
+                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, fontWeight: 700 }}>
+                      Desde {formatDateDDMMYYYYDash(headerStates.opSince)}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {/* Estado Administrativo */}
+                {headerStates.adMain ? (
+                  <Chip
+                    size='small'
+                    label={ADMINISTRATIVE_STATES.find(s => s.value === headerStates.adMain)?.label ?? headerStates.adMain}
+                    sx={getAdministrativeChipSx(headerStates.adMain)}
+                  />
+                ) : null}
+
+                {onClose ? (
+                  <IconButton size='small' aria-label='Cerrar' onClick={onClose}>
+                    <CloseIcon fontSize='small' />
+                  </IconButton>
+                ) : null}
+              </Box>
             </Box>
 
+            {/* Segunda fila: OT / SS / loading */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               {data?.ordenTrabajo?.correlativ ? (
                 <Chip size='small' label={`OT ${data.ordenTrabajo.correlativ}`} variant='outlined' sx={{ fontWeight: 700 }} />
@@ -267,12 +415,6 @@ export default function CodigoProductoDetallePanel({
                 <Chip size='small' label={data.ordenTrabajo.clave} variant='outlined' sx={{ fontWeight: 700 }} />
               ) : null}
               {loading ? <Chip size='small' label='Cargando…' variant='outlined' /> : null}
-
-              {onClose ? (
-                <IconButton size='small' aria-label='Cerrar' onClick={onClose}>
-                  <CloseIcon fontSize='small' />
-                </IconButton>
-              ) : null}
             </Box>
           </Box>
         }
@@ -317,7 +459,23 @@ export default function CodigoProductoDetallePanel({
 
                   return (
                     <tr key={r.id}>
-                      <td style={{ fontWeight: 800, color: 'var(--mui-palette-primary-main)' }}>{formatRcmLabel(r.numeroRcm)}</td>
+                      <td>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <Typography variant='body2' sx={{ fontWeight: 900, color: 'primary.main' }}>
+                            {(() => {
+                              const raw = String(r.numeroRcm ?? '').trim()
+                              const num = raw.replace(/^RCM[-\s]?/i, '').trim()
+                              return `RCM — ${num || raw || '-'}`
+                            })()}
+                          </Typography>
+                          <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                            {(() => {
+                              const sede = String(r.sede ?? '').trim()
+                              return sede || ' '
+                            })()}
+                          </Typography>
+                        </Box>
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         {r.numeroTarjeta ? (
                           <Chip size='small' label={`T:${r.numeroTarjeta}`} variant='outlined' sx={{ fontWeight: 700 }} />
@@ -342,11 +500,22 @@ export default function CodigoProductoDetallePanel({
                         </Box>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <Chip
-                          size='small'
-                          label={OPERATIONAL_STATES.find(s => s.value === normalizeStateKey(r.estadoOperativo))?.label ?? (r.estadoOperativo ?? '-')}
-                          sx={getOperativeChipSx(r.estadoOperativo)}
-                        />
+                        {(() => {
+                          // El estado aquí representa el avance de ensayos (ServicioRCM.estadoOperativo), no el estado operativo del RCM.
+                          if (ens.total <= 0) {
+                            return (
+                              <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                            )
+                          }
+
+                          const ensayoState = ens.ensayados >= ens.total ? 'ENSAYADO' : ens.ensayados > 0 ? 'EN_PROCESO' : 'CODIFICADO'
+                          const label =
+                            ensayoState === 'CODIFICADO'
+                              ? 'Pendiente'
+                              : OPERATIONAL_STATES.find(s => s.value === ensayoState)?.label ?? ensayoState
+
+                          return <Chip size='small' label={label} sx={getOperativeChipSx(ensayoState)} />
+                        })()}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <IconButton size='small' title='Ver' onClick={() => handleViewRcm(r.id)}>

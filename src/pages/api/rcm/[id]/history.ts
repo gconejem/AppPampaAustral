@@ -62,14 +62,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     ? estPrev.trim()
                     : (typeof estPrev === 'string' ? null : (estPrev ?? null)) ?? dbPrev?.estadoOperativo ?? null
 
+            const explicitEstNuevo = (typeof estNuevo === 'string' && estNuevo.trim()) ? estNuevo.trim() : null
+            // `RCMHistory.estNuevo` es obligatorio en Prisma. Para entradas que no cambian el estado (ej: INFORME_AUTO),
+            // guardamos un valor informativo, pero NO actualizamos `RCM.estadoOperativo`.
+            const finalEstNuevo =
+                explicitEstNuevo ??
+                ((typeof tipoEstado === 'string' && tipoEstado.trim()) ? tipoEstado.trim() : null) ??
+                'SIN_CAMBIO'
+
             const created = await prisma.rCMHistory.create({
                 data: {
-                    rcmId,
+                    rcm: { connect: { id: rcmId } },
                     tipo: finalTipo,
                     funcionario: finalFuncionario,
                     fechaAccion: new Date(),
                     estAnterior: finalEstPrev,
-                    estNuevo: estNuevo ?? null,
+                    estNuevo: finalEstNuevo,
                     observacion: observacion ?? motivo ?? null,
                     informe: informe ?? null,
                     aplicadoA: (typeof aplicadoA === 'string' && aplicadoA.trim()) ? aplicadoA.trim() : null,
@@ -79,7 +87,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             })
 
             // actualizar estado operativo en RCM si corresponde (no fatal)
-            if (estNuevo) {
+            // Solo cuando el front envía un `estNuevo` explícito (cambio de estado real).
+            if (explicitEstNuevo) {
                 try {
                     const appliedKey = String(aplicadoA ?? '').trim().toUpperCase()
                     const applyToCp = appliedKey === 'CP' || appliedKey === 'CODIGO_PRODUCTO' || appliedKey === 'CODIGO PRODUCTO'
@@ -99,23 +108,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         if (base?.codigoAgrupadorId) {
                             await prisma.rCM.updateMany({
                                 where: { codigoAgrupadorId: base.codigoAgrupadorId },
-                                data: { estadoOperativo: estNuevo }
+                                data: { estadoOperativo: explicitEstNuevo }
                             })
                         } else if (base?.codigoProducto && base?.ordenTrabajoId) {
                             await prisma.rCM.updateMany({
                                 where: { codigoProducto: base.codigoProducto, ordenTrabajoId: base.ordenTrabajoId },
-                                data: { estadoOperativo: estNuevo }
+                                data: { estadoOperativo: explicitEstNuevo }
                             })
                         } else {
                             await prisma.rCM.update({
                                 where: { id: rcmId },
-                                data: { estadoOperativo: estNuevo }
+                                data: { estadoOperativo: explicitEstNuevo }
                             })
                         }
                     } else {
                         await prisma.rCM.update({
                             where: { id: rcmId },
-                            data: { estadoOperativo: estNuevo }
+                            data: { estadoOperativo: explicitEstNuevo }
                         })
                     }
                 } catch (e) {

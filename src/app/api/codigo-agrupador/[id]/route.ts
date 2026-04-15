@@ -87,6 +87,20 @@ export async function GET(request: Request, { params }: Params) {
                             rcmType: true,
                             estadoOperativo: true,
                             estadoAdministrativo: true,
+                            sede: true,
+                            cliente: {
+                                select: {
+                                    razonSocial: true,
+                                    nombreCliente: true
+                                }
+                            },
+                            obra: {
+                                select: {
+                                    numeroObra: true,
+                                    nombreObra: true,
+                                    comuna: true
+                                }
+                            },
                             tipoMaterial: true,
                             item: true,
                             tomaMuestra: true,

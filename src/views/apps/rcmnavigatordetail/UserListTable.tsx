@@ -339,8 +339,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const key = String(s).toUpperCase().trim()
     const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
     const color = st?.color ?? '#9E9E9E'
-    // bg en formato #RRGGBBAA (20 hex = ~12% alpha)
-    const bg = `${color}20`
+    const bg = hexToRgba(color, 0.12)
     return { bgcolor: bg, color }
   }
 

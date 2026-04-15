@@ -155,7 +155,9 @@ interface RCM {
   id: number
   // Tabla principal ahora muestra Códigos Producto (agrupadores)
   codigoNombre?: string | null
+  descripcionServicio?: string | null
   ss?: string | null
+  ordenTrabajoId?: number | string | null
   totalRcms?: number | null
   conEvento?: boolean
   informe?: number | null
@@ -164,6 +166,9 @@ interface RCM {
   estadoAdministrativoCounts?: Record<string, number>
   ciudad?: string | null
   representativeRcmId?: number | null
+
+  // sedes (puede venir mixto por Código Producto)
+  sedes?: string[]
 
   // campos comunes usados por filtros/tabla
   numeroRcm: string
@@ -202,6 +207,7 @@ interface Filters {
   areaId?: number | null
   areaName?: string | null
   familia?: string | null
+  sede?: string | string[]
 }
 
 const fuzzyFilter: FilterFn<RCM> = (row, columnId, value) => {
@@ -295,8 +301,7 @@ const UserListTable2 = ({
     const key = String(s).toUpperCase().trim()
     const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
     const color = st?.color ?? '#9E9E9E'
-    // bg en formato #RRGGBBAA (20 hex = ~12% alpha)
-    const bg = `${color}20`
+    const bg = hexToRgba(color, 0.12)
     return { bgcolor: bg, color }
   }
 
@@ -1606,10 +1611,15 @@ const UserListTable2 = ({
           id: Number(r.id),
           numeroRcm: String(r.codigoNombre ?? ''),
           codigoNombre: r.codigoNombre ?? null,
+          descripcionServicio: (r as any).descripcionServicio ?? null,
           representativeRcmId: (r?.representativeRcmId ?? null) as number | null,
           rcmNumeros: r.rcmNumeros ?? [],
+          sedes: Array.isArray(r?.sedes)
+            ? (r.sedes as any[]).map(v => String(v ?? '').trim()).filter(Boolean)
+            : [],
           ss: r.ss ?? null,
           ot: r.ot ?? null,
+          ordenTrabajoId: (r?.ordenTrabajoId ?? null) as any,
           totalRcms: r.totalRcms ?? 0,
           conEvento: Boolean(r.conEvento),
           informe: (r.informe ?? null) as number | null,
@@ -1851,6 +1861,21 @@ const UserListTable2 = ({
     if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).trim() !== '') {
       const rawNorm = normalizeText(familiaValue)
       result = result.filter(r => normalizeText(r.familia ?? '').includes(rawNorm))
+    }
+
+    // Sede filtering: el Código Producto calza si contiene esa sede en su lista
+    const sedeValue = (filters as any)?.sede ?? null
+    const sedeSelected = Array.isArray(sedeValue) ? sedeValue : sedeValue ? [sedeValue] : []
+    const sedeWanted = sedeSelected.map(v => normalizeText(v)).filter(Boolean)
+    if (sedeWanted.length) {
+      result = result.filter(r => {
+        const sedes = Array.isArray((r as any).sedes) ? ((r as any).sedes as any[]) : []
+        if (!sedes.length) return false
+        return sedes.some(s => {
+          const norm = normalizeText(s)
+          return sedeWanted.some(w => norm.includes(w))
+        })
+      })
     }
 
     // Con Evento filtering
@@ -2721,9 +2746,75 @@ const UserListTable2 = ({
               </Typography>
             </Box>
 
-            <IconButton aria-label='Cerrar' onClick={closeCodigoProductoDialog} size='small'>
-              <CloseIcon fontSize='small' />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+              {/* Estados (mover a esquina superior derecha) */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 170 }}>
+                {(() => {
+                  const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
+                  const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
+                  if (!op && !adm) return null
+
+                  const opKey = String(op).trim().toUpperCase()
+                  const opInfo = op ? getOperationalInfo(op) : null
+                  const opLabel = op
+                    ? OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? op
+                    : null
+
+                  const dateSrc = op ? (codigoDialogOpAt ?? (opKey === 'DIGITADO' ? codigoDialogDigitadoAt : null)) : null
+                  const dateTxt = dateSrc ? formatDateDDMMYYYYDateOnly(dateSrc) : '-'
+
+                  const admInfo = adm ? getAdministrativeInfo(adm) : null
+
+                  return (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {op && opInfo ? (
+                          <Chip
+                            size='small'
+                            label={opLabel}
+                            sx={{
+                              bgcolor: opInfo.bgcolor,
+                              color: opInfo.colorText,
+                              border: `1px solid ${opInfo.border}`,
+                              textTransform: 'capitalize',
+                              fontWeight: 700,
+                              fontSize: '0.72rem',
+                              borderRadius: 999
+                            }}
+                          />
+                        ) : null}
+
+                        {adm && admInfo ? (
+                          <Chip
+                            size='small'
+                            label={formatStateForChip(adm)}
+                            sx={{
+                              bgcolor: admInfo.bgcolor,
+                              color: admInfo.colorText,
+                              border: `1px solid ${admInfo.border}`,
+                              textTransform: 'capitalize',
+                              fontWeight: 700,
+                              fontSize: '0.72rem',
+                              borderRadius: 999
+                            }}
+                          />
+                        ) : null}
+                      </Box>
+
+                      {op ? (
+                        <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, fontWeight: 700 }}>
+                          Desde {dateTxt}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  )
+                })()}
+              </Box>
+
+              <IconButton aria-label='Cerrar' onClick={closeCodigoProductoDialog} size='small'>
+                <CloseIcon fontSize='small' />
+              </IconButton>
+            </Box>
           </Box>
         </DialogTitle>
 
@@ -2741,128 +2832,164 @@ const UserListTable2 = ({
               borderColor: alpha(theme.palette.primary.main, 0.18)
             })}
           >
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25, flex: 1 }}>
-                {[
-                  { k: 'FECHA COD.', v: formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-' },
-                  { k: 'ÁREA', v: String(codigoDialogMeta?.area ?? '').trim() || '-' },
-                  { k: 'TIPO SERVICIO', v: String(codigoDialogMeta?.familia ?? '').trim() || '-' },
-                  { k: 'SS', v: String(codigoDialogMeta?.ss ?? '').trim() || '-' },
-                  { k: 'SEDE(S)', v: String(codigoDialogMeta?.ciudad ?? '').trim() || '-' }
-                ].map(item => (
-                  <Box key={item.k} sx={{ minWidth: 0 }}>
-                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}>
-                      {item.k}
-                    </Typography>
-                    <Typography variant='body2' sx={{ lineHeight: 1.25 }}>
-                      {item.v}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
+            {/* Formato requerido: título arriba / valor abajo */}
+            {(() => {
+              const sedes = Array.isArray(codigoDialogMeta?.sedes)
+                ? (codigoDialogMeta.sedes as any[]).map(v => String(v ?? '').trim()).filter(Boolean)
+                : []
+              const sedeTxt = sedes.length ? sedes.join(', ') : String(codigoDialogMeta?.ciudad ?? '').trim() || '-'
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, minWidth: 150 }}>
-                {(() => {
-                  const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
-                  if (!op) return null
-                  const info = getOperationalInfo(op)
-                  const label = OPERATIONAL_STATES.find(s => s.value === String(op).trim().toUpperCase())?.label ?? op
-                  const dateSrc = codigoDialogOpAt ?? (String(op).trim().toUpperCase() === 'DIGITADO' ? codigoDialogDigitadoAt : null)
-                  const dateTxt = dateSrc ? ` (${formatDateDDMMYYYYDateOnly(dateSrc)})` : ''
-                  return (
-                    <Chip
-                      size='small'
-                      label={`${label}${dateTxt}`}
-                      sx={{
-                        bgcolor: info.bgcolor,
-                        color: info.colorText,
-                        border: `1px solid ${info.border}`,
-                        textTransform: 'capitalize',
-                        fontWeight: 700,
-                        fontSize: '0.72rem',
-                        borderRadius: 999
-                      }}
-                    />
-                  )
-                })()}
+              const areaTxt = String(codigoDialogMeta?.area ?? '').trim() || '-'
+              const tipoServTxt = String(codigoDialogMeta?.familia ?? '').trim() || '-'
+              const fechaCodTxt = formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-'
 
-                {(() => {
-                  const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
-                  if (!adm) return null
-                  const info = getAdministrativeInfo(adm)
-                  return (
-                    <Chip
-                      size='small'
-                      label={formatStateForChip(adm)}
-                      sx={{
-                        bgcolor: info.bgcolor,
-                        color: info.colorText,
-                        border: `1px solid ${info.border}`,
-                        textTransform: 'capitalize',
-                        fontWeight: 700,
-                        fontSize: '0.72rem',
-                        borderRadius: 999
-                      }}
-                    />
-                  )
-                })()}
-              </Box>
-            </Box>
+              const ssTxt = String(codigoDialogMeta?.ss ?? '').trim() || '-'
+              const otIdRaw = codigoDialogMeta?.ordenTrabajoId ?? null
+              const otId = Number(otIdRaw)
+              const canLink = ssTxt !== '-' && Number.isFinite(otId) && otId > 0
+
+              const openSolicitudServicio = () => {
+                if (!canLink) return
+                if (typeof window === 'undefined') return
+                const parts = window.location.pathname.split('/').filter(Boolean)
+                const lang = parts[0] || 'en'
+                const params = new URLSearchParams()
+                params.set('otId', String(otId))
+                params.set('readonly', '1')
+                const target = `${window.location.origin}/${lang}/apps/encoder?${params.toString()}`
+                window.open(target, '_blank')
+              }
+
+              return (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(5, minmax(0, 1fr))' }, gap: 1.25 }}>
+                  {[
+                    { k: 'SEDE(S)', v: sedeTxt },
+                    { k: 'ÁREA', v: areaTxt },
+                    { k: 'TIPO SERVICIO', v: tipoServTxt },
+                    {
+                      k: 'SS',
+                      v: ssTxt,
+                      isLink: canLink,
+                      onClick: openSolicitudServicio
+                    },
+                    { k: 'FECHA COD.', v: fechaCodTxt }
+                  ].map(item => (
+                    <Box key={item.k} sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}
+                      >
+                        {item.k}
+                      </Typography>
+                      <Typography variant='body2' sx={{ lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {(item as any).isLink ? (
+                          <Typography
+                            component='span'
+                            sx={{
+                              color: 'primary.main',
+                              textDecoration: 'underline',
+                              cursor: 'pointer',
+                              fontWeight: 800
+                            }}
+                            onClick={(item as any).onClick}
+                          >
+                            {item.v}
+                          </Typography>
+                        ) : (
+                          item.v
+                        )}
+                      </Typography>
+                    </Box>
+                  ))}
+
+                  {(() => {
+                    const desc = String(codigoDialogData?.descripcionServicio ?? codigoDialogMeta?.descripcionServicio ?? '').trim()
+                    const value = desc || '-'
+                    return (
+                      <Box sx={{ gridColumn: { xs: 'auto', sm: '1 / -1' }, minWidth: 0 }}>
+                        <Typography
+                          variant='caption'
+                          color='text.secondary'
+                          sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2, mt: { xs: 0.5, sm: 0 } }}
+                        >
+                          DESCRIPCIÓN
+                        </Typography>
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            lineHeight: 1.25,
+                            color: value === '-' ? 'text.secondary' : 'text.primary',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {value}
+                        </Typography>
+                      </Box>
+                    )
+                  })()}
+                </Box>
+              )
+            })()}
           </Paper>
-
-          {/* Banner descripción (como en mockup) */}
-          {(() => {
-            const desc = String(codigoDialogData?.descripcionServicio ?? '').trim()
-            if (!desc) return null
-            return (
-              <Box
-                sx={theme => ({
-                  mb: 2,
-                  p: 1.25,
-                  borderRadius: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.06),
-                  borderLeft: `3px solid ${theme.palette.primary.main}`
-                })}
-              >
-                <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
-                  {desc}
-                </Typography>
-              </Box>
-            )
-          })()}
 
           {/* SKUs */}
           <Box sx={{ mb: 2 }}>
             <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
-              SKUs del CP
+              SKUs
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {(() => {
-                const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
-                const uniq = new Map<string, { sku: string; nombre: string }>()
-                for (const e of ens) {
-                  const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
-                  const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
-                  if (!sku) continue
-                  if (!uniq.has(sku)) uniq.set(sku, { sku, nombre })
-                }
-                const items = Array.from(uniq.values())
-                if (items.length === 0) return <Typography variant='body2'>-</Typography>
-                return items.slice(0, 24).map(it => (
-                  <Chip
-                    key={it.sku}
-                    size='small'
-                    label={`${it.sku} ${it.nombre || ''}`.trim()}
-                    sx={theme => ({
-                      fontWeight: 800,
-                      borderRadius: 999,
-                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.22)}`
-                    })}
-                  />
-                ))
-              })()}
-            </Box>
+
+            {(() => {
+              const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
+              const map = new Map<string, { sku: string; nombre: string; cantidad: number }>()
+
+              for (const e of ens) {
+                const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
+                const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
+                if (!sku) continue
+                const prev = map.get(sku)
+                map.set(sku, {
+                  sku,
+                  nombre: prev?.nombre || nombre,
+                  cantidad: (prev?.cantidad ?? 0) + 1
+                })
+              }
+
+              const items = Array.from(map.values())
+              if (!items.length) {
+                return (
+                  <Typography variant='body2' color='text.secondary'>
+                    Sin SKUs asociados. Este producto se factura según los ensayos y servicios efectivamente realizados a las muestras.
+                  </Typography>
+                )
+              }
+
+              return (
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 900, color: 'text.secondary' }}>SKU</TableCell>
+                        <TableCell sx={{ fontWeight: 900, color: 'text.secondary' }}>NOMBRE</TableCell>
+                        <TableCell align='right' sx={{ fontWeight: 900, color: 'text.secondary', width: 80 }}>
+                          CANT.
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {items.slice(0, 24).map(it => (
+                        <TableRow key={it.sku} hover>
+                          <TableCell sx={{ fontWeight: 900, color: 'primary.main' }}>{it.sku}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{it.nombre || '-'}</TableCell>
+                          <TableCell align='right' sx={{ fontWeight: 700 }}>{it.cantidad}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )
+            })()}
           </Box>
 
           {/* Informes (generados) — derivado de SKUs (mientras no exista fuente explícita) */}
@@ -2872,6 +2999,15 @@ const UserListTable2 = ({
             </Typography>
 
             {(() => {
+              const hasGenerated = Number(codigoDialogMeta?.informe ?? 0) > 0
+              if (!hasGenerated) {
+                return (
+                  <Typography variant='body2' color='text.secondary'>
+                    Sin informes generados manuales / digitales
+                  </Typography>
+                )
+              }
+
               const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
               const uniq = new Map<string, { sku: string; nombre: string }>()
               for (const e of ens) {
@@ -2882,7 +3018,11 @@ const UserListTable2 = ({
               }
               const items = Array.from(uniq.values())
               if (items.length === 0) {
-                return <Typography variant='body2'>-</Typography>
+                return (
+                  <Typography variant='body2' color='text.secondary'>
+                    Sin informes generados manuales / digitales
+                  </Typography>
+                )
               }
 
               const totalEns = Number(codigoDialogMeta?.ensayos?.total ?? 0)
@@ -3187,6 +3327,28 @@ const UserListTable2 = ({
                                 <Typography variant='caption' sx={{ fontWeight: 800, color: 'text.secondary' }}>
                                   N° {existing}
                                 </Typography>
+                                <IconButton
+                                  size='small'
+                                  aria-label='Ver informe'
+                                  title='Ver informe'
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    const slug = t.key === 'DENSIDAD' ? 'densidad' : t.key === 'HORMIGON' ? 'hormigon' : null
+                                    if (!slug) return
+                                    const url = `/api/informes/${slug}/mock`
+                                    const w = window.open(url, '_blank')
+                                    if (w) {
+                                      try {
+                                        w.opener = null
+                                      } catch {
+                                        // noop
+                                      }
+                                    }
+                                  }}
+                                  sx={{ ml: 0.25 }}
+                                >
+                                  <VisibilityIcon fontSize='small' />
+                                </IconButton>
                               </>
                             ) : blocked ? (
                               <>
@@ -3632,51 +3794,68 @@ const UserListTable2 = ({
             Cancelar
           </Button>
 
-          <Button
-            variant='contained'
-            onClick={handleConfirmInformeDialog}
-            disabled={(() => {
-              if (savingInformeDialog) return true
+          {(() => {
+            const opMeta = normalizeStateForCompare(informeDialogMeta?.estadoOperativo)
+            const opRow = normalizeStateForCompare(getCurrentStateForRow(informeDialogRcmId))
 
-              const totalEnsayos = Number(informeDialogMeta?.ensayos?.total ?? 0)
-              const ensayados = Number(informeDialogMeta?.ensayos?.ensayados ?? 0)
-              const pendientes = Math.max(0, totalEnsayos - ensayados)
+            const digitadoByHistory = (informeDialogHistory ?? []).some((h: any) => {
+              const k1 = normalizeStateForCompare(h?.tipoEstado)
+              const k2 = normalizeStateForCompare(h?.estNuevo)
+              return k1 === 'DIGITADO' || k2 === 'DIGITADO'
+            })
 
-              const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
-              const requiresAutos = applicableKeys.length > 0
+            const isDigitado = opMeta === 'DIGITADO' || opRow === 'DIGITADO' || digitadoByHistory
 
-              const manualsWithNumero = (informeDrafts ?? []).filter(d => parseInformeNumber((d as any).numero) != null)
-              const hasManual = manualsWithNumero.length > 0
+            if (isDigitado) return null
 
-              // Si hay un N° de informe manual, debe seleccionar al menos 1 RCM.
-              const hasManualMissingRcmSelection = manualsWithNumero.some(d => {
-                const selected = Array.isArray((d as any).rcms)
-                  ? (d as any).rcms.map((x: any) => String(x ?? '').trim()).filter(Boolean)
-                  : []
-                return selected.length === 0
-              })
+            return (
+              <Button
+                variant='contained'
+                onClick={handleConfirmInformeDialog}
+                disabled={(() => {
+                  if (savingInformeDialog) return true
 
-              if (hasManualMissingRcmSelection) return true
+                  const totalEnsayos = Number(informeDialogMeta?.ensayos?.total ?? 0)
+                  const ensayados = Number(informeDialogMeta?.ensayos?.ensayados ?? 0)
+                  const pendientes = Math.max(0, totalEnsayos - ensayados)
 
-              if (!requiresAutos) {
-                // si no hay automáticos aplicables, el manual es obligatorio
-                return !hasManual
-              }
+                  const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
+                  const requiresAutos = applicableKeys.length > 0
 
-              // si hay automáticos aplicables, deben estar completos
-              const missingAuto = applicableKeys.some(k => {
-                if (autoInformeExisting?.[k] != null) return false
-                const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
-                if (n == null) return true
-                return pendientes > 0
-              })
+                  const manualsWithNumero = (informeDrafts ?? []).filter(d => parseInformeNumber((d as any).numero) != null)
+                  const hasManual = manualsWithNumero.length > 0
 
-              return missingAuto
-            })()}
-            sx={{ textTransform: 'none', borderRadius: 2 }}
-          >
-            {savingInformeDialog ? 'Confirmando…' : 'Confirmar'}
-          </Button>
+                  // Si hay un N° de informe manual, debe seleccionar al menos 1 RCM.
+                  const hasManualMissingRcmSelection = manualsWithNumero.some(d => {
+                    const selected = Array.isArray((d as any).rcms)
+                      ? (d as any).rcms.map((x: any) => String(x ?? '').trim()).filter(Boolean)
+                      : []
+                    return selected.length === 0
+                  })
+
+                  if (hasManualMissingRcmSelection) return true
+
+                  if (!requiresAutos) {
+                    // si no hay automáticos aplicables, el manual es obligatorio
+                    return !hasManual
+                  }
+
+                  // si hay automáticos aplicables, deben estar completos
+                  const missingAuto = applicableKeys.some(k => {
+                    if (autoInformeExisting?.[k] != null) return false
+                    const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
+                    if (n == null) return true
+                    return pendientes > 0
+                  })
+
+                  return missingAuto
+                })()}
+                sx={{ textTransform: 'none', borderRadius: 2 }}
+              >
+                {savingInformeDialog ? 'Confirmando…' : 'Confirmar'}
+              </Button>
+            )
+          })()}
         </DialogActions>
       </Dialog>
 

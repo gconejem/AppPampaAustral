@@ -30,7 +30,9 @@ interface HeaderProps {
     estadoOperativo?: string | string[]
     estadoAdministrativo?: string | string[]
     areaId?: number | null
+    areaName?: string
     familia?: string
+    sede?: string
   }) => void
 }
 
@@ -61,6 +63,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedAreaName, setSelectedAreaName] = useState<string>('')
+  const [selectedSede, setSelectedSede] = useState<string>('')
+  const [sedeOptions, setSedeOptions] = useState<string[]>([])
 
   const handleAreaChange = (value: string) => {
     const areaId = value ? Number(value) : null
@@ -112,6 +116,19 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       })
   }, [])
 
+  // Cargar sedes (para filtro)
+  useEffect(() => {
+    fetch('/api/sedes')
+      .then(res => res.json())
+      .then(data => {
+        setSedeOptions(Array.isArray(data) ? data : [])
+      })
+      .catch(error => {
+        console.error('Error al cargar sedes:', error)
+        setSedeOptions([])
+      })
+  }, [])
+
   // Cargar familias cuando se selecciona un área
   useEffect(() => {
     if (selectedAreaId) {
@@ -136,7 +153,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     areaId = selectedAreaId,
     familia = selectedFamilia,
     estAd = selectedEstadoAd,
-    areaName = selectedAreaName
+    areaName = selectedAreaName,
+    sede = selectedSede
   ) => {
     const hasAny = (v: any) => {
       if (Array.isArray(v)) return v.length > 0
@@ -144,7 +162,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     }
 
     // si no hay nada seleccionado, limpiar filtros
-    if (!df && !hasAny(estOp) && !areaId && !familia && !hasAny(estAd) && !areaName) {
+    if (!df && !hasAny(estOp) && !areaId && !familia && !hasAny(estAd) && !areaName && !hasAny(sede)) {
       console.log('Header -> emitFilters: no filters selected, clearing')
       onFiltersChange?.(undefined)
       return
@@ -158,6 +176,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
     if (areaName) payload.areaName = areaName
     if (familia) payload.familia = familia
+    if (hasAny(sede)) payload.sede = sede
     console.log('Header -> emitFilters', payload)
     onFiltersChange?.(payload)
   }
@@ -166,6 +185,11 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedFamilia(value)
     // emitir con area actual y nueva familia
     emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, value)
+  }
+
+  const handleSedeChange = (value: string) => {
+    setSelectedSede(value)
+    emitFilters(fechaCodificacionOption, dateRange, selectedEstadoOp, selectedAreaId, selectedFamilia, selectedEstadoAd, selectedAreaName, value)
   }
 
   // permitir valor vacío '' = "Seleccione"
@@ -267,6 +291,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedFamilia('')
     setSelectedEstadoOp([])
     setSelectedEstadoAd([])
+    setSelectedSede('')
 
     // Mantener fecha por defecto y liberar el resto.
     onFiltersChange?.({
@@ -393,7 +418,9 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
-            <InputLabel id='estado-op-select'>Estado Operativo</InputLabel>
+            <InputLabel id='estado-op-select' shrink>
+              Estado Operativo
+            </InputLabel>
             <Select
               labelId='estado-op-select'
               label='Estado Operativo'
@@ -427,7 +454,9 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth size='small'>
-            <InputLabel id='estado-ad-select'>Estado Administrativo</InputLabel>
+            <InputLabel id='estado-ad-select' shrink>
+              Estado Administrativo
+            </InputLabel>
             <Select
               labelId='estado-ad-select'
               label='Estado Administrativo'
@@ -453,6 +482,28 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
                 <MenuItem key={s.value} value={s.value}>
                   <Checkbox checked={selectedEstadoAd.includes(s.value)} />
                   <ListItemText primary={s.label} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+
+      {/* Tercera Fila: Sede */}
+      <Grid container spacing={2} alignItems='center' sx={{ mt: 0.5 }}>
+        <Grid item xs={12} sm={3}>
+          <FormControl fullWidth size='small'>
+            <InputLabel id='sede-select'>Sede</InputLabel>
+            <Select
+              labelId='sede-select'
+              label='Sede'
+              value={selectedSede}
+              onChange={e => handleSedeChange(String(e.target.value ?? ''))}
+            >
+              <MenuItem value=''>Todas las sedes</MenuItem>
+              {sedeOptions.map(s => (
+                <MenuItem key={s} value={s}>
+                  {s}
                 </MenuItem>
               ))}
             </Select>

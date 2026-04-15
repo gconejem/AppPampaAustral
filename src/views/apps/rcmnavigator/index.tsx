@@ -13,12 +13,13 @@ export default function RcmNavigatorPage() {
     dateField?: 'fecha_codificacion' | 'fecha_muestreo'
     start?: string
     end?: string
-    estadoOperativo?: string
-    estadoAdministrativo?: string
+    estadoOperativo?: string | string[]
+    estadoAdministrativo?: string | string[]
     conEvento?: boolean
     areaId?: number | null
     areaName?: string | null
     familia?: string
+    sede?: string
   } | undefined>()
 
   return (

@@ -133,6 +133,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         numeroRcm: true,
+        sede: true,
         fechaCodificacion: true,
         fechaMuestreo: true,
         estadoOperativo: true,
@@ -206,6 +207,15 @@ export async function GET(request: Request) {
 
     const rows = agrupadores.map(ag => {
       const rcmsForAg = rcmsByAgrupadorId.get(ag.id) ?? []
+
+      // Sedes incluidas (para filtro; un CP puede contener más de una sede)
+      const sedes = Array.from(
+        new Set(
+          (rcmsForAg ?? [])
+            .map(r => String((r as any)?.sede ?? '').trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => String(a).localeCompare(String(b)))
 
       // N° de RCMs incluidos (para selección en informes manuales)
       const rcmNumeros = Array.from(
@@ -326,8 +336,10 @@ export async function GET(request: Request) {
         id: ag.id,
         codigoId: ag.codigoId,
         codigoNombre: ag.codigoNombre,
+        descripcionServicio: (ag as any).descripcionServicio ?? null,
         representativeRcmId,
         rcmNumeros,
+        sedes,
         ss: ag.ordenTrabajo?.clave ?? null,
         ot: ag.ordenTrabajo?.correlativ ?? null,
         ordenTrabajoId: ag.ordenTrabajo?.id ?? ag.ordenTrabajoId ?? null,
