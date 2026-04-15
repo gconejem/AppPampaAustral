@@ -67,7 +67,7 @@ export function useCodigoAgrupador({
         setSelectedCodigo('')
         setDialogSkuSearch('')
         setDialogDescripcionServicio('')
-        setDialogCantidad(selectedRcmIds.length > 0 ? selectedRcmIds.length : 1)
+        setDialogCantidad(1)
         setDialogMode('nuevo')
         setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
