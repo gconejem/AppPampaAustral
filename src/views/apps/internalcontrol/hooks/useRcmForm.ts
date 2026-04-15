@@ -153,47 +153,67 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         // En duplicar, forzar nuevo número de tarjeta
         setNumeroTarjeta(mode === 'duplicate' ? '' : rcm.numeroTarjeta)
 
-        // Obtener opciones válidas para el área del RCM
-        const areaId = areaFound?.id
-        const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
-        const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
-        const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
-
-        // Manejar tipoMaterial "Otro"
-        if (rcm.tipoMaterial && !validMaterials.includes(rcm.tipoMaterial)) {
-            setTipoMaterial('Otro')
-            setCustomTipoMaterial(rcm.tipoMaterial)
-        } else {
-            setTipoMaterial(rcm.tipoMaterial)
+        // Si es modo duplicar, resetear campos dinámicos que dependen del área
+        if (mode === 'duplicate') {
+            setTipoMaterial('')
             setCustomTipoMaterial('')
-        }
-
-        // Manejar item "Otro"
-        if (rcm.item && !validItems.includes(rcm.item)) {
-            setItem('Otro')
-            setCustomItem(rcm.item)
-        } else {
-            setItem(rcm.item)
+            setItem('')
             setCustomItem('')
-        }
-
-        // Manejar grado "Otro"
-        if (rcm.grado && !validGrades.includes(rcm.grado)) {
-            setGrado('Otro')
-            setCustomGrado(rcm.grado)
-        } else {
-            setGrado(rcm.grado || '')
+            setGrado('')
             setCustomGrado('')
+            setProcedencia('')
+            setUbicacionSector('')
+            setElemento('')
+            setCalicata('')
+            setEstrato('')
+            setCota1('')
+            setCota2('')
+            setObservacionItem('')
+        } else {
+            // Modo edición: cargar todos los campos dinámicos
+            // Obtener opciones válidas para el área del RCM
+            const areaId = areaFound?.id
+            const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
+            const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
+            const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
+
+            // Manejar tipoMaterial "Otro"
+            if (rcm.tipoMaterial && !validMaterials.includes(rcm.tipoMaterial)) {
+                setTipoMaterial('Otro')
+                setCustomTipoMaterial(rcm.tipoMaterial)
+            } else {
+                setTipoMaterial(rcm.tipoMaterial)
+                setCustomTipoMaterial('')
+            }
+
+            // Manejar item "Otro"
+            if (rcm.item && !validItems.includes(rcm.item)) {
+                setItem('Otro')
+                setCustomItem(rcm.item)
+            } else {
+                setItem(rcm.item)
+                setCustomItem('')
+            }
+
+            // Manejar grado "Otro"
+            if (rcm.grado && !validGrades.includes(rcm.grado)) {
+                setGrado('Otro')
+                setCustomGrado(rcm.grado)
+            } else {
+                setGrado(rcm.grado || '')
+                setCustomGrado('')
+            }
+
+            setProcedencia(rcm.procedencia || '')
+            setUbicacionSector(rcm.ubicacionSector || '')
+            setElemento(rcm.elemento || '')
+            setCalicata(rcm.calicata || '')
+            setEstrato(rcm.estrato || '')
+            setCota1(rcm.cota1 || '')
+            setCota2(rcm.cota2 || '')
+            setObservacionItem(rcm.observacionItem || '')
         }
 
-        setProcedencia(rcm.procedencia || '')
-        setUbicacionSector(rcm.ubicacionSector || '')
-        setElemento(rcm.elemento || '')
-        setCalicata(rcm.calicata || '')
-        setEstrato(rcm.estrato || '')
-        setCota1(rcm.cota1 || '')
-        setCota2(rcm.cota2 || '')
-        setObservacionItem(rcm.observacionItem || '')
         setObservaciones(rcm.observaciones || '')
         setInformeEnsayo(rcm.informeEnsayo !== undefined ? rcm.informeEnsayo : rcm.rcmType !== 'Servicio')
         setTomaMuestra(rcm.tomaMuestra || '')
