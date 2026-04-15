@@ -150,8 +150,9 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         const familiaFound = todasLasFamilias.find(f => f.nombre === rcm.tipoServicio)
         setTipoServicio(familiaFound ? familiaFound.id : '')
 
-        // En duplicar, forzar nuevo número de tarjeta
+        // En duplicar, forzar nuevo número de tarjeta y número de muestra
         setNumeroTarjeta(mode === 'duplicate' ? '' : rcm.numeroTarjeta)
+        setTomaMuestra(mode === 'duplicate' ? '' : rcm.tomaMuestra || '')
 
         // Si es modo duplicar, resetear campos dinámicos que dependen del área
         if (mode === 'duplicate') {
@@ -216,7 +217,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
 
         setObservaciones(rcm.observaciones || '')
         setInformeEnsayo(rcm.informeEnsayo !== undefined ? rcm.informeEnsayo : rcm.rcmType !== 'Servicio')
-        setTomaMuestra(rcm.tomaMuestra || '')
+        // tomaMuestra ya se estableció arriba según el modo (edit/duplicate)
         setCantidadMuestras(rcm.cantidadMuestras)
         setFechaServicio(rcm.fechaServicio)
 
