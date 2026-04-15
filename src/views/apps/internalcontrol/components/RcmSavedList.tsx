@@ -144,25 +144,72 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 </thead>
                 <tbody>
                     {ensayos.map(ensayo => (
-                        <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                            <td style={{ padding: '12px' }}>
-                                <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{ensayo.sku}</Typography>
-                            </td>
-                            <td style={{ padding: '12px' }}>
-                                <Typography variant='body2' sx={{ fontWeight: 700, display: 'inline' }}>{ensayo.nombre}</Typography>
-                                {ensayo.norma && (
-                                    <Typography variant='body2' color='text.secondary' sx={{ display: 'inline', ml: 1 }}>
-                                        {ensayo.norma}
-                                    </Typography>
-                                )}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
-                            </td>
-                            <td style={{ padding: '12px' }}>
-                                <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
-                            </td>
-                        </tr>
+                        <React.Fragment key={ensayo.id}>
+                            {/* Fila del paquete o ensayo normal */}
+                            <tr style={{
+                                borderBottom: ensayo.esPaquete && ensayo.subProductos && ensayo.subProductos.length > 0 ? 'none' : '1px solid #E0E0E0',
+                                backgroundColor: ensayo.esPaquete ? '#E3F2FD' : 'transparent'
+                            }}>
+                                <td style={{ padding: '12px' }}>
+                                    <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{ensayo.sku}</Typography>
+                                </td>
+                                <td style={{ padding: '12px' }}>
+                                    <Typography variant='body2' sx={{ fontWeight: 700, display: 'inline' }}>{ensayo.nombre}</Typography>
+                                    {ensayo.norma && (
+                                        <Typography variant='body2' color='text.secondary' sx={{ display: 'inline', ml: 1 }}>
+                                            {ensayo.norma}
+                                        </Typography>
+                                    )}
+                                    {ensayo.esPaquete && (
+                                        <Chip
+                                            label='Paquete'
+                                            size='small'
+                                            sx={{ ml: 1, height: '20px', fontSize: '0.7rem', fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}
+                                        />
+                                    )}
+                                </td>
+                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                    <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
+                                </td>
+                                <td style={{ padding: '12px' }}>
+                                    <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
+                                </td>
+                            </tr>
+                            {/* Filas de subproductos si es un paquete */}
+                            {ensayo.esPaquete && ensayo.subProductos && ensayo.subProductos.map((subProducto, index) => (
+                                <tr
+                                    key={`${ensayo.id}-sub-${subProducto.id}`}
+                                    style={{
+                                        borderBottom: index === ensayo.subProductos!.length - 1 ? '1px solid #E0E0E0' : 'none',
+                                        backgroundColor: '#E3F2FD'
+                                    }}
+                                >
+                                    <td style={{ padding: '12px', paddingLeft: '32px' }}>
+                                        <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.85rem' }}>
+                                            {subProducto.sku}
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '12px', paddingLeft: '32px' }}>
+                                        <Typography variant='body2' sx={{ fontWeight: 500, display: 'inline', fontSize: '0.85rem' }}>
+                                            ↳ {subProducto.nombre}
+                                        </Typography>
+                                        {subProducto.norma && (
+                                            <Typography variant='body2' color='text.secondary' sx={{ display: 'inline', ml: 1, fontSize: '0.85rem' }}>
+                                                {subProducto.norma}
+                                            </Typography>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                        <Typography variant='body2' sx={{ fontWeight: 500, fontSize: '0.85rem' }}>{subProducto.cantidad}</Typography>
+                                    </td>
+                                    <td style={{ padding: '12px' }}>
+                                        <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.85rem' }}>
+                                            {subProducto.observacion || '-'}
+                                        </Typography>
+                                    </td>
+                                </tr>
+                            ))}
+                        </React.Fragment>
                     ))}
                 </tbody>
             </table>
