@@ -32,7 +32,7 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
                         sku: p.sku,
                         nombre: p.nombre,
                         norma: p.norma || '',
-                        cantidad: p.cantidad || 1,
+                        cantidad: p.sku === '2006' ? 3 : 1,
                         observacion: '',
                         isEditing: false
                     }))
