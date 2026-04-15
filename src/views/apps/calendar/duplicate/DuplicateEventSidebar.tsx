@@ -882,8 +882,18 @@ const DuplicateEventSidebar = ({
         throw new Error(`Por favor complete los siguientes campos: ${camposFaltantes.join(', ')}`)
       }
 
-      // Para duplicación, SIEMPRE crear con estado CREADA (sin importar las condiciones)
-      console.log('Creando evento duplicado con estado CREADA (fijo para duplicaciones)')
+      // Determinar el estado final: AGENDADA si tiene fecha, hora y laboratorista; CREADA en caso contrario
+      const tieneHoraInicio = !!fechaInicio && (fechaInicio.getHours() !== 0 || fechaInicio.getMinutes() !== 0)
+      const tieneHoraFin = !!fechaFin && (fechaFin.getHours() !== 0 || fechaFin.getMinutes() !== 0)
+      const estadoFinal =
+        !!formData.fechaInicio &&
+          !!formData.fechaFin &&
+          tieneHoraInicio &&
+          tieneHoraFin &&
+          laboratoristasAgendados.length > 0
+          ? 'AGENDADA'
+          : 'CREADA'
+      console.log('Creando evento duplicado con estado:', estadoFinal)
 
       // Generar título automáticamente
       const cliente = clientes.find(c => c.clienteId === formData.clienteId)
@@ -902,7 +912,7 @@ const DuplicateEventSidebar = ({
         titulo: tituloGenerado, // Usar el título generado con indicador de duplicación
         tipoVisita: 'EVENTO', // Las duplicaciones siempre son eventos únicos
         esRecurrente: false, // Las duplicaciones nunca son recurrentes
-        estado: 'CREADA', // Las duplicaciones siempre se guardan con estado CREADA
+        estado: estadoFinal,
         referencia: selectedReferencia,
         georreferencia: selectedGeorreferencia,
         servicios: serviciosAgendados.map(servicio => ({

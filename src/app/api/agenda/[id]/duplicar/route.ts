@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         esRecurrente: agendaOriginal.esRecurrente,
         fechaInicio: agendaOriginal.fechaInicio,
         fechaFin: agendaOriginal.fechaFin,
-        estado: agendaOriginal.estado,
+        estado: 'CREADA',
         sectorComercial: agendaOriginal.sectorComercial,
         region: agendaOriginal.region,
         comuna: agendaOriginal.comuna,
