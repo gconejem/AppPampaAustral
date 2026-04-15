@@ -119,12 +119,6 @@ const CambiarEstadoModal = ({
       missingFields.push('laboratoristas asignados')
     }
 
-    // Validar equipos
-    const equipos = eventData.extendedProps?.equipos || []
-    if (equipos.length === 0) {
-      missingFields.push('equipos asignados')
-    }
-
     return {
       isValid: missingFields.length === 0,
       missingFields

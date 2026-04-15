@@ -854,10 +854,9 @@ const EditEventSidebar = ({
         const tieneHoraInicio = !!horaInicio
         const tieneHoraFin = !!horaFin
         const tieneLaboratoristas = laboratoristasAgendados.length > 0
-        const tieneEquipos = equiposAgendados.length > 0
 
         // Si se cumplen todas las condiciones, cambiar a AGENDADA
-        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas && tieneEquipos) {
+        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas) {
           nuevoEstado = 'AGENDADA'
           console.log('Cambiando estado de CREADA a AGENDADA - se cumplen todas las condiciones')
         } else {
@@ -866,8 +865,7 @@ const EditEventSidebar = ({
             tieneFechaFin,
             tieneHoraInicio,
             tieneHoraFin,
-            tieneLaboratoristas,
-            tieneEquipos
+            tieneLaboratoristas
           })
         }
       }

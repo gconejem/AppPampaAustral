@@ -898,10 +898,9 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
         const tieneHoraInicio = !!fechaInicio && (fechaInicio.getHours() !== 0 || fechaInicio.getMinutes() !== 0)
         const tieneHoraFin = !!fechaFin && (fechaFin.getHours() !== 0 || fechaFin.getMinutes() !== 0)
         const tieneLaboratoristas = laboratoristasAgendados.length > 0
-        const tieneEquipos = equiposAgendados.length > 0
 
         // Si se cumplen todas las condiciones, cambiar a AGENDADA
-        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas && tieneEquipos) {
+        if (tieneFechaInicio && tieneFechaFin && tieneHoraInicio && tieneHoraFin && tieneLaboratoristas) {
           estadoFinal = 'AGENDADA'
           console.log('Creando evento con estado AGENDADA - se cumplen todas las condiciones')
         } else {
@@ -910,8 +909,7 @@ const AddEventSidebar = ({ addEventSidebarOpen, handleAddEventSidebarToggle }: A
             tieneFechaFin,
             tieneHoraInicio,
             tieneHoraFin,
-            tieneLaboratoristas,
-            tieneEquipos
+            tieneLaboratoristas
           })
         }
       }
@@ -1050,14 +1048,12 @@ ${visitaData.observaciones ? `Observaciones adicionales: ${visitaData.observacio
       const tieneHoraInicio = !!fechaInicio && (fechaInicio.getHours() !== 0 || fechaInicio.getMinutes() !== 0)
       const tieneHoraFin = !!fechaFin && (fechaFin.getHours() !== 0 || fechaFin.getMinutes() !== 0)
       const tieneLaboratoristas = laboratoristasAgendados.length > 0
-      const tieneEquipos = equiposAgendados.length > 0
 
       if (!tieneFechaInicio) camposFaltantes.push('Fecha de inicio')
       if (!tieneFechaFin) camposFaltantes.push('Fecha de fin')
       if (!tieneHoraInicio) camposFaltantes.push('Hora de inicio')
       if (!tieneHoraFin) camposFaltantes.push('Hora de fin')
       if (!tieneLaboratoristas) camposFaltantes.push('Laboratoristas')
-      if (!tieneEquipos) camposFaltantes.push('Equipos')
 
       if (camposFaltantes.length > 0) {
         toast(`ℹ️ El evento se creó con estado "Creada". Para que pase a "Agendada" debe completar: ${camposFaltantes.join(', ')}`, {
