@@ -255,17 +255,18 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
 }
 
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
-    const { data: session } = useSession()
+  const { data: session } = useSession()
+  const router = useRouter()
 
-    const getCurrentUserName = () => {
-      const name = session?.user?.name
-      if (typeof name === 'string' && name.trim()) return name.trim()
+  const getCurrentUserName = () => {
+    const name = session?.user?.name
+    if (typeof name === 'string' && name.trim()) return name.trim()
 
-      const email = session?.user?.email
-      if (typeof email === 'string' && email.trim()) return email.trim()
+    const email = session?.user?.email
+    if (typeof email === 'string' && email.trim()) return email.trim()
 
-      return null
-    }
+    return null
+  }
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
@@ -703,43 +704,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const rcmId = row.rcmOriginalId ?? row.id
     const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
 
-    console.log('🔍 handleEdit - Datos para encoder:', {
-      rowId,
-      rcmId,
-      rcmOriginalId: row.rcmOriginalId,
-      otId,
-      ordenTrabajo: row.ordenTrabajo
-    })
-
-    // ✅ CORRECCIÓN: construir URL correcta para encoder
-    const params = new URLSearchParams()
-    params.set('rcmId', String(rcmId))
-    if (otId) params.set('otId', String(otId))
-    if (opts?.readonly) params.set('readonly', '1')
-
-    const target = `${window.location.origin}/en/apps/encoder?${params.toString()}`
-
-    console.log('🚀 Redirecting to encoder:', target)
-
-    try {
-      const newWin = window.open(target, '_blank')
-      if (newWin) {
-        try {
-          newWin.opener = null
-        } catch (e) {
-          /* noop */
-        }
-        try {
-          newWin.focus()
-        } catch (e) {
-          /* noop */
-        }
-      } else {
-        window.location.href = target
-      }
-    } catch (e) {
-      window.location.href = target
+    // Si readonly, abrir encoder en nueva pestaña (comportamiento original)
+    if (opts?.readonly) {
+      const params = new URLSearchParams()
+      params.set('rcmId', String(rcmId))
+      if (otId) params.set('otId', String(otId))
+      params.set('readonly', '1')
+      window.open(`${window.location.origin}/en/apps/encoder?${params.toString()}`, '_blank')
+      handleCloseRowMenu()
+      return
     }
+
+    // Navegación a la página de edición en la misma pestaña
+    const currentLang = (locale as string) || 'es'
+    router.push(`/${currentLang}/apps/rcm-edit/${rcmId}`)
     handleCloseRowMenu()
   }
 
