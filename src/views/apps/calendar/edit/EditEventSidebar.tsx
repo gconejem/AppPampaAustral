@@ -829,10 +829,6 @@ const EditEventSidebar = ({
       if (!formData.comuna) camposFaltantes.push('Comuna')
       if (!formData.direccion) camposFaltantes.push('Dirección')
 
-      // Solicitud es obligatoria solo para estado AGENDADO
-      if (estado === 'AGENDADA' && !formData.solicitudId) {
-        camposFaltantes.push('Solicitud')
-      }
 
       // Validar que haya al menos un contacto
       if (contactos.length === 0) camposFaltantes.push('Al menos un Contacto')
@@ -1708,9 +1704,7 @@ const EditEventSidebar = ({
                   renderInput={params => (
                     <TextField
                       {...params}
-                      label={estado === 'AGENDADA' ? 'Solicitud *' : 'Solicitud'}
-                      error={estado === 'AGENDADA' && !formData.solicitudId}
-                      helperText={estado === 'AGENDADA' && !formData.solicitudId ? 'Campo obligatorio para eventos agendados' : ''}
+                      label='Solicitud'
                     />
                   )}
                   disabled={!formData.clienteId}
